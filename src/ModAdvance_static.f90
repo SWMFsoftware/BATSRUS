@@ -2,9 +2,14 @@
 Module ModAdvance
   use ModSize
   use ModVarIndexes
-
+  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModProcMH,     ONLY: iProc
+  
   implicit none
   save
+
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicAdvance = .false.
 
   ! Update check parameters
   logical :: UseUpdateCheck
@@ -169,11 +174,30 @@ Module ModAdvance
   real, dimension(nCorrectedFaceValues,1:nI,1:nJ,1:2,nBLK) :: &
           CorrectedFlux_VZB
 
+contains
+
+  !============================================================================
+
+  subroutine init_mod_advance
+
+    if(IsDynamicAdvance .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
+    end if
+
+  end subroutine init_mod_advance
+
+  !============================================================================
+
+  subroutine clean_mod_advance
+
+    if(IsDynamicAdvance .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'
+    end if
+
+  end subroutine clean_mod_advance
+
+  !============================================================================
+
 end Module ModAdvance
-
-
-
-
-
-
-

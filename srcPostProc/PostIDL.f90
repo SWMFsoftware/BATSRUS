@@ -56,7 +56,9 @@ program PostIDL
   read(*,'(a)')filenamehead
 
   ! Get rid of the component name
-  if(filenamehead(1:3)=='GM/' .or. filenamehead(1:3)=='IH/') &
+  if(  filenamehead(1:3)=='GM/' .or. &
+       filenamehead(1:3)=='IH/' .or. &
+       filenamehead(1:3)=='SC/')     &
        filenamehead=filenamehead(4:len(filenamehead))
 
   read(*,*)numprocs
@@ -419,7 +421,7 @@ contains
        call check_corners
     else
        ! Negative lookup value means an error
-       write(*,*)'!!! Error: 3rd data for same projected position'
+       write(*,*)'!!! Error: 3rd data for same projected position in ',filename
        write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',ix1,ix2,icell,jcell,dxcell,xyz
        stop
     end if
