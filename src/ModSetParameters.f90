@@ -6,26 +6,26 @@ subroutine MH_set_parameters(TypeAction)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY :&
+  use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,iVolumeCounterBLK,iVolumeCounterI,& !^CFG IF NOT CARTESIAN
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
+  use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
   use ModProject                                        !^CFG IF PROJECTION
-  use ModCT, ONLY : DoInitConstrainB                    !^CFG IF CONSTRAINB
+  use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModAMR
   use ModParallel, ONLY : UseCorners,proc_dims
-  use ModRaytrace, ONLY : DtExchangeRay                 !^CFG IF RAYTRACE
+  use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
-  use ModCompatibility, ONLY: read_compatible_command
-  use CON_planet,       ONLY: read_planet_var, check_planet_var, UseAlignedAxes
-  use CON_axes,         ONLY: init_axes, DtUpdateB0
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case
+  use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
+  use CON_planet,       ONLY: read_planet_var, check_planet_var
+  use CON_axes,         ONLY: init_axes
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case
 
-  ! SWMF superstructure
-  use CON_physics, ONLY : get_physics, time_int_to_real, time_real_to_int
-
-  ! SWMF infrastructure
+  use CON_planet,       ONLY: get_planet
+  use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+  use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMpi
 
@@ -44,31 +44,41 @@ subroutine MH_set_parameters(TypeAction)
 
   logical :: IsUninitialized=.true.
   logical :: read_new_upstream=.false.
+  logical :: DoReadSatelliteFiles=.false.
 
   ! The name of the command
   character (len=lStringLine) :: NameCommand, StringLine
   logical                     :: DoEcho
 
   ! Variables to remember for multiple calls
-  character (len=100) :: UpstreamFileName='???'
+  character (len=lStringLine) :: UpstreamFileName='???'
 
   ! Temporary variables
   integer :: nByteRealRead, nVarRead
-  character (len=100) :: NameEquationRead
+  character (len=lStringLine) :: NameEquationRead
 
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
+  character (len=2)  :: NameCompCheck
   integer :: problem_type_r, qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
   character (len=10) :: TimingStyle='cumm'
 
   ! Variables for checking/reading #STARTTIME command
-  real (Real8_)         :: StartTimeCheck
+  real (Real8_)         :: StartTimeCheck = -1.0_Real8_
+
+  ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
+  character (len=lStringLine) :: NameArea
+  integer                     :: nLevelArea
+  real                        :: AreaResolution, RadiusArea
+  logical                     :: DoReadAreaCenter
+  real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
+  real                        :: xRotateArea, yRotateArea, zRotateArea
 
   logical            :: UseSimple=.true.
 
-  integer :: iSession
+  integer :: iSession, iPlotFile
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -86,34 +96,44 @@ subroutine MH_set_parameters(TypeAction)
      read_new_upstream=.false. ! upstream file reading in session 1 only
   end if
 
+  if(DoReadSatelliteFiles)then
+     call read_satellite_input_files
+     DoReadSatelliteFiles = .false.
+  end if
+
   select case(TypeAction)
   case('CHECK')
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
 
-     ! Obtain general parameters from CON_physics
-     if(.not.IsStandAlone)then
-        call get_physics( &
-             DoTimeAccurateOut = time_accurate, &
-             tStartOut         = StartTime,     &
-             DtUpdateB0Out     = dt_updateB0)
-        call time_real_to_int(StartTime,iStartTime_I)
+     if(StartTimeCheck > 0.0 .and. abs(StartTime - StartTimeCheck) > 0.001)then
+        write(*,*)NameSub//' WARNING: '//NameThisComp//'::StartTimeCheck=', &
+             StartTimeCheck,' differs from CON::StartTime=', &
+             StartTime,' !!!'
+        if(UseStrict)then
+           call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
+        else
+           ! Fix iStartTime_I array
+           call time_real_to_int(StartTime, iStartTime_I)
+        end if
      end if
- 
-     ! Obtain GM specific parameters from CON_physics
-     if(NameThisComp=='GM' .and. UseNewAxes) then
-        call get_physics(UseRotationOut = UseCorotation)
 
-        if(IsStandAlone) then
-           call check_planet_var(iProc==0)
-
-           ! There is no need to update B0 if the axes are aligned or there is
-           ! no rotation or the solution is not time accurate
-           if(UseAlignedAxes .or. .not.UseCorotation .or. .not.Time_Accurate) &
-                dt_updateB0 = -1.0
+     ! In standalone mode set and obtain GM specific parameters 
+     ! in CON_planet and CON_axes
+     if(IsStandAlone .and. NameThisComp=='GM') then
+        if(UseNewAxes)then
+           ! Check and set some planet variables (e.g. DoUpdateB0)
+           call check_planet_var(iProc==0, time_accurate)
 
            ! Initialize axes
-           call init_axes
-        end if
+           call init_axes(StartTime)
+
+           ! Obtain some planet parameters
+           call get_planet(UseRotationOut = UseRotatingBc, &
+                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+        else
+           DoUpdateB0 = time_accurate .and. Dt_updateB0 > 0.0 .and. &
+                UseRotatingBc .and. .not.SetDipoleTilt
+        endif
      end if
 
      !^CFG IF NOT SIMPLE BEGIN
@@ -129,6 +149,14 @@ subroutine MH_set_parameters(TypeAction)
 
      call check_options
 
+     ! initialize module variables
+     call init_mod_advance
+     call init_mod_geometry
+     call init_mod_nodes
+     call init_mod_raytrace                    !^CFG IF RAYTRACE
+     if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
+     if(UseImplicit)   call init_mod_implicit  !^CFG IF IMPLICIT
+
      if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
         jMinFaceX=0; jMaxFaceX=nJ+1
         kMinFaceX=0; kMaxFaceX=nK+1
@@ -142,7 +170,7 @@ subroutine MH_set_parameters(TypeAction)
           call read_upstream_input_file(UpstreamFileName)
 
      call set_physics_constants
-     
+
      call set_physics_parameters
 
      if(iProc==0 .and. IsStandAlone)then
@@ -166,13 +194,13 @@ subroutine MH_set_parameters(TypeAction)
   !\
   ! Read parameters from the text
   !/
-  do
+  READPARAM: do
      if(.not.read_line(StringLine) )then
         IsLastRead = .true.
-        EXIT
+        EXIT READPARAM
      end if
 
-     if(.not.read_command(NameCommand)) CYCLE
+     if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
      case("#NEWPARAM")
@@ -180,38 +208,43 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseNewParam',UseNewParam)
         call read_var('UseNewAxes', UseNewAxes)
         call read_var('DoTimeAccurate',time_accurate)
-        call read_var('UseCorotation',UseCorotation)
+        call read_var('UseRotatingBc',UseRotatingBc)
+     case("#COMPONENT")
+        call read_var('NameComp',NameCompCheck)
+        if(NameCompCheck /= NameThisComp)&
+             call stop_mpi(NameSub//' ERROR: BATSRUS is running as component '&
+             //NameThisComp//' and not as '//NameCompCheck)
      case("#DESCRIPTION")
         call check_stand_alone
      case("#BEGIN_COMP","#END_COMP")
         call check_stand_alone
         i = len_trim(NameCommand)
-        if(StringLine(i+2:i+3) /= 'GM')&
-             call stop_mpi(NameSub//' ERROR: the component is not GM in '// &
-             trim(StringLine))
+        if(StringLine(i+2:i+3) /= NameThisComp)&
+             call stop_mpi(NameSub//' ERROR: the component is not '// &
+             NameThisComp//'in '//trim(StringLine))
      case("#END")
         call check_stand_alone
         IslastRead=.true.
-        EXIT
+        EXIT READPARAM
      case("#RUN")
         call check_stand_alone
         IslastRead=.false.
-        EXIT
+        EXIT READPARAM
      case("#STOP")
         call check_stand_alone
-        call read_var('nIter',nIter)
+        call read_var('MaxIteration',nIter)
         if(UseNewParam .or. time_accurate) &
-             call read_var('t_max',t_max)
+             call read_var('tSimulationMax',t_max)
      case("#CPUTIMEMAX")
         call check_stand_alone
-        call read_var('cputime_max',cputime_max)
+        call read_var('CpuTimeMax',cputime_max)
      case("#CHECKSTOPFILE")
         call check_stand_alone
-        call read_var('check_stopfile',check_stopfile)
+        call read_var('DoCheckStopfile',check_stopfile)
      case("#PROGRESS")
         call check_stand_alone
-        call read_var('dn_progress1',dn_progress1)
-        call read_var('dn_progress2',dn_progress2)
+        call read_var('DnProgressShort',dn_progress1)
+        call read_var('DnProgressLong',dn_progress2)
      case("#TIMEACCURATE")
         call check_stand_alone
         call read_var('DoTimeAccurate',time_accurate)
@@ -220,59 +253,63 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoEcho',DoEcho)
         if(iProc==0)call read_echo_set(DoEcho)
      case("#TEST")
-        call read_var('test_string',test_string)
+        call read_var('StringTest',test_string)
         if(.not.UseNewParam .and. index(test_string,'read_inputs')>0)then
            DoEcho = .true.
-           if(iProc==0)call read_echo_set(.true.)
+           if(iProc==0)call read_echo_set(DoEcho)
         end if
      case("#TESTXYZ")
         coord_test=.true.
         UseTestCell=.true.
-        call read_var('Xtest',Xtest)
-        call read_var('Ytest',Ytest)
-        call read_var('Ztest',Ztest)
+        call read_var('xTest',Xtest)
+        call read_var('yTest',Ytest)
+        call read_var('zTest',Ztest)
      case("#TESTIJK")
         coord_test=.false.
         UseTestCell=.true.
-        call read_var('Itest',Itest)
-        call read_var('Jtest',Jtest)
-        call read_var('Ktest',Ktest)
-        call read_var('BLKtest',BLKtest)
-        call read_var('PROCtest',PROCtest)
+        call read_var('iTest',Itest)
+        call read_var('jTest',Jtest)
+        call read_var('kTest',Ktest)
+        call read_var('iBlockTest',BLKtest)
+        call read_var('iProcTest',PROCtest)
      case("#TESTVAR")
-        call read_var('VARtest ',VARtest)
+        call read_var('iVarTest ',VARtest)
      case("#TESTDIM")
-        call read_var('DIMtest ',DIMtest)
+        call read_var('iDimTest ',DIMtest)
      case("#TESTTIME")
-        call read_var('Itertest',ITERtest)
+        call read_var('nIterTest',ITERtest)
         if(UseNewParam .or. time_accurate) &
-             call read_var('Ttest',Ttest)
+             call read_var('TimeTest',Ttest)
      case("#STRICT")
         call read_var('UseStrict',UseStrict)
      case("#VERBOSE")
         call read_var('lVerbose',lVerbose)
      case("#DEBUG")
-        call read_var('okdebug',okdebug)
-        call read_var('ShowGhostCells',ShowGhostCells)
+        call read_var('DoDebug',okdebug)
+        call read_var('DoDebugGhost',ShowGhostCells)
      case("#TIMING")
         call read_var('UseTiming',UseTiming)
         if(UseTiming)then
-           call read_var('dnTiming',dn_timing)
-           call read_var('TimingDepth',TimingDepth)
-           call read_var('TimingStyle',TimingStyle)
+           call read_var('DnTiming',dn_timing)
+           call read_var('nDepthTiming',TimingDepth)
+           call read_var('TypeTimingReport',TimingStyle)
         end if
      case("#OUTERBOUNDARY")
-        call read_var('TypeBc_I(east_)',TypeBc_I(east_))  !^CFG IF NOT SIMPLE BEGIN
-        call read_var('TypeBc_I(west_)',TypeBc_I(west_))
-        call read_var('TypeBc_I(south_)',TypeBc_I(south_))
-        call read_var('TypeBc_I(north_)',TypeBc_I(north_))
-        call read_var('TypeBc_I(bot_)',TypeBc_I(bot_))
-        call read_var('TypeBc_I(top_)',TypeBc_I(top_))    !^CFG END SIMPLE
+        !                                              ^CFG IF NOT SIMPLE BEGIN
+        call read_var('TypeBcEast'  ,TypeBc_I(east_))  
+        call read_var('TypeBcWest'  ,TypeBc_I(west_))
+        call read_var('TypeBcSouth' ,TypeBc_I(south_))
+        call read_var('TypeBcNorth' ,TypeBc_I(north_))
+        call read_var('TypeBcBottom',TypeBc_I(bot_))
+        call read_var('TypeBcTop'   ,TypeBc_I(top_))    
+        !                                              ^CFG END SIMPLE
      case("#INNERBOUNDARY")
         !                                              ^CFG IF NOT SIMPLE BEGIN
-        call read_var('TypeBc_I(body1_)',TypeBc_I(body1_))
-        if(UseBody2) &                                      !^CFG IF SECONDBODY
-             call read_var('TypeBc_I(body2_)',TypeBc_I(body2_)) !^CFG IF SECONDBODY
+        call read_var('TypeBcInner',TypeBc_I(body1_))
+        !                                              ^CFG IF SECONDBODY BEGIN
+        if(UseBody2) &                                      
+             call read_var('TypeBcBody2',TypeBc_I(body2_)) 
+        !                                              ^CFG END SECONDBODY
         !                                              ^CFG END SIMPLE
      case("#TIMESTEPPING")
         if(.not.UseNewParam)call read_var('DoTimeAccurate',time_accurate)
@@ -308,15 +345,16 @@ subroutine MH_set_parameters(TypeAction)
 
         !                                             ^CFG IF NOT SIMPLE BEGIN
      case("#IMPLICITCRITERIA", "#STEPPINGCRITERIA")
-        call read_var('ImplCritType',ImplCritType)
+        call read_var('TypeImplCrit',ImplCritType)
         select case(ImplCritType)
         case('R','r')
-           call read_var('Rimplicit'   ,Rimplicit)
+           call read_var('rImplicit'   ,Rimplicit)
         case('test','dt')
         case default
            if(iProc==0)then
               write(*,'(a)')NameSub// &
-                   ' WARNING: Invalid ImplCritType='//ImplCritType
+                   ' WARNING: invalid ImplCritType='//trim(ImplCritType)// &
+                   ' !!!'
               if(UseStrict)call stop_mpi('Correct PARAM.in!')
               write(*,*)NameSub//' Setting ImplCritType=R'
            end if
@@ -324,7 +362,7 @@ subroutine MH_set_parameters(TypeAction)
         end select
      case("#IMPLSCHEME")
         call read_var('nOrderImpl',nORDER_impl)
-        call read_var('FluxTypeImpl',FluxTypeImpl)
+        call read_var('TypeFluxImpl',FluxTypeImpl)
      case("#IMPLSTEP")
         call read_var('ImplCoeff ',ImplCoeff0)
         call read_var('UseBDF2   ',UseBDF2)
@@ -333,23 +371,23 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseConservativeImplicit',UseConservativeImplicit)
         call read_var('UseNewton',UseNewton)
         if(UseNewton)then
-           call read_var('NewMatrix    ',NewMatrix)
-           call read_var('NewtonIterMax',NewtonIterMax)
+           call read_var('UseNewMatrix ',NewMatrix)
+           call read_var('MaxIterNewton',NewtonIterMax)
         endif
      case("#JACOBIAN")
-        call read_var('JacobianType',JacobianType)
+        call read_var('TypeJacobian',JacobianType)
         call read_var('JacobianEps', JacobianEps)
      case("#PRECONDITIONER")
-        call read_var('PrecondSide'  ,PrecondSide)
-        call read_var('PrecondType'  ,PrecondType)
-        call read_var('GustafssonPar',GustafssonPar)
+        call read_var('TypePrecondSide',PrecondSide)
+        call read_var('TypePrecond'    ,PrecondType)
+        call read_var('GustafssonPar'  ,GustafssonPar)
         if(GustafssonPar<=0.)GustafssonPar=0.
         if(GustafssonPar>1.)GustafssonPar=1.
      case("#KRYLOV")
-        call read_var('KrylovType'     ,KrylovType)
-        call read_var('KrylovInitType' ,KrylovInitType)
-        call read_var('KrylovErrorMax' ,KrylovErrorMax)
-        call read_var('KrylovMatvecMax',KrylovMatvecMax)
+        call read_var('TypeKrylov'     ,KrylovType)
+        call read_var('TypeInitKrylov' ,KrylovInitType)
+        call read_var('ErrorMaxKrylov' ,KrylovErrorMax)
+        call read_var('MaxMatvecKrylov',KrylovMatvecMax)
         nKrylovVector = KrylovMatvecMax
      case("#KRYLOVSIZE")
         call read_var('nKrylovVector',nKrylovVector)
@@ -385,23 +423,23 @@ subroutine MH_set_parameters(TypeAction)
         end if
         !                                               ^CFG END DISSFLUX
      case("#SAVERESTART")
-        call read_var('SaveRestartFile',save_restart_file)
+        call read_var('DoSaveRestart',save_restart_file)
         if(save_restart_file)then
            if(iProc==0)call check_dir(NameRestartOutDir)
-           call read_var('dnOutput(restart_)',dn_output(restart_))
+           call read_var('DnSaveRestart',dn_output(restart_))
            if(UseNewParam .or. time_accurate) &
                 call read_var('dt_output(restart_)',dt_output(restart_))
            nfile=max(nfile,restart_)
         end if
      case("#SAVELOGFILE")
-        call read_var('SaveLogfile',save_logfile)
+        call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
            if(iProc==0)call check_dir(NamePlotDir)
            nfile=max(nfile,logfile_)
-           call read_var('log_string',log_string)
-           call read_var('dn_output(logfile_)',dn_output(logfile_))
+           call read_var('StringLog',log_string)
+           call read_var('DnSaveLogfile',dn_output(logfile_))
            if(UseNewParam .or. time_accurate) &
-                call read_var('dt_output(logfile_)',dt_output(logfile_))
+                call read_var('DtSaveLogfile',dt_output(logfile_))
 
            ! Log variables
            if((index(log_string,'VAR')>0) .or. (index(log_string,'var')>0))then
@@ -449,7 +487,7 @@ subroutine MH_set_parameters(TypeAction)
                 call read_var('log_R_str',log_R_str)
         end if
      case("#SAVEPLOT")
-        call read_var('nplotfile',nplotfile)
+        call read_var('nPlotFile',nplotfile)
 
         if(nPlotFile>0 .and. iProc==0)call check_dir(NamePlotDir)
 
@@ -457,46 +495,68 @@ subroutine MH_set_parameters(TypeAction)
         if (nfile > maxfile .or. nplotfile > maxplotfile)call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
              //' nplotfile>maxplotfile .or. nfile>maxfile')
-        do ifile=plot_+1,plot_+nplotfile
+        do iFile=plot_+1,plot_+nplotfile
 
-           call read_var('plot_string',plot_string)
+           call read_var('StringPlot',plot_string)
 
            ! Plotting frequency
-           call read_var('dn_output',dn_output(ifile))
+           call read_var('DnSavePlot',dn_output(ifile))
            if(UseNewParam .or. time_accurate) &
-                call read_var('dt_output',dt_output(ifile))
+                call read_var('DtSavePlot',dt_output(ifile))
 
            ! Plotting area
            if(index(plot_string,'cut')>0)then
               plot_area='cut'
-              call read_var('plot_range(x1)',plot_range(1,ifile))
-              call read_var('plot_range(x2)',plot_range(2,ifile))
-              call read_var('plot_range(y1)',plot_range(3,ifile))
-              call read_var('plot_range(y2)',plot_range(4,ifile))
-              call read_var('plot_range(z1)',plot_range(5,ifile))
-              call read_var('plot_range(z2)',plot_range(6,ifile))
+              call read_var('xMinCut',plot_range(1,ifile))
+              call read_var('xMaxCut',plot_range(2,ifile))
+              call read_var('yMinCut',plot_range(3,ifile))
+              call read_var('yMaxCut',plot_range(4,ifile))
+              call read_var('zMinCut',plot_range(5,ifile))
+              call read_var('zMaxCut',plot_range(6,ifile))
+           elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
+              iPlotFile = iFile - Plot_
+              plot_area='lin'
+              call read_var('NameLine',NameLine_I(iPlotFile))
+              call upper_case(NameLine_I(iPlotFile))
+              call read_var('IsSingleLine',IsSingleLine_I(iPlotFile))
+              call read_var('nLine',nLine_I(iPlotFile))
+              if(nLine_I(iPlotFile)==1)IsSingleLine_I(iPlotFile)=.true.
+              if(nLine_I(iPlotFile) > MaxLine)then
+                 if(iProc==0)then
+                    write(*,*)NameSub,' WARNING: nLine=',nLine_I(iPlotFile),&
+                         ' exceeds MaxLine=',MaxLine
+                    write(*,*)NameSub,' WARNING reducing nLine to MaxLine'
+                 end if
+                 nLine_I(iPlotFile) = MaxLine
+              end if
+              do i=1,nLine_I(iPlotFile)
+                 call read_var('xStartLine',XyzStartLine_DII(1,i,iPlotFile))
+                 call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
+                 call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
+                 call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
+              end do                                  !^CFG END RAYTRACE
            elseif (index(plot_string,'sph')>0)then    !^CFG IF NOT SIMPLE BEGIN
    	      plot_area='sph'
-	      call read_var('R_plot',plot_range(1,ifile))
+	      call read_var('Radius',plot_range(1,ifile))
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
               ! Line of sight vector
-              call read_var('los_vector(1)',los_vector(1,ifile))
-              call read_var('los_vector(2)',los_vector(2,ifile))
-              call read_var('los_vector(3)',los_vector(3,ifile))
+              call read_var('LosVectorX',los_vector(1,ifile))
+              call read_var('LosVectorY',los_vector(2,ifile))
+              call read_var('LosVectorZ',los_vector(3,ifile))
               ! read max dimensions of the 2d image plane
-              call read_var('x_size_image',x_size_image)
-              call read_var('y_size_image',y_size_image)
+              call read_var('xSizeImage',x_size_image)
+              call read_var('ySizeImage',y_size_image)
               ! read the position of image origin relative to grid origin
-              call read_var('xoffset',xoffset)
-              call read_var('yoffset',yoffset)
+              call read_var('xOffset',xoffset)
+              call read_var('yOffset',yoffset)
               ! read the occulting radius
-              call read_var('radius_occult',radius_occult)
+              call read_var('rOccult',radius_occult)
               ! read the limb darkening parameter
-              call read_var('mu_los',mu_los)
+              call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
-              call read_var('n_pix_X',n_pix_X)
-              call read_var('n_pix_Y',n_pix_Y)        !^CFG END SIMPLE
+              call read_var('nPixX',n_pix_X)
+              call read_var('nPixY',n_pix_Y)        !^CFG END SIMPLE
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
            else
@@ -521,7 +581,8 @@ subroutine MH_set_parameters(TypeAction)
                          +cTiny*(XyzMax_D(2)-XyzMin_D(2))&
                          /(nCells(2)*proc_dims(2)) 
                  case default
-                    call stop_mpi('Unknown geometry type = '//TypeGeometry)
+                    call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                         //TypeGeometry)
                  end select
                  !                                  ^CFG END CARTESIAN
               elseif(index(plot_string,'y=0')>0)then
@@ -547,7 +608,8 @@ subroutine MH_set_parameters(TypeAction)
                          +cTiny*(XyzMax_D(3)-XyzMin_D(3))&
                          /(nCells(3)*proc_dims(3)) 
                  case default
-                    call stop_mpi('Unknown geometry type = '//TypeGeometry)
+                    call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                         //TypeGeometry)
                  end select
                  !^CFG END CARTESIAN
               elseif(index(plot_string,'3d')>0)then
@@ -562,9 +624,10 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'idl')>0)then
               plot_form(ifile)='idl'
               if ((plot_area /= 'ion')&
-                   .and.(plot_area /= 'sph') .and. &        !^CFG IF NOT SIMPLE
-                   (plot_area /= 'los')  &                  !^CFG IF NOT SIMPLE
-                   ) call read_var('plot_dx',plot_dx(1,ifile))
+                   .and. plot_area /= 'sph' &        !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'los' &        !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
+                   ) call read_var('DxSavePlot',plot_dx(1,ifile))
               !                                     ^CFG IF NOT CARTESIAN BEGIN
               if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
                    plot_dx(1,ifile)=-1.0 
@@ -604,7 +667,8 @@ subroutine MH_set_parameters(TypeAction)
                  end do
                  plot_area='R=0'           ! to disable the write_plot_sph routine
               case default
-                 call stop_mpi('Unknown geometry type'//TypeGeometry)
+                 call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                      //TypeGeometry)
               end select                           !^CFG END CARTESIAN 
            end if                                  !^CFG END SIMPLE
 
@@ -612,8 +676,8 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
               plot_var='var'
               plot_dimensional(ifile) = index(plot_string,'VAR')>0
-              call read_var('plot_vars(ifile)',plot_vars(ifile))
-              call read_var('plot_pars(ifile)',plot_pars(ifile))
+              call read_var('NameVars',plot_vars(ifile))
+              call read_var('NamePars',plot_pars(ifile))
               !                                         ^CFG  IF RAYTRACE BEGIN
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
@@ -647,51 +711,209 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'SOL')>0
               plot_vars(ifile)='wl pb' ! white light
               plot_pars(ifile)='mu'
-           elseif(index(plot_string,'MIN')>0.or.index(plot_string,'min')>0)then
-              plot_var='min'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='minimum'
-              plot_pars(ifile)=' '
-           elseif(index(plot_string,'MAX')>0.or.index(plot_string,'max')>0)then
-              plot_var='max'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='maximum'
-              plot_pars(ifile)=' '
-           elseif(index(plot_string,'UAM')>0.or. &        !^CFG IF TIEGCM BEGIN
-                index(plot_string,'uam')>0)then
-              plot_var='uam'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='uam'
-              plot_pars(ifile)=' '                        !^CFG END TIEGCM
-           elseif(index(plot_string,'AUR')>0.or.index(plot_string,'aur')>0)then
-              plot_var='aur'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='aur'
-              plot_pars(ifile)=' '
+           elseif(index(plot_string,'pos')>0.or.index(plot_string,'POS')>0)then
+              plot_var='pos'
+              plot_dimensional(ifile) = index(plot_string,'POS')>0
+              if(plot_area /= 'lin')call stop_mpi(&
+                   'Variable "pos" can only be used with area "lin" !')
            else
-              call stop_mpi(&
-                   'Variable definition missing from plot_string='//plot_string)
+              call stop_mpi('Variable definition missing from plot_string=' &
+                   //plot_string)
            end if
 
            plot_type(ifile)=plot_area//'_'//plot_var
         end do
      case("#SAVEPLOTSAMR")
-        call read_var('save_plots_amr',save_plots_amr)
+        call read_var('DoSavePlotsAmr',save_plots_amr)
      case("#SAVEBINARY")
-        call read_var('save_binary',save_binary)
+        call read_var('DoSaveBinary',save_binary)
+
+     case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
+        if(index(NameCommand,"RESOLUTION")>0)then
+           call read_var('AreaResolution',AreaResolution)
+        else
+           call read_var('nLevelArea',nLevelArea)
+        end if
+        call read_var('NameArea',NameArea)
+        call lower_case(NameArea)
+
+        NameArea = adjustl(NameArea)
+
+        if(NameArea(1:4) == 'init')then
+           ! 'init' or 'initial' means that the initial resolution is set,
+           ! and no area is created. Replaces the #AMRINIT 'none' nlevel.
+           ! Convert resolution to level if necessary
+           if(index(NameCommand,"RESOLUTION")>0) &
+                nLevelArea = nint( &
+                alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
+                / AreaResolution) / alog(2.0) )
+
+           ! Set the initial levels and the refinement type to 'none'
+           initial_refine_levels = nLevelArea
+           InitialRefineType     = 'none'
+
+           ! No area is created, continue reading the parameters
+           CYCLE READPARAM
+        end if
+
+        ! Convert level to resolution if necessary
+        if(index(NameCommand,"LEVEL")>0) &
+             AreaResolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
+             / (proc_dims(x_) * nI * 2.0**nLevelArea)
+
+        nArea = nArea + 1
+        if(nArea > MaxArea)then
+           if(UseStrict)call stop_mpi(NameSub// &
+                ' ERROR: Too many grid areas were defined')
+           if(iProc == 0)then
+              write(*,*)NameSub," nArea = ",nArea
+              write(*,*)NameSub," WARNING: Too many grid areas were defined"
+              write(*,*)NameSub," ignoring command ",NameCommand
+           end if
+           nArea = MaxArea
+        end if
+
+        Area_I(nArea) % Resolution = AreaResolution
+
+        ! Set the default center to be the origin, 
+        ! the size to be 1 and no rotatoin
+        Area_I(nArea)%Center_D  = 0.0
+        Area_I(nArea)%Size_D    = 1.
+
+        ! Check for the word rotated in the name
+        i = index(NameArea,'rotated')
+        Area_I(nArea)%DoRotate = i > 0
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
+
+        ! Check for the character '0' in the name
+        i = index(NameArea,'0')
+        DoReadAreaCenter = i < 1
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
+
+        ! Remove leading spaces
+        NameArea = adjustl(NameArea)
+        Area_I(nArea)%Name = NameArea
+
+        ! Read center of area if needed
+        if(DoReadAreaCenter .and. &
+             NameArea /= 'all' .and. NameArea /= 'box') then
+           call read_var("xCenter",Area_I(nArea)%Center_D(1))
+           call read_var("yCenter",Area_I(nArea)%Center_D(2))
+           call read_var("zCenter",Area_I(nArea)%Center_D(3))
+        endif
+
+        select case(NameArea)
+        case("all")
+           ! No geometry info is needed for uniform refinement
+
+        case("box")
+           call read_var("xMinBox",XyzStartArea_D(1))
+           call read_var("yMinBox",XyzStartArea_D(2))
+           call read_var("zMinBox",XyzStartArea_D(3))
+           call read_var("xMaxBox",XyzEndArea_D(1))
+           call read_var("yMaxBox",XyzEndArea_D(2))
+           call read_var("zMaxBox",XyzEndArea_D(3))
+           ! Convert to center and size information
+           Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
+           Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
+
+           ! Overwrite name with brick
+           Area_I(nArea)%Name     = "brick"
+
+        case("brick")
+           call read_var("xSize", Area_I(nArea)%Size_D(1))
+           call read_var("ySize", Area_I(nArea)%Size_D(2))
+           call read_var("zSize", Area_I(nArea)%Size_D(3))
+
+           ! Area size is measured from the center: half of brick size
+           Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
+
+        case("shell")
+           call read_area_radii
+           Area_I(nArea)%Size_D = RadiusArea
+
+        case("sphere")
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D   = RadiusArea
+
+        case("ringx")
+           call read_var("Height", Area_I(nArea)%Size_D(1))
+           Area_I(nArea)%Size_D(1)     = 0.5*Area_I(nArea)%Size_D(1)
+           call read_area_radii
+           Area_I(nArea)%Size_D(2:3)   = RadiusArea
+
+        case("ringy")
+           call read_var("Height", Area_I(nArea)%Size_D(2))
+           Area_I(nArea)%Size_D(2)     = 0.5*Area_I(nArea)%Size_D(2)
+           call read_area_radii
+           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+
+        case("ringz")
+           call read_var("Height", Area_I(nArea)%Size_D(3))
+           Area_I(nArea)%Size_D(3)     = 0.5*Area_I(nArea)%Size_D(3)
+           call read_area_radii
+           Area_I(nArea)%Size_D(1:2)   = RadiusArea
+
+        case("cylinderx")
+           call read_var("Length", Area_I(nArea)%Size_D(1))
+           Area_I(nArea)%Size_D(1)     = 0.5 * Area_I(nArea)%Size_D(1)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(2:3)   = RadiusArea
+
+        case("cylindery")
+           call read_var("Length", Area_I(nArea)%Size_D(2))
+           Area_I(nArea)%Size_D(2)     = 0.5 * Area_I(nArea)%Size_D(2)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+
+        case("cylinderz")
+           call read_var("Length", Area_I(nArea)%Size_D(3))
+           Area_I(nArea)%Size_D(3)     = 0.5 * Area_I(nArea)%Size_D(3)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(1:2)   = RadiusArea
+
+        case default
+           if(UseStrict) call stop_mpi(NameSub//&
+                   ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
+
+           if(iProc == 0) &
+                write(*,*) NameSub//' WARNING: unknown NameArea=' // &
+                trim(Area_I(nArea)%Name) // ', ignoring command ' // &
+                trim(NameCommand)
+
+           nArea = nArea - 1
+           CYCLE READPARAM
+        end select
+
+        if(Area_I(nArea) % DoRotate)then
+
+           ! Read 3 angles for the rotation matrix in degrees
+           call read_var('xRotate',xRotateArea)
+           call read_var('yRotate',yRotateArea)
+           call read_var('zRotate',zRotateArea)
+
+           ! Rotation matrix rotates around X, Y and Z axes in this order
+           Area_I(nArea)%Rotate_DD = matmul( matmul( &
+                rot_matrix_z(-zRotateArea*cDegToRad), &
+                rot_matrix_y(-yRotateArea*cDegToRad)),&
+                rot_matrix_x(-xRotateArea*cDegToRad))
+
+           !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
+
+        end if
      case("#AMRLEVELS")
-        call read_var('min_block_level',min_block_level)
-        call read_var('max_block_level',max_block_level)
-        call read_var( 'fix_body_level', fix_body_level)    !^CFG IF NOT SIMPLE
+        call read_var('MinBlockLevel',min_block_level)
+        call read_var('MaxBlockLevel',max_block_level)
+        call read_var('DoFixBodyLevel',fix_body_level)    !^CFG IF NOT SIMPLE
         if(iSession==1)then
            DoSetLevels=.true.
         else
            call set_levels
         end if
      case("#AMRRESOLUTION")
-        call read_var('min_cell_dx',min_cell_dx)
-        call read_var('max_cell_dx',max_cell_dx)
-        call read_var('fix_body_level',fix_body_level)      !^CFG IF NOT SIMPLE
+        call read_var('DxCellMin',min_cell_dx)
+        call read_var('DxCellMax',max_cell_dx)
+        call read_var('DoFixBodyLevel',fix_body_level)      !^CFG IF NOT SIMPLE
         local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
         if    (max_cell_dx < -1.E-6) then
            min_block_level = -1
@@ -719,26 +941,26 @@ subroutine MH_set_parameters(TypeAction)
            call set_levels
         end if
      case("#AMR")
-        call read_var('dnRefine',dn_refine)
+        call read_var('DnRefine',dn_refine)
         if (dn_refine > 0)then
-                call read_var('DoAutomaticRefinement',automatic_refinement)
+           call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
-              call read_var('percentCoarsen',percentCoarsen)
-              call read_var('percentRefine' ,percentRefine)
+              call read_var('PercentCoarsen',percentCoarsen)
+              call read_var('PercentRefine' ,percentRefine)
               call read_var('MaxTotalBlocks',MaxTotalBlocks)
            end if
         end if
      case("#AMRINIT")
         !                                              ^CFG IF NOT SIMPLE BEGIN
-        call read_var('InitialRefineType',InitialRefineType)
-        call read_var('InitialRefineLevel',initial_refine_levels)
+        call read_var('TypeRefineInit'  ,InitialRefineType)
+        call read_var('nRefineLevelInit',initial_refine_levels)
         !                                              ^CFG END SIMPLE
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
         if(nRefineCrit<1 .or. nRefineCrit>3)&
              call stop_mpi('nRefineCrit must be 1,2,or 3')
         do i=1,nRefineCrit
-           call read_var('RefineCrit(i)',RefineCrit(i))
+           call read_var('TypeRefine',RefineCrit(i))
            !                                           ^CFG IF NOT SIMPLE BEGIN
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
               call read_var('TypeTransient_I(i)',TypeTransient_I(i))
@@ -755,11 +977,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         !                                              ^CFG IF NOT SIMPLE BEGIN
-        call read_var('FluxType',FluxType)
+        call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
-             call read_var('LimiterType',limiter_type)
-        if(limiter_type=='beta') call read_var('v_limiter_beta_param',&  
-             v_limiter_beta_param)
+             call read_var('TypeLimiter',limiter_type)
+        if(limiter_type=='beta') call read_var('LimiterBeta',&  
+             BetaLimiter)
         !                                              ^CFG END SIMPLE
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative) !^CFG IF NOT SIMPLE
@@ -770,40 +992,47 @@ subroutine MH_set_parameters(TypeAction)
            if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
            allocate( TypeConservCrit_I(nConservCrit) )
            do i=1,nConservCrit
-              call read_var('TypeConservCrit_I',TypeConservCrit_I(i) )
+              call read_var('TypeConservCrit',TypeConservCrit_I(i) )
+              call lower_case(TypeConservCrit_I(i))
               select case(TypeConservCrit_I(i))
                  !\
                  ! Geometry based criteria: 
-                 !    non-conservative scheme is used for r < rConserv
                  !/
-              case('R','r','radius','Radius')
+              case('r','radius')
+                 !    non-conservative scheme is used for r < rConserv
                  TypeConservCrit_I(i) = 'r'
                  call read_var('rConserv',rConserv)
+              case('parabola','paraboloid')
+                 !    non-conservative scheme is used for 
+                 !    x < xParabolaConserv - (y**2+z**2)/yParabolaConserv
+                 TypeConservCrit_I(i) = 'parabola'
+                 call read_var('xParabolaConserv',xParabolaConserv)
+                 call read_var('yParabolaConserv',yParabolaConserv)
                  !\
                  ! Physics based criteria
                  !/
-              case('p','P')
+              case('p')
                  ! Balsara/Ryu switch 1
-                 TypeConservCrit_I(i) = 'p'
                  call read_var('pCoeffConserv',pCoeffConserv)
-              case('GradP','gradp')
+              case('gradp')
                  ! Balsara/Ryu switch 2
-                 TypeConservCrit_I(i) = 'GradP'
                  call read_var('GradPCoeffConserv',GradPCoeffConserv)
               case default
                  if(UseStrict)then
-                    call stop_mpi('Error: unknown TypeConservCrit_I=' &
+                    call stop_mpi(NameSub//&
+                         ' ERROR: unknown TypeConservCrit_I=' &
                          //TypeConservCrit_I(i))
                  else
-                    if(iProc==0)write(*,*)&
-                         'Error: ignoring unknown TypeConservCrit_I=',&
-                         TypeConservCrit_I(i)
+                    if(iProc==0)write(*,'(a)') NameSub // &
+                         ' WARNING: ignoring unknown TypeConservCrit_I=',&
+                         trim(TypeConservCrit_I(i))//' !!!'
                  end if
               end select
               ! Check if the same criterion has been used before
               if(any(TypeConservCrit_I(1:i-1)==TypeConservCrit_I(i)))then
-                 if(iProc==0)write(*,*)'Warning: multiple use of criterion ',&
-                      TypeConservCrit_I(i)
+                 if(iProc==0)write(*,'(a)')NameSub // &
+                      ' WARNING: multiple use of criterion ',&
+                      trim(TypeConservCrit_I(i))
               end if
            end do
         end if
@@ -812,37 +1041,34 @@ subroutine MH_set_parameters(TypeAction)
         !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var("UseUpdateCheck",UseUpdateCheck)          
         if(UseUpdateCheck)then
-           call read_var("rhomin[%]", percent_max_rho(1))        
-           call read_var("rhomax[%]", percent_max_rho(2))
-           call read_var("Pmin[%]",   percent_max_p(1))
-           call read_var("Pmax[%]",   percent_max_p(2))
+           call read_var("RhoMinPercent", percent_max_rho(1))        
+           call read_var("RhoMaxPercent", percent_max_rho(2))
+           call read_var("pMinPercent",   percent_max_p(1))
+           call read_var("pMaxPercent",   percent_max_p(2))
         end if
         !                                              ^CFG END SIMPLE
      case("#PROLONGATION")
-        call read_var('prolong_order',prolong_order)  !^CFG IF NOT SIMPLE
-        call read_var('prolong_type' ,prolong_type)   !^CFG IF NOT SIMPLE
+        call read_var('nOrderProlong',prolong_order)  !^CFG IF NOT SIMPLE
+        call read_var('TypeProlong' ,prolong_type)   !^CFG IF NOT SIMPLE
      case("#MESSAGEPASS","#OPTIMIZE")
         !                                              ^CFG IF NOT SIMPLE BEGIN
         if(TypeGeometry=='cartesian') then               !^CFG IF NOT CARTESIAN
-           call read_var('OptimizeMessagePass'    ,optimize_message_pass)
+           call read_var('TypeMessagePass',optimize_message_pass)
            if(optimize_message_pass=='allold' .or.&
                 optimize_message_pass=='oldopt')then
-              if(iProc==0)then
-                 write(*,*)'=========================='
-                 write(*,*)'WARNING: message_pass mode=',optimize_message_pass
-                 write(*,*)'is not available in the compiled code.'
-                 write(*,*)'Optimize_message_pass = allopt is set'
-                 write(*,*)'=========================='
-              end if
+              if(iProc==0)write(*,'(a)')NameSub// &
+                   ' WARNING: message_pass mode='// &
+                   trim(optimize_message_pass)// &
+                   ' is not available any longer, allopt is set !!!'
               optimize_message_pass='allopt'
            end if
         end if                                           !^CFG IF NOT CARTESIAN
         !                                              ^CFG END SIMPLE
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
-        call read_var('boris_correction',boris_correction)   
+        call read_var('UseBorisCorrection',boris_correction)   
         if(boris_correction) then
-           call read_var('boris_cLIGHT_factor',boris_cLIGHT_factor)
+           call read_var('BorisClightFactor',boris_cLIGHT_factor)
            UseBorisSimple=.false.     !^CFG IF SIMPLEBORIS
         else
            boris_cLIGHT_factor = 1.0
@@ -851,7 +1077,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#BORISSIMPLE")                            !^CFG IF SIMPLEBORIS BEGIN
         call read_var('UseBorisSimple',UseBorisSimple)
         if(UseBorisSimple) then
-           call read_var('boris_cLIGHT_factor',boris_cLIGHT_factor)
+           call read_var('BorisClightFactor',boris_cLIGHT_factor)
            boris_correction=.false.                     !^CFG IF BORISCORR
         else
            boris_cLIGHT_factor = 1.0
@@ -870,14 +1096,16 @@ subroutine MH_set_parameters(TypeAction)
         !^CFG IF DIVBDIFFUSE BEGIN
         !^CFG IF PROJECTION BEGIN
         if (UseProjection.and.UseDivbSource.and.iProc==0) then
-           write(*,*)'Warning: using divbsource and projection together!'
+           write(*,'(a)')NameSub // &
+                ' WARNING: using divbsource and projection together !!!'
            if (UseStrict) call stop_mpi('Correct ')
         end if
         !^CFG END PROJECTION
         !^CFG END DIVBDIFFUSE
         !^CFG IF CONSTRAINB BEGIN
         if (UseConstrainB.and.UseDivbSource.and.iProc==0) then
-           write(*,*)'Warning: using divbsource and constrain B together!'
+           write(*,'(a)')NameSub // &
+                ' WARNING: using divbsource and constrain B together !!!'
            if (UseStrict) call stop_mpi('Correct ')
         end if
         !^CFG END CONSTRAINB
@@ -888,7 +1116,8 @@ subroutine MH_set_parameters(TypeAction)
              .and..not.UseConstrainB &      !^CFG IF CONSTRAINB
              .and..not.UseDivbDiffusion &   !^CFG IF DIVBDIFFUSE
              ) then
-           write(*,*) 'Warning: you should use some div B control method!'
+           write(*,*) NameSub // &
+                'WARNING: you should use some div B control method !!!'
            if (UseStrict) call stop_mpi('Correct PARAM.in!')
         end if
         ! Make sure that divbmax will be calculated      !^CFG IF PROJECTION
@@ -899,27 +1128,27 @@ subroutine MH_set_parameters(TypeAction)
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)   !^CFG IF NOT SIMPLE
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
-        call read_var('proj_method'   ,proj_method)
-        call read_var('proj_typestop ',proj_typestop)
-        call read_var('proj_divbcoeff',proj_divbcoeff)
-        call read_var('proj_divbconst',proj_divbconst)
-        call read_var('proj_matvecmax',proj_matvecmax)
+        call read_var('TypeProjectIter' ,proj_method)
+        call read_var('TypeProjectStop' ,proj_typestop)
+        call read_var('RelativeLimit'   ,proj_divbcoeff)
+        call read_var('AbsoluteLimit'   ,proj_divbconst)
+        call read_var('MaxMatvec'       ,proj_matvecmax)
         ! Make sure that DivbMax is recalculated
         DivbMax = -1.0                                !^CFG END PROJECTION
      case("#DIVBDIFFUSION")                           !^CFG IF DIVBDIFFUSE
-        call read_var('divb_diffcoeff',divb_diffcoeff)!^CFG IF DIVBDIFFUSE
+        call read_var('DivbDiffCoeff',divb_diffcoeff)!^CFG IF DIVBDIFFUSE
      case("#CORRECTP")                                !^CFG IF PROJECTION BEGIN
-        call read_var('Pratio_lo',Pratio_lo)
-        call read_var('Pratio_hi',Pratio_hi)
+        call read_var('pRatioLow',Pratio_lo)
+        call read_var('pRatioHigh',Pratio_hi)
         if(Pratio_lo>=Pratio_hi)&
-             call stop_mpi('Error: Pratio_lo>=Pratio_hi')
+             call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
         !                                              ^CFG END PROJECTION
      case("#SHOCKTUBE")                               !^CFG IF NOT SIMPLE BEGIN
         do i=1,nVar
-           call read_var('shock_Lstate',shock_Lstate(i))
+           call read_var('LeftState',shock_Lstate(i))
         end do
         do i=1,nVar
-           call read_var('shock_Rstate',shock_Rstate(i))
+           call read_var('RightState',shock_Rstate(i))
         end do
         call read_var('ShockSlope',ShockSlope)
         !                                              ^CFG END SIMPLE
@@ -927,25 +1156,29 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUpstreamInputFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
            read_new_upstream = .true.
-           call read_var('UpstreamFileName',UpstreamFileName)
-           call read_var('Satellite_Y_Pos',Satellite_Y_Pos)
-           call read_var('Satellite_Z_Pos',Satellite_Z_Pos)
+           call read_var('NameUpstreamFile',UpstreamFileName)
         end if
-     case("#RAYTRACE")                                  !^CFG IF RAYTRACE BEGIN
+        !                                               ^CFG IF RAYTRACE BEGIN
+     case("#RAYTRACE")
+        call read_var('UseAccurateIntegral',UseAccurateIntegral)
+        call read_var('UseAccurateTrace'   ,UseAccurateTrace)
+        if(UseAccurateTrace .and. .not. UseAccurateIntegral)then
+           if(iProc==0)then
+              write(*,'(a)')NameSub//' WARNING: '// &
+                   'UseAccurateTrace=T requires UseAccurateIntegral=T'
+              if(UseStrict)call stop_mpi('Correct PARAM.in!')
+              write(*,*)NameSub//' setting UseAccurateIntegral=T'
+           end if
+           UseAccurateIntegral = .true.
+        end if
         call read_var('DtExchangeRay',DtExchangeRay)
-!        call read_var('UseRayTrace',UseRayTrace)
-!        if(UseRayTrace)then
-!           call read_var('check_rayloop',check_rayloop)
-!           call read_var('dn_raytrace'  ,dn_raytrace)
-!           call read_var('R_raytrace'   ,R_raytrace)
-!           R2_raytrace=R_raytrace**2
-!        end if
-        !^CFG END RAYTRACE
+        call read_var('DnRaytrace',   DnRaytrace)
+        !                                              ^CFG END RAYTRACE
      case("#IM")                                      !^CFG IF RCM
         call read_var('TauCoupleIm',TauCoupleIm)      !^CFG IF RCM
      case("#MASSLOADING")                             !^CFG IF NOT SIMPLE BEGIN
         call read_var('UseMassLoading',UseMassLoading)
-        call read_var('AccelerateMassLoading',AccelerateMassLoading) 
+        call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
      case("#USER_FLAGS")             !^CFG IF USERFILES BEGIN
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
         call read_var('UseUserSource'           ,UseUserSource)
@@ -963,503 +1196,532 @@ subroutine MH_set_parameters(TypeAction)
      case("#USERINPUTBEGIN")        
         call user_read_inputs        !^CFG END USERFILES
         !                                              ^CFG END SIMPLE
-     case default
-        if(iSession == 1) then
-           !
-           ! These variables only make sense to input for the first session.
-           ! They will be ignored for any other session.
-           !
-           select case(NameCommand)
-           case("#CODEVERSION")
-              call read_var('CodeVersion',CodeVersionRead)
-              if(abs(CodeVersionRead-CodeVersion)>0.005.and.iProc==0)&
-                   write(*,'(a,f6.3,a,f6.3)')NameSub//&
-                   ' WARNING: CodeVersion in file=',CodeVersionRead,&
-                   ' but '//NameThisComp//' version is ',CodeVersion
-           case("#PRECISION")
-              call read_var('nByteReal',nByteRealRead)
-              if(nByteReal/=nByteRealRead.and.iProc==0)then
-                 write(*,'(a,i1,a)')'BATSRUS was compiled with ',nByteReal,&
-                      ' byte reals'
-                 call stop_mpi('ERROR: incorrect precision for reals')
-              end if
-           case("#EQUATION")
-              call read_var('NameEquation',NameEquationRead)
-              call read_var('nVar',        nVarRead)
-              if(NameEquationRead /= NameEquation .and. iProc==0)then
-                 write(*,'(a)')'BATSRUS was compiled with equation '// &
-                      NameEquation//' which is different from '// &
-                      NameEquationRead
-                 call stop_mpi(NameSub//&
-                      ' ERROR: incompatible equation names')
-              end if
-              if(nVarRead /= nVar .and. iProc==0)then
-                 write(*,'(a,i2,a,i2)')&
-                      'BATSRUS was compiled with nVar=',nVar, &
-                      ' which is different from nVarRead=',nVarRead
-                 call stop_mpi(NameSub//&
-                      ' ERROR: Incompatible number of variables')
-              end if
-           case("#PROBLEMTYPE")
-              !                                        ^CFG IF NOT SIMPLE BEGIN
-              call read_var('problem_type',problem_type_r) 
-              if(problem_type<0)then
-                 problem_type=problem_type_r
-                 if (problem_type==problem_dissipation) &
-                      call read_var('TypeProblemDiss',TypeProblemDiss)
-                 call set_problem_defaults
-              else if(problem_type/=problem_type_r) then
-                 if(iProc==0)write(*,*)'problem type already set to',&
-                      problem_type,' /=',problem_type_r
-                 call stop_mpi('PROBLEM TYPE CANNOT BE OVERWRITTEN !')
-              else
-                 if(iProc==0)write(*,'(a)')NameSub//&
-                      ' WARNING: probem type set twice!'
-              end if                                  !^CFG END SIMPLE
-           case("#RESTARTINDIR")
-              call read_var("NameRestartInDir",NameRestartInDir)
-              call fix_dir_name(NameRestartInDir)
-              if (iProc==0) call check_dir(NameRestartInDir)
-           case("#RESTARTOUTDIR")
-              call read_var("NameRestartOutDir",NameRestartOutDir)
-              call fix_dir_name(NameRestartOutDir)
-              if (iProc==0) call check_dir(NameRestartOutDir)
-           case("#PLOTDIR")
-              call read_var("NamePlotDir",NamePlotDir)
-              call fix_dir_name(NamePlotDir)
-              if (iProc==0) call check_dir(NamePlotDir)
-           case("#NEWRESTART")
-              restart=.true.
-              if (iProc==0) call check_dir(NameRestartInDir)
-              restart_reals=.true.
-              restart_ghost=.false.
-              call read_var('restart_Bface',restart_Bface) !^CFG IF CONSTRAINB
-           case("#BLOCKLEVELSRELOADED")
-              ! Sets logical for upgrade of restart files to include LEVmin and LEVmax
-              RestartBlockLevels=.true.
-           case("#SATELLITE")
-              call read_var('nsatellite',nsatellite)
-              if(nsatellite>0) save_satellite_data=.true.
-              if(save_satellite_data)then
-                 if(iProc==0) call check_dir(NamePlotDir)
-                 nfile=max(nfile,satellite_+nsatellite)
-                 if (nfile > maxfile .or. nsatellite > maxsatellitefile)&
-                      call stop_mpi(&
-                      'The number of output files is too large in #SATELLITE:'&
-                      //' nfile>maxfile .or. nsatellite>maxsatellitefile')
-
-                 do ifile=satellite_+1,satellite_+nsatellite
-                    call read_var('satellite_string',satellite_string)
-
-
-                    ! Satellite output frequency
-                    ! Note that we broke with tradition here so that the
-                    ! dt_output will always we read!  This may be changed
-                    ! in later distributions
-                    call read_var('dn_output',dn_output(ifile))
-                    call read_var('dt_output',dt_output(ifile))
-
-                    ! Satellite outputfile name or the satellite name
-                    call read_var('Satellite_name',&
-                         Satellite_name(ifile-satellite_))
-                    if(index(satellite_string,'eqn')>0 &
-                         .or. index(satellite_string,'Eqn')>0 .or. &
-                         index(satellite_string,'EQN')>0 ) then
-                       UseSatelliteFile(ifile-satellite_) = .false.
-                    else
-                       UseSatelliteFile(ifile-satellite_) = .true.
-                    end if
-
-                    ! Satellite variables
-                    if(index(satellite_string,'VAR')>0 .or. &
-                         index(satellite_string,'var')>0 )then
-                       satellite_var='var'
-                       plot_dimensional(ifile)= index(satellite_string,'VAR')>0
-         	       sat_time(ifile) = 'step date'
-                       call read_var('satellite_vars',satellite_vars(ifile))
-                    elseif(index(satellite_string,'MHD')>0 .or. &
-                         index(satellite_string,'mhd')>0)then
-                       satellite_var='mhd'
-                       plot_dimensional(ifile)= index(satellite_string,'MHD')>0
-         	       sat_time(ifile) = 'step date'
-                       satellite_vars(ifile)='rho ux uy uz bx by bz p jx jy jz'
-                    elseif(index(satellite_string,'FUL')>0 .or. &
-                         index(satellite_string,'ful')>0)then
-                       satellite_var='ful'
-                       plot_dimensional(ifile)= index(satellite_string,'FUL')>0
-         	       sat_time(ifile) = 'step date'
-                       satellite_vars(ifile)=&
-                            'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'
-                    else
-                       call stop_mpi(&
-                            'Variable definition (mhd,ful,var) missing' &
-                            //' from satellite_string='//satellite_string)
-                    end if
-                    plot_type(ifile) = "satellite"
-
-                    ! Determine the time output format to use in the 
-                    ! satellite files.  This is loaded by default above, 
-                    ! but can be input in the log_string line.
-                    if(index(satellite_string,'none')>0) then
-                       sat_time(ifile) = 'none'
-                    elseif((index(satellite_string,'step')>0) .or. &
-                         (index(satellite_string,'date')>0) .or. &
-                         (index(satellite_string,'time')>0)) then
-                       sat_time(ifile) = ''
-                       if(index(satellite_string,'step')>0) &
-                            sat_time(ifile) = 'step'
-                       if(index(satellite_string,'date')>0) &
-                            write(sat_time(ifile),'(a)') &
-                            sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                            //' date'
-                       if(index(satellite_string,'time')>0) &
-                            write(sat_time(ifile),'(a)') &
-                            sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                            //' time'
-                    end if
-
-                 end do
-                 call read_satellite_input_files
-              end if
-           case("#COVARIANTGEOMETRY")
-              !                                         ^CFG IF CARTESIAN BEGIN
-              call stop_mpi&
-                   ('Configure BATSRUS with CARTESIAN=OFF to use the command'&
-                   //NameCommand)
-              !                                         ^CFG END CARTESIAN 
-              !^CFG IF NOT CARTESIAN BEGIN
-              call read_var('TypeGeometry',TypeGeometry)      
-              select case(TypeGeometry)                                   
-              case('cartesian') 
-                 !^CFG IF FACEOUTERBC BEGIN
-              case('spherical','spherical_lnr')      
-                 automatic_refinement=.false.                  
-                 MaxBoundary = Top_
-                 if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
-                 DoFixExtraBoundary=.true.
-                 DoFixOuterBoundary=.true.
-              case('cylindrical')
-                 automatic_refinement=.false.
-                 MaxBoundary = max(MaxBoundary,North_)
-                 if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
-                 DoFixExtraBoundary=.true.
-                 DoFixOuterBoundary=.true.         
-                 !^CFG END FACEOUTERBC
-              case default
-                 call stop_mpi('Unknown geometry type = '//TypeGeometry)
-              end select
-              !^CFG END CARTESIAN 
-           case("#GRID")
-              !                                        ^CFG IF NOT SIMPLE BEGIN
-              call read_var('proc_dims(1)',proc_dims(1)) 
-              call read_var('proc_dims(2)',proc_dims(2))
-              call read_var('proc_dims(3)',proc_dims(3))
-              !^CFG IF NOT CARTESIAN BEGIN
-              if( (TypeGeometry=='spherical'.or.TypeGeometry=='cylindrical'&
-                   .or.TypeGeometry=='spherical_lnr')&
-                   .and.mod(proc_dims(2),2)==1) then
-                 proc_dims(2)=2*proc_dims(3)
-                 if(iProc==0)then
-                    write(*,*)&
-                         'Original number of blocks for the polar angle Phi must be even'
-                    write(*,*)&
-                         'Proc_dim(2) is set to be equal to 2*Proc_dim(3) = ',&
-                         proc_dims(2)
-                 end if
-              end if
-              !^CFG END CARTESIAN
-              if(product(proc_dims)>nBLK.and.iProc==0)then
-                 write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
-                 call stop_mpi('product(proc_dims) > nBLK!')
-              end if
-              call read_var('x1',x1)
-              call read_var('x2',x2)
-              call read_var('y1',y1)
-              call read_var('y2',y2)
-              call read_var('z1',z1)
-              call read_var('z2',z2)      !^CFG END SIMPLE
-              select case(TypeGeometry)   !^CFG IF NOT CARTESIAN
-              case('cartesian')           !^CFG IF NOT CARTESIAN
-                 call set_xyzminmax_cart  
-              case('spherical')           !^CFG IF NOT CARTESIAN BEGIN
-                 call set_xyzminmax_sph  
-              case('spherical_lnr')         
-                 call set_xyzminmax_sph2      
-              case('cylindrical')         
-                 call set_xyzminmax_cyl
-              case default
-                 call stop_mpi('Unknown geometry type'//TypeGeometry)
-              end select                  !^CFG END CARTESIAN
-
-              !case("#LIMITGENCOORD1")                   !^CFG IF NOT CARTESIAN
-              ! call read_var('XyzMin_D(1)',XyzMin_D(1)) !^CFG IF NOT CARTESIAN
-              ! call read_var('XyzMax_D(1)',XyzMax_D(1)) !^CFG IF NOT CARTESIAN
-           case("#CHECKGRIDSIZE")
-              call read_var('nI',nIJKRead_D(1))
-              call read_var('nJ',nIJKRead_D(2))
-              call read_var('nK',nIJKRead_D(3))
-              if(any(nCells/=nIJKRead_D).and.iProc==0)then
-                 write(*,*)'Code is compiled with nI,nJ,nK=',nCells
-                 call stop_mpi('Change nI,nJ,nK in ModSize.f90 and recompile!')
-              end if
-              call read_var('MinBlockALL',qtotal)
-              if(qtotal>nBLK*nProc .and. iProc==0)then
-                 write(*,*)'nBLK*nProc=',nBLK*nProc
-                 call stop_mpi('Use more processors'//&
-                      ' or increase nBLK in ModSize and recompile!')
-              end if
-           case("#AMRINITPHYSICS")
-              call read_var('nRefineLevelIC',nRefineLevelIC)
-           case("#GAMMA")
-              call read_var('gamma',g)
-              !\
-              ! Compute gamma related values.
-              !/
-              gm1     = g-cOne
-              gm2     = g-cTwo
-              gp1     = g+cOne
-              inv_g   = cOne/g
-              inv_gm1 = cOne/gm1
-              g_half  = cHalf*g
-           case('#EXTRABOUNDARY')                   !^CFG IF USERFILES BEGIN
-              call read_var('UseExtraBoundary',UseExtraBoundary)
-              if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
-                   TypeBc_I(ExtraBc_))      
-              !                                      ^CFG IF FACEOUTERBC BEGIN
-              if(TypeGeometry=='cartesian')&             !^CFG IF NOT CARTESIAN
-                   call read_var('DoFixExtraBoundary',&  
-                   DoFixExtraBoundary)  
-              !                                      ^CFG END FACEOUTERBC
-              !                                      ^CFG END USERFILES
-           case('#FACEOUTERBC')                      !^CFG IF FACEOUTERBC BEGIN
-              call read_var('MaxBoundary',MaxBoundary)
-              !^CFG IF NOT CARTESIAN BEGIN
-              select case(TypeGeometry)
-              case('spherical','spherical_lnr')
-                 MaxBoundary = Top_
-              case('cylindrical')
-                 MaxBoundary = max(MaxBoundary,North_)
-              end select
-              !^CFG END CARTESIAN
-              if(MaxBoundary>=East_)&
-                   call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
-              !                                       ^CFG END FACEOUTERBC 
-           case("#SOLARWIND")
-              call read_var('SW_rho_dim',SW_rho_dim)
-              call read_var('SW_T_dim'  ,SW_T_dim)
-              call read_var('SW_Ux_dim' ,SW_Ux_dim)
-              call read_var('SW_Uy_dim' ,SW_Uy_dim)
-              call read_var('SW_Uz_dim' ,SW_Uz_dim)
-              call read_var('SW_Bx_dim' ,SW_Bx_dim)
-              call read_var('SW_By_dim' ,SW_By_dim)
-              call read_var('SW_Bz_dim' ,SW_Bz_dim)
-           case("#MAGNETOSPHERE","#BODY")
-              call read_var('body1',body1)            !^CFG IF NOT SIMPLE BEGIN
-              if(body1)then
-                 call read_var('Rbody'     ,Rbody)
-                 call read_var('Rcurrents' ,Rcurrents)
-                 call read_var('BodyRhoDim',Body_Rho_Dim)
-                 call read_var('BodyTDim'  ,Body_T_dim)
-              end if                                  !^CFG END SIMPLE
-           case("#GRAVITY")
-              call read_var('UseGravity',UseGravity)        !^CFG IF NOT SIMPLE
-              if(UseGravity)call read_var('GravityDir',GravityDir) !^CFG IF NOT SIMPLE
-           case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
-              call read_var('UseBody2',UseBody2)
-              if(UseBody2)then
-                 call read_var('rBody2',rBody2)
-                 call read_var('xBody2',xBody2)
-                 call read_var('yBody2',yBody2)
-                 call read_var('zBody2',zBody2)
-                 call read_var('rCurrentsBody2',rCurrentsBody2)
-                 call read_var('RhoDimBody2',RhoDimBody2)
-                 call read_var('tDimBody2'  ,tDimBody2)
-              end if
-           case("#DIPOLEBODY2")
-              call read_var('BdpDimBody2x',BdpDimBody2_D(1))
-              call read_var('BdpDimBody2y',BdpDimBody2_D(2))
-              call read_var('BdpDimBody2z',BdpDimBody2_D(3))
-              !                                           ^CFG END SECONDBODY
-
-           case('#UPDATEB0')
-
-              call check_stand_alone
-              call read_var('DtUpdateB0',Dt_UpdateB0)
-              if(UseNewAxes)DtUpdateB0 = Dt_UpdateB0
-
-           case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-                '#ROTATION','#NONDIPOLE')
-
-              call check_stand_alone
-
-              if(.not.UseNewAxes .and. iProc==0) &
-                 call stop_mpi(NameSub//': ERROR command '// &
-                 trim(NameCommand)//' cannot be used with UseNewAxes=F')
-
-              call read_planet_var(NameCommand)
-
-           case("#COROTATION","#AXES")
-
-              call check_stand_alone
-
-              if(UseNewAxes .and. iProc==0) &
-                 call stop_mpi(NameSub//': ERROR command '// &
-                 trim(NameCommand)//' cannot be used with UseNewAxes=T')
-
-              call read_compatible_command(NameCommand)
-
-           case("#DIPOLE")
-
-              call check_stand_alone
-
-              if(UseNewAxes)then
-                 call read_planet_var(NameCommand)
-              else
-                 call read_compatible_command(NameCommand)
-              end if
-
-           case("#COORDSYSTEM")
-              call read_var('TypeCoordSystem',TypeCoordSystem)
-              call upper_case(TypeCoordSystem)
-              select case(NameThisComp)
-              case('GM')
-                 if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
-                      ' GM_ERROR: cannot handle coordinate system '&
-                      //TypeCoordSystem)
-              case('IH')
-                 if(TypeCoordSystem /= 'HGI')call stop_mpi(NameSub// &
-                      ' IH_ERROR: cannot handle coordinate system '&
-                      //TypeCoordSystem)
-              end select
-           case("#NSTEP")
-              call read_var('n_step',n_step)
-           case("#NPREVIOUS")
-              call read_var('nPrev',n_prev)             !^CFG IF IMPLICIT
-              call read_var('DtPrev',dt_prev)           !^CFG IF IMPLICIT
-           case("#STARTTIME", "#SETREALTIME")
-              call read_var('year'  ,iStartTime_I(1))
-              call read_var('month' ,iStartTime_I(2))
-              call read_var('day'   ,iStartTime_I(3))
-              call read_var('hour'  ,iStartTime_I(4))
-              call read_var('minute',iStartTime_I(5))
-              call read_var('second',iStartTime_I(6))
-              iStartTime_I(7) = 0
-              if(IsStandAlone)then
-                 call time_int_to_real(iStartTime_I, StartTime)
-              else
-                 ! Check if things work out or not
-                 call time_int_to_real(iStartTime_I, StartTimeCheck)
-                 call get_physics(tStartOut = StartTime)
-                 if(abs(StartTime - StartTimeCheck) > 0.001)then
-                    write(*,*)NameSub//' WARNING: GM::StartTimeCheck=', &
-                         StartTimeCheck,' differs from CON::StartTime=', &
-                         StartTime
-                    if(UseStrict)call stop_mpi(&
-                         'Fix #STARTTIME commands in PARAM.in')
-                 end if
-              end if
-           case("#TIMESIMULATION")
-              if(IsStandAlone) &
-                   call read_var('tSimulation',time_simulation)
-                 !                                    ^CFG IF NOT SIMPLE BEGIN
-           case("#HELIOSPHERE")
-              call read_var('Tsun' ,Body_T_dim)
-              call read_var('NDsun',Body_rho_dim)
-              call read_var('Qsun' ,Qsun)
-              call read_var('Theat',Theat)
-              call read_var('Rheat',Rheat)
-              call read_var('SIGMAheat',SIGMAheat)
-              call read_var('UseFluxRope',UseFluxRope)
-              if(UseFluxRope)then
-                 call read_var('cme_a' ,cme_a)
-                 call read_var('cme_r1',cme_r1)
-                 call read_var('cme_r0',cme_r0)
-                 call read_var('cme_a1',cme_a1)
-                 call read_var('cme_alpha',cme_alpha)
-                 call read_var('cme_rho1',cme_rho1)
-                 call read_var('cme_rho2',cme_rho2)
-                 call read_var('ModulationRho',ModulationRho)
-                 call read_var('ModulationP',ModulationP)
-                 call read_var('cRot_x_GL98'  ,cRot_x_GL98)
-                 call read_var('cRot_y_GL98'  ,cRot_y_GL98)
-                 call read_var('cRot_z_GL98'  ,cRot_z_GL98)
-              end if
-           case("#HELIODIPOLE")
-              call read_var('HelioDipoleStrength',Bdp_dim)
-              call read_var('HelioDipoleTilt'    ,ThetaTilt)
-              ThetaTilt = ThetaTilt * cDegToRad
-           case("#HELIOROTATION", "#INERTIAL")
-              call read_var('UseInertialFrame',UseInertial)
-              UseRotatingFrame = .not.UseInertial
-              if(UseInertial)then
-                 call read_var('UseRotatingBC',UseCorotation)
-              else
-                 ! In the corotating frame the inner BC does not rotate
-                 UseCorotation=.false.
-              end if
-           case("#HELIOTEST")
-              call read_var('DoSendMHD',DoSendMHD)
-           case("#ARCADE")
-              call read_var('TArcDim'  ,TArcDim)
-              call read_var('RhoArcDim',RhoArcDim)
-              call read_var('BArcDim'  ,BArcDim)
-              call read_var('ByArcDim' ,ByArcDim)
-              call read_var('UzArcDim' ,UzArcDim)
-              call read_var('phi0Arc'  ,phi0Arc)
-              call read_var('muArc'    ,muArc)
-              call read_var('expArc'   ,expArc)
-              call read_var('widthArc' ,widthArc)
-           case("#CME")
-              call read_var('cme_type',cme_type)
-              call read_var('cme_a' ,cme_a)
-              call read_var('cme_r1',cme_r1)
-              call read_var('cme_r0',cme_r0)
-              call read_var('cme_a1',cme_a1)
-              call read_var('cme_alpha',cme_alpha)
-              call read_var('cme_rho1',cme_rho1)
-              call read_var('cme_rho2',cme_rho2)
-              call read_var('cme_B1_dim',cme_B1_dim)
-              call read_var('cme_v_erupt',cme_v_erupt)
-           case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
-              call read_var('UseDefaultUnits',UseDefaultUnits)
-              call read_var('Grav0Diss'      ,Grav0Diss)
-              call read_var('Beta0Diss'      ,Beta0Diss)
-              call read_var('Length0Diss'    ,Length0Diss)
-              call read_var('Time0Diss'      ,Time0Diss)
-              call read_var('Rho0Diss'       ,Rho0Diss)
-              call read_var('Tem0Diss'       ,Tem0Diss)
-              call read_var('ThetaDiss'      ,ThetaDiss)
-              call read_var('DeltaDiss'      ,DeltaDiss)
-              call read_var('EpsilonDiss'    ,EpsilonDiss)
-              call read_var('RhoDifDiss'     ,RhoDifDiss)
-              call read_var('yShiftDiss'     ,yShiftDiss)
-              call read_var('scaleHeightDiss',scaleHeightDiss)
-              call read_var('scaleFactorDiss',scaleFactorDiss)
-              call read_var('BZ0Diss'        ,BZ0Diss)
-              !                                             ^CFG END DISSFLUX
-           case("#COMET")
-              call read_var('Qprod' ,Qprod)
-              call read_var('Unr_in' ,Unr_in)
-              call read_var('mbar',mbar)
-              call read_var('ionization_rate',ionization_rate)
-              call read_var('kin_in',kin_in)                              
-              !                                            ^CFG END SIMPLE
-           case default
-              if(iProc==0) then
-                 write(*,*) 'Invalid #COMMAND, unknown. '//NameCommand
-                 if(UseStrict)call stop_mpi('Correct PARAM.in!')
-              end if
-           end select
+     case("#CODEVERSION")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('CodeVersion',CodeVersionRead)
+        if(abs(CodeVersionRead-CodeVersion)>0.005.and.iProc==0)&
+             write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
+             ' WARNING: CodeVersion in file=',CodeVersionRead,&
+             ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
+     case("#PRECISION")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nByteReal',nByteRealRead)
+        if(nByteReal/=nByteRealRead.and.iProc==0)then
+           write(*,'(a,i1,a)')'BATSRUS was compiled with ',nByteReal,&
+                ' byte reals'
+           call stop_mpi(NameSub//' ERROR: incorrect precision for reals')
+        end if
+     case("#EQUATION")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('NameEquation',NameEquationRead)
+        call read_var('nVar',        nVarRead)
+        if(NameEquationRead /= NameEquation .and. iProc==0)then
+           write(*,'(a)')'BATSRUS was compiled with equation '// &
+                NameEquation//' which is different from '// &
+                NameEquationRead
+           call stop_mpi(NameSub//' ERROR: incompatible equation names')
+        end if
+        if(nVarRead /= nVar .and. iProc==0)then
+           write(*,'(a,i2,a,i2)')&
+                'BATSRUS was compiled with nVar=',nVar, &
+                ' which is different from nVarRead=',nVarRead
+           call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
+        end if
+     case("#PROBLEMTYPE")
+        if(.not.is_first_session())CYCLE READPARAM
+        !                                        ^CFG IF NOT SIMPLE BEGIN
+        call read_var('iProblemType',problem_type_r) 
+        if(problem_type<0)then
+           problem_type=problem_type_r
+           if (problem_type==problem_dissipation) &
+                call read_var('TypeProblemDiss',TypeProblemDiss)
+           call set_problem_defaults
+        else if(problem_type/=problem_type_r) then
+           if(iProc==0)write(*,*)'problem type already set to',&
+                problem_type,' /=',problem_type_r
+           call stop_mpi('PROBLEM TYPE CANNOT BE OVERWRITTEN !')
         else
-           if(iProc==0) then
+           if(iProc==0)write(*,'(a)')NameSub // &
+                ' WARNING: problem type set twice !!!'
+        end if                                  !^CFG END SIMPLE
+     case("#RESTARTINDIR")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var("NameRestartInDir",NameRestartInDir)
+        call fix_dir_name(NameRestartInDir)
+        if (iProc==0) call check_dir(NameRestartInDir)
+     case("#RESTARTOUTDIR")
+        call read_var("NameRestartOutDir",NameRestartOutDir)
+        call fix_dir_name(NameRestartOutDir)
+        if (iProc==0) call check_dir(NameRestartOutDir)
+     case("#PLOTDIR")
+        call read_var("NamePlotDir",NamePlotDir)
+        call fix_dir_name(NamePlotDir)
+        if (iProc==0) call check_dir(NamePlotDir)
+     case("#NEWRESTART")
+        if(.not.is_first_session())CYCLE READPARAM
+        restart=.true.
+        restart_reals=.true.
+        restart_ghost=.false.
+        call read_var('DoRestartBFace',restart_Bface) !^CFG IF CONSTRAINB
+     case("#BLOCKLEVELSRELOADED")
+        if(.not.is_first_session())CYCLE READPARAM
+        ! Sets logical for upgrade of restart files 
+        ! to include LEVmin and LEVmax
+        RestartBlockLevels=.true.
+     case("#SATELLITE")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nSatellite',nsatellite)
+        if(nSatellite <= 0) CYCLE READPARAM
+        save_satellite_data=.true.
+        DoReadSatelliteFiles=.true.
+        if(iProc==0) call check_dir(NamePlotDir)
+        nFile = max(nFile, satellite_ + nSatellite)
+        if (nFile > MaxFile .or. nSatellite > MaxSatelliteFile)&
+             call stop_mpi(&
+             'The number of output files is too large in #SATELLITE:'&
+             //' nFile > MaxFile .or. nSatellite > MaxSatelliteFile')
+
+        do iFile = satellite_+1, satellite_ + nSatellite
+           call read_var('StringSatellite',satellite_string)
+
+           ! Satellite output frequency
+           ! Note that we broke with tradition here so that the
+           ! dt_output will always we read!  This may be changed
+           ! in later distributions
+           call read_var('DnOutput',dn_output(ifile))
+           call read_var('DtOutput',dt_output(ifile))
+
+           ! Satellite inputfile name or the satellite name
+           call read_var('NameTrajectoryFile',&
+                Satellite_name(ifile-satellite_))
+           if(index(satellite_string,'eqn')>0 &
+                .or. index(satellite_string,'Eqn')>0 .or. &
+                index(satellite_string,'EQN')>0 ) then
+              UseSatelliteFile(ifile-satellite_) = .false.
+           else
+              UseSatelliteFile(ifile-satellite_) = .true.
+           end if
+
+           ! Satellite variables
+           if(index(satellite_string,'VAR')>0 .or. &
+                index(satellite_string,'var')>0 )then
+              satellite_var='var'
+              plot_dimensional(ifile)= index(satellite_string,'VAR')>0
+              sat_time(ifile) = 'step date'
+              call read_var('NameSatelliteVars',satellite_vars(ifile))
+           elseif(index(satellite_string,'MHD')>0 .or. &
+                index(satellite_string,'mhd')>0)then
+              satellite_var='mhd'
+              plot_dimensional(ifile)= index(satellite_string,'MHD')>0
+              sat_time(ifile) = 'step date'
+              satellite_vars(ifile)='rho ux uy uz bx by bz p jx jy jz'
+           elseif(index(satellite_string,'FUL')>0 .or. &
+                index(satellite_string,'ful')>0)then
+              satellite_var='ful'
+              plot_dimensional(ifile)= index(satellite_string,'FUL')>0
+              sat_time(ifile) = 'step date'
+              satellite_vars(ifile)=&
+                   'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'
+           else
+              call stop_mpi(&
+                   'Variable definition (mhd,ful,var) missing' &
+                   //' from satellite_string='//satellite_string)
+           end if
+           plot_type(ifile) = "satellite"
+
+           ! Determine the time output format to use in the 
+           ! satellite files.  This is loaded by default above, 
+           ! but can be input in the log_string line.
+           if(index(satellite_string,'none')>0) then
+              sat_time(ifile) = 'none'
+           elseif((index(satellite_string,'step')>0) .or. &
+                (index(satellite_string,'date')>0) .or. &
+                (index(satellite_string,'time')>0)) then
+              sat_time(ifile) = ''
+              if(index(satellite_string,'step')>0) &
+                   sat_time(ifile) = 'step'
+              if(index(satellite_string,'date')>0) &
+                   write(sat_time(ifile),'(a)') &
+                   sat_time(ifile)(1:len_trim(sat_time(ifile)))&
+                   //' date'
+              if(index(satellite_string,'time')>0) &
+                   write(sat_time(ifile),'(a)') &
+                   sat_time(ifile)(1:len_trim(sat_time(ifile)))&
+                   //' time'
+           end if
+
+        end do
+     case("#COVARIANTGEOMETRY")
+        !                                         ^CFG IF CARTESIAN BEGIN
+        call stop_mpi&
+             ('Configure BATSRUS with CARTESIAN=OFF to use the command'&
+             //NameCommand)
+        !                                         ^CFG END CARTESIAN 
+        !^CFG IF NOT CARTESIAN BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('TypeGeometry',TypeGeometry)      
+        select case(TypeGeometry)                                   
+        case('cartesian') 
+           !^CFG IF FACEOUTERBC BEGIN
+        case('spherical','spherical_lnr')      
+           automatic_refinement=.false.                  
+           MaxBoundary = Top_
+           if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
+           DoFixExtraBoundary=.true.
+           DoFixOuterBoundary=.true.
+        case('cylindrical')
+           automatic_refinement=.false.
+           MaxBoundary = max(MaxBoundary,North_)
+           if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
+           DoFixExtraBoundary=.true.
+           DoFixOuterBoundary=.true.         
+           !^CFG END FACEOUTERBC
+        case default
+           call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                //TypeGeometry)
+        end select
+        !^CFG END CARTESIAN 
+     case("#GRID")
+        !                                        ^CFG IF NOT SIMPLE BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nRootBlockX',proc_dims(1)) 
+        call read_var('nRootBlockY',proc_dims(2))
+        call read_var('nRootBlockZ',proc_dims(3))
+        !^CFG IF NOT CARTESIAN BEGIN
+        if( (TypeGeometry=='spherical'.or.TypeGeometry=='cylindrical'&
+             .or.TypeGeometry=='spherical_lnr')&
+             .and.mod(proc_dims(2),2)==1) then
+           proc_dims(2)=2*proc_dims(3)
+           if(iProc==0)then
               write(*,*)&
-                   'Invalid #COMMAND, either unknown or first session only. ' &
-                   //NameCommand
-              if(UseStrict)call stop_mpi('Correct PARAM.in!')
+                   'Original number of blocks for the polar angle Phi must be even'
+              write(*,*)&
+                   'Proc_dim(2) is set to be equal to 2*Proc_dim(3) = ',&
+                   proc_dims(2)
            end if
         end if
+        !^CFG END CARTESIAN
+        if(product(proc_dims)>nBLK.and.iProc==0)then
+           write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
+           call stop_mpi('product(proc_dims) > nBLK!')
+        end if
+        call read_var('xMin',x1)
+        call read_var('xMax',x2)
+        call read_var('yMin',y1)
+        call read_var('yMax',y2)
+        call read_var('zMin',z1)
+        call read_var('zMax',z2)      !^CFG END SIMPLE
+        select case(TypeGeometry)   !^CFG IF NOT CARTESIAN
+        case('cartesian')           !^CFG IF NOT CARTESIAN
+           call set_xyzminmax_cart  
+        case('spherical')           !^CFG IF NOT CARTESIAN BEGIN
+           call set_xyzminmax_sph  
+        case('spherical_lnr')         
+           call set_xyzminmax_sph2      
+        case('cylindrical')         
+           call set_xyzminmax_cyl
+        case default
+           call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                //TypeGeometry)
+        end select                  !^CFG END CARTESIAN
+
+        !case("#LIMITGENCOORD1")                   !^CFG IF NOT CARTESIAN
+        ! call read_var('XyzMin_D(1)',XyzMin_D(1)) !^CFG IF NOT CARTESIAN
+        ! call read_var('XyzMax_D(1)',XyzMax_D(1)) !^CFG IF NOT CARTESIAN
+     case("#CHECKGRIDSIZE")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nI',nIJKRead_D(1))
+        call read_var('nJ',nIJKRead_D(2))
+        call read_var('nK',nIJKRead_D(3))
+        if(any(nCells/=nIJKRead_D).and.iProc==0)then
+           write(*,*)'Code is compiled with nI,nJ,nK=',nCells
+           call stop_mpi('Change nI,nJ,nK in ModSize.f90 and recompile!')
+        end if
+        call read_var('MinBlockALL',qtotal)
+        if(qtotal>nBLK*nProc .and. iProc==0)then
+           write(*,*)'nBLK*nProc=',nBLK*nProc
+           call stop_mpi('Use more processors'//&
+                ' or increase nBLK in ModSize and recompile!')
+        end if
+     case("#AMRINITPHYSICS")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nRefineLevelIC',nRefineLevelIC)
+     case("#GAMMA")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('Gamma',g)
+        !\
+        ! Compute gamma related values.
+        !/
+        gm1     = g-cOne
+        gm2     = g-cTwo
+        gp1     = g+cOne
+        inv_g   = cOne/g
+        inv_gm1 = cOne/gm1
+        g_half  = cHalf*g
+     case('#EXTRABOUNDARY')                   !^CFG IF USERFILES BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseExtraBoundary',UseExtraBoundary)
+        if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
+             TypeBc_I(ExtraBc_))      
+        !                                      ^CFG IF FACEOUTERBC BEGIN
+        if(TypeGeometry=='cartesian')&             !^CFG IF NOT CARTESIAN
+             call read_var('DoFixExtraBoundary',&  
+             DoFixExtraBoundary)  
+        !                                      ^CFG END FACEOUTERBC
+        !                                      ^CFG END USERFILES
+     case('#FACEOUTERBC')                      !^CFG IF FACEOUTERBC BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('MaxBoundary',MaxBoundary)
+        !^CFG IF NOT CARTESIAN BEGIN
+        select case(TypeGeometry)
+        case('spherical','spherical_lnr')
+           MaxBoundary = Top_
+        case('cylindrical')
+           MaxBoundary = max(MaxBoundary,North_)
+        end select
+        !^CFG END CARTESIAN
+        if(MaxBoundary>=East_)&
+             call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
+        !                                       ^CFG END FACEOUTERBC 
+     case("#SOLARWIND")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('SwRhoDim',SW_rho_dim)
+        call read_var('SwTDim'  ,SW_T_dim)
+        call read_var('SwUxDim' ,SW_Ux_dim)
+        call read_var('SwUyDim' ,SW_Uy_dim)
+        call read_var('SwUzDim' ,SW_Uz_dim)
+        call read_var('SwBxDim' ,SW_Bx_dim)
+        call read_var('SwByDim' ,SW_By_dim)
+        call read_var('SwBzDim' ,SW_Bz_dim)
+     case("#MAGNETOSPHERE","#BODY")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseBody',body1)            !^CFG IF NOT SIMPLE BEGIN
+        if(body1)then
+           call read_var('rBody'     ,Rbody)
+           if(NameThisComp=='GM')then
+              call read_var('rCurrents' ,Rcurrents)
+              call read_var('BodyRhoDim',Body_Rho_Dim)
+              call read_var('BodyTDim'  ,Body_T_dim)
+           end if
+        end if                                  !^CFG END SIMPLE
+     case("#GRAVITY")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseGravity',UseGravity)        !^CFG IF NOT SIMPLE
+        if(UseGravity)call read_var('iDirGravity',GravityDir) !^CFG IF NOT SIMPLE
+     case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseBody2',UseBody2)
+        if(UseBody2)then
+           call read_var('rBody2',rBody2)
+           call read_var('xBody2',xBody2)
+           call read_var('yBody2',yBody2)
+           call read_var('zBody2',zBody2)
+           call read_var('rCurrentsBody2',rCurrentsBody2)
+           call read_var('RhoDimBody2',RhoDimBody2)
+           call read_var('tDimBody2'  ,tDimBody2)
+        end if
+     case("#DIPOLEBODY2")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('BdpDimBody2x',BdpDimBody2_D(1))
+        call read_var('BdpDimBody2y',BdpDimBody2_D(2))
+        call read_var('BdpDimBody2z',BdpDimBody2_D(3))
+        !                                           ^CFG END SECONDBODY
+
+     case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
+          '#ROTATION','#NONDIPOLE','#UPDATEB0')
+
+        call check_stand_alone
+        if(.not.is_first_session())CYCLE READPARAM
+
+        if(.not.UseNewAxes .and. iProc==0) &
+             call stop_mpi(NameSub//': ERROR command '// &
+             trim(NameCommand)//' cannot be used with UseNewAxes=F')
+
+        call read_planet_var(NameCommand)
+
+     case("#COROTATION","#AXES")
+
+        call check_stand_alone
+        if(.not.is_first_session())CYCLE READPARAM
+
+        if(UseNewAxes .and. iProc==0) &
+             call stop_mpi(NameSub//': ERROR command '// &
+             trim(NameCommand)//' cannot be used with UseNewAxes=T')
+
+        call read_compatible_command(NameCommand)
+
+     case("#DIPOLE")
+
+        call check_stand_alone
+        if(.not.is_first_session())CYCLE READPARAM
+
+        if(UseNewAxes)then
+           call read_planet_var(NameCommand)
+        else
+           call read_compatible_command(NameCommand)
+        end if
+
+     case("#COORDSYSTEM")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('TypeCoordSystem',TypeCoordSystem)
+        call upper_case(TypeCoordSystem)
+        select case(NameThisComp)
+        case('GM')
+           if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
+                ' ERROR: cannot handle coordinate system '&
+                //TypeCoordSystem)
+        case('IH')
+           select case(TypeCoordSystem)
+           case('HGI')
+              UseInertial = .true.
+           case('HGR')
+              if(iProc==0)then
+                 write(*,*) NameSub, &
+                      ' WARNING: corotating IH does not fully work'
+                 if(UseStrict)call stop_mpi('Correct PARAM.in!')
+                 write(*,*)NameSub//' setting UseInertial = T'
+              end if
+              UseInertial = .false.
+           case default
+              call stop_mpi(NameSub// &
+                   ' ERROR: cannot handle coordinate system '&
+                   //TypeCoordSystem)
+           end select
+        case('SC')
+           select case(TypeCoordSystem)
+           case('HGR')
+              UseInertial = .false.
+           case('HGI')
+              if(iProc==0) write(*,*) NameSub,&
+                      ' WARNING: inertial SC is less accurate'
+              UseInertial = .true.
+           case default
+              call stop_mpi(NameSub// &
+                   ' ERROR: cannot handle coordinate system '&
+                   //TypeCoordSystem)
+           end select
+        end select
+        UseRotatingFrame = .not.UseInertial
+     case("#NSTEP")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nStep',n_step)
+     case("#NPREVIOUS")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('nPrev',n_prev)             !^CFG IF IMPLICIT
+        call read_var('DtPrev',dt_prev)           !^CFG IF IMPLICIT
+     case("#STARTTIME", "#SETREALTIME")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('iYear'  ,iStartTime_I(1))
+        call read_var('iMonth' ,iStartTime_I(2))
+        call read_var('iDay'   ,iStartTime_I(3))
+        call read_var('iHour'  ,iStartTime_I(4))
+        call read_var('iMinute',iStartTime_I(5))
+        call read_var('iSecond',iStartTime_I(6))
+        iStartTime_I(7) = 0
+        if(IsStandAlone)then
+           call time_int_to_real(iStartTime_I, StartTime)
+        else
+           ! Check if things work out or not
+           call time_int_to_real(iStartTime_I, StartTimeCheck)
+        end if
+     case("#TIMESIMULATION")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('tSimulation',time_simulation)
+        !                                    ^CFG IF NOT SIMPLE BEGIN
+     case("#HELIOSPHERE")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('BodyTDim' ,Body_T_dim)
+        call read_var('BodyRhoDim',Body_rho_dim)
+        call read_var('qSun' ,Qsun)
+        call read_var('tHeat',Theat)
+        call read_var('rHeat',Rheat)
+        call read_var('SigmaHeat',SIGMAheat)
+        call read_var('UseFluxRope',UseFluxRope)
+        if(UseFluxRope)then
+           call read_var('CmeA' ,cme_a)
+           call read_var('CmeR1',cme_r1)
+           call read_var('CmeR0',cme_r0)
+           call read_var('CmeA1',cme_a1)
+           call read_var('CmeAlpha',cme_alpha)
+           call read_var('CmeRho1',cme_rho1)
+           call read_var('CmeRho2',cme_rho2)
+           call read_var('ModulationRho',ModulationRho)
+           call read_var('ModulationP',ModulationP)
+           call read_var('OrientationGl98',OrientationGL98)
+           call read_var('LatitudeGl98   ',LatitudeGL98)
+           call read_var('LongitudeGl98  ',LongitudeGL98)
+        end if
+     case("#HELIOUPDATEB0")
+        call read_var('DtUpdateB0',dt_updateb0)
+        DoUpdateB0 = dt_updateb0 > 0.0
+     case("#HELIODIPOLE")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('HelioDipoleStrength',Bdp_dim)
+        call read_var('HelioDipoleTilt'    ,ThetaTilt)
+        ThetaTilt = ThetaTilt * cDegToRad
+     case("#HELIOROTATION", "#INERTIAL")
+        if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
+             ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
+     case("#HELIOTEST")
+        call read_var('DoSendMHD',DoSendMHD)
+     case("#ARCADE")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('TArcDim'  ,TArcDim)
+        call read_var('RhoArcDim',RhoArcDim)
+        call read_var('BArcDim'  ,BArcDim)
+        call read_var('ByArcDim' ,ByArcDim)
+        call read_var('UzArcDim' ,UzArcDim)
+        call read_var('phi0Arc'  ,phi0Arc)
+        call read_var('muArc'    ,muArc)
+        call read_var('expArc'   ,expArc)
+        call read_var('widthArc' ,widthArc)
+     case("#CME")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('Cmetype',cme_type)
+        call read_var('Cmea' ,cme_a)
+        call read_var('Cmer1',cme_r1)
+        call read_var('Cmer0',cme_r0)
+        call read_var('Cmea1',cme_a1)
+        call read_var('Cmealpha',cme_alpha)
+        call read_var('Cmerho1',cme_rho1)
+        call read_var('Cmerho2',cme_rho2)
+        call read_var('CmeB1_dim',cme_B1_dim)
+        call read_var('Cmev_erupt',cme_v_erupt)
+     case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseDefaultUnits',UseDefaultUnits)
+        call read_var('Grav0Diss'      ,Grav0Diss)
+        call read_var('Beta0Diss'      ,Beta0Diss)
+        call read_var('Length0Diss'    ,Length0Diss)
+        call read_var('Time0Diss'      ,Time0Diss)
+        call read_var('Rho0Diss'       ,Rho0Diss)
+        call read_var('Tem0Diss'       ,Tem0Diss)
+        call read_var('ThetaDiss'      ,ThetaDiss)
+        call read_var('DeltaDiss'      ,DeltaDiss)
+        call read_var('EpsilonDiss'    ,EpsilonDiss)
+        call read_var('RhoDifDiss'     ,RhoDifDiss)
+        call read_var('yShiftDiss'     ,yShiftDiss)
+        call read_var('scaleHeightDiss',scaleHeightDiss)
+        call read_var('scaleFactorDiss',scaleFactorDiss)
+        call read_var('BZ0Diss'        ,BZ0Diss)
+        !                                             ^CFG END DISSFLUX
+     case("#COMET")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('Qprod' ,Qprod)
+        call read_var('Unr_in' ,Unr_in)
+        call read_var('mbar',mbar)
+        call read_var('ionization_rate',ionization_rate)
+        call read_var('kin_in',kin_in)                              
+        !                                            ^CFG END SIMPLE
+     case default
+        if(iProc==0) then
+           write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
+                trim(NameCommand),' !!!'
+           if(UseStrict)call stop_mpi('Correct PARAM.in!')
+        end if
      end select
-  end do
+  
+end do READPARAM
 
   ! end reading parameters
 
@@ -1470,18 +1732,48 @@ contains
 
     if(IsStandAlone) RETURN
     if(iProc==0) write(*,*) NameSub,' WARNING: command '//trim(NameCommand)//&
-         ' is allowed in stand alone mode only!'
+         ' is allowed in stand alone mode only !!!'
     if(UseStrict)call stop_mpi(NameSub//' Correct PARAM.in')
 
   end subroutine check_stand_alone
+
   !===========================================================================
+
+  logical function is_first_session()
+
+    is_first_session = iSession == 1
+
+    if(iSession/=1 .and. iProc==0)then
+       write(*,*)NameSub//' WARNING: command '//trim(NameCommand)// &
+            ' can be used in the first session only !!!'
+       if(UseStrict)call stop_mpi('Correct PARAM.in')
+    end if
+
+  end function is_first_session
+
+  !===========================================================================
+
   subroutine set_defaults
 
     CodeVersionRead = -1.
 
     problem_type = -1                                      !^CFG IF NOT SIMPLE
 
-    if(NameThisComp=='IH')TypeCoordSystem = 'HGI'
+    ! Default coordinate systems
+    select case(NameThisComp)
+    case('IH')
+       TypeCoordSystem = 'HGI'
+       UseInertial     = .true.
+    case('SC')
+!!!       TypeCoordSystem = 'HGR'
+!!!       UseInertial     = .false.
+       TypeCoordSystem = 'HGI'
+       UseInertial     = .true.
+    case('GM')
+       TypeCoordSystem = 'GSM'
+       UseInertial     = .true.
+    end select
+    UseRotatingFrame = .not.UseInertial
 
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'
@@ -1521,8 +1813,8 @@ contains
     automatic_refinement = .false.
 
     nOrder = 2
-    FluxType = 'Rusanov'
-
+    FluxType = 'Rusanov'               !^CFG IF RUSANOVFLUX
+    !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
 
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.              !^CFG IF POINTIMPLICIT
@@ -1532,7 +1824,7 @@ contains
     ImplCritType     = 'dt'
 
     nOrder_impl   = 1
-    FluxTypeImpl  = 'Rusanov'
+    FluxTypeImpl  = 'default'
 
     ImplCoeff0    = 1.0
     UseBDF2       = .false.
@@ -1554,7 +1846,7 @@ contains
     PrecondType   = 'MBILU'
     GustafssonPar = 0.5
 
-    KrylovType      = 'gmres'
+    KrylovType      = 'gmres' !do not rename the gmres string
     KrylovInitType  = 'nul'
     KrylovErrorMax  = 0.001
     KrylovMatvecMax = 100
@@ -1686,15 +1978,16 @@ contains
        allocate( TypeConservCrit_I(nConservCrit) )
        TypeConservCrit_I(1) = 'r'
        rConserv             = 2*rBody
-       Bdp_dim = -31100.0
 
+       Bdp_dim              = -31100.0
        THETAtilt       = 0.00
        dt_UpdateB0     = -1.0
+       DoUpdateB0      = .false.
 
        TypeBc_I(east_)        ='outflow'
        TypeBc_I(west_)        ='vary'
        TypeBc_I(south_:top_)  ='fixed'
-       TypeBc_I(body1_)='ionosphere'
+       TypeBc_I(body1_)       ='ionosphere'
 
        SW_rho_dim =      5.0    ! n/cc
        SW_T_dim   = 150000.0    ! K
@@ -1801,7 +2094,7 @@ contains
        Rcurrents  = -1.0
 
     end select
-    
+
     select case(problem_type)                          !^CFG IF CARTESIAN BEGIN
     case(problem_earth,problem_saturn,problem_jupiter,problem_rotation)
        UseNonConservative   = .true.
@@ -1860,11 +2153,8 @@ contains
     case(problem_earth, problem_saturn, problem_jupiter, problem_rotation)
        TypeBc_I(body1_)='ionosphere'
     case default
-       TypeBc_I(body1_)='reflect'
+       TypeBc_I(body1_)='unknown'
     end select
-
-    !   UseRotatingFrame = problem_type == problem_heliosphere
-    UseRotatingFrame = .not.UseInertial
 
     ! These are used for problem_heliosphere only
     Qsun  = 25.00
@@ -1928,11 +2218,11 @@ contains
     case (problem_rotation)
        Body_rho_dim = 25.0    ! n/cc
        Body_T_dim   = 181712.175   ! K
-!^CFG IF GLOBALHELIOSPHERE BEGIN
+       !^CFG IF GLOBALHELIOSPHERE BEGIN
     case(problem_globalhelio)
        Body_rho_dim = SW_rho*unitUSER_rho*1.E6
        Body_T_dim = SW_T_dim
-!^CFG END GLOBALHELIOSPHERE
+       !^CFG END GLOBALHELIOSPHERE
     case default
        Body_rho_dim = 1.0    ! n/cc
        Body_T_dim   = 10000.0! K
@@ -1961,13 +2251,13 @@ contains
        RefineCrit(1)  = 'geometry'
        RefineCrit(2)  = 'Va'
        RefineCrit(3)  = 'flux'
-!^CFG IF GLOBALHELIOSPHERE BEGIN
+       !^CFG IF GLOBALHELIOSPHERE BEGIN
     case (problem_globalhelio)
        nRefineCrit    = 3
        RefineCrit(1)  = 'geometry'
        RefineCrit(2)  = 'Va'
        RefineCrit(3)  = 'flux'
-!^CFG END GLOBALHELIOSPHERE
+       !^CFG END GLOBALHELIOSPHERE
     case (problem_earth,problem_saturn,problem_jupiter)
        nRefineCrit    = 3
        RefineCrit(1)  = 'gradlogP'
@@ -2036,7 +2326,7 @@ contains
        call OPTION_IMPLICIT(IsOn,Name)
        if(.not.IsOn)then
           if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: IMPLICIT module is OFF'
+             write(*,'(a)')NameSub//' WARNING: IMPLICIT module is OFF !!!'
              if(UseStrict) &
                   call stop_mpi('Correct PARAM.in or switch IMPLICIT on!')
              write(*,*)NameSub//' setting UseImplicit=.false.'
@@ -2049,7 +2339,7 @@ contains
        call OPTION_PROJECTION(IsOn,Name)
        if(.not.IsOn)then
           if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: PROJECTION module is OFF'
+             write(*,'(a)')NameSub//' WARNING: PROJECTION module is OFF !!!'
              if(UseStrict)&
                   call stop_mpi('Correct PARAM.in or switch PROJECTION on!')
              write(*,*)NameSub//&
@@ -2064,7 +2354,7 @@ contains
        call OPTION_CONSTRAIN_B(IsOn,Name)
        if(.not.IsOn)then
           if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: CONSTRAINB module is OFF'
+             write(*,'(a)')NameSub//' WARNING: CONSTRAINB module is OFF !!!'
              if(UseStrict)&
                   call stop_mpi('Correct PARAM.in or switch CONSTRAINB on!')
              write(*,*)NameSub//&
@@ -2079,7 +2369,8 @@ contains
     if(UseRaytrace .or. any(index(plot_type,'ray')>0))then
        call OPTION_RAYTRACING(IsOn,Name)
        if(.not.IsOn)then
-          if(iProc==0)write(*,'(a)')NameSub//' WARNING: OPTION RAYTRACING is OFF'
+          if(iProc==0)write(*,'(a)')NameSub// &
+               ' WARNING: RAYTRACING module is OFF !!!'
           if(UseStrict)&
                call stop_mpi('Correct PARAM.in or switch RAYTRACING on!')
           if(UseRaytrace)then
@@ -2095,18 +2386,14 @@ contains
     !^CFG END RAYTRACE
     !^CFG IF NOT SIMPLE BEGIN
     if(limiter_type=='mc')then
-       call OPTION_FACE(IsOn,Name)
-       if(index(Name,'OPTIMIZE')>0)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: no MC limiter in OPTION_FACE optimized!'
-             if(UseStrict)call stop_mpi( &
-                  'Correct PARAM.in or select unoptimized OPTION_FACE!')
-             write(*,*)NameSub//' setting beta limiter with parameter 1.2'
-          endif
-          limiter_type='beta'
-          v_limiter_beta_param=1.2
-       end if
+       if(iProc==0)then
+          write(*,'(a)')NameSub//&
+               ' WARNING: MC limiter is not available any longer !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting beta limiter with parameter 1.2'
+       endif
+       limiter_type='beta'
+       BetaLimiter=1.2
     end if
     !^CFG END SIMPLE
 
@@ -2114,7 +2401,7 @@ contains
        call timing_version(IsOn,Name,Version)
        if(.not.IsOn)then
           if(iProc==0)then
-             write(*,'(a)')'WARNING: TIMING module is OFF'
+             write(*,'(a)')NameSub//' WARNING: TIMING module is OFF !!!'
              if(UseStrict)call stop_mpi( &
                   'Correct PARAM.in or switch TIMING ON')
              write(*,*)'setting UseTiming=.false.'
@@ -2145,7 +2432,8 @@ contains
        FluxType='Sokolov'                            !^CFG IF AWFLUX
     case default
        if(iProc==0)then
-          write(*,'(a,a)')'ERROR: Unknown value for FluxType=',FluxType
+          write(*,'(a)')NameSub // &
+               'WARNING: unknown value for FluxType=' // trim(FluxType)
           if(UseStrict) &                            !^CFG IF RUSANOVFLUX
                call stop_mpi('Correct PARAM.in!')
           write(*,*)'setting FluxType=Rusanov'       !^CFG IF RUSANOVFLUX
@@ -2155,6 +2443,8 @@ contains
 
     ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
     select case(FluxTypeImpl)
+    case('default')
+       FluxTypeImpl = FluxType
     case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX
        FluxTypeImpl='Roe'                            !^CFG IF ROEFLUX
     case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
@@ -2165,13 +2455,13 @@ contains
        FluxTypeImpl='Sokolov'                        !^CFG IF AWFLUX
     case default
        if(iProc==0)then
-          write(*,'(a,a)')NameSub// &
-               'WARNING: Unknown value for FluxTypeImpl=',FluxTypeImpl
-          if(UseStrict)&                             !^CFG IF RUSANOVFLUX
-               call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting FluxTypeImpl=Rusanov' !^CFG IF RUSANOVFLUX
+          write(*,'(a)')NameSub// &
+               ' WARNING: Unknown value for FluxTypeImpl='// &
+               trim(FluxTypeImpl)//' !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting FluxTypeImpl=',trim(FluxType)
        end if
-       FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
+       FluxTypeImpl=FluxType
     end select                               !^CFG END IMPLICIT
 
     if (time_accurate .and. nStage==2) UseBDF2=.true. !^CFG IF IMPLICIT
@@ -2192,7 +2482,7 @@ contains
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then
           write(*,'(a)')NameSub//&
-               ' WARNING: constrain_B works for time accurate run only!'
+               ' WARNING: constrain_B works for time accurate run only !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting UseConstrainB=F UseDivbSource=T'
        end if
@@ -2202,9 +2492,9 @@ contains
 
     if (UseConstrainB .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,*)NameSub//&
-               ' WARNING: constrain_B does not work for ', &
-               'optimize_message_pass=',optimize_message_pass
+          write(*,'(a)')NameSub//&
+               ' WARNING: constrain_B does not work for'// &
+               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
@@ -2214,9 +2504,9 @@ contains
     !^CFG IF DIVBDIFFUSE BEGIN    
     if (UseDivbDiffusion .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,*)NameSub//&
-               ' WARNING: div B diffusion does not work with ', &
-               'optimize_message_pass=',optimize_message_pass
+          write(*,'(a)')NameSub//&
+               ' WARNING: div B diffusion does not work with'// &
+               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
@@ -2235,7 +2525,7 @@ contains
     ! Check test processor
     if(procTEST>nProc)then
        if(iProc==0) write(*,'(a)')NameSub//&
-            ' WARNING: procTEST > nProc, setting procTEST=0'
+            ' WARNING: procTEST > nProc, setting procTEST=0 !!!'
        procTEST=0
     end if
 
@@ -2252,16 +2542,16 @@ contains
     if(.not.time_accurate .and. iProc==0)then
        if(boris_correction)then                     !^CFG IF BORISCORR BEGIN
           if(cfl>0.65) then
-             write(*,'(a,a)')NameSub// &
-                  ' WARNING: CFL number above 0.65 may be unstable ', &
-                  'for local timestepping with Boris correction !!!'
+             write(*,'(a)')NameSub// &
+                  ' WARNING: CFL number above 0.65 may be unstable'// &
+                  ' for local timestepping with Boris correction !!!'
              if (UseStrict) call stop_mpi('Correct PARAM.in!')
           end if
        else                                         !^CFG END BORISCORR
           if(cfl>0.85)then
-             write(*,'(a,a)')NameSub// &
-                  ' WARNING: CFL number above 0.85 may be unstable ', &
-                  'for local timestepping !!!'
+             write(*,'(a)')NameSub// &
+                  ' WARNING: CFL number above 0.85 may be unstable'// &
+                  ' for local timestepping !!!'
              if (UseStrict) call stop_mpi('Correct PARAM.in!')
           end if
        end if                                       !^CFG IF BORISCORR
@@ -2273,7 +2563,7 @@ contains
          ) .and. boris_correction)then
        if (iProc == 0) then
           write(*,'(a)')NameSub//&
-               ' WARNING: Boris correction not available for Roe flux!'
+               ' WARNING: Boris correction not available for Roe flux !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' Setting boris_correction = .false.'
        end if
@@ -2283,8 +2573,8 @@ contains
 
     if(UsePointImplicit.and.boris_correction) then     !^CFG IF POINTIMPLICIT BEGIN
        if (iProc == 0)  write(*,'(a)')NameSub// &
-            ' WARNING: Point implicit not available for Boris, ',&
-            'turning point implicit off!'
+            ' WARNING: Point implicit not available for Boris, '// &
+            'turning point implicit off !!!'
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
        UsePointImplicit = .false.
     end if                                              !^CFG END POINTIMPLICIT
@@ -2353,7 +2643,7 @@ contains
     if(.not.time_accurate.and.UseBDF2)then
        if(iProc==0)then
           write(*,'(a)') NameSub//&
-               ' WARNING: BDF2 is only available for time accurate run'
+               ' WARNING: BDF2 is only available for time accurate run !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting UseBDF2=.false.'
        end if
@@ -2384,13 +2674,14 @@ contains
           if(iProc==0)then
              write(*,'(a)')NameSub//&
                   ' WARNING: UseDtFixed=T and not time accurate run',&
-                  ' cannot be used together'
+                  ' cannot be used together !!!'
              if (UseStrict) call stop_mpi('Correct PARAM.in')
              write(*,*)NameSub//' setting UseDtFixed to false...'
           end if
           UseDtFixed=.false.
        else ! fixed time step for time accurate
           DtFixed = DtFixedDim/unitSI_t
+          DtFixedOrig = DtFixed ! Store the initial setting
           dt = DtFixed
           cfl=1.0
        end if
@@ -2411,18 +2702,23 @@ contains
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
     !    MaxBoundary=max(MaxBoundary,Top_)           !^CFG IF NOT CELLOUTERBC
-
-    !if(iProc==0)then                                !^CFG IF FACEOUTERBC BEGIN
-    !   !These write outs are rather meaningless for the average user
-    !   !and the values never change when cell outer bc-s are used 
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'MinBoundary=',MinBoundary,'MaxBoundary=',MaxBoundary
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'DoFixOuterBoundary = ',DoFixOuterBoundary
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'UseExtraBoundary =',UseExtraBoundary,&
-    !        'DoFixExtraBoundary =',DoFixExtraBoundary
-    !end if                                           !^CFG END FACEOUTERBC 
+ 
   end subroutine set_physics_parameters
+
+  !==========================================================================
+  subroutine read_area_radii
+
+    real :: Radius1, Radius2
+
+    ! Read inner and outer radii for areas shell and ring
+    call read_var("Radius1", Radius1)
+    call read_var("Radius2", Radius2)
+
+    ! Set outer size of the area
+    RadiusArea = max(Radius1, Radius2)
+    ! Normalize inner radius to the outer size
+    Area_I(nArea)%Radius1  = min(Radius1, Radius2) / RadiusArea
+
+  end subroutine read_area_radii
 
 end subroutine MH_set_parameters

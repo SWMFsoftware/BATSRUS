@@ -10,7 +10,7 @@ Module ModMain
 
   save
 
-  real :: CodeVersion=7.72, CodeVersionRead=-1.
+  real :: CodeVersion=7.73, CodeVersionRead=-1.
 
   ! BATSRUS may run as GM or IH component. This will be set by CON.
   character (len=2)   :: NameThisComp=''
@@ -90,7 +90,7 @@ Module ModMain
   ! Time stepping parameters and values.
   !/
   integer :: n_step, nOrder, nStage, iteration_number=0
-  real :: dt, DtFixed, DtFixedDim, cfl, dt_BLK(nBLK)
+  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, cfl, dt_BLK(nBLK)
   logical :: time_accurate=.true.,           &
        boris_correction, &                   !^CFG IF BORISCORR       
        UseBorisSimple,   &                   !^CFG IF SIMPLEBORIS
@@ -103,18 +103,23 @@ Module ModMain
   !\
   ! Model Coupling variables
   !/
+  
+  !\
+  ! Dimensions of the buffer grid
+  !/
+  integer::  nPhiBuff=90,nThetaBuff=45
+  real   ::RBuffMin=19.0,RBuffMax=21.0 
 
   logical :: UseIonosphere=.false.
 
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
-  integer :: dn_raytrace=100                               !^CFG IF RAYTRACE
-  logical :: check_rayloop=.false.                         !^CFG IF RAYTRACE
 
   logical :: UseIM = .false.                               !^CFG IF RCM
   real    :: tauCoupleIM=0.01                              !^CFG IF RCM
 
   real    :: ThetaTiltDeg = 0.0
   real    :: dt_UpdateB0  = 0.0001
+  logical :: DoUpdateB0   = .true.
   logical :: DoSplitDb0Dt = .true.
 
   logical, dimension(nBLK) :: unusedBLK
@@ -157,7 +162,7 @@ Module ModMain
   !^CFG END DIVBDIFFUSE
   ! Choice of limiter
   character*6 :: limiter_type='minmod'
-  real :: v_limiter_beta_param
+  real :: BetaLimiter
 
   ! Prolongation order (1 or 2) and type ('central','lr','minmod','central2'..)
   integer :: prolong_order=1
@@ -183,7 +188,7 @@ Module ModMain
   logical :: UseRotatingFrame
 
   ! Logical for corotation
-  logical :: UseCorotation=.false.
+  logical :: UseRotatingBc=.false.
   character(len=3) :: TypeCoordSystem='GSM'
 
   ! Logical for inertial frame
@@ -224,7 +229,7 @@ Module ModMain
   ! Solar Wind Input Parameters
 
   logical :: UseUpstreamInputFile
-  real :: Satellite_Y_Pos, Satellite_Z_Pos
+  real :: Satellite_Y_Pos = 0.0, Satellite_Z_Pos = 0.0
 
   ! Timing variables
   logical:: UseTiming = .true.
@@ -249,11 +254,10 @@ Module ModMain
   logical:: UseUserSetPhysConst=.false.
   logical:: UseUserUpdateStates=.false.
 
-  character (LEN=4) :: TimeH4
-  character (LEN=2) :: TimeM2,TimeS2
+  character (LEN=8) :: StringTimeH4M2S2
 
   logical :: DoSetLevels = .false.
-  logical :: DoSendMHD   = .false.
+  logical :: DoSendMHD   = .true.
 
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.

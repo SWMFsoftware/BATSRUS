@@ -70,16 +70,23 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
   !       write debug info if true
 
   ! Local variables
-  integer :: i,i1,its,j,k,k1
+  integer :: i,i1,its,j,k,k1, iError
   real :: coeff,Tol1,epsmac,gam,ro,ro0,t,tmp
 
-  ! Automatic array for vectors in Krylov subspace
-  real :: Krylov_II(n,nKrylov+2)
+  ! This array used to be automatic (Krylov subspace vectors)
+  real, dimension(:,:), allocatable :: Krylov_II
 
-  ! Automatic arrays (Hessenberg matrix and some vectors)
-  real :: hh(nKrylov+1,nKrylov),c(nKrylov),s(nKrylov),rs(nKrylov+1)
+  ! These arrays used to be automatic (Hessenberg matrix and some vectors)
+  real, dimension(:,:), allocatable :: hh
+  real, dimension(:),   allocatable :: c,s,rs
   !-----------------------------------------------------------------------
+
   if(oktest)write(*,*)'GMRES tol,iter:',Tol,Iter
+
+  ! Allocate arrays that used to be automatic
+  allocate(Krylov_II(n,nKrylov+2), hh(nKrylov+1,nKrylov), &
+       c(nKrylov), s(nKrylov), rs(nKrylov+1), stat=iError); 
+  call alloc_check(iError,"gmres arrays")
 
   if(range(1.0)>100)then
      epsmac=0.0000000000000001
@@ -147,7 +154,7 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
         !
         !           Krylov_II(i1):=A*Krylov_II(i)
         !
-        call matvec(Krylov_II(1,i),Krylov_II(1,i1),n) 
+        call matvec(Krylov_II(:,i),Krylov_II(:,i1),n) 
         !-----------------------------------------
         !  modified gram - schmidt...
         !-----------------------------------------
@@ -230,6 +237,10 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
   else
      info = -2
   endif
+
+  ! Deallocate arrays that used to be automatic
+  deallocate(Krylov_II, hh, c, s, rs)
+
 contains
   !============================================================================
   real function dot_product_mpi(a,b)

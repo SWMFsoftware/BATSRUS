@@ -104,10 +104,10 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
   ! Local variables (only 4 big vectors are needed):
 
-  !!! Automatic arrays for BiCGSTAB!!!
-  real, dimension(n):: bicg_r, bicg_u, bicg_r1, bicg_u1
+  ! used to be automatic arrays
+  real, dimension(:), allocatable :: bicg_r, bicg_u, bicg_r1, bicg_u1
 
-  !!! Allocatable array for initial guess !!!
+  ! allocatable array for initial guess
   real, dimension(:), allocatable :: qx0
 
   real :: rwork(2,7)
@@ -123,6 +123,11 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
   integer :: iError, nError 
 
   !---------------------------------------------------------------------------
+
+  ! Allocate arrays that used to be automatic
+  allocate(bicg_r(n), bicg_u(n), bicg_r1(n), bicg_u1(n), stat=iError); 
+  call alloc_check(iError,"bicgstab arrays")
+
   if(oktest)write(*,*)'BiCGSTAB tol,iter:',tol,iter
 
   info = 0
@@ -142,7 +147,8 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
   ! Calculate initial residual
   if(nonzero)then
      ! Store initial guess into qx0
-     allocate(qx0(n))
+     allocate(qx0(n), stat=iError)
+     call alloc_check(iError,'bicgstab:qx0')
      qx0=qx
      call matvec(qx,bicg_r,n)
      bicg_r = rhs - bicg_r
@@ -202,6 +208,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
      iter = nmv
      info = 3
      if(oktest) print *,'BiCGSTAB: nothing to do. info = ',info
+     call deallocate_bicgstab
      return
   end if
 
@@ -217,6 +224,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
      if (abs(rho0)<assumedzero**2) then
         info = 1
+        call deallocate_bicgstab
         return
      endif
      beta = alpha*(rho1/rho0)
@@ -234,6 +242,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
      if (abs(sigma)<assumedzero**2) then
         info = 1
+        call deallocate_bicgstab
         return
      endif
 
@@ -360,6 +369,8 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
   iter = nmv
 
+  call deallocate_bicgstab
+
 contains
 
   !============================================================================
@@ -414,5 +425,10 @@ contains
     stop
 
   end subroutine stop_bicgstab
+
+  subroutine deallocate_bicgstab
+    ! Deallocate arrays that used to be automatic
+    deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+  end subroutine deallocate_bicgstab
 
 end subroutine bicgstab
