@@ -166,7 +166,7 @@ if(-f "Makefile"){
     }
     if(not $norun){
 	# Check if executable exists and compile if necessary
-	if($exe ne $exe_default){
+	if($exe ne $exe_default and $exe ne "SWMF.exe"){
 	    die "ERROR: No executable $rundir/$exe was found!\n" 
 		unless -x "$rundir/$exe";
 	}elsif(not -f "bin/$exe" and not -f "src/$exe"){
@@ -209,8 +209,8 @@ close (DIR);
 # Set $SWMF to true if SWMF is run
 my $SWMF = 0; $SWMF = 1 if $exe =~ /SWMF/;
 
-# Touch RESTART.in if the executable is not SWMF
-&execute("touch RESTART.in") if not $SWMF;
+# Touch RESTART.out if the executable is not SWMF
+&execute("touch RESTART.out") if not $SWMF;
 
 my $num  = "0" x (3-length($n)) . $n; # string identifying the test run
 my %value;       # hash containing one set of values
@@ -441,7 +441,8 @@ For detailed information on usage type
 
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Testing}
+#!QUOTE: \section{GM/BATSRUS: Scripts Used by BATSRUS and SWMF}
+#!QUOTE: \subsection{Testing the GM and IE Components}
 #!ROUTINE: TestBatsrus.pl - test Batsrus with a set of parameters
 #!DESCRIPTION:
 # Run BATSRUS.exe or SWMF.exe with various parameters in the run/ directory

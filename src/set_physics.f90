@@ -7,7 +7,8 @@ subroutine set_physics_constants
   use ModProcMH
   use ModMain
   use ModPhysics
-  use CON_physics, ONLY: get_axes, get_physics
+  use CON_axes,   ONLY: get_axes
+  use CON_planet, ONLY: get_planet
 !  use ModUser                      !^CFG UNCOMMENT IF USERFILES
   use ModVarIndexes
   use ModCompatibility, ONLY: calculate_dipole_tilt
@@ -111,22 +112,18 @@ subroutine set_physics_constants
   !/
   ! if the rotation period is less than 1 second then you made
   ! a mistake - the period is to fast
-  if (UseCorotation) then
-     if (abs(rot_period_dim) > 1./3600.) then
-   	OMEGAbody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
-     else
-   	OMEGAbody = 0.0
-        write(*,*) "----------------------------------------"
-        write(*,*) "              Warning:                  "
-        write(*,*) "Your have set UseCorotation - .true.    "
-        write(*,*) "but the rotation period is set less than"
-        write(*,*) "1 second.  This is too fast.            "
-        write(*,*) "(rot_period_dim=",rot_period_dim," hours)"
-        write(*,*) "setting rot_period_dim=0.0              "
-        write(*,*) "----------------------------------------"
-     end if
+  if (abs(rot_period_dim) > 1./3600.) then
+     OMEGAbody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
   else
-     OMEGAbody=0.00
+     OMEGAbody = 0.0
+     write(*,*) "----------------------------------------"
+     write(*,*) "              Warning:                  "
+     write(*,*) "Your have set UseCorotation - .true.    "
+     write(*,*) "but the rotation period is set less than"
+     write(*,*) "1 second.  This is too fast.            "
+     write(*,*) "(rot_period_dim=",rot_period_dim," hours)"
+     write(*,*) "setting rot_period_dim=0.0              "
+     write(*,*) "----------------------------------------"
   end if
 
   Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
@@ -247,7 +244,7 @@ subroutine set_physics_constants
   ! Nondimensionalize dipole strength.
   if(NameThisComp == 'GM' .and. UseNewAxes) then
      call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-     call get_physics(DipoleStrengthOut = Bdp_dim)
+     call get_planet(DipoleStrengthOut = Bdp_dim)
      Bdp      = Bdp_dim/unitSI_B 
   else
      Bdp      = Bdp_dim/unitUSER_B 

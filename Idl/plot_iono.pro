@@ -9,7 +9,57 @@
 ;
 
 function mm, array
-return, [min(array),max(array)]
+  return, [min(array),max(array)]
+end
+
+;------------------------------------------------------------------------
+;------------------------------------------------------------------------
+
+function tostr,value
+  return, strcompress(string(fix(value)),/remove_all)
+end
+
+;------------------------------------------------------------------------
+;------------------------------------------------------------------------
+
+function chopr, svalue, n
+  if strlen(svalue) lt n then n = strlen(svalue)
+  return, strmid(svalue, strlen(svalue)-n,n)
+end
+
+;------------------------------------------------------------------------
+;------------------------------------------------------------------------
+
+
+function ask, what, orig_ans, set_orig = set_orig
+
+  if n_elements(orig_ans) eq 0 then orig_ans = ''
+
+  answer = ''
+
+  read, 'Enter '+what+' ['+orig_ans+'] : ', answer
+
+  if strlen(answer) eq 0 then answer = orig_ans
+
+  if n_elements(set_orig) gt 0 then orig_ans = answer
+
+  return, answer
+
+end
+
+;------------------------------------------------------------------------
+;------------------------------------------------------------------------
+
+function mklower, string
+
+  temp = byte(string)
+
+  loc = where((temp ge 65) and (temp le 90), count)
+
+  if count ne 0 then temp(loc) = temp(loc)+32
+
+  return, string(temp)
+
 end
 
 ;------------------------------------------------------------------------
@@ -46,26 +96,6 @@ pro plotdumb
 	/nodata
 
   return
-
-end
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
-
-function ask, what, orig_ans, set_orig = set_orig
-
-  if n_elements(orig_ans) eq 0 then orig_ans = ''
-
-  answer = ''
-
-  read, 'Enter '+what+' ['+orig_ans+'] : ', answer
-
-  if strlen(answer) eq 0 then answer = orig_ans
-
-  if n_elements(set_orig) gt 0 then orig_ans = answer
-
-  return, answer
 
 end
 
@@ -226,14 +256,6 @@ END
 ;------------------------------------------------------------------------
 ;------------------------------------------------------------------------
 
-function chopr, svalue, n
-  if strlen(svalue) lt n then n = strlen(svalue)
-  return, strmid(svalue, strlen(svalue)-n,n)
-end
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
 pro closedevice
 
   if !d.name eq 'PS' then begin
@@ -314,21 +336,6 @@ pro get_position, nb, space, sizes, pos_num, pos, rect = rect,		$
   RETURN
 
 END
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
-function mklower, string
-
-  temp = byte(string)
-
-  loc = where((temp ge 65) and (temp le 90), count)
-
-  if count ne 0 then temp(loc) = temp(loc)+32
-
-  return, string(temp)
-
-end
 
 ;------------------------------------------------------------------------
 ;------------------------------------------------------------------------
@@ -949,13 +956,6 @@ end
 ;------------------------------------------------------------------------
 ;------------------------------------------------------------------------
 
-function tostr,value
-  return, strcompress(string(fix(value)),/remove_all)
-end
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
 list = findfile("-t i*.idl")
 if strlen(list(0)) gt 0 then filein = list(0) $
 else filein = 'ionosphere_n000000.dat'
@@ -1015,7 +1015,7 @@ for n = 0, nfiles-1 do begin
 
       endif
 
-      if (strpos(mklower(line),"time") gt -1) then begin
+      if (strpos(line,"TIME") gt -1) then begin
 
         int_tmp = 0
         for i=0,5 do begin
