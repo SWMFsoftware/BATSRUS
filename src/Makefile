@@ -3,17 +3,7 @@
 SHELL =/bin/sh
 
 include ../Makefile.def
-
-# IH WRAPPER DEFINITIONS 
-# these definitions are commented out in IH/BATSRUS/src/Makefile only
-
-#IH_WRAPPER_MOD    = ModGridDescriptor.o
-#IH_WRAPPER_OBJ    = IH_wrapper.o
-#IH_WRAPPER_SEARCH = -I${COUPLERDIR} -I${LIBRARYDIR}
-SEARCH_EXTRA = ${IH_WRAPPER_SEARCH}
-
 include ../Makefile.conf
-include Makefile.OPTIONS
 include Makefile.DEPEND
 include Makefile.RULES
 
@@ -44,7 +34,6 @@ MODEL = ModVarIndexes.o
 #MODEL = ModVarIndexes_globhelio.o #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
 
 MODULES = \
-	${IH_WRAPPER_MOD}\
 	ModCompatibility.o\
 	ModInterface.o\
 	ModProcMH.o\
@@ -52,10 +41,10 @@ MODULES = \
 	ModMain.o\
 	ModAdvance.o\
 	ModGeometry.o\
-	ModInterface.o\
 	ModIO.o\
 	ModPhysics.o\
 	ModAMR.o\
+	ModPartSteady.o\
 	ModParallel.o\
 	ModOctree.o\
 	ModNodes.o\
@@ -68,8 +57,7 @@ MODULES = \
 OBJ1=constrain_B.o #				^CFG IF CONSTRAINB
 
 #^CFG IF IMPLICIT BEGIN
-OBJ2A=bicgstab.o #				^CFG IF NOT SIMPLE
-OBJ2=   ${OBJ2A}\
+OBJ2=   bicgstab.o\
 	gmres.o\
 	implicit.o\
 	impl_interface.o\
@@ -79,7 +67,7 @@ OBJ2=   ${OBJ2A}\
 	ModPrecond.o precond.o ${BLAS}
 #^CFG END IMPLICIT
 
-OBJ3=ray_trace.o ray_pass.o #			^CFG IF RAYTRACE
+OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
 OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
@@ -126,10 +114,8 @@ OBJ10=\
 
 OBJ11=set_outer_BCs.o #				^CFG IF CELLOUTERBC
 
-#^CFG IF NOT SIMPLE BEGIN
 OBJ12= write_plot_los.o write_plot_sph.o \
 		     set_ICs_arc.o set_ICs_cme.o      
-#^CFG END SIMPLE
 
 #^CFG IF USERFILES BEGIN
 OBJ13 = user_routines.o 
@@ -138,10 +124,9 @@ user_routines.f90:
 #^CFG END USERFILES
 
 OBJECTS = \
-	${IH_WRAPPER_OBJ}\
 	BATS_methods.o \
 	MH_set_parameters.o\
-	conserve_flux.o\
+	advect_points.o\
 	allocate_vars.o\
 	amr.o\
 	amr_criteria.o\
@@ -151,6 +136,7 @@ OBJECTS = \
 	calc_gradients.o\
 	calc_timestep.o\
 	coarsen_grid.o\
+	conserve_flux.o\
 	create_soln_blocks.o\
 	exchange_messages.o\
 	explicit.o\
@@ -165,7 +151,7 @@ OBJECTS = \
 	message_pass_nodes.o\
 	number_blocks.o\
 	octree.o\
-	perfctr_cray.o\
+	potential_force_averages.o\
 	refine_grid.o\
 	restart.o\
 	rotate.o\
@@ -183,10 +169,40 @@ OBJECTS = \
 	write_plot_idl.o\
 	write_plot_tec.o\
 	write_progress.o\
-	${OPTION_FORCE}\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
 	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
+
+# Copy modules with static declaration of large variables into used modules
+NAME = Advance
+
+STATIC1:
+	cp -f Mod${NAME}_static.f90 Mod${NAME}.f90
+
+STATIC:
+	make -s STATIC1 NAME=Advance
+	make -s STATIC1 NAME=Nodes
+	make -s STATIC1 NAME=Geometry
+	make -s STATIC1 NAME=Implicit	#^CFG IF IMPLICIT
+	make -s STATIC1 NAME=Raytrace	#^CFG IF RAYTRACE
+	make -s STATIC1 NAME=CT		#^CFG IF CONSTRAINB
+
+# Transform modules with static declaration of large variables into 
+# modules with dynamic allocation as used modules
+DYNAMIC1: 
+	${SCRIPTDIR}/StaticToDynamic.pl ${LARGE} \
+		Mod${NAME}_static.f90 > Mod${NAME}.f90
+
+DYNAMIC:
+	make -s DYNAMIC1 NAME=Advance
+	make -s DYNAMIC1 NAME=Nodes
+	make -s DYNAMIC1 NAME=Geometry
+	@#^CFG IF IMPLICIT BEGIN
+	make -s DYNAMIC1 NAME=Implicit \
+		LARGE="-d=1 -l='MaxImplVar|,nBLK|,MaxImplBLK'" 
+	@#^CFG END IMPLICIT
+	make -s DYNAMIC1 NAME=Raytrace	#^CFG IF RAYTRACE
+	make -s DYNAMIC1 NAME=CT	#^CFG IF CONSTRAINB
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
@@ -200,7 +216,7 @@ DEPEND:
 # Library for framework and also for stand alone code
 #
 
-MY_LIB = ${LIBDIR}/libBATSRUS.a
+MY_LIB = libBATSRUS.a
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -208,8 +224,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS} \
-	Makefile.OPTIONS ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
 
@@ -225,31 +240,39 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 # Libraries should be compiled first, because modules are used in main.
-${OBJECTS_EXE}: ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 BATSRUS.exe: ${OBJECTS_EXE}
+	@(if [ ${COMPILE.f90} = "xlf90" ]; then make BATSRUS_for_xlf; \
+	elif [ ${OS} = "Darwin" ];         then make BATSRUS_for_Darwin; \
+	else                                    make BATSRUS_general; fi)
+
+BATSRUS_general:
 	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
-		-L${LIBDIR} -lBATSRUS -lSHARE -lTIMING \
+		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
 		${Lflag1}
 
-#
-# Other executables
-#
+BATSRUS_for_Darwin:
+	ld -all_load -r -o LIBRARIES.o \
+		${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+		LIBRARIES.o ${LBLAS} ${Lflag1}
+	rm -f LIBRARIES.o
 
-PostIDL.exe:	PostIDL.o
-		${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o ${Lflag2}
-
-#^CFG IF NOT SIMPLE BEGIN
-PostSPH.exe:	PostSPH.o
-		${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
-#^CFG END SIMPLE
-
+BATSRUS_for_xlf:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} Tmp_/*.o \
+		${LBLAS} ${Lflag1}
+	rm -rf Tmp_
 #
 #	cleaning
 #
 
 distclean: clean
-	rm -f Makefile.RULES Makefile.DEPEND Makefile.OPTIONS ModSize.f90
+	rm -f Makefile.RULES Makefile.DEPEND ModSize.f90
+	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
+		ModNodes.f90 ModRaytrace.f90
 	rm -f stand_alone.f90
 
 # keep this line

@@ -2,7 +2,7 @@
 subroutine set_root_block_geometry
   use ModProcMH
   use ModSize
-  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlockMAX
+  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
        R2_BLK,&                !^CFG IF SECONDBODY
@@ -70,7 +70,8 @@ subroutine set_root_block_geometry
   end if
 
   ! Let every PE know the available blocks on PE 0
-  nBlockMax = proc_dims(1)*proc_dims(2)*proc_dims(3)
+  nBlock    = product(proc_dims)
+  nBlockMax = nBlock
   availableBLKs(0,0)=nBlockMax+1
 
 end subroutine set_root_block_geometry
@@ -350,34 +351,51 @@ subroutine set_xyzminmax_cyl
 
 end subroutine set_xyzminmax_cyl
 !^CFG END CARTESIAN
-!---------------------------------------------------------------------------------------
+!==============================================================================
 subroutine set_boundary_cells(iBLK)
+
   use ModProcMH
   use ModMain
-  use ModPhysics,ONLY: Rbody
-  use ModGeometry,ONLY:R_BLK,IsBoundaryBlock_IB,IsBoundaryCell_GI,MinBoundary,MaxBoundary
-  use ModPhysics,ONLY: Rbody2                                     !^CFG IF SECONDBODY
-  use ModGeometry,ONLY:R2_BLK                                     !^CFG IF SECONDBODY
-  use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK        !^CFG IF FACEOUTERBC
+  use ModPhysics,  ONLY: Rbody
+  use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI, &
+       MinBoundary,MaxBoundary
+  use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
+  use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
+  use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK !^CFG IF FACEOUTERBC
+
   implicit none
   integer,intent(in)::iBLK
+  !----------------------------------------------------------------------------
  
   IsBoundaryCell_GI=.false.  
-  if(IsBoundaryBlock_IB(Body2_,iBLK))&                            !^CFG IF SECONDBODY BEGIN
-       IsBoundaryCell_GI(:,:,:,Body2_) = UseBody2.and.R2_BLK(:,:,:,iBLK) < RBody2  
-                                                                  !^CFG END SECONDBODY
-  if(IsBoundaryBlock_IB(Body1_,iBLK))&
-       IsBoundaryCell_GI(:,:,:,Body1_) = body1.and. R_BLK(:,:,:,iBLK) <  Rbody
+  !^CFG IF SECONDBODY BEGIN
+  if(IsBoundaryBlock_IB(Body2_,iBLK))&               
+       IsBoundaryCell_GI(:,:,:,Body2_) = &
+       UseBody2 .and. R2_BLK(:,:,:,iBLK) < RBody2  
+  !^CFG END SECONDBODY
 
-  if(IsBoundaryBlock_IB(ExtraBc_,iBLK))&                          !^CFG IF USERFILES BEGIN
+  if(IsBoundaryBlock_IB(Body1_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,Body1_) = &
+       body1    .and. R_BLK(:,:,:,iBLK) < Rbody
+
+  !^CFG IF USERFILES BEGIN
+  if(IsBoundaryBlock_IB(ExtraBc_,iBLK))&             
        call set_extra_boundary_cells(iBLK)
-                                                                  !^CFG END USERFILES
-!^CFG IF FACEOUTERBC BEGIN
-    if(IsBoundaryBlock_IB(East_,iBLK))IsBoundaryCell_GI(:,:,:,East_)=x_BLK(:,:,:,iBLK)<x1  
-    if(IsBoundaryBlock_IB(West_,iBLK))IsBoundaryCell_GI(:,:,:,West_)=x_BLK(:,:,:,iBLK)>x2 
-    if(IsBoundaryBlock_IB(South_,iBLK))IsBoundaryCell_GI(:,:,:,South_)= y_BLK(:,:,:,iBLK)<y1
-    if(IsBoundaryBlock_IB(North_,iBLK))IsBoundaryCell_GI(:,:,:,North_)= y_BLK(:,:,:,iBLK)>y2 
-    if(IsBoundaryBlock_IB(Bot_,iBLK))IsBoundaryCell_GI(:,:,:,Bot_)= z_BLK(:,:,:,iBLK)<z1
-    if(IsBoundaryBlock_IB(Top_,iBLK))IsBoundaryCell_GI(:,:,:,Top_)= z_BLK(:,:,:,iBLK)>z2  
-!^CFG END FACEOUTERBC
+  !^CFG END USERFILES
+
+  !^CFG IF FACEOUTERBC BEGIN
+  if(IsBoundaryBlock_IB(East_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,East_)=x_BLK(:,:,:,iBLK)<x1  
+  if(IsBoundaryBlock_IB(West_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,West_)=x_BLK(:,:,:,iBLK)>x2 
+  if(IsBoundaryBlock_IB(South_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,South_)= y_BLK(:,:,:,iBLK)<y1
+  if(IsBoundaryBlock_IB(North_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,North_)= y_BLK(:,:,:,iBLK)>y2 
+  if(IsBoundaryBlock_IB(Bot_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,Bot_)= z_BLK(:,:,:,iBLK)<z1
+  if(IsBoundaryBlock_IB(Top_,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,Top_)= z_BLK(:,:,:,iBLK)>z2  
+  !^CFG END FACEOUTERBC
+
 end subroutine set_boundary_cells

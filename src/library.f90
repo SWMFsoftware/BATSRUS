@@ -410,65 +410,6 @@ real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
 
 end function integrate_BLK    
 
-subroutine integrate_cell_centered_vars(StateIntegral_V)
-  use ModProcMH
-  use ModAdvance,ONLY : State_VGB,tmp2_BLK
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlockMax,unusedBLK
-  use ModVarIndexes,ONLY:nVar,P_
-  use ModGeometry, ONLY :&
-                          cV_BLK,&                   
-                          true_BLK,true_cell
-  use ModNumConst
-  use ModMpi
-  implicit none 
-
-  ! Arguments
-
-  real,dimension( nVar),intent(out) :: &
-       StateIntegral_V
-
-  ! Local variables:
-  real ,dimension( nVar)   :: Sum_V, TotalSum_V
-  integer :: iBLK, iError,iVar
-
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('integrate_BLK',oktest, oktest_me)
-
-  Sum_V=cZero
-                                                     
-  do iBLK=1,nBlockMax
-     if(.not.unusedBLK(iBLK)) then
-        if(true_BLK(iBLK)) then
-           do iVar=1,nVar
-              Sum_V(iVar)=Sum_V(iVar) + sum(&
-              State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK))*&
-                cV_BLK(iBLK)
-           end do
-        else
-           do iVar=1,nVar
-              Sum_V(iVar)=Sum_V(iVar) + sum(&
-              State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK),&
-              MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))*cV_BLK(iBLK)
-           end do
-        end if
-        tmp2_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)
-     end if
-  end do
-
-  if(nProc>1)then
-     call MPI_allreduce(Sum_V, TotalSum_V, &
-          nVar,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-   
-     StateIntegral_V=TotalSum_V
-  else
-     StateIntegral_V=Sum_V
-  end if
-end subroutine integrate_cell_centered_vars
 !^CFG END CARTESIAN
 
 !=============================================================================
@@ -1007,7 +948,7 @@ end subroutine barrier_mpi
 subroutine stop_mpi(str)
 
   use ModProcMH
-  use ModMain, ONLY : iteration_number
+  use ModMain, ONLY : iteration_number,NameThisComp,IsStandAlone
   use ModMpi
   implicit none
 
@@ -1018,15 +959,35 @@ subroutine stop_mpi(str)
 
   !----------------------------------------------------------------------------
 
-  write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
-       iteration_number,' with msg:'
-  write(*,*)str
-  call MPI_abort(iComm, nError, iError)
+  if(IsStandAlone)then
+     write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
+          iteration_number,' with msg:'
+     write(*,*)str
+     call MPI_abort(iComm, nError, iError)
+     stop
+  else
+     write(*,*)NameThisComp,': stopping execution! me=',iProc,&
+          ' at iteration=',iteration_number
+     call CON_stop(NameThisComp//':'//str)
+  end if
 
-  stop
 end subroutine stop_mpi
 
+!============================================================================
 
+subroutine alloc_check(iError,String)
+
+  implicit none
+
+  integer, intent(in) :: iError
+  character (len=*), intent(in) :: String
+  !----------------------------------------------------------------------------
+
+  if (iError>0) call stop_mpi("Allocation error for "//String)
+
+end subroutine alloc_check
+
+!==========================================================================
 
 subroutine error_report(str,value,iErrorIn,show_first)
 
@@ -1549,8 +1510,8 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   type(adaptive_block_ptr):: Octree
   real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
   integer,dimension(3)::IjkRoot_D
-  logical::Done
   logical,dimension(3):: IsLowerThanCenter_D
+  !----------------------------------------------------------------------
 
   nullify(Octree % ptr)
 
@@ -1582,10 +1543,9 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   Octree % ptr => &
        octree_roots(IjkRoot_D(1)+1,IjkRoot_D(2)+1,IjkRoot_D(3)+1) % ptr
   ! Recursive procedure to find the adaptive block:
-  Done=.false.
-  do while (.not.Done)
+  do
      if(Octree % ptr % used) then
-        iPE =octree % ptr % PE
+        iPE    = octree % ptr % PE
         iBlock = octree % ptr % BLK
         if(DoFindCell)then
            DXyz_D=DXyz_D/nCells
@@ -1593,7 +1553,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
            jCell=int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
            kCell=int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
         end if
-        Done=.true.
+        EXIT
      else
         DXyz_D=cHalf*DXyz_D
         XyzCenter_D=XyzCorner_D+DXyz_D
@@ -1639,10 +1599,23 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
 end subroutine xyz_to_peblk
 
 !=========================================================================
+subroutine get_date_time_start(iTime_I)
+  
+  use ModMain,        ONLY : StartTime
+  use ModTimeConvert, ONLY : time_real_to_int
+
+  implicit none
+  integer, intent(out) :: iTime_I(7)
+
+  call time_real_to_int(StartTime,iTime_I)
+
+end subroutine get_date_time_start
+
+!=========================================================================
 subroutine get_date_time(iTime_I)
   
-  use ModMain,     ONLY : StartTime, Time_Simulation
-  use CON_physics, ONLY : time_real_to_int
+  use ModMain,        ONLY : StartTime, Time_Simulation
+  use ModTimeConvert, ONLY : time_real_to_int
 
   implicit none
   integer, intent(out) :: iTime_I(7)
@@ -1650,18 +1623,16 @@ subroutine get_date_time(iTime_I)
   call time_real_to_int(StartTime+Time_Simulation,iTime_I)
 
 end subroutine get_date_time
-!=========================================================================
 
-subroutine gettimestring
-  use ModMain, ONLY: TimeH4,TimeM2,TimeS2,Time_Simulation
+!=========================================================================
+subroutine get_time_string
+  use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
   implicit none
 
-  write(TimeH4,'(i4.4)') &
-       int(                            Time_Simulation/3600.)
-  write(TimeM2,'(i2.2)') &
-       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.)
-  write(TimeS2,'(i2.2)') &
+  write(StringTimeH4M2S2,'(i4.4,i2.2,i2.2)') &
+       int(                            Time_Simulation/3600.), &
+       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
        int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
 
-end subroutine gettimestring
+end subroutine get_time_string
 
