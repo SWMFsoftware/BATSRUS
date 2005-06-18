@@ -9,7 +9,7 @@ subroutine write_plot_common(ifile)
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
   use ModGeometry, ONLY : TypeGeometry                   !^CFG IF NOT CARTESIAN
-  use ModPhysics, ONLY : unitUSER_x, thetaTilt
+  use ModPhysics, ONLY : unitUSER_x, thetaTilt,Rbody
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
@@ -27,10 +27,10 @@ subroutine write_plot_common(ifile)
   integer :: iError
 
   ! Plot variables
-  integer, parameter :: nplotvarmax=20
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
-  real :: PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax)
+  logical :: PlotVar_useBody(nplotvarmax)
+  real, allocatable :: PlotVarNodes(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)
   integer :: nplotvar
@@ -70,6 +70,7 @@ subroutine write_plot_common(ifile)
 
   PlotVar = 0.0
   plotvar_inBody = 0.0
+  plotvar_useBody = .false.
 
   unitstr_TEC = ''
   unitstr_IDL = ''
@@ -96,11 +97,15 @@ subroutine write_plot_common(ifile)
      write(*,*) plot_form(ifile)
   end if
 
+  ! Construct the file name
   if (ifile-plot_ > 9) then
      file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a,i4.4,a)'
   else
      file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a,i4.4,a)'
   end if
+
+  ! For time accurate runs the file name will contain the StringTimeH4M2S2
+  if(time_accurate)call get_time_string
 
   select case(plot_form(ifile))
   case('tec')
@@ -110,15 +115,16 @@ subroutine write_plot_common(ifile)
   end select
   if(index(plot_type1,'sph')>0)then
      if(time_accurate)then
-        call gettimestring
         ! do the northern hemisphere
         write(filename_n,file_format) &
              plot_type1(1:2)//"N"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
         ! do the southern hemisphere
         write(filename_s,file_format) &
              plot_type1(1:2)//"S"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
      else
         ! do the northern hemisphere
         write(filename_n,file_format) &
@@ -132,21 +138,24 @@ subroutine write_plot_common(ifile)
      ! open the files
      unit_tmp2 = io_unit_new()
      if(save_binary .and. plot_form(ifile)=='idl') then
-        open(unit_tmp ,file=filename_n,status="unknown",err=999,form="unformatted")
-        open(unit_tmp2,file=filename_s,status="unknown",err=999,form="unformatted")
+        open(unit_tmp ,file=filename_n,status="replace",err=999,&
+             form="unformatted")
+        open(unit_tmp2,file=filename_s,status="replace",err=999,&
+             form="unformatted")
      else
-        open(unit_tmp ,file=filename_n,status="unknown",err=999)
-        open(unit_tmp2,file=filename_s,status="unknown",err=999)
+        open(unit_tmp ,file=filename_n,status="replace",err=999)
+        open(unit_tmp2,file=filename_s,status="replace",err=999)
      end if
   elseif(plot_form(ifile)=='tec')then
      if(time_accurate)then
-        call gettimestring
         write(filename_n,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_1_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_1_pe",iProc,&
+             file_extension
         write(filename_s,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_2_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_2_pe",iProc,&
+             file_extension
      else
         write(filename_n,file_format) &
              trim(plot_type1)//"_",&
@@ -156,23 +165,26 @@ subroutine write_plot_common(ifile)
              ifile-plot_,"_n",n_step,"_2_pe",iProc,file_extension
      end if
      unit_tmp2 = io_unit_new()
-     open(unit_tmp ,file=filename_n,status="unknown",err=999)
-     open(unit_tmp2,file=filename_s,status="unknown",err=999)
+     ! Open files
+     open(unit_tmp ,file=filename_n,status="replace",err=999)
+     open(unit_tmp2,file=filename_s,status="replace",err=999)
   else
      if(time_accurate)then
-        call gettimestring
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
      else
         write(filename,file_format) &
              trim(plot_type1)//"_",&
              ifile-plot_,"_n",n_step,"_pe",iProc,file_extension
      end if
+     ! Open file
      if(save_binary .and. plot_form(ifile)=='idl')then
-        open(unit_tmp,file=filename,status="unknown",err=999,form="unformatted")
+        open(unit_tmp,file=filename,status="replace",err=999,&
+             form="unformatted")
      else
-        open(unit_tmp,file=filename,status="unknown",err=999)
+        open(unit_tmp,file=filename,status="replace",err=999)
      end if
   end if
 
@@ -207,10 +219,10 @@ subroutine write_plot_common(ifile)
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
   case('tec')
-     call get_TEC_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
+     call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_IDL_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+     call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
@@ -218,13 +230,14 @@ subroutine write_plot_common(ifile)
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
-     call set_plotvar(iBLK,ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
+     call set_plotvar(iBLK, &
+          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody,plotvar_useBody)
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
      if (index(plot_type1,'sph')>0) then
-        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &      !^CFG IF NOT SIMPLE
-             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)           !^CFG IF NOT SIMPLE 
+        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
+             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)
    	dxblk=1.0
    	dyblk=180.0/real(ntheta-1)
    	dzblk=360.0/real(nphi)
@@ -257,14 +270,15 @@ subroutine write_plot_common(ifile)
   end do ! iBLK
 
   ! Write files for new tecplot format
-  if(plot_form(ifile)=='tec')then
+  if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
      do i=1,nplotvar
         NodeValue_IIIB=plotvarnodes(:,:,:,:,i)
         call pass_and_average_nodes(.true.,NodeValue_IIIB)
         plotvarnodes(:,:,:,:,i)=NodeValue_IIIB
      end do
-     call write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC, &
+     call write_plot_tec(ifile,nplotvar,PlotVarNodes,unitstr_TEC, &
           xmin,xmax,ymin,ymax,zmin,zmax)
+     deallocate(PlotVarNodes)
   end if
 
   close(unit_tmp)
@@ -334,7 +348,7 @@ subroutine write_plot_common(ifile)
               write(filename,file_format) &
                    plot_type1(1:2)//NorthOrSouth// &
                    plot_type1(4:len_trim(plot_type1))//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -344,10 +358,10 @@ subroutine write_plot_common(ifile)
            end if
         elseif(plot_form(ifile)=='tec')then
            if(time_accurate)then
-              call gettimestring
+              call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -356,10 +370,10 @@ subroutine write_plot_common(ifile)
            end if
         else
            if(time_accurate)then
-              call gettimestring
+              call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -367,7 +381,7 @@ subroutine write_plot_common(ifile)
                    ifile-plot_,"_n",n_step,file_extension
            end if
         end if
-        open(unit_tmp,file=filename,status="unknown",err=999)
+        open(unit_tmp,file=filename,status="replace",err=999)
 
         write(unit_tmp,'(a)')filename
         write(unit_tmp,'(i8,a)')nProc,' nProc'
@@ -384,14 +398,17 @@ subroutine write_plot_common(ifile)
                                             ' thetatilt[deg] phitilt[deg]'
         case('idl')
            if(plot_dimensional(ifile)) then
-              write(unit_tmp,'(6(1pe13.5),a)')plot_range(:,ifile)*unitUSER_x,' plot_range'
-              write(unit_tmp,'(6(1pe13.5),i8,a)') &
-                   plot_dx(:,ifile)*unitUSER_x,dxGLOBALmin*unitUSER_x,nGLOBALcells,&
+              write(unit_tmp,'(6(1pe18.10),a)') &
+                   plot_range(:,ifile)*unitUSER_x,' plot_range'
+              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+                   plot_dx(:,ifile)*unitUSER_x, &
+                   dxGLOBALmin*unitUSER_x, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            else
-              write(unit_tmp,'(6(1pe13.5),a)')plot_range(:,ifile),' plot_range'
-              write(unit_tmp,'(6(1pe13.5),i8,a)') &
-                   plot_dx(:,ifile),dxGLOBALmin,nGLOBALcells,&
+              write(unit_tmp,'(6(1pe18.10),a)') &
+                   plot_range(:,ifile),' plot_range'
+              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+                   plot_dx(:,ifile), dxGLOBALmin, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            end if
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
@@ -428,29 +445,52 @@ Contains
 
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
-    integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1) :: nodeCount
-    real, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
+    integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeCount
+    real,    dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
+    real :: rr
+
+    if(.not.allocated(PlotVarNodes)) allocate(&
+         PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax),stat=iError)
+    call alloc_check(iError,'write_plot_common:PlotVarNodes')
 
     ! Initialize values
     nodeCount = 0; nodeV(:,:,:,:) = 0.00
 
-    do i=0,nI+1; do j=0,nJ+1; do k=0,nK+1  ! Cell loop
-       if ( true_cell(i,j,k,iBLK) )then
-          do ii=-1,0; do jj=-1,0; do kk=-1,0
-             nodeCount(i+ii,j+jj,k+kk) = nodeCount(i+ii,j+jj,k+kk) +1
-             nodeV(i+ii,j+jj,k+kk,1:nplotvar) = &
-                  nodeV(i+ii,j+jj,k+kk,1:nplotvar) + plotvar(i,j,k,1:nplotvar)
-          end do; end do; end do
-       end if
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+       do iVar=1,nplotvar
+          if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
+             do kk=-1,0; do jj=-1,0; do ii=-1,0
+                nodeCount(i+ii,j+jj,k+kk,iVar) = nodeCount(i+ii,j+jj,k+kk,iVar) +1
+                nodeV(i+ii,j+jj,k+kk,iVar) = nodeV(i+ii,j+jj,k+kk,iVar)+ &
+                     plotvar(i,j,k,iVar)
+             end do; end do; end do
+          end if
+       end do
     end do; end do; end do
 
-    do i=0,nI; do j=0,nJ; do k=0,nK  ! Node loop
-       if (nodeCount(i,j,k) > 0) then
-          PlotVarNodes(i,j,k,iBLK,1:nplotvar) = &
-               nodeV(i,j,k,1:nplotvar)/real(nodeCount(i,j,k))
-       else
-          PlotVarNodes(i,j,k,iBLK,1:nplotvar) = plotvar_inBody(1:nplotvar)
-       end if
+    do k=0,nK; do j=0,nJ; do i=0,nI  ! Node loop
+       rr=sqrt( &
+            NodeX_IIIB(i,j,k,iBLK)**2+ &
+            NodeY_IIIB(i,j,k,iBLK)**2+ &
+            NodeZ_IIIB(i,j,k,iBLK)**2)
+       do iVar=1,nplotvar
+          if (nodeCount(i,j,k,iVar) > 0) then
+             PlotVarNodes(i,j,k,iBLK,iVar) = &
+                  nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
+             ! This will zero out values otherwise true with plotvar_useBody
+             ! The intent of plotvar_useBody is to fill nodes inside of the body
+             !   with values for plotting.  However, when allowed to go all the
+             !   way to the origin, B traces will continuously loop through the
+             !   body and out.  Setting the values to zero inside of 0.51 fixes it.
+             if(plotvar_useBody(iVar))then
+                if(rr < 0.51*Rbody .and. rr < 0.51) then
+                   PlotVarNodes(i,j,k,iBLK,iVar) = 0.00
+                end if
+             end if
+          else
+             PlotVarNodes(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
+          end if
+       end do
     end do; end do; end do
 
   end subroutine plotvar_to_plotvarnodes
@@ -511,13 +551,14 @@ end subroutine set_EqPar
 
 !==============================================================================
 subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
-     plotvar_inBody)
+     plotvar_inBody,plotvar_useBody)
 
   use ModProcMH
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
-       State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative
+       State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative, &
+       Ex_CB, Ey_CB, Ez_CB
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
   use ModImplicit, ONLY : implicitBLK                      !^CFG IF IMPLICIT
@@ -530,16 +571,20 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
   real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
   real, intent(out)   :: plotvar_inBody(nPlotVar)
+  logical, intent(out) :: plotvar_useBody(nPlotVar)
   character (len=10)  :: s
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
   integer :: iVar,itmp,jtmp, jVar
-  integer :: i,j,k
+  integer :: i,j,k, ip1,im1,jp1,jm1,kp1,km1
+  real :: xfactor,yfactor,zfactor
   !-------------------------------------------------------------------------
 
-  do iVar=1,nPlotVar
-     s=plotvarnames(iVar)
+  do iVar = 1, nPlotVar
+     s = plotvarnames(iVar)
+!!! call lower_case(s)
+
      ! Set plotvar_inBody to something reasonable for inside the body.
      ! Load zeros (0) for most values - load something better for rho, p, and T.
      ! We know that U,B,J are okay with zeroes, others should be changed if
@@ -547,6 +592,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      ! Note that this is used for tecplot corner extrapolation and for nothing
      ! else.
      plotvar_inBody(iVar) = 0.0
+
+     ! Set plotvar_useBody to false unless cell values inside of the body are
+     ! to be used for plotting.
+     plotvar_useBody(iVar) = .false.
 
      select case(s)
 
@@ -571,10 +620,13 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('rhoUz','rhouz','mz')
         PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)
      case('Bx','bx')
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
      case('By','by')
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)
      case('Bz','bz')
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)
 
      case('BxL','bxl')                           !^CFG IF CONSTRAINB BEGIN
@@ -599,7 +651,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(By_,:,:,:,iBLK)**2 &
              -State_VGB(Bz_,:,:,:,iBLK)**2)
      case('P','p','Pth','pth')
-        PlotVar(:,:,:,iVar)=State_VGB(P_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = State_VGB(P_,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_p
 !^CFG IF ALWAVES BEGIN
      case('Ew','ew')
@@ -620,10 +672,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 + OMEGAbody*x_BLK(:,:,:,iBLK)
         else
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(rhoUy_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
         end if
      case('Uz','uz')
-        PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = &
+             State_VGB(rhoUz_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
      case('B1x','b1x')
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)
      case('B1y','b1y')
@@ -632,37 +686,122 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)
      case('Jx','jx')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bz_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bz_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK) &
-             -(State_VGB(By_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(By_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
+                -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
+                   -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK) - &
+                   (State_VGB(By_,i  ,j  ,kp1,iBLK) &
+                   -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
+           end do; end do; end do
+        end if
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN         
      case('Jy','jy')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bx_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(Bx_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK) &
-             -(State_VGB(Bz_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(Bz_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
+                -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
+                   -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK) - &
+                   (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
+                   -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
+           end do; end do; end do
+        endif
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
      case('Jz','jz')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(By_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(By_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK) &
-             -(State_VGB(Bx_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bx_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
+                -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+                -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(By_,ip1,j  ,k  ,iBLK) &
+                   -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK) - &
+                   (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
+                   -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
+           end do; end do; end do
+        end if
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
+     case('enumx')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
+     case('enumy')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ey_CB(:,:,:,iBLK)
+     case('enumz')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
      case('ex','Ex','EX')
-        PlotVar(:,:,:,iVar)= ( State_VGB(rhoUz_,:,:,:,iBLK)* &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUy_,:,:,:,iBLK)* &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)))/ &
-             State_VGB(rho_,:,:,:,iBLK) 
+        PlotVar(:,:,:,iVar)= &
+             ( State_VGB(rhoUz_,:,:,:,iBLK) &
+             * ( State_VGB(By_,:,:,:,iBLK) + B0yCell_BLK(:,:,:,iBLK)) &
+             - State_VGB(rhoUy_,:,:,:,iBLK) &
+             * ( State_VGB(Bz_,:,:,:,iBLK) + B0zCell_BLK(:,:,:,iBLK)) &
+             ) / State_VGB(rho_,:,:,:,iBLK) 
      case('ey','Ey','EY')
         PlotVar(:,:,:,iVar)= ( State_VGB(rhoUx_,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
@@ -676,9 +815,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)))/ &
              State_VGB(rho_,:,:,:,iBLK) 
      case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-        PlotVar(:,:,:,iVar) = ( ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
+        PlotVar(:,:,:,iVar) = ( &
+             ( (State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2  &
+             + (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2  &
+             + (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
              State_VGB(rhoUx_,:,:,:,iBLK) &
              -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUx_,:,:,:,iBLK) + &
@@ -715,46 +855,54 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         ! Radial component variables
 
      case('Ur','ur')
-        PlotVar(:,:,:,iVar)=( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK))  &
-             / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+        PlotVar(:,:,:,iVar) = &
+             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('rhoUr','rhour','mr')
-        PlotVar(:,:,:,iVar)=( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK))  &
-             / R_BLK(:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = &
+             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / R_BLK(:,:,:,iBLK)
      case('Br','br')
-        PlotVar(:,:,:,iVar)=( (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
+        plotvar_useBody(iVar) = .true.
+        PlotVar(:,:,:,iVar)=( &
+             ( State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
              *X_BLK(:,:,:,iBLK)                         &  
              +(State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
              *Y_BLK(:,:,:,iBLK)                         &
              +(State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
              *Z_BLK(:,:,:,iBLK) ) / R_BLK(:,:,:,iBLK) 
      case('B1r','b1r')
-        PlotVar(:,:,:,iVar)=( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK)                         &  
-             +State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK)                         &
-             +State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) ) &
-             / R_BLK(:,:,:,iBLK)                                 
+        PlotVar(:,:,:,iVar)= &
+             ( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) &
+             + State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) &
+             + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / R_BLK(:,:,:,iBLK)                                 
      case('Jr','jr')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=                    &
-             ( ( 0.5*(&
-             (State_VGB(Bz_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bz_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK) &
-             -(State_VGB(By_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(By_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK)) )*x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             +( 0.5*(&
-             (State_VGB(Bx_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(Bx_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK) &
-             -(State_VGB(Bz_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(Bz_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK)) )*y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             +( 0.5*(&
-             (State_VGB(By_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(By_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK) &
-             -(State_VGB(Bx_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bx_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK)) )*z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) ) / &
-             R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK)
+        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+             0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
+             ( ( &
+             ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
+             - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+             ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+             - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK)   &
+             ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+             + ( &
+             ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
+             - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+             ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
+             - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK)   &
+             ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+             + ( &
+             ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
+             - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+             ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+             - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
+             ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )
 !^CFG END CARTESIAN
 !       call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN
      case('er','Er','ER')
@@ -774,10 +922,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))) &
              *z_BLK(:,:,:,iBLK) )/State_VGB(rho_,:,:,:,iBLK) 
      case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-        tmp1Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
+        tmp1Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 
-        tmp2Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+        tmp2Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUx_,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUy_,:,:,:,iBLK) + &
@@ -797,9 +947,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('B2ur','B2Ur','b2ur')
-        tmp1Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
+        tmp1Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2                       
+             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2  
         PlotVar(:,:,:,iVar)=0.5*( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK)* &
              X_BLK(:,:,:,iBLK) &
              +tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK)* &
@@ -842,7 +993,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dx_BLK(iBLK)  &
+                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dx_BLK(iBLK) &
                 +(State_VGB(By_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
@@ -850,7 +1001,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dy_BLK(iBLK)  &
+                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dy_BLK(iBLK) &
                 +(State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
@@ -864,11 +1015,11 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
         endif
 !^CFG END CARTESIAN
-     case('absdivB')
-         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=abs(DivB1_GB(:,:,:,iBLK))
+     case('absdivB','absdivb','ABSDIVB')
+         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = abs(DivB1_GB(:,:,:,iBLK))
          if(.not.true_BLK(iBLK))then
-           where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
-        endif
+            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
+         endif
 !!$!^CFG  IF RAYTRACE BEGIN
         ! BASIC RAYTRACE variables
 
@@ -1064,7 +1215,7 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_B
      case('Jx','jx','Jy','jy','Jz','jz','Jr','jr')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_J   
-     case('ex','Ex','ey','Ey','ez','Ez','er','Er')
+     case('ex','Ex','ey','Ey','ez','Ez','er','Er','enumx','enumy','enumz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_electric   
      case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX', &
           'pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY', &
@@ -1073,9 +1224,9 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
      case('B2ur','B2Ur','b2ur')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
-     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
+     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct',&
+          'absdivB','absdivb','ABSDIVB')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_DivB
-
 
         ! BASIC RAYTRACE variables
 
@@ -1114,694 +1265,336 @@ end subroutine dimensionalize_plotvar
 
 !==============================================================================
 
-subroutine get_TEC_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
+subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   use ModPhysics
-  use ModIO, ONLY : plot_type,plot_dimensional
-  use ModVarIndexes, ONLY : NameVar_V
+  use ModUtilities,  ONLY: lower_case
+  use ModIO,         ONLY: plot_type,plot_dimensional
+  use ModVarIndexes, ONLY: NameVar_V
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: Nplotvar,iFile
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=500), intent(out) :: unitstr_TEC 
-  character (len=10) :: s
+  integer, intent(in)              :: nPlotVar, iFile
+  character (len=10), intent(in)   :: NamePlotVar_V(nPlotVar)
+  character (len=500), intent(out) :: StringVarTec 
 
-  integer :: iVar, len, jVar
-
+  character (len=10) :: NamePlotVar, NameVar, NameTecVar, NameUnit
+  integer            :: iPlotVar, iVar
 
   !\
   ! This routine takes the plot_var information and loads the header file with
   ! the appropriate string of variable names and units
   !/
 
+  ! Coordinate names and units
   if(index(plot_type(ifile),'sph')>0) then
 
      if (plot_dimensional(ifile)) then
-   	write(unitstr_TEC,'(a)') 'VARIABLES = '
-    	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Z '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)// &
-             '", "`q [degree]", "`f[degree]'
+        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
+             // '", "Y ' // trim(unitstr_TEC_x) &
+             // '", "Z ' // trim(unitstr_TEC_x) &
+             // '", "`q [degree]", "`f[degree]'
      else
-   	write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y", "Z", "`q", "`f'
+   	StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
      end if
 
   else
 
      if (plot_dimensional(ifile)) then
-   	write(unitstr_TEC,'(a)') 'VARIABLES = '
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Z '//&
-             trim(unitstr_TEC_x)
+        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
+             // '", "Y ' // trim(unitstr_TEC_x) &
+             // '", "Z ' // trim(unitstr_TEC_x)
      else
-   	write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y", "Z'
+   	StringVarTec = 'VARIABLES = "X", "Y", "Z"'
      end if
 
   end if
 
-  do iVar = 1, nplotvar
+  do iPlotVar = 1, nPlotVar
 
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+     NamePlotVar = NamePlotVar_V(iPlotVar)
+     call lower_case(NamePlotVar)
 
-     s=plotvarnames(iVar)
+     ! Default value for NameUnit is empty string
+     NameUnit = ''
 
-     if (plot_dimensional(ifile)) then
-
-        select case(s)
-
-           ! BASIC MHD variables 
-        case('rho') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r'//' '//&
-               trim(unitstr_TEC_rho)
-        case('rhoUx','rhoux','mx') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_x'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('rhoUy','rhouy','my') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_y'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('rhoUz','rhouz','mz') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_z'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('Bx','bx') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_x'//' '//&
-               trim(unitstr_TEC_B)
-        case('By','by') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_y'//' '//&
-               trim(unitstr_TEC_B)
-        case('Bz','bz') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_z'//' '//&
-               trim(unitstr_TEC_B)
-           ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
-        case('BxL','bxl') ! east
-           unitstr_TEC=trim(unitstr_TEC)//'B_e'//' '//trim(unitstr_TEC_B)
-        case('BxR','bxr') ! west
-           unitstr_TEC=trim(unitstr_TEC)//'B_w'//' '//trim(unitstr_TEC_B)
-        case('ByL','byl') ! south
-           unitstr_TEC=trim(unitstr_TEC)//'B_s'//' '//trim(unitstr_TEC_B)
-        case('ByR','byr') ! north
-           unitstr_TEC=trim(unitstr_TEC)//'B_n'//' '//trim(unitstr_TEC_B)
-        case('BzL','bzl') ! bottom
-           unitstr_TEC=trim(unitstr_TEC)//'B_b'//' '//trim(unitstr_TEC_B)
-        case('BzR','bzr') ! top
-           unitstr_TEC=trim(unitstr_TEC)//'B_t'//' '//trim(unitstr_TEC_B)
-           !                                        !^CFG END CONSTRAINB
-        case('E','e')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'E'//' '//&
-                trim(unitstr_TEC_energydens)
-        case('P','p','Pth','pth')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'p'//' '//&
-                trim(unitstr_TEC_p)
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Ew'//' '//&
-                trim(unitstr_TEC_energydens)
-!^CFG END ALWAVES
-
-           ! EXTRA MHD variables 
-
-        case('Ux','ux') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_x'//' '//&
-                trim(unitstr_TEC_U)
-        case('Uy','uy') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_y'//' '//&
-                trim(unitstr_TEC_U)
-        case('Uz','uz') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_z'//' '//&
-                trim(unitstr_TEC_U)
-        case('Ur','ur') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_r'//' '//&
-                trim(unitstr_TEC_U)
-        case('rhoUr','rhour','mr') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r U_r'//' '//&
-                trim(unitstr_TEC_rhoU)
-        case('Br','br') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'B_r'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1x','b1x') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'B1_x'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1y','b1y')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_y'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1z','b1z')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_z'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1r','b1r')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_r'//' '//&
-                trim(unitstr_TEC_B)
-        case('Jx','jx') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'J_x'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jy','jy')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_y'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jz','jz')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_z'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jr','jr')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_r'//' '//&
-                trim(unitstr_TEC_J)                
-        case('Ex','ex') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'E_x'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Ey','ey')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_y'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Ez','ez')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_z'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Er','er')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_r'//' '//&
-                trim(unitstr_TEC_electric)                
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_x'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_y'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_z'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_r'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('B2ur','B2Ur','b2ur')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B^2/`u_0 U_r'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'~Q~7B'//' '//&
-                trim(unitstr_TEC_DivB)
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-
-        case('theta1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_1'//' '//&
-                trim(unitstr_TEC_angle)
-        case('phi1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`f_1'//' '//&
-                trim(unitstr_TEC_angle)
-        case('theta2')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_2'//' '//&
-                trim(unitstr_TEC_angle)
-        case('phi2')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`f_2'//' '//&
-                trim(unitstr_TEC_angle)
-        case('status')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'Status'
-
-           ! EXTRA RAYTRACE variables
-        case('f1x')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'f1x'
-        case('f1y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1y'
-        case('f1z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1z'
-        case('f2x')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2x'
-        case('f2y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2y'
-        case('f2z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2z'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION
-        case('dx')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dx'//' '//&
-                trim(unitstr_TEC_x)
-        case('dt')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dt'//' '//&
-                trim(unitstr_TEC_t)
-        case('dtblk','dtBLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dtblk'//' '//&
-                trim(unitstr_TEC_t)
-        case('impl','IMPL')                                  !^CFG IF IMPLICIT BEGIN
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'impl' !^CFG END IMPLICIT
-        case('PE','pe','proc')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'PE #'
-        case('blk','BLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Block #'
-        case('blkall','BLKALL')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'blkall'
-        case('child')
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'Child #'
-
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)) )
-              jVar=jVar+1
-           end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//&
-                   ' '//trim(NameVar_V(jVar))//' '//&
-                   trim(TypeUnitVarsTec_V(jVar))
-           else           
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//'Default'
+     select case(NamePlotVar)
+     case('rho') 
+        NameTecVar = '`r'
+        NameUnit   = unitstr_TEC_rho
+     case('rhoux','mx') 
+        NameTecVar = '`r U_x'
+        NameUnit   = unitstr_TEC_rhoU
+     case('rhouy','my') 
+        NameTecVar = '`r U_y'
+        NameUnit   = unitstr_TEC_rhoU
+     case('rhouz','mz') 
+        NameTecVar = '`r U_z'
+        NameUnit   = unitstr_TEC_rhoU
+     case('bx') 
+        NameTecVar = 'B_x'
+        NameUnit   = unitstr_TEC_B
+     case('by') 
+        NameTecVar = 'B_y'
+        NameUnit   = unitstr_TEC_B
+     case('bz') 
+        NameTecVar = 'B_z'
+        NameUnit   = unitstr_TEC_B
+        ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
+     case('bxl') ! east
+        NameTecVar = 'B_e'
+        NameUnit   = unitstr_TEC_B
+     case('bxr') ! west
+        NameTecVar = 'B_w'
+        NameUnit   = unitstr_TEC_B
+     case('byl') ! south
+        NameTecVar = 'B_s'
+        NameUnit   = unitstr_TEC_B
+     case('byr') ! north
+        NameTecVar = 'B_n'
+        NameUnit   = unitstr_TEC_B
+     case('bzl') ! bottom
+        NameTecVar = 'B_b'
+        NameUnit   = unitstr_TEC_B
+     case('bzr') ! top
+        NameTecVar = 'B_t'
+        NameUnit   = unitstr_TEC_B
+        !                                        !^CFG END CONSTRAINB
+     case('e')
+        NameTecVar = 'E'
+        NameUnit   = unitstr_TEC_energydens
+     case('p','pth')
+        NameTecVar = 'p'
+        NameUnit   = unitstr_TEC_p
+     case('ew')                                  !^CFG IF ALWAVES BEGIN
+        NameTecVar = 'Ew'
+        NameUnit   = unitstr_TEC_energydens      !^CFG END ALWAVES
+     case('ux') 
+        NameTecVar = 'U_x'
+        NameUnit   = unitstr_TEC_U
+     case('uy') 
+        NameTecVar = 'U_y'
+        NameUnit   = unitstr_TEC_U
+     case('uz') 
+        NameTecVar = 'U_z'
+        NameUnit   = unitstr_TEC_U
+     case('ur') 
+        NameTecVar = 'U_r'
+        NameUnit   = unitstr_TEC_U
+     case('rhour','mr') 
+        NameTecVar = '`r U_r'
+        NameUnit   = unitstr_TEC_rhoU
+     case('br') 
+        NameTecVar = 'B_r'
+        NameUnit   = unitstr_TEC_B
+     case('b1x') 
+        NameTecVar = 'B1_x'
+        NameUnit   = unitstr_TEC_B
+     case('b1y')                                 
+        NameTecVar = 'B1_y'
+        NameUnit   = unitstr_TEC_B
+     case('b1z')                                 
+        NameTecVar = 'B1_z'
+        NameUnit   = unitstr_TEC_B
+     case('b1r')                                 
+        NameTecVar = 'B1_r'
+        NameUnit   = unitstr_TEC_B
+     case('jx') 
+        NameTecVar = 'J_x'
+        NameUnit   = unitstr_TEC_J
+     case('jy')                                 
+        NameTecVar = 'J_y'
+        NameUnit   = unitstr_TEC_J
+     case('jz')                                 
+        NameTecVar = 'J_z'
+        NameUnit   = unitstr_TEC_J
+     case('jr')                                 
+        NameTecVar = 'J_r'
+        NameUnit   = unitstr_TEC_J
+     case('ex')
+        NameTecVar = 'E_x'
+        NameUnit   = unitstr_TEC_electric
+     case('ey')
+        NameTecVar = 'E_y'
+        NameUnit   = unitstr_TEC_electric
+     case('ez')                                 
+        NameTecVar = 'E_z'
+        NameUnit   = unitstr_TEC_electric
+     case('er')                                 
+        NameTecVar = 'E_r'
+        NameUnit   = unitstr_TEC_electric                
+     case('pvecx')
+        NameTecVar = 'S_x'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecy')
+        NameTecVar = 'S_y'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecz')
+        NameTecVar = 'S_z'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecr')
+        NameTecVar = 'S_r'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('b2ur')
+        NameTecVar = 'B^2/`u_0 U_r'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('divb', 'divb_cd', 'divb_ct', 'absdivb')
+        NameTecVar = '~Q~7B'
+        NameUnit   = unitstr_TEC_DivB
+     case('theta1')                              !^CFG  IF RAYTRACE BEGIN
+        NameTecVar = '`q_1'
+        NameUnit   = unitstr_TEC_angle
+     case('phi1')
+        NameTecVar = '`f_1'
+        NameUnit   = unitstr_TEC_angle
+     case('theta2')
+        NameTecVar = '`q_2'
+        NameUnit   = unitstr_TEC_angle
+     case('phi2')
+        NameTecVar = '`f_2'
+        NameUnit   = unitstr_TEC_angle
+     case('status')
+        NameTecVar = 'Status'
+     case('f1x','f1y','f1z','f2x','f2y','f2z')
+        NameTecVar = NamePlotVar                 !^CFG END RAYTRACE
+     case('dx')
+        NameTecVar = 'dx'
+        NameUnit   = unitstr_TEC_x
+     case('dt')
+        NameTecVar = 'dt'
+        NameUnit   = unitstr_TEC_t
+     case('dtblk')
+        NameTecVar = 'dtblk'
+        NameUnit   = unitstr_TEC_t
+     case('impl')                                !^CFG IF IMPLICIT
+        NameTecVar = 'impl'                      !^CFG IF IMPLICIT
+     case('PE','pe','proc')
+        NameTecVar = 'PE #'
+     case('blk')
+        NameTecVar = 'Block #'
+     case('blkall')
+        NameTecVar = 'blkall'
+     case('child')
+        NameTecVar = 'Child #'
+     case default
+        ! Use the plot variable name by default but unit is not known
+        NameTecVar = NamePlotVar
+        NameUnit   = 'Default'
+        ! Try to find the plot variable among the basic variables to set unit
+        do iVar = 1, nVar
+           NameVar = NameVar_V(iVar)
+           call lower_case(NameVar)
+           if(NameVar == NamePlotVar)then
+              NameUnit = TypeUnitVarsTec_V(iVar)
+              EXIT
            end if
+        end do
+     end select
 
-        end select
+     StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
 
-     else
-
-        select case(s)
-
-           ! BASIC MHD variables
-        case('rho') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r'
-        case('rhoUx','rhoux','mx') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_x'
-        case('rhoUy','rhouy','my') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_y'
-        case('rhoUz','rhouz','mz') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_z'
-        case('Bx','bx') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_x'
-        case('By','by') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_y'
-        case('Bz','bz') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_z'
-
-           ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
-        case('BxL','bxl') ! east
-           unitstr_TEC=trim(unitstr_TEC)//'B_e'
-        case('BxR','bxr') ! west
-           unitstr_TEC=trim(unitstr_TEC)//'B_w'
-        case('ByL','byl') ! south
-           unitstr_TEC=trim(unitstr_TEC)//'B_s'
-        case('ByR','byr') ! north
-           unitstr_TEC=trim(unitstr_TEC)//'B_n'
-        case('BzL','bzl') ! bottom
-           unitstr_TEC=trim(unitstr_TEC)//'B_b'
-        case('BzR','bzr') ! top
-           unitstr_TEC=trim(unitstr_TEC)//'B_t'
-           !                                        !^CFG END CONSTRAINB
-        case('E','e')				       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'E'
-        case('P','p','Pth','pth')		       
-           write(unitstr_TEC,'(a)') & 		       
-               trim(unitstr_TEC)//'p'
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Ew'
-!^CFG END ALWAVES
-           ! EXTRA MHD variables
-
-        case('Ux','ux') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_x'
-        case('Uy','uy') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_y'
-        case('Uz','uz') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_z'
-        case('Ur','ur') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_r'
-        case('rhoUr','rhour','mr') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_r'
-        case('Br','br') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_r'
-        case('B1x','b1x') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B1_x'
-        case('B1y','b1y')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_y'
-        case('B1z','b1z')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_z'
-        case('B1r','b1r')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_r'
-        case('Jx','jx') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'J_x'
-        case('Jy','jy')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_y'
-        case('Jz','jz')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_z'
-        case('Jr','jr')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_r'
-        case('Ex','ex') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'E_x'
-        case('Ey','ey')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_y'
-        case('Ez','ez')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_z'
-        case('Er','er')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_r'
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_x'
-        case('pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_y'
-        case('pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_z'
-        case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_r'
-        case('B2ur','B2Ur','b2ur')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B^2/`u_0 U_r'
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'~Q~7B'
-
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-
-        case('theta1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_1'
-        case('phi1')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`f_1'
-        case('theta2')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`q_2'
-        case('phi2')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`f_2'
-        case('status')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'Status'
-
-           ! EXTRA RAYTRACE variables		       
-        case('f1x')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1x'
-        case('f1y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1y'
-        case('f1z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1z'
-        case('f2x')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2x'
-        case('f2y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2y'
-        case('f2z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2z'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION			       
-        case('dx')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dx'
-        case('dt')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dt'
-        case('dtblk','dtBLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dtblk'
-        case('impl','IMPL')                                  !^CFG IF IMPLICIT BEGIN
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'impl' !^CFG END IMPLICIT
-        case('PE','pe','proc')			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'PE #'
-        case('blk','BLK')
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Block #'
-        case('blkall','BLKALL')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'blkall'
-        case('child')				       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Child #'
-
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           jVar = 1
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)))
-              jVar=jVar+1
-           end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//&
-                   ' '//trim(NameVar_V(jVar))
-           else           
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//'Default'
-           end if
-        end select
-
-     end if
+     if (plot_dimensional(ifile)) &
+          StringVarTec = trim(StringVarTec) // ' ' //NameUnit
 
   end do
 
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+  ! Append a closing double quote
+  StringVarTec = trim(StringVarTec) // '"'
 
 end subroutine get_TEC_variables
 
-
 !==============================================================================
 
-subroutine get_IDL_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
   use ModPhysics
-  use ModIO, ONLY : plot_type,plot_dimensional
-  use ModVarIndexes, ONLY : NameVar_V
+  use ModUtilities,  ONLY: lower_case
+  use ModIO,         ONLY: plot_type, plot_dimensional
+  use ModVarIndexes, ONLY: NameVar_V
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: iFile,Nplotvar
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=79), intent(out) :: unitstr_IDL 
-  character (len=10) :: s
+  integer, intent(in)             :: iFile, nPlotVar
+  character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
+  character (len=79), intent(out) :: StringUnitIdl 
 
-  integer :: iVar, len, jVar
 
+  character (len=10) :: NamePlotVar, NameVar, NameUnit
+  integer            :: iPlotVar, iVar
 
   !\
   ! This routine takes the plot_var information and loads the header file with
   ! the appropriate string of unit values
   !/
 
+  if(.not.plot_dimensional(iFile))then
+     StringUnitIdl = 'normalized variables'
+     RETURN
+  end if
+
   if(index(plot_type(ifile),'sph')>0) then
-
-     if (plot_dimensional(ifile)) then
-        write(unitstr_IDL,'(a)') trim(unitstr_IDL_x)//' '//&
-             'degree degree'
-     else
-        write(unitstr_IDL,'(a)') 'normalized variables'
-     end if
-
+     StringUnitIdl = trim(unitstr_IDL_x)//' deg deg'
   else
-     if (plot_dimensional(ifile)) then
-        write(unitstr_IDL,'(a)') trim(unitstr_IDL_x)//' '//&
-             trim(unitstr_IDL_x)//' '//&
-             trim(unitstr_IDL_x)
-     else
-        write(unitstr_IDL,'(a)') 'normalized variables'
-     end if
-
+     StringUnitIdl = trim(unitstr_IDL_x)//' '//&
+          trim(unitstr_IDL_x)//' '//trim(unitstr_IDL_x)
   end if
 
+  do iPlotVar = 1, nPlotVar
 
-  if (plot_dimensional(ifile)) then
+     NamePlotVar = NamePlotVar_V(iPlotVar)
+     call lower_case(NamePlotVar)
 
-     do iVar = 1, nplotvar
-
-   	s=plotvarnames(iVar)
-
-   	select case(s)
-
-           ! MHD variables 
-   	case('rho') 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_rho)
-   	case('rhoUx','rhoux','mx','rhoUy','rhouy','my','rhoUz','rhouz','mz',&
-             'rhoUr','rhour','mr')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_rhoU)
-   	case('Bx','bx','By','by','Bz','bz',&
-             'B1x','b1x','B1y','b1y','B1z','b1z',&
-             'Br','br','B1r','b1r')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_B)
-   	case('E','e')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_energydens)
-   	case('P','p','Pth','pth')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_p)
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_energydens)
-!^CFG END ALWAVES
-        case('Ux','ux','Uy','uy','Uz','uz',&
-             'Ur','ur')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_U)
-   	case('Jx','jx','Jy','jy','Jz','jz','Jr','jr') 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_J)
-   	case('Ex','ex','Ey','ey','Ez','ez','Er','er')                                 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_electric)
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX', &
-             'pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY', &
-             'pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ', &
-             'pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR', &
-             'B2ur','B2Ur','b2ur')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_Poynting)
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct')
-           write(unitstr_IDL,'(a)') &                      
-                trim(unitstr_IDL)//' '//&
-                trim(unitstr_IDL_DivB)
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-      	case('theta1','phi1','theta2','phi2')
-   	   write(unitstr_IDL,'(a)') &                      
-   		trim(unitstr_IDL)//' deg'
-   	case('status')
-   	   write(unitstr_IDL,'(a)') &                      
-   		trim(unitstr_IDL)//' --'
-
-           ! EXTRA RAYTRACE variables
-   	case('f1x','f1y','f1z','f2x','f2y','f2z')
-   	   write(unitstr_IDL,'(a)') &                 
-   		trim(unitstr_IDL)//' --'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION
-   	case('PE','pe','proc','blk','BLK','blkall','BLKALL','child', &
-             'impl','IMPL')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' 1'
-        case('dt','dtBLK','dtblk')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '// &
-                trim(unitstr_IDL_t)
-        case('dx')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '// &
-                trim(unitstr_IDL_x)
-
-
-           ! DEFAULT FOR A BAD SELECTION
-   	case default
-           jVar = 1
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)))
-              jVar=jVar+1
-           end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
-              write(unitstr_IDL,'(a)') & 
-                   trim(unitstr_IDL)//&
-                   ' '//trim(TypeUnitVarsIdl_V(jVar))
-           else
-              write(unitstr_IDL,'(a)') & 
-                   trim(unitstr_IDL)//' ?'
-              
+     select case(NamePlotVar)
+     case('rho') 
+        NameUnit = unitstr_IDL_rho
+     case('rhoux','mx','rhouy','rhoUz','rhouz','mz','rhour','mr')
+        NameUnit = unitstr_IDL_rhoU
+     case('bx','by','bz','b1x','b1y','b1z','br','b1r')
+        NameUnit = unitstr_IDL_B
+     case('e')
+        NameUnit = unitstr_IDL_energydens
+     case('p','pth')
+        NameUnit = unitstr_IDL_p
+     case('ew')                                  !^CFG IF ALWAVES
+        NameUnit = unitstr_IDL_energydens        !^CFG IF ALWAVES
+     case('ux','uy','uz','ur')
+        NameUnit = unitstr_IDL_U
+     case('jx','jy','jz','jr') 
+        NameUnit = unitstr_IDL_J
+     case('ex','ey','ez','er','enumx','enumy','enumz')
+        NameUnit = unitstr_IDL_electric
+     case('pvecx','pvecy','pvecz','pvecr','b2ur')
+        NameUnit = unitstr_IDL_Poynting
+     case('divb','divb_cd','divb_ct','absdivb')
+        NameUnit = unitstr_IDL_DivB
+     case('theta1','phi1','theta2','phi2')       !^CFG  IF RAYTRACE BEGIN
+        NameUnit = 'deg'
+     case('status','f1x','f1y','f1z','f2x','f2y','f2z')
+        NameUnit = '--'                          !^CFG END RAYTRACE
+        ! GRID INFORMATION
+     case('pe', 'proc','blk','blkall','child','impl')
+        NameUnit = '1'
+     case('dt', 'dtblk')
+        NameUnit = unitstr_IDL_t
+     case('dx')
+        NameUnit = unitstr_IDL_x
+     case default
+        ! Unit is not known
+        NameUnit = '?'
+        ! Try to find the plot variable among the basic variables
+        do iVar = 1, nVar
+           NameVar = NameVar_V(iVar)
+           call lower_case(NameVar)
+           if(NameVar == NamePlotVar)then
+              NameUnit = TypeUnitVarsIdl_V(iVar)
+              EXIT
            end if
-   	end select
-
-     end do
-
-  end if
+        end do
+     end select
+     ! Append the unit string for this variable to the output string
+     StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
+  end do
 
 end subroutine get_idl_units

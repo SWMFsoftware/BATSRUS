@@ -248,15 +248,15 @@ subroutine gravity_force(X0,Y0,Z0,g0)
 end subroutine gravity_force
 
 !----------------------------------------------------------------------
-!                        centripetal_force
+!                        centrifugal_force
 !----------------------------------------------------------------------
 
 !\
-! Evaluates the non-dimensional centripetal force at the
+! Evaluates the non-dimensional centrifugal force at the
 ! specified location (X0,Y0,Z0) for a rotating coordinate frame.
 !/
 
-subroutine centripetal_force(X0,Y0,Z0,f0)
+subroutine centrifugal_force(X0,Y0,Z0,f0)
   use ModMain
   use ModPhysics, ONLY : OMEGAbody
   implicit none
@@ -264,9 +264,9 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(1:3) :: f0
 
-  select case (problem_type)             !^CFG IF NOT SIMPLE BEGIN
+  select case (problem_type)
   case (problem_heliosphere)
-     if (UseInertial) then
+     if (.not.UseRotatingFrame) then
         f0(1) = 0.00
         f0(2) = 0.00
         f0(3) = 0.00
@@ -275,13 +275,13 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
         f0(2) = OMEGAbody*OMEGAbody*Y0
         f0(3) = 0.00
      endif
-  case default                           !^CFG END SIMPLE
+  case default
      f0(1) = 0.00
      f0(2) = 0.00
      f0(3) = 0.00
-  end select                             !^CFG IF NOT SIMPLE
+  end select
 
-end subroutine centripetal_force
+end subroutine centrifugal_force
 
 !----------------------------------------------------------------------
 !                       body_force_GaussQuadXYZ
@@ -384,8 +384,8 @@ subroutine body_force_GaussQuadZ(x0,y0,zmin,zmax,integral)
      integral(1) = integral(1) + GaussWeights(j)*(tmp1(1)+tmp2(1))
      integral(2) = integral(2) + GaussWeights(j)*(tmp1(2)+tmp2(2))
      integral(3) = integral(3) + GaussWeights(j)*(tmp1(3)+tmp2(3))
-     call centripetal_force(x0,y0,zm+localdz,tmp1)
-     call centripetal_force(x0,y0,zm-localdz,tmp2)
+     call centrifugal_force(x0,y0,zm+localdz,tmp1)
+     call centrifugal_force(x0,y0,zm-localdz,tmp2)
      integral(1) = integral(1) + GaussWeights(j)*(tmp1(1)+tmp2(1))
      integral(2) = integral(2) + GaussWeights(j)*(tmp1(2)+tmp2(2))
      integral(3) = integral(3) + GaussWeights(j)*(tmp1(3)+tmp2(3))
@@ -532,7 +532,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
 
   real, intent(in) :: X0,Y0,Z0
   real :: q0
-!^CFG IF NOT SIMPLE BEGIN
   real :: R0,XT,YT,ZT,SIGMAHeat2
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
        sin2Theta_coronal_hole
@@ -583,7 +582,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
   end if
   !^CFG IF SECONDBODY END
 
-!^CFG END SIMPLE
 end subroutine heat_source
 
 !----------------------------------------------------------------------

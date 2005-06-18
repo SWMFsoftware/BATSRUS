@@ -6,7 +6,11 @@ subroutine GM_set_param(CompInfo, TypeAction)
   use ModProcMH
   use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, &
        NamePlotDir, NameRestartInDir, NameRestartOutDir
-  use ModMain, ONLY : CodeVersion, NameThisComp
+  use ModMain, ONLY : CodeVersion, NameThisComp, &
+       time_accurate, StartTime, iStartTime_I, &
+       dt_UpdateB0, DoUpdateB0, UseRotatingBc
+  use CON_physics, ONLY: get_time, get_planet
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 
@@ -36,8 +40,19 @@ subroutine GM_set_param(CompInfo, TypeAction)
      NamePlotDir      = NameThisComp//'/'//NamePlotDir
      NameRestartInDir = NameThisComp//'/'//NameRestartInDir
      NameRestartOutDir= NameThisComp//'/'//NameRestartOutDir
-  case('READ','CHECK')
-     call MH_set_parameters(TypeAction)
+  case('READ')
+     call MH_set_parameters('READ')
+  case('CHECK')
+     call get_time( &
+          DoTimeAccurateOut = time_accurate, &
+          tStartOut         = StartTime)
+     call get_planet( &
+          DtUpdateB0Out  = dt_updateB0,   &
+          DoUpdateB0Out  = DoUpdateB0,    &
+          UseRotationOut = UseRotatingBc)
+     call time_real_to_int(StartTime,iStartTime_I)
+
+     call MH_set_parameters('CHECK')
   case('STDOUT')
      iUnitOut=STDOUT_
      if(iProc==0)then
@@ -75,28 +90,26 @@ subroutine GM_set_grid
   !EOP
   logical ::DoTest,DoTestMe
   DoTest=.false.;DoTestMe=.false.
-  if(.not.done_dd_init(GM_))then
-     call init_decomposition(GM_,GM_,3,.true.)
-     call set_coord_system(GM_,TypeCoordSystem)
-
-     if(is_proc(GM_))then
-        call init_decomposition(&
-             MH_DomainDecomposition,GM_,3,.true.)
-        call MH_get_root_decomposition(MH_DomainDecomposition)
-        call MH_update_local_decomposition(MH_DomainDecomposition)
-        MH_DomainDecomposition%IsLocal=.true.
-     end if
-  call CON_set_do_test('test_grids',DoTest,DoTestMe)
+  if(done_dd_init(GM_))return
+  call init_decomposition(GM_,GM_,3,.true.)
+  call set_coord_system(GM_,TypeCoordSystem)
+  
+  if(is_proc(GM_))then
+     call init_decomposition(&
+          MH_DomainDecomposition,GM_,3,.true.)
+     call MH_get_root_decomposition(MH_DomainDecomposition)
+     call MH_update_local_decomposition(MH_DomainDecomposition)
+     MH_DomainDecomposition%IsLocal=.true.
   end if
+  call CON_set_do_test('test_grids',DoTest,DoTestMe)
 
 
   if(is_proc0(GM_))call MH_get_root_decomposition(GM_)
 
   call bcast_decomposition(GM_)
-!write(*,*) 'location 8'
 
   call synchronize_refinement(GM_,MH_domaindecomposition)
-!write(*,*) 'location 9'
+
   if(DoTest) call test_global_message_pass(GM_)
 end subroutine GM_set_grid
 !===================================================================!
@@ -129,8 +142,8 @@ subroutine GM_print_variables(NameSource)
   use ModMain, ONLY: NameThisComp
   use ModNumConst
   use ModImPressure                                  !^CFG IF RCM
-  use ModMapPotential,ONLY:IONO_NORTH_PHI,IONO_SOUTH_PHI
-  use ModInnerBc
+  use ModIonoPotential,ONLY:IonoPotential_II
+  use ModIeGrid,       ONLY:nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I
   use ModIoUnit, ONLY: UNITTMP_
   implicit none
   character(len=*), parameter :: NameSub='GM_print_variables'
@@ -148,7 +161,7 @@ subroutine GM_print_variables(NameSource)
   case('IM')                        !^CFG IF RCM
      NameVar='j i lon lat p'        !^CFG IF RCM
   case('IE','IE_swmf')
-     NameVar='i j theta psi pot'
+     NameVar='i j theta phi pot'
   case default
      write(*,*)NameSub,': incorrect NameSource=',NameSource
      RETURN
@@ -163,33 +176,15 @@ subroutine GM_print_variables(NameSource)
   case('IM')                             !^CFG IF RCM BEGIN
      do i=1,iSize
         do j=1,jSize
-           write(UNITTMP_,'(2i4,3G14.6)')j,i,RCM_lon(j),RCM_lat(i),RCM_p(i,j)
+           write(UNITTMP_,'(2i4,3G14.6)')j,i,RCM_lon(j),RCM_lat(i), &
+                RCM_p(i,j),RCM_dens(i,j)
         end do
      end do                              !^CFG END RCM
   case('IE')
-     do j=1,IONO_nPsi
-        do i=1,IONO_nTheta 
+     do j=1,nPhiIono
+        do i=1,nThetaIono
            write(UNITTMP_,'(2i4,3G14.6)')i,j,&
-                IONO_NORTH_Theta(i,j),IONO_NORTH_Psi(i,j),&
-                IONO_NORTH_Phi(i,j)
-        end do
-        do i=1,IONO_nTheta
-           write(UNITTMP_,'(2i4,3G14.6)')i+IONO_nTheta,j,&
-                IONO_SOUTH_Theta(i,j),IONO_SOUTH_Psi(i,j),&
-                IONO_SOUTH_Phi(i,j)
-        end do
-     end do
-  case('IE_swmf')
-     do j=1,IONO_nPsi
-        do i=1,IONO_nTheta 
-           write(UNITTMP_,'(2i4,3G14.6)')i,j,&
-                IONO_NORTH_Theta(i,j),IONO_NORTH_Psi(i,j),&
-                IONO_NORTH_Phi_BC(i,j)
-        end do
-        do i=1,IONO_nTheta
-           write(UNITTMP_,'(2i4,3G14.6)')i+IONO_nTheta,j,&
-                IONO_SOUTH_Theta(i,j),IONO_SOUTH_Psi(i,j),&
-                IONO_SOUTH_Phi_BC(i,j)
+                ThetaIono_I(i),PhiIono_I(j),IonoPotential_II(i,j)
         end do
      end do
   end select
@@ -197,7 +192,7 @@ subroutine GM_print_variables(NameSource)
 
 end subroutine GM_print_variables
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_init_session(iSession, TimeSimulation)
 
@@ -205,7 +200,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
   use ModMain,     ONLY: Time_Simulation, UseIonosphere, &
        TypeBC_I, west_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
-  use CON_physics, ONLY: get_physics
+  use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_
   implicit none
 
@@ -236,8 +231,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
 
   if(IsUninitialized)then
 
-     call get_physics(tSimulationOut=Time_Simulation)
-
+     call get_time(tSimulationOut=Time_Simulation)
      call BATS_setup
      IsUninitialized = .false.
   end if
@@ -252,6 +246,8 @@ end subroutine GM_init_session
 subroutine GM_finalize(TimeSimulation)
 
   use ModMain, ONLY: UseIonosphere, time_loop
+  use ModFieldAlignedCurrent, ONLY: &     !^CFG IF IONOSPHERE
+       clean_mod_field_aligned_current    !^CFG IF IONOSPHERE
   implicit none
 
   !INPUT PARAMETERS:
@@ -266,7 +262,7 @@ subroutine GM_finalize(TimeSimulation)
 
   call BATS_save_files('FINAL')
 
-  if (UseIonosphere) call magnetosphere_deallocate  !^CFG IF IONOSPHERE
+  if (UseIonosphere) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
 
   call error_report('PRINT',0.,iError,.true.)
 
@@ -287,13 +283,12 @@ subroutine GM_save_restart(TimeSimulation)
 
 end subroutine GM_save_restart
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: Time_Simulation, dt
-  use ModPhysics, ONLY: UnitSi_t
+  use ModMain,   ONLY: Time_Simulation
 
   implicit none
 
@@ -320,7 +315,7 @@ subroutine GM_run(TimeSimulation,TimeSimulationLimit)
   call BATS_advance(TimeSimulationLimit)
 
   ! Return time after the time step
-  TimeSimulation = TimeSimulation + dt*UnitSI_t
+  TimeSimulation = Time_Simulation
 
 end subroutine GM_run
 

@@ -896,7 +896,7 @@ subroutine testmessage_pass_nodes
                    ' Values=',V0(i,j,k,iBLK),V1(i,j,k,iBLK)
            end if
         end do; end do; end do
-        if(n/=0) stop
+        if(n/=0) call stop_mpi('testmessage_pass_nodes n/=0')
      end do
      call stop_mpi("testmessage_pass_nodes error")
   end if
@@ -908,6 +908,7 @@ subroutine testmessage_pass_nodes
   write(*,*)' '
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+  call MPI_Finalize(iError)
   stop
 
 end subroutine testmessage_pass_nodes
@@ -1091,7 +1092,8 @@ end subroutine set_block_hanging_nodes
 !==========================================================================
 subroutine assign_node_numbers
   use ModProcMH
-  use ModMain, ONLY : nBlockALL
+  use ModIO, ONLY: write_prefix, iUnitOut
+  use ModMain, ONLY : lVerbose, nBlockALL
   use ModOctree
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModImplicit, ONLY : UsePartImplicit   !^CFG IF IMPLICIT
@@ -1107,8 +1109,8 @@ subroutine assign_node_numbers
   !------------------------------------------
 
   ! Write information to the screen
-  if(iProc==0)then
-     write(*,*)'Starting assign_node_numbers ...'
+  if(iProc==0.and.lVerbose>0)then
+     call write_prefix; write(iUnitOut,*)'Starting assign_node_numbers ...'
   end if
 
   ! Initialize all node numbers to zero
@@ -1196,7 +1198,7 @@ subroutine assign_node_numbers
               write(*,*)'  NodeNumberGlobal_IIIB=',NodeNumberGlobal_IIIB(i,j,k,iBLK)
               write(*,*)'  nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
                    ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
-              stop
+              call stop_mpi('message_pass_nodes: error in numbering')
            end if
         end do; end do; end do
      end if
@@ -1208,7 +1210,8 @@ subroutine assign_node_numbers
 
   ! Write information to the screen
   if(iProc==0)then
-     write(*,*)' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
+     call write_prefix; write(iUnitOUt,*) &
+          ' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
           ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
   end if
 
