@@ -1,5 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT SIMPLE
 !---------------------------------------------------------------------------
 !Subroutine                   arcade_init
 !---------------------------------------------------------------------------
@@ -132,7 +131,7 @@ subroutine set_ICs_arc
            !PRESSURE TEST
            if(State_VGB(P_,i,j,k,globalBLK) .lt. 0.0) then
               write(*,*) 'ARCADE: negative pressure at', i,j,k,globalBLK
-              stop
+              call stop_mpi('ERROR in set_ICs_arc.f90')
            end if
         end do
      end do

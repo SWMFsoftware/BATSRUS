@@ -1,5 +1,5 @@
 Module ModUpstreamData
-  integer, parameter :: Max_Upstream_Npts = 5000
+  integer, parameter :: Max_Upstream_Npts = 50000
   integer :: Upstream_Npts
 
   real, dimension(Max_Upstream_Npts, 8)   :: Upstream_Data
@@ -19,7 +19,7 @@ subroutine read_upstream_input_file(upstreamfilename)
   use ModUpstreamData
   use CON_geopack
   use ModIO, ONLY: iUnitOut, write_prefix
-  use CON_physics, ONLY: time_int_to_real
+  use ModTimeConvert, ONLY: time_int_to_real
   use ModUtilities, ONLY: upper_case
   use ModMpi
   implicit none
@@ -37,6 +37,7 @@ subroutine read_upstream_input_file(upstreamfilename)
 
   real :: timedelay
   real :: dt_min
+  real(Real8_) :: dtData1, dtData2
   real,save::HgiGsm_DD(3,3)
   logical,save::DoSetMatrix=.true.
 
@@ -186,40 +187,45 @@ subroutine read_upstream_input_file(upstreamfilename)
 
      close(UNITTMP_)
 
+     dt_min = 366.0*24.0*3600.0
+     do i=1,Upstream_Npts
+        call time_int_to_real(Upstream_integer_Time(i,:),Upstream_Time(i))
+        Upstream_Time(i) = Upstream_Time(i) + timedelay
+        if (dt_min > abs(Upstream_Time(i) - StartTime)) then
+           dt_min = abs(Upstream_Time(i) - StartTime)
+        endif
+     end do
+
+     if (dt_min > 24.0*3600.0) then
+        write(*,*) "**********************************************************"
+        write(*,*) "*                                                        *"
+        write(*,*) "*         Warning! Warning! Warning! Warning! Warning!   *"
+        write(*,*) "*                                                        *"
+        write(*,*) "*  Time dependent solar wind file disagrees with the     *"
+        write(*,*) "*  starting time of the                                  *"
+        write(*,*) "*  simulation by more than 24 hours.  This could cause   *"
+        write(*,*) "*  results which you                                     *"
+        write(*,*) "*  may not enjoy.                                        *"
+        write(*,*) "*                                                        *"
+        if (UseStrict) call stop_mpi('Correct PARAM.in or the IMF data file')
+        
+        write(*,*) "*  I am assuming that you are smarter than I am.         *"
+        write(*,*) "*  Continuing with simulation.                           *"
+        write(*,*) "*                                                        *"
+        write(*,*) "**********************************************************"
+     endif
+
   endif
 
   call MPI_Bcast(Upstream_Npts,1,MPI_Integer,0,iComm,iError)
   if(iError>0)call stop_mpi(&
        "Upstream_Npts could not be broadcast by read_upstream_input_file")
 
-  call MPI_Bcast(Upstream_integer_time,Max_Upstream_Npts*7,MPI_Integer, &
+  call MPI_Bcast(Upstream_Time,Max_Upstream_Npts,MPI_DOUBLE_PRECISION, &
        0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Upstream_integer_Time could not be broadcast by read_upstream_input_file")
-
-  dt_min = 366.0*24.0*3600.0
-  do i=1,Upstream_Npts
-     call time_int_to_real(Upstream_integer_Time(i,:),Upstream_Time(i))
-     if (dt_min > abs(Upstream_Time(i) - StartTime)) then
-        dt_min = abs(Upstream_Time(i) - StartTime)
-     endif
-  end do
-
-  if ((dt_min > 24.0*3600.0).and.(iProc == 0)) then
-     write(*,*) "******************************************************************************"
-     write(*,*) "*                                                                            *"
-     write(*,*) "*  Warning! Warning! Warning! Warning! Warning! Warning! Warning! Warning!   *"
-     write(*,*) "*                                                                            *"
-     write(*,*) "*  Time dependent solar wind file disagrees with the starting time of the    *"
-     write(*,*) "*  simulation by more than 24 hours.  This could cause results which you     *"
-     write(*,*) "*  may not enjoy.                                                            *"
-     write(*,*) "*                                                                            *"
-     if (UseStrict) call stop_mpi('Correct PARAM.in or the IMF data file')
-
-     write(*,*) "*  I am assuming that you are smarter than I am. Continuing with simulation. *"
-     write(*,*) "*                                                                            *"
-     write(*,*) "******************************************************************************"
-  endif
+       "Upstream_Time could not be broadcast by "// &
+       "read_upstream_input_file")
 
   call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*8,MPI_Real, &
        0,iComm,iError)
@@ -228,15 +234,18 @@ subroutine read_upstream_input_file(upstreamfilename)
 
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "TypeInputCoordSystem could not be broadcast by read_upstream_input_file")
+       "TypeInputCoordSystem could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Propagation_Plane_XY,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XY could not be broadcast by read_upstream_input_file")
+       "Propagation_Plane_XY could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Propagation_Plane_XZ,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XZ could not be broadcast by read_upstream_input_file")
+       "Propagation_Plane_XZ could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Satellite_Y_Pos,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
@@ -290,27 +299,28 @@ subroutine read_upstream_input_file(upstreamfilename)
 
         else
 
-           dt = 1.0 - (Upstream_Time(i) - StartTime) / &
+           DtData2 = (Upstream_Time(i) - StartTime) / &
                 (Upstream_Time(i) - Upstream_Time(i-1) + 1.0e-6)
+           DtData1 = 1.0 - DtData2
 
-           SW_Bx_dim  =       dt  * Upstream_Data(i,1) + &
-                (1.0 - dt) * Upstream_Data(i-1,1)
-           SW_By_dim  =       dt  * Upstream_Data(i,2) + &
-                (1.0 - dt) * Upstream_Data(i-1,2)
-           SW_Bz_dim  =       dt  * Upstream_Data(i,3) + &
-                (1.0 - dt) * Upstream_Data(i-1,3)
+           SW_Bx_dim  =       DtData1  * Upstream_Data(i,1) + &
+                DtData2 * Upstream_Data(i-1,1)
+           SW_By_dim  =       DtData1  * Upstream_Data(i,2) + &
+                DtData2 * Upstream_Data(i-1,2)
+           SW_Bz_dim  =       DtData1  * Upstream_Data(i,3) + &
+                DtData2 * Upstream_Data(i-1,3)
 
-           SW_Ux_dim  =       dt  * Upstream_Data(i,4) + &
-                (1.0 - dt) * Upstream_Data(i-1,4)
-           SW_Uy_dim  =       dt  * Upstream_Data(i,5) + &
-                (1.0 - dt) * Upstream_Data(i-1,5)
-           SW_Uz_dim  =       dt  * Upstream_Data(i,6) + &
-                (1.0 - dt) * Upstream_Data(i-1,6)
+           SW_Ux_dim  =       DtData1  * Upstream_Data(i,4) + &
+                DtData2 * Upstream_Data(i-1,4)
+           SW_Uy_dim  =       DtData1  * Upstream_Data(i,5) + &
+                DtData2 * Upstream_Data(i-1,5)
+           SW_Uz_dim  =       DtData1  * Upstream_Data(i,6) + &
+                DtData2 * Upstream_Data(i-1,6)
 
-           SW_rho_dim =       dt  * Upstream_Data(i,7) + &
-                (1.0 - dt) * Upstream_Data(i-1,7)
-           SW_T_dim   =       dt  * Upstream_Data(i,8) + &
-                (1.0 - dt) * Upstream_Data(i-1,8)
+           SW_rho_dim =       DtData1  * Upstream_Data(i,7) + &
+                DtData2 * Upstream_Data(i-1,7)
+           SW_T_dim   =       DtData1  * Upstream_Data(i,8) + &
+                DtData2 * Upstream_Data(i-1,8)
         endif
      endif
   endif

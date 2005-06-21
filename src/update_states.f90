@@ -105,6 +105,7 @@ subroutine update_check(iStage)
 
   use ModProcMH
   use ModMain
+  use ModImplicit, ONLY: UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance
   use ModPhysics
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,true_cell
@@ -199,6 +200,15 @@ subroutine update_check(iStage)
      end do
      PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
      PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
+
+     !^CFG IF IMPLICIT BEGIN
+     ! The part implicit scheme can get here if all blocks become explicit
+     ! due to time step reductions. To be able to recover the time step,
+     ! increase fixed time step if there was no time step reduction above.
+     if(UsePartImplicit .and. dt == DtFixed) &
+          DtFixed = min(DtFixedOrig, DtFixed*1.05)
+     !^CFG END IMPLICIT
+
      if(oktest) then
         if (iProc == 0 .and. report_tf < 1.) &
              write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
@@ -653,9 +663,7 @@ subroutine select_conservative
      RETURN
   endif
 
-  if(any(TypeConservCrit_I /= 'r' .and. &
-       index(TypeConservCrit_I,'Max') /= 2 .and. &
-       index(TypeConservCrit_I,'Min') /= 2 ))then
+  if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp'))then
 
      if(DoTestMe)write(*,*)'select_conservative: Apply physics based criteria'
 
@@ -682,7 +690,7 @@ subroutine select_conservative
                    -State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
                    -State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2 &
                    ))
-           case('GradP')
+           case('gradp')
               ! Switch to conservative if gradient of pressure is large
               do k=1,nK; do j=1,nJ; do i=1,nI
                  IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
@@ -721,9 +729,15 @@ subroutine select_conservative
      do iCrit = 1, nConservCrit
         select case(TypeConservCrit_I(iCrit))
         case('r')
-           ! Switch to non-conservative inside rConserv
+           ! Switch to non-conservative inside radius rConserv
            IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
                 R_BLK(1:nI,1:nJ,1:nK,iBlock) > rConserv
+        case('parabola')
+           ! Switch to non-conservative behind a parabola inside the bow shock
+           IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
+                x_BLK(1:nI,1:nJ,1:nK,iBlock) > xParabolaConserv - &
+                ( y_BLK(1:nI,1:nJ,1:nK,iBlock)**2 &
+                + z_BLK(1:nI,1:nJ,1:nK,iBlock)**2 ) / yParabolaConserv
         case default
            CYCLE
         end select

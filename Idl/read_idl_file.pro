@@ -7,20 +7,6 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 ;===========================================================================
 ;    Read the npict-th picture from an ascii or binary ini or out file 
 ;
-;    Usage: 
-;
-; .r getpict
-;
-;    "getpict" will prompt you for "filename(s)" and "npict"
-;    unless they are already set. Previous settings can be erased by 
-;
-; .r defaults
-;
-;    or modified explicitly, e.g.:
-;
-; filename='data/example.ini'
-; npict=1
-;
 ;    The "x" and "w" arrays and the header info will be read from the file. 
 ;
 ;    If a file is read with generalized coordinates, "gencoord=1" is set,
@@ -33,14 +19,6 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 ;
 ;    In this case the data is read into x0,w0 and x1,w1 for the two files,
 ;    and possibly transformeed into wreg0,wreg1.
-;
-;    To plot a variable, type e.g.:
-;
-; surface,w(*,*,2)
-;
-;    or 
-;
-; .r plotfunc
 ;
 ;===========================================================================
 
@@ -56,7 +34,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
   str2arr,filename,filenames,nfile
   if nfile gt 3 then begin
-     print,'Error in GetPict: cannot handle more than 3 files.'
+     print,'Error in getpict: cannot handle more than 3 files.'
      retall
   endif
   gettype,filenames,filetypes,npictinfiles
@@ -77,13 +55,13 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
      openfile,10,filenames(ifile),filetypes(ifile)
 
-     getpict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
-            gencoord,ndim,neqpar,nw,nx,eqpar,variables,error
+     get_pict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
+            gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
      if (nxreg(0) lt 0.0) then begin
 
        dxmin = 1000.0
-       for i=0,nx(0)-2 do $
+       for i=0L,nx(0)-2 do $
          if x(i+1,0,0)-x(i,0,0) gt 0 and x(i+1,0,0)-x(i,0,0) lt dxmin then $
            dxmin = x(i+1,0,0)-x(i,0,0)
        nxreg=abs(nxreg)/dxmin+1
@@ -122,7 +100,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
         else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
         case transform of
            'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                     x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri,x_limited
+                     x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
            'polar'  :begin
                        polargrid,nvector,vectors,x,w,xreg,wreg
                        variables(0:1)=['r','phi']
@@ -147,4 +125,3 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
   wnames=variables(ndim:ndim+nw-1)
 
 end
-

@@ -74,8 +74,8 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
      if(neiLEV(iside,iBLK)/=NOBLK) CYCLE
 
      ! If boundary is coupled do not overwrite the ghost cells
-     if(TypeBc_I(iside)=='coupled')CYCLE
-
+     if(TypeBc_I(iside)=='coupled')CYCLE !^CFG IF NOT ALWAVES
+ 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
      jmin1g=-1; jmax1g=nJ+2; jmin2g=-1; jmax2g=nJ+2
@@ -107,6 +107,8 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
      end select
 
      select case(TypeBc_I(iside))
+     case('coupled')
+!        call BC_cont(EnergyRL_,EnergyRL_) !^CFG UNCOMMENT IF ALWAVES   
      case('periodic')
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
      case('float','outflow')       
@@ -315,7 +317,7 @@ subroutine BC_shear(iVar,iSide)
              State_VGB(iVar,imin1p  :imax1p-1, jmin2g+Dn, kmin1p:kmax1p,iBLK)
      case(north_)
         State_VGB(iVar,    imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p+1:imax1g,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
+             State_VGB(iVar,imin1p+1:imax1p,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
         State_VGB(iVar,     imin2g  :imax2g-1, jmin2g,    kmin2g:kmax2g,iBLK)=&
              State_VGB(iVar,imin1p+1:imax1p,   jmin2g-Dn, kmin1p:kmax1p,iBLK)
      end select
@@ -488,7 +490,7 @@ subroutine BC_arcade_bottom
 
      if(State_VGB(P_,i,j,k,iBLK) .lt. 0.0) then
         write(*,*) 'negative pressure at', i,j,k,iBLK
-        stop
+        call stop_mpi('ERROR in set_outer_BCs::BC_arcade_bottom')
      end if
   end do; end do; end do
 end subroutine BC_arcade_bottom

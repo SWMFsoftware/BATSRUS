@@ -22,8 +22,10 @@ physics=''
 
 ; Parameters for the functions to be plotted
 func=''
+logfunc=''
 plotmode=''
 plottitle='default'
+timetitle=0          ; if set to 1, plots time as the title for time series
 autorange='y'
 axistype='coord'
 
@@ -54,7 +56,7 @@ velpos   =0
 ; Animation parameters for the movie
 firstpict=1
 dpict=1
-npictmax=50
+npictmax=200
 npict=0
 
 ; Slicing parameters
