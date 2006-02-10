@@ -38,7 +38,6 @@ subroutine set_b0_cell(iBlock)
   real :: x,y,z
 
   logical :: oktest, oktest_me
-  !^CFG IF NOT SIMPLE BEGIN
   logical:: UseCellAveragesAsFaceField
   !--------------------------------------------------------------------------
   !
@@ -48,7 +47,6 @@ subroutine set_b0_cell(iBlock)
   !  UseCellAveragesAsFaceField = UseB0Source  
 
   !--------------------------------------------------------------------------
-  !^CFG END SIMPLE
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_cell',oktest,oktest_me)
   else
@@ -75,7 +73,7 @@ subroutine set_b0_cell(iBlock)
        B0yCell_BLK(Itest,Jtest,Ktest,BLKtest),&
        B0zCell_BLK(Itest,Jtest,Ktest,BLKtest)
 
-  if(.not. UseCellAveragesAsFaceField) then                      !^CFG IF NOT SIMPLE BEGIN
+  if(.not. UseCellAveragesAsFaceField) then
      !The face B0 field is the field in the center of face
      !\
      ! Face fields (X)
@@ -127,7 +125,7 @@ subroutine set_b0_cell(iBlock)
            end do
         end do
      end do
-  end if                                           !^CFG END SIMPLE
+  end if
 end subroutine set_b0_cell
 
 !============================================================================
@@ -140,13 +138,14 @@ subroutine set_b0_face(iBlock)
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModGeometry, ONLY : &       
        dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK
+  use ModGeometry, ONLY : UseCovariant                !^CFG IF COVARIANT
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iBlock
 
-  integer :: i,j,k,iVolumeCounter
+  integer :: i,j,k
   real,dimension(3):: B0_D,RefXyzStart_D,RefDXyz_D
   real,dimension(nDim,0:1,0:1,0:1)::RefB0_DIII
   real ::x,y,z
@@ -157,7 +156,6 @@ subroutine set_b0_face(iBlock)
   logical :: oktest, oktest_me
 
   !--------------------------------------------------------------------------
-  !^CFG IF NOT SIMPLE BEGIN
   logical:: UseB0FaceRestriction
   logical:: UseCellAveragesAsFaceField
   !--------------------------------------------------------------------------
@@ -173,7 +171,6 @@ subroutine set_b0_face(iBlock)
   UseB0FaceRestriction=.true. !in versions 6.10-7_0_2
   ! UseB0FaceRestriction  = UseB0Source  
   !--------------------------------------------------------------------------
-  !^CFG END SIMPLE
 
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_face',oktest,oktest_me)
@@ -181,7 +178,7 @@ subroutine set_b0_face(iBlock)
      oktest=.false.; oktest_me=.false.
   endif
 
-  if(UseCellAveragesAsFaceField)then                    !^CFG IF NOT SIMPLE
+  if(UseCellAveragesAsFaceField)then
      !\
      ! Face averages (X)
      !/
@@ -221,11 +218,14 @@ subroutine set_b0_face(iBlock)
           B0zCell_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock)+&
           B0zCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
 
-  end if                               !^CFG IF NOT SIMPLE
+  end if
+  if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN    
+     call calc_b0source_covar(iBlock)         
+     return
+  end if                                 !^CFG END COVARIANT
+  !^CFG IF NOT COVARIANT BEGIN
 
-  !^CFG IF CARTESIAN BEGIN
-
-  if(.not. UseB0FaceRestriction)return !^CFG IF NOT SIMPLE
+  if(.not. UseB0FaceRestriction)return
 
   RefDXyz_D(x_)=cHalf*dx_BLK(iBlock)
   RefDXyz_D(y_)=cHalf*dy_BLK(iBlock)
@@ -303,52 +303,49 @@ subroutine set_b0_face(iBlock)
 
   call set_b0_matrix(iBlock)
 
-  !^CFG END CARTESIAN   
+  !^CFG END COVARIANT   
 
-  !   call calc_b0source_covar(iBlock)          !^CFG IF NOT CARTESIAN
+ 
 
 contains
+  !===========================================================================
   subroutine correct_b0_face(iSide)
     implicit none
     integer,intent(in)::iSide
     integer::iFace,jFace,kFace
+    !-------------------------------------------------------------------------
     select case(iSide)
     case(East_,West_)
        iFace=1+nI*(iSide-East_)
-       do k=1,nK
-          do j=1,nJ
-             call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-             B0xFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
+       do k=1,nK; do j=1,nJ
+          call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
+          B0xFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     case(South_,North_)
        jFace=1+nJ*(iSide-South_)
-       do k=1,nK
-          do i=1,nI
-             call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-             B0xFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
-
+       do k=1,nK; do i=1,nI
+          call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
+          B0xFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     case(Bot_,Top_)
        kFace=1+nK*(iSide-Bot_)
-       do j=1,nJ
-          do i=1,nI
-             call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-             B0xFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
+       do j=1,nJ; do i=1,nI
+          call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
+          B0xFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     end select
   end subroutine correct_b0_face
+  !===========================================================================
   subroutine get_refined_b0(iRef,jRef,kRef)
     integer,intent(in)::iRef,jRef,kRef
-    integer::i2,j2,k2         
+    integer::i2,j2,k2
+    !-------------------------------------------------------------------------
     do k2=0,1; do j2=0,1; do i2=0,1
        x=RefXyzStart_D(x_)+(iRef+i2)*RefDXyz_D(x_)
        y=RefXyzStart_D(y_)+(jRef+j2)*RefDXyz_D(y_)
@@ -367,7 +364,6 @@ subroutine calc_db0_dt(dTime)
   use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, Db0Dt_CDB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModPhysics, ONLY: UnitSi_t
-  use ModCompatibility, ONLY: calculate_dipole_tilt
   implicit none
 
   real, intent(in) :: dTime
@@ -392,10 +388,6 @@ subroutine calc_db0_dt(dTime)
   TimeSimulationOrig = Time_Simulation
   Time_Simulation = Time_Simulation + dTime*UnitSi_t
 
-  ! The user may have decided to use the old algorithm (UseNewAxes=F). 
-  ! Then the dipole tilt will be approximate only. Enjoy ...
-  if(.not.UseNewAxes .and. NameThisComp=='GM') call calculate_dipole_tilt
-
   ! Calculate dB0dt
   do iBlock=1,nBlock
      if(unusedBLK(iBlock))CYCLE
@@ -409,13 +401,11 @@ subroutine calc_db0_dt(dTime)
   end do
   ! Reset time, date and dipole tilt
   Time_Simulation = TimeSimulationOrig
-  if(.not.UseNewAxes .and. NameThisComp=='GM') call calculate_dipole_tilt
-
 
 end subroutine calc_db0_dt
 !============================================================================
 
-subroutine set_b0_matrix(iBlock)                      !^CFG IF NOT SIMPLE BEGIN
+subroutine set_b0_matrix(iBlock)
 
   ! Calculate the elements of the B0SourceMatrix
 
@@ -503,30 +493,30 @@ subroutine set_b0_matrix(iBlock)                      !^CFG IF NOT SIMPLE BEGIN
 
   end do; end do; end do
 
-end subroutine set_b0_matrix                                 !^CFG END SIMPLE
+end subroutine set_b0_matrix
 
 !============================================================================
 
 subroutine get_b0(X0,Y0,Z0,B0)
 
   ! this interface allows use of various models for B0
-  use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem, &
-       UseNewAxes
-  use ModPhysics,  ONLY : unitSI_B
-  use CON_physics, ONLY : get_planet_field
-  use ModMain,     ONLY : UseBody2                  !^CFG IF SECONDBODY
-  use ModMain,     ONLY : UseUserB0                 !^CFG IF USERFILES
+  use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem
+  use ModPhysics,       ONLY : unitSI_B
+  use CON_planet_field, ONLY : get_planet_field
+  use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
+  use ModMain,          ONLY : UseUserB0
+  use ModUser, ONLY: user_get_b0
   implicit none
 
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(3) :: B0
 
-  if(NameThisComp=='GM' .and. UseNewAxes)then
+  if(NameThisComp=='GM')then
      call get_planet_field(Time_Simulation,X0,Y0,Z0,TypeCoordSystem//' NORM',&
           B0)
      B0 = B0/unitSI_B
-  else if (UseUserB0) then                          !^CFG IF USERFILES
-     call get_user_b0(X0,Y0,Z0,B0)                  !^CFG IF USERFILES
+  else if (UseUserB0) then
+     call user_get_b0(X0,Y0,Z0,B0)
   else
      call get_b0_multipole(X0,Y0,Z0,B0) 
   end if
@@ -710,27 +700,37 @@ end subroutine add_b0_body2
 
 subroutine update_b0
 
-  use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
-       time_simulation, lVerbose, UseNewAxes
-  use ModIO, ONLY: iUnitOut, write_prefix
-  use ModAdvance, ONLY : Bx_, By_, Bz_, State_VGB, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModGeometry, ONLY: true_cell, body_BLK
-  use ModCompatibility, ONLY: calculate_dipole_tilt
+  use ModProcMH,        ONLY: iProc
+  use ModMain,          ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
+       time_simulation, lVerbose, NameThisComp
+  use ModPhysics,       ONLY: ThetaTilt
+  use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModGeometry,      ONLY: true_cell, body_BLK
+  use CON_axes,         ONLY: get_axes
+  use ModNumConst,      ONLY: cRadToDeg
+  use ModIO,            ONLY: iUnitOut, write_prefix
 
   implicit none
 
   integer :: iBlock
   !============================================================================
 
+  ! Update ThetaTilt
+  if(NameThisComp=='GM') &
+       call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
+
   if (iProc == 0.and.lVerbose>0) then
-     call write_prefix; write(iUnitOut,*) &
-          "=> Updating B0 at Simulation time",Time_Simulation
+     if(NameThisComp=='GM')then
+        call write_prefix; write(iUnitOut,*) &
+          "update_b0 at tSimulation, TiltGsm=", &
+          Time_Simulation, ThetaTilt*cRadToDeg
+     else
+        call write_prefix; write(iUnitOut,*) &
+             "update_b0 at tSimulation=",Time_Simulation
+     end if
   end if
   call timing_start('update_B0')
-
-  if(.not.UseNewAxes)call calculate_dipole_tilt
 
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE

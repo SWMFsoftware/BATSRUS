@@ -1,24 +1,23 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT SIMPLE
 !=============================================================================
-subroutine write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
-     ntheta,nphi,rplot,nBLKcellsN,NBLKcellsS)
+subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
+     nTheta,nPhi,rPlot,nBlkCellsN,nBlkCellsS)
 
   ! Save all cells within plotting range, for each processor
 
   use ModPhysics, ONLY : unitUSER_x
   use ModGeometry, ONLY: nI,nJ,nK, x_BLK,y_BLK,z_BLK, dx_BLK,dy_BLK,dz_BLK 
+  use ModMain,     ONLY: BlkTest
   use ModNumConst
   use ModIO
   implicit none
 
   ! Arguments
-
-  integer, intent(in) :: ifile, iBLK,ntheta,nphi
-  integer, intent(in) :: nplotvar
-  integer, intent(out) :: nBLKcellsN,nBLKcellsS
-  real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvar)
-  real, intent(in)     :: rplot
+  integer, intent(in)  :: iFile, iBLK,nTheta,nPhi
+  integer, intent(in)  :: nPlotvar
+  integer, intent(out) :: nBlkCellsN,nBlkCellsS
+  real, intent(in)     :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvar)
+  real, intent(in)     :: rPlot
 
   ! Local variables
   ! Indices and coordinates
@@ -29,14 +28,18 @@ subroutine write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
   real :: xx1,xx2,yy1,yy2,zz1,zz2,minRblk, maxRblk
   real :: rplot_out,theta_plot, phi_plot, dphi_plot, dtheta_plot, dxblk
   real :: theta_out, phi_out
-  real :: PointVar(nplotvar)
+  real :: PointVar(nPlotvarMax)
 
   integer :: write_out_unit
 
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
 
-  call set_oktest('write_plot_sph',oktest,oktest_me)
+  if(iBLK == BlkTest)then
+     call set_oktest('write_plot_sph',oktest,oktest_me)
+  else
+     oktest=.false.; oktest_me=.false.
+  end if
 
   nBLKcellsN = 0
   nBLKcellsS = 0

@@ -1,8 +1,8 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 
 !^CFG FILE LINDEFLUX 
-subroutine option_lindeflux(TrueOption,NameOption)
+subroutine option_lindeflux_covar(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption
   character (len=40), intent(out) :: NameOption
@@ -10,10 +10,10 @@ subroutine option_lindeflux(TrueOption,NameOption)
   TrueOption  = .true.
   NameOption  = 'COVARIANT LINDE FLUX  Sokolov'
 
-end subroutine option_lindeflux
+end subroutine option_lindeflux_covar
 !=============================================================================
 
-subroutine calc_flux_Linde(DoResChangeOnly)
+subroutine calc_flux_Linde_covar(DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModVarIndexes
@@ -23,7 +23,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
   use ModNumConst
   use ModAdvance
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-  use ModFlux
+  use ModFlux_covar
 
   implicit none
   logical, intent (in) :: DoResChangeOnly
@@ -74,12 +74,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1		  
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
+              FaceArea_DI(:,i)=FaceAreaI_DFB(:,iStrip,j,k,globalBLK)
 
               ! GET PRIMITIVES
               !\
@@ -120,7 +115,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdLinde(nStrip)	
+           call get_flux_mhdLinde_covar(nStrip)	
            !
            !\
            ! test output
@@ -190,12 +185,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
+              FaceArea_DI(:,i)=FaceAreaJ_DFB(:,iStrip,j,k,globalBLK)
 
               v_B0x(i) = B0xFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0y(i) = B0yFace_y_BLK(iStrip,j,k,globalBLK)
@@ -228,7 +218,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdLinde(nStrip)
+           call get_flux_mhdLinde_covar(nStrip)
            !\
            ! test output
            !/	
@@ -290,12 +280,8 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            !/
            do i=1,nStrip
               iStrip=i+iStart-1
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
+
+              FaceArea_DI(:,i)=FaceAreaK_DFB(:,iStrip,j,k,globalBLK)
 
               !\
               ! B0 on the face
@@ -329,7 +315,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            !\
            ! get fluxes
            !/
-           call get_flux_mhdLinde(nStrip)	
+           call get_flux_mhdLinde_covar(nStrip)	
 
            if(oktest_row) then
               do i=iStart,iStart+nStrip-1
@@ -380,11 +366,11 @@ Contains
 
   end subroutine test_fluxes_wri
 
-end subroutine calc_flux_Linde
+end subroutine calc_flux_Linde_covar
 
 !==========================================================================
-subroutine get_flux_mhdLinde(nStrip)
-  use ModFlux
+subroutine get_flux_mhdLinde_covar(nStrip)
+  use ModFlux_covar
   use ModNumConst
   use ModMain, ONLY :x_,y_,z_
   use ModVarIndexes,ONLY:rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, &
@@ -596,4 +582,4 @@ subroutine get_flux_mhdLinde(nStrip)
           Fl_rf(Bx_,i)*v_B1x_lf(i)+Fl_rf(By_,i)*&
           v_B1y_lf(i)+Fl_rf(Bz_,i)*v_B1z_lf(i)
   end do
-end subroutine get_flux_mhdLinde
+end subroutine get_flux_mhdLinde_covar

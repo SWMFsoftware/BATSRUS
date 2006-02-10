@@ -1,9 +1,7 @@
-#^CFG COPYRIGHT UM
-#
-#	Specific Rules for Darwin fortran compiler
-#
+# Compiling lapack.f and/or blas.f with -O2 causes run time error. 
+# Both -O4 and -O1 seem to work.
+lapack.o: lapack.f
+	${COMPILE.f77} ${Cflag4} -132 lapack.f
 
-calc_flux_Roe.o:ModProcMH.o ModMain.o ModGeometry.o \
-		ModPhysics.o ${MODDIR}/ModNumConst.o \
-		ModAdvance.o ModParallel.o calc_flux_Roe.f90
-	${COMPILE.f90} ${Cflag0} calc_flux_Roe.f90
+blas.o: blas.f
+	${COMPILE.f77} ${Cflag4} -132 blas.f

@@ -5,17 +5,13 @@ subroutine stand_alone
   ! This version behaves like the GM component of SWMF.
 
   use ModProcMH, ONLY: iProc
-  use ModMain,   ONLY: NameThisComp, UseNewParam, UseNewAxes, UseCorotation,&
-       time_accurate
+  use ModMain,   ONLY: NameThisComp, UseRotatingBc
   use ModIO,     ONLY: NamePlotDir, NameRestartInDir, NameRestartOutDir
 
   implicit none
 
   NameThisComp  = 'GM'
-  UseNewParam   = .true.
-  UseNewAxes    = .true.
-  time_accurate = .true.
-  UseCorotation = .true.
+  UseRotatingBc = .true.
 
   NamePlotDir       = 'GM/'//NamePlotDir
   NameRestartInDir  = 'GM/'//NameRestartInDir

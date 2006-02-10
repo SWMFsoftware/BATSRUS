@@ -1,6 +1,5 @@
 !^CFG COPYRIGHT UM
 
-!^CFG IF IMPLICIT BEGIN
 subroutine init_conservative_facefluxes(iBLK)
   use ModAdvance, ONLY: CorrectedFlux_VXB, &
        CorrectedFlux_VYB, CorrectedFlux_VZB
@@ -12,7 +11,6 @@ subroutine init_conservative_facefluxes(iBLK)
   CorrectedFlux_VYB(:,:,:,:,iBLK)=cZero
   CorrectedFlux_VZB(:,:,:,:,iBLK)=cZero
 end subroutine init_conservative_facefluxes
-!^CFG END IMPLICIT
 
 !============================================================================
 
@@ -22,6 +20,7 @@ subroutine save_conservative_facefluxes
   use ModMain
   use ModNumConst
   use ModAdvance
+  use ModGeometry,ONLY: UseCovariant                   !^CFG IF COVARIANT
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -87,14 +86,15 @@ Contains
 
        CorrectedFlux_VXB(Vdt_,   j,k,lFaceTo,globalBLK)= &
             VdtFace_x(             lFaceFrom,j,k)
-       !^CFG IF CARTESIAN BEGIN
+       !^CFG IF NOT COVARIANT BEGIN
        CorrectedFlux_VXB(BnL_,   j,k,lFaceTo,globalBLK)= &
             LeftState_VX(Bx_,     lFaceFrom,j,k)*cQuarter
        CorrectedFlux_VXB(BnR_,   j,k,lFaceTo,globalBLK)= &
             RightState_VX(Bx_,     lFaceFrom,j,k)*cQuarter
-       !^CFG END CARTESIAN
+       !^CFG END COVARIANT
     end do;end do
-    !call save_bn_faceI(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceI(&   !^CFG IF COVARIANT
+         lFaceTo,lFaceFrom,globalBLK)      !^CFG IF COVARIANT
   end subroutine save_corrected_flux_x
 
   !===========================================================================
@@ -107,14 +107,15 @@ Contains
             Flux_VY(Energy_,i,lFaceFrom,k)
        CorrectedFlux_VYB(Vdt_,     i,k,lFaceTo,globalBLK)= &
             VdtFace_y(i,lFaceFrom,k)
-       !^CFG IF CARTESIAN BEGIN
+       !^CFG IF NOT COVARIANT BEGIN
        CorrectedFlux_VYB(BnL_,  i,k,lFaceTo,globalBLK)= &
             LeftState_VY(By_,i,lFaceFrom,k)*cQuarter
        CorrectedFlux_VYB(BnR_,  i,k,lFaceTo,globalBLK)= &
             RightState_VY(By_,i,lFaceFrom,k)*cQuarter
-       !^CFG END CARTESIAN
+       !^CFG END COVARIANT
     end do; end do
-    !call save_bn_faceJ(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceJ(&  !^CFG IF COVARIANT
+         lFaceTo,lFaceFrom,globalBLK)     !^CFG IF COVARIANT
   end subroutine save_corrected_flux_y
 
   !===========================================================================
@@ -128,14 +129,15 @@ Contains
 
        CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,globalBLK)= &
             VdtFace_z(i,j,lFaceFrom)
-       !^CFG IF CARTESIAN BEGIN
+       !^CFG IF NOT COVARIANT BEGIN
        CorrectedFlux_VZB(BnL_,i,j,lFaceTo,globalBLK)= &
             LeftState_VZ(Bz_,i,j,lFaceFrom)*cQuarter
        CorrectedFlux_VZB(BnR_,i,j,lFaceTo,globalBLK)= &
             RightState_VZ(Bz_,i,j,lFaceFrom)*cQuarter
-       !^CFG END CARTESIAN
+       !^CFG END COVARIANT
     end do; end do
-    !call save_bn_faceK(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceK(& !^CFG IF COVARIANT
+         lFaceTo,lFaceFrom,globalBLK)    !^CFG IF COVARIANT
   end subroutine save_corrected_flux_z
 end subroutine save_conservative_facefluxes
 
@@ -147,6 +149,7 @@ subroutine apply_cons_face_flux
   use ModAdvance
   use ModVarIndexes
   use ModGeometry, ONLY: body_BLK, true_cell
+  use ModGeometry, ONLY: UseCovariant    !^CFG IF COVARIANT
   use ModAMR
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
@@ -156,7 +159,7 @@ subroutine apply_cons_face_flux
   use ModNumConst
   implicit none
 
-  integer :: i,j,k
+  integer :: i,j,k,iBlock
   logical :: oktest, oktest_me, oktest_row
   integer :: lFaceFrom, lFaceTo
   !--------------------------------------------------------------------------
@@ -167,85 +170,75 @@ subroutine apply_cons_face_flux
      oktest=.false.; oktest_me=.false.
   end if
 
-  if (neiLeast(globalBLK)==-1)then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBeast(1,globalBLK),neiPeast(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(2,globalBLK),neiPeast(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(3,globalBLK),neiPeast(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(4,globalBLK),neiPeast(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  iBlock = globalBLK
+
+  if (neiLeast(iBlock)==-1)then
+     if ( .not.unusedBlock_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_x
-     end if                                 !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLwest(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBwest(1,globalBLK),neiPwest(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(2,globalBLK),neiPwest(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(3,globalBLK),neiPwest(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(4,globalBLK),neiPwest(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLwest(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
         lFaceTo=nI+1
         lFaceFrom=2
         call apply_corrected_flux_x
-     end if                                                     !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLsouth(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBsouth(1,globalBLK),neiPsouth(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(2,globalBLK),neiPsouth(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(3,globalBLK),neiPsouth(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(4,globalBLK),neiPsouth(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLsouth(iBlock)==-1) then
+     if(.not.unusedBlock_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_y
-     end if                                         !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLnorth(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBnorth(1,globalBLK),neiPnorth(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(2,globalBLK),neiPnorth(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(3,globalBLK),neiPnorth(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(4,globalBLK),neiPnorth(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLnorth(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
         lFaceTo=nJ+1
         lFaceFrom=2
         call apply_corrected_flux_y
-     end if                                          !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLbot(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBbot(1,globalBLK),neiPbot(1,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(2,globalBLK),neiPbot(2,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(3,globalBLK),neiPbot(3,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(4,globalBLK),neiPbot(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLbot(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_z
-     end if                                            !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLtop(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBtop(1,globalBLK),neiPtop(1,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(2,globalBLK),neiPtop(2,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(3,globalBLK),neiPtop(3,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(4,globalBLK),neiPtop(4,globalBLK))) then
-        !^CFG END IMPLICIT
+  if (neiLtop(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(4,iBlock),neiPtop(4,iBlock))) then
         lFaceTo=nK+1
         lFaceFrom=2
         call apply_corrected_flux_z
-     end if                                   !^CFG IF IMPLICIT
+     end if
   end if
 
-Contains
+contains
 
   !============================================================================
 
@@ -258,12 +251,13 @@ Contains
                CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
           VdtFace_x(lFaceTo,j,k) = &
                CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
-          !^CFG IF CARTESIAN BEGIN
+          if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
+          !^CFG IF NOT COVARIANT BEGIN
           LeftState_VX(Bx_,lFaceTo,j,k) = &
                CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
           RightState_VX(Bx_,lFaceTo,j,k) = &
                CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,globalBLK)
-          !^CFG END CARTESIAN
+          !^CFG END COVARIANT
        end do;end do
     else
        do k = 1, nK; do j = 1, nJ
@@ -274,16 +268,18 @@ Contains
                   CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
              VdtFace_x(lFaceTo,j,k) = &
                   CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
-             !^CFG IF CARTESIAN BEGIN
+             if(UseCovariant)CYCLE       !^CFG IF COVARIANT 
+             !^CFG IF NOT COVARIANT BEGIN
              LeftState_VX(Bx_,lFaceTo,j,k) = &
                   CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
              RightState_VX(Bx_,lFaceTo,j,k) = &
                   CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,globalBLK)
-             !^CFG END CARTESIAN
+             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    !call apply_bn_faceI(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceI(&      !^CFG IF COVARIANT
+         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF COVARIANT
   end subroutine apply_corrected_flux_x
 
   !============================================================================
@@ -297,12 +293,13 @@ Contains
                CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
           VdtFace_y(i,lFaceTo,k)= &
                CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
-          !^CFG IF CARTESIAN BEGIN
+          if(UseCovariant)CYCLE          !^CFG IF COVARIANT 
+          !^CFG IF NOT COVARIANT BEGIN
           LeftState_VY(By_,i,lFaceTo,k) = &
                CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
           RightState_VY(By_,i,lFaceTo,k) = &
                CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,globalBLK)
-          !^CFG END CARTESIAN
+          !^CFG END COVARIANT
        end do; end do 
     else
        do k = 1, nK; do i = 1, nI
@@ -313,16 +310,18 @@ Contains
                   CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
              VdtFace_y(i,lFaceTo,k)= &
                   CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
-             !^CFG IF CARTESIAN BEGIN
+             if(UseCovariant)CYCLE     !^CFG IF COVARIANT 
+             !^CFG IF NOT COVARIANT BEGIN
              LeftState_VY(By_,i,lFaceTo,k) = &
                   CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
              RightState_VY(By_,i,lFaceTo,k) = &
                   CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,globalBLK)
-             !^CFG END CARTESIAN
+             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    !call apply_bn_faceJ(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceJ(&      !^CFG IF COVARIANT
+         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF COVARIANT
   end subroutine apply_corrected_flux_y
 
   !============================================================================
@@ -336,12 +335,13 @@ Contains
                CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
           VdtFace_z(i,j,lFaceTo) = &
                CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
-          !^CFG IF CARTESIAN BEGIN
+          if(UseCovariant)CYCLE      !^CFG IF COVARIANT 
+          !^CFG IF NOT COVARIANT BEGIN
           LeftState_VZ(Bz_,i,j,lFaceTo) = &
                CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
           RightState_VZ(Bz_,i,j,lFaceTo) = &
                CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,globalBLK)
-          !^CFG END CARTESIAN
+          !^CFG END COVARIANT
        end do; end do 
     else
        do j = 1, nJ; do i = 1, nI
@@ -352,16 +352,18 @@ Contains
                   CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
              VdtFace_z(i,j,lFaceTo) = &
                   CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
-             !^CFG IF CARTESIAN BEGIN
+             if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
+             !^CFG IF NOT COVARIANT BEGIN
              LeftState_VZ(Bz_,i,j,lFaceTo) = &
                   CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
              RightState_VZ(Bz_,i,j,lFaceTo) = &
                   CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,globalBLK)
-             !^CFG END CARTESIAN
+             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    !call apply_bn_faceK(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceK(&       !^CFG IF COVARIANT
+         lFaceFrom,lFaceTo,globalBLK)           !^CFG IF COVARIANT
   end subroutine apply_corrected_flux_z
 
 end subroutine apply_cons_face_flux

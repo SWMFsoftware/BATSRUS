@@ -8,6 +8,7 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   ! For using in amr_criteria only
 
   use ModMain, ONLY : nI,nJ,nK,gcn
+  use ModGeometry,ONLY: UseCovariant               !^CFG IF COVARIANT
   implicit none
 
   integer,           intent(in) :: iBlock
@@ -18,19 +19,23 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   character (LEN=*), intent(in) :: TypeObsolete            !Obsolete
 
   !--------------------------------------------------------------------------
-!call covariant_gradient(iBlock, Var_G,&          !^CFG IF NOT CARTESIAN
-  call central_differences(iBlock, Var_G,&          !^CFG IF CARTESIAN
-       DifferenceX_G, DifferenceY_G, DifferenceZ_G)  
-
+  if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
+     call covariant_gradient(iBlock, Var_G,&  
+          DifferenceX_G, DifferenceY_G, DifferenceZ_G)  
+  else                                                !^CFG END COVARIANT
+     call central_differences(iBlock, Var_G,&         !^CFG IF NOT COVARIANT
+          DifferenceX_G, DifferenceY_G, DifferenceZ_G)!^CFG IF NOT COVARIANT
+     continue
+  end if                                              !^CFG IF COVARIANT
 end subroutine grad1D
 
 !==============================================================================
-subroutine central_differences(iBlock, Var_G,&     !^CFG IF CARTESIAN BEGIN
+subroutine central_differences(iBlock, Var_G,&     !^CFG IF NOT COVARIANT BEGIN
      DifferenceX_G, DifferenceY_G, DifferenceZ_G)
   use ModSize
   use ModGeometry,ONLY:body_blk, true_cell, &
        fAX_BLK, fAY_BLK, fAZ_BLK, &
-       VolumeInverse_I
+       vInv_CB
   use ModNumConst
   implicit none
 
@@ -54,11 +59,11 @@ subroutine central_differences(iBlock, Var_G,&     !^CFG IF CARTESIAN BEGIN
   if(.not.body_blk(iBlock)) then
      do k=1,nK; do j=1,nJ; do i=1,nI
         DifferenceX_G(i,j,k) = cHalf*fAX_BLK(iBlock)*&
-             (Var_G(i+1, j, k)-Var_G(i-1,j,k))
+             (Var_G(i+1, j, k)-Var_G(i-1,j,k))*vInv_CB(i,j,k,iBlock)
         DifferenceY_G(i,j,k) = cHalf*fAY_BLK(iBlock)*&
-             (Var_G(i, j+1, k)-Var_G(i,j-1,k))
+             (Var_G(i, j+1, k)-Var_G(i,j-1,k))*vInv_CB(i,j,k,iBlock)
         DifferenceZ_G(i,j,k) = cHalf*fAZ_BLK(iBlock)*&
-             (Var_G(i, j, k+1)-Var_G(i, j, k-1))
+             (Var_G(i, j, k+1)-Var_G(i, j, k-1))*vInv_CB(i,j,k,iBlock)
      end do; end do; end do
   else
      where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
@@ -75,14 +80,14 @@ subroutine central_differences(iBlock, Var_G,&     !^CFG IF CARTESIAN BEGIN
      !/
      !
      do k=1,nK; do j=1,nJ; do i=1,nI
-        DifferenceX_G(k,j,k) = cHalf*fAX_BLK(iBlock)*&
+        DifferenceX_G(i,j,k) = cHalf*fAX_BLK(iBlock)*&
              OneTrue_G(i,j,k)*(&
              (Var_G(i+1,j,k)-Var_G(i,j,k))*&
              OneTrue_G(i+1,j,k)*&
              (cTwo - OneTrue_G(i-1,j,k)) + &
              (Var_G(i,j,k)-Var_G(i-1,j,k))*&
              OneTrue_G(i-1,j,k)*&
-             (cTwo - OneTrue_G(i+1,j,k)) )
+             (cTwo - OneTrue_G(i+1,j,k)) )*vInv_CB(i,j,k,iBlock)
 
         DifferenceY_G(i,j,k) = cHalf*fAY_BLK(iBlock)*&
              OneTrue_G(i,j,k)*(&
@@ -91,7 +96,7 @@ subroutine central_differences(iBlock, Var_G,&     !^CFG IF CARTESIAN BEGIN
              (cTwo - OneTrue_G(i,j-1,k))+&
              (Var_G(i,j,k)-Var_G(i,j-1,k))*&
              OneTrue_G(i,j-1,k)*&
-             (cTwo - OneTrue_G(i,j+1,k)) )
+             (cTwo - OneTrue_G(i,j+1,k)) )*vInv_CB(i,j,k,iBlock)
 
         DifferenceZ_G(i,j,k) = cHalf*fAZ_BLK(iBlock)*&
              OneTrue_G(i,j,k)*(&
@@ -100,14 +105,10 @@ subroutine central_differences(iBlock, Var_G,&     !^CFG IF CARTESIAN BEGIN
              (cTwo - OneTrue_G(i,j,k-1))+&
              (Var_G(i,j,k)-Var_G(i,j,k-1))*&
              OneTrue_G(i,j,k-1)*&
-             (cTwo - OneTrue_G(i,j,k+1)) )
+             (cTwo - OneTrue_G(i,j,k+1)) )*vInv_CB(i,j,k,iBlock)
      end do; end do; end do
   end if
-
-   DifferenceX_G(:,:,:)=DifferenceX_G(:,:,:)*VolumeInverse_I(iBlock)
-   DifferenceY_G(:,:,:)=DifferenceY_G(:,:,:)*VolumeInverse_I(iBlock)
-   DifferenceZ_G(:,:,:)=DifferenceZ_G(:,:,:)*VolumeInverse_I(iBlock)
 end subroutine central_differences
 
-!^CFG END CARTESIAN
+!^CFG END COVARIANT
 

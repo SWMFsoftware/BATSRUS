@@ -3,10 +3,10 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModAdvance
-!  use ModVarIndexes
   use ModNumConst
   use ModGeometry, ONLY:&
        IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
+  use ModBoundaryCells
   implicit none
 
   integer, intent(in) :: iter
@@ -28,6 +28,13 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
        LeftState_VX(Ux_,Itest,Jtest,Ktest),LeftState_VX(Uy_,Itest,Jtest,Ktest)
 
   call set_boundary_cells(globalBLK)
+  if(SaveBoundaryCells)then
+     do iBoundary=MinBoundarySaved,MaxBoundarySaved
+        IsBoundaryCell_GI(:,:,:,iBoundary)=&
+             IsBoundaryCell_IGB(iBoundary,:,:,:,globalBLK)
+     end do
+  end if
+  
   !\
   ! Apply boundary conditions
   !/
@@ -62,15 +69,17 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
 
 end subroutine set_BCs
 
+!=============================================================================
+
 subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
      IsBodyCell,IsTrueCell,iBoundary)
 
   use ModMain
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModAdvance
-!  use ModVarIndexes
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
+
   implicit none
 
   integer, intent(in) :: iter, iBoundary
@@ -78,7 +87,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   logical, intent (in) :: DoResChangeOnly
   logical, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn), intent(in) :: &
        IsBodyCell, IsTrueCell 
-  logical :: UseIonosphereHere, UseCorotationHere
+  logical :: UseIonosphereHere, UseRotatingBcHere
   character (len=20) :: TypeBcHere
   
   real,dimension(nFaceValueVars)::VarsTrueFace_V,VarsGhostFace_V
@@ -89,24 +98,32 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   ! Here iter and time now are the iteration number and physical time,
   ! which may be used for time-dependent BCs (not used now).
   ! 
-  ! RHere is 3d array of the distance values apart from the inner boundary center,
-  ! xBodyHere, yBodyHere,zBodyHere are the physical coordinates of the inner boundary center 
-  ! UseIonesphereHere=.true. allows to call subroutine calc_innerBC_velocities
-  ! UseCorotationHere = .true. allows to call calc_corotation_velocities
+  ! UseIonesphereHere = .true. allows to call calc_inner_bc_velocity
+  ! UseRotatingBcHere = .true. allows to call calc_corotation_velocities
 
   integer :: i,j,k
 
-  real,dimension(1:nDim):: FaceCoords_D, B0Face_D
+  real              :: FaceCoords_D(nDim), B0Face_D(nDim)
+
+  character (len=*), parameter :: NameSub = 'set_face_BCs'
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  if(globalBLK==BLKtest.and.iProc==PROCtest)then
+     call set_oktest(NameSub, DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   if(iBoundary==Body1_)then
      UseIonosphereHere=UseIonosphere
-     UseCorotationHere=UseCorotation
+     UseRotatingBcHere=UseRotatingBc
   else
      UseIonosphereHere=.false.
-     UseCorotationHere=.false.
+     UseRotatingBcHere=.false.
   end if
 
   TypeBcHere=TypeBc_I(iBoundary)
+
   !\
   ! Apply body BCs as required.
   !/                            
@@ -270,47 +287,30 @@ contains
   subroutine set_body_BCs(iSide)
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI
-!    use ModVarIndexes
+    use ModUser, ONLY: user_face_bcs
+    
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
-    real, dimension(1:3) :: v_phi, FaceIono_D
+    real, dimension(1:3) :: v_phi, uIono_D
 
     real:: FaceState_V(nFaceValueVars)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
-    ! Theoretical upper limit for DensityJumpLimit is (1-cfl) for nOrder=nStage=1
-    ! Practical estimate 0.1 (may be (1-cfl)/2 ???) for nOrder=nStage=2
-    !
-    ! ___________ATTENTION!!!!!___________
-    ! A non-zero value for the DensityJumpLimit physically corresponds 
-    ! to a partially penetrable surface through which matter can diffuse. The 
-    ! diffusion rate is restricted in a non-linear fashion due to the use 
-    ! of a small DensityJumpLimit.  The "diffusion mass velocity" is 
-    ! automatically lower than Alfven velocity*DensityJumpLimit.  Even the use 
-    ! of small DensityJumpLimit STRONGLY INFLUENCES the numerical solution 
-    ! in cases when RhoFace and RhoBodyHere are strongly different  near some 
-    ! part of the boundary.  Even when using a non-zero DensityJumpLimit, the
-    ! outer density tends to RhoBodyHere after a huge number of iterations.
-    !
-    !___________ATTENTION!!!!!!___________
-    ! A non-zero value for PressureJumpLimit is not recommended. A theoretical 
-    ! upper limit is unknown and numerical experiments with a non-zero value are
-    ! not robust. NO REAL PHYSICAL process corresponds to a non-zero 
-    ! PressureJumpLimit which would be like "pressure diffusion".
-
     real ::BdotR,BRefl_D(nDim)
     real:: BdotU,RInv
     real:: cosTheta,sinTheta,cosPhi,sinPhi
     real:: UrTrue,UtTrue,BpTrue,BrGhost,BtGhost,BpGhost
-!^CFG IF USERFILES BEGIN
+
 !    For new ionosphere, multispecies, multifluids 
-    if(index(TypeBcHere,'user')>0.or.UseUserInnerBCs)then
+    if(  index(TypeBcHere,'user')>0 .or. &
+         (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
+         (UseUserOuterBCs .and. iBoundary >= east_ ) )then
        call user_face_bcs(i,j,k,globalBLK,iSide,iBoundary,&
             iter,time_now, FaceCoords_D,&
             VarsTrueFace_V,VarsGhostFace_V,&
-            B0Face_D,  UseIonosphereHere,UseCorotationHere)
+            B0Face_D,  UseIonosphereHere,UseRotatingBcHere)
        return
     end if
-!^CFG END USERFILES
+
 
     !^CFG IF SECONDBODY BEGIN
     if(iBoundary==body2_)then
@@ -318,7 +318,8 @@ contains
        FaceCoords_D(y_)= FaceCoords_D(y_)-yBody2
        FaceCoords_D(z_)= FaceCoords_D(z_)-zBody2
     end if
-    !^CFG END SECONDBODY                                                                
+    !^CFG END SECONDBODY
+
     FaceState_V=FaceState_VI(:,iBoundary)  
     if(iBoundary==west_.and.TypeBcHere=='vary') then                          
        call get_solar_wind_point(&
@@ -416,30 +417,35 @@ contains
             PressureJumpLimit*VarsTrueFace_V(P_))
 
        VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
+    case('coronatoih')    !Only for nVar=8
+
+       !Get interpolated values from buffer grid:
+       call get_from_spher_buffer_grid(&
+            FaceCoords_D,nVar,FaceState_V)
+
+       VarsGhostFace_V = FaceState_V
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
     end select
 !^CFG IF IONOSPHERE BEGIN
     if (UseIonosphereHere) then
-       call calc_inner_BC_velocities(iter,time_now,&
-            FaceCoords_D(x_),FaceCoords_D(y_),FaceCoords_D(z_), &
-            VarsTrueFace_V(Bx_),VarsTrueFace_V(By_),VarsTrueFace_V(Bz_),&
-            B0Face_D(x_),B0Face_D(y_),B0Face_D(z_),&
-            FaceIono_D(x_),FaceIono_D(y_),FaceIono_D(z_))
+       call calc_inner_bc_velocity(time_now, FaceCoords_D, &
+            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
+       
        select case(TypeBcHere)
        case('reflect','linetied',&
             'ionosphere','ionospherefloat')
-          VarsGhostFace_V(Ux_:Uz_) = cTwo*FaceIono_D + VarsGhostFace_V(Ux_:Uz_)
+          VarsGhostFace_V(Ux_:Uz_) = cTwo*uIono_D + VarsGhostFace_V(Ux_:Uz_)
        case default
           call stop_mpi('UseIonosphere is not compatible with TypeBc_I='//TypeBcHere)
        end select
     end if
 !^CFG END IONOSPHERE
-    if (UseCorotationHere) then
+    if (UseRotatingBcHere) then
 
        !\
-       ! The program is called which calculates the cartesian corotation velocity vector
-       ! v_phi as a function of the radius-vector "FaceCoords"
+       ! The program is called which calculates the cartesian corotation 
+       ! velocity vector v_phi as a function of the radius-vector "FaceCoords"
        !/
        call calc_corotation_velocities(iter,time_now,FaceCoords_D,v_phi)
 
@@ -448,7 +454,8 @@ contains
             'ionosphere','ionospherefloat')
           VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + cTwo*v_phi
        case default
-          call stop_mpi('UseCorotation is not compatible with TypeBc_I='//TypeBcHere) 
+          call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
+               //TypeBcHere) 
        end select
     end if 
   end subroutine set_body_BCs

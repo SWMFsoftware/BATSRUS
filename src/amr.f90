@@ -1,17 +1,19 @@
 !^CFG COPYRIGHT UM
 subroutine amr(idepth)
   use ModProcMH
-  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,unusedBLK,lVerbose
+  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
+       unusedBLK,lVerbose
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
-  use ModAdvance, ONLY : DivB1_GB
+  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP
+  use ModBlockData, ONLY: clean_block_data
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
   implicit none
 
   integer, intent(in) :: idepth
 
-  integer :: iBlock, nBlockMoved, iError
+  integer :: iBlock, iError
   real :: minDX,maxDX    
   logical :: local_refine(nBLK)
 
@@ -20,20 +22,20 @@ subroutine amr(idepth)
   !
   call exchange_messages
 
-  if (automatic_refinement) then              !^CFG IF NOT SIMPLE
+  if (automatic_refinement) then
      !-----------------------------------------------------------------
      ! Physics based refinement.
      !
      call amr_physics
 
-  else                                        !^CFG IF NOT SIMPLE BEGIN
+  else
      !-----------------------------------------------------------------
      ! Prespecified refinement.
      !
      call specify_initial_refinement(local_refine, idepth)
      call refine_grid(local_refine)
 
-  end if                                      !^CFG END SIMPLE
+  end if
   call fixRefinementLevels
 
   ! Find new min and max dx
@@ -42,12 +44,18 @@ subroutine amr(idepth)
   call MPI_allreduce(minDX,minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
   call MPI_allreduce(maxDX,maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
 
-
-  !--------------------------------------------------------------------
-  ! Fix up other variables due to refinement
-  !
+  ! Renumber blocks
   call number_soln_blocks
-  call load_balance(.true.,.true.,nBlockMoved)
+
+  ! Update the global advance info
+  call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+
+  ! Clean all dynamically stored block data
+  call clean_block_data
+
+  ! Load balance: move coords, data, and there are new blocks
+  call load_balance(.true.,.true.,.true.)
   if(iProc==0.and.lVerbose>0)then
      ! Write block/cell summary after AMR
      call write_prefix; write(iUnitOut,*) '|'
@@ -63,12 +71,16 @@ subroutine amr(idepth)
      call write_prefix; write(iUnitOut,*) '|'
   end if
 
-  call find_neighbors
+  ! Update ghost cells
   call exchange_messages
+
   ! Correct B0 face at newly created and removed resolution changes
   do iBlock=1,nBlock
      if (unusedBLK(iBlock)) CYCLE
      call set_b0_face(iBlock)
   end do
+
+  ! Reset divb (it is undefined in newly created/moved blocks)
   DivB1_GB=-7.70
+
 end subroutine amr

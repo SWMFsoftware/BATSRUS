@@ -4,14 +4,13 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : &
-       iVolumeCounterBLK,iVolumeCounterI,&  !^CFG IF NOT CARTESIAN
-       R_BLK,VolumeInverse_I,RMin_BLK,body_BLK
+       R_BLK,vInv_CB,RMin_BLK,body_BLK
   use ModPhysics
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iStage,iBLK
-  integer :: iVolumeCounter,i,j,k, iVar
+  integer :: i,j,k, iVar
 
   real*8 :: fullBx, fullBy, fullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
        FullBxOld,FullByOld,FullBzOld,Ux,Uy,Uz,UxOld,UyOld,UzOld,&
@@ -19,8 +18,8 @@ subroutine update_states_MHD(iStage,iBLK)
        MBorisMinusRhoUxOld, MBorisMinusRhoUyOld, MBorisMinusRhoUzOld,&
        Rho,RhoInv,ECorr
   real::cfl_factor
-  real:: DtLocal,VInvLocal
-!^CFG IF POINTIMPLICIT BEGIN
+  real:: DtLocal
+  !^CFG IF POINTIMPLICIT BEGIN
 
   real :: sigma_ptImplicit, &
        TimeCell, ResidCell, &
@@ -36,7 +35,7 @@ subroutine update_states_MHD(iStage,iBLK)
 
   !T3E! !dir$ cache_align /timestepping/
   !T3E! !dir$ cache_align /localvars/
-!^CFG END POINTIMPLICIT
+  !^CFG END POINTIMPLICIT
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
   if(iBLK==BLKtest .and. iProc==PROCtest)then
@@ -44,74 +43,64 @@ subroutine update_states_MHD(iStage,iBLK)
   else
      oktest=.false.; oktest_me=.false.
   endif
-  
+
   !\
   ! Set variables depending on stage number
   !/
 
   cfl_factor = iStage*(cfl/nStage)
-  
+
   !\
   ! Update the new solution state and calc residuals for the mth stage.
   ! Note must copy state to old state only if m is 1.
   !/
-  
+
   if(iStage==1) then
      StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = & 
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK)
-     E_o_BLK    (1:nI,1:nJ,1:nK,iBLK) =     E_BLK(1:nI,1:nJ,1:nK,iBLK)
+     E_o_BLK(1:nI,1:nJ,1:nK,iBLK) = E_BLK(1:nI,1:nJ,1:nK,iBLK)
   end if
 
   !Get Residual.
-    iVolumeCounter=iBLK
-    iVolumeCounter=iVolumeCounterBLK*(iVolumeCounter-iVolumeCounterI)    !^CFG IF NOT CARTESIAN
-    do k=1,nK;do j=1,nJ;do i=1,nI
-       iVolumeCounter=iVolumeCounter+iVolumeCounterI               !^CFG IF NOT CARTESIAN
-       DtLocal=cfl_factor*time_BLK(i,j,k,iBLK)
-       VInvLocal=VolumeInverse_I(iVolumeCounter)
-       Source_VC(:,i,j,k) = &
-            DtLocal* (Source_VC(:,i,j,k) + &
-            VInvLocal * &
-            (Flux_VX(:,i,j,k)-Flux_VX(:,i+1,j,k)+&
-            Flux_VY(:,i,j,k)-Flux_VY(:,i,j+1,k)+ &
-            Flux_VZ(:,i,j,k)-Flux_VZ(:,i,j,k+1) )) 
-    end do;end do;end do
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI
+     DtLocal=cfl_factor*time_BLK(i,j,k,iBLK)
+     Source_VC(:,i,j,k) = &
+          DtLocal* (Source_VC(:,i,j,k) + &
+          vInv_CB(i,j,k,iBLK) * &
+          ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
+          + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
+          + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 
+  end do; end do; end do
   if (UsePointImplicit) then   !^CFG IF POINTIMPLICIT BEGIN
-     call update_ptImplicit
+     call update_point_implicit
   else                         !^CFG END POINTIMPLICIT
-     call update_Explicit
+     call update_explicit
   end if                       !^CFG IF POINTIMPLICIT
 
-  if (UseIM) call update_pressure_from_IM !^CFG IF RCM
+contains
 
-Contains
-
-  subroutine update_Explicit
-    do k=1,nK
-       do j=1,nJ
-          do i=1,nI
-             do iVar=1,nVar
-                State_VGB(iVar,i,j,k,iBLK) = &
-                     StateOld_VCB(iVar,i,j,k,iBLK) + &
-                     Source_VC(iVar,i,j,k)
-             end do
-             ! Compute both E and p. Choose which to keep below in the where statement
-             E_BLK(i,j,k,iBLK) = E_o_BLK(i,j,k,iBLK) + &
-                  Source_VC(Energy_,i,j,k)
-          end do
+  subroutine update_explicit
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       do iVar=1,nVar
+          State_VGB(iVar,i,j,k,iBLK) = &
+               StateOld_VCB(iVar,i,j,k,iBLK) + &
+               Source_VC(iVar,i,j,k)
        end do
-    end do
+       ! Compute energy. Choose which to keep below in the where statement
+       E_BLK(i,j,k,iBLK) = E_o_BLK(i,j,k,iBLK) + Source_VC(Energy_,i,j,k)
+    end do; end do; end do
 
-    if((nStage==1.and..not.time_accurate).or.&
-         (nStage>1.and.iStage==1))then
-       do k=1,nK;do j=1,nJ;do i=1,nI
-          E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK)+cHalf*&
-              (Source_VC(Bx_,i,j,k)**2+Source_VC(By_,i,j,k)**2+Source_VC(Bz_,i,j,k)**2)
-       end do;end do; end do
+    if((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1))then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK) + cHalf*( &
+               Source_VC(Bx_,i,j,k)**2 + &
+               Source_VC(By_,i,j,k)**2 + &
+               Source_VC(Bz_,i,j,k)**2)
+       end do; end do; end do
     end if
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
-    
+
        do k=1,nK; do j=1,nJ; do i=1,nI
           B0x= B0xCell_BLK(i,j,k,iBLK)
           B0y= B0yCell_BLK(i,j,k,iBLK)
@@ -123,7 +112,7 @@ Contains
           fullBxOld = B0x + BxOld
           fullByOld = B0y + ByOld
           fullBzOld = B0z + BzOld
-          
+
           Rho = StateOld_VCB(rho_,i,j,k,iBLK)
           rhoc2  = Rho*c2LIGHT
 
@@ -153,7 +142,7 @@ Contains
           Bx= State_VGB(Bx_,i,j,k,iBLK)
           By= State_VGB(By_,i,j,k,iBLK)
           Bz= State_VGB(Bz_,i,j,k,iBLK)
-          
+
           fullBx = B0x + Bx
           fullBy = B0y + By
           fullBz = B0z + Bz
@@ -208,7 +197,7 @@ Contains
                -(UyOld*BxOld-Uy*Bx+(UyOld-Uy)*B0x))* &
                (UxOld*fullByOld+Ux*FullBy            &
                -UyOld*fullBxOld-Uy*FullBx)
-     
+
           E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK)      &
                + cHalf*inv_c2LIGHT*ECorr
 
@@ -224,7 +213,7 @@ Contains
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = StateOld_VCB(rho_,i,j,k,iBLK)*c2LIGHT
           gA2_Boris=fullBB/rhoc2
-          
+
           ! rhoU_BorisSimple = rhoU*(1+BB/(rho*c2))
           State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBLK) = &
                State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBLK)+&
@@ -241,7 +230,7 @@ Contains
           ! rhoU = 1/[1+BB/(rho c^2)]* rhoU_BorisSimple
           State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBLK) = gA2_Boris * &
                State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBLK)
- 
+
        end do; end do; end do
     end if                                   !^CFG END SIMPLEBORIS
 
@@ -292,9 +281,11 @@ Contains
             State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
             State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2) )
     end if
-  end subroutine update_Explicit
+  end subroutine update_explicit
+
   !^CFG IF POINTIMPLICIT BEGIN
-  subroutine update_ptImplicit
+  !================================================ 
+  subroutine update_point_implicit
     sigma_ptImplicit = cOne
     do k=1,nK; do j=1,nJ; do i=1,nI 
        TimeCell = cfl_factor*time_BLK(i,j,k,iBLK)*sigma_ptImplicit
@@ -302,11 +293,12 @@ Contains
        inv_rho2 = inv_rho*inv_rho
        LHSCell = 0.00
 
-       ResidualCell(1:7) = Source_VC(1:7,i,j,k);ResidualCell(8) = Source_VC(Energy_,i,j,k)
-       
-       do iVar=1,7;LHSCell(iVar,iVar) = 1.00;end do
+       ResidualCell(1:7) = Source_VC(1:7,i,j,k)
+       ResidualCell(8)   = Source_VC(Energy_,i,j,k)
 
-
+       do iVar=1,7
+          LHSCell(iVar,iVar) = 1.00
+       end do
 
        LHSCell(2,1) = -TimeCell*fbody_x_BLK(i,j,k,iBLK)
 
@@ -314,13 +306,10 @@ Contains
             LHSCell(2,3) = -2.00*TimeCell*OMEGAbody
        LHSCell(2,5) = TimeCell*DivB1_GB(i,j,k,iBLK)
 
-
-
        LHSCell(3,1) = -TimeCell*fbody_y_BLK(i,j,k,iBLK)
        if (problem_type == problem_heliosphere) &
             LHSCell(3,2) = 2.00*TimeCell*OMEGAbody
        LHSCell(3,6) = sigma_ptImplicit*TimeCell*DivB1_GB(i,j,k,iBLK)
-
 
        LHSCell(4,1) = -TimeCell*fbody_z_BLK(i,j,k,iBLK)
        LHSCell(4,7) = TimeCell*DivB1_GB(i,j,k,iBLK)
@@ -329,7 +318,7 @@ Contains
             State_VGB(rhoUx_,i,j,k,iBLK)*inv_rho2
        LHSCell(5,2) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
 
-       
+
        LHSCell(6,1) = -TimeCell*DivB1_GB(i,j,k,iBLK)* &
             State_VGB(rhoUy_,i,j,k,iBLK)*inv_rho2
        LHSCell(6,3) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
@@ -339,7 +328,6 @@ Contains
        LHSCell(7,1) = -TimeCell*DivB1_GB(i,j,k,iBLK)* &
             State_VGB(rhoUz_,i,j,k,iBLK)*inv_rho2
        LHSCell(7,4) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
-
 
        LHSCell(8,1) = -TimeCell*( &
             DivB1_GB(i,j,k,iBLK)* &
@@ -414,8 +402,8 @@ Contains
 
     end do; end do; end do
 
-  end subroutine update_ptImplicit
-  
+  end subroutine update_point_implicit
+
 
   subroutine linear_equation_solver
     ! This routine solves the system of Nvar linear equations:
@@ -427,8 +415,8 @@ Contains
     ! backward substitution to obtain the solution vector dUCell.
     ! Crout's method with partial implicit pivoting is used to perform
     ! the decompostion.
-  integer :: IL, II, ILMAX, JL, KL, LL, INDX(1:Nvar)
-  real, parameter :: TINY=1.0E-20
+    integer :: IL, II, ILMAX, JL, KL, LL, INDX(1:Nvar)
+    real, parameter :: TINY=1.0E-20
 
 
     !\
@@ -512,61 +500,7 @@ Contains
     END DO
 
   end subroutine linear_equation_solver
-  
+
   !^CFG END POINTIMPLICIT
-  
-  !^CFG IF RCM BEGIN
-  subroutine update_pressure_from_IM
 
-    use ModRaytrace
-
-    real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: pIM
-
-    ! Now use the pressure from the IM to nudge the pressure in the MHD
-    ! code.  This will happen only on closed magnetic field lines.
-    ! Determining which field lines are closed is done by using the ray
-    ! tracing.
-
-    call get_im_pressure(iBLK,pIM)
-
-    where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. &
-         State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)<pIM(1:nI,1:nJ,1:nK))
-
-       State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+tauCoupleIM))* &
-            (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + tauCoupleIM*pIM(1:nI,1:nJ,1:nK))
-
-    end where
-
-    ! Now get the energy that corresponds to this new pressure
-    E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-            inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) &
-            + 0.5*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-                     /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-                   +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)
-
-  end subroutine update_pressure_from_IM
-  !^CFG END RCM
-
-end subroutine update_states_MHD
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+end subroutine update_states_mhd

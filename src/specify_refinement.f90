@@ -1,12 +1,16 @@
 !^CFG COPYRIGHT UM
 subroutine specify_initial_refinement(refb, lev)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,UseCorotation,UseMassLoading,unusedBLK
+  use ModSize
+  use ModMain, ONLY : &
+       UseUserSpecifyRefinement,&
+       body1,UseRotatingBc,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
-       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                                 !^CFG IF NOT CARTESIAN
-       x_BLK,y_BLK,z_BLK,dx_BLK
+       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF COVARIANT
+       x_BLK,y_BLK,z_BLK,dx_BLK,far_field_BCs_BLK
   use ModPhysics, ONLY : Rbody,Rcurrents,Qprod
   use ModAMR, ONLY : InitialRefineType
   use ModNumConst
+  use ModUser, ONLY: user_specify_initial_refinement
   implicit none
 
   logical, intent(out) :: refb(nBLK)
@@ -22,15 +26,16 @@ subroutine specify_initial_refinement(refb, lev)
   real :: SizeMax
 
   real,parameter::cRefinedTailCutoff=(cOne-cQuarter)*(cOne-cEighth)
+  logical::IsFound
+  character(len=*), parameter :: NameSub='specify_initial_refinement'
+  logical :: oktest, oktest_me
 
-  logical :: oktest, oktest_me, localtestdone=.false.
-
+  !----------------------------------------------------------------------------
   call set_oktest('initial_refinement',oktest,oktest_me)
-  if (lev > 4) localtestdone = .true.
 
   refb = .false.
 
-  do iBLK = 1,nBLK  
+  do iBLK = 1,nBLK
      if (.not. unusedBLK(iBLK)) then
         ! Block min, max radius values
         xx1 = cHalf*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
@@ -40,8 +45,8 @@ subroutine specify_initial_refinement(refb, lev)
         zz1 = cHalf*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
         zz2 = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
         
-        select case(TypeGeometry)                              !^CFG IF NOT CARTESIAN
-        case('cartesian')                                      !^CFG IF NOT CARTESIAN
+        select case(TypeGeometry)                              !^CFG IF COVARIANT
+        case('cartesian')                                      !^CFG IF COVARIANT
            SizeMax=dx_BLK(iBLK)
            ! Block center coordinates
            xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK)) 
@@ -50,42 +55,50 @@ subroutine specify_initial_refinement(refb, lev)
            RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
            minRblk = sqrt(&
              minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
-!^CFG IF NOT SIMPLE BEGIN
            maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
                 (max(abs(yy1),abs(yy2)))**2 + &
                 (max(abs(zz1),abs(zz2)))**2)
-        case('spherical')                                          !^CFG IF NOT CARTESIAN BEGIN
+           if(body1.and.maxRblk<rBody)CYCLE
+        case('spherical')                                          !^CFG IF COVARIANT BEGIN
            SizeMax=max(dx_BLK(iBLK),dy_BLK(iBLK)*maxRblk)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
            maxRblk = minRblk+nI*dx_BLK(iBLK)                            
            RR=cHalf*(minRblk+maxRblk)                                   
-           xxx=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           xxx=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 cos(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           yyy=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           yyy=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           zzz=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
+           zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case('spherical_lnr')                                          
            SizeMax=max(dx_BLK(iBLK)*maxRblk,dy_BLK(iBLK)*maxRblk)
            minRblk =exp( XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK))            
            maxRblk =exp(nI*dx_BLK(iBLK))*minRblk                            
            RR=cHalf*(minRblk+maxRblk)                                   
-           xxx=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           xxx=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 cos(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           yyy=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           yyy=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           zzz=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
+           zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case default
-           call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-        end select                                                 !^CFG END CARTESIAN
-!^CFG END SIMPLE
+           SizeMax=-cOne
+           minRblk=-cOne
+           maxRblk=-cOne
+           RR=-cOne
+           xxx=-cOne
+           yyy=-cOne
+           zzz=-cOne
+           !In case of an arbitrary geometry the variables above
+           !are initialized but they are meaningless
+        end select                                                 !^CFG END COVARIANT
 
         select case (InitialRefineType)
         case ('none')
            ! Refine no blocks
-!^CFG IF NOT SIMPLE BEGIN
         case ('all')
            ! Refine all used blocks
            refb(iBLK) = .true.
+        case('outerboundary')
+           refb(iBLK) =  far_field_BCs_BLK(iBLK)
 
         case ('2Dbodyfocus')
            ! 
@@ -129,7 +142,7 @@ subroutine specify_initial_refinement(refb, lev)
               refb(iBLK) = .true.
            else
               critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
-              if ( RR < 1.10 + critx ) then
+              if ( RR < 1.10*rBody + critx ) then
                  refb(iBLK) = .true.
               else
                  refb(iBLK) = .false.
@@ -164,7 +177,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 14) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
@@ -195,7 +208,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 10) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
@@ -322,7 +335,7 @@ subroutine specify_initial_refinement(refb, lev)
                  !  12 Re in Y
 
                  if (SizeMax > 0.5 .and. &
-                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (xxx < 0. .and. xxx > -SizeMax*28.0)) then
 
                     if (nJ == 4) then
@@ -359,6 +372,11 @@ subroutine specify_initial_refinement(refb, lev)
 
            endif
 
+        case ('coupledhelio')
+           !refine to have resolution not worse 4.0 and
+           !refine the body intersecting blocks
+           refb(iBLK)=minRblk<=rBody.or.dx_BLK(iBLK)>4.01
+
         case ('magnetosphere')
            ! Refine for generic magnetosphere
            if (maxRblk > Rbody) then
@@ -369,17 +387,17 @@ subroutine specify_initial_refinement(refb, lev)
               else
    
                  ! Refine inner blocks for corotation
-                 if ((UseCorotation).and.(minRblk <= 6.0)) then
-                    select case(TypeGeometry)                                     !^CFG IF NOT CARTESIAN
-                    case('cartesian')                                             !^CFG IF NOT CARTESIAN
+                 if ((UseRotatingBc).and.(minRblk <= 6.0)) then
+                    select case(TypeGeometry)                                     !^CFG IF COVARIANT
+                    case('cartesian')                                             !^CFG IF COVARIANT
                        if (min(abs(zz1),abs(zz2)) < Rcurrents) refb(iBLK) = .true.   
-                    case('spherical','spherical_lnr')                                        !^CFG IF NOT CARTESIAN BEGIN  
-                       if(minRblk*min(abs(cos(XyzStart_BLK(3,iBLK)-cHalf*&           
-                            dz_BLK(iBLK))),abs(cos(XyzStart_BLK(3,iBLK)+(nK-cHalf)&  
+                    case('spherical','spherical_lnr')                               !^CFG IF COVARIANT BEGIN  
+                       if(minRblk*min(abs(sin(XyzStart_BLK(3,iBLK)-cHalf*&           
+                            dz_BLK(iBLK))),abs(sin(XyzStart_BLK(3,iBLK)+(nK-cHalf)&  
                             *dz_BLK(iBLK)))) < Rcurrents)refb(iBLK) = .true.         
                     case default
                        call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-                    end select                                                       !^CFG END CARTESIAN
+                    end select                                                       !^CFG END COVARIANT
                  endif
 
                  ! Refine magnetopause/shock
@@ -410,16 +428,16 @@ subroutine specify_initial_refinement(refb, lev)
                  !  12 Re in Y
 
                  if (SizeMax>0.5 .and.&
-                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (xxx<0. .and. xxx>-SizeMax*28.0)) then
                     if (nJ == 4) then
-                       select case(TypeGeometry)                           !^CFG IF NOT CARTESIAN
-                       case('cartesian')                                   !^CFG IF NOT CARTESIAN
+                       select case(TypeGeometry)                           !^CFG IF COVARIANT
+                       case('cartesian')                                   !^CFG IF COVARIANT
                           tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                                25.*((min(abs(zz1),abs(zz2)))**2))
-                       case('spherical','spherical_lnr')                             !^CFG IF NOT CARTESIAN BEGIN
-                          tmpminRblk=min(cos(XyzStart_BLK(3,iBLK)-cHalf*&          
-                               dz_BLK(iBLK))**2,cos(XyzStart_BLK(3,iBLK)+&          
+                       case('spherical','spherical_lnr')                             !^CFG IF COVARIANT BEGIN
+                          tmpminRblk=min(sin(XyzStart_BLK(3,iBLK)-cHalf*&          
+                               dz_BLK(iBLK))**2,sin(XyzStart_BLK(3,iBLK)+&          
                                (nK-cHalf)*dz_BLK(iBLK))**2)                         
                           tmpminRblk=min(sin(XyzStart_BLK(2,iBLK)-cHalf*&          
                                dy_BLK(iBLK))**2,sin(XyzStart_BLK(2,iBLK)+&          
@@ -428,7 +446,7 @@ subroutine specify_initial_refinement(refb, lev)
                           tmpminRblk=minRblk*sqrt(tmpminRblk)
                        case default
                           call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)               
-                       end select                                    !^CFG END CARTESIAN
+                       end select                                    !^CFG END COVARIANT
                        if (tmpminRblk < 12.) refb(iBLK) = .true.
                     else
                        if  (((abs(zz1) == 0) .or. (abs(zz2) == 0)) .and. &
@@ -445,16 +463,15 @@ subroutine specify_initial_refinement(refb, lev)
 
                  ! Refine all blocks intersecting body
                  if (minRblk <= Rcurrents) then
-                    if(TypeGeometry=='cartesian')&                !^CFG IF NOT CARTESIAN
+                    if(TypeGeometry=='cartesian')&                !^CFG IF COVARIANT
                          refb(iBLK) = .true.
-                    if(TypeGeometry=='spherical')&                !^CFG IF NOT CARTESIAN BEGIN
+                    if(TypeGeometry=='spherical')&                !^CFG IF COVARIANT BEGIN
                          refb(iBLK) = dy_BLK(iBLK)>cPi/128+cTiny.or.&
-                         dz_BLK(iBLK)>cPi/128+cTiny               !^CFG END CARTESIAN
+                         dz_BLK(iBLK)>cPi/128+cTiny               !^CFG END COVARIANT
                  end if
               end if
            end if
 
-!^CFG END SIMPLE
 
         case ('magneto12')
            ! Refine for generic magnetosphere
@@ -464,8 +481,8 @@ subroutine specify_initial_refinement(refb, lev)
                  ! Refine all blocks with dx greater than 8
                  refb(iBLK) = .true.
               else
-                 select case(TypeGeometry)                       !^CFG IF NOT CARTESIAN
-                 case('cartesian')                               !^CFG IF NOT CARTESIAN
+                 select case(TypeGeometry)                       !^CFG IF COVARIANT
+                 case('cartesian')                               !^CFG IF COVARIANT
                     minx = minval(abs(x_BLK(1:nI, 1, 1,iBLK)))
                     miny = minval(abs(y_BLK(1, 1:nJ, 1,iBLK)))
                     minz = minval(abs(z_BLK(1, 1, 1:nK,iBLK)))
@@ -473,19 +490,19 @@ subroutine specify_initial_refinement(refb, lev)
                     minRblk = sqrt(minx*minx + miny*miny + minz*minz)
                     minx = minval(x_BLK(1:nI, 1, 1,iBLK))
 
-                 case('spherical','spherical_lnr')              !^CFG IF NOT CARTESIAN BEGIN
+                 case('spherical','spherical_lnr')              !^CFG IF COVARIANT BEGIN
                     minx = minval(x_BLK(1:nI, 1:nJ, 1:nK,iBLK))
                     miny = minval(abs(y_BLK(1:nI, 1:nJ, 1:nK,iBLK)))
                     minz = minval(abs(z_BLK(1:nI, 1:nJ, 1:nK,iBLK)))                     
                  case default
                     call stop_mpi('Specify Refinement: Unknown TypeGeometry'//TypeGeometry)
-                 end select                                      !^CFG END CARTESIAN
+                 end select                                      !^CFG END COVARIANT
 
                  ! With 8x8x8 blocks
                  ! levels = 7 (i.e. 1/4 Re) 495616 cells rbody+corotation
                  ! levels = 8 (i.e. 1/8 Re) 1671168 cells rbody+corotation                 
                  ! Refine inner blocks for corotation
-                 if ((UseCorotation).and.(minRblk <= 6.0).and.SizeMax>=cQuarter) then
+                 if ((UseRotatingBc).and.(minRblk <= 6.0).and.SizeMax>=cQuarter) then
                        
                     if (minz < Rcurrents+ SizeMax) refb(iBLK) = .true.
                        
@@ -521,8 +538,8 @@ subroutine specify_initial_refinement(refb, lev)
                  ! levels = 8 (i.e. 1/4 Re) 742912  cells for rbody+corotation+mp+tail
                  ! levels = 9 (i.e. 1/8 Re) 1214208 cells for rbody+corotation+mp+tail
                  if ( SizeMax >0.4.and.&                               
-                      (TypeGeometry=='cartesian'.or.&           !^CFG IF NOT CARTESIAN
-                      minx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.&           !^CFG IF COVARIANT
+                      minx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (minx<0. .and. &
                       minx > -SizeMax*50.0)) then
                     if (miny < 15.0*dx_BLK(iBLK) .and. minz < SizeMax) refb(iBLK) = .true.
@@ -537,15 +554,14 @@ subroutine specify_initial_refinement(refb, lev)
                  ! cell centers were further away from 0.0 than RCurrents.
                  ! Now it checks to see if it is within 1 cell of rcurrents.
                  if (minRblk - Rcurrents <= dx_BLK(iBLK)) then
-                    if(TypeGeometry=='cartesian')&                !^CFG IF NOT CARTESIAN
+                    if(TypeGeometry=='cartesian')&                !^CFG IF COVARIANT
                          refb(iBLK) = .true.
-                    if(TypeGeometry=='spherical'.or.&                !^CFG IF NOT CARTESIAN BEGIN
+                    if(TypeGeometry=='spherical'.or.&                !^CFG IF COVARIANT BEGIN
                          TypeGeometry=='spherical_lnr')&
                          refb(iBLK) = dy_BLK(iBLK)>cPi/128+cTiny.or.&
-                         dz_BLK(iBLK)>cPi/128+cTiny               !^CFG END CARTESIAN
+                         dz_BLK(iBLK)>cPi/128+cTiny               !^CFG END COVARIANT
                  end if
 
-!^CFG IF NOT SIMPLE BEGIN
                  minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
                       (min(abs(yy1),abs(yy2)))**2 + &
                       (min(abs(zz1),abs(zz2)))**2)
@@ -581,15 +597,15 @@ subroutine specify_initial_refinement(refb, lev)
                  !    0.125  at lt  19.5
 
                  if (SizeMax>0.125 .and.&
-                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (xxx<-7. .and. xxx>-SizeMax*50.0-5.0)) then
-                       select case(TypeGeometry)                           !^CFG IF NOT CARTESIAN
-                       case('cartesian')                                   !^CFG IF NOT CARTESIAN
+                       select case(TypeGeometry)                           !^CFG IF COVARIANT
+                       case('cartesian')                                   !^CFG IF COVARIANT
                           tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                                25.*((min(abs(zz1),abs(zz2)))**2))
-                       case('spherical')                             !^CFG IF NOT CARTESIAN BEGIN
-                          tmpminRblk=min(cos(XyzStart_BLK(3,iBLK)-cHalf*&          
-                               dz_BLK(iBLK))**2,cos(XyzStart_BLK(3,iBLK)+&          
+                       case('spherical')                             !^CFG IF COVARIANT BEGIN
+                          tmpminRblk=min(sin(XyzStart_BLK(3,iBLK)-cHalf*&          
+                               dz_BLK(iBLK))**2,sin(XyzStart_BLK(3,iBLK)+&          
                                (nK-cHalf)*dz_BLK(iBLK))**2)                         
                           tmpminRblk=min(sin(XyzStart_BLK(2,iBLK)-cHalf*&          
                                dy_BLK(iBLK))**2,sin(XyzStart_BLK(2,iBLK)+&          
@@ -598,7 +614,7 @@ subroutine specify_initial_refinement(refb, lev)
                           tmpminRblk=minRblk*sqrt(tmpminRblk)
                        case default
                           call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)               
-                       end select                                    !^CFG END CARTESIAN
+                       end select                                    !^CFG END COVARIANT
 
                     if (tmpminRblk < 12.) refb(iBLK) = .true.
                  end if
@@ -606,6 +622,64 @@ subroutine specify_initial_refinement(refb, lev)
                  ! Refine tail
                  if (SizeMax>2 .and. (xxx<0. .and. xxx>-150.)) refb(iBLK) = .true.
 
+              end if
+           end if
+
+        case ('carrington')
+           ! Refine for Carrington Event grid
+
+           select case(TypeGeometry)                     !^CFG IF COVARIANT BEGIN
+           case('spherical')
+              call stop_mpi('No spherical definitions for carrington refinement')               
+           end select                                    !^CFG END COVARIANT
+
+           ! Cycle if the whole block is inside body
+           if(maxRblk < Rbody) then
+              CYCLE
+           end if
+
+           ! Refine all blocks with dx greater than 8
+           if(dx_BLK(iBLK) > 8.) then
+              refb(iBLK) = .true.
+              CYCLE
+           end if
+
+           ! Refine all blocks inside Rcurrents
+           if(minRblk <= Rcurrents) then
+              refb(iBLK) = .true.
+              CYCLE
+           end if
+
+           ! Refine magnetopause/shock
+           if(SizeMax > 0.25 .and. xxx > 0.) then
+              tmpminRblk = sqrt( &
+                   1.00*((min(abs(xx1),abs(xx2)))**2) + &
+                   0.75*((min(abs(yy1),abs(yy2)))**2) + &
+                   0.75*((min(abs(zz1),abs(zz2)))**2) )
+              if(tmpminRblk < 12.) then
+                 refb(iBLK) = .true.
+                 CYCLE
+              end if
+           end if
+
+           ! Refine tail
+           if (SizeMax>2 .and. (xxx<0. .and. xxx>-100.)) then
+              tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
+                   1.*((min(abs(zz1),abs(zz2)))**2))
+              if (tmpminRblk < 50.) then
+                 refb(iBLK) = .true.
+                 CYCLE
+              end if
+           end if
+
+           ! Refine tail sheet
+           if (SizeMax>0.25 .and.&
+                (xxx<0. .and. xxx>-SizeMax*32.0-3.1)) then
+              tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
+                   25.*((min(abs(zz1),abs(zz2)))**2))
+              if (tmpminRblk < 12.) then
+                 refb(iBLK) = .true.
+                 CYCLE
               end if
            end if
 
@@ -695,7 +769,7 @@ subroutine specify_initial_refinement(refb, lev)
                  !   2 blocks thick in Z
                  !  18.0 Re in Y
                  if (SizeMax > 1.5 .and. &
-                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (xxx < 0. .and. xxx > -SizeMax*30.0) .and. &
                       (.not. UseMassLoading)) then
                     tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
@@ -811,7 +885,7 @@ subroutine specify_initial_refinement(refb, lev)
                  !   2 blocks thick in Z
                  !  18.0 Re in Y
                  if (SizeMax > 2.0 .and. &
-                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF NOT CARTESIAN
+                      (TypeGeometry=='cartesian'.or.xxx>x1+(x2-x1)*cRefinedTailCutoff).and.& !^CFG IF COVARIANT
                       (xxx < 0. .and. xxx > -SizeMax*35.0)) then
 
                     tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
@@ -918,14 +992,21 @@ subroutine specify_initial_refinement(refb, lev)
                       minRblk < 0.1*lscale ) then
                     refb(iBLK) = .true.
                  endif
-!^CFG END SIMPLE
               endif
            endif
         case default
-           call stop_mpi('Unknown InitialRefineType='//InitialRefineType)
+           IsFound=.false.
+           if (UseUserSpecifyRefinement) &
+                call user_specify_initial_refinement(iBLK,refb(iBLK),lev,dx_BLK(iBLK), &
+                xxx,yyy,zzz,RR,minx,miny,minz,minRblk,maxx,maxy,maxz,maxRblk,IsFound)
+           if(.not.IsFound) &
+           call stop_mpi(NameSub//' ERROR: unknown InitialRefineType='// &
+                trim(InitialRefineType)//'!!!')
         end select
      end if
   end do
+
+  call specify_area_refinement(refb)
 
 contains
 
@@ -935,3 +1016,160 @@ contains
   end function minmod
 
 end subroutine specify_initial_refinement
+
+!==============================================================================
+
+subroutine specify_area_refinement(DoRefine_B)
+
+  !DESCRIPTION:
+  ! Set DoRefine_B to .true. for blocks touching the predefined areas
+  ! if the area has a finer resolution than the block
+
+  use ModProcMH,   ONLY: iProc
+  use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk
+  use ModAMR,      ONLY: nArea, Area_I
+  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK
+
+  implicit none
+
+  !INPUT/OUTPUT ARGUMENTS:
+  logical, intent(inout) :: DoRefine_B(MaxBlock)
+
+  !LOCAL VARIABLES:
+  integer, parameter :: nCorner = 8
+  real     :: CornerOrig_DI(3, nCorner), Corner_DI(3, nCorner)
+  real     :: DistMin_D(3), DistMax_D(3)
+  integer  :: i, j, k, iDim, iArea, iBlock, iCorner
+  real     :: CurrentResolution
+
+  character(len=*), parameter :: NameSub = 'specify_area_refinement'
+
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  if(nArea <= 0) RETURN
+
+  call set_oktest(NameSub,DoTest,DoTestMe)
+  if(DoTestMe)write(*,*)NameSub,' nArea, nBlock, nBlockMax, MaxBlock=',&
+       nArea, nBlock, nBlockMax, MaxBlock
+
+  BLOCK: do iBlock = 1, nBlockMax
+
+     if( UnusedBlk(iBlock) ) CYCLE BLOCK
+
+     ! No need to check block if it is to be refined already
+     if(DoRefine_B(iBlock)) CYCLE BLOCK
+
+     CurrentResolution = dx_BLK(iBlock)
+
+     iCorner = 0
+     do k=1,nK+1,nK; do j=1,nJ+1,nJ; do i=1,nI+1,nI
+        iCorner = iCorner+1
+        CornerOrig_DI(1,iCorner) = 0.125 * sum(x_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+        CornerOrig_DI(2,iCorner) = 0.125 * sum(y_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+        CornerOrig_DI(3,iCorner) = 0.125 * sum(z_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+     end do; end do; end do
+
+     AREA: do iArea = 1, nArea
+
+        ! No need to check area if block is finer than area resolution
+        if(Area_I(iArea) % Resolution >= CurrentResolution) CYCLE AREA
+
+        ! Check if area refines the whole domain
+        if(Area_I(iArea) % Name == 'all')then
+           DoRefine_B(iBlock) = .true.
+           CYCLE AREA
+        endif
+           
+        ! Shift corner coordinates to the center of area
+        do iCorner = 1, nCorner
+           Corner_DI(:,iCorner) = &
+                CornerOrig_DI(:,iCorner) - Area_I(iArea) % Center_D
+        end do
+
+        ! Rotate corners into the orientation of the area if required
+        if(Area_I(iArea) % DoRotate) &
+             Corner_DI = matmul(Area_I(iArea) % Rotate_DD, Corner_DI)
+
+        ! Normalize coordinates to the size of the area in all 3 directions
+        do iCorner = 1, nCorner
+           Corner_DI(:,iCorner) = Corner_DI(:,iCorner) / Area_I(iArea) % Size_D
+        end do
+
+        ! Calculate maximum and minimum distances in all 3 directions
+        do iDim = 1, 3
+           DistMax_D(iDim) = maxval(abs(Corner_DI(iDim,:)))
+
+           if( maxval(Corner_DI(iDim,:))*minval(Corner_DI(iDim,:)) <= 0.0)then
+              ! The block covers the center point in this dimension
+              DistMin_D(iDim) = 0.0
+           else
+              ! Select the point that is closer in this dimension
+              DistMin_D(iDim) = minval(abs(Corner_DI(iDim,:)))
+           end if
+        end do
+
+        ! Check if this area is intersecting with the block
+        select case( Area_I(iArea) % Name)
+        case('brick')
+           if( all( DistMin_D < 1.0 ) ) DoRefine_B(iBlock) = .true.
+
+        case('sphere')
+           if( sum(DistMin_D**2) < 1.0 ) DoRefine_B(iBlock) = .true.
+
+        case('shell')
+           ! Check if block intersects with the enclosing sphere
+           ! but it is not fully inside the inner sphere
+           if(  sum(DistMin_D**2) < 1.0 .and. &
+                sum(DistMax_D**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylinderx')
+           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylindery')
+           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylinderz')
+           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringx')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0    &
+                .and. sum(DistMax_D(2:3)**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringy')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:3:2)**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringz')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:2)**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case default
+           call stop_mpi(NameSub // &
+                ' ERROR: Unknown NameArea = ',Area_I(iArea) % Name)
+
+        end select
+
+        ! No need to check more areas if block is to be refined already
+        if(DoRefine_B(iBlock)) EXIT AREA
+
+     end do AREA
+
+  end do BLOCK
+
+  if(DoTest)write(*,*)NameSub,' on iProc=',iProc,&
+       ' number of selected blocks=',count(DoRefine_B)
+
+end subroutine specify_area_refinement

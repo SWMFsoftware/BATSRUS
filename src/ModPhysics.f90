@@ -25,7 +25,7 @@ module ModPhysics
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   !/
-  real :: Bdp,Bdpx,Bdpy,Bdpz,Bdp_dim      ! the dipole moment of B0
+  real :: Bdp,Bdpx,Bdpy,Bdpz,Bdp_dim=0.0  ! the dipole moment of B0
   real, dimension(1:3,1:3) :: Qqp         ! the quadrupole moment of B0
   real, dimension(1:3,1:3,1:3) :: Oop     ! the octupole moment of B0
 
@@ -127,12 +127,11 @@ module ModPhysics
   real :: Rscl, RHOscl, rho1scl, rho2scl, SSPscl, Vscl 
   real :: B1scl, a1scl
   real :: ModulationRho,ModulationP
-  real :: cRot_x_GL98,cRot_y_GL98,cRot_z_GL98
+  real :: OrientationGL98, LatitudeGL98, LongitudeGL98
   real :: widthArc, phi0Arc, muArc
   real :: RhoArcDim, TArcDim, UzArcDim, BArcDim, ByArcDim
   real :: B0_scl, B0y_scl, Phtscl
   integer :: expArc
-!^CFG IF NOT SIMPLE BEGIN
   !\
   ! Position of Earth for Dynamic AMR purposes, including
   ! a parameter that specifies the opening angle of the ray
@@ -151,8 +150,8 @@ module ModPhysics
   character (len=20) :: TypeResist
   real :: TimeInitRise,TimeConstLev
   real :: Eta0Resist,Alpha0Resist,yShiftResist
-  real :: Eta0AnomResist,EtaAnomMaxResist,ThresholdFactorResist
-  
+  real :: Eta0AnomResist,EtaAnomMaxResist,jCritResist
+
   !\
   ! Ilia's reconnection & test problems
   !/
@@ -166,7 +165,6 @@ module ModPhysics
   logical :: UseDefaultUnits = .false.
   real :: Grav0Diss,Beta0Diss,Length0Diss
   real :: Time0Diss,Rho0Diss,Tem0Diss
-!^CFG END SIMPLE
   !\
   ! Comet terms.
   !/

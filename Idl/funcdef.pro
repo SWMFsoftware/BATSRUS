@@ -1,18 +1,19 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,xx,w,func,physics,eqpar,wnames
+function funcdef,xx,w,func,physics,eqpar,variables,rcut
 ;
 ; Originally developed for the Versatile Advection Code by G. Toth (1996-99).
 ; Rewritten for the BATSRUS code by G. Toth (2000).
 ;
 ; This is the function called by ".r animate" and ".r plotfunc".
 ;
-; "xx" array contains the "ndim" components of the coordinates for the grid.
-; "w" array contains the "nw" conservative variables for the grid.
-; "func" string describes the function to be returned.
-; "physics" string defines the meaning of the variables in "w".
-; "eqpar" array contains the equation parameters.
-; "wnames" string array contains the names for the conservative variables.
+; "xx"        array contains the "ndim" components of the coordinates.
+; "w"         array contains the "nw" variables.
+; "func"      string describes the function to be returned.
+; "physics"   string defines the meaning of the variables in "w".
+; "eqpar"     array contains the equation parameters.
+; "variables" string array contains the names of the coordinates in xx
+;             the variables in w and the equation parameters in eqpar
 ;
 ; The "func" string is interpreted by the following rules:
 ;
@@ -22,7 +23,7 @@ function funcdef,xx,w,func,physics,eqpar,wnames
 ;   A single number between 0 and nw-1 returns the variable indexed by
 ;       that number, e.g. '2' in 3D returns w(*,*,*,2). 
 ;
-;   Variable names in the "wnames" array mean the appropriate variable.
+;   Variable names in the "variables" array mean the appropriate variable.
 ;
 ;   Function names listed below are calculated and returned.
 ;
@@ -31,15 +32,20 @@ function funcdef,xx,w,func,physics,eqpar,wnames
 ;     and equation parameter names (gamma) and any IDL function
 ;     and operator are evaluated and returned. 
 ;
-; Examples for valid strings: '3', 'rho', '-T', 'rho*ux', ...
+;   Expressions can also contain coordinate, variable or equation
+;   parameter names enclosed in curly brackets. For example
+;   {r} or {bx1} or {rbody}. These will be replaced with strings like
+;   xx(*,*,0) or w(*,*,10) or eqpar(2) before evaluation.
+
+
+; Examples for valid strings: 
+;   '3', 'rho', 'Mfast', '-T', 'rho*ux', '{bx1}^2+{by1}^2'...
 ;
 ; One can use "funcdef" interactively too, e.g.
 ; 
-; ekin =funcdef(x,w,'(ux^2+uy^2)*rho','mhd23')
-; cfast=funcdef(x,w,'cfast','mhd33',eqpar)
+; ekin =funcdef(x,w,'(ux^2+uy^2)*rho','mhd23',eqpar,variables)
+; cfast=funcdef(x,w,'cfast','mhd33',eqpar,variables)
 ;
-; Note that "eqpar" is needed for the pressure but not for the kinetic energy, 
-; while "wnames" is not needed in either case.
 ;===========================================================================
 
 ; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
@@ -49,12 +55,36 @@ if ndim eq 0 then ndim=1
 n1=siz(1)
 if ndim gt 1 then n2=siz(2)
 if ndim gt 2 then n3=siz(3)
+
 ; For 1 variable: w(n1),   w(n1,n2),   w(n1,n2,n3)
 ; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
 siz=size(w)
 if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 
-if n_elements(wnames) eq 0 then wnames=strarr(nw)
+; Number of equation parameters
+nEqpar = n_elements(eqpar)
+
+; Extract equation parameters
+amu    =  1.67e-24 ;[g]
+gamma  =  5./3.
+clight =  1.0
+rbody  = -1.0
+if nEqpar gt 0 then begin
+    for i=nDim+nW,n_elements(variables)-1 do begin
+        iEqpar = i-nDim-nW
+        case variables(i) of
+            'g'     : gamma  = eqpar(iEqpar)
+            'gamma' : gamma  = eqpar(iEqpar)
+            'c'     : clight = eqpar(iEqpar)
+            'rbody' : rbody  = eqpar(iEqpar)
+            else:
+        endcase
+    endfor
+endif
+
+; Variable names
+if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
+wnames = strlowcase(variables(ndim:ndim+nw-1))
 
 ; Check for a negative sign in func
 if strmid(func,0,1) eq '-' then begin 
@@ -67,14 +97,35 @@ endelse
 
 ; Check if f is among the variable names listed in wnames or if it is a number
 for iw=0,nw-1 do $
-   if f eq strtrim(string(iw),2) or f eq wnames(iw) then $
-   case ndim of
-      1:result=w(*,iw)
-      2:result=w(*,*,iw)
-      3:result=w(*,*,*,iw)
-   endcase
+  if f eq strtrim(string(iw),2) or strlowcase(f) eq wnames(iw) then $
+  case ndim of
+    1:result = w(*,iw)
+    2:result = w(*,*,iw)
+    3:result = w(*,*,*,iw)
+endcase
 
-if n_elements(result) gt 0 then return,sign*result
+if n_elements(result) gt 0 and rcut le 0 then return, sign*result
+
+; Extract coordinate variables from xx:
+case ndim of
+   1:begin
+      x=xx & y=0 & z=0
+   end
+   2:begin
+      x=xx(*,*,0) & y=xx(*,*,1) & z=0
+   end
+   3:begin
+      x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
+   end
+endcase
+r = sqrt(x^2+y^2+z^2)
+
+; Return result after cutting out the body
+if n_elements(result) gt 0 then begin
+    loc = where(r le rcut, count) 
+    if count gt 0 then result(loc)=min(result)
+    return, sign*result
+endif
 
 ; Extract variables from w based on name
 if not keyword_set(physics) then begin
@@ -92,22 +143,8 @@ if ndim ne long(strmid(physics,l-2,1)) then begin
    retall
 endif
 
-; Put elements of eqpar into simple variables based on phys
-neqpar = n_elements(eqpar)
-if neqpar ne 0 then case 1 of
-   phys eq 'mhd' or phys eq 'var' or phys eq 'raw': begin 
-       gamma=eqpar(0)
-       if neqpar gt 1 then clight=eqpar(1) else clight=59.958
-   end
-   phys eq 'ray': R_ray=eqpar(0)
-   phys eq 'vol': begin
-      dtheta=eqpar(0) & dphi=eqpar(1)
-   end
-   else :
-endcase
-
+; Extract primitive variables for calculating MHD type functions
 if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
-   ; Extract primitive variables
    ux=0 & uy=0 & uz=0 & bx=0 & by=0 & bz=0
    for iw=0,nw-1 do case ndim of
    1: case wnames(iw) of
@@ -121,9 +158,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,iw)
       'b2' : by=w(*,iw)
       'b3' : bz=w(*,iw)
-      'b1x': b1x=w(*,iw)
-      'b1y': b1y=w(*,iw)
-      'b1z': b1z=w(*,iw)
       'p'  : p=w(*,iw)
       'pth': p=w(*,iw)
       'mx' : ux=w(*,iw)/rho
@@ -136,14 +170,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       else :
       endcase
    2: case wnames(iw) of
-      'RHO': rho=w(*,*,iw)
-      'UX' : ux=w(*,*,iw)
-      'UY' : uy=w(*,*,iw)
-      'UZ' : uz=w(*,*,iw)
-      'BX' : bx=w(*,*,iw)
-      'BY' : by=w(*,*,iw)
-      'BZ' : bz=w(*,*,iw)
-      'P'  : p=w(*,*,iw)
       'rho': rho=w(*,*,iw)
       'ux' : ux=w(*,*,iw)
       'uy' : uy=w(*,*,iw)
@@ -154,9 +180,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,*,iw)
       'b2' : by=w(*,*,iw)
       'b3' : bz=w(*,*,iw)
-      'b1x': b1x=w(*,*,iw)
-      'b1y': b1y=w(*,*,iw)
-      'b1z': b1z=w(*,*,iw)
       'p'  : p=w(*,*,iw)
       'pth': p=w(*,*,iw)
       'mx' : ux=w(*,*,iw)/rho
@@ -169,14 +192,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       else :
       endcase
    3: case wnames(iw) of
-      'RHO': rho=w(*,*,*,iw)
-      'UX' : ux=w(*,*,*,iw)
-      'UY' : uy=w(*,*,*,iw)
-      'UZ' : uz=w(*,*,*,iw)
-      'BX' : bx=w(*,*,*,iw)
-      'BY' : by=w(*,*,*,iw)
-      'BZ' : bz=w(*,*,*,iw)
-      'P'  : p=w(*,*,*,iw)
       'rho': rho=w(*,*,*,iw)
       'ux' : ux=w(*,*,*,iw)
       'uy' : uy=w(*,*,*,iw)
@@ -187,9 +202,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,*,*,iw)
       'b2' : by=w(*,*,*,iw)
       'b3' : bz=w(*,*,*,iw)
-      'b1x': b1x=w(*,*,*,iw)
-      'b1y': b1y=w(*,*,*,iw)
-      'b1z': b1z=w(*,*,*,iw)
       'p'  : p=w(*,*,*,iw)
       'pth': p=w(*,*,*,iw)
       'mx' : ux=w(*,*,*,iw)/rho
@@ -205,57 +217,16 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
    ; Some extra variables
    uu=ux^2+uy^2+uz^2
    bb=bx^2+by^2+bz^2
+   u =sqrt(uu)
+   b =sqrt(bb)
+
    ; Change energy into pressure
    if n_elements(p) eq 0 and n_elements(e) gt 0 then $
       p=(gamma-1)*(e-0.5*(rho*uu+bb))
+
    ; Calculate gamma*p+bb if that is needed for the function
    if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then cc=gamma*p+bb
-endif else begin
-   case physics of
-   'ray13':begin
-      bx =w(*,0) & by =w(*,1) & bz =w(*,2)
-      theta1=w(*,3) & phi1=w(*,4) & theta2=w(*,5) & phi2=w(*,6) 
-      status=w(*,7) & blk=w(*,8)
-      f1x=w(*,9)  & f1y=w(*,10) & f1z=w(*,11)
-      f2x=w(*,12) & f2y=w(*,13) & f2z=w(*,14)
-   end
-   'ray23':begin
-      bx =w(*,*,0) & by =w(*,*,1) & bz =w(*,*,2)
-      theta1=w(*,*,3) & phi1=w(*,*,4) & theta2=w(*,*,5) & phi2=w(*,*,6) 
-      status=w(*,*,7) & blk=w(*,*,8)
-      f1x=w(*,*,9)  & f1y=w(*,*,10) & f1z=w(*,*,11)
-      f2x=w(*,*,12) & f2y=w(*,*,13) & f2z=w(*,*,14)
-   end
-   'ray33':begin
-      bx =w(*,*,*,0) & by =w(*,*,*,1) & bz =w(*,*,*,2)
-      theta1=w(*,*,*,3) & phi1=w(*,*,*,4)
-      theta2=w(*,*,*,5) & phi2=w(*,*,*,6) 
-      status=w(*,*,*,7) & blk=w(*,*,*,8)
-      f1x=w(*,*,*,9)  & f1y=w(*,*,*,10) & f1z=w(*,*,*,11)
-      f2x=w(*,*,*,12) & f2y=w(*,*,*,13) & f2z=w(*,*,*,14)
-   end
-   'vol22':begin
-      vol1=w(*,*,0) & vol2=w(*,*,1)
-   end
-   else: begin
-     print,'Error in funcdef: physics=',physics,' is not known'
-     retall
-   end
-   endcase
-endelse
-
-; Extract coordinate variables from x:
-case ndim of
-   1:begin
-      x=xx
-   end
-   2:begin
-      x=xx(*,*,0) & y=xx(*,*,1)
-   end
-   3:begin
-      x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
-   end
-endcase
+endif
 
 ;==== Put your function definition(s) below using the variables and eq. params
 ;     extracted from x, w and eqpar, and select cases by the function name "f"
@@ -263,10 +234,6 @@ endcase
 
 case f of
   'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
-  ; Electric field
-  'Ex'       : result=(by*uz-uy*bz)
-  'Ey'       : result=(bz*ux-uz*bx)
-  'Ez'       : result=(bx*uy-ux*by)
   ; momenta
   'mx'       : result=rho*ux
   'my'       : result=rho*uy
@@ -275,24 +242,33 @@ case f of
   'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
   'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
   'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
+  ; Electric field
+  'Ex'       : result=(by*uz-uy*bz)
+  'Ey'       : result=(bz*ux-uz*bx)
+  'Ez'       : result=(bx*uy-ux*by)
   ; Total energy
   'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
   ; Alfven speed and Mach number
   'calfvenx' : result=bx/sqrt(rho)
   'calfveny' : result=by/sqrt(rho)
   'calfvenz' : result=bz/sqrt(rho)
-  'calfven'  : result=sqrt(bb/rho)
+  'calfven'  : result=b /sqrt(rho)
   'Malfvenx' : result=ux/bx*sqrt(rho)
   'Malfveny' : result=uy/by*sqrt(rho)
   'Malfvenz' : result=uz/bz*sqrt(rho)
-  'Malfven'  : result=sqrt(uu/bb*rho)
-  ; pressure, plazma beta, temperature, entropy
+  'Malfven'  : result=u /b *sqrt(rho)
+  ; pressure, plasma beta, temperature, entropy
   'pbeta'    : result=2*p/bb
-  'T'        : result=p/rho
   's'        : result=p/rho^gamma
+  'T'        : result=p/rho
+  'T_SC'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+  'T_IH'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+  'T_GM'     : result=7.243E+7*p/rho       ; [K] amu/kB*nPa / (amu/cm^3)
+  'n_IH'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
+  'n_SC'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
   ; sound speed, Mach number
   'csound'   :result=sqrt(gamma*p/rho)
-  'mach'  :result=sqrt(uu/(gamma*p/rho))
+  'mach'  :result=u /sqrt(gamma*p/rho)
   'machx' :result=ux/sqrt(gamma*p/rho)
   'machy' :result=uy/sqrt(gamma*p/rho)
   'machz' :result=uz/sqrt(gamma*p/rho)
@@ -311,6 +287,8 @@ case f of
   'Mslowx':result=ux/sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
   'Mslowy':result=uy/sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
   'Mslowz':result=uz/sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+  'divbxy':result=div(bx,by,x,y)
+  'absdivbxy':result=abs(div(bx,by,x,y))
   'jz': case ndim of
      1: result=deriv(x,by)
      2: result=curl(bx,by,x,y)
@@ -368,28 +346,65 @@ case f of
   'bb1':result=w(*,*,*,10)^2+w(*,*,*,11)^2+w(*,*,*,12)^2
 
   'Jy_cut': begin
-	result=diff2(2,w(*,*,9),z)-diff2(1,w(*,*,11),x)
-	loc=where(x^2+z^2 lt 16.,count)
-	if count gt 0 then result(loc)=0.0
-            end
+      result=diff2(2,w(*,*,9),z)-diff2(1,w(*,*,11),x)
+      loc=where(x^2+z^2 lt 16.,count)
+      if count gt 0 then result(loc)=0.0
+  end
 
   'logrho':result=alog10(rho)
 
   ;If "f" has not matched any function yet, try evaluating it as an expression
   else:begin
-     if sign eq -1 then begin
-        f='-'+f
-        sign=1
-     endif
-     if not execute('result='+f) then begin
-        print,'Error in funcdef: cannot evaluate function=',func
-        retall
-     endif
+      if sign eq -1 then begin
+          f='-'+f
+          sign=1
+      endif
+
+      ; Create * or *,* or *,*,* for {var} --> w(*,*,iVar) replacements
+      case nDim of
+          1: Stars = '*,'
+          2: Stars = '*,*,'
+          3: Stars = '*,*,*,'
+      endcase
+
+      ; replace {name} with appropriate variable
+      while strpos(f,'{') ge 0 do begin
+          iStart = strpos(f,'{')
+          iEnd   = strpos(f,'}')
+          Name   = strmid(f,iStart+1,iEnd-iStart-1)
+          iVar   = where(variables eq Name)
+          iVar   = iVar(0)
+          if iVar lt 0 then begin
+              print,'Error in funcdef: cannot find variable "{',Name, $
+                '}" among variables'
+              print,variables
+              retall
+          endif
+          fStart = strmid(f,0,iStart)
+          fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
+          if iVar lt ndim then $
+            f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
+          else if iVar lt ndim+nw then $
+            f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
+          else $
+            f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd
+
+      endwhile
+
+
+      if not execute('result='+f) then begin
+          print,'Error in funcdef: cannot evaluate function=',func
+          retall
+      endif
   end
 endcase
 
 if n_elements(result) gt 0 then begin
-   return,sign*result
+    ; exclude r < rcut
+    loc=where(r le rcut, count) 
+    if count gt 0 then result(loc)=min(result)
+
+    return,sign*result
 endif else begin
    print,'Error in funcdef: function=',func,' was not calculated ?!'
    retall

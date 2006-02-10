@@ -5,8 +5,9 @@ subroutine amr_criteria(ref_criteria)
   use ModAdvance
   use ModAMR,      ONLY:nRefineCrit,RefineCrit
   use ModPhysics,  ONLY:cosTHETAtilt,sinTHETAtilt,Rcurrents
-  use ModPhysics,  ONLY:UseSunEarth         !^CFG IF NOT SIMPLE
+  use ModPhysics,  ONLY:UseSunEarth
   use ModConst
+  use ModUser, ONLY: user_amr_criteria
   implicit none
 
   real, intent(out) :: ref_criteria(4,nBLK)
@@ -30,13 +31,11 @@ subroutine amr_criteria(ref_criteria)
      dsMIN = min(dx_BLK(iBLK), dy_BLK(iBLK), dz_BLK(iBLK))
      dsMAX = max(dx_BLK(iBLK), dy_BLK(iBLK), dz_BLK(iBLK))
      ds2 = dsMIN*dsMIN
-!^CFG IF NOT SIMPLE BEGIN
      if (UseSunEarth) then
         RcritAMR = cOne+(cOne+cHalf)*sqrt(cTwo)*dsMAX
      else
         RcritAMR = cZero
      end if
-!^CFG END SIMPLE
     
      do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
         Rho_G(i,j,k)  = State_VGB(rho_,i,j,k,iBLK)
@@ -231,7 +230,6 @@ subroutine amr_criteria(ref_criteria)
                 abs(Rcurrents-R_BLK(1:nI,1:nJ,1:nK,iBLK))))**2)
            ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
                 MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-!^CFG IF NOT SIMPLE BEGIN
         case('Transient','transient')	
            xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
            yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
@@ -259,9 +257,8 @@ subroutine amr_criteria(ref_criteria)
               end if
               ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
            end if
-!^CFG END SIMPLE           
         case default
-           if (UseUserAMR) then !^CFG IF USERFILES BEGIN
+           if (UseUserAMR) then
               IsFound=.false.
               call user_amr_criteria(iBLK, userCriteria, RefineCrit(iCrit), IsFound)
               if (IsFound) then
@@ -271,9 +268,9 @@ subroutine amr_criteria(ref_criteria)
                             RefineCrit(iCrit)
                  call stop_mpi('Fix user_amr_criteria or PARAM.in!')
               end if
-           else               !^CFG END USERFILES
+           else
               call stop_mpi('Unknown RefineCrit='//RefineCrit(iCrit))
-           end if             !^CFG IF USERFILES
+           end if
         end select
      end do ! iCrit
   end do ! iBLK
@@ -404,7 +401,6 @@ contains
   
   end subroutine trace_transient
 end subroutine amr_criteria
-!^CFG IF NOT SIMPLE BEGIN
 
 
 subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
@@ -524,4 +520,3 @@ subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
   end if
   
 end subroutine refine_sun_earth_cyl
-!^CFG END SIMPLE

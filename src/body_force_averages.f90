@@ -152,7 +152,7 @@ end subroutine body_force_averages
 subroutine body_force_cell_average(i,j,k)
   use ModMain, ONLY : globalBLK,UseGravity
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,VolumeInverse_I
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
 
   implicit none
 
@@ -177,7 +177,7 @@ subroutine body_force_cell_average(i,j,k)
   call body_force_GaussQuadXYZ(xmin,xmax,ymin,ymax,zmin,zmax,Fave)
 
   do ii=1,3
-     Fave(ii) = Fave(ii)*VolumeInverse_I(globalBLK)
+     Fave(ii) = Fave(ii)*vInv_CB(i,j,k,globalBLK)
   end do
 
   fbody_x_BLK(i,j,k,globalBLK) = fbody_x_BLK(i,j,k,globalBLK) + Fave(1)
@@ -248,15 +248,15 @@ subroutine gravity_force(X0,Y0,Z0,g0)
 end subroutine gravity_force
 
 !----------------------------------------------------------------------
-!                        centripetal_force
+!                        centrifugal_force
 !----------------------------------------------------------------------
 
 !\
-! Evaluates the non-dimensional centripetal force at the
+! Evaluates the non-dimensional centrifugal force at the
 ! specified location (X0,Y0,Z0) for a rotating coordinate frame.
 !/
 
-subroutine centripetal_force(X0,Y0,Z0,f0)
+subroutine centrifugal_force(X0,Y0,Z0,f0)
   use ModMain
   use ModPhysics, ONLY : OMEGAbody
   implicit none
@@ -264,9 +264,9 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(1:3) :: f0
 
-  select case (problem_type)             !^CFG IF NOT SIMPLE BEGIN
+  select case (problem_type)
   case (problem_heliosphere)
-     if (UseInertial) then
+     if (.not.UseRotatingFrame) then
         f0(1) = 0.00
         f0(2) = 0.00
         f0(3) = 0.00
@@ -275,13 +275,13 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
         f0(2) = OMEGAbody*OMEGAbody*Y0
         f0(3) = 0.00
      endif
-  case default                           !^CFG END SIMPLE
+  case default
      f0(1) = 0.00
      f0(2) = 0.00
      f0(3) = 0.00
-  end select                             !^CFG IF NOT SIMPLE
+  end select
 
-end subroutine centripetal_force
+end subroutine centrifugal_force
 
 !----------------------------------------------------------------------
 !                       body_force_GaussQuadXYZ
@@ -384,8 +384,8 @@ subroutine body_force_GaussQuadZ(x0,y0,zmin,zmax,integral)
      integral(1) = integral(1) + GaussWeights(j)*(tmp1(1)+tmp2(1))
      integral(2) = integral(2) + GaussWeights(j)*(tmp1(2)+tmp2(2))
      integral(3) = integral(3) + GaussWeights(j)*(tmp1(3)+tmp2(3))
-     call centripetal_force(x0,y0,zm+localdz,tmp1)
-     call centripetal_force(x0,y0,zm-localdz,tmp2)
+     call centrifugal_force(x0,y0,zm+localdz,tmp1)
+     call centrifugal_force(x0,y0,zm-localdz,tmp2)
      integral(1) = integral(1) + GaussWeights(j)*(tmp1(1)+tmp2(1))
      integral(2) = integral(2) + GaussWeights(j)*(tmp1(2)+tmp2(2))
      integral(3) = integral(3) + GaussWeights(j)*(tmp1(3)+tmp2(3))
@@ -491,7 +491,7 @@ end subroutine heat_source_averages
 subroutine heat_source_cell_average(i,j,k)
   use ModMain, ONLY : globalBLK
   use ModAdvance, ONLY : qheat_BLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,VolumeInverse_I
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
   implicit none
 
   integer, intent(in) :: i,j,k
@@ -510,7 +510,7 @@ subroutine heat_source_cell_average(i,j,k)
 
   call heat_source_GaussQuadXYZ(xmin,xmax,ymin,ymax,zmin,zmax,q0ave)
 
-  q0ave = q0ave*VolumeInverse_I(globalBLK)
+  q0ave = q0ave*vInv_CB(i,j,k,globalBLK)
 
   qheat_BLK(i,j,k,globalBLK) = qheat_BLK(i,j,k,globalBLK) + q0ave
 
@@ -532,7 +532,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
 
   real, intent(in) :: X0,Y0,Z0
   real :: q0
-!^CFG IF NOT SIMPLE BEGIN
   real :: R0,XT,YT,ZT,SIGMAHeat2
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
        sin2Theta_coronal_hole
@@ -583,7 +582,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
   end if
   !^CFG IF SECONDBODY END
 
-!^CFG END SIMPLE
 end subroutine heat_source
 
 !----------------------------------------------------------------------

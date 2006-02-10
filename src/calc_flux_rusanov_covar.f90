@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 !^CFG FILE RUSANOVFLUX 
-subroutine option_rusanovflux(TrueOption,NameOption)
+subroutine option_rusanovflux_covar(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption
   character (len=40), intent(out) :: NameOption
@@ -9,9 +9,9 @@ subroutine option_rusanovflux(TrueOption,NameOption)
   TrueOption  = .true.
   NameOption  = 'COVARIANT RUSANOV FLUX Sokolov'
 
-end subroutine option_rusanovflux
+end subroutine option_rusanovflux_covar
 
-subroutine calc_flux_Rusanov(DoResChangeOnly)
+subroutine calc_flux_Rusanov_covar(DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModVarIndexes
@@ -21,7 +21,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
   use ModNumConst
   use ModAdvance
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-  use ModFlux
+  use ModFlux_covar
 
   implicit none
   logical, intent (in) :: DoResChangeOnly
@@ -72,12 +72,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1		  
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
+              FaceArea_DI(:,i)=FaceAreaI_DFB(:,iStrip,j,k,globalBLK)
 
               ! GET PRIMITIVES
               !\
@@ -118,7 +113,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdRusanov(nStrip)	
+           call get_flux_mhdRusanov_covar(nStrip)	
            !
            !\
            ! test output
@@ -188,12 +183,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
+              FaceArea_DI(:,i)=FaceAreaJ_DFB(:,iStrip,j,k,globalBLK)
 
               v_B0x(i) = B0xFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0y(i) = B0yFace_y_BLK(iStrip,j,k,globalBLK)
@@ -226,7 +216,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdRusanov(nStrip)
+           call get_flux_mhdRusanov_covar(nStrip)
            !\
            ! test output
            !/	
@@ -287,12 +277,8 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            !/
            do i=1,nStrip
               iStrip=i+iStart-1
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
+
+              FaceArea_DI(:,i)=FaceAreaK_DFB(:,iStrip,j,k,globalBLK)
 
               !\
               ! B0 on the face
@@ -326,7 +312,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
            !\
            ! get fluxes
            !/
-           call get_flux_mhdRusanov(nStrip)	
+           call get_flux_mhdRusanov_covar(nStrip)	
 
            if(oktest_row) then
               do i=iStart,iStart+nStrip-1
@@ -376,11 +362,11 @@ Contains
     end do
 
   end subroutine test_fluxes_wri
-end subroutine calc_flux_Rusanov
+end subroutine calc_flux_Rusanov_covar
 
 !==========================================================================
-subroutine get_flux_mhdRusanov(nStrip)
-  use ModFlux
+subroutine get_flux_mhdRusanov_covar(nStrip)
+  use ModFlux_covar
   use ModNumConst
   use ModMain, ONLY : x_,y_,z_
   use ModVarIndexes,ONLY:rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, &
@@ -538,4 +524,4 @@ subroutine get_flux_mhdRusanov(nStrip)
      Full_Flux(rhoUx_:rhoUz_,i) =   Full_Flux(rhoUx_:rhoUz_,i)+&
           FaceArea_DI(x_:z_,i)*Full_Flux(Energy_+1,i)
   end do
-end subroutine get_flux_mhdRusanov
+end subroutine get_flux_mhdRusanov_covar

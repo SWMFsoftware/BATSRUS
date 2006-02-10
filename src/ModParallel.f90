@@ -21,11 +21,6 @@ module ModParallel
   !/
   integer, allocatable, dimension(:) :: iBlock_A, iProc_A, iBlockRestartALL_A
 
-  !\                                               !^CFG IF IMPLICIT BEGIN
-  ! logical for explicit vs. implicit blocks
-  !/
-  logical, allocatable :: implicitBlock_BP(:,:)    !^CFG END IMPLICIT
-
   !\
   ! Neighbor solution block refinement levels
   ! ( 0=neighbors at same level, 
@@ -53,8 +48,8 @@ module ModParallel
   integer, dimension(4,east_:top_,nBLK) :: neiPE, neiBLK
 
   integer, dimension( -1:1, -1:1, -1:1, 4, nBLK) :: &
-       BLKneighborPE, BLKneighborBLK, BLKneighborCHILD
-  integer, dimension( -1:1, -1:1, -1:1, nBLK) :: BLKneighborLEV
+       BLKneighborPE=NOBLK, BLKneighborBLK=NOBLK, BLKneighborCHILD=NOBLK
+  integer, dimension( -1:1, -1:1, -1:1, nBLK) :: BLKneighborLEV=NOBLK
 
   !\
   ! Variables for nonblocking sends used in fix_refine and fix_coarsen.
@@ -64,9 +59,6 @@ module ModParallel
   integer :: nb_buffs(3,NUM_NB_BUFFS,0:nBLK)
   integer :: curr_nb_buff(0:nBLK)
   integer :: nb_buff_req(NUM_NB_BUFFS,0:nBLK)
-
-  ! Use corners/edges in gradients and message passing
-  logical :: UseCorners
 
   ! Use special options in exchange_messages if creating plot files
   logical :: UsePlotMessageOptions = .false.
