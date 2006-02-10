@@ -9,13 +9,14 @@ subroutine implicit_init
 
   use ModMain
   use ModImplicit
+  use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
   implicit none
 
   logical :: IsInitialized=.false.
   integer :: iBLK, iBlockImpl
   !---------------------------------------------------------------------------
 
-  nImplBLK=count(implicitBLK(1:nBlock))
+  nImplBLK=count(iTypeAdvance_B(1:nBlock) == ImplBlock_)
 
   ! Check for too many implicit blocks
   if(nImplBLK>MaxImplBLK)then
@@ -33,7 +34,7 @@ subroutine implicit_init
   implBLKtest=1
   iBlockImpl=0
   do iBLK=1,nBlock
-     if (implicitBLK(iBLK)) then
+     if (iTypeAdvance_B(iBLK) == ImplBlock_) then
         iBlockImpl = iBlockImpl + 1
         impl2iBLK(iBlockImpl)=iBLK
         if(iBLK==BLKtest)implBLKtest=iBlockImpl
@@ -56,8 +57,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   ! Convert data structure w of the implicit code to the explicit code
 
   use ModMain
-  use ModAdvance, ONLY : &
-       State_VGB, E_BLK,nVar
+  use ModAdvance, ONLY : State_VGB, E_BLK,nVar
   use ModImplicit
   implicit none
 
@@ -78,12 +78,12 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
      iBLK = impl2iBLK(implBLK)
      do iVar=1, nVar
         if(iVar==E_)then
-           w(:,:,:,E_    ,implBLK) = E_BLK(    imin:imax,jmin:jmax,kmin:kmax,iBLK)
+           w(:,:,:,E_,implBLK) = E_BLK(imin:imax,jmin:jmax,kmin:kmax,iBLK)
         else
-        w(:,:,:,iVar ,implBLK) = &
-             State_VGB(iVar,  imin:imax,jmin:jmax,kmin:kmax,iBLK)
-     end if
-  end do
+           w(:,:,:,iVar,implBLK) = &
+                State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
+        end if
+     end do
   end do
 
   call timing_stop('expl2impl')
@@ -116,20 +116,20 @@ subroutine impl2expl(w,iBLK)
 
   do iVar=1,nVar
      if(iVar==E_)then
-        E_BLK(    1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,E_    )
+        E_BLK(1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,E_)
      else
-        State_VGB(iVar,  1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar  )
+        State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
      end if
   end do
 
   State_VGB(P_, 1:nI,1:nJ,1:nK,iBLK) = gm1*(E_BLK(1:nI,1:nJ,1:nK,iBLK)-0.5*( &
-       (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2)/&
-       State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-       +State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2                                   &
-       +State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2                                   &
-       +State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)                                 )
+       (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       +State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       +State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       )/State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)                                 &
+       +State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2                                &
+       +State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2                                &
+       +State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)                             )
 
   call timing_stop('impl2expl')
 
@@ -224,7 +224,7 @@ subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
   ! RES = w(t+dt)
   call implicit2explicit(w)
   call exchange_messages
-  call advance_expl(do_calc_timestep,.false.)
+  call advance_expl(do_calc_timestep)
   call explicit2implicit(1,nI,1,nJ,1,nK,RES)
 
   if(do_subtract) &
@@ -264,16 +264,14 @@ subroutine getsource(iBLK,w,s)
   real, intent(out)   :: s(nI,nJ,nK,nw)
 
   logical :: qUseDivbSource
-  logical :: qUseDivbDiffusion        !^CFG IF DIVBDIFFUSE
-  integer::iVar
+    integer::iVar
   !--------------------------------------------------------------------------
 
   call timing_start('getsource')
 
   qUseDivbSource   =UseDivbSource
-  qUseDivbDiffusion=UseDivbDiffusion  !^CFG IF DIVBDIFFUSE
   UseDivbSource    =.false.
-  UseDivbDiffusion =.false.           !^CFG IF DIVBDIFFUSE
+  
 
   call impl2expl(w,iBLK)
   globalBLK = iBLK
@@ -289,8 +287,6 @@ subroutine getsource(iBLK,w,s)
   s(:,:,:,E_)    =Source_VC(Energy_,1:nI,1:nJ,1:nK)
 
   UseDivbSource   =qUseDivbSource
-  UseDivbDiffusion=qUseDivbDiffusion  !^CFG IF DIVBDIFFUSE
-
   call timing_stop('getsource')
 
 end subroutine getsource
@@ -350,8 +346,9 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
   real, intent(in)   :: B0(qnI,qnJ,qnK,ndim)
   real, intent(out)  :: cmax(qnI,qnJ,qnK)
 
-  !!! Automatic arrays !!!
-  real, dimension(qnI,qnJ,qnK) :: csound2,cfast2
+  ! used to be automatic arrays
+  real, dimension(:,:,:), allocatable :: csound2,cfast2
+  integer :: iError
 
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
@@ -361,6 +358,10 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
   else
      oktest=.false.; oktest_me=.false.
   end if
+
+  ! Allocate arrays that used to be automatic
+  allocate(csound2(qnI,qnJ,qnK), cfast2(qnI,qnJ,qnK), stat=iError)
+  call alloc_check(iError,"getcmax arrays")
 
   if(oktest_me)then
      if(okdebug)then
@@ -412,6 +413,9 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
        -4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/w(:,:,:,rho_)))))
 
   if(oktest_me)write(*,*)'Finished getcmax: cmax=',cmax(Itest,Jtest,Ktest)
+
+  ! Deallocate arrays that used to be automatic
+  deallocate(csound2, cfast2)
 
 end subroutine getcmax
 
@@ -529,28 +533,30 @@ subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
      call getptotal(w,qnI,qnJ,qnK,f)
      f = (w(:,:,:,rhoU_+idim)                 & ! (m_i
           *(f + w( :,:,:,E_)                  & ! *(ptotal + e
-          +B0(:,:,:,x_)*w(:,:,:,Bx_)         & !   +B0.b)
-          +B0(:,:,:,y_)*w(:,:,:,By_)         &
-          +B0(:,:,:,z_)*w(:,:,:,Bz_))        & 
+          +B0(:,:,:,x_)*w(:,:,:,Bx_)          & !   +B0.b)
+          +B0(:,:,:,y_)*w(:,:,:,By_)          &
+          +B0(:,:,:,z_)*w(:,:,:,Bz_))         & 
           -(w(:,:,:,B_+idim)+B0(:,:,:,idim))  & ! -(b_i+B0_i)
           *(w(:,:,:,Bx_)*w(:,:,:,rhoUx_)      & !  *(b.m)
-          +w(:,:,:,By_)*w(:,:,:,rhoUy_)      &
-          +w(:,:,:,Bz_)*w(:,:,:,rhoUz_))     & ! 
+          +w(:,:,:,By_)*w(:,:,:,rhoUy_)       &
+          +w(:,:,:,Bz_)*w(:,:,:,rhoUz_))      & ! 
           )/w(:,:,:,rho_)                       ! )/rho
 
-     ! f_i[b_k]=(m_i*(b_k+B0_k)-m_k*(b_i + B0_i))/rho
   case(Bx_,By_,Bz_)
      kdim = iw-B_
      if(idim==kdim) then
         ! f_i[b_i] should be exactly 0
         f = 0.0
      else
-        f = (w(:,:,:,rhoU_+idim)*(w( :,:,:,iw)     + B0(:,:,:,kdim)) &
+        ! f_i[b_k]=(m_i*(b_k+B0_k) - m_k*(b_i+B0_i))/rho
+        f =  (w(:,:,:,rhoU_+idim)*(w(:,:,:,iw)      + B0(:,:,:,kdim)) &
              -w(:,:,:,rhoU_+kdim)*(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
              )/w(:,:,:,rho_)
      endif
   case default
-     call stop_mpi('Error in getflux: unknown flow variable!')
+     ! We assume that all other variables behave like advected scalars !!!
+     ! f_i[scalar]=m_i/rho*scalar
+     f = w(:,:,:,rhoU_+idim)/w(:,:,:,rho_)*w(:,:,:,iw)
   end select
 
   if(oktest_me)write(*,*)'getflux final f=',f(Itest,Jtest,Ktest)

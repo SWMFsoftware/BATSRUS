@@ -7,10 +7,10 @@ subroutine set_physics_constants
   use ModProcMH
   use ModMain
   use ModPhysics
-  use CON_physics, ONLY: get_axes, get_physics
-!  use ModUser                      !^CFG UNCOMMENT IF USERFILES
+  use CON_axes,   ONLY: get_axes
+  use CON_planet, ONLY: get_planet
   use ModVarIndexes
-  use ModCompatibility, ONLY: calculate_dipole_tilt
+
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun
@@ -28,7 +28,7 @@ subroutine set_physics_constants
   !\
   ! Load body rotation rates, masses, and radii by problem type
   !/
-  select case(problem_type)          !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case (problem_rotation,problem_saturn)
      unitSI_x       = Rsaturn       ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = Msaturn       ! Mass of body in kg
@@ -37,17 +37,17 @@ subroutine set_physics_constants
      unitSI_x       = Rsun                      ! Radius - MUST BE IN meters
      Mbody_dim      = Msun                      ! Mass of body in kg
      rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-!^CFG IF GLOBALHELIOSPHERE BEGIN
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
   case (problem_globalhelio)
      unitSI_x       = 215.0*Rsun                ! Radius - MUST BE IN meters
      Mbody_dim      = Msun                      ! Mass of body in kg
      rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-!^CFG END GLOBALHELIOSPHERE
-  case (problem_earth)               !^CFG END SIMPLE
+     !^CFG END GLOBALHELIOSPHERE
+  case (problem_earth)
      unitSI_x       = Rearth        ! Radius - MUST BE IN meters
      Mbody_dim      = Mearth        ! Mass of body in kg
      rot_period_dim = RotationPeriodEarth/3600.0
-  case (problem_jupiter)             !^CFG IF NOT SIMPLE BEGIN
+  case (problem_jupiter)
      unitSI_x       = Rjupiter      ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = Mjupiter      ! Mass of body in kg
      rot_period_dim = RotationPeriodJupiter/3600.0
@@ -71,7 +71,7 @@ subroutine set_physics_constants
      unitSI_x       = 1.0           ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = 0.00          ! Mass of body in kg
      rot_period_dim = 0.00          ! rotation period in hours
-  end select                         !^CFG END SIMPLE
+  end select
 
   ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
   MBody2Dim = 0.0                                !^CFG IF SECONDBODY
@@ -111,29 +111,22 @@ subroutine set_physics_constants
   !/
   ! if the rotation period is less than 1 second then you made
   ! a mistake - the period is to fast
-  if (UseCorotation) then
-     if (abs(rot_period_dim) > 1./3600.) then
-   	OMEGAbody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
-     else
-   	OMEGAbody = 0.0
-        write(*,*) "----------------------------------------"
-        write(*,*) "              Warning:                  "
-        write(*,*) "Your have set UseCorotation - .true.    "
-        write(*,*) "but the rotation period is set less than"
-        write(*,*) "1 second.  This is too fast.            "
-        write(*,*) "(rot_period_dim=",rot_period_dim," hours)"
-        write(*,*) "setting rot_period_dim=0.0              "
-        write(*,*) "----------------------------------------"
-     end if
+  if (abs(rot_period_dim) > 1./3600.) then
+     OmegaBody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
   else
-     OMEGAbody=0.00
+     if(UseRotatingFrame)then
+        write(*,*) "--------------------------------------------------"
+        write(*,*) "WARNING in set_physics:                           "
+        write(*,*) "You have set UseRotatingFrame = ",UseRotatingFrame
+        write(*,*) "but rot_period_dim in hours= ",rot_period_dim
+        write(*,*) "This is too fast! Setting OmegaBody=0.0           "
+        write(*,*) "--------------------------------------------------"
+     end if
+     OmegaBody = 0.0
   end if
 
   Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
-  GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x)  !^CFG IF SECONDBODY
-!^CFG IF ALWAVES BEGIN
-!  Gbody  = Gbody/Tnot  !^CFG UNCOMMENT IF ALWAVES
-!^CFG END ALWAVES
+  GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x) !^CFG IF SECONDBODY
 
   !\
   ! Nondimensionalize dimensional SW values - 
@@ -142,13 +135,12 @@ subroutine set_physics_constants
   SW_p_dim = unitUSER_p*inv_g
   SW_B_factor = unitUSER_B
 
-  !^CFG IF GLOBALHELIOSPHERE BEGIN
-  if(problem_type==problem_globalhelio)then
-! unitUSER_rho #/cm3
+  if(problem_type==problem_globalhelio)then !^CFG IF GLOBALHELIOSPHERE BEGIN
+     ! unitUSER_rho #/cm3
      SW_rho = SW_rho_dim/unitUSER_rho
-  else        !^CFG END GLOBALHELIOSPHERE
+  else                                      !^CFG END GLOBALHELIOSPHERE
      SW_rho = 1.0    
-  end if      !^CFG IF GLOBALHELIOSPHERE
+  end if                                    !^CFG IF GLOBALHELIOSPHERE
   SW_p   = inv_g
   SW_Ux  = SW_Ux_dim/unitUSER_U
   SW_Uy  = SW_Uy_dim/unitUSER_U
@@ -157,7 +149,6 @@ subroutine set_physics_constants
   SW_By  = SW_By_dim/unitUSER_B
   SW_Bz  = SW_Bz_dim/unitUSER_B
 
-!^CFG IF NOT SIMPLE BEGIN
   !\
   ! Convert comet input parameters to SI
   !/
@@ -175,28 +166,29 @@ subroutine set_physics_constants
      Body_p  = Body_rho*Body_T_dim
      RhoBody2= RhoDimBody2                          !^CFG IF SECONDBODY
      pBody2  = RhoDimBody2*TDimBody2                !^CFG IF SECONDBODY
-!^CFG IF GLOBALHELIOSPHERE BEGIN
-!Correcting the problem of the pressure and density near the body
+
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
+     !Correcting the problem of the pressure and density near the body
   case(problem_globalhelio)
-!
-! setting Body_rho_dim to be like SW_rho_dim -look at write_plot_common.f90
-!
+     !
+     ! setting Body_rho_dim to be like SW_rho_dim, look at write_plot_common
+     !
      Body_rho_dim = SW_rho_dim
      Body_T_dim = SW_T_dim
      Body_rho = Body_rho_dim/unitUSER_rho
      Body_p = inv_g
      RhoBody2= Body_rho                            !^CFG IF SECONDBODY
      pBody2  = Body_p                              !^CFG IF SECONDBODY
-!^CFG END GLOBALHELIOSPHERE
+     !^CFG END GLOBALHELIOSPHERE
 
-  case default                                      !^CFG END SIMPLE
+  case default
      Body_rho= Body_rho_dim/unitUSER_n
      Body_p  = cBoltzmann*Body_rho_dim*&
                1.0E6*Body_T_dim/unitSI_p
      RhoBody2= RhoDimBody2/unitUSER_n               !^CFG IF SECONDBODY
      pBody2  = cBoltzmann*RhoDimBody2*&             !^CFG IF SECONDBODY
                1.0E6*TDimBody2/unitSI_p             !^CFG IF SECONDBODY
-  end select                                        !^CFG IF NOT SIMPLE
+  end select
 
   !Here the arrays of the FACE VALUE are formed
   !Initialization
@@ -209,24 +201,24 @@ subroutine set_physics_constants
   FaceState_VI(rho_,body1_)=Body_rho
   FaceState_VI(P_,body1_)=Body_p
   
-  !The following part of the code is sensitive to a particular phisical
+  !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
-  !or featuring
+  !or features
 
   FaceState_VI(rho_,body2_)=RhoBody2                !^CFG IF SECONDBODY
-  FaceState_VI(P_,body2_)=pBody2            !^CFG IF SECONDBODY
+  FaceState_VI(P_,body2_)=pBody2                    !^CFG IF SECONDBODY
 
   
   !For Outer Boundaries
   do iBoundary=East_,Top_
-     FaceState_VI(rho_,iBoundary)= SW_rho
-     FaceState_VI(Ux_,iBoundary)= SW_Ux
-     FaceState_VI(Uy_,iBoundary)= SW_Uy
-     FaceState_VI(Uz_,iBoundary)= SW_Uz
-     FaceState_VI(Bx_,iBoundary)= SW_Bx
-     FaceState_VI(By_,iBoundary)= SW_By
-     FaceState_VI(Bz_,iBoundary)= SW_Bz
-     FaceState_VI(P_,iBoundary)= SW_p
+     FaceState_VI(rho_, iBoundary) = SW_rho
+     FaceState_VI(Ux_,  iBoundary) = SW_Ux
+     FaceState_VI(Uy_,  iBoundary) = SW_Uy
+     FaceState_VI(Uz_,  iBoundary) = SW_Uz
+     FaceState_VI(Bx_,  iBoundary) =  SW_Bx
+     FaceState_VI(By_,  iBoundary) = SW_By
+     FaceState_VI(Bz_,  iBoundary) = SW_Bz
+     FaceState_VI(P_,   iBoundary) = SW_p
   end do
 
   !Cell State is used for filling the ghostcells
@@ -237,7 +229,6 @@ subroutine set_physics_constants
           FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
   end do
 
-  
   !\
   ! Now do the magnetic field stuff
   !/
@@ -245,9 +236,9 @@ subroutine set_physics_constants
   ! for reporting them in write_progress.
 
   ! Nondimensionalize dipole strength.
-  if(NameThisComp == 'GM' .and. UseNewAxes) then
+  if(NameThisComp == 'GM') then
      call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-     call get_physics(DipoleStrengthOut = Bdp_dim)
+     call get_planet(DipoleStrengthOut = Bdp_dim)
      Bdp      = Bdp_dim/unitSI_B 
   else
      Bdp      = Bdp_dim/unitUSER_B 
@@ -260,9 +251,6 @@ subroutine set_physics_constants
      ! But how is it going to rotate ?
      CosThetaTilt = cos(ThetaTilt)
      SinThetaTilt = sin(ThetaTilt)
-  elseif(.not.UseNewAxes) then
-     ! The user decided to use the old algorithm. Enjoy...
-     call calculate_dipole_tilt
   end if
 
   ! by default quadrupole and octupole terms are zero
@@ -273,7 +261,7 @@ subroutine set_physics_constants
   ! Now do extra varibles that are problem dependent.
   ! As well as case by case exceptions to the above.
   !/
-  select case (problem_type)                      !^CFG IF NOT SIMPLE BEGIN
+  select case (problem_type)
   case (problem_earth)
      !     !\
      !     ! Temporary for the paleo earth case
@@ -413,10 +401,8 @@ subroutine set_physics_constants
      B0_scl  = 1.0E-4*BArcDim /sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
-  if( UseUserSetPhysConst)call user_set_physics_constants  !^CFG IF USERFILES 
-!^CFG END SIMPLE
-end subroutine set_physics_constants
 
+end subroutine set_physics_constants
 
 !===========================================================================
 
@@ -445,25 +431,25 @@ subroutine set_dimensions
   !\
   ! set independent normalizing SI variables first - on a case by case basis
   !/
-  select case(problem_type)                          !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet, problem_mars)    !^CFG END SIMPLE
+       problem_venus,problem_comet, problem_mars)
      unitSI_rho  = cProtonMass*(cMillion*SW_rho_dim)         ! kg/m^3
      unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)   ! m/s
-  case(problem_arcade)                               !^CFG IF NOT SIMPLE BEGIN
+  case(problem_arcade)
      unitSI_rho  = RHOsun                                    ! kg/m^3
      unitSI_U    = SSPsun                                    ! m/s
   case(problem_heliosphere,problem_cme)
      unitSI_x    = Rsun                                      ! m
      unitSI_rho  = cProtonMass*Body_rho_dim                  ! kg/m^3
      unitSI_U    = sqrt(g*cBoltzmann*Body_T_dim/cProtonMass) ! m/s  (SSPsun)
-!^CFG IF GLOBALHELIOSPHERE BEGIN
-! SW_rho_dim is in units of n/cc
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
+     ! SW_rho_dim is in units of n/cc
     case(problem_globalhelio)
-       unitSI_x    = 215.0*Rsun                                        ! m
-       unitSI_rho  = cProtonMass*SW_rho_dim*1.0E+6                     ! kg/m^3
-       unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)           ! m/s  (SSPsun)
-!^CFG END GLOBALHELIOSPHERE
+       unitSI_x    = 215.0*Rsun                              ! m
+       unitSI_rho  = cProtonMass*SW_rho_dim*1.0E+6           ! kg/m^3
+       unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! m/s  (SSPsun)
+       !^CFG END GLOBALHELIOSPHERE
   case(problem_dissipation)
      if (.not.UseDefaultUnits) then
         unitSI_x    = Length0Diss                            ! m
@@ -480,7 +466,7 @@ subroutine set_dimensions
      unitSI_x    = 1.0                                       ! dimensionless
      unitSI_rho  = 1.0                                       ! dimensionless
      unitSI_U    = 1.0                                       ! dimensionless
-  end select                                                 !^CFG END SIMPLE
+  end select
   !\
   ! set other normalizing SI variables from the independent ones
   !/
@@ -494,10 +480,17 @@ subroutine set_dimensions
   unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
   unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
   unitSI_DivB        = unitSI_B/unitSI_x                     ! T/m
-  ! set temperature - note that the below is  only strictly true for a
-  ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-  ! be off in temperature by as much as a factor of #.  There is no way around
-  ! this in MHD.
+  ! set temperature - note that the below is only strictly true for a
+  ! limited number of cases.  If the only ion is proton then 
+  ! Tcode = Te+Ti.
+  !
+  ! If the ions are "heavy" (m = A * mp) then n above is not really a 
+  ! number density but is a nucleon density (#nucleons/m^3).  In this 
+  ! case the temperature code using unitSI_temperature is really
+  ! Tcode = (Ti+Te)/A.
+  !
+  ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
+  ! we assume Ti=Te then Tcode=Ti=Te.
   unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) ! Kelvin 
 
   !\
@@ -508,9 +501,9 @@ subroutine set_dimensions
   ! Also load the string variables associated with the USER variables - 
   ! note that they are loaded differently for IDL and TEC output
   !/
-  select case(problem_type)                        !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet,problem_mars)   !^CFG END SIMPLE
+       problem_venus,problem_comet,problem_mars)
      ! load units
      unitUSER_x           = unitSI_x/unitSI_x                ! planetary radii
      unitUSER_rho         = 1.0E-6*unitSI_n                  ! (#/cm^3) (amu/cm^3)
@@ -525,10 +518,17 @@ subroutine set_dimensions
      unitUSER_J           = 1.0E+6*unitSI_J                  ! uA/m^2
      unitUSER_electric    = 1.0E+3*unitSI_electric           ! mV/m
      unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x      ! nT/planetary radii
-     ! set temperature - note that the below is  only strictly true for a
-     ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  There is no way around
-     ! this in MHD.
+     ! set temperature - note that the below is only strictly true for a
+     ! limited number of cases.  If the only ion is proton then 
+     ! Tcode = Te+Ti.
+     !
+     ! If the ions are "heavy" (m = A * mp) then n above is not really a 
+     ! number density but is a nucleon density (#nucleons/m^3).  In this 
+     ! case the temperature code using unitSI_temperature is really
+     ! Tcode = (Ti+Te)/A.
+     !
+     ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
+     ! we assume Ti=Te then Tcode=Ti=Te..
      unitUSER_temperature = unitSI_temperature               ! Kelvin 
 
      !\
@@ -566,7 +566,7 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = 'nT/R'           
      unitstr_IDL_temperature = 'K'             
 
-  case(problem_heliosphere,problem_cme)             !^CFG IF NOT SIMPLE BEGIN
+  case(problem_heliosphere,problem_cme)
      unitUSER_x           = unitSI_x/unitSI_x                ! R
      unitUSER_rho         = 1.0e-3*unitSI_rho                ! g/cm^3
      unitUSER_U           = 1.0E-3*unitSI_U                  ! km/s
@@ -736,7 +736,7 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = ''    
      unitstr_IDL_temperature = ''           
 
-  end select                                   !^CFG END SIMPLE
+  end select
   unitUSERVars_V(rho_)     = unitUSER_rho
   unitUSERVars_V(rhoUx_)   = unitUSER_rhoU
   unitUSERVars_V(rhoUy_)   = unitUSER_rhoU

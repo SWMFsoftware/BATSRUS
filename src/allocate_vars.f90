@@ -83,16 +83,6 @@ subroutine allocate_vars
        " allocation error: PE_mflop_list"
   PE_mflop_list = 0.00
 
-  allocate( neiPall(4,6,nBLK,nProc), stat=ierror )
-  if (ierror > 0) write(*,*) "allocate_vars: PE = ",iProc, &
-       " allocation error: neiPall"
-  neiPall = -773
-
-  allocate( neiBall(4,6,nBLK,nProc), stat=ierror )
-  if (ierror > 0) write(*,*) "allocate_vars: PE = ",iProc, &
-       " allocation error: neiBall"
-  neiBall = -773
-
   !\
   ! allocate index arrays
   !/
@@ -105,20 +95,11 @@ subroutine allocate_vars
   ! allocate unusedBlock_BP and set the default false value
   !/
   allocate(unusedBlock_BP(MaxBlock, 0:nProc-1))
-  unusedBlock_BP=.false.
 
   !\  
   ! Initialize unused block indicators.
   !/  
   unusedBLK     = .true.
   unusedBlock_BP= .false.
-
-  !^CFG IF IMPLICIT BEGIN
-  !\
-  ! allocate implicitBlock_BP and set the default false value
-  !/
-  allocate(implicitBlock_BP(MaxBlock, 0:nProc-1))
-  implicitBlock_BP=.false.
-  !^CFG END IMPLICIT
 
 end subroutine allocate_vars

@@ -28,6 +28,17 @@ module ModMPCells
   !                    using simple prolongation
   integer, parameter :: iCFExchangeType=2
 
+  !With DoOneCoarserLayer=.false., the finer cells of the "second" layer are filled in 
+  !with the values from the "second" layer of the coarser block
+  logical::DoOneCoarserLayer=.true.
+  
+  !With DoOneCoarserLayer=.true., the following nDuplicateIJK=2 and
+  !the values from only one layer of the physical cells are sent to the finer neighbor
+  
+  integer:: nDuplicateI=2,nDuplicateJ=2,nDuplicateK=2
+  integer:: iTwoOrOneForTwoCoarserLayers=2,iZeroOrOneForTwoCoarserLayers=0
+
+
   logical :: DoFacesOnlyLast, DoOneLayerLast
   logical, parameter :: DoLimitCornerMemory=.false.
   logical, parameter :: DoRSend=.true.
@@ -89,21 +100,26 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        V(     lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           V(     lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                V(lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         V(lR(1),lR(3),lR(5),lR(7)) = V(lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            V(i,j,k,lR(7)) = V(lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
-        V(lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine*V(lS(1),lS(3),lS(5),lS(7))+ &
-                V(lS(2),lS(3),lS(5),lS(7))+V(lS(1),lS(4),lS(5),lS(7))+V(lS(1),lS(3),lS(6),lS(7)))
+        V(lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine* &
+             V(lS(1),lS(3),lS(5),lS(7))+ &
+             V(lS(2),lS(3),lS(5),lS(7))+ &
+             V(lS(1),lS(4),lS(5),lS(7))+ &
+             V(lS(1),lS(3),lS(6),lS(7)))
      else
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-        Counter=real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-        V(lR(1),lR(3),lR(5),lR(7)) = sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))/Counter
+        Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+        V(lR(1),lR(3),lR(5),lR(7)) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
      end if
   end do
 
@@ -116,12 +132,15 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
         if(lS(0)==1 .or. lS(0)==2)then
            VSend(iV) = V(lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend(iV) = (cOne/cTwelve)*(cNine*V(lS(1),lS(3),lS(5),lS(7))+ &
-                V(lS(2),lS(3),lS(5),lS(7))+V(lS(1),lS(4),lS(5),lS(7))+V(lS(1),lS(3),lS(6),lS(7)))
+           VSend(iV) = (cOne/cTwelve)*(cNine* &
+                V(lS(1),lS(3),lS(5),lS(7))+ &
+                V(lS(2),lS(3),lS(5),lS(7))+ &
+                V(lS(1),lS(4),lS(5),lS(7))+ &
+                V(lS(1),lS(3),lS(6),lS(7)))
         else
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-           Counter=real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-           VSend(iV) = sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))/Counter
+           Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+           VSend(iV) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end if
      end do
   end do
@@ -137,7 +156,8 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
            itag = nProc*(i-1)+iPE
            nRECVrequests = nRECVrequests + 1
            if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-           call MPI_irecv(VRecv(nRecvStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+           call MPI_irecv(VRecv(nRecvStart(iPE)+1+((i-1)*MessageSize)), &
+                min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
                 MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
         end do
      else
@@ -164,11 +184,13 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
         do i=1,nSends
            itag = nProc*(i-1)+iProc
            if(DoRSend)then
-              call MPI_rsend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_rsend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)), &
+                   min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,iError)
            else
               nSENDrequests = nSENDrequests + 1
-              call MPI_isend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_isend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)), &
+                   min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
            end if
         end do
@@ -195,7 +217,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               V(i,j,k,lR(7)) = VRecv(iV)
            end do; end do; end do
         else
@@ -269,13 +291,15 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        State_VGB(     :,lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             State_VGB(:,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           State_VGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                State_VGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         State_VGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
@@ -288,8 +312,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
         Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         do iVar=1,nVar
-           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) =  sum(&
-               State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) =  Counter*sum(&
+               State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end do
      end if
   end do
@@ -312,8 +336,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
            Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            do iVar=1,nVar
-              VSend8(iVar,iV) = sum(&
-                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+              VSend8(iVar,iV) = Counter*sum(&
+                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
            end do
         end if
      end do
@@ -393,7 +417,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               State_VGB(:,i,j,k,lR(7)) = VRecv8(1:nVar,iV)
            end do; end do; end do
         else
@@ -466,13 +490,15 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        State_VGB(     :,lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             State_VGB(:,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           State_VGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                State_VGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         State_VGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
@@ -485,8 +511,8 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
         Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         do iVar=1,nVar
-           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) = &
-                sum(State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) = Counter*sum( &
+                State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end do
      end if
   end do
@@ -509,8 +535,8 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
            Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            do iVar=1,nVar
-              VSend8(iVar,iV) = &
-                   sum(State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+              VSend8(iVar,iV) = Counter*sum( &
+                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
            end do
         end if
      end do
@@ -590,7 +616,7 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               State_VGB(1:nVar,i,j,k,lR(7)) = VRecv8(:,iV)
            end do; end do; end do
         else
@@ -605,6 +631,190 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
   end if
 
 end subroutine message_pass_cells_8state
+!==========================================================================
+subroutine message_pass_boundary_cells(UseMonotoneRestrict)
+  !
+  ! This routine will complete a messagepass of boundary cell flags.
+  !
+  use ModProcMH
+  use ModBoundaryCells
+  use ModMPCells
+  use ModNumConst
+  use ModMpi
+  implicit none
+
+  !Subroutine arguements
+  logical, intent(in) :: UseMonotoneRestrict
+
+  !Local variables
+  integer :: iBoundary,i,j,k, iV,iPE, iError
+  integer :: nSENDrequests, SENDrequests(maxMessages)
+  integer :: nRECVrequests, RECVrequests(maxMessages)
+  integer :: MESGstatus(MPI_STATUS_SIZE, maxMessages)
+
+  !logical buffers
+  logical, dimension(:,:), allocatable, save :: IsBuffSend_II,IsBuffRecv_II
+  !------------------------------------------
+
+  if(.not.SaveBoundaryCells)return
+  if(numsend>0)&
+       allocate( IsBuffSend_II(MinBoundarySaved:MaxBoundarySaved,numSend),&
+       stat=iError );   call alloc_check(iError,"IsBuffSend_II")
+
+  if(numrecv>0)&
+       allocate( IsBuffRecv_II(MinBoundarySaved:MaxBoundarySaved,numRecv),&
+       stat=iError );   call alloc_check(iError,"IsBuffRecv_II")
+  
+
+
+  ! When neighbor is on the same processor, Collect/Send/Assign are all
+  !    done in one step, without intermediate memory use.
+  iPE=iProc
+  do iV=1,nSend(iPE)
+     lS(:)=VSendIlocal(:,iV)
+     lR(:)=VRecvIlocal(:,iV)
+     if(lS(0)==0)then
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           IsBoundaryCell_IGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                IsBoundaryCell_IGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
+     elseif(lS(0)==1)then
+        IsBoundaryCell_IGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+     elseif(lS(0)==2)then
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
+           IsBoundaryCell_IGB(:,i,j,k,lR(7)) = IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+        end do; end do; end do
+     elseif(lS(0)==3)then
+        IsBoundaryCell_IGB(:,lR(1),lR(3),lR(5),lR(7)) = &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(2),lS(3),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(1),lS(4),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(6),lS(7))
+     else
+        if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
+        do iBoundary=MinBoundarySaved,MaxBoundarySaved
+           IsBoundaryCell_IGB(iBoundary,lR(1),lR(3),lR(5),lR(7)) = any( &
+                IsBoundaryCell_IGB(iBoundary,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
+        end do
+     end if
+  end do
+
+  ! Collect values into VSend that need to be passed to other processors
+  do iPE=0,nProc-1
+     if(iPE==iProc) CYCLE
+     if(nSend(iPE)==0) CYCLE
+     do iV=nSendStart(iPE)+1,nSendStart(iPE)+nSend(iPE)
+        lS(:)=VSendI(:,iV)
+        if(lS(0)==0 .or. lS(0)==1)then
+           IsBuffSend_II(:,iV) = IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+        elseif(lS(0)==3)then
+           IsBuffSend_II(:,iV) =                      &
+                IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(2),lS(3),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(1),lS(4),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(1),lS(3),lS(6),lS(7))
+        else
+           if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
+           do iBoundary=MinBoundarySaved,MaxBoundarySaved
+              IsBuffSend_II(iBoundary,iV) = any( &
+                   IsBoundaryCell_IGB(iBoundary,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
+           end do
+        end if
+     end do
+  end do
+
+  ! Post receives first so that they are ready
+  nRECVrequests = 0  
+  do iPE=0,nProc-1
+     if(iPE == iProc) CYCLE
+     if(nRecv(iPE)==0) CYCLE
+     if(DoBreakUpMessages)then
+        nSends=1+((nRecv(iPE)-1)/MessageSize)
+        do i=1,nSends
+           itag = nProc*(i-1)+iPE
+           nRECVrequests = nRECVrequests + 1
+           if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
+           call MPI_irecv(IsBuffRecv_II(MinBoundarySaved,nRecvStart(iPE)+1+((i-1)*MessageSize)),&
+                nBoundarySaved*min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+                MPI_LOGICAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
+        end do
+     else
+        itag = iPE
+        nRECVrequests = nRECVrequests + 1
+        if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
+        call MPI_irecv(IsBuffRecv_II(MinBoundarySaved,nRecvStart(iPE)+1),nBoundarySaved*nRecv(iPE), &
+             MPI_LOGICAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
+     end if
+  end do
+
+  ! Make sure all recv's are posted before using an rsend
+  if(DoRSend)then
+     call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+  end if
+
+  ! VSend array sent to VRecv array on other PEs
+  nSENDrequests = 0
+  do iPE=0,nProc-1
+     if(iPE == iProc) CYCLE
+     if(nSend(iPE)==0) CYCLE
+     if(DoBreakUpMessages)then
+        nSends=1+((nSend(iPE)-1)/MessageSize)
+        do i=1,nSends
+           itag = nProc*(i-1)+iProc
+           if(DoRSend)then
+              call MPI_rsend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1+((i-1)*MessageSize)),&
+                   nBoundarySaved*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   MPI_LOGICAL,iPE,itag,iComm,iError)
+           else
+              nSENDrequests = nSENDrequests + 1
+              call MPI_isend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1+((i-1)*MessageSize)),&
+                   nBoundarySaved*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   MPI_LOGICAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
+           end if
+        end do
+     else
+        itag = iProc
+        nSENDrequests = nSENDrequests + 1
+        if(DoRSend)then
+           call MPI_rsend(IsBuffSend_II(MinBoundarySaved ,nSendStart(iPE)+1),&
+                nBoundarySaved*nSend(iPE), &
+                MPI_LOGICAL,iPE,itag,iComm,iError)
+        else
+           call MPI_isend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1),&
+                nBoundarySaved*nSend(iPE), &
+                MPI_LOGICAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
+        end if
+     end if
+  end do
+
+  ! Wait for messages to be received before continuing.
+  call MPI_waitall(nRECVrequests, RECVrequests(1), MESGstatus(1,1), iError)
+
+  ! This loop copies the values from VRecv to their destination
+  do iPE=0,nProc-1
+     if(iPE==iProc) CYCLE
+     if(nRecv(iPE)==0) CYCLE
+     do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
+        lR(:)=VRecvI(:,iV)
+        if(lR(0)==2)then
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
+              IsBoundaryCell_IGB(:,i,j,k,lR(7)) = IsBuffRecv_II(:,iV)
+           end do; end do; end do
+        else
+           IsBoundaryCell_IGB(:,lR(1),lR(3),lR(5),lR(7)) = IsBuffRecv_II(:,iV)
+        end if
+     end do
+  end do
+
+  ! Wait for sent messages to be received before exiting
+  if(.not.DoRSend)then
+     call MPI_waitall(nSENDrequests, SENDrequests(1), MESGstatus(1,1), iError)
+  end if
+  if(allocated(IsBuffSend_II)) deallocate(IsBuffSend_II)
+  if(allocated(IsBuffRecv_II)) deallocate(IsBuffRecv_II)
+end subroutine message_pass_boundary_cells
+
 !========================================================================
 !========================================================================
 !========================================================================
@@ -822,8 +1032,8 @@ subroutine mp_build_cell_indices(JustCount)
   use ModOctree
   use ModMPCells
   use ModAMR, ONLY : unusedBlock_BP
-  use ModGeometry,ONLY:TypeGeometry                !^CFG IF NOT CARTESIAN
-  use ModParallel,ONLY:NOBLK                       !^CFG IF NOT CARTESIAN
+  use ModGeometry,ONLY:TypeGeometry                !^CFG IF COVARIANT
+  use ModParallel,ONLY:NOBLK                       !^CFG IF COVARIANT
   implicit none
 
   !Subroutine arguements
@@ -872,6 +1082,15 @@ subroutine mp_build_cell_indices(JustCount)
      sS=1 ; sR=2
   end if
 
+  if(.not.DoOneCoarserLayer) then
+     iTwoOrOneForTwoCoarserLayers=1
+     iZeroOrOneForTwoCoarserLayers=1
+  else
+     iTwoOrOneForTwoCoarserLayers=2
+     iZeroOrOneForTwoCoarserLayers=0
+  end if
+
+
   do iPE = 0,nProc-1
      do iBLK = 1,nBLK
         if (.not.associated(global_block_ptrs(iBLK, iPE+1) % ptr)) CYCLE
@@ -904,12 +1123,12 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF NOT CARTESIAN BEGIN
+              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
-                      (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
+                      ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
-                 !^CFG END CARTESIAN  
+                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_))) call build_i_axis
+                 !^CFG END COVARIANT  
               end select
            end do
         else
@@ -931,12 +1150,12 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF NOT CARTESIAN BEGIN
+              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
-                      (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
+                      ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
-                 !^CFG END CARTESIAN  
+                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_)))  call build_i_axis
+                 !^CFG END COVARIANT  
               end select
            end do
         end if
@@ -1144,10 +1363,10 @@ contains
           elseif(iCFExchangeType==2)then
              ! New Style: receive 1 value for 8 fine cells to use
              iAdd=1; jAdd=1; kAdd=1
-             if(i1R==i2R) iAdd=0
-             if(j1R==j2R) jAdd=0
-             if(k1R==k2R) kAdd=0
-             do i=i1R,i2R,2; do j=j1R,j2R,2; do k=k1R,k2R,2
+             if(i1R==i2R.or.nDuplicateI==1) iAdd=0
+             if(j1R==j2R.or.nDuplicateJ==1) jAdd=0
+             if(k1R==k2R.or.nDuplicateK==1) kAdd=0
+             do i=i1R,i2R,nDuplicateI; do j=j1R,j2R,nDuplicateJ; do k=k1R,k2R,nDuplicateK
                 if(iPE==nborPE)then
                    nRecv(iPE)=nRecv(iPE)+1
                    if(JustCount) CYCLE
@@ -1294,18 +1513,21 @@ contains
        !i
        select case(dLOOP(idir,1))
        case(1)
-          i1S=nI ; i1R=-1
+          nDuplicateI=iTwoOrOneForTwoCoarserLayers
+          i1S=nI-iZeroOrOneForTwoCoarserLayers; i1R=-1
           i2S=nI ; i2R= 0
           if(DoOneLayerLast)then
-             i1R= 0
+             i1R= i2R; i1S=i2S
           end if
        case(-1)
+          nDuplicateI=iTwoOrOneForTwoCoarserLayers
           i1S= 1 ; i1R=nI+1
-          i2S= 1 ; i2R=nI+2
+          i2S= 1+iZeroOrOneForTwoCoarserLayers; i2R=nI+2
           if(DoOneLayerLast)then
-             i2R=nI+1
+             i2R=i1R;i2S=i1S
           end if
        case(0)
+          nDuplicateI=2
           select case(sSubF)
           case(1)
              i1S= 1        ; i1R= 1
@@ -1337,18 +1559,21 @@ contains
        !j
        select case(dLOOP(idir,2))
        case(1)
-          j1S=nJ ; j1R=-1
+          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
+          j1S=nJ-iZeroOrOneForTwoCoarserLayers; j1R=-1
           j2S=nJ ; j2R= 0
           if(DoOneLayerLast)then
-             j1R= 0
+             j1R= j2R; j1S=j2S
           end if
        case(-1)
+          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
           j1S= 1 ; j1R=nJ+1
-          j2S= 1 ; j2R=nJ+2
+          j2S= 1+iZeroOrOneForTwoCoarserLayers ; j2R=nJ+2
           if(DoOneLayerLast)then
-             j2R=nJ+1
+             j2R=j1R; j2S=j1S
           end if
        case(0)
+          nDuplicateJ=2
           select case(sSubF)
           case(1)
              j1S= 1        ; j1R= 1
@@ -1374,18 +1599,21 @@ contains
        !k
        select case(dLOOP(idir,3))
        case(1)
-          k1S=nK ; k1R=-1
+          nDuplicateK=iTwoOrOneForTwoCoarserLayers
+          k1S=nK-iZeroOrOneForTwoCoarserLayers ; k1R=-1
           k2S=nK ; k2R= 0
           if(DoOneLayerLast)then
-             k1R= 0
+             k1R=  k2R;  k1S=k2S
           end if
        case(-1)
+          nDuplicateK=iTwoOrOneForTwoCoarserLayers
           k1S= 1 ; k1R=nK+1
-          k2S= 1 ; k2R=nK+2
+          k2S= 1+iZeroOrOneForTwoCoarserLayers; k2R=nK+2
           if(DoOneLayerLast)then
-             k2R=nK+1
+             k2R=k1R; k2S=k1S
           end if
        case(0)
+          nDuplicateK=2
           select case(sSubF)
           case(1)
              k1S= 1        ; k1R= 1
@@ -1527,7 +1755,7 @@ contains
     end if
 
   end subroutine set_indices
-  subroutine build_i_axis                              !^CFG IF NOT CARTESIAN BEGIN
+  subroutine build_i_axis                              !^CFG IF COVARIANT BEGIN
     !Local variables
     integer :: i,j,k,n
     integer :: iStepR,kStepR
@@ -1586,32 +1814,13 @@ contains
        end do; end do; end do
     end if
 
-  end subroutine build_i_axis                                   !^CFG END CARTESIAN
+  end subroutine build_i_axis                                   !^CFG END COVARIANT
 
 end subroutine mp_build_cell_indices
 
 !==========================================================================
 !==========================================================================
 !==========================================================================
-subroutine alloc_check(ierror,str)
-
-  implicit none
-
-  integer, intent(in) :: ierror
-  character (len=*), intent(in) :: str
-  !----------------------------------------------------------------------------
-
-  if(ierror>0)then
-     write(*,*)'Allocation error for: ',str
-     call stop_mpi("Allocation error")
-  end if
-
-end subroutine alloc_check
-
-!==========================================================================
-!==========================================================================
-!==========================================================================
-
 !!$!------------------------------------------------------------------------------------!
 !!$!
 !!$!    North                      8--------------7

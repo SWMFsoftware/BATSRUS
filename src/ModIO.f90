@@ -19,16 +19,16 @@ Module ModIO
 
   logical :: restart               ! Use a restart file
   logical :: restart_Bface=.false. ! Bface from restart file ^CFG IF CONSTRAINB
-  logical :: restart_ghost=.true.  ! ghost cells from restart file
-  logical :: restart_reals=.false. ! Real numbers only in restart file
-  logical :: RestartBlockLevels=.false. ! Load LEVmin and LEVmax in octree restart
+  logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
+
+  integer :: nByteRealRead = 8     ! Real precision in restart files
 
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
 
   ! Maximum number of output files and output variables
   ! note that:
-  !     maxfile > maxplotfile + maxsatellitefile + extras
+  !     maxfile > MaxPlotFile + maxsatellitefile + extras
   ! is required
   integer, parameter :: MaxPlotFile=15
   integer, parameter :: MaxSatelliteFile=10
@@ -42,16 +42,27 @@ Module ModIO
 
   ! Named indexes for output parameters
   integer, parameter :: restart_=1, &
-       logfile_=2, plot_=2, satellite_ = plot_+maxplotfile
+       logfile_=2, plot_=2, satellite_ = plot_+MaxPlotFile
 
-! variables for the line of sight integration plots
+  ! variables for the line of sight integration plots
   character (LEN=2) :: TypeLosImage
   integer, parameter :: nplotvarlosmax=10
-  integer :: n_pix_X, n_pix_Y
-  real :: x_size_image, y_size_image, xoffset, yoffset
-  real :: radius_occult, mu_los
-  real, dimension(3,maxfile) :: los_vector
-  real, dimension(3,maxfile) :: los_corner 
+  integer :: n_pix_r(maxfile)
+  real :: r_size_image(maxfile), xoffset(maxfile), yoffset(maxfile)
+  real :: radius_occult(maxfile), mu_los
+  real :: offset_angle(maxfile)
+  real, dimension(3,maxfile) :: ObsPos_DI
+
+  ! Maximum number of plot variables
+  integer, parameter :: nPlotvarMax=20
+
+  ! Variables for field/stream/current line files
+  logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
+  integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
+  integer, parameter :: MaxLine=20            ! Max numbe of lines/plot file
+  character :: NameLine_I(MaxPlotFile)                 ! Name of vector field
+  real      :: XyzStartLine_DII(3,MaxLine,MaxPlotFile) ! Starting positions
+  logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
 
   ! Actual number of output files and plot files
   ! note that nfile is not the number of output files but rather the 
@@ -72,6 +83,12 @@ Module ModIO
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,maxfile) :: plot_range 
+
+  ! x, y, z point for arbitrary slice plotting
+  real, dimension(3,maxfile) :: plot_point
+
+  ! x, y, z normal vector for arbitrary slice plotting
+  real, dimension(3,maxfile) :: plot_normal
 
   ! dx resolution for equidistant plotting
   real, dimension(3,maxfile) :: plot_dx
@@ -99,12 +116,12 @@ Module ModIO
   logical, dimension(maxsatellitefile)                        :: DoTrackSatellite_I = .false.
   logical, dimension(maxsatellitefile)                        :: UseSatelliteFile = .true.
   logical, dimension(maxsatellitefile)                        :: Satellite_first_write = .true.
-  integer, parameter                                          :: Max_Satellite_Npts = 5000
+  integer, parameter                                          :: Max_Satellite_Npts = 50000
   integer, dimension(maxsatellitefile)                        :: Satellite_Npts, icurrent_satellite_position=1
   integer, dimension(maxsatellitefile)                        :: iPEsatellite, iBLKsatellite
   real,    dimension(maxsatellitefile, Max_Satellite_Npts, 3) :: XSatellite_traj
   real,    dimension(maxsatellitefile, 3)                     :: XSatellite
-  real*8,  dimension(maxsatellitefile, Max_Satellite_Npts)    :: Satellite_Time
+  real,    dimension(maxsatellitefile, Max_Satellite_Npts)    :: Satellite_Time
   character (len=50)                                          :: Satellite_name(maxsatellitefile)
   character(len=3), dimension(maxsatellitefile) :: TypeSatCoord_I
 

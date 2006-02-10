@@ -27,9 +27,10 @@ end subroutine refine_grid
 !------------------------------------------------------------------------
 subroutine parallel_refine
   use ModProcMH
-  use ModMain, ONLY : iNewGrid,nBlockMax,unusedBLK,nBLK
+  use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs,refine_list
+  use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
   use ModOctree
   implicit none
 
@@ -123,9 +124,10 @@ subroutine parallel_refine
      PEsRefBlk = -1
      PEsRefBlk(1) = iPE
      do icube = 1, 8
-        ! update nBlockMax
+        ! update nBlock and nBlockMax
 
         nBlockMax = max(nBlockMax, local_cubeBLK(icube))
+        nBlock    = nBlockMax
 
         ! find out if new block is on same PE as any other previous new blocks
         do ii = 1,nPEsRefBlk
@@ -170,6 +172,7 @@ subroutine parallel_refine
               z_BLK(:,:,:,iBLK) = -777777.
               R_BLK(:,:,:,iBLK) = -777777.
               unusedBLK(iBLK) = .true.
+              iTypeAdvance_B(iBLK) = SkippedBlock_
            end if
         end do
      end if

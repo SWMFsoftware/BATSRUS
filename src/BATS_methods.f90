@@ -16,7 +16,6 @@ subroutine BATS_setup
   use ModMpi
   use ModProcMH
   use ModIoUnit, ONLY: UNITTMP_
-  use CON_physics, ONLY: get_physics
   use ModMain
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
@@ -26,6 +25,7 @@ subroutine BATS_setup
        dn_refine,initial_refine_levels,nRefineLevelIC,nRefineLevel,&
        automatic_refinement
   use ModPhysics, ONLY : unitSI_t
+  use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
 
   implicit none
@@ -33,7 +33,6 @@ subroutine BATS_setup
   ! Local variables
 
   character(len=*), parameter :: NameSub = 'BATS_setup'
-  real    :: tSimulation
   integer :: iError 
   !---------------------------------------------------------------------------
 
@@ -63,7 +62,6 @@ contains
     !/
 
     !LOCAL VARIABLES:
-    integer :: nBlockMoved
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
     logical :: local_refine(nBLK)
 
@@ -90,18 +88,22 @@ contains
        ! Read initial solution block geometry from octree restart file.
 
        ! Read restart header file only if old type.
-       if(.not.restart_reals)call read_restart_header  
        call read_octree_file     ! Read octree restart file.
 
     end if
     ! number blocks and balance load
     call number_soln_blocks
 
-    ! Move coordinates around except for restart from new restart files 
-    ! which have coordinate info in the .rst files and not in the octree.
-    call load_balance(.not.(restart .and. restart_reals),.false.,nBlockMoved)
+    ! Set initial block types
+    where(.not.UnusedBlk) iTypeAdvance_B = ExplBlock_
+    call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    call find_neighbors
+    ! Move coordinates around except for restart because the
+    ! coordinate info is in the .rst files and not in the octree (1st).
+    ! Do not move the data, it is not yet set (2nd false).
+    ! There are new blocks (3rd true).
+    call load_balance(.not.restart, .false., .true.)
 
     if (iProc == 0.and.lVerbose>0)then
        call write_prefix; write (iUnitOut,*) '    total blocks = ',nBlockALL
@@ -110,49 +112,40 @@ contains
     nRefineLevel = initial_refine_levels
 
     if(DoSetLevels) call set_levels
-
-    call analyze_neighbors    !^CFG IF DEBUGGING 
-
   end subroutine grid_setup
   !===========================================================================
 
   subroutine set_initial_conditions
+    use ModUser, ONLY: user_initial_perturbation
 
     !\
     ! Set intial conditions for solution in each block.
     !/
 
-    use ModCompatibility, ONLY: calculate_dipole_tilt, SetDipoleTilt
-
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = &
          NameSub//'::set_initial_conditions'
     integer :: iLevel, iError
-    integer :: nBlockMoved
-    logical :: restart_read = .false. ! This is needed for UseNewAxes=F only
-
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        do iLevel=1,nRefineLevelIC
           do globalBLK = 1, nBlockMax
              call set_ICs
           end do
-          !^CFG IF USERFILES BEGIN
+
           !\
           ! Allow the user to add a perturbation and use that for
           ! physical refinement.
           !/
           if (UseUserPerturbation) &
                call user_initial_perturbation
-          !^CFG END USERFILES
+
           call amr_physics
           call fixRefinementLevels
           call number_soln_blocks
        end do
-       call load_balance(.true.,.false.,nBlockMoved)
-       call find_neighbors
-       call analyze_neighbors      !^CFG IF DEBUGGING
-       call find_test_cell
+       ! Move coordinates, but not data (?), there are new blocks
+       call load_balance(.true.,.false.,.true.)
     end if
 
     do globalBLK = 1, nBlockMax
@@ -165,15 +158,7 @@ contains
           call read_restart_file
           call timing_stop('read_restart')
 
-          if(restart_reals)call fix_block_geometry(globalBLK)
-
-          ! For sake of backwards compatibility
-          if(.not.UseNewAxes .and. .not.restart_read .and. time_accurate &
-               .and. dt_UpdateB0 > cZero .and. .not.SetDipoleTilt)then
-             ! Now we have time_simulation read from the first restart file
-             restart_read = .true.
-             call calculate_dipole_tilt
-          end if
+          call fix_block_geometry(globalBLK)
 
        end if
 
@@ -184,7 +169,7 @@ contains
 
     end do ! Multi-block initialization loop.
 
-    !^CFG IF USERFILES BEGIN
+
     !\
     ! Allow the user to add a perturbation to the initial condition.
     !/
@@ -192,23 +177,21 @@ contains
        call user_initial_perturbation
        UseUserPerturbation=.false.
     end if
-    !^CFG END USERFILES   
+
 
     if (restart) then
        if(iProc==0)then
-          write(*,*)NameSub,' restarts at n_step,Time_Simulation=',&
+          call write_prefix; write(iUnitOut,*)&
+               NameSub,' restarts at n_step,Time_Simulation=',&
                n_step,Time_Simulation
-          if(.not.IsStandAlone)then
-             call get_physics(tSimulationOut=tSimulation)
-             if(abs(tSimulation-Time_Simulation)>0.001) &
-                  write(*,*)NameSub,' WARNING Time_Simulation differs from ',&
-                  'tSimulation = ',tSimulation,' !!!'
-          end if
        end if
-       ! ???n_step is already known, BCAST maybe for backwards compatibility???
-       call MPI_BCAST(n_step,1,MPI_INTEGER,0,iComm,iError)
-       ! Overwrite time_simulation with binary value read from restart file
-       call MPI_BCAST(Time_Simulation,1,MPI_REAL,0,iComm,iError)
+       ! Load balance for the inner blocks:
+       ! move coords, move data, there are no new blocks
+       call load_balance(.true.,.true.,.false.)
+
+       ! Redo the AMR level constraints for fixed body level
+       ! The coordinates of the blocks are only known now
+       if(DoSetLevels) call set_levels
     end if
 
     !^CFG IF CONSTRAINB BEGIN
@@ -246,9 +229,10 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
+  use ModMain, ONLY: DoTransformToHgi
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
-  use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
+  use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
 
   implicit none
 
@@ -261,6 +245,12 @@ subroutine BATS_init_session
   ! Set number of explicit and implicit blocks !^CFG IF  IMPLICIT BEGIN
   ! Partially implicit/local selection will be done in each time step
   call select_stepping(.false.)                !^CFG END IMPLICIT 
+
+  ! Transform velocities from a rotating system to the HGI system if required
+  if(DoTransformToHgi)then
+     call transform_to_hgi
+     DoTransformToHgi = .false.
+  end if
 
   ! Ensure zero divergence for the CT scheme   !^CFG IF CONSTRAINB
   if(UseConstrainB .and. DoInitConstrainB)&    !^CFG IF CONSTRAINB
@@ -288,6 +278,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAmr, ONLY: dn_refine
   use ModPhysics, ONLY: UnitSI_t
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
+  use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
+       part_steady_select, part_steady_switch
 
   implicit none
 
@@ -301,23 +293,37 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
+  !Eliminate non-positive timesteps
+  if(Time_Simulation>=TimeSimulationLimit)return 
+
+  ! Check if steady state is achieved
+  if(.not.time_accurate .and. UsePartSteady .and. IsSteadyState)then
+     ! Create stop condition for stand alone mode
+     nIter = iteration_number
+     ! There is nothing to do, simply return
+     RETURN
+  end if
+
   call set_oktest(NameSub,DoTest,DoTestMe)
 
   ! We are advancing in time
   time_loop = .true.
 
-  call BATS_select_blocks              !^CFG IF IMPLICIT
+  ! Select block types and load balance blocks
+  call BATS_select_blocks
+
+  ! Switch off steady blocks to reduce calculation
+  if(UsePartSteady) call part_steady_switch(.true.)
 
   n_step = n_step + 1
   iteration_number = iteration_number+1
 
-  if (time_accurate) then
-     call set_global_timestep
-     dt = min(dt,(TimeSimulationLimit-Time_Simulation)/UnitSI_t)
-  end if
+  ! Calculate time step dt
+  if (time_accurate) &
+       call set_global_timestep((TimeSimulationLimit-Time_Simulation)/UnitSI_t)
 
   ! Calculate unsplit dB0Dt term for every time step
-  if(time_accurate .and. dt_updateB0>0.0 .and. .not.DoSplitDb0Dt)then
+  if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
      call timing_start('update_B0')
      call calc_db0_dt(dt)
      call timing_stop('update_B0')
@@ -331,18 +337,40 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseImplicit.and.nBlockImplALL>0)then !^CFG IF IMPLICIT BEGIN
      call advance_impl
   else                                    !^CFG END IMPLICIT
-     call advance_expl(.true., .true.)
+     call advance_expl(.true.)
   endif                                   !^CFG IF IMPLICIT  
-
-  call timing_stop('advance')
+  
+  if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
   Time_Simulation = Time_Simulation + dt*UnitSI_t
+  if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
+  call exchange_messages
+  
+  if(UsePartSteady) then
+     ! Select steady and unsteady blocks
+     if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
+        call timing_start('part_steady')
+        call part_steady_select
+        call timing_stop('part_steady')
+     end if
+
+     ! Switch on steady blocks to be included in AMR, plotting, etc.
+     call part_steady_switch(.false.)
+  end if
+
+  call advect_all_points
+  
+  call timing_stop('advance')
+
+  if(time_accurate)&
+       call update_lagrangian_grid(&
+       Time_Simulation - dt*UnitSI_t,Time_Simulation)
 
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation
 
-  if (time_accurate .and. dt_updateB0 > 0.0) then
-     ! Unsplit dB0/dBt term is added every time step
+  if (DoUpdateB0) then
+     ! Unsplit dB0/dt term is added every time step
      ! Split dB0/dt term is added at the dt_updateB0 frequency
      if (.not.DoSplitDb0Dt .or. &
           int(Time_Simulation/dt_UpdateB0) >  &
@@ -418,9 +446,7 @@ subroutine BATS_amr_refinement
   real, external :: maxval_loc_abs_BLK
   integer :: ifile
   integer :: iLoc_I(5)  ! full location index
-  logical :: DoExchangeAgain
-
-  DoExchangeAgain =.false.
+  !----------------------------------------------------------------------------
 
   !\
   ! Perform the AMR.
@@ -433,8 +459,6 @@ subroutine BATS_amr_refinement
   if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
   call amr(nRefineLevel)
-  call analyze_neighbors                     !^CFG IF DEBUGGING    
-  call find_test_cell
 
   !^CFG IF CONSTRAINB BEGIN
   if(UseConstrainB)then
@@ -538,43 +562,39 @@ subroutine BATS_init_constrain_b
 end subroutine BATS_init_constrain_b
 
 !^CFG END CONSTRAINB
-!^CFG IF IMPLICIT BEGIN
+
 !=============================================================================
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModMain, ONLY: UsePartLocal, lVerbose
-  use ModImplicit, ONLY : UsePartImplicit
-  use ModIO, ONLY: write_prefix, iUnitOut
+  use ModMain, ONLY: UsePartLocal         !^CFG IF IMPLICIT
+  use ModMain, ONLY: lVerbose
+  use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
+  use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
   !LOCAL VARIABLES:
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   integer :: iError
-  integer :: nBlockMoved
   !----------------------------------------------------------------------------
 
   ! Select blocks for partially local time stepping
 
-  if(UsePartLocal)call select_stepping(.true.)
+  if(UsePartLocal)call select_stepping(.true.) !^CFG IF IMPLICIT
 
-  ! Select and load balance blocks for partially implicit scheme
-  if(UsePartImplicit)then                      
-     ! Redo load balancing for partially implicit scheme
-     call load_balance(.true.,.true.,nBlockMoved)
-     if(nBlockMoved>0)then
-        if(iProc == 0.and.lVerbose>0)then
-           call write_prefix; write(iUnitOut,*)&
-                'load_balance finished: nBlockMoved=',nBlockMoved
-        end if
-        call find_neighbors
-        call analyze_neighbors   !^CFG IF DEBUGGING
-        call find_test_cell
-     end if
+  ! Select and load balance blocks for partially implicit/steady scheme
+  if( UsePartSteady .and. IsNewSteadySelect &
+       .or. UsePartImplicit &                !^CFG IF IMPLICIT
+       )then
+
+     ! Redo load balancing: move coordinates and data, there are no new blocks
+     call load_balance(.true.,.true.,.false.)
+
+     IsNewSteadySelect = .false.
   end if
 
 end subroutine BATS_select_blocks
-!^CFG END IMPLICIT
+
 !===========================================================================
 
 subroutine BATS_save_files(TypeSaveIn)
@@ -587,7 +607,7 @@ subroutine BATS_save_files(TypeSaveIn)
   character(len=*), intent(in) :: TypeSaveIn
 
   character(len=len(TypeSaveIn)) :: TypeSave
-  logical :: DoExchangeAgain, IsFound
+  logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound
   integer :: iFile
   
   character(len=*), parameter :: NameSub='BATS_save_files'
@@ -595,6 +615,8 @@ subroutine BATS_save_files(TypeSaveIn)
   logical :: IsTimeAccuratePrevious = .false.
   !--------------------------------------------------------------------------
 
+  DoExchangeAgain     = .false.
+  DoAssignNodeNumbers = .true.
   TypeSave = TypeSaveIn
   call upper_case(TypeSave)
   select case(TypeSave)
@@ -646,7 +668,6 @@ contains
 
   subroutine save_files
 
-    DoExchangeAgain = .false.
     do ifile=1,nfile
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
@@ -666,8 +687,10 @@ contains
     ! in ghost cells.
 
     if(DoExchangeAgain)then
-       if(iProc==0.and.lVerbose>0)call write_prefix; write(iUnitOut,*)&
-            '  Calling exchange_messages to reset ghost cells ...'
+       if(iProc==0.and.lVerbose>0)then
+          call write_prefix; write(iUnitOut,*)&
+               'Calling exchange_messages to reset ghost cells ...'
+       end if
        call exchange_messages
     end if
 
@@ -690,6 +713,7 @@ contains
        do globalBLK = 1,nBlockMax
           if (.not.unusedBLK(globalBLK)) call write_restart_file
        end do
+       if(iProc==0)call save_advected_points
        call timing_stop('save_restart')
 
     elseif(ifile==logfile_) then
@@ -710,40 +734,45 @@ contains
           end if
           RETURN
        end if
-       !^CFG IF NOT SIMPLE BEGIN
-       if(index(plot_type(ifile),'los')>0 .and. (.not. IsFound)) then
-          IsFound = .true.
-          ! Do message passing with corners once for plots
-          if(.not.DoExchangeAgain)then
-                if(iProc==0.and.lVerbose>0)then
-                   call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for plot files ...'
-                end if
-                UsePlotMessageOptions = .true.
-                call exchange_messages
-                UsePlotMessageOptions = .false.
-                DoExchangeAgain = .true.
+
+       if(.not.DoExchangeAgain .and. ( &
+            index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'los')==1 .or. &
+            plot_form(iFile) == 'tec')) then
+
+          if(iProc==0.and.lVerbose>0)then
+             call write_prefix; write(iUnitOut,*)&
+                  ' Message passing for plot files ...'
           end if
-          call write_plot_los(ifile)
+          UsePlotMessageOptions = .true.
+          call exchange_messages
+          UsePlotMessageOptions = .false.
+          DoExchangeAgain = .true.
        end if
-       !^CFG END SIMPLE 
-       if(plot_type(ifile)/='nul' .and. (.not. IsFound) ) then
-          ! Do message passing with corners once for plots
-          if(.not.DoExchangeAgain)then
-             if(  index(plot_form(ifile),'tec')>0 ) then
-                if(iProc==0.and.lVerbose>0)then
-                   call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for plot files ...'
-                end if
-                UsePlotMessageOptions = .true.
-                call exchange_messages
-                UsePlotMessageOptions = .false.
-                DoExchangeAgain = .true.
-                call assign_node_numbers
-             end if
+
+       if(index(plot_type(iFile),'los')>0) then
+          IsFound = .true.
+          call write_plot_los(iFile)
+       end if
+
+       !^CFG IF RAYTRACE BEGIN
+       if(index(plot_type(iFile),'lin')>0) then
+          IsFound = .true.
+          call write_plot_line(iFile)
+       end if
+       !^CFG END RAYTRACE
+
+       if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
+          ! Assign node numbers for tec plots
+          if( index(plot_form(ifile),'tec')>0 .and. DoAssignNodeNumbers)then
+             call assign_node_numbers
+             DoAssignNodeNumbers = .false.
           end if
 
-          if(index(plot_type(ifile),'ray')>0) call ray_trace !^CFG IF RAYTRACE
+          !^CFG IF RAYTRACE BEGIN
+          if(  index(plot_type(ifile),'ray')>0 .or. &
+               index(plot_vars(ifile),'status')>0) call ray_trace
+          !^CFG END RAYTRACE
           call timing_start('save_plot')
           call write_plot_common(ifile)
           call timing_stop('save_plot')
@@ -787,7 +816,6 @@ contains
 
   subroutine save_files_final
 
-    DoExchangeAgain = .false.
     do ifile=1,plot_+nplotfile
        call save_file
     end do

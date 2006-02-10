@@ -88,8 +88,8 @@ subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
   octree % ptr % refine  = .false.
   octree % ptr % coarsen = .false.
   octree % ptr % body    = .false.
-  octree % ptr % IsExtraBoundary    = .false.   !^CFG IF FACEOUTERBC
-  octree % ptr % IsOuterBoundary    = .false.   !^CFG IF FACEOUTERBC
+  octree % ptr % IsExtraBoundary    = .false.   
+  octree % ptr % IsOuterBoundary    = .false.  
 
 end subroutine initialize_octree_block
 
@@ -162,8 +162,8 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false. !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false. !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false. 
+     octree % ptr % IsOuterBoundary = .false. 
      octree % ptr % number  = -1
      octree % ptr % PE      = -1
      octree % ptr % BLK     = -1
@@ -248,8 +248,8 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false.   !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false.   !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false.   
+     octree % ptr % IsOuterBoundary = .false.  
 
      global_block_ptrs(iBLKs(1), iPEs(1)+1) % ptr => octree % ptr
 
@@ -271,7 +271,7 @@ subroutine read_octree_file
   use ModOctree
   use ModIoUnit, Only : UNITTMP_
   use ModIO, ONLY : NameRestartInDir, iUnitOut, write_prefix
-  use ModMpi
+!  use ModMpi
   implicit none
 
   integer :: i,j,k, total_number_of_blocks_needed, BlksPerPE, iError,nError
@@ -280,15 +280,15 @@ subroutine read_octree_file
   logical :: isRoot
   type (adaptive_block_ptr) :: octree
 
-  if (iProc == 0) then
+!  if (iProc == 0) then
      open(UNITTMP_, file=trim(NameRestartInDir)//"octree"//octree_ext, &
           status="old", form="UNFORMATTED")
      read(UNITTMP_) r_proc_dims(1),r_proc_dims(2),r_proc_dims(3)
      read(UNITTMP_) total_number_of_blocks_needed
-  end if
+!  end if
 
-  call MPI_BCAST(r_proc_dims(1),                3, MPI_INTEGER, 0, iComm, iError)
-  call MPI_BCAST(total_number_of_blocks_needed, 1, MPI_INTEGER, 0, iComm, iError)
+!  call MPI_BCAST(r_proc_dims(1),                3, MPI_INTEGER, 0, iComm, iError)
+!  call MPI_BCAST(total_number_of_blocks_needed, 1, MPI_INTEGER, 0, iComm, iError)
 
   if ( (r_proc_dims(1) /= proc_dims(1)) .or. &
        (r_proc_dims(2) /= proc_dims(2)) .or. &
@@ -297,16 +297,14 @@ subroutine read_octree_file
           " Initial processor outlay incorrect, ", &
           & "proc_dims = ",proc_dims," r_proc_dims = ", &
           r_proc_dims
-     call MPI_ABORT(iComm, nError, iError)
-     stop
+     call stop_mpi('ERROR in read_octree_file')
   end if
 
   if (total_number_of_blocks_needed > nProc*nBLK) then
      write(*,*) "read_octree_file: PE = ",iProc, &
           " Error, insufficient number of solution blocks, ", &
           "total_number_of_blocks_needed = ",total_number_of_blocks_needed
-     call MPI_ABORT(iComm, nError, iError)
-     stop
+     call stop_mpi('ERROR in read_octree_file')
   end if
 
   BlksPerPE = ((total_number_of_blocks_needed-1)/nProc)+1
@@ -335,10 +333,10 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
   use ModMain, ONLY : nBlockMax, unusedBLK
   use ModGeometry, ONLY : xyzStart, dxyz
   use ModIoUnit, ONLY : UNITTMP_
-  use ModIO, ONLY : restart_reals,RestartBlockLevels
+  use ModIO, ONLY : RestartBlockLevels
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs
   use ModOctree
-  use ModMpi
+! use ModMpi
   implicit none
 
   type (adaptive_block_ptr) :: octree
@@ -354,15 +352,15 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
   !---------------------------------------------------------------------------
 
   if (associated(octree % ptr)) then
-     if (iProc == 0) &
+!     if (iProc == 0) &
           read(UNITTMP_) numberBLK, childNumber, iPE, iBLK, iLEV, sol_blk_used
 
-     call MPI_BCAST(numberBLK,    1, MPI_INTEGER, 0, iComm, iError)
-     call MPI_BCAST(childNumber,  1, MPI_INTEGER, 0, iComm, iError)
+!     call MPI_BCAST(numberBLK,    1, MPI_INTEGER, 0, iComm, iError)
+!     call MPI_BCAST(childNumber,  1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iPE,          1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iBLK,         1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iLEV,         1, MPI_INTEGER, 0, iComm, iError)
-     call MPI_BCAST(sol_blk_used, 1, MPI_LOGICAL, 0, iComm, iError)
+!     call MPI_BCAST(sol_blk_used, 1, MPI_LOGICAL, 0, iComm, iError)
 
      octree % ptr % number  = numberBLK
      octree % ptr % child_number = childNumber
@@ -370,16 +368,17 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false.  !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false.  !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false.  
+     octree % ptr % IsOuterBoundary = .false.  
      iPE = octree % ptr % PE
      iBLK = octree % ptr % BLK
 
      if(RestartBlockLevels)then
-        if (iProc == 0) read(UNITTMP_) iLEVmin,iLEVmax
+!        if (iProc == 0) &
+             read(UNITTMP_) iLEVmin,iLEVmax
 
-        call MPI_BCAST(iLEVmin,    1, MPI_INTEGER, 0, iComm, iError)
-        call MPI_BCAST(iLEVmax,    1, MPI_INTEGER, 0, iComm, iError)
+!        call MPI_BCAST(iLEVmin,    1, MPI_INTEGER, 0, iComm, iError)
+!        call MPI_BCAST(iLEVmax,    1, MPI_INTEGER, 0, iComm, iError)
 
         octree % ptr % LEVmin = iLEVmin
         octree % ptr % LEVmax = iLEVmax
@@ -388,15 +387,6 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
      if (octree % ptr % used) then
         global_block_ptrs(iBLK, iPE+1) % ptr => octree % ptr
         nBlockMax =  max(nBlockMax, iBLK)
-
-!!! Backwards compatibility for old restart files !!!
-        if(.not.restart_reals)then
-           if (iProc == 0) read(UNITTMP_) xyzends, dxyz
-           xyzStart(:)=xyzends(1,:)
-           call MPI_BCAST(xyzStart(1), 3, MPI_REAL, 0, iComm, iError)
-           call MPI_BCAST(dxyz(1),      3, MPI_REAL, 0, iComm, iError)
-           if (iProc == iPE) call set_block_geometry_obsolete(iBLK)
-        end if
 
         if (iProc == iPE) unusedBLK(iBLK) = .false.
 
@@ -473,7 +463,7 @@ subroutine write_octree_file
 
   call write_prefix; write(iUnitOut,*) '=> Writing restart files ...'
   open(UNITTMP_, file=trim(NameRestartOutDir)//"octree"//octree_ext, &
-       status="unknown", form="UNFORMATTED")
+       status="replace", form="UNFORMATTED")
   write(UNITTMP_) proc_dims(1),proc_dims(2),proc_dims(3)
   write(UNITTMP_) nBlockALL
 
@@ -736,11 +726,9 @@ end subroutine set_octree_body_level
 subroutine set_body_flag
   use ModProcMH
   use ModSize,ONLY:nBLK
-!^CFG IF FACEOUTERBC BEGIN
   use ModMain, ONLY : DoFixOuterBoundary,East_,Top_,&       
        ExtraBc_,DoFixExtraBoundary,TypeBC_I     
   use ModGeometry, ONLY :IsBoundaryBlock_IB,DoFixExtraBoundary_B
-!^CFG END FACEOUTERBC  
   use ModGeometry, ONLY : BodyFlg_B
   use ModOctree
   use ModMpi
@@ -768,7 +756,7 @@ subroutine set_body_flag
              inBlockPtr%ptr%body = tmp_logical_list(inBLK,inPE)
      end do
   end do
-!^CFG IF FACEOUTERBC BEGIN
+
   if(DoFixExtraBoundary)then
 
      tmp_logical_list = .false.
@@ -804,7 +792,7 @@ subroutine set_body_flag
         end do
      end do
   end if
-!^CFG END FACEOUTERBC
+
   deallocate(tmp_logical_list)
 
 end subroutine set_body_flag

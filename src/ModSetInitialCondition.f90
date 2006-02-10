@@ -7,6 +7,7 @@ subroutine set_ICs
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
   use ModNumConst
+  use ModUser, ONLY: user_heat_source, user_set_ICs
   implicit none
 
   real :: Rmax, SinSlope, CosSlope
@@ -38,11 +39,7 @@ subroutine set_ICs
   Flux_VY = cZero
   Flux_VZ = cZero
 
-
-
-
-  if(UsePartImplicit)&                              !^CFG IF IMPLICIT
-       call init_conservative_facefluxes(globalBLK) !^CFG IF IMPLICIT
+  call init_conservative_facefluxes(globalBLK)
 
   if(unusedBLK(globalBLK))then  
      do iVar=1,nVar
@@ -54,7 +51,7 @@ subroutine set_ICs
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     select case (problem_type)                !^CFG IF NOT SIMPLE BEGIN
+     select case (problem_type)
      case(problem_dissipation)                    !^CFG IF DISSFLUX
         if(.not.restart) call set_ICs_diss_test   !^CFG IF DISSFLUX
      case (problem_uniform)
@@ -150,14 +147,14 @@ subroutine set_ICs
         ! Calculate the volume averaged heating sources
         ! (Heliosphere).
         !/
-        if(UseUserHeating)     call user_heat_source           !^CFG IF USERFILES
+        if(UseUserHeating)     call user_heat_source
         if(.not.restart)then
            !\
            ! Initialize solution quantities (Heliosphere).
            !/
            Rmax = max(21.00, sqrt(x2**2+y2**2+z2**2))
-           if (UseInertial) then 
-              where (R_BLK(:,:,:,globalBLK) > 1.00)
+           if (.not.UseRotatingFrame) then 
+              where (R_BLK(:,:,:,globalBLK) > rBody)
                  State_VGB(rho_,:,:,:,globalBLK) = 1.00/R_BLK(:,:,:,globalBLK)**3
                  State_VGB(P_,:,:,:,globalBLK) = inv_g*State_VGB(rho_,:,:,:,globalBLK)
                  State_VGB(rhoUx_,:,:,:,globalBLK) = State_VGB(rho_,:,:,:,globalBLK)* &
@@ -180,7 +177,7 @@ subroutine set_ICs
                  State_VGB(Bz_,:,:,:,globalBLK)=0.00
               end where
            else
-              where (R_BLK(:,:,:,globalBLK) > 1.00)
+              where (R_BLK(:,:,:,globalBLK) > rBody)
                  State_VGB(rho_,:,:,:,globalBLK) = 1.00/R_BLK(:,:,:,globalBLK)**3
                  State_VGB(P_,:,:,:,globalBLK) = inv_g*State_VGB(rho_,:,:,:,globalBLK)
                  State_VGB(rhoUx_,:,:,:,globalBLK) = State_VGB(rho_,:,:,:,globalBLK)* &
@@ -304,7 +301,7 @@ subroutine set_ICs
            end where
         end if
 
-     case (problem_earth)                       !^CFG END SIMPLE
+     case (problem_earth)
         !\
         ! Initialize solution variables for
         ! Earth Magnetosphere flow problem.
@@ -329,7 +326,7 @@ subroutine set_ICs
            end do;end do;end do
         end if
 
-     case (problem_saturn,problem_jupiter)    !^CFG IF NOT SIMPLE BEGIN
+     case (problem_saturn,problem_jupiter)
         !\
         ! Initialize solution variables for
         ! Saturn and Jupiter Magnetosphere flow problem.
@@ -458,10 +455,9 @@ subroutine set_ICs
            end do;end do;end do
         end if
 
-     end select             !^CFG END SIMPLE             
-     if(UseUserICs) call user_set_ICs       !^CFG IF USERFILES
+     end select
+     if(UseUserICs) call user_set_ICs
   end if ! unusedBLK
-!^CFG IF NOT SIMPLE BEGIN
   ! Eliminate B1 around body if necessary
   if(.not.restart)then
      if(UseConstrainB)then  !^CFG IF CONSTRAINB BEGIN
@@ -483,7 +479,6 @@ subroutine set_ICs
         end if
      end if                 !^CFG IF CONSTRAINB
   end if
-!^CFG END SIMPLE 
   !\
   ! Compute energy from set values above.
   !/
@@ -491,7 +486,6 @@ subroutine set_ICs
 end subroutine set_ICs
 
 
-!^CFG IF NOT SIMPLE BEGIN
 subroutine coronal_hole_boundary(RadiusSun, sin2Theta_coronal_hole)
   implicit none
 
@@ -538,4 +532,3 @@ subroutine coronal_hole_boundary(RadiusSun, sin2Theta_coronal_hole)
   end if
 
 end subroutine coronal_hole_boundary
-!^CFG END SIMPLE 

@@ -1,5 +1,5 @@
 !==============================================================================
-subroutine option_awflux(TrueOption,NameOption)
+subroutine option_awflux_covar(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption
   character (len=40), intent(out) :: NameOption
@@ -7,11 +7,11 @@ subroutine option_awflux(TrueOption,NameOption)
   TrueOption  = .true.
   NameOption  = 'COVARIANT AW FLUX Sokolov 2.1'
 
-end subroutine option_awflux
+end subroutine option_awflux_covar
 
 !=============================================================================
 
-subroutine calc_flux_AW(DoResChangeOnly)
+subroutine calc_flux_AW_covar(DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModVarIndexes
@@ -72,12 +72,7 @@ subroutine calc_flux_AW(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1		  
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
+              FaceArea_DI(:,i)=FaceAreaI_DFB(:,iStrip,j,k,globalBLK)
 
               ! GET PRIMITIVES
               !\
@@ -120,7 +115,7 @@ subroutine calc_flux_AW(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdLAW(nStrip)	
+           call get_flux_mhdLAW_covar(nStrip)	
            !
            !\
            ! test output
@@ -190,13 +185,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-
+              FaceArea_DI(:,i)=FaceAreaJ_DFB(:,iStrip,j,k,globalBLK)
+            
               v_B0x(i) = B0xFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0y(i) = B0yFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0z(i) = B0zFace_y_BLK(iStrip,j,k,globalBLK)
@@ -230,7 +220,7 @@ subroutine calc_flux_AW(DoResChangeOnly)
            ! get fluxes
            !/
 
-           call get_flux_mhdLAW(nStrip)
+           call get_flux_mhdLAW_covar(nStrip)
            !\
            ! test output
            !/	
@@ -292,13 +282,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
            !/
            do i=1,nStrip
               iStrip=i+iStart-1
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
 
+              FaceArea_DI(:,i)=FaceAreaK_DFB(:,iStrip,j,k,globalBLK)
               !\
               ! B0 on the face
               !/
@@ -333,7 +318,7 @@ subroutine calc_flux_AW(DoResChangeOnly)
            !\
            ! get fluxes
            !/
-           call get_flux_mhdLAW(nStrip)	
+           call get_flux_mhdLAW_covar(nStrip)	
 
            if(oktest_row) then
               do i=iStart,iStart+nStrip-1
@@ -384,10 +369,10 @@ Contains
 
   end subroutine test_fluxes_wri
 
-end subroutine calc_flux_AW
+end subroutine calc_flux_AW_covar
 
 !==========================================================================
-subroutine get_flux_mhdLAW(nStrip)
+subroutine get_flux_mhdLAW_covar(nStrip)
   use ModFlux
   use ModNumConst
   use ModMain,      ONLY: x_,y_,z_
@@ -573,4 +558,4 @@ subroutine get_flux_mhdLAW(nStrip)
           Fl_rf(Bx_,i)*v_B1x_lf(i)+Fl_rf(By_,i)*&
           v_B1y_lf(i)+Fl_rf(Bz_,i)*v_B1z_lf(i)
   end do
-end subroutine get_flux_mhdLAW
+end subroutine get_flux_mhdLAW_covar
