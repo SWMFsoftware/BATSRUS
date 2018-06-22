@@ -164,9 +164,11 @@ contains
           ! number of particles per field line (average)
           call read_var('nParticlePerLine', nParticlePerLine)
           ! check correctness
-          if(nFieldLineMax <= 0) call stop_mpi(NameSub//&
+          if(nFieldLineMax <= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
                ': invalid max number of field lines')
-          if(nParticlePerLine <= 0) call stop_mpi(NameSub//&
+          if(nParticlePerLine <= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
                ': invalid number of particles per field lines')              
           !--------------------------------------------------------------
           ! read min and max values for space step
@@ -186,7 +188,8 @@ contains
           if(index(StringInitMode, 'preset') > 0)then
              call read_var('nLineInit', nLineInit)
              if(nLineInit <= 0)&
-                  call stop_mpi(NameSub // &
+                  call stop_mpi(&
+                  NameThisComp//':'//NameSub // &
                   ": invalid number of initialized particle lines")
              allocate(XyzLineInit_DI(MaxDim, nLineInit))
              do iLine = 1, nLineInit; do iDim = 1, MaxDim
@@ -195,7 +198,8 @@ contains
           elseif(index(StringInitMode, 'import') > 0)then
              ! do nothing: particles are imported from elsewhere
           else
-             call stop_mpi(NameSub //": unknown initialization mode")
+             call stop_mpi(&
+                  NameThisComp//':'//NameSub //": unknown initialization mode")
           end if
           !--------------------------------------------------------------
           call read_var('OrderMode', StringOrderMode, IsLowerCase=.true.)
@@ -283,6 +287,7 @@ contains
     integer :: nLineThisProc! number of new field lines initialized locally
     integer :: nLineAllProc ! number of new field lines initialized on all PEs
     integer :: nParticleOld ! number of already existing regular particles
+    integer :: nParticleAll ! number of all particles on all PEs
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
@@ -351,6 +356,12 @@ contains
 
        call trace_particles(KindEnd_, particle_line)
 
+       ! check that the allowed number of particles hasn't been exceeded
+       call count_all_particles()
+       if(nParticleAll > nParticlePerLine*nFieldLineMax)&
+            call stop_mpi(&
+            NameThisComp//':'//NameSub//': max number of particles exceeded')
+       
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
        if(iDirTrace < 0 .and. iTraceMode == 0)then
@@ -384,6 +395,21 @@ contains
          nLineAllProc = nLineThisProc
       end if
     end subroutine count_new_lines
+    !==========================================================================
+    subroutine count_all_particles()
+      ! gather information from all processors on how many new field lines
+      ! have been started
+      use ModMpi
+      use BATL_mpi, ONLY: iComm, nProc
+      integer:: iError
+      !------------------------------------------------------------------------
+      if(nProc>1)then
+         call MPI_Allreduce(Particle_I(KindReg_)%nParticle, nParticleAll, 1, &
+              MPI_INTEGER, MPI_SUM, iComm, iError)
+      else
+         nParticleAll = Particle_I(KindReg_)%nParticle
+      end if
+    end subroutine count_all_particles
     !==========================================================================
     subroutine compute_cosbr()
       use ModMain, ONLY: UseB0
@@ -525,7 +551,7 @@ contains
        call stage1
 
     case default
-       call stop_mpi(NameSub//': Unknown stage ID')
+       call stop_mpi(NameThisComp//':'//NameSub//': Unknown stage ID')
     end select
 
     if(IsEndOfSegment) RETURN
@@ -622,6 +648,15 @@ contains
       ! correct the direction to prevent the line from closing
       if(UseCorrection) &
            call correct(DirLine_D)
+
+      ! check whether direction reverses in a sharp turn:
+      ! this is an indicator of a problem, break tracing of the line
+      if(sum(StateEnd_VI(DirX_:DirZ_,  iParticle) * DirLine_D) < 0)then
+         call mark_undefined(KindEnd_, iParticle)
+         IsEndOfSegment = .true.
+         RETURN
+      end if
+
       ! save the direction to correct the next step
       StateEnd_VI(DirX_:DirZ_,  iParticle) = DirLine_D
       ! get final location
@@ -824,6 +859,9 @@ contains
        iParticleEnd   = Particle_I(KindEnd_)%nParticle
     end if
     do iParticle = iParticleStart, iParticleEnd
+       if(Particle_I(KindReg_)%nParticle == nParticlePerLine*nFieldLineMax)&
+            call stop_mpi(&
+            NameThisComp//':'//NameSub//': max number of particles exceeded')
        Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
        StateReg_VI(iVarCopy_I, Particle_I(KindReg_)%nParticle) =&
             StateEnd_VI(iVarCopy_I, iParticle)
@@ -1008,7 +1046,7 @@ contains
        ! do nothing, full time step has been finished
        IsEndOfSegment = .true.
     case default
-       call stop_mpi(NameSub//': Unknown stage ID')
+       call stop_mpi(NameThisComp//':'//NameSub//': Unknown stage ID')
     end select
     call test_stop(NameSub, DoTest)
   contains
@@ -1043,7 +1081,8 @@ contains
          i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
-              call stop_mpi(NameSub//": zero or negative plasma density")
+              call stop_mpi(&
+              NameThisComp//':'//NameSub//": zero or negative plasma density")
          ! convert momentum to velocity
          V_D = V_D + &
               State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock) / &
@@ -1161,7 +1200,8 @@ contains
        NameVar = '"X", "Y", "Z"'
        NameVar = trim(NameVar)//', "FieldLine"'
     case default
-       call stop_mpi(NameSub//' ERROR invalid plot form='//plot_form(iFile))
+       call stop_mpi(&
+            NameThisComp//':'//NameSub//' ERROR invalid plot form='//plot_form(iFile))
     end select
 
     ! name of output files
