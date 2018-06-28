@@ -1,0 +1,134 @@
+#ECHO
+T			DoEcho
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+1			nK
+64			MinBlockALL
+
+#GRID
+8			nRootBlockX
+8			nRootBlockY
+1			nRootBlockZ
+0.0			xMin
+1.0			xMax
+0.0			yMin
+1.0			yMax
+0.0			zMin
+1.0			zMax
+
+#UPDATECHECK
+F                      UseUpdateCheck
+40.                     RhoMinPercent
+200.                    RhoMaxPercent
+40.                     pMinPercent
+200.                    pMaxPercent
+
+#GAMMA
+5/3			Gamma
+
+#UNIFORMSTATE
+25/9			rho (left state)
+0			Ux
+0.0			Uy
+0.0			Uz
+0			Bx
+0			By
+0			Bz
+5/3			P
+
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+ux			Ux 
+1.0			Width
+-1.0			Amplitude
+-1			LambdaX  
+1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+uy			Ux 
+1.0			Width
+1.0			Amplitude
+1			LambdaX  
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+bx			Bx 
+1.0			Width
+-1.0			Amplitude
+-1			LambdaX  
+1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+by			By 
+1.0			Width
+1.0			Amplitude
+0.5			LambdaX  
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+
+#USERINPUTEND   ----------------
+
+#OUTERBOUNDARY
+periodic			xMinBc
+periodic   	        xMaxBc
+periodic     		yMinBc
+periodic		yMaxBc
+reflect			zMinBc
+reflect			zMaxBc
+
+#SCHEME      2 ghost cells
+5                       nOrder
+Rusanov                   TypeFlux
+mc3                     TypeLimiter
+1.2                     LimiterBeta
+
+#RUNGEKUTTA
+3		nStage
+0.6		CflExpl
+
+
+#SAVELOGFILE
+F		DoSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#SAVEINITIAL
+T		DoSaveInitial
+
+#SAVEPLOT
+1			nPlotfile
+z=0 var idl_ascii       PlotString
+-1                       DnSavePlot
+0.05                     DtSavePlot
+0.0                     DxSavePlot
+{MHD}
+g                       NamePar
+
+#STOP
+-1		MaxIteration
+1		tSimulationMax
