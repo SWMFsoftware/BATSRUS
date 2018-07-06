@@ -85,6 +85,8 @@ module ModCoronalHeating
   logical :: UseStochasticHeating = .false.
   real :: StochasticExponent = 0.34
   real :: StochasticAmplitude = 0.18
+  ! Use a lookup table for linear Landau and transit-time damping of KAWs
+  integer :: iTableHeatPartition = -1
 
   logical :: DoInit = .true.
 
@@ -509,8 +511,11 @@ contains
 
   !============================================================================
   subroutine init_coronal_heating
-    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_, &
-         UnitU_
+
+    use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, &
+         UnitX_, UnitU_
+    use ModMultiFluid,  ONLY: UseMultiIon, nIonFluid
+    use ModLookupTable, ONLY: i_lookup_table
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_coronal_heating'
@@ -531,6 +536,16 @@ contains
 
     PoyntingFluxPerB = PoyntingFluxPerBSi &
          *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
+
+    ! if multi-ion, then use lookup table to determine the linear Landau
+    ! and transit-time damping of kinetic Alfven waves
+    if(UseMultiIon)then
+       iTableHeatPartition = i_lookup_table('heatpartition')
+       if(.not. iTableHeatPartition > 0) &
+            call stop_mpi('Heat partition table required for multi-ion')
+       if(nIonFluid /= 2) &
+            call stop_mpi('multi-ion heat partitioning only works for 2 ions')
+    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine init_coronal_heating
@@ -1113,8 +1128,9 @@ contains
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
-         nIonFluid, IonFirst_, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
+         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
          iPparIon_I
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
@@ -1123,7 +1139,7 @@ contains
 
     integer :: iIon
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
-    real :: Ne, B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
+    real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: Emajor, EwavePlus, EwaveMinus
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
@@ -1132,6 +1148,8 @@ contains
     real :: QratioProton
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
          CascadeTime_I, Qcascade_I
+    real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
+    real :: Value_I(3)
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
@@ -1144,13 +1162,6 @@ contains
           Qtotal = CoronalHeating
        end if
 
-       TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
-       if(UseMultiIon)then
-          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
-          TeByTp = TeByTp*State_VGB(iRhoIon_I(1),i,j,k,iBlock)/Ne
-       end if
-
        if(UseB0) then
           B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
@@ -1159,15 +1170,54 @@ contains
        B2 = max(sum(B_D**2), 1e-30)
        B = sqrt(B2)
 
-       BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
-       BetaProton = 2.0*State_VGB(iPIon_I(1),i,j,k,iBlock)/B2
+       RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
-       ! waves contributes to electron and parallel proton heating
-       DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
-            *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
-       DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
-            *exp(-1.3/max(BetaProton, 1.0e-8))
+       ! waves contributes to electron and parallel ion heating
+       if(UseMultiIon)then
+          if(UseAnisoPressure)then
+             Ppar = State_VGB(iPparIon_I(1),i,j,k,iBlock)
+          else
+             Ppar = State_VGB(iPIon_I(1),i,j,k,iBlock)
+          end if
+          BetaParProton = 2.0*Ppar/B2
+          Np = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+          Na = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
+               /MassIon_I(nIonFluid)
+          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
+          Tp = State_VGB(iPIon_I(1),i,j,k,iBlock)/Np
+          Ta = State_VGB(iPIon_I(nIonFluid),i,j,k,iBlock)/Na
+          Te = State_VGB(Pe_,i,j,k,iBlock)/Ne
+
+          ! difference bulk speed between alphas and protons
+          Udiff_D = State_VGB( &
+               iRhoUxIon_I(nIonFluid):iRhoUzIon_I(nIonFluid),i,j,k,iBlock) &
+               /State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
+               -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
+               /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+          Upar = sum(Udiff_D*B_D)/B
+          Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+
+          call interpolate_lookup_table(iTableHeatPartition, &
+               BetaParProton, Upar/Valfven, Tp/Ta, Tp/Te, Na/Np, &
+               Value_I, DoExtrapolate = .false.)
+
+          DampingPar_I(1) = Value_I(1)
+          DampingPar_I(nIonFluid) = Value_I(3)
+          DampingElectron = Value_I(2)
+       else
+          TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
+               /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
+
+          BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
+          BetaProton = 2.0*State_VGB(iPIon_I(1),i,j,k,iBlock)/B2
+
+          DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
+               *(1.0 + 0.17*BetaProton**1.3) &
+               /(1.0 +(2800.0*BetaElectron)**(-1.25))
+          DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
+               *exp(-1.3/max(BetaProton, 1.0e-8))
+       end if
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
@@ -1181,8 +1231,6 @@ contains
           ! Sign of fractional cross helicity
           SignWave = sign(1.0, EwavePlus-EwaveMinus)
        end if
-
-       RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
 
        Qcascade_I(nIonFluid) = Qtotal
 
@@ -1207,18 +1255,9 @@ contains
           ! For protons the following would be DeltaU at ion gyro radius
           DeltaU = sqrt(Emajor/RhoProton/sqrt(LperpInvGyroRad))
 
-          ! For other ions, correct for velocity difference between iIon
+          ! For other ions, correct for velocity difference between alphas
           ! and protons
           if(iIon > 1)then
-             ! difference bulk speed between iIon and protons
-             Udiff_D = &
-                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) &
-                  /State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
-                  -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
-                  /RhoProton
-             Upar = sum(Udiff_D*B_D)/B
-
-             Valfven = B/sqrt(RhoProton)
              ! parallel ion thermal speed
              Vpar2 = 2.0*Ppar/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)
 
@@ -1246,7 +1285,7 @@ contains
              HeatFraction_I(iIon) = &
                   DampingPerp_I(iIon)/(1.0 + DampingPerp_I(iIon))
 
-             ! Subtract energy that is used for stochastic heating of iIon
+             ! Subtract energy that is used for stochastic heating of alphas
              Qcascade_I(iIon-1) = Qcascade_I(iIon)*(1.0 - HeatFraction_I(iIon))
              Emajor = Emajor*(1.0 - HeatFraction_I(iIon))
           end if
