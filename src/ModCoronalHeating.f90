@@ -1198,8 +1198,15 @@ contains
           Upar = sum(Udiff_D*B_D)/B
           Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
 
+          ! The damping rates in the lookup table are only for Alfven modes
+          ! propagating in the same direction as the alpha-proton drift
+          ! (i.e. forward mode). Drift breaks the symmetrical behavior of
+          ! forward and backward propagating modes.
+          ! They are quite similar for low drift speeds, while the modes
+          ! can diverge significantly for larger drifts. For now, we ignore
+          ! this divergence by using an abs function.
           call interpolate_lookup_table(iTableHeatPartition, &
-               BetaParProton, Upar/Valfven, Tp/Ta, Tp/Te, Na/Np, &
+               BetaParProton, abs(Upar)/Valfven, Tp/Ta, Tp/Te, Na/Np, &
                Value_I, DoExtrapolate = .false.)
 
           DampingPar_I(1) = Value_I(1)
