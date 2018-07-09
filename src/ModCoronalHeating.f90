@@ -1149,7 +1149,7 @@ contains
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
          CascadeTime_I, Qcascade_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
-    real :: Value_I(3)
+    real :: Value_I(6)
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
@@ -1171,6 +1171,19 @@ contains
        B = sqrt(B2)
 
        RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+
+       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+       ! Dominant wave
+       if(nIonFluid == 1)then
+          ! This is for backward compatibility
+          Emajor = EwavePlus + EwaveMinus
+       else
+          Emajor = max(EwavePlus, EwaveMinus)
+          ! Sign of fractional cross helicity
+          SignWave = sign(1.0, EwavePlus-EwaveMinus)
+       end if
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
        ! waves contributes to electron and parallel ion heating
@@ -1198,20 +1211,27 @@ contains
           Upar = sum(Udiff_D*B_D)/B
           Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
 
-          ! The damping rates in the lookup table are only for Alfven modes
-          ! propagating in the same direction as the alpha-proton drift
-          ! (i.e. forward mode). Drift breaks the symmetrical behavior of
-          ! forward and backward propagating modes.
-          ! They are quite similar for low drift speeds, while the modes
-          ! can diverge significantly for larger drifts. For now, we ignore
-          ! this divergence by using an abs function.
+          ! The damping rates in the lookup table are for both forward
+          ! propagating Alfven modes (i.e. in same direction as the
+          ! alpha-proton drift) as well as backward propagting modes.
+          ! The sign in drift can break the symmetrical behavior of forward
+          ! and backward modes. For steady state, the Alfven modes are mostly
+          ! forward propagating.
           call interpolate_lookup_table(iTableHeatPartition, &
                BetaParProton, abs(Upar)/Valfven, Tp/Ta, Tp/Te, Na/Np, &
                Value_I, DoExtrapolate = .false.)
 
-          DampingPar_I(1) = Value_I(1)
-          DampingPar_I(nIonFluid) = Value_I(3)
-          DampingElectron = Value_I(2)
+          if(SignWave*Upar < 0.0)then
+             ! Backward propagating
+             DampingPar_I(1) = Value_I(4)
+             DampingPar_I(nIonFluid) = Value_I(6)
+             DampingElectron = Value_I(5)
+          else
+             ! Forward propagating
+             DampingPar_I(1) = Value_I(1)
+             DampingPar_I(nIonFluid) = Value_I(3)
+             DampingElectron = Value_I(2)
+          end if
        else
           TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
                /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
@@ -1224,19 +1244,6 @@ contains
                /(1.0 +(2800.0*BetaElectron)**(-1.25))
           DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
                *exp(-1.3/max(BetaProton, 1.0e-8))
-       end if
-
-       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
-
-       ! Dominant wave
-       if(nIonFluid == 1)then
-          ! This is for backward compatibility
-          Emajor = EwavePlus + EwaveMinus
-       else
-          Emajor = max(EwavePlus, EwaveMinus)
-          ! Sign of fractional cross helicity
-          SignWave = sign(1.0, EwavePlus-EwaveMinus)
        end if
 
        Qcascade_I(nIonFluid) = Qtotal
