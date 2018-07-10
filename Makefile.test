@@ -719,6 +719,8 @@ test_awsomfluids_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomFluids PARAM.in
+	cd ${TESTDIR}; cp ../data/CORONA/HeatPartition.dat.gz .
+	cd ${TESTDIR}; gunzip HeatPartition.dat.gz
 
 test_awsomfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
