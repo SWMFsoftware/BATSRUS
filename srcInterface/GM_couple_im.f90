@@ -66,8 +66,8 @@ contains
   !==========================================================================
   ! FOR CRCM COUPLING
   !==========================================================================
-  subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
-       nPointLine)
+  subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, nDensityIn, &
+       NameVar, nVarLine, nPointLine)
 
     ! Do field tracing for IM. 
     ! Provide total number of points along rays 
@@ -75,7 +75,7 @@ contains
     use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
     use CON_line_extract, ONLY: line_get
 
-    integer, intent(in)           :: iSizeIn, jSizeIn
+    integer, intent(in)           :: iSizeIn, jSizeIn, nDensityIn
     character (len=*), intent(in) :: NameVar
     integer, intent(out)          :: nVarLine, nPointLine
     real :: Radius
@@ -84,8 +84,14 @@ contains
     !---------------------------------------------------------------------
 
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       if (nDensityIn==4) then
+          if(NameVar /= &
+               'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp')&
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       else
+          if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       endif
     else if(DoAnisoPressureIMCoupling)then
        if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -112,8 +118,8 @@ contains
 
   !==========================================================================
 
-  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nVarIn, &
-       BufferLine_VI, nVarLine, nPointLine, NameVar)
+  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nDensityIn, &
+       nVarIn, BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     use ModGeometry,ONLY: x2
     use ModProcMH,  ONLY: iProc
@@ -132,7 +138,7 @@ contains
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
 
-    integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+    integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut
 
     integer, intent(in) :: nPointLine, nVarLine
@@ -142,8 +148,7 @@ contains
     integer :: nVarExtract, nPoint, iPoint, iStartPoint
     real, allocatable :: Buffer_VI(:,:)
 
-    integer :: iLat,iLon,iLine,iLocBmin
-    integer :: iIonSecond
+    integer :: iLat,iLon,iLine,iLocBmin,iIon
     real    :: SmGm_DD(3,3), XyzBminSm_D(3)
     real    :: SolarWind_V(nVar)
     character(len=100) :: NameOut
@@ -163,8 +168,14 @@ contains
 
     
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       if (nDensityIn==4) then
+          if(NameVar /= &
+               'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp')&
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       else
+          if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+               call CON_stop(NameSub//' invalid NameVar='//NameVar)
+       endif
     else if(DoAnisoPressureIMCoupling)then
        if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -185,10 +196,6 @@ contains
 
     ! Transformation matrix between CRCM(SM) and GM coordinates
     SmGm_DD = transform_matrix(Time_Simulation,TypeCoordSystem,'SMG')
-
-    ! For multifluid coupling
-    if(DoMultiFluidIMCoupling) &
-         iIonSecond = min(IonFirst_+1, IonLast_)
 
     ! The first field line starts from iPoint = 1
     iStartPoint = 1
@@ -237,10 +244,11 @@ contains
                   /cProtonMass                          ! rho in [#/m^3]
              Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)    ! p
              if(DoMultiFluidIMCoupling)then
-                Buffer_IIV(iLat, iLon, 7:8) &                      ! HpRho, OpRho
-                     = Buffer_VI(4+iRho_I(IonFirst_:iIonSecond), iLocBmin) 
-                Buffer_IIV(iLat, iLon, 9:10) &                         ! HpP,OpP
-                     = Buffer_VI(4+iP_I(IonFirst_:iIonSecond),   iLocBmin) 
+                Buffer_IIV(iLat, iLon, 7+iIon-IonFirst_) &   ! Rho for each species [kg/m3]
+                     = Buffer_VI(4+iRho_I(iIon), iLocBmin) 
+                Buffer_IIV(iLat, iLon, 10+iIon-IonFirst_) &  ! P for each species
+                     = Buffer_VI(4+iP_I(iIon),   iLocBmin)
+                
              end if
              ! Ppar and HpRho share the same index in buffer_iiv for now
              ! does not work for multifluid MHD with anisotropic pressure
