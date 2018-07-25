@@ -1129,7 +1129,7 @@ contains
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
-         iPparIon_I
+         iPparIon_I,IonFirst_
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1189,9 +1189,9 @@ contains
        ! waves contributes to electron and parallel ion heating
        if(UseMultiIon)then
           if(UseAnisoPressure)then
-             Ppar = State_VGB(iPparIon_I(1),i,j,k,iBlock)
+             Ppar = State_VGB(iPparIon_I(IonFirst_),i,j,k,iBlock)
           else
-             Ppar = State_VGB(iPIon_I(1),i,j,k,iBlock)
+             Ppar = State_VGB(iPIon_I(IonFirst_),i,j,k,iBlock)
           end if
           BetaParProton = 2.0*Ppar/B2
           Np = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
