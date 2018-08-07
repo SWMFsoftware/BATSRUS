@@ -14,6 +14,7 @@ module ModPhysics
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
+  use ModMultiFluid, ONLY: nIonFluid
 
   implicit none
   save
@@ -164,7 +165,7 @@ module ModPhysics
   real :: pOutflowSi = -1.0, pOutflow = -1.0
 
   ! Relaxation time for anisotropic pressure
-  logical :: UseConstantTau_I(nFluid)   = .false.
+  logical :: UseConstantTau_I(nFluid)   = .false. .or. nIonFluid > 1
   real    :: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
   real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
