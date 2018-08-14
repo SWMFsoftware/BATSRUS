@@ -165,7 +165,7 @@ module ModPhysics
   real :: pOutflowSi = -1.0, pOutflow = -1.0
 
   ! Relaxation time for anisotropic pressure
-  logical :: UseConstantTau_I(nFluid)   = .false. .or. nIonFluid > 1
+  logical :: UseConstantTau_I(nFluid)   =  nIonFluid > 1
   real    :: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
   real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
