@@ -79,7 +79,7 @@ stochasticheating	TypeHeatPartitioning
 #LOOKUPTABLE
 heatpartition		NameTable
 load			NameCommand
-Param/CORONA/HeatPartition.dat
+HeatPartition.dat
 ascii			TypeFile
 
 #ANISOTROPICPRESSURE
