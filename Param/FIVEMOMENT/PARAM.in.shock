@@ -103,7 +103,7 @@ float                   TypeBcBottom
 float                   TypeBcTop
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #SCHEME
 2			nOrder
