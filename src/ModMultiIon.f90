@@ -83,6 +83,11 @@ module ModMultiIon
   ! Minimum pressure ratio for a minor fluid (so it remains positive)
   real:: LowPressureRatio = 1e-10
 
+  ! OpenMP declarations
+  !$omp threadprivate( Pe_X, PE_Y, PE_Z )
+  !$omp threadprivate( PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ )
+  !$omp threadprivate( Pwave_X, Pwave_Y, Pwave_Z )
+  
 contains
   !============================================================================
 
