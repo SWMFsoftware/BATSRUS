@@ -53,7 +53,7 @@ contains
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
 
-    use ModUserInterface ! user_calc_sources
+    use ModUserInterface, ONLY:  user_calc_sources
 
     integer, intent(in):: iBlock
 
