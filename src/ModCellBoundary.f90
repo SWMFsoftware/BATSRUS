@@ -17,10 +17,11 @@ module ModCellBoundary
 
   ! Index range for the ghost cell region (for ModUser::user_set_cell_boundary)
   integer, public:: iMin, iMax, jMin, jMax, kMin, kMax
+  !$omp threadprivate( iMin,iMax,jMin,jMax,kMin,kMax )
   
   ! Local variables
   integer:: iSide, iSideMin, iSideMax
-
+ 
 contains
   !============================================================================
 
