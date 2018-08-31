@@ -6,15 +6,14 @@ module ModUser
 
   ! Revision history:
   ! Nov. 2010 Rona Oran -
-  !   1 . Added user problem AdvectSphere and comparison
-  !   to exact solution for this test problem.
-  !   2. Allow user to choose the unit of length used
-  !   in input commands #WAVE, #WAVE2 and #ADVECTSPHERE,
-  !   without affecting the actual normalization in BATSRUS.
-  !   This simplifies the way IC's are set up in the input
-  !   file. This option is useful in case this user module
-  !   is used by two coupled components with different
-  !   normalizations.
+  !   1 . Added user problem AdvectSphere and comparison to exact solution for
+  !   this test problem.
+  !   2. Allow user to choose the unit of length used in input commands #WAVE,
+  !   #WAVE2 and #ADVECTSPHERE, without affecting the actual normalization in
+  !   BATSRUS.
+  !   This simplifies the way IC's are set up in the input file. This option is
+  !   useful in case this user module is used by two coupled components with
+  !   different normalizations.
   !
   !   USAGE:
   !   #USERINPUTUNITX
@@ -22,11 +21,11 @@ module ModUser
   !   String       TypeInputUnitX
   !   real         UnitXSi
   !
-  !   If UseUSerInputUnitX = T the String is read.
-  !   String specifies the input unit of length.
+  !   If UseUSerInputUnitX = T the String is read. String specifies the input
+  !   unit of length.
   !   Options are: rPlanet, rBody, rSun, cAU, Si.
-  !   In case String='Si', the third parameter is
-  !   read, allowing any value in Si units to be chosen.
+  !   In case String='Si', the third parameter is read, allowing any value in
+  !   Si units to be chosen.
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
@@ -48,73 +47,70 @@ module ModUser
   include 'user_module.h' ! list of public methods
 
   !\
-  ! Here you must define a user routine Version number and a
-  ! descriptive string.
+  ! user routine Version number and descriptive string
   !/
-  real,              parameter :: VersionUserModule = 1.3
+  real,              parameter :: VersionUserModule = 1.4
   character (len=*), parameter :: NameUserModule = &
        'Waves and GEM, Yingjuan Ma'
 
-  character (len=20)  :: UserProblem='wave'
-
-  real                :: Width, Amplitude, Phase, &
-       LambdaX, LambdaY, LambdaZ
-  real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
+  character(len=20):: UserProblem='wave'
+  real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
+  real, dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
-  integer   :: iPower_V(nVar)=1
-  integer   :: iVar
-  logical   :: DoInitialize=.true.
+  integer :: iPower_V(nVar)=1
+  logical :: DoInitialize=.true.
 
   ! GEM challenge parameters
-  real      :: Lambda0=0.5, Az=0.1, Tp=0.5 , B0=1.0
-  real      :: GemEps = 0.0
+  real, parameter :: Lambda0=0.5, Tp=0.5 , B0=1.0
+  real :: GemEps=0.0, Az=0.1
 
   ! The (rotated) unperturbed initial state with primitive variables
-  real      :: PrimInit_V(nVar)
+  real :: PrimInit_V(nVar)
 
   ! Velocity of wave (default is set for right going whistler wave test)
-  real      :: Velocity = 169.344
+  real :: Velocity=169.344
 
   ! Entropy constant for isentropic initial condition. Only used if positive.
-  real      :: EntropyConstant = -1.0
+  real :: EntropyConstant=-1.0
 
   ! Integrate sin / cos wave over cell if true
-  logical   :: DoIntegrateWave = .false.
+  logical :: DoIntegrateWave=.false.
 
   ! Variables used by the user problem AdvectSphere
-  real      :: pBackgrndIo, uBackgrndIo, FlowAngleTheta, FlowAnglePhi
-  real      :: NumDensBackgrndIo, NumDensMaxIo
-  real      :: rSphere, rSphereIo, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo, UzNo
-  real      :: xSphereCenterInitIo, xSphereCenterInit
-  real      :: ySphereCenterInitIo, ySphereCenterInit
-  real      :: zSphereCenterInitIo, zSphereCenterInit
-  logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
+  real :: pBackgrndIo, uBackgrndIo, FlowAngleTheta, FlowAnglePhi
+  real :: NumDensBackgrndIo, NumDensMaxIo
+  real :: rSphere, rSphereIo, RhoBackgrndNo, RhoMaxNo, UxNo, UyNo, UzNo
+  real :: xSphereCenterInitIo, xSphereCenterInit
+  real :: ySphereCenterInitIo, ySphereCenterInit
+  real :: zSphereCenterInitIo, zSphereCenterInit
+  logical :: DoCalcAnalytic=.false., DoInitSphere=.false.
 
   ! Variables for the generalized power profile
-  logical                  :: IsPowerProfile_V(nVar) = .false.
-  integer, dimension(nVar) :: nPowerX_V = 1, nPowerY_V = 1, nPowerZ_V = 1
-  real, dimension(nVar)    :: CoeffX_V = 0.0, CoeffY_V = 0.0, CoeffZ_V = 0.0
+  logical                  :: IsPowerProfile_V(nVar)=.false.
+  integer, dimension(nVar) :: nPowerX_V=1, nPowerY_V=1, nPowerZ_V=1
+  real, dimension(nVar)    :: CoeffX_V=0.0, CoeffY_V=0.0, CoeffZ_V=0.0
 
   ! For updating selected variables
-  character (len=200)   :: VarsUpdate
-  integer, parameter    :: nVarsUpdateMax = 20
-  integer               :: nVarsUpdate
-  character(len=20)     :: VarsUpdate_I(nVarsUpdateMax)
-  integer, allocatable  :: iVarsUpdate_I(:)
+  character (len=200)  :: VarsUpdate
+  integer, parameter   :: nVarsUpdateMax=20
+  integer              :: nVarsUpdate
+  character(len=20)    :: VarsUpdate_I(nVarsUpdateMax)
+  integer, allocatable :: iVarsUpdate_I(:)
 
   ! Enable user units of length in input file
-  logical           :: UseUserInputUnitx = .false.
+  logical           :: UseUserInputUnitx=.false.
   character(len=20) :: TypeInputUnitX
-  real              :: InputUnitXSi = 0.0
+  real              :: InputUnitXSi=0.0
 
   ! aux. flags for problem types
-  logical :: DoAdvectSphere, DoWave, DoPipeFlow =.false., &
-       DoResistivityGaussian = .false.
+  logical :: DoAdvectSphere, DoWave, DoPipeFlow=.false., &
+       DoResistivityGaussian=.false.
 
-  logical:: UseInitialStateDefinition = .false.
+  logical:: UseInitialStateDefinition=.false.
 
   ! Variables for shockramp problem
-  logical :: DoShockramp = .false.
+  logical :: DoShockramp=.false.
+  
 contains
   !============================================================================
 
@@ -131,6 +127,7 @@ contains
     character(len=100) :: NameCommand
     character(len=500) :: StringVar
     character(len=20)  :: NameVar
+    integer :: iVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
@@ -202,7 +199,7 @@ contains
           UseUserOuterBcs = DoShockramp
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
-          UseUserICs  = .true.
+          UseUserICs = .true.
           call read_var('NameVar',   NameVar)
           call get_iVar(NameVar, iVar)
           call read_var('Width', Width)
@@ -230,7 +227,7 @@ contains
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
 
-          if (iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
+          if(iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
                ', NameVar =', NameVar_V(iVar)
 
        case('#USERINPUTUNITX')
@@ -282,7 +279,7 @@ contains
           UserProblem = 'PowerProfile'
           IsPowerProfile_V(iVar) = .true.
 
-          if (iProc == 0) write(*,*) 'Setting POWERPROFILE for iVar =', &
+          if(iProc == 0) write(*,*) 'Setting POWERPROFILE for iVar =', &
                iVar, ', NameVar =', NameVar_V(iVar)
 
        case('#PIPEFLOW')
@@ -301,11 +298,11 @@ contains
           if (allocated(iVarsUpdate_I)) deallocate(iVarsUpdate_I)
           allocate(iVarsUpdate_I(nVarsUpdate))
 
-          do iVar = 1, nVarsUpdate
+          do iVar=1,nVarsUpdate
              call get_iVar(VarsUpdate_I(iVar), iVarsUpdate_I(iVar))
           end do
 
-          if (iProc == 0) then
+          if(iProc == 0)then
              write(*,*) 'Only update vars =', NameVar_V(iVarsUpdate_I)
              write(*,*) 'Indexes          =', iVarsUpdate_I
           end if
@@ -349,7 +346,7 @@ contains
     real,dimension(nVar):: State_V, KxTemp_V, KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
     real                :: x, y, z, r, r2, Lx, Ly, HalfWidth
-    integer             :: i, j, k, iVectorVar, iVarX, iVarY
+    integer             :: i, j, k, iVectorVar, iVar, iVarX, iVarY
 
     real :: RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff = 0.0
@@ -505,7 +502,7 @@ contains
 
           if(DoIntegrateWave)then
              ! Calculate the finite volume integral of the wave over the cell
-             do iVar = 1, nVar
+             do iVar=1,nVar
                 if(iPower_V(iVar) == 1)then
                    if(KxWave_V(iVar) > 0) then
                       HalfWidth = 0.5*KxWave_V(iVar)*CellSize_DB(x_,iBlock)
@@ -540,7 +537,7 @@ contains
 
              State_V = Ampl_V
 
-             do iVectorVar = 1, nVectorVar
+             do iVectorVar=1,nVectorVar
                 iVarX = iVectorVar_I(iVectorVar)
                 iVarY = iVarX + 1
                 ! Make sure that the X and Y components of vector variables
@@ -587,7 +584,7 @@ contains
                / State_VGB(iRho_I,i,j,k,iBlock)
        end do; end do; end do
 
-       do iVar = 1, nVar
+       do iVar=1,nVar
           if(iPower_V(iVar) <= 0)then
              ! iPower==0: Tophat
              ! iPower< 0: Gaussian profile multiplied by smoother:
@@ -626,7 +623,7 @@ contains
              end do; end do; end do
           else
              ! cos^n profile
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
                 if(KxWave_V(iVar) > 0.0)then
                    if(abs(Xyz_DGB(x_,i,j,k,iBlock) &
                         + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)) &
@@ -648,7 +645,7 @@ contains
        end do
 
        ! Convert velocity to momentum
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           State_VGB(iRhoUx_I,i,j,k,iBlock) = State_VGB(iUx_I,i,j,k,iBlock) &
                *State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUy_I,i,j,k,iBlock) = State_VGB(iUy_I,i,j,k,iBlock) &
@@ -658,7 +655,7 @@ contains
        end do; end do; end do
 
        if(EntropyConstant > 0.0)then
-          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              State_VGB(iP_I,i,j,k,iBlock) = &
                   EntropyConstant*State_VGB(iRho_I,i,j,k,iBlock)**Gamma_I
           end do; end do; end do
@@ -670,7 +667,7 @@ contains
        if(DoIntegrateWave)then
           ! Convert to cell averages
           allocate(State_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-          do iVar = 1, nVar
+          do iVar=1,nVar
              ! Tophat should not be integrated.
              ! Pure cosine can be integrated analytically
              if(abs(iPower_V(iVar)) <= 1) CYCLE
@@ -743,10 +740,10 @@ contains
     case('PowerProfile')
        ! Generalized power profile:
        ! state = shockleftstate + c1*x^p1 + c2*y^p2 + c3*z^p3
-       do iVar = 1, nVar
-          if( .not.IsPowerProfile_V(iVar)) CYCLE
+       do iVar=1,nVar
+          if(.not.IsPowerProfile_V(iVar)) CYCLE
           ! set up the power profile for iVar
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
 
              ! Convert momentum to velocity
              State_VGB(iUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
@@ -1073,7 +1070,7 @@ contains
     !    if(DoTest) write(*,*)'Velocity, TimeBc, tSim, Dx=',&
     !         Velocity, TimeBc, Dx
 
-    do iVar = 1, nVar
+    do iVar=1,nVar
        ! Both of these are primitive variables
        VarsGhostFace_V(iVar) = PrimInit_V(iVar)         &
             + Ampl_V(iVar)*cos(Phase_V(iVar)            &
@@ -1231,10 +1228,9 @@ contains
                 if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
                      .and. r > rMin .and. r < rMax) CYCLE
 
-                !             if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
+                ! if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
 
-                do iVar = 1, nVar
-
+                do iVar=1,nVar
                    ! Both of these are primitive variables
                    State_VGB(iVar,i,j,k,iBlock) = PrimInit_V(iVar) &
                         + Ampl_V(iVar)*cos(Phase_V(iVar)               &
@@ -1394,10 +1390,10 @@ contains
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-!!!    if(maxval(iVarsUpdate_I) == 0) &
-!!!         call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
+    !if(maxval(iVarsUpdate_I) == 0) &
+    !  call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
 
-    do iVar = 1, nVar
+    do iVar=1,nVar
        if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then
           Flux_VX(iVar,:,:,:) = 0.0
           Flux_VY(iVar,:,:,:) = 0.0
