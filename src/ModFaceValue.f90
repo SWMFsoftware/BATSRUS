@@ -50,11 +50,12 @@ module ModFaceValue
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
-
+  
   ! Region parameters for low order scheme
   character(len=200), public:: StringLowOrderRegion = 'none'
   integer, allocatable, public:: iRegionLowOrder_I(:)
-
+  !$omp threadprivate( iRegionLowOrder_I )
+  
   ! Local variables -----------------
 
   ! Parameters for the limiter applied near resolution changes
@@ -75,7 +76,8 @@ module ModFaceValue
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
-
+  !$omp threadprivate( iVarLimitRatio_I )
+  
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
   logical :: UseDuFlat     = .false.
@@ -95,19 +97,23 @@ module ModFaceValue
 
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
-
+  !$omp threadprivate( Primitive_VG )
+  
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
-
+  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
+  
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-
+  !$omp threadprivate( UseLowOrder_I )
+  
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
-
+  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
+  
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
@@ -115,23 +121,14 @@ module ModFaceValue
   real:: Face_I(0:MaxIJK+2)
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
+  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
+  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+  
   real:: LowOrderCrit_I(1:MaxIJK+1)
   !$omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-
-  ! OpenMP declaration
-  !$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
-  !$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
-  !$omp threadprivate( iVarLimitRatio_I )
-  !$omp threadprivate( Primitive_VG )
-  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
-  !$omp threadprivate( UseLowOrder_I )
-  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
-  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
   !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
