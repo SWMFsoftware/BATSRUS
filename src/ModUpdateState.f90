@@ -291,7 +291,7 @@ contains
     end if
 
     ! Add point implicit user or multi-ion source terms
-    if (UsePointImplicit)then
+    if(UsePointImplicit)then
        if(IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock)) then
           if(UseEfield)then
              call update_point_implicit(iBlock, ion_electron_source_impl, &
