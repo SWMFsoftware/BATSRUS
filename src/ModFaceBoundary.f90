@@ -26,7 +26,7 @@ module ModFaceBoundary
 
   ! The type and index of the boundary
   character(len=20), public :: TypeBc
-
+  
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
   ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
@@ -48,6 +48,13 @@ module ModFaceBoundary
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
 
+  ! OpenMP declarations
+  !$omp threadprivate( DoResChangeOnly, TypeBc, iBoundary )
+  !$omp threadprivate( iFace,jFace,kFace,iBlockBc )
+  !$omp threadprivate( iSide )
+  !$omp threadprivate( VarsTrueFace_V, VarsGhostFace_V )
+  !$omp threadprivate( FaceCoords_D, B0Face_D, TimeBc )
+  
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -73,7 +80,7 @@ module ModFaceBoundary
   ! The lower bound of pe/p at inner boundary when the electron 
   ! pressure equation is used. 
   real :: RatioPe2P = 0
-
+  
 contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
@@ -500,16 +507,13 @@ contains
       integer:: iDir
       real:: Normal_D(MaxDim)
 
-      ! logical:: DoTestCell
+      !logical:: DoTestCell
       logical, parameter:: DoTestCell = .false.
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
 
-      ! DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
-
-      if(DoTestCell)write(*,*) NameSubSub,' starting with ijkTrue, ijkGhost=',&
-           iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
-
+      !DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest-1
+      
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
       TypeBc = TypeFaceBc_I(iBoundary)
 
