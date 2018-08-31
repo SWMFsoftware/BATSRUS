@@ -554,7 +554,7 @@ contains
 
     ! Advance time to level n+1 in case there is explicit time dependence:
     !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
-    ! so the Jacobian should be evaliated at t^n+1
+    ! so the Jacobian should be evaluated at t^n+1
 
     Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
@@ -567,7 +567,7 @@ contains
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
        ! can be restored.
        ! The implicit blocks haven't been updated, so save current state
-       do iBlockImpl = 1, nBlockImpl
+       do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
           ImplOld_VCB(:,:,:,:,iBlock) = Impl_VGB(:,1:nI,1:nJ,1:nK,iBlockImpl)
        end do
@@ -638,7 +638,7 @@ contains
        endif
 
        ! Update rhs and initial x_I if required
-       if (nIterNewton > 1) call impl_newton_loop
+       if(nIterNewton > 1) call impl_newton_loop
 
        if(DoTest.and.nBlockImpl>0)write(*,*)NameSub,&
             ': initial x_I(test), rhs(test)=',x_I(nTest),Rhs_I(nTest)
@@ -935,7 +935,7 @@ contains
   subroutine impl_newton_loop
 
     use ModProcMH
-    use ModMain, ONLY : 
+    ! use ModMain, ONLY : 
     use ModMpi
 
     integer :: i,j,k,iVar,iBlockImpl,n, iError
