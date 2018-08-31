@@ -278,6 +278,7 @@ contains
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
     use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B
+    !use omp_lib
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
 
