@@ -101,7 +101,7 @@ module ModPointImplicit
   ! Number and indexes of variables with numerical derivatives
   integer :: nVarPointImplNum = 0
   integer, allocatable :: iVarPointImplNum_I(:)
-  !$omp threadprivate( iVarPointImplNum_I )
+  !!$omp threadprivate( iVarPointImplNum_I )
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
   real:: BetaPointImpl = 1.0
@@ -260,7 +260,6 @@ contains
 
        if(iProc==0 .and. index(StringTest, NameSub)>0)then
           write(*,*)NameSub,' allocated arrays'
-          write(*,*)NameSub,': iThread,iBlock=',OMP_GET_THREAD_NUM(),iBlock
           write(*,*)NameSub,': nVarPointImpl  =', nVarPointImpl
           write(*,*)NameSub,': iVarPointImpl_I=', iVarPointImpl_I
           write(*,*)NameSub,': IsPointImplMatrixSet=', IsPointImplMatrixSet
