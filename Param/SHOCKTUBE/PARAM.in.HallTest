@@ -7,18 +7,18 @@ T                       DoEcho
 Fast Whistler wave test. Hall term is only applied at part of the domain.		StringDescription
 
 #EQUATION
-MHD                    NameEquation
-       8                            nVar
+MHD			NameEquation
+8      			nVar
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+1.40             	VersionUserModule
 
 #CHECKGRIDSIZE
-       4                              nI
-       2                              nJ
-       2                              nK
-       100                     MinBlockALL
+4                       nI
+2                       nJ
+2                       nK
+100                     MinBlockALL
 
 #PLANET
 NONE			NamePlanet
