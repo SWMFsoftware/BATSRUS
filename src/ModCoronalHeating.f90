@@ -88,6 +88,9 @@ module ModCoronalHeating
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
 
+  ! Corrected critical-balance condition
+  logical, public :: UseNewHeatPartition = .false.
+
   logical :: DoInit = .true.
 
   public :: get_coronal_heat_factor
@@ -1141,13 +1144,13 @@ contains
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
-    real :: Emajor, EwavePlus, EwaveMinus
+    real :: Emajor, Eminor, EwavePlus, EwaveMinus
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Vpar2, SignWave
     real :: QratioProton
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
-         CascadeTime_I, Qcascade_I
+         CascadeTimeMajor_I, CascadeTimeMinor_I, Qcascade_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
     real :: Value_I(6)
 
@@ -1175,14 +1178,13 @@ contains
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       ! Dominant wave
-       if(nIonFluid == 1)then
-          ! This is for backward compatibility
-          Emajor = EwavePlus + EwaveMinus
-       else
+       if(UseNewHeatPartition)then
           Emajor = max(EwavePlus, EwaveMinus)
+          Eminor = min(EwavePlus, EwaveMinus)
           ! Sign of fractional cross helicity
           SignWave = sign(1.0, EwavePlus-EwaveMinus)
+       else
+          Emajor = EwavePlus + EwaveMinus
        end if
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
@@ -1287,13 +1289,14 @@ contains
 
           Epsilon = DeltaU/Vperp
 
-          CascadeTime_I(iIon) = RhoProton*DeltaU**2/max(Qcascade_I(iIon),1e-30)
+          CascadeTimeMajor_I(iIon) = &
+               RhoProton*DeltaU**2/max(Qcascade_I(iIon),1e-30)
 
           ! Damping rate times cascade time
           DampingPerp_I(iIon) = StochasticAmplitude*DeltaU &
                *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               *CascadeTime_I(iIon)*State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
-               /RhoProton
+               *CascadeTimeMajor_I(iIon) &
+               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)/RhoProton
 
           if(iIon > 1)then
              HeatFraction_I(iIon) = &
@@ -1304,6 +1307,17 @@ contains
              Emajor = Emajor*(1.0 - HeatFraction_I(iIon))
           end if
        end do
+
+       if(UseNewHeatPartition)then
+          CascadeTimeMinor_I = &
+               max(CascadeTimeMajor_I*sqrt(Eminor/Emajor),1e-30)
+
+          ! Set k_parallel*V_Alfven = 1/t_minor and multiply by t_major
+          DampingElectron = DampingElectron*CascadeTimeMajor_I(1) &
+               /CascadeTimeMinor_I(1)
+          DampingPar_I = DampingPar_I*CascadeTimeMajor_I(1) &
+               /CascadeTimeMinor_I(1)
+       end if
 
        ! Total damping rate times cascade time around proton gyroscale
        DampingProton = DampingElectron + sum(DampingPar_I) &
