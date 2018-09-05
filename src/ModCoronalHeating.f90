@@ -1310,7 +1310,7 @@ contains
 
        if(UseNewHeatPartition)then
           CascadeTimeMinor_I = &
-               max(CascadeTimeMajor_I*sqrt(Eminor/Emajor),1e-30)
+               CascadeTimeMajor_I*max(sqrt(Eminor/Emajor),1e-8)
 
           ! Set k_parallel*V_Alfven = 1/t_minor and multiply by t_major
           DampingElectron = DampingElectron*CascadeTimeMajor_I(1) &
