@@ -53,7 +53,7 @@ contains
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
 
-    use ModUserInterface, ONLY:  user_calc_sources
+    use ModUserInterface,   ONLY: user_calc_sources
 
     integer, intent(in):: iBlock
 
@@ -734,8 +734,19 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           Source_VC(HypE_,i,j,k) = Clight*C2light * &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
-       end do; end do; end do
 
+          ! source terms for the energy equation, q/m*rho*(E dot u)
+          if(.not. UseNonconservative) then
+             Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) =  &
+                  Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k)    &
+                  + ChargePerMass_I*State_VGB(iRhoUxIon_I,i,j,k,iBlock)      &
+                  *State_VGB(Ex_,i,j,k,iBlock)                               &
+                  + ChargePerMass_I*State_VGB(iRhoUyIon_I,i,j,k,iBlock)      &
+                  *State_VGB(Ey_,i,j,k,iBlock)                               &
+                  + ChargePerMass_I*State_VGB(iRhoUzIon_I,i,j,k,iBlock)      &
+                  *State_VGB(Ez_,i,j,k,iBlock)
+          end if
+       end do; end do; end do
     end if
 
     if(UseEfield .and. .not.UsePointImplicit)then
