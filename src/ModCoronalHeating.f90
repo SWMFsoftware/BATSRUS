@@ -1144,7 +1144,7 @@ contains
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
-    real :: Emajor, Eminor, EwavePlus, EwaveMinus
+    real :: Emajor, Eminor, EwavePlus, EwaveMinus, EmajorGyro
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Vpar2, SignWave
@@ -1159,6 +1159,10 @@ contains
     if(UseStochasticHeating)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
+       ! Below we will use the total (major+minor) wave dissipation, but
+       ! the analysis is only valid for the major wave dissipation.
+       ! For the minor waves, the cascade time at the gyroscale is shorter,
+       ! which would result in a different heat partition for the minor waves.
        if(DoExtendTransitionRegion)then
           Qtotal = CoronalHeating*extension_factor(TeSi_C(i,j,k))
        else
@@ -1213,12 +1217,12 @@ contains
           Upar = sum(Udiff_D*B_D)/B
           Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
 
-          ! The damping rates in the lookup table are for both forward
-          ! propagating Alfven modes (i.e. in same direction as the
-          ! alpha-proton drift) as well as backward propagting modes.
-          ! The sign in drift can break the symmetrical behavior of forward
-          ! and backward modes. For steady state, the Alfven modes are mostly
-          ! forward propagating.
+          ! The damping rates (divided by k_parallel V_Ap) in the lookup
+          ! table are for both forward propagating Alfven modes (i.e. in
+          ! same direction as the alpha-proton drift) as well as backward
+          ! propagating modes. The sign in drift can break the symmetrical
+          ! behavior of forward and backward modes. For steady state, the
+          ! Alfven modes are mostly forward propagating.
           call interpolate_lookup_table(iTableHeatPartition, &
                BetaParProton, abs(Upar)/Valfven, Tp/Ta, Tp/Te, Na/Np, &
                Value_I, DoExtrapolate = .false.)
@@ -1268,8 +1272,13 @@ contains
                B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
           LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
 
+          EmajorGyro = Emajor/sqrt(LperpInvGyroRad)
+
+          ! Cascade timescale for z_major at the gyroscale
+          CascadeTimeMajor_I(iIon) = EmajorGyro/max(Qcascade_I(iIon),1e-30)
+
           ! For protons the following would be DeltaU at ion gyro radius
-          DeltaU = sqrt(Emajor/RhoProton/sqrt(LperpInvGyroRad))
+          DeltaU = sqrt(EmajorGyro/RhoProton)
 
           ! For other ions, correct for velocity difference between alphas
           ! and protons
@@ -1289,14 +1298,11 @@ contains
 
           Epsilon = DeltaU/Vperp
 
-          CascadeTimeMajor_I(iIon) = &
-               RhoProton*DeltaU**2/max(Qcascade_I(iIon),1e-30)
-
           ! Damping rate times cascade time
-          DampingPerp_I(iIon) = StochasticAmplitude*DeltaU &
+          DampingPerp_I(iIon) = StochasticAmplitude &
+               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
                *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               *CascadeTimeMajor_I(iIon) &
-               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)/RhoProton
+               /EmajorGyro*CascadeTimeMajor_I(iIon)
 
           if(iIon > 1)then
              HeatFraction_I(iIon) = &
@@ -1309,6 +1315,7 @@ contains
        end do
 
        if(UseNewHeatPartition)then
+          ! Cascade timescale for z_minor at the gyroscale
           CascadeTimeMinor_I = &
                CascadeTimeMajor_I*max(sqrt(Eminor/Emajor),1e-8)
 
@@ -1322,6 +1329,7 @@ contains
        ! Total damping rate times cascade time around proton gyroscale
        DampingProton = DampingElectron + sum(DampingPar_I) &
             + DampingPerp_I(1)
+
        HeatFraction_I(1) = DampingProton/(1.0 + DampingProton)
 
        QratioProton = Qcascade_I(1)/max(Qtotal, 1e-30)
