@@ -1118,7 +1118,8 @@ contains
   !============================================================================
 
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       CoronalHeating, QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
+       WaveDissipation_V, CoronalHeating, &
+       QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
@@ -1136,6 +1137,7 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: WaveDissipation_V(WaveFirst_:WaveLast_)
     real, intent(in) :: CoronalHeating
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
@@ -1148,7 +1150,7 @@ contains
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Vpar2, SignWave
-    real :: QratioProton
+    real :: QratioProton, ExtensionCoef, Qmajor
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qcascade_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
@@ -1164,10 +1166,11 @@ contains
        ! For the minor waves, the cascade time at the gyroscale is shorter,
        ! which would result in a different heat partition for the minor waves.
        if(DoExtendTransitionRegion)then
-          Qtotal = CoronalHeating*extension_factor(TeSi_C(i,j,k))
+          ExtensionCoef = extension_factor(TeSi_C(i,j,k))
        else
-          Qtotal = CoronalHeating
+          ExtensionCoef = 1.0
        end if
+       Qtotal = CoronalHeating*ExtensionCoef
 
        if(UseB0) then
           B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -1187,8 +1190,15 @@ contains
           Eminor = min(EwavePlus, EwaveMinus)
           ! Sign of fractional cross helicity
           SignWave = sign(1.0, EwavePlus-EwaveMinus)
+
+          if(SignWave > 0.0)then
+             Qmajor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
+          else
+             Qmajor = WaveDissipation_V(WaveLast_)*ExtensionCoef
+          end if
        else
           Emajor = EwavePlus + EwaveMinus
+          Qmajor = Qtotal
        end if
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
@@ -1252,7 +1262,7 @@ contains
                *exp(-1.3/max(BetaProton, 1.0e-8))
        end if
 
-       Qcascade_I(nIonFluid) = Qtotal
+       Qcascade_I(nIonFluid) = Qmajor
 
        ! Loop in reverse order for energy subtraction
        do iIon = nIonFluid, 1, -1
