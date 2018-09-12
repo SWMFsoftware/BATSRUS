@@ -547,7 +547,8 @@ contains
     use ModChromosphere,   ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C, get_tesi_c
     use ModCoronalHeating, ONLY: IsNewBlockAlfven, CoronalHeating_C, &
-         apportion_coronal_heating, get_block_heating, get_wave_reflection
+         apportion_coronal_heating, get_block_heating, get_wave_reflection, &
+         WaveDissipation_VC
     use ModFaceValue,      ONLY: calc_face_value
     use ModMultiFluid,     ONLY: IonLast_
     use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_
@@ -615,8 +616,8 @@ contains
              if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
                   CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
              call apportion_coronal_heating(i, j, k, iBlock, &
-                  CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
-                  QePerQtotal)
+                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
+                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
              select case(NameVar)
              case('qebyq')
                 PlotVar_G(i,j,k) = QePerQtotal
