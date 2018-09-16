@@ -1152,7 +1152,7 @@ contains
     real :: RhoProton, Ppar, Vpar2, SignWave
     real :: QratioProton, ExtensionCoef, Qmajor
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
-         CascadeTimeMajor_I, CascadeTimeMinor_I, Qcascade_I
+         CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qtotal_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
     real :: Value_I(6)
 
@@ -1262,7 +1262,8 @@ contains
                *exp(-1.3/max(BetaProton, 1.0e-8))
        end if
 
-       Qcascade_I(nIonFluid) = Qmajor
+       Qmajor_I(nIonFluid) = Qmajor
+       Qtotal_I(nIonFluid) = Qtotal
 
        ! Loop in reverse order for energy subtraction
        do iIon = nIonFluid, 1, -1
@@ -1285,7 +1286,7 @@ contains
           EmajorGyro = Emajor/sqrt(LperpInvGyroRad)
 
           ! Cascade timescale for z_major at the gyroscale
-          CascadeTimeMajor_I(iIon) = EmajorGyro/max(Qcascade_I(iIon),1e-30)
+          CascadeTimeMajor_I(iIon) = EmajorGyro/max(Qmajor_I(iIon),1e-30)
 
           ! For protons the following would be DeltaU at ion gyro radius
           DeltaU = sqrt(EmajorGyro/RhoProton)
@@ -1319,7 +1320,8 @@ contains
                   DampingPerp_I(iIon)/(1.0 + DampingPerp_I(iIon))
 
              ! Subtract energy that is used for stochastic heating of alphas
-             Qcascade_I(iIon-1) = Qcascade_I(iIon)*(1.0 - HeatFraction_I(iIon))
+             Qmajor_I(iIon-1) = Qmajor_I(iIon)*(1.0 - HeatFraction_I(iIon))
+             Qtotal_I(iIon-1) = Qtotal_I(iIon)*(1.0 - HeatFraction_I(iIon))
              Emajor = Emajor*(1.0 - HeatFraction_I(iIon))
           end if
        end do
@@ -1342,7 +1344,7 @@ contains
 
        HeatFraction_I(1) = DampingProton/(1.0 + DampingProton)
 
-       QratioProton = Qcascade_I(1)/max(Qtotal, 1e-30)
+       QratioProton = Qtotal_I(1)/max(Qtotal, 1e-30)
 
        QparPerQtotal_I = HeatFraction_I(1)*DampingPar_I/DampingProton &
             *QratioProton
@@ -1350,7 +1352,7 @@ contains
        QperpPerQtotal_I(1) = HeatFraction_I(1)*DampingPerp_I(1)/DampingProton &
             *QratioProton
        if(nIonFluid > 1) QperpPerQtotal_I(2:) = HeatFraction_I(2:) &
-            *Qcascade_I(2:)/max(Qtotal, 1e-30)
+            *Qtotal_I(2:)/max(Qtotal, 1e-30)
 
        QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
 
