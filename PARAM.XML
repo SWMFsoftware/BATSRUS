@@ -7178,7 +7178,7 @@ anisotropy).
 
 
 <command name="PICUNIT">
-	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
+ 	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
 	 <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
 
 #PICUNIT
@@ -7197,6 +7197,33 @@ larger. For typical magnetosphere applications a few 1000 km/s can work.
 
 Default is 1 for both parameters, which is only meaningful if the velocities
 are much smaller than 1 (e.g. in shock tube test problems).
+</command>
+
+
+<command name="PICREGIONUNIT">
+	 <parameter name="nPicRegion" type="integer" min="1"/>
+	 <for from="1" to="$nPicRegion">
+ 	   <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
+	   <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
+	   <parameter name="ScalingFactor" type="real" min="0" default="1"/>
+	 </for>
+
+#PICREGIONUNIT
+2               nPicRegion
+1.0		xUnitPicSi [m]
+3000e3		uUnitPicSi [m/s] Speed of light for the first PIC region
+8               ScalingFactor
+6400e3		xUnitPicSi [m]
+1000e3		uUnitPicSi [m/s] Speed of light for the second PIC region
+16              ScalingFactor
+
+
+Similar to command #PICUNIT, but this command allows/needs setting different
+normalization units for different PIC regions. ScalingFactor is used to 
+scale up kinetic scales. See Toth et al. 2017 for more details. 
+
+Do not use #PICUNIT and #PICREGIONUNIT at the same time. 
+
 </command>
 
 <command name="PICREGION">
