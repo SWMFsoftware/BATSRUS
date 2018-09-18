@@ -30,10 +30,12 @@ module ModPIC
   ! Coupling parameters
   integer, public :: nGhostPic   = 2  ! Number of ghost cells around PIC region
 
-  ! Conversion to PIC units
-  real, public  :: xUnitPicSi  = 1.0
-  real, public  :: uUnitPicSi  = 1.0
-  real, public  :: mUnitPicSi  = 1.0
+  ! Conversion to PIC units  
+  ! If UseSamePicUnit is true, use the same units for all PIC regions. 
+  logical, public:: UseSamePicUnit = .true. 
+  real, public :: xUnitPicSi = 1, uUnitPicSi = 1, mUnitPicSi = 1
+  real, public, allocatable  :: xUnitPicSi_I(:), uUnitPicSi_I(:), &
+       mUnitPicSi_I(:), ScalingFactor_I(:)
 
   ! File sent by the PIC code
 
@@ -71,7 +73,7 @@ contains
 
     character(len=*), intent(in):: NameCommand
 
-    integer:: iRegion
+    integer:: iRegion, nRegionPicTmp
 
     real :: xRotate, yRotate, zRotate
 
@@ -85,10 +87,41 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
+
+    case("#PICREGIONUNIT")
+       UseSamePicUnit = .false. 
+       call read_var('nPicRegion', nRegionPicTmp)
+
+       if(nRegionPic > 0 .and. nRegionPicTmp /= nRegionPic ) then
+          if(iProc==0) call stop_mpi(NameSub// &
+               ': the input nPicRegion conflicts with the existing nPicRegion')
+       endif
+       nRegionPic = nRegionPicTmp
+
+       if(allocated(xUnitPicSi_I)) deallocate( &
+            xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, ScalingFactor_I)
+       allocate( &
+            xUnitPicSi_I(nRegionPic),       &
+            uUnitPicSi_I(nRegionPic),       &
+            mUnitPicSi_I(nRegionPic),       &
+            ScalingFactor_I(nRegionPic)     )
+       
+       do iRegion = 1, nRegionPic
+          call read_var('xUnitPicSi', xUnitPicSi_I(iRegion))
+          call read_var('uUnitPicSi', uUnitPicSi_I(iRegion))
+          call read_var('ScalingFactor', ScalingFactor_I(iRegion))          
+       enddo
+       
     case("#PICBALANCE")
        call read_var('DoBalancePicBlock', DoBalancePicBlock)
     case("#PICREGION")
-       call read_var('nPicRegion', nRegionPic)
+       call read_var('nPicRegion', nRegionPicTmp)
+       if(nRegionPic > 0 .and. nRegionPicTmp /= nRegionPic ) then
+          if(iProc==0) call stop_mpi(NameSub// &
+               ': the input nPicRegion conflicts with the existing nPicRegion')
+       endif
+       nRegionPic = nRegionPicTmp
+
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
             XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI)
@@ -123,7 +156,14 @@ contains
        end do
     case("#PICREGIONROTATE")       
        DoRotatePIC = .true.
-       call read_var('nPicRegion', nRegionPic)
+
+       call read_var('nPicRegion', nRegionPicTmp)
+       if(nRegionPic > 0 .and. nRegionPicTmp /= nRegionPic ) then
+          if(iProc==0) call stop_mpi(NameSub// &
+               ': the input nPicRegion conflicts with the existing nPicRegion')
+       endif
+       nRegionPic = nRegionPicTmp
+
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
             XyzMinPic_DI, XyzMaxPic_DI, LenPic_DI, DxyzPic_DI,XyzPic0_DI)
@@ -247,21 +287,38 @@ contains
     ! the following sessions.
     if(IsPicRegionInitialized) RETURN
     IsPicRegionInitialized = .true.
+
+    if(UseSamePicUnit) then
+       if(allocated(xUnitPicSi_I)) deallocate( &
+            xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, ScalingFactor_I)
+       allocate( &
+            xUnitPicSi_I(nRegionPic),       &
+            uUnitPicSi_I(nRegionPic),       &
+            mUnitPicSi_I(nRegionPic),       &
+            ScalingFactor_I(nRegionPic)     )
+       xUnitPicSi_I = xUnitPicSi
+       uUnitPicSi_I = uUnitPicSi
+       ScalingFactor_I = HallFactorMax
+    endif
+
     IonMassPerChargeSi = IonMassPerCharge* &
          No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
-
     if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
-    mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
+    do iRegion = 1, nRegionPic      
+       mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
+            (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
+       mUnitPicSi_I(iRegion) = mUnitPicSi
 
-    if(iProc==0)then
-       write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
-       write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi
-       write(*,*) NameSub,': mUnitPicSi = ',mUnitPicSi
-       write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi
-    end if
+       if(iProc==0)then
+          write(*,*) NameSub,': iRegion = ', iRegion
+          write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
+          write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': ScalingFactor = ',ScalingFactor_I(iRegion)
+          write(*,*) NameSub,': mUnitPicSi = ',mUnitPicSi_I(iRegion)
+       end if
 
-    do iRegion = 1, nRegionPic
        ! extending the region sizes with 1 ghost cell
        do i=1, nDim
           ! Number of nodes (not cells! )
