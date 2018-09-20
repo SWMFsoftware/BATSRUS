@@ -605,7 +605,7 @@ contains
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
 
-    case('qebyq', 'qparbyq')
+    case('qebyq', 'qparbyq', 'qperpbyq', 'qparbyqa', 'qperpbyqa')
        ! Not yet generalized to multi-fluid
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
@@ -622,8 +622,15 @@ contains
              case('qebyq')
                 PlotVar_G(i,j,k) = QePerQtotal
              case('qparbyq')
-                if(UseAnisoPressure) &
-                     PlotVar_G(i,j,k) = QparPerQtotal_I(IonFirst_)
+                PlotVar_G(i,j,k) = QparPerQtotal_I(IonFirst_)
+             case('qperpbyq')
+                PlotVar_G(i,j,k) = &
+                     QPerQtotal_I(IonFirst_) - QparPerQtotal_I(IonFirst_)
+             case('qparbyqa')
+                PlotVar_G(i,j,k) = QparPerQtotal_I(IonLast_)
+             case('qperpbyqa')
+                PlotVar_G(i,j,k) = &
+                     QPerQtotal_I(IonLast_) - QparPerQtotal_I(IonLast_)
              end select
           end do; end do; end do
        else
