@@ -7706,7 +7706,7 @@ The exact effect of these parameters depends on the settings
 in the #INNERBOUNDARY command.
 
 The default values depend on the component: 
-For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K. 
+For GM rBody=3, rCurrents=4, BodyNDim = 28/cc and BodyTDim = 25000 K. 
 For SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
 The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
