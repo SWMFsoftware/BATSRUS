@@ -9,7 +9,7 @@ module ModGroundMagPerturb
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product
-  use ModConst,          ONLY: cHalfPi, cDegToRad
+  use ModConst,          ONLY: cDegToRad
 
   implicit none
   save
@@ -451,7 +451,7 @@ contains
     integer           :: k, iHemisphere, iError
     integer           :: iTheta,iPhi,iLine,iMag
     real              :: dR, r, Theta, Phi
-    real              :: dL, dS, dTheta, dPhi, SinTheta, dVol, dVolCoeff
+    real              :: dTheta, dPhi, SinTheta, dVol, dVolCoeff
     real              :: InvBr, BrRcurrents, FacRcurrents, bRcurrents
     real, dimension(3):: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
          XyzMid_D, j_D, Pert_D
