@@ -453,7 +453,8 @@ contains
     real              :: dR, r, Theta, Phi
     real              :: dL, dS, dTheta, dPhi, SinTheta, dVol, dVolCoeff
     real              :: InvBr, BrRcurrents, FacRcurrents, bRcurrents
-    real, dimension(3):: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, XyzMid_D, j_D, Pert_D
+    real, dimension(3):: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
+         XyzMid_D, j_D, Pert_D
     real              :: FacRcurrents_II(nTheta,nPhi)
     real              :: bRcurrents_DII(3,nTheta,nPhi)
 
@@ -519,9 +520,7 @@ contains
           ! Calculate volume element multiplied by |Br|
           ! dVolume = dS_sphere*dR = dS_tube*dL and dR/dL = Br/|B|
           BrRcurrents = abs(sum(bRcurrents_D*XyzRcurrents_D))/rCurrents
-          !dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
-          ! This is the incorrect formula we had before
-          dVolCoeff   = abs(bRcurrents)*dR*rCurrents**2*SinTheta*dTheta*dPhi
+          dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
 
           do k = 1, nR
 
@@ -551,10 +550,6 @@ contains
              do iMag = 1, nMag
                 Xyz_D = Xyz_DI(:,iMag)
                 
-                ! Why??? What about FAC on opposite sides of the earth?
-                if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
-                     .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
-
                 ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                 Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
                      /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
