@@ -56,11 +56,13 @@ module ModB0
 
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
-
+  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
+  
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
-
+  !$omp threadprivate( CurlB0_DC, DivB0_C )
+  
   ! Local variables
 
   ! B0 field at the resolution change interfaces
@@ -71,9 +73,6 @@ module ModB0
   ! Lookup table related variables
   integer:: iTableB0 = -1
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
-
-  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  !$omp threadprivate( CurlB0_DC, DivB0_C )
   !$omp threadprivate( iTableB0, rMinB0, rMaxB0, dLonB0, FactorB0 )
   
 contains
