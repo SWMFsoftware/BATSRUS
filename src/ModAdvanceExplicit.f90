@@ -74,7 +74,7 @@ contains
 
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
-       if(UseResistivity)  call set_resistivity
+       if(UseResistivity) call set_resistivity
 
        if(iStage==1) then
           if(UseArtificialVisco .or. UseAdaptiveLowOrder) &
@@ -83,8 +83,8 @@ contains
        endif
 
        if(DoConserveFlux) then
-          do iBlock = 1, nBlock
-             if (Unused_B(iBlock)) CYCLE
+          do iBlock=1,nBlock
+             if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
              ! Calculate interface values for L/R states of each
              ! fine grid cell face at block edges with resolution changes
@@ -122,16 +122,15 @@ contains
        if(DoTest)write(*,*)NameSub,' done message pass'
 
        ! Multi-block solution update.
-       !$omp parallel
-       !$omp do
-       do iBlock = 1, nBlock
+       !$omp parallel do
+       do iBlock=1,nBlock
 
-          if (Unused_B(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
 
           ! Calculate interface values for L/R states of each face
           !   and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
-
+          
           if(DoInterpolateFlux)then
              call timing_start('calc_fluxes')
              call calc_cell_flux(iBlock)
@@ -141,22 +140,22 @@ contains
           call timing_start('calc_facevalues')
           call calc_face_value(.false., iBlock)
           call timing_stop('calc_facevalues')
-
+          
           if(body_BLK(iBlock)) &
                call set_face_boundary(iBlock, Time_Simulation,.false.)
-
+          
           if(.not.DoInterpolateFlux)then
              ! Compute interface fluxes for each cell.
              call timing_start('calc_fluxes')
              call calc_face_flux(.false., iBlock)
              call timing_stop('calc_fluxes')
           end if
-
+          
           ! Enforce flux conservation by applying corrected fluxes
           ! to each coarse grid cell face at block edges with
           ! resolution changes.
           if(DoConserveFlux) call apply_cons_flux(iBlock)
-
+          
           ! Compute source terms for each cell.
           call timing_start('calc_sources')
           call calc_source(iBlock)
@@ -198,8 +197,7 @@ contains
           call set_block_data(iBlock)
 
        end do ! Multi-block solution update loop.
-       !$omp end do
-       !$omp end parallel
+       !$omp end parallel do
 
        
        if(DoTest)write(*,*)NameSub,' done update blocks'
@@ -233,7 +231,7 @@ contains
           if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 
-       if(DoCalcTimeStep) then
+       if(DoCalcTimeStep)then
           ! Update check only works for half step 2 stages time integration.
           ! The final Dt is determined by the second stage if Dt changed by
           ! update_check subroutine.
