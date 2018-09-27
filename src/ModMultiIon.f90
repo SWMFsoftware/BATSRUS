@@ -51,19 +51,22 @@ module ModMultiIon
        Pe_X(0:nI+2,0:nJ+1,0:nK+1), &
        Pe_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pe_Z(0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( Pe_X, PE_Y, PE_Z )
+  
   ! anisotropic pe dot area on the faces for grad Pe
   real, public:: &
        PeDotArea_DX(3,0:nI+2,0:nJ+1,0:nK+1), &
        PeDotArea_DY(3,0:nI+1,0:nJ+2,0:nK+1), &
        PeDotArea_DZ(3,0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ )
+  
   ! wave pressure on the faces for grad Pwave
   real, public:: &
        Pwave_X(0:nI+2,0:nJ+1,0:nK+1), &
        Pwave_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pwave_Z(0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( Pwave_X, Pwave_Y, Pwave_Z )
+  
   ! collision coefficient
   real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
@@ -83,11 +86,6 @@ module ModMultiIon
   ! Minimum pressure ratio for a minor fluid (so it remains positive)
   real:: LowPressureRatio = 1e-10
 
-  ! OpenMP declarations
-  !$omp threadprivate( Pe_X, PE_Y, PE_Z )
-  !$omp threadprivate( PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ )
-  !$omp threadprivate( Pwave_X, Pwave_Y, Pwave_Z )
-  
 contains
   !============================================================================
 

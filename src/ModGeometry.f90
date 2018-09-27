@@ -77,7 +77,8 @@ module ModGeometry
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   ! This can be set with call set_block_jacobian_cell(iBlock)
   real, public :: DgenDxyz_DDC(MaxDim,MaxDim,nI,nJ,nK)
-
+  !$omp threadprivate( DgenDxyz_DDC )
+  
 contains
   !============================================================================
   subroutine init_mod_geometry

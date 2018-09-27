@@ -36,11 +36,11 @@ module ModBorisCorrection
   ! Electric field . area vector for div(E) in Boris correction
   real, allocatable, public:: &
        EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
-
   !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
 
   ! Speed of light at cell centers and cell faces
   real, allocatable, public:: Clight_G(:,:,:), Clight_DF(:,:,:,:)
+  !$omp threadprivate( Clight_G, Clight_DF )
   
   ! Local variables ---------------
 

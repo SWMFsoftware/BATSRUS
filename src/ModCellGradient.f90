@@ -10,7 +10,8 @@ module ModCellGradient
        IsCartesian, IsCartesianGrid, Unused_B, nBlock, MaxBlock,&
        nDim, jDim_, kDim_, x_, y_, z_, Dim1_, Dim2_, Dim3_
   use ModGeometry, ONLY: body_blk, true_cell
-
+  use omp_lib
+  
   implicit none
 
   SAVE
@@ -26,7 +27,8 @@ module ModCellGradient
   ! Local variables -------------
 
   integer, allocatable:: iTrue_G(:,:,:)
-
+  !$omp threadprivate( iTrue_G )
+  
   interface calc_gradient
      module procedure calc_gradient1, calc_gradient3
   end interface

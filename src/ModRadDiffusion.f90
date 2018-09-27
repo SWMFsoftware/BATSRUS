@@ -50,6 +50,7 @@ module ModRadDiffusion
 
   ! Logical for adding radiation diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
+  !$omp threadprivate( IsNewBlockRadDiffusion )
   logical, public :: IsNewTimestepRadDiffusion = .true.
 
   ! Logical for using the electron heat flux limiter
@@ -91,9 +92,11 @@ module ModRadDiffusion
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
+  !$omp threadprivate( Erad_WG )
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_WG(:,:,:,:)
-
+  !$omp threadprivate( Erad1_WG )
+  
   ! The electron heat flux limiter corrects the electron heat conduction if
   ! the electron temperature length scale is only a few collisonal mean free
   ! paths of the electrons or smaller.
@@ -109,11 +112,14 @@ module ModRadDiffusion
   ! electron temperature array needed for calculating the elctron temperature
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
+  !$omp threadprivate( Te_G )
   ! temporary electron temperature array needed by set_block_field
   real, allocatable :: Te1_G(:,:,:)
-
+  !$omp threadprivate( Te1_G )
+  
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-
+  !$omp threadprivate( FluxImpl_VFD )
+  
 contains
   !============================================================================
 
@@ -197,8 +203,10 @@ contains
     end if
 
     if(UseFullImplicit)then
+       !$omp parallel
        allocate(Erad_WG(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-
+       !$omp end parallel
+       
        nDiff = 1
        allocate(iDiff_I(nDiff))
        iDiff_I(1) = WaveFirst_
@@ -211,12 +219,14 @@ contains
 
     if(UseSemiImplicit)then
 
+       !$omp parallel
        allocate(Erad_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        allocate(Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
        allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        allocate(Te1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-
+       !$omp end parallel
+       
        ! Default to zero, unless reset
        iTeImpl = 0; iErImplFirst = 0; iErImplLast = 0;
        iDiffHeat = 0; iDiffRadFirst = 0; iDiffRadLast = 0
@@ -476,7 +486,8 @@ contains
 
     ! Variables for the electron heat flux limiter
     logical :: IsNewBlockTe = .false.
-
+    !$omp threadprivate( IsNewBlockTe )
+    
     real :: State_V(nVar)
     integer :: iVarSemi_
 

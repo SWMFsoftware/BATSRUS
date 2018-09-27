@@ -238,7 +238,8 @@ contains
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
-
+    use omp_lib
+    
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
 
@@ -252,13 +253,13 @@ contains
     real   :: InvDx2, InvDy2, InvDz2
 
     integer:: iBlockLast = -1
-
+    !$omp threadprivate( iBlockLast )
+    
     ! Exclude body cells
     character(len=*), parameter:: NameSub = 'get_current'
     !--------------------------------------------------------------------------
     if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
-
        RETURN
     endif
 
@@ -460,7 +461,7 @@ contains
       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
-
+      
     end subroutine calc_cartesian_j
     !==========================================================================
 
