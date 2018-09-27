@@ -10,6 +10,7 @@ module ModWaves
   use ModPhysics,    ONLY: GammaWave
   use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
   use ModSize,       ONLY: nI, nJ, nK
+  use omp_lib
 
   implicit none
 
@@ -31,7 +32,8 @@ module ModWaves
   integer, parameter :: AlfvenWaveMinusLast_  = WaveLast_
 
   real :: AlfvenSpeed  ! Auxiliary variable
-
+  !$omp threadprivate( AlfvenSpeed )
+  
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
@@ -88,7 +90,8 @@ module ModWaves
 
   real :: WaveEnergy = 0.0 ! Auxiliary variable
   real :: DivU_C(nI,nJ,nK) = 0.0       ! Auxiliary variable
-
+  !$omp threadprivate( WaveEnergy, DivU_C )
+  
 contains
   !============================================================================
   subroutine read_waves_param(NameCommand)
