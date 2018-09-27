@@ -7178,7 +7178,7 @@ anisotropy).
 
 
 <command name="PICUNIT">
-	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
+ 	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
 	 <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
 
 #PICUNIT
@@ -7197,6 +7197,33 @@ larger. For typical magnetosphere applications a few 1000 km/s can work.
 
 Default is 1 for both parameters, which is only meaningful if the velocities
 are much smaller than 1 (e.g. in shock tube test problems).
+</command>
+
+
+<command name="PICREGIONUNIT">
+	 <parameter name="nPicRegion" type="integer" min="1"/>
+	 <for from="1" to="$nPicRegion">
+ 	   <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
+	   <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
+	   <parameter name="ScalingFactor" type="real" min="0" default="1"/>
+	 </for>
+
+#PICREGIONUNIT
+2               nPicRegion
+1.0		xUnitPicSi [m]
+3000e3		uUnitPicSi [m/s] Speed of light for the first PIC region
+8               ScalingFactor
+6400e3		xUnitPicSi [m]
+1000e3		uUnitPicSi [m/s] Speed of light for the second PIC region
+16              ScalingFactor
+
+
+Similar to command #PICUNIT, but this command allows/needs setting different
+normalization units for different PIC regions. ScalingFactor is used to 
+scale up kinetic scales. See Toth et al. 2017 for more details. 
+
+Do not use #PICUNIT and #PICREGIONUNIT at the same time. 
+
 </command>
 
 <command name="PICREGION">
@@ -7641,7 +7668,7 @@ value read.
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
-3.0			rBody (user units)
+3.0			rBody
 4.0			rCurrents (only read for GM component)
 1.0			BodyNDim (/cc) for fluid 1
 10000.0			BodyTDim (K)   for fluid 1
@@ -7650,11 +7677,18 @@ T			UseBody (rest of parameters read if true)
 
 #BODY
 T			UseBody (rest of parameters read if true)
-3.0			rBody (user units)
+3.0			rBody
 4.0			rCurrents (only read for GM component)
 1.0			BodyNDim (/cc) for species 1
 0.01			BodyNDim (/cc) for species 2
 300.0			BodyTDim (K)
+
+#MAGNETOSPHERE
+T                       UseBody (rest of parameters read if true)
+2.5                     rBody
+3.5                     rCurrents (only read for GM component)
+28.0                    BodyRhoDim (/cc)
+25000.0                 BodyTDim (K)
 
 Note that the #BODY command is most useful for Cartesian grids so that a sphere
 can be cut out as the inner boundary.
@@ -7665,11 +7699,11 @@ If UseBody is true, the inner boundary is a spherical surface
 with radius rBody. The rBody is defined in units of the planet/solar
 radius. It can be 1.0, in which case the simulation extends all the
 way to the surface of the central body. In many cases it is more
-economic to use an rBody larger than 1.0. 
+economic to use an rBody larger than 1.
 
 The rCurrents parameter defines where the currents are calculated for
-the GM-IE coupling. This only matters if BATSRUS is running as GM
-and it is coupled to IE.
+the GM-IE coupling as well as for calculating the FAC contribution
+of ground magnetic field perturbations.
 
 The BodyNDim and BodyTDim parameters define the number density and temperature
 inside the body, respectively. For multifluid MHD the number density and 
@@ -7680,6 +7714,8 @@ in the #INNERBOUNDARY command.
 
 The default values depend on the component: 
 For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K. 
+However, the above #MAGNETOSPHERE example shows the typically used values
+for Earth running with a single ion fluid. 
 For SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
 The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
