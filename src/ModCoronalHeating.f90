@@ -12,7 +12,8 @@ module ModCoronalHeating
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use ModExpansionFactors, ONLY: get_bernoulli_integral
-
+  use omp_lib
+  
   implicit none
   SAVE
 
@@ -63,7 +64,8 @@ module ModCoronalHeating
   logical,public :: UseWaveReflection = .true.
 
   logical,public :: IsNewBlockAlfven = .true.
-
+  !$omp threadprivate( IsNewBlockAlfven )
+  
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
@@ -72,7 +74,8 @@ module ModCoronalHeating
   ! Arrays for the calculated heat function and dissipated wave energy
   real,public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real,public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
-
+  !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
+  
   character(len=lStringLine) :: TypeHeatPartitioning
 
   ! Switch whether to use uniform heat partition
