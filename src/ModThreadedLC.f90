@@ -23,7 +23,7 @@ module ModThreadedLC
   !/
   !\
   ! The plasma properties dependent coefficient needed to evaluate the
-  ! eefect of gravity on the hydrostatic equilibrium
+  ! effect of gravity on the hydrostatic equilibrium
   !/
   use ModFieldLineThread, ONLY:  &
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
