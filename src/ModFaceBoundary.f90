@@ -23,37 +23,38 @@ module ModFaceBoundary
 
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
+  !$omp threadprivate( DoResChangeOnly )
 
   ! The type and index of the boundary
   character(len=20), public :: TypeBc
+  !$omp threadprivate( TypeBc )
   
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
   ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
   ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY
   integer, public :: iBoundary
+  !$omp threadprivate( iBoundary )
 
   ! Index of the face
   integer, public :: iFace, jFace, kFace, iBlockBc
-
+  !$omp threadprivate( iFace,jFace,kFace,iBlockBc )
+  
   ! The side of the cell defined with respect to the cell inside the domain
   integer, public :: iSide
-
+  !$omp threadprivate( iSide )
+  
   ! The values on the physical side and the ghost cell side of the boundary
   real, public :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
-
+  !$omp threadprivate( VarsTrueFace_V, VarsGhostFace_V )
+  
   ! The coordinates of the face center and the B0 field at that point
   real, public :: FaceCoords_D(3), B0Face_D(3)
-
+  !$omp threadprivate( FaceCoords_D, B0Face_D )
+  
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
-
-  ! OpenMP declarations
-  !$omp threadprivate( DoResChangeOnly, TypeBc, iBoundary )
-  !$omp threadprivate( iFace,jFace,kFace,iBlockBc )
-  !$omp threadprivate( iSide )
-  !$omp threadprivate( VarsTrueFace_V, VarsGhostFace_V )
-  !$omp threadprivate( FaceCoords_D, B0Face_D, TimeBc )
+  !$omp threadprivate( TimeBc )
   
   ! Local variables
 
