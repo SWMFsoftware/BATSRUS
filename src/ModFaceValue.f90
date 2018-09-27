@@ -106,7 +106,6 @@ module ModFaceValue
   
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-  !$omp threadprivate( UseLowOrder_I )
   
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -904,7 +903,7 @@ contains
        end if
     end if
     if(UseAccurateResChange .or. nOrder==4)then
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           call calc_primitives         ! all cells
        end do; end do; end do
        if(nOrder == 4 .and. UseVolumeIntegral4)then
@@ -920,7 +919,7 @@ contains
           Prim_VG = Primitive_VG
 
           ! Convert to pointwise conservative variable (eq. 12)
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
 
              ! Store cell averaged value
              State_V = State_VGB(:,i,j,k,iBlock)
@@ -1521,6 +1520,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
+      !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
 
@@ -1682,6 +1682,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
+      !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -1838,6 +1839,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VZ(:,:,:,:)
+      !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -2777,8 +2779,8 @@ contains
     real:: LowOrderCrit_X(nIFace,nJ,nK)
     real:: LowOrderCrit_Y(nI,nJFace,nK)
     real:: LowOrderCrit_Z(nI,nJ,nKFace)
-    integer:: cLowOrder = 1
-    real:: cSmall = 1e-6
+    integer, parameter:: cLowOrder = 1
+    real, parameter:: cSmall = 1e-6
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_low_order_face'
