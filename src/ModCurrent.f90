@@ -564,7 +564,8 @@ contains
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
 
-    real, allocatable :: bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
+    ! Interpolation weight, interpolated agnetic field and current 
+    real, allocatable :: bCurrent_VII(:,:,:)
 
     integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3),B0_D(3)
@@ -578,11 +579,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.allocated(bCurrentLocal_VII)) allocate( &
-         bCurrentLocal_VII(0:6,nTheta,nPhi), &
-         bCurrent_VII(0:6,nTheta,nPhi))
+    if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6,nTheta,nPhi))
 
-    bCurrentLocal_VII = 0.0
     bCurrent_VII      = 0.0
 
     Fac_II = 0.0
@@ -622,7 +620,7 @@ contains
 
              if(iHemisphere == 0) then
                 ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
-                bCurrentLocal_VII(:,i,j) = &
+                bCurrent_VII(:,i,j) = &
                      (/1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
                 CYCLE
              end if
@@ -645,10 +643,10 @@ contains
           ! Extract currents and magnetic field for this position
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
 
-          bCurrentLocal_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
-          bCurrentLocal_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+          bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
+          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
                State_V(Bx_-1)*B0_D
-          bCurrentLocal_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+          bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
           if(.false. .and. i==6 .and. j==6)then
              write(*,*)'iHemispher=',iHemisphere
@@ -657,14 +655,14 @@ contains
              write(*,*)'Xyz_D    =',Xyz_D
              write(*,*)'rCurrents=',rCurrents, sqrt(sum(Xyz_D**2))
              write(*,*)'B0_D     =',B0_D
-             write(*,*)'bCurrentLocal_VII =',bCurrentLocal_VII(:,i,j)
+             write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
              call stop_mpi('DEBUG')
           end if
        end do
     end do
 
-    call MPI_reduce(bCurrentLocal_VII,bCurrent_VII,nTheta*nPhi*7, &
-         MPI_REAL,MPI_SUM,0,iComm,iError)
+    call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
+         iComm,iError)
 
     !\
     ! Map the field aligned current to rIn sphere
@@ -722,14 +720,14 @@ contains
              end if
              ! store the field alinged current
              Fac_II(i,j) = Fac
-             ! store the B field in SM coordinates !!
 
+             ! store the B field in SM coordinates !!
              bSm_DII(:,i,j) = matmul(bIn_D, GmSmg_DD)
 
           end do
        end do
     end if
-    deallocate(bCurrentLocal_VII, bCurrent_VII)
+    deallocate(bCurrent_VII)
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
