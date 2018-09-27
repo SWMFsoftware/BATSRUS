@@ -26,7 +26,8 @@ module ModRadiativeCooling
   ! in RadCooling
 
   real :: RadCooling_C(1:nI,1:nJ,1:nK)
-
+  !$omp threadprivate( RadCooling_C )
+  
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   ! erg = 1e-7 J
        /1.0e-6    ! cm3 = 1e-6 m3
