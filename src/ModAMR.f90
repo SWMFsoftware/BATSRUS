@@ -6,7 +6,6 @@ module ModAMR
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
-
   use ModCellGradient, ONLY: calc_gradient
 
   implicit none
@@ -746,19 +745,19 @@ contains
     character(len=*), parameter:: NameSub = 'fix_amr_limits'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if    (CellSizeMax < -1.E-6) then
+    if(CellSizeMax < -1.E-6)then
        MinAmrLevel = -1
-    elseif(CellSizeMax <  1.E-6) then
+    elseif(CellSizeMax < 1.E-6)then
        MinAmrLevel = 99
     else
-       do j = 1, 99
+       do j=1,99
           MinAmrLevel = j - 1
           if ( RootDx/(2**j) < CellSizeMax) EXIT
        end do
     end if
-    if    (CellSizeMin < -1.E-6) then
+    if(CellSizeMin < -1.E-6)then
        MaxAmrLevel = -1
-    elseif(CellSizeMin <  1.E-6) then
+    elseif(CellSizeMin < 1.E-6)then
        MaxAmrLevel = 99
     else
        do j=1,99

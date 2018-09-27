@@ -24,7 +24,6 @@ module ModPartSteady
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VGB
   use BATL_lib,      ONLY: Unused_B, Unused_BP
-
   use ModMpi
 
   implicit none
@@ -68,7 +67,7 @@ contains
             iTypeAdvance_BP(1:nBlockMax,:) <= SteadyBlock_
 
        ! Change the decomposition index
-       iNewDecomposition=mod(iNewDecomposition+1, 10000)
+       iNewDecomposition = mod(iNewDecomposition+1, 10000)
     else
        ! Restore the original unused blocks
        Unused_BP(1:nBlockMax,:) = &

@@ -72,6 +72,9 @@ F
 1.0                     AverageIonCharge [e]
 1.0/5.0                 ElectronTemperatureRatio
 
+#TEST
+krylov
+
 #KRYLOV
 GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
 nul             	TypeInitKrylov (nul, old, explicit, scaled)
@@ -160,8 +163,6 @@ F                       UseUserUpdateStates
 #USERINPUTBEGIN --------------------
 
 #RESISTIVEPLANET
--1			PlanetDensitySI
--1                      PlanetPressureSI
 1.0                     PlanetRadius
 5                       nResistivPoints
 1.05                    Radius
@@ -210,5 +211,5 @@ y=0 VAR idl             StringPlot
 {default}                       NamePars
 
 #STOP
-10			MaxIteration
+5			MaxIteration
 -1.0			tSimulationMax

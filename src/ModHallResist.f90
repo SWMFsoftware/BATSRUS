@@ -7,6 +7,7 @@ module ModHallResist
        test_start, test_stop
 
   use ModSize, ONLY: nI, nJ, nK, MaxDim, j0_, nJp1_, k0_, nKp1_
+  use omp_lib
 
   implicit none
 
@@ -28,6 +29,7 @@ module ModHallResist
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
   logical, public:: IsNewBlockCurrent=.true.
+  !$omp threadprivate( IsNewBlockCurrent )
 
   ! Coefficient for taking whistler wave speed into account
   real, public:: HallCmaxFactor = 1.0
@@ -39,16 +41,20 @@ module ModHallResist
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
   real:: IonMassPerChargeCoef
+  !$omp threadprivate( IonMassPerCharge_G )
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:)
-
+  !$omp threadprivate( HallJ_CD )
+  
   ! Hall factor on the faces and in the cell centers
   real, public, allocatable:: HallFactor_DF(:,:,:,:), HallFactor_C(:,:,:)
-
+  !$omp threadprivate( HallFactor_DF, HallFactor_C )
+  
   ! Logical is true if call set_hall_factor* sets any non-zero hall factors
   logical, public:: IsHallBlock
-
+  !$omp threadprivate( IsHallBlock )
+  
   ! Local variables ---------
 
   ! Description of the region where Hall effect is used
@@ -70,7 +76,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if (DoTest) then
+    if(DoTest)then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
@@ -83,6 +89,7 @@ contains
        write(*,*) ''
     end if
 
+    !$omp parallel
     if(.not.allocated(HallJ_CD)) allocate(              &
          HallJ_CD(nI,nJ,nK,MaxDim),                     &
          IonMassPerCharge_G(0:nI+1,j0_:nJp1_,k0_:nKp1_) )
@@ -90,7 +97,8 @@ contains
     HallJ_CD = 0.0
 
     IonMassPerCharge_G = IonMassPerCharge
-
+    !$omp end parallel
+    
     ! This is used in combination with normalized density
     ! divided by SI charge density.
     IonMassPerChargeCoef = &
@@ -243,7 +251,7 @@ contains
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
     HallFactor_C = HallFactor_C*IonMassPerCharge_G(1:nI,1:nJ,1:nK)
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_hall_factor_cell
   !============================================================================
@@ -267,7 +275,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(HallFactor_DF)) &
          allocate(HallFactor_DF(nDim,nINode,nJNode,nKNode))
-
+       
     if(.not.allocated(iRegionHall_I))then
        IsHallBlock = .true.
        HallFactor_DF = HallFactorMax
@@ -281,7 +289,7 @@ contains
        ! Multiply by HallFactorMax
        if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
     end if
-
+    
     if(present(UseIonMassPerCharge))then
        if(.not.UseIonMassPerCharge) RETURN
     end if
@@ -289,25 +297,25 @@ contains
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
 
-    do k=1, nK; do j=1,nJ; do i=1, nI+1
+    do k=1,nK; do j=1,nJ; do i=1,nI+1
        HallFactor_DF(1,i,j,k) = HallFactor_DF(1,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i-1:i,j,k))
     end do; end do; end do
 
     if(nDim == 1) RETURN
 
-    do k=1, nK; do j=1,nJ+1; do i=1, nI
+    do k=1,nK; do j=1,nJ+1; do i=1,nI
        HallFactor_DF(2,i,j,k) = HallFactor_DF(2,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j-1:j,k))
     end do; end do; end do
 
     if(nDim == 2) RETURN
 
-    do k=1, nK+1; do j=1,nJ; do i=1, nI
+    do k=1,nK+1; do j=1,nJ; do i=1,nI
        HallFactor_DF(3,i,j,k) = HallFactor_DF(3,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j,k-1:k))
     end do; end do; end do
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_hall_factor_face
   !============================================================================

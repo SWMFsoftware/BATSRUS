@@ -38,27 +38,26 @@ module ModResistivity
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0=0.0, Eta0Si=0.0
-
   real, public              :: Si2NoEta
 
   ! Local variables
-  logical :: UseJouleHeating  = .true.
-  logical :: DoMessagePassResistivity = .false.
-  logical :: UseCentralDifference = .false.            
+  logical :: UseJouleHeating=.true.
+  logical :: DoMessagePassResistivity=.false.
+  logical :: UseCentralDifference =.false.            
 
-  real :: EtaPerpSpitzerSi = 0.0
-  real :: CoulombLogarithm = 20.0
+  real :: EtaPerpSpitzerSi=0.0
+  real :: CoulombLogarithm=20.0
   real :: Eta0AnomSi=0.0, Eta0Anom
   real :: EtaMaxAnomSi=0.0, EtaMaxAnom
   real :: JcritAnomSi=1.0, JcritInv
-  real :: EtaCoeff = 0.0
-  real :: JoverBCrit = 0.0
+  real :: EtaCoeff=0.0
+  real :: JoverBCrit=0.0
 
   ! Description of the region where resistivity is used
   character(len=200):: StringResistRegion ='none'
 
   ! Indexes of regions defined with the #REGION commands
-  integer, allocatable:: iRegionResist_I(:)
+  integer, allocatable :: iRegionResist_I(:)
 
   ! resistivity pre-multiplied by the face area vector
   real, allocatable :: Eta_DFDB(:,:,:,:,:,:)
@@ -73,7 +72,7 @@ module ModResistivity
   integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
   ! Include resistive fluxes at all?
-  logical :: DoResistiveFlux = .true.
+  logical :: DoResistiveFlux=.true.
 
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 contains
@@ -169,7 +168,7 @@ contains
             TypeResistivity
        Eta_GB = 0.0
     end if
-
+    
     ! The following will ensure that the explicit evaluation of the
     ! resistive diffusion is switched off
     if(UseSemiResistivity) UseResistiveFlux = .false.
@@ -209,8 +208,8 @@ contains
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-    do iBlock = 1, nBlock
-       if (Unused_B(iBlock)) CYCLE
+    do iBlock=1,nBlock
+       if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
        case('constant')
           Eta_GB(:,:,:,iBlock) = Eta0
@@ -238,7 +237,7 @@ contains
 
     if(DoMessagePassResistivity) &
          call message_pass_cell(Eta_GB, nWidthIn=1)
-
+    
     call test_stop(NameSub, DoTest)
   end subroutine set_resistivity
   !============================================================================
@@ -378,18 +377,19 @@ contains
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
-    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
+    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, By_, Bz_, Energy_
     use ModAdvance,    ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure, UseAnisoPe
-
+    use omp_lib
+    
     integer, intent(in):: iBlock
 
     ! Variables needed for Joule heating
     real :: Current_D(3), JouleHeating
 
-    integer:: i, j, k
+    integer :: i, j, k
 
-    logical :: DoTestCell = .false.
+    logical :: DoTestCell
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_resistivity_source'
@@ -397,14 +397,14 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     JouleHeating = 0.0
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    
+    do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. &
             i == iTest .and. j == jTest .and. k == kTest
 
-       if (DoTestCell) then
+       if(DoTestCell)then
           write(*,*) NameSub, ': initial JouleHeating    =', &
                JouleHeating
           write(*,*) NameSub, ': initial P source        =', &
@@ -417,8 +417,8 @@ contains
                Source_VC(Ppar_,i,j,k)
           write(*,*) NameSub, ': initial energy source   =', &
                Source_VC(Energy_,i,j,k)
-          write(*,*) NameSub, ': initial Bz source       =', &
-               Source_VC(Bz_,i,j,k)
+          write(*,*) NameSub, ': initial By source       =', &
+               Source_VC(By_,i,j,k)
        end if
 
        if(UseAnisoPe) call stop_mpi(NameSub// &
@@ -429,7 +429,8 @@ contains
           JouleHeating = GammaElectronMinus1 &
                * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
        end if
-       if(UseElectronPressure) then
+       
+       if(UseElectronPressure)then
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
           ! Remove Joule heating from ion energy equation
           if(UseResistiveFlux) &
@@ -457,21 +458,21 @@ contains
                - Eta_GB(i,j,k,iBlock)*Current_D(x_)/Xyz_DGB(2,i,j,k,iBlock)
        end if
 
-       if (DoTestCell) then
+       if(DoTestCell)then
           write(*,*) NameSub, ': corrected JouleHeating  =', &
                JouleHeating
           write(*,*) NameSub, ': corrected P source      =', &
                Source_VC(P_,i,j,k)
-          if (UseElectronPressure) &
+          if(UseElectronPressure) &
                write(*,*) NameSub, ': corrected Pe source     =', &
                Source_VC(Pe_,i,j,k)
-          if (UseAnisoPressure) &
+          if(UseAnisoPressure) &
                write(*,*) NameSub, ': corrected Ppar source     =', &
                Source_VC(Ppar_,i,j,k)
           write(*,*) NameSub, ': corrected energy source =', &
                Source_VC(Energy_,i,j,k)
-          write(*,*) NameSub, ': initial Bz source       =', &
-               Source_VC(Bz_,i,j,k)
+          write(*,*) NameSub, ': initial By source       =', &
+               Source_VC(By_,i,j,k)
        end if
     end do; end do; end do
 
@@ -490,7 +491,7 @@ contains
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
-    integer:: i, j, k, iBlock
+    integer :: i, j, k, iBlock
     logical :: DoTestCell
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_heat_exchange'
@@ -503,10 +504,10 @@ contains
 
     call set_resistivity
 
-    do iBlock = 1, nBlock
-       if (Unused_B(iBlock)) CYCLE
+    do iBlock=1,nBlock
+       if(Unused_B(iBlock)) CYCLE
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           DoTestCell = DoTest .and. iBlock == iBlockTest .and. &
@@ -564,7 +565,7 @@ contains
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                + DtLocal*GammaElectronMinus1*HeatExchangePeP
 
-          if (DoTestCell) then
+          if(DoTestCell)then
              write(*,*) NameSub, ': corrected State_VGB(P_)  =', &
                   State_VGB(P_,i,j,k,iBlock)
              if (UseAnisoPressure) then
@@ -594,14 +595,14 @@ contains
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
     use BATL_lib, ONLY: nBlock, Unused_B, iProc
+    use omp_lib
 
     real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlock)
 
     ! Initialize variables for RHS and Jacobian calculation
     ! and find the blocks that require semi-implicit solver
 
-    integer:: i, j, k, iBlock
-
+    integer:: i, j, k, iBlock, iBlockSemi
     logical:: IsSemiBlock
 
     logical:: DoTest
@@ -614,7 +615,7 @@ contains
 
     ! Collect the semi-implicit blocks
     nBlockSemi = 0
-    do iBlock = 1, nBlock
+    do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
        ! Check if the block needs to be advanced with semi-implicit scheme
@@ -630,14 +631,18 @@ contains
 
        ! Store index mapping
        iBlockFromSemi_B(nBlockSemi) = iBlock
-
+    end do
+    
+    !$omp parallel do
+    do iBlockSemi=1,nBlockSemi
        ! Store the magnetic field in SemiAll_VCB
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,nBlockSemi) = &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlockFromSemi_B(iBlockSemi))
        end do; end do; end do
     end do
-
+    !$omp end parallel do
+    
     if(DoTest) write(*,*) NameSub,' iProc, nBlockSemi=', iProc, nBlockSemi
 
     call test_stop(NameSub, DoTest)
@@ -650,9 +655,9 @@ contains
          CellFace_DB, FaceNormal_DDFB, nBlock, Unused_B
     use ModNumConst,     ONLY: i_DD
 
-    integer:: iDim, i, j, k, Di, Dj, Dk, iBlock
-    real:: Eta
-    real:: FaceNormal_D(nDim)
+    integer :: iDim, i, j, k, Di, Dj, Dk, iBlock
+    real :: Eta
+    real :: FaceNormal_D(nDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_impl_resistivity'
@@ -667,27 +672,29 @@ contains
     ! Message pass resistivity to fill in ghost cells
     call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
-    do iBlock = 1, nBlock
+    !$omp parallel do private( Di,Dj,Dk,FaceNormal_D,Eta )
+    do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
        Eta_DFDB(:,:,:,:,:,iBlock) = 0.0
 
-       do iDim = 1, nDim
+       do iDim=1,nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           if(IsCartesian)then
              FaceNormal_D = 0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
           end if
-          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+          do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
              if(.not.IsCartesian) &
                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
 
-             Eta= 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
+             Eta = 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
 
              Eta_DFDB(:,i,j,k,iDim,iBlock) = Eta*FaceNormal_D
           end do; end do; end do
        end do
     end do
-
+    !$omp end parallel do
+    
     call test_stop(NameSub, DoTest)
   end subroutine init_impl_resistivity
   !============================================================================
@@ -704,13 +711,13 @@ contains
     use ModHallResist,   ONLY: UseHallResist, &
          set_hall_factor_face, HallFactor_DF, IsHallBlock, HallCmaxFactor
 
-    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
+    integer :: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
 
-    real:: HallCoeff, Rho, b_D(MaxDim)
+    real :: HallCoeff, Rho, b_D(MaxDim)
 
-    real:: InvDxyz
+    real :: InvDxyz
 
-    real:: FaceNormal_D(nDim)
+    real :: FaceNormal_D(nDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_impl_hall_resist'
@@ -726,7 +733,7 @@ contains
     if(HallCmaxFactor > 0 .and. .not.allocated(WhistlerCoeff_FDB)) &
          allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
-    do iBlock = 1, nBlock
+    do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
        Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
@@ -735,13 +742,13 @@ contains
        call set_hall_factor_face(iBlock)
        if(.not.IsHallBlock) CYCLE
 
-       do iDim = 1, nDim
+       do iDim=1,nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          if(HallCmaxFactor > 0 .and.  IsCartesian) then
+          if(HallCmaxFactor > 0 .and. IsCartesian) then
              InvDxyz = 1./CellSize_DB(iDim,iBlock)
              FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
           end if
-          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+          do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
 
              ! Check if the Hall coefficient is positive for this face
              HallCoeff = HallFactor_DF(iDim,i,j,k)
@@ -807,17 +814,19 @@ contains
     use ModHallResist,   ONLY: HallCmaxFactor
     use ModCellGradient, ONLY: calc_cell_curl_ghost
     use ModCoordTransform, ONLY: determinant
-
+    use omp_lib
+    
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
     ! resistive flux for operator split scheme
-    real, allocatable, save :: FluxImpl_VFD(:,:,:,:,:)
-
+    real :: FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim)
+    
     real :: DetJ, InvDxHalf, InvDyHalf, InvDzHalf
     real, allocatable :: Egen_DG(:,:,:,:)
+
     real :: dBgen_D(3)
     real :: InvJac_DD(3,3)
     
@@ -829,7 +838,8 @@ contains
     character(len=*), parameter:: NameSub = 'get_resistivity_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(DoTest)write(*,*)NameSub,' true cell=',true_cell(iTest,jTest,ktest,iBlockTest)
+    if(DoTest) write(*,*) NameSub,' true cell=',&
+         true_cell(iTest,jTest,ktest,iBlockTest)
 
     IsNewBlock = .true.
 
@@ -837,9 +847,6 @@ contains
 
     ! Should we keep this or not?
     !if(.not. true_BLK(iblock)) RETURN
-
-    if(.not.allocated(FluxImpl_VFD)) allocate( &
-         FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim))
 
     if(.not.UseCentralDifference)then
        ! Loop over face directions
@@ -1127,7 +1134,6 @@ contains
     use ModImplicit,     ONLY: UseNoOverlap, nStencil
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: true_cell
-    use ModImplicit,     ONLY: nStencil
     use ModAdvance,      ONLY: B_
 
     integer, intent(in):: iBlock
@@ -1136,7 +1142,7 @@ contains
 
     integer :: iB
     integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
-    integer:: iVar, jVar
+    integer :: iVar, jVar
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
 
     logical:: DoTest
@@ -1517,7 +1523,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = NewSemiAll_VC(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do

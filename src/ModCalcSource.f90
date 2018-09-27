@@ -101,7 +101,7 @@ contains
 
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
-       do iFluid = 1, nFluid
+       do iFluid=1,nFluid
           call select_fluid
 
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
@@ -110,7 +110,7 @@ contains
              if(UseViscosity)call set_visco_factor_cell(iBlock)
 
              ! Source terms for anisotropic pressure equations
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 DoTestCell = DoTest .and. i==iTest .and. &
                      j==jTest .and. k==kTest
 
@@ -193,7 +193,7 @@ contains
           end if
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
              DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
@@ -218,7 +218,7 @@ contains
     end if
 
     if(UseWavePressure)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseMultiIon)then
@@ -635,7 +635,7 @@ contains
     end if
 
     ! These source terms apply to all the fluids
-    do iFluid = 1, nFluid
+    do iFluid=1,nFluid
        call select_fluid
        if(UseGravity)then
           ! Add gravitational force
@@ -652,7 +652,7 @@ contains
              end do; end do; end do
 
              if(UseBody2)then
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do k=1,nK; do j=1,nJ; do i=1,nI
                    if(.not.true_cell(i,j,k,iBlock)) CYCLE
                    ForcePerRho_D = Gbody2 &
                         * (Xyz_DGB(:,i,j,k,iBlock)-(/xBody2,yBody2,zBody2/)) &
@@ -667,7 +667,7 @@ contains
              end if
           else
              iRhoUGrav = iRhoUx - 1 + GravityDir
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &
                      + Gbody*State_VGB(iRho,i,j,k,iBlock)
@@ -766,7 +766,7 @@ contains
          call calc_source_rad_diffusion(iBlock)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
@@ -786,7 +786,7 @@ contains
     end if
 
     if(DoTest) call write_source('final')
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================

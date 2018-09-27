@@ -156,7 +156,7 @@ contains
     ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
     ! and heat exchange between electrons and ions (mult-ion is not coded).
-
+    
     if(.not.UseMultiIon .and. UseResistivity .and. &
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
@@ -195,6 +195,7 @@ contains
                * State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron - 1)
        end do; end do; end do
     end if
+
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
        Source_VC(:,i,j,k) = &
@@ -204,7 +205,7 @@ contains
             + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
             /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do
-
+       
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
        ! Integrate fluxes in the transverse direction (eq. 20)
        ! <F> = F + Laplace_transverse(F)/24
@@ -385,7 +386,7 @@ contains
       end if
 
       ! Now update State_VGB
-
+      
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -394,7 +395,7 @@ contains
          end do; end do; end do
 
          ! Update energy variables
-         do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
                  + Source_VC(nVar+iFluid,i,j,k)
@@ -471,12 +472,12 @@ contains
          ! Interpolation step for 2nd and 3rd order Runge-Kutta schemes
 
          ! Runge-Kutta scheme coefficients
-         if (nStage==2) then
+         if(nStage==2)then
             Coeff1 = 0.5
-         elseif (nStage==3) then
-            if (iStage==2) then
+         elseif(nStage==3)then
+            if(iStage==2)then
                Coeff1 = 0.75
-            elseif (iStage==3) then
+            elseif(iStage==3)then
                Coeff1 = 1./3.
             end if
          end if
@@ -490,7 +491,7 @@ contains
          end do; end do; end do
 
          ! Interpolate energies
-         do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  Coeff1*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
                  Coeff2*Energy_GBI(i,j,k,iBlock,iFluid)
@@ -1483,12 +1484,12 @@ contains
             write(*,*) NameSub, ': default IsConserv is true'
     endif
 
-    do iBlock = 1, nBlock
+    do iBlock=1,nBlock
        if( Unused_B(iBlock) ) CYCLE
 
        ! Apply geometry based criteria
        ! Any of these can switch from conservative to non-conservative
-       do iCrit = 1, nConservCrit
+       do iCrit=1,nConservCrit
           select case(TypeConservCrit_I(iCrit))
           case('r')
              ! Switch to non-conservative inside radius rConserv
