@@ -91,7 +91,7 @@ module ModUser
   real, dimension(nVar)    :: CoeffX_V=0.0, CoeffY_V=0.0, CoeffZ_V=0.0
 
   ! For updating selected variables
-  character (len=200)  :: VarsUpdate
+  character(len=200)   :: VarsUpdate
   integer, parameter   :: nVarsUpdateMax=20
   integer              :: nVarsUpdate
   character(len=20)    :: VarsUpdate_I(nVarsUpdateMax)
@@ -106,7 +106,7 @@ module ModUser
   logical :: DoAdvectSphere, DoWave, DoPipeFlow=.false., &
        DoResistivityGaussian=.false.
 
-  logical:: UseInitialStateDefinition=.false.
+  logical :: UseInitialStateDefinition=.false.
 
   ! Variables for shockramp problem
   logical :: DoShockramp=.false.
@@ -349,10 +349,10 @@ contains
     integer             :: i, j, k, iVectorVar, iVar, iVarX, iVarY
 
     real :: RhoLeft, RhoRight, pLeft
-    real :: ViscoCoeff = 0.0
+    real :: ViscoCoeff
 
     ! For 4th order scheme
-    real:: Laplace
+    real :: Laplace
     real, allocatable:: State_G(:,:,:)
 
     logical:: DoTest
@@ -450,15 +450,15 @@ contains
 
        ! Start filling in cells (including ghost cells)
 
-       if (DoInitSphere) then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       if(DoInitSphere)then
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              x = Xyz_DGB(x_,i,j,k,iBlock)
              y = Xyz_DGB(y_,i,j,k,iBlock)
              z = Xyz_DGB(z_,i,j,k,iBlock)
              r = sqrt((x - xSphereCenterInit)**2 + &
                   (y - ySphereCenterInit)**2 + &
                   (z - zSphereCenterInit)**2)
-             if (r <= rSphere)then
+             if(r <= rSphere)then
                 ! inside the sphere
                 ! State_VGB(rho_,i,j,k,iBlock) = RhoMaxNo ! for tophat
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo + &
@@ -481,7 +481,7 @@ contains
        ! pressure
        State_VGB(p_,    :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
 
-       if (TypeCoordSystem =='HGC') then
+       if(TypeCoordSystem =='HGC')then
           ! Transform to HGC frame - initially aligned with HGI, only velocity
           ! and/or momentum in X-Y plane should be transformed
 
@@ -522,7 +522,7 @@ contains
 
           PrimInit_V = ShockLeftState_V
 
-          if (UseUserInputUnitX) then
+          if(UseUserInputUnitX)then
              ! Convert to normalized units of length
              Width_V  = Width_V*rSun*Si2No_V(UnitX_)
              KxWave_V = KxWave_V/(Input2SiUnitX*Si2No_V(UnitX_))
@@ -575,7 +575,7 @@ contains
        end if
 
        ! Convert momentum to velocity
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           State_VGB(iUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
                / State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iUy_I,i,j,k,iBlock) = State_VGB(iRhoUy_I,i,j,k,iBlock) &
@@ -673,7 +673,7 @@ contains
              if(abs(iPower_V(iVar)) <= 1) CYCLE
 
              State_G = State_VGB(iVar,:,:,:,iBlock)
-             do k=1, nK; do j=1, nJ; do i = 1, nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 Laplace =                   State_G(i-1,j,k) + State_G(i+1,j,k)
                 if(nJ > 1)Laplace=Laplace + State_G(i,j-1,k) + State_G(i,j+1,k)
                 if(nK > 1)Laplace=Laplace + State_G(i,j,k-1) + State_G(i,j,k+1)
@@ -684,7 +684,7 @@ contains
           deallocate(State_G)
        end if
 
-       if (UseEfield .and. DoCorrectElectronFluid) &
+       if(UseEfield .and. DoCorrectElectronFluid) &
             call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
             1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,         &
             DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
@@ -774,7 +774,7 @@ contains
        State_VGB(Rho_,:,:,:,iBlock)   = 1.0
        State_VGB(p_,:,:,:,iBlock)     = 1.0 &
             - 0.1*(Xyz_DGB(x_,:,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
-       do k = 1,nK; do j = 1,nJ; do i = MinI,MaxI
+       do k=1,nK; do j=1,nJ; do i=MinI,MaxI
           ViscoCoeff = 1.0! Viscosity_factor(0,i,j,k,iBlock)
           if(ViscoCoeff > 0.0) then
              State_VGB(RhoUx_,i,j,k,iBlock) = &
@@ -792,7 +792,7 @@ contains
        State_VGB(Rho_,:,:,:,iBlock) = 1.0
        State_VGB(p_,:,:,:,iBlock)   = 1.0
        State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock) = 0.0
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           call get_gaussian_field(i, j, k, iBlock, &
                State_VGB(Bx_:Bz_,i,j,k,iBlock))
        end do; end do; end do
@@ -914,7 +914,7 @@ contains
 
     case('bxexact')
        if(DoResistivityGaussian)then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              call get_gaussian_field(i, j, k, iBlock, B_D)
              PlotVar_G(i,j,k) = B_D(1)
           end do; end do ; end do
@@ -1087,7 +1087,7 @@ contains
   end subroutine user_set_face_boundary
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModImplicit, ONLY: StateSemi_VGB
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
@@ -1113,10 +1113,9 @@ contains
     character (len=*), intent(in) :: TypeBc
 
     integer :: i,j,k,iVar
-    real    :: Dx, x, y, z,r, rMin, rMax
+    real    :: Dx,x,y,z,r,rMin,rMax
     real    :: OmegaSun, phi, UxAligned, UyAligned
-    real    :: ViscoCoeff = 0.0
-    !    logical :: DoTest = .false.
+    real    :: ViscoCoeff
     character (len=*), parameter :: Name='user_set_cell_boundary'
 
     ! variables for shockramp
@@ -1192,7 +1191,7 @@ contains
        case('usersemi')
           select case(iSide)
           case(2)
-             do j = MinJ, MaxJ
+             do j=MinJ,MaxJ
                 call get_gaussian_field(nI+1, j, 1, iBlock, &
                      StateSemi_VGB(1:3,nI+1,j,1,iBlock))
              end do
@@ -1225,10 +1224,8 @@ contains
                 r = r_BLK(i,j,k,iBlock)
                 r = alog(r)
 
-                if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
-                     .and. r > rMin .and. r < rMax) CYCLE
-
-                ! if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
+                if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. &
+                     z<z2 .and. r > rMin .and. r < rMax) CYCLE
 
                 do iVar=1,nVar
                    ! Both of these are primitive variables
@@ -1239,7 +1236,8 @@ contains
                         + KzWave_V(iVar)*z)
                 end do
                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                     State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
+                     State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                     State_VGB(Rho_,i,j,k,iBlock)
              end do
           end do
        end do
@@ -1249,14 +1247,17 @@ contains
 
        select case(iSide)
        case(1)
-          State_VGB(:,MinK:0,:,:,iBlock)      = 0.0
-          State_VGB(Rho_,MinK:0,:,:,iBlock)   = 1.0
-          State_VGB(p_,MinI:0,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,MinI:0,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
-          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,0
-             ViscoCoeff = 1.0! Viscosity_factor(0,i,j,k,iBlock)
-             if( ViscoCoeff > 0.0 ) then
-                State_VGB(RhoUx_,i,j,k,iBlock) = 0.5*(Xyz_DGB(y_,i,j,k,iBlock)**2 -CoordMax_D(y_)**2)*&
-                     (State_VGB(p_,i,j,k,iBlock)-1.0)/(ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock)-CoordMin_D(x_)))
+          State_VGB(:,MinK:0,:,:,iBlock)    = 0.0
+          State_VGB(Rho_,MinK:0,:,:,iBlock) = 1.0
+          State_VGB(p_,MinI:0,:,:,iBlock)   = 1.0 - 0.1*&
+               (Xyz_DGB(x_,MinI:0,:,:,iBlock) - CoordMin_D(x_))/CoordMax_D(x_)
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,0
+             ViscoCoeff = 1.0 ! Viscosity_factor(0,i,j,k,iBlock)
+             if( ViscoCoeff > 0.0 )then
+                State_VGB(RhoUx_,i,j,k,iBlock) = 0.5*&
+                     (Xyz_DGB(y_,i,j,k,iBlock)**2 - CoordMax_D(y_)**2)*&
+                     (State_VGB(p_,i,j,k,iBlock) - 1.0)/&
+                     (ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock) - CoordMin_D(x_)))
              else
                 State_VGB(RhoUx_,i,j,k,iBlock) = 0.0025
              end if
@@ -1310,7 +1311,7 @@ contains
        ! Transform to HGC frame
        ! only velocity and/ or momentum in X-Y plane should be transformed
 
-       if (TypeCoordSystem =='HGC') then
+       if(TypeCoordSystem =='HGC')then
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
           phi = OmegaSun*Time_Simulation*Si2No_V(UnitT_)
           ! calculate the uniform flow in a fixed frame that is aligned with
@@ -1318,8 +1319,10 @@ contains
           UxAligned =  UxNo*cos(phi) + UyNo*sin(phi)
           UyAligned = -UxNo*sin(phi) + UyNo*cos(phi)
 
-          State_VGB(RhoUx_,:,:,:,iBlock) = UxAligned*State_VGB(rho_,:,:,:,iBlock)
-          State_VGB(RhoUy_,:,:,:,iBlock) = UyAligned*State_VGB(rho_,:,:,:,iBlock)
+          State_VGB(RhoUx_,:,:,:,iBlock) = UxAligned*&
+               State_VGB(rho_,:,:,:,iBlock)
+          State_VGB(RhoUy_,:,:,:,iBlock) = UyAligned*&
+               State_VGB(rho_,:,:,:,iBlock)
 
           ! Now transform velocity field to a rotating frame
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
@@ -1356,7 +1359,7 @@ contains
 
     real, parameter:: RhoMin = 2.0
 
-    integer:: i, j, k
+    integer :: i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_amr_criteria'
@@ -1418,7 +1421,8 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: B_D(3)
 
-    real:: Spread, Field, AmplitudeGaussian = 10.0
+    real :: Spread, Field
+    real, parameter :: AmplitudeGaussian=10.0
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_gaussian_field'
     !--------------------------------------------------------------------------
