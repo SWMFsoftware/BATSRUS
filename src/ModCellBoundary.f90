@@ -21,6 +21,7 @@ module ModCellBoundary
   
   ! Local variables
   integer:: iSide, iSideMin, iSideMax
+  !$omp threadprivate( iSide, iSideMin, iSideMax )
  
 contains
   !============================================================================
