@@ -280,7 +280,7 @@ contains
     real :: MassBody2Si
     real :: pCoef
 
-    integer :: i, iBoundary
+    integer :: i, iBoundary, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_physics_constants'
@@ -546,8 +546,8 @@ contains
           ! wind. The other ions carry the rest. The neutrals are not included.
           ! We preserve the temperature of the solar wind, so the pressure
           ! changes proportionally to the density.
-          iFluid=IonFirst_
-          call select_fluid
+          iFluid = IonFirst_
+          call select_fluid(iFluid)
           FaceState_VI(iRho,xMinBc_:zMaxBc_) = &
                SW_Rho*(1 - LowDensityRatio*(nIonFluid - 1))
           FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
@@ -558,7 +558,7 @@ contains
                *(1.0 - LowDensityRatio*(nIonFluid-1))
 
           do iFluid = IonFirst_+1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              FaceState_VI(iRho,xMinBc_:zMaxBc_) = SW_Rho*LowDensityRatio
              FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
              FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
@@ -641,7 +641,7 @@ contains
 
     ! Convert velocity to momentum for all fluids and boundaries
     do iFluid = 1, nFluid
-       call select_fluid
+       call select_fluid(iFluid)
        CellState_VI(iRhoUx,:) = CellState_VI(iUx,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUy,:) = CellState_VI(iUy,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUz,:) = CellState_VI(iUz,:)*CellState_VI(iRho,:)
@@ -1009,7 +1009,7 @@ contains
          UseEfield, UseAnisoPe
     use ModMain,    ONLY: UseB
 
-    integer :: iVar
+    integer :: iVar, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mhd_variables'
     !--------------------------------------------------------------------------
@@ -1035,7 +1035,7 @@ contains
     end if
 
     do iFluid = 1, nFluid
-       call select_fluid
+       call select_fluid(iFluid)
        UnitUser_V(iRho)          = No2Io_V(UnitRho_)
        UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
        UnitUser_V(iP)            = No2Io_V(UnitP_)

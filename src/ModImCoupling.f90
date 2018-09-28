@@ -74,7 +74,6 @@ contains
     use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
     use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_, UseMultiSpecies
     use ModB0,       ONLY: B0_DGB
-    use ModMultiFluid, ONLY: iFluid
     use ModVarIndexes, ONLY: IonFirst_, IonLast_, IsMhd
 
     integer, intent(in)  :: iBlock
@@ -86,7 +85,7 @@ contains
 
     real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
 
-    integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
+    integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2
 
     real :: Lat,Lon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
     real :: LatMaxIm
@@ -301,7 +300,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
-         iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid
+         iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModEnergy, ONLY: calc_energy_cell
     use ModFieldTrace, ONLY: trace_field_grid
 
@@ -314,7 +313,7 @@ contains
 
     integer :: iLastPIm = -1, iLastGrid = -1
     integer :: iIonSecond, nIons
-    integer :: i, j, k, iBlock, nDensity
+    integer :: i, j, k, iBlock, iFluid, nDensity
     integer, allocatable:: iDens_I(:)
 
     logical:: DoTest

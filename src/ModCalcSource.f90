@@ -57,7 +57,7 @@ contains
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iVar
+    integer :: i, j, k, iVar, iFluid
     real :: Pe, Pwave, DivU
     real :: Coef
 
@@ -102,7 +102,7 @@ contains
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid=1,nFluid
-          call select_fluid
+          call select_fluid(iFluid)
 
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
@@ -636,7 +636,7 @@ contains
 
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
-       call select_fluid
+       call select_fluid(iFluid)
        if(UseGravity)then
           ! Add gravitational force
           if(GravityDir == 0)then

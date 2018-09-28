@@ -381,7 +381,7 @@ contains
          n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
-    use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
+    use ModMultifluid, ONLY: select_fluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
@@ -401,7 +401,7 @@ contains
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
 
-    integer :: i, j, k, iVar, iBlock, iBlockImpl
+    integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
     integer :: nIterNewton
     integer :: iError, iError1
     real    :: NormX, NormLocal_V(nVar), JacSum
@@ -472,7 +472,7 @@ contains
              if(.not. UseImplicitEnergy) CYCLE
              ! Overwrite pressure with energy
              do iFluid = 1, nFluid
-                call select_fluid
+                call select_fluid(iFluid)
                 ImplOld_VCB(iP,:,:,:,iBlock) = &
                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
              end do
@@ -718,7 +718,7 @@ contains
 
        if(UseImplicitEnergy) then
           do iFluid = 1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
           call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
@@ -1946,13 +1946,13 @@ contains
 
     use ModMain
     use ModAdvance, ONLY : State_VGB, Energy_GBI
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, iRho_I
+    use ModMultiFluid, ONLY: select_fluid, nFluid, iP, iRho_I
     use ModSize, ONLY: nG, nI, nJ, nK
 
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
     real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxImplBLK)
 
-    integer :: iBlockImpl, iBlock, i, j, k
+    integer :: iBlockImpl, iBlock, i, j, k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'explicit2implicit'
@@ -1974,7 +1974,7 @@ contains
 
        if(UseImplicitEnergy)then
           do iFluid=1,nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              Var_VGB(iP,:,:,:,iBlockImpl) = &
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
@@ -2016,12 +2016,12 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: nVar, State_VGB, Energy_GBI
     use ModEnergy,     ONLY: calc_pressure_cell, calc_energy_cell
-    use ModMultiFluid, ONLY: iFluid, nFluid, iRho, iRho_I, iP_I, iP
+    use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
 
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
-    integer :: i,j,k
+    integer :: i,j,k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'impl2expl'
@@ -2360,17 +2360,18 @@ contains
 
     use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
     use ModMultiFluid, ONLY: select_fluid, &
-         iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
+         iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModPhysics, ONLY: GammaMinus1_I, GammaMinus1
 
     real, intent(inout):: State_V(nVar)
     real :: InvRho, InvRho_I(nFluid)
+    integer :: iFluid
     character(len=*), parameter:: NameSub = 'conservative_to_primitive'
     !--------------------------------------------------------------------------
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
-          call select_fluid
+          call select_fluid(iFluid)
 
           InvRho = 1.0/State_V(iRho)
 

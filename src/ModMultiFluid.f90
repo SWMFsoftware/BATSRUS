@@ -56,7 +56,6 @@ module ModMultiFluid
   logical :: DoConserveNeutrals    = .true.
 
   ! Variables that are set for the selected fluid
-  integer :: iFluid = 1
   integer ::                           &
        iRho   = Rho_,                  &
        iRhoUx = RhoUx_, iUx = RhoUx_,  &
@@ -66,7 +65,7 @@ module ModMultiFluid
        iP     = P_,                    &
        iEnergy= nVar+1
   !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
-  !$omp threadprivate( iFluid, iUx, iUy, iUz )
+  !$omp threadprivate( iUx, iUy, iUz )
   
   character (len=20) :: NameFluid = ''
 
@@ -86,27 +85,28 @@ module ModMultiFluid
 contains
   !============================================================================
 
-  subroutine select_fluid
+  subroutine select_fluid(iFluidIn)
+    integer :: iFluidIn 
     !--------------------------------------------------------------------------
-    iRho   = iRho_I(iFluid)
-    iRhoUx = iRhoUx_I(iFluid)
-    iRhoUy = iRhoUy_I(iFluid)
-    iRhoUz = iRhoUz_I(iFluid)
-    iP     = iP_I(iFluid)
+    iRho   = iRho_I(iFluidIn)
+    iRhoUx = iRhoUx_I(iFluidIn)
+    iRhoUy = iRhoUy_I(iFluidIn)
+    iRhoUz = iRhoUz_I(iFluidIn)
+    iP     = iP_I(iFluidIn)
 
-    if(IsIon_I(iFluid)) iPpar = iPparIon_I(iFluid)
+    if(IsIon_I(iFluidIn)) iPpar = iPparIon_I(iFluidIn)
 
-    iEnergy= nVar + iFluid
+    iEnergy= nVar + iFluidIn
 
     iUx    = iRhoUx
     iUy    = iRhoUy
     iUz    = iRhoUz
 
-    NameFluid = NameFluid_I(iFluid)
+    NameFluid = NameFluid_I(iFluidIn)
 
   end subroutine select_fluid
   !============================================================================
-  subroutine extract_fluid_name(String)
+  subroutine extract_fluid_name(String,iFluidOut)
 
     ! Find fluid name in string, remove it from string
     ! and set iFluid to the corresponding fluid index
@@ -114,8 +114,9 @@ contains
     use ModUtilities, ONLY: lower_case
 
     character(len=*), intent(inout) :: String
-
-    integer :: i, l
+    integer, optional, intent(out) :: iFluidOut
+    
+    integer :: i, l, iFluid
     character (len=10) :: NameFluid
 
     character(len=*), parameter:: NameSub = 'extract_fluid_name'
@@ -135,8 +136,10 @@ contains
           EXIT
        end if
     end do
-    call select_fluid
+    call select_fluid(iFluid)
 
+    if(present(iFluidOut)) iFluidOut = iFluid
+    
   end subroutine extract_fluid_name
   !============================================================================
 

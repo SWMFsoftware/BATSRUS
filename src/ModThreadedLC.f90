@@ -16,6 +16,7 @@ module ModThreadedLC
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,   ONLY: Xyz_DGB
   use ModCoordTransform, ONLY: determinant, inverse_matrix
+  use omp_lib
   !\
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -36,7 +37,7 @@ module ModThreadedLC
   !/
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
   !\
-  ! To expsress Te in terms of P and rho.
+  ! To express Te in terms of P and rho.
   !/
   real    :: TeFraction, TiFraction, PeFraction
   integer :: iP
@@ -44,10 +45,11 @@ module ModThreadedLC
   ! Temperature 3D array
   !/
   real,allocatable :: Te_G(:,:,:)
+  !$omp threadprivate( Te_G )
   !\
   ! Arrays for 1D distributions
   !/
-  real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
+  real,allocatable,dimension(:):: ReflCoef_I, APlus_I, AMinus_I, &
        TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I, &
        TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,&
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I, &

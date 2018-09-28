@@ -79,7 +79,7 @@ contains
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
     use ModResistivity, ONLY: UseResistivity, &
          read_resistivity_param, init_mod_resistivity
-    use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, iFluid, &
+    use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, &
          DoConserveNeutrals, DoOhNeutralBc, &
          uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
          UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
@@ -142,7 +142,7 @@ contains
     character (len=*), intent(in) :: TypeAction
 
     ! Local variables
-    integer :: iFile, i
+    integer :: iFile, i, iFluid
     logical :: IsUninitialized      = .true.
 
     !  logical :: HdfUninitialized      = .true.
@@ -2269,10 +2269,10 @@ contains
 
     subroutine set_namevar
 
-      use ModMultiFluid, ONLY: extract_fluid_name, iFluid
+      use ModMultiFluid, ONLY: extract_fluid_name
       use ModUtilities,  ONLY: join_string
 
-      integer :: iWave, iMaterial, lConservative, lPrimitive
+      integer :: iWave, iMaterial, iFluid, lConservative, lPrimitive
       character(len=3)  :: NameWave
       character(len=2)  :: NameMaterial
       character(len=50) :: NamePrimitive, NamePrimitivePlot, NameConservative
@@ -2315,7 +2315,7 @@ contains
       do iVar = 1, nVar
          ! extract_fluid_name only checks fluid names in lower case
          String  = NameVarLower_V(iVar)
-         call extract_fluid_name(String)
+         call extract_fluid_name(String,iFluid)
 
          ! no need to add the fluid name for the first fluid, this is needed
          ! for non fluid variables

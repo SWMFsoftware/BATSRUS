@@ -408,13 +408,13 @@ subroutine get_iVar(NameVar, iVar)
 
   use ModMain,       ONLY: NameVarLower_V
   use ModVarIndexes, ONLY: NameFluid_I, nVar
-  use ModMultiFluid, ONLY: extract_fluid_name, iFluid
+  use ModMultiFluid, ONLY: extract_fluid_name
   use ModUtilities,  ONLY: lower_case
 
   character(len=*), intent(inout)  :: NameVar
   integer,intent(out)              :: iVar
 
-  integer :: iVarLoop, iError
+  integer :: iVarLoop, iError, iFluid
 
   ! Initialize iVar
   character(len=*), parameter:: NameSub = 'get_iVar'
@@ -425,7 +425,7 @@ subroutine get_iVar(NameVar, iVar)
   call lower_case(NameVar)
 
   ! Remove the fluid name first
-  call extract_fluid_name(NameVar)
+  call extract_fluid_name(NameVar,iFluid)
 
   ! In case the user specifies ux/uy/uz instead of mx/my/mz
   select case(NameVar)

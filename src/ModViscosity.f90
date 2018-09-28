@@ -224,7 +224,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iRho, iRhoUx
+    use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
 
     integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
@@ -234,13 +234,13 @@ contains
     real    :: Diag
     logical :: IsNewBlock = .true.
     real, parameter :: TraceCoeff = 2.0/3.0
-    integer :: i,j,k
+    integer :: i,j,k, iFluid
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
        do iFluid = iFluidMin, iFluidMax
-          call select_fluid
+          call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then
                 u_DGI(:,i,j,k,iFluid) = &

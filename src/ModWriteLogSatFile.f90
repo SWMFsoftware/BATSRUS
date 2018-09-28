@@ -11,6 +11,8 @@ module ModWriteLogSatFile
 
   private ! except
 
+  integer :: iFluid ! to make iFluid local in this module
+  
   public:: write_logfile          ! write one line into the log file
   public:: collect_satellite_data ! collect data from multiple processors
   public:: calc_sphere            ! calculate values on spherical surface
@@ -325,7 +327,7 @@ contains
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
     use ModIO, ONLY: write_myname, lNameLogVar
-    use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
+    use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: integrate_grid, maxval_grid, minval_grid
 
@@ -1700,7 +1702,7 @@ contains
     ! Switch to all lower case
     call lower_case(NameOut)
 
-    call extract_fluid_name(NameOut)
+    call extract_fluid_name(NameOut,iFluid)
 
     ! Replace mx with rhoux, my with rhouy, mz with rhouz
     select case(NameOut(1:2))

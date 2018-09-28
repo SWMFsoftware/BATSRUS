@@ -88,12 +88,12 @@ contains
 
     use ModReadParam,  ONLY: read_var
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
-    use ModMultiFluid, ONLY: iFluid, nFluid, IonFirst_
+    use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
     character(len=*), intent(in):: NameCommand
 
-    integer:: iDensity
+    integer:: iDensity, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_face_boundary_param'
@@ -500,7 +500,8 @@ contains
            TheTmp,DtTmp,DaTmp, Cosx, Jlocal_D(3), Jpar
       integer:: iHemisphere
       integer :: iIonSecond
-
+      integer :: iFluid
+      
       ! Variables for the absorbing BC
       real:: UdotR, r2Inv
 
