@@ -854,7 +854,7 @@ contains
     integer, intent(in) :: iBlock
     logical, intent(in) :: IsFinal  ! true for the final update
 
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
     real    :: State_V(nVar), Rho, InvRho, p, IonSum, InvSum
     real    :: TeRatio1, InvTeRatio1
     logical :: IsMultiIon

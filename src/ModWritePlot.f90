@@ -986,7 +986,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
-         IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
          ChargeIon_I
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
@@ -1018,7 +1018,7 @@ contains
     real, allocatable :: J_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:)
 
-    integer :: iVar, itmp, jtmp, jVar, iIon
+    integer :: iVar, itmp, jtmp, jVar, iIon, iFluid
     integer :: i,j,k
 
     integer:: iDir, Di, Dj, Dk
@@ -1066,7 +1066,7 @@ contains
 
        call lower_case(NamePlotVar)
        String = NamePlotVar
-       call extract_fluid_name(String)
+       call extract_fluid_name(String,iFluid)
 
        ! Set plotvar_inBody to something reasonable for inside the body.
        ! Load zeros (0) for most values - load something better for rho, p, and T

@@ -301,7 +301,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer:: i, j, k
+    integer:: i, j, k, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_other_vars'
     !--------------------------------------------------------------------------
@@ -319,7 +319,7 @@ contains
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body1_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              State_VGB(iRhoUx,i,j,k,iBlock) = &
                   FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
              State_VGB(iRhoUy,i,j,k,iBlock) = &
@@ -336,7 +336,7 @@ contains
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              State_VGB(iRhoUx,i,j,k,iBlock) = &
                   FaceState_VI(iUx,body2_)*FaceState_VI(iRho,body2_)
              State_VGB(iRhoUy,i,j,k,iBlock) = &

@@ -1928,7 +1928,7 @@ contains
     ! spherical grid.
 
     real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
-    integer :: iBlock, iLat, iLon, iHemisphere, iRay
+    integer :: iBlock, iFluid, iLat, iLon, iHemisphere, iRay
     integer :: iProcFound, iBlockFound, i, j, k
     integer :: nStateVar
     integer :: iError
@@ -2138,7 +2138,7 @@ contains
 
     real    :: Xyz_D(3)
     integer :: iPt
-    integer :: iProcFound, iBlockFound, i, j, k, iBlock
+    integer :: iProcFound, iBlockFound, i, j, k, iBlock, iFluid
     integer :: nStateVar
     integer :: iError
 

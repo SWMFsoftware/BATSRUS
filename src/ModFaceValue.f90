@@ -2580,7 +2580,7 @@ contains
 
     subroutine flatten(Prim_VG)
 
-      use ModMultiFluid, ONLY: iFluid, iRho, iUx, iUy, iUz, iP, select_fluid
+      use ModMultiFluid, ONLY: iRho, iUx, iUy, iUz, iP, select_fluid
 
       real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -2591,7 +2591,7 @@ contains
       real:: FlatCoef_I(-1:MaxIJK+2)
       real, allocatable:: FlatCoef_G(:,:,:)
 
-      integer:: i, j, k
+      integer:: i, j, k, iFluid
       !------------------------------------------------------------------------
       ! call timing_start('flatten')
 
@@ -2602,7 +2602,7 @@ contains
 
       FLUIDLOOP: do iFluid = 1, nFluid
 
-         call select_fluid
+         call select_fluid(iFluid)
 
          do k = 1-kDim_,nK+kDim_; do j = 1-jDim_,nJ+jDim_
             do i = -1, nI+2

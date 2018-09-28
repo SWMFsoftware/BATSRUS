@@ -430,11 +430,11 @@ contains
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
          LowDensityRatio, ElectronPressureRatio
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, &
+    use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUy, iUz, &
          iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
 
-    integer:: iData
+    integer:: iData, iFluid
     integer:: T_= p_
     real :: Solarwind_V(nVar)
 
@@ -499,7 +499,7 @@ contains
 
        ! Set or normalize other fluids for multi-fluid equations
        do iFluid = 2, nFluid
-          call select_fluid
+          call select_fluid(iFluid)
 
           ! Set fluid density
           if(.not.IsInput_V(iRho)) then

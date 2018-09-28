@@ -28,7 +28,7 @@ contains
     use ModProcMH
     use ModMain
     use ModAdvance
-    use ModMultiFluid, ONLY: iFluid, nFluid
+    use ModMultiFluid, ONLY:  nFluid
     use BATL_lib, ONLY: CellVolume_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -36,7 +36,7 @@ contains
     use ModMessagePass, ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
-    integer :: iVar
+    integer :: iVar, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
@@ -1536,14 +1536,14 @@ contains
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModGeometry, ONLY: true_cell
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iP, iPpar
+    use ModMultiFluid, ONLY: select_fluid, iP, iPpar
     use ModVarIndexes, ONLY: nFluid
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
     real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm
 
-    integer:: i, j, k, iBlock
+    integer:: i, j, k, iBlock, iFluid
 
     logical :: UseConstantTau
     real    :: TauInstability, TauGlobal
@@ -1558,8 +1558,7 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           do iFluid = 1, nFluid
-
-             call select_fluid
+             call select_fluid(iFluid)
 
              UseConstantTau = UseConstantTau_I(iFluid)
              TauInstability = TauInstability_I(iFluid)
