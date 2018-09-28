@@ -1241,7 +1241,7 @@ contains
 
     real :: GradPe_D(3)
     real :: InvElectronDens
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
     real :: NatomicSi, TeSi
 
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1510,7 +1510,7 @@ contains
     do iFluidMin = NeutralFirst_, nFluid
        iFluidMax = iFluidMin
        iFluid = iFluidMin
-       call select_fluid
+       call select_fluid(iFluid)
        iVarMin = iRho; iVarMax = iP
        iEnergyMin = iEnergy; iEnergyMax = iEnergy
        if(DoLfNeutral)then
@@ -1639,11 +1639,11 @@ contains
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
-      Cmax   =maxval(Cmax_I(iFluidMin:iFluidMax))
-      Cleft  =min(0.0, &
+      Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
+      Cleft  = min(0.0, &
            minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
            minval(CleftStateHat_I(iFluidMin:iFluidMax)))
-      Cright =max(0.0, &
+      Cright = max(0.0, &
            maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
            maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
 
@@ -1698,7 +1698,7 @@ contains
 
       real:: DeltaCons_V(nVar), DeltaFlux_V(nVar)
       real:: Cleft, Cright
-      real:: WeightLeft=0.0, WeightRight=0.0, Diffusion=0.0, DiffusionDw
+      real:: WeightLeft, WeightRight, Diffusion, DiffusionDw
       real:: Nu1, Nu2, Nu, CsoundL, CsoundR, Cdw
 
       ! Get the max, left and right speeds for HLL (and DW?)
@@ -2216,7 +2216,7 @@ contains
       real::pWaveL=0.0,pWaveR=0.0, pWaveStar=0.0, pWaveSide=0.0
       real :: PeL, PeR, PeStar, PeSide
       real :: Adiabatic, Isothermal, GammaRatio, Factor
-      integer::iVar
+      integer:: iVar
 
       ! Scalar variables
       !------------------------------------------------------------------------
@@ -2489,7 +2489,7 @@ contains
     real:: FluxBx, FluxBy, FluxBz, FullB2, Peperp, Pepar
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
 
-    integer:: iVar
+    integer:: iVar, iFluid
 
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
@@ -2563,7 +2563,7 @@ contains
     HallUn = 0.0
 
     do iFluid=iFluidMin,iFluidMax
-       call select_fluid
+       call select_fluid(iFluid)
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
           if(UseBorisCorrection)then
@@ -2636,7 +2636,7 @@ contains
 
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid
-          call select_fluid
+          call select_fluid(iFluid)
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
           Flux_V(Energy_)= Flux_V(Energy_) - &
@@ -3511,7 +3511,7 @@ contains
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
        UseAwSpeedIn)
 
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUz, iP
+    use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
          GammaWave, UseAlfvenWaves
     use ModMain,    ONLY: Climit
@@ -3531,7 +3531,8 @@ contains
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
     integer :: iError = -1
-
+    integer :: iFluid
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_speed_max'
     !--------------------------------------------------------------------------
@@ -3539,7 +3540,7 @@ contains
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid
+       call select_fluid(iFluid)
 
        if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
