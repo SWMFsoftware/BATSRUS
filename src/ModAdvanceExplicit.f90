@@ -82,6 +82,7 @@ contains
           call set_low_order_face
        endif
 
+       !hyzhou: potentially this can also be parallelized?
        if(DoConserveFlux) then
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
