@@ -8,7 +8,6 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
-	Config.pl -noopenmp
 	-@($(MAKE) test_shockramp)
 	./Config.pl -ng=2
 	-@($(MAKE) test_partsteady)
@@ -47,6 +46,7 @@ test:
 	-@($(MAKE) test_region2d)
 	-@($(MAKE) test_fivemoment)
 	-@($(MAKE) test_func)
+	./Config.pl -noopenmp
 	@ls -l *.diff
 
 # !!! NOTE: In the above list "test_func" should be the last test
