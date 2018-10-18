@@ -48,6 +48,7 @@ contains
     use ModElectricField, ONLY: get_num_electric_field
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
+
     
     logical, intent(in) :: DoCalcTimestep
     integer, intent(in) :: iStageMax ! advance only part way
@@ -121,7 +122,7 @@ contains
        call timing_stop('send_cons_flux')
 
        if(DoTest)write(*,*)NameSub,' done message pass'
-
+       
        ! Multi-block solution update.
        !$omp parallel do
        do iBlock=1,nBlock
