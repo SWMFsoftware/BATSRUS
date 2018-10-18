@@ -636,8 +636,8 @@ contains
        else
           PlotVar_G(i,j,k) = 0.0
        end if
-       NameIdlUnit = 'J/m^3/s'
-       NameTecUnit = 'J/m^3/s'
+       NameIdlUnit = '-'
+       NameTecUnit = '-'
 
     case default
        IsFound = .false.

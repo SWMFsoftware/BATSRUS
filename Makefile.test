@@ -8,7 +8,6 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
-	Config.pl -noopenmp
 	-@($(MAKE) test_shockramp)
 	./Config.pl -ng=2
 	-@($(MAKE) test_partsteady)
@@ -47,6 +46,7 @@ test:
 	-@($(MAKE) test_region2d)
 	-@($(MAKE) test_fivemoment)
 	-@($(MAKE) test_func)
+	./Config.pl -noopenmp
 	@ls -l *.diff
 
 # !!! NOTE: In the above list "test_func" should be the last test
@@ -63,6 +63,7 @@ test_help:
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
+	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_amr                   (run AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
@@ -1381,7 +1382,7 @@ test_earthsph_start:
 	$(MAKE) test_earthsph_check
 
 test_earthsph_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
+	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,8,600,300
 	${MAKE} BATSRUS
 	make PIDL
 
@@ -1392,7 +1393,7 @@ test_earthsph_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_earthsph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
