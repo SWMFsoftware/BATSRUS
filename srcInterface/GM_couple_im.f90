@@ -368,7 +368,7 @@ contains
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_coupler,      ONLY: Grid_C, IM_
     use CON_axes,         ONLY: transform_matrix
-    use ModMultiFluid,    ONLY: iFluid, nFluid, iUx_I, iUz_I
+    use ModMultiFluid,    ONLY: nFluid, iUx_I, iUz_I
     use ModFieldTrace,    ONLY: DoExtractBGradB1, trace_field_equator
 
     integer, intent(in)           :: nRadius, nLon
@@ -377,7 +377,7 @@ contains
 
     real, allocatable, save :: RadiusIm_I(:), LongitudeIm_I(:)
 
-    integer :: nVarExtract, iPoint, iUx5, iUz5
+    integer :: nVarExtract, iPoint, iUx5, iUz5, iFluid
     real    :: SmGm_DD(3,3)
 
     character(len=lNameVersion) :: NameVersionIm

@@ -5425,7 +5425,7 @@ together.
 <command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
-	    <parameter name="StringRefine" type="string" length="200"/>
+	    <parameter name="StringRefine" type="string" length="200" case="lower"/>
 	    <if expr="$StringRefine=~/^level/">
 	    	<parameter name="RefineTo"    type="integer" min="0" />
 	        <parameter name="CoarsenFrom" type="integer" min="$RefineTo" />
