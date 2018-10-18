@@ -122,8 +122,9 @@ contains
        if(DoTest)write(*,*)NameSub,' done message pass'
 
        ! Multi-block solution update.
+       call init_check_variables
        !$omp parallel do
-       do iBlock=1,nBlock
+       do iBlock = 1, nBlock
 
           if(Unused_B(iBlock)) CYCLE
 
@@ -196,6 +197,7 @@ contains
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)
 
+          call do_check_variables
        end do ! Multi-block solution update loop.
        !$omp end parallel do
 
