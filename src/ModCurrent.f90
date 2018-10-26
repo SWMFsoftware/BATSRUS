@@ -11,6 +11,12 @@ module ModCurrent
 
   implicit none
 
+  private ! except
+
+  public:: get_point_data
+  public:: get_current
+  public:: calc_field_aligned_current
+
 contains
   !============================================================================
 
