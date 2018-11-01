@@ -110,7 +110,6 @@ OBJECTS = \
 	ModWritePlotRadioWave.o \
 	ModWriteProgress.o \
 	user_interface.o \
-	check_variables.o
 
 # Default user module
 ModUser.f90:
