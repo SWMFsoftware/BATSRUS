@@ -11,6 +11,7 @@ include Makefile.RULES
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 #
 # Post processing executables
 #
@@ -34,25 +35,20 @@ ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 CRST:
 	make ${BINDIR}/ConvertRestart.exe
 
-OBJECTS1 = \
-	CON_geopack_internal.o\
-	ModUT.o \
-	${SHAREDIR}/ModNumConst.o \
-	${SHAREDIR}/ModTimeConvert.o \
-	${SHAREDIR}/ModConst.o
+OBJECTS1 = CON_geopack_internal.o ModUT.o
 
-earth_traj.o: ${OBJECTS1}
+earth_traj.o:  ${LIBSHARE} ${OBJECTS1}
 
-EARTH_TRAJ: ${OBJECTS1} earth_traj.o
+EARTH_TRAJ: earth_traj.o
 	${LINK.f90} ${SEARCH} -o ${BINDIR}/EARTH_TRAJ.exe earth_traj.o \
-		${OBJECTS1} ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
 TIME_CONV:  ${OBJECTS1} time_convert.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
-		${OBJECTS1} ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
 
 TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_TOCRNO.exe time_to_cr_no.o \
-		${OBJECTS1} ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
 
 #
 # test for spectrum

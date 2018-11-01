@@ -181,9 +181,13 @@ contains
     ! Variables for checking the user module
     character (len=lStringLine) :: NameUserModuleRead='?'
     real                        :: VersionUserModuleRead=0.0
-    integer :: iSession, iPlotFile, iVar, iDim
 
-    integer :: iSpecies
+    ! Variables related to sessions
+    logical :: IsFirstSession = .true.
+    integer :: iSession, iSessionFirst = 0
+
+    ! Indexes
+    integer :: iSpecies, iPlotFile, iVar, iDim
 
     ! Variables for #SAVEPLOT command, to replace some common used variables
     ! in VAR string
@@ -202,6 +206,8 @@ contains
     NameSub(1:2) = NameThisComp
 
     iSession = i_session_read()
+    ! First session when component is reading parameters
+    if(iSessionFirst < 1) iSessionFirst = iSession
 
     ! Initialize BATL
     call init_mpi(iComm)
@@ -212,9 +218,8 @@ contains
        IsUninitialized=.false.
     end if
 
-    if(iSession > 1)then
-       restart=.false.           ! restart in session 1 only
-    end if
+    ! restart in first session only
+    if(.not.IsFirstSession) restart=.false. 
 
     if(DoReadSatelliteFiles)then
        call read_satellite_input_files
@@ -259,7 +264,8 @@ contains
           end if
        end if
        ! Planet NONE in GM means that we do not use a body
-       if (NameThisComp=='GM' .and. NamePlanet == 'NONE' .and. iSession == 1)then
+       if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
+            .and. IsFirstSession)then
           body1 = .false.
           ! Change the default conservative criteria when there is no planet
           ! and the #CONSERVATIVECRITERIA command did not occur
@@ -378,7 +384,7 @@ contains
        call check_cooling_param
 
        ! Initialize threaded field line module (lower corona)
-       if(UseFieldLineThreads .and. iSession==1)call init_threaded_lc
+       if(UseFieldLineThreads .and. IsFirstSession)call init_threaded_lc
 
        ! Initialize user module and allow user to modify things
        if(UseUserInitSession)call user_init_session
@@ -391,7 +397,7 @@ contains
 
        if((iProc==0 .or. UseTimingAll) .and. IsStandAlone)then
           call timing_active(UseTiming)
-          if(iSession==1)then
+          if(IsFirstSession)then
              call timing_step(0)
              if(UseTimingAll)then
                 iUnitTiming = io_unit_new()
@@ -405,6 +411,8 @@ contains
           call timing_report_style(TimingStyle)
        end if
 
+       IsFirstSession = .false.
+       
        RETURN
     case('read','Read','READ')
        if(iProc==0)then
@@ -1156,8 +1164,8 @@ contains
           call read_var('DoConserveFlux', DoConserveFlux)
 
        case("#SCHEME")
-          if(iSession>1) nOrderOld = nOrder
-          call read_var('nOrder'  ,nOrder)
+          if(.not. IsFirstSession) nOrderOld = nOrder
+          call read_var('nOrder', nOrder)
           ! Set default value for nStage. Can be overwritten if desired.
           nStage = nOrder
           ! Use RK3 for MP5 scheme
@@ -2256,9 +2264,9 @@ contains
     logical function is_first_session()
 
       !------------------------------------------------------------------------
-      is_first_session = iSession == 1
+      is_first_session = IsFirstSession
 
-      if(iSession /= 1 .and. iProc==0)then
+      if(.not.IsFirstSession .and. iProc==0)then
          write(*,*)NameSub//' WARNING: command '//trim(NameCommand)// &
               ' can be used in the first session only !!!'
          if(UseStrict)call stop_mpi('Correct PARAM.in')
@@ -2630,14 +2638,14 @@ contains
          call correct_grid_geometry
 
          if( (.not.IsCartesian .or. &
-              i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0 ) &
+              i_line_command("#BOXBOUNDARY", iSessionIn=iSessionFirst) < 0 ) &
               .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
             if(iProc==0)then
                if(.not. IsCartesian) write(*,'(a)')NameSub//&
                     ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                     'for Cartesian grid only!'
 
-               if(i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0) &
+               if(i_line_command("#BOXBOUNDARY", iSessionIn=iSessionFirst)<0) &
                     write(*,'(a)')NameSub//&
                     ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                     'for cell based boundaries only!'
@@ -2899,7 +2907,7 @@ contains
            'Empirical Solar Wind model requires magnetogram')
 
       if(DoOpenClosedHeat.and.(.not.UseMagnetogram.and.&
-           (iSession==1.and.i_line_command('#PFSSM')<0)))&
+           (IsFirstSession .and. i_line_command('#PFSSM')<0)))&
            call stop_mpi(&
            'The heating in the closed field region requires magnetogram')
 
@@ -3073,7 +3081,7 @@ contains
       ! Finish checks for implicit
 
       ! Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
-      if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0) &
+      if(i_line_command("#AMRRESOLUTION", iSessionIn=iSessionFirst) > 0) &
            call fix_amr_limits( &
            (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI))
 
@@ -3220,12 +3228,12 @@ contains
 
       character(len=*), parameter:: NameSub = 'correct_grid_geometry'
       !------------------------------------------------------------------------
-      if(i_line_command("#GRID", iSessionIn = 1) < 0) &
+      if(i_line_command("#GRID", iSessionIn=iSessionFirst) < 0) &
            call stop_mpi(NameSub // &
            ' #GRID command must be specified in the first session!')
 
-      if(  i_line_command("#OUTERBOUNDARY", iSessionIn = 1) < 0 .and. &
-           i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0 ) &
+      if(  i_line_command("#OUTERBOUNDARY", iSessionIn=iSessionFirst)<0 .and. &
+           i_line_command("#BOXBOUNDARY", iSessionIn=iSessionFirst) < 0 ) &
            call stop_mpi(NameSub // &
            ' #OUTERBOUNDARY or #BOXBOUNDARY command must be specified &
            &in the first session!')
@@ -3242,7 +3250,8 @@ contains
       ! #GRID, #GRIDGEOMETRY, and #LIMITRADIUS
       ! #GRIDGEOMETRYLIMIT already sets XyzMin_D, XyzMax_D so that it does not
       ! have to be reset here
-      if(.not.i_line_command("#GRIDGEOMETRYLIMIT", iSessionIn = 1) > 0) then
+      if(.not.i_line_command("#GRIDGEOMETRYLIMIT", &
+           iSessionIn=iSessionFirst) > 0) then
          select case(TypeGeometry)
          case('cartesian' ,'rotatedcartesian')
             XyzMin_D = (/x1, y1, z1/)
@@ -3282,7 +3291,7 @@ contains
             call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
          end select
 
-         if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then
+         if(i_line_command("#LIMITRADIUS", iSessionIn=iSessionFirst) > 0) then
             XyzMin_D(1) = RadiusMin
             XyzMax_D(1) = RadiusMax
             if(TypeGeometry == 'roundcube' .and. rRound1 > rRound0) &
