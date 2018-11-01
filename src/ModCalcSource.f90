@@ -98,7 +98,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     Source_VC = 0.0
-
+    
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid=1,nFluid
@@ -376,7 +376,7 @@ contains
              b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
 
              ! Calculate b.grad u.b
-             bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+             bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
              ! p parallel: -2*ppar*b.(b.(Grad U))
              Source_VC(Pepar_,i,j,k) = Source_VC(Pepar_,i,j,k) &
@@ -422,7 +422,7 @@ contains
        end do; end do; end do
        if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
     end if
-
+    
     if(IsRzGeometry)then
        ! The following geometrical source terms are added for the MHD equations
        ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
@@ -764,7 +764,7 @@ contains
 
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
-
+    
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -784,7 +784,7 @@ contains
        call user_calc_sources(iBlock)
        if(DoTest) call write_source('After user sources')
     end if
-
+    
     if(DoTest) call write_source('final')
     
     call test_stop(NameSub, DoTest, iBlock)
