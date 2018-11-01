@@ -38,7 +38,7 @@ module ModPhysics
   real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
 
   ! gamma of the waves
-  real:: GammaWave = 1.5
+  real :: GammaWave = 1.5
 
   ! electron charge in normalized units (actually proton charge/mass)
   real:: ElectronCharge
@@ -1162,6 +1162,7 @@ contains
     real, intent(out):: uRot_D(3)
 
     real, save:: Omega_D(3)
+    !$omp threadprivate( Omega_D )
     logical   :: IsUninitialized = .true.
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
