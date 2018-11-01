@@ -137,13 +137,15 @@ contains
     use ModMessagePass, ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
          ion_electron_init_point_impl, HypEDecay
+    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
+         iRhoUzIon_I, nIonFluid
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
 
     ! These variables have to be double precision for accurate Boris scheme
-    real:: DtLocal, DtFactor, Coeff
+    real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -205,7 +207,7 @@ contains
             + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
             /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do
-       
+
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
        ! Integrate fluxes in the transverse direction (eq. 20)
        ! <F> = F + Laplace_transverse(F)/24
@@ -311,7 +313,43 @@ contains
                call fix_multi_ion_update(iBlock)
 
           ! Make sure that energy is consistent
-          call calc_energy_cell(iBlock)
+          if(UseEfield)then
+             if(.not. UseNonconservative) then
+                ! Add q/m rhou.E to ion energy source terms for the 
+                ! energy equation, q/m*rho*(E dot u) if UseEfield.
+                ! Tests show that putting the energy source terms after
+                ! the point implicit update is more stable than putting
+                ! the source terms in ModCalcSource.
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
+
+                   SourceIonEnergy_I = ChargePerMass_I* (         &
+                        State_VGB(Ex_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUxIon_I,i,j,k,iBlock)    + &
+                        State_VGB(Ey_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUyIon_I,i,j,k,iBlock)    + &
+                        State_VGB(Ez_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUzIon_I,i,j,k,iBlock) )
+
+                   SourceIonEnergy_I = SourceIonEnergy_I*DtLocal
+
+                   Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_) =     &
+                        Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_)  &
+                        + SourceIonEnergy_I
+                end do; end do; end do
+
+                ! Re-calculate the pressure from the energy.
+                ! In this case, the pressure source terms in the user file
+                ! would not contribute to the pressure. It requires that
+                ! the user MUST provide the corresponding source terms  for 
+                ! the energy equation in the user file.
+                call calc_pressure_cell(iBlock)
+             else
+                call calc_energy_cell(iBlock)
+             end if
+          else
+             call calc_energy_cell(iBlock)
+          end if
 
           if(DoTest)write(*,'(2x,2a,15es20.12)') &
                NameSub, ' after point impl state              =', &
@@ -363,7 +401,7 @@ contains
       !------------------------------------------------------------------------
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call mhd_to_boris(iBlock)
-         
+
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
@@ -386,7 +424,7 @@ contains
       end if
 
       ! Now update State_VGB
-      
+
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -506,7 +544,7 @@ contains
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call boris_to_mhd(iBlock)
-      
+
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
