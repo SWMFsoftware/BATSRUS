@@ -62,7 +62,7 @@ module ModHallResist
 
   ! Indexes of regions defined with the #REGION commands
   integer, allocatable:: iRegionHall_I(:)
-
+  
 contains
   !============================================================================
   subroutine init_hall_resist
@@ -103,10 +103,11 @@ contains
     ! divided by SI charge density.
     IonMassPerChargeCoef = &
          Si2No_V(UnitX_)**3 / (cElectronCharge*Si2No_V(UnitCharge_))
-
+    
     ! Get signed indexes for Hall region(s)
     call get_region_indexes(StringHallRegion, iRegionHall_I)
 
+    
     call test_stop(NameSub, DoTest)
   end subroutine init_hall_resist
   !============================================================================
