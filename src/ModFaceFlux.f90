@@ -81,7 +81,13 @@ module ModFaceFlux
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
-
+  !hyzhou: this can be threadprivate but not necessary! just for test!
+  ! maybe there're race conditions?
+  !!$omp threadprivate( DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld )
+  !!$omp threadprivate( DoAw, DoRoeOld, DoRoe, DoLfNeutral )
+  !!$omp threadprivate( DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
+  !!$omp threadprivate( DoAwNeutral, DoGodunovNeutral, DoHllcNeutral )
+  
   ! 1D Burgers' equation, works for Hd equations.
   logical :: DoBurgers = .false.
 
@@ -155,7 +161,7 @@ module ModFaceFlux
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
   real, allocatable, save :: Pe_G(:,:,:)
-  !$omp threadprivate( IsNewBlockGradPe )
+  !$omp threadprivate( UseHallGradPe, IsNewBlockGradPe )
   !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
   !$omp threadprivate( Pe_G )
   
@@ -205,7 +211,8 @@ module ModFaceFlux
   ! to the number of waves, resulting in a well-posed Riemann problem.
   ! This approach is an alternative to the 8-wave scheme.
   logical :: UseRS7 = .false.
-
+  !$omp threadprivate( UseRS7 )
+  
   ! Local logical variables for various terms that may be switched off
   ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
@@ -644,7 +651,7 @@ contains
          end if
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
-
+                  
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
          if(UseArtificialVisco) then
@@ -1406,7 +1413,7 @@ contains
           DiffBb = sum(DiffBn_D**2)
        end if
     end if
-
+    
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
@@ -1416,7 +1423,7 @@ contains
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
-
+    
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
@@ -1425,7 +1432,7 @@ contains
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft, &
             PeDotAreaLeft_D)
-
+       
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight, PeDotAreaRight_D)
@@ -1479,7 +1486,7 @@ contains
           call stop_mpi(NameSub//': Unknown flux type for ions')
        end if
     end if
-
+    
     if(UseLindeFix)then
 
        if(UseHyperbolicDivb) then
@@ -1498,7 +1505,7 @@ contains
        end if
     end if
 
-    if (UseEfield) then
+    if(UseEfield)then
        Cmax = max(Cmax, clight)
        Flux_V(iVarUseCmax_I) = &
             0.5*(FluxLeft_V(iVarUseCmax_I) + FluxRight_V(iVarUseCmax_I) &
@@ -2865,7 +2872,7 @@ contains
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
       p       = State_V(p_)
-
+      
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes
       if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -3005,7 +3012,7 @@ contains
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
 
-         if (DoTestCell) then
+         if(DoTestCell)then
             write(*,*) NameSub, ' after aniso flux:'
             if (.not. UseAnisoPe) then
                write(*,*) 'DpPerB  =', DpPerB
@@ -3097,7 +3104,7 @@ contains
       real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
-
+      
       ! calculate number densities
       ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
       InvElectronDens = 1.0/sum(ChargeDens_I)
