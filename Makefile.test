@@ -611,7 +611,7 @@ test_graydiffusion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
+	./Config.pl -openmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -620,7 +620,7 @@ test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie3.dat .
 
 test_graydiffusion_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
