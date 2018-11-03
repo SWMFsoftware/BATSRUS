@@ -400,7 +400,7 @@ contains
     use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB, minval_grid
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
-
+    
     integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
     integer :: nIterNewton
     integer :: iError, iError1
@@ -426,6 +426,7 @@ contains
 
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
 
+    
     ! Initialize some variables in ModImplicit
     call implicit_init
 
@@ -471,7 +472,7 @@ contains
 
              if(.not. UseImplicitEnergy) CYCLE
              ! Overwrite pressure with energy
-             do iFluid = 1, nFluid
+             do iFluid=1,nFluid
                 call select_fluid(iFluid)
                 ImplOld_VCB(iP,:,:,:,iBlock) = &
                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
@@ -517,7 +518,7 @@ contains
             iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
     end if
-
+    
     !\
     ! Advance implicitly treated blocks
     !/
@@ -536,7 +537,7 @@ contains
     UseCoarseAxis      = .false.
     ! Use implicit time step
     if(.not.UseDtFixed)Cfl = CflImpl
-
+    
     if(UseDtFixed)then
        if(DoTest)write(*,*)NameSub,': call get_dt_courant'
        call get_dt_courant(DtExpl)
@@ -546,7 +547,7 @@ contains
        if(DoTest)write(*,*)NameSub,': no call of get_dt_courant'
        DtCoeff = CflImpl/0.5
     endif
-
+    
     if (UseBDF2.and.n_step==n_prev+1) then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
@@ -574,7 +575,7 @@ contains
           ImplOld_VCB(:,:,:,:,iBlock) = Impl_VGB(:,1:nI,1:nJ,1:nK,iBlockImpl)
        end do
     end if
-    
+
     ! Initialize right hand side and x_I. Uses ImplOld_VCB for BDF2 scheme.
     call impl_newton_init
     
@@ -615,7 +616,7 @@ contains
              call exchange_messages
              call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
           end if
-
+             
           call timing_start('impl_jacobian')
 
           ! Initialize variables for preconditioner calculation
@@ -717,7 +718,7 @@ contains
        StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
 
        if(UseImplicitEnergy) then
-          do iFluid = 1, nFluid
+          do iFluid=1,nFluid
              call select_fluid(iFluid)
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
@@ -814,7 +815,7 @@ contains
     use ModAdvance, ONLY : FluxType
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
-
+    
     integer :: i, j, k, n, iVar, iBlockImpl, iBlock, iError
     real :: Coef1, Coef2, q1, q2, q3
 
@@ -825,7 +826,7 @@ contains
 
     ! Calculate high and low order residuals
     ! ResExpl_VCB= DtExpl * R
-
+    
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
     
     !                not low,  dt,  subtract
@@ -833,7 +834,7 @@ contains
          Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
     
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
-
+    
     if (nOrder==nOrderImpl .and. FluxType==FluxTypeImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
@@ -1178,9 +1179,7 @@ contains
 
     Eps = sqrt(JacobianEps)/xNorm
 
-    if(DoTest)write(*,*)'Eps, xNorm =',Eps,xNorm
-
-    n=0
+    n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
        n = (iBlock-1)*nIJK*nVar !hyzhou
@@ -1194,7 +1193,7 @@ contains
     
     ! Advance ImplEps_VCB:low order,  no dt, don't subtract
     call get_residual(.true., .false., .false., ImplEps_VCB, ImplEps_VCB)
-
+    
     ! Calculate y = L.x = (1 + beta*DtCoeff)*x
     !                       - beta*DtCoeff*(ImplEps_VCB' - Impl_VGB')/eps
     ! where ImplEps_VCB  = Impl_VGB + eps*x,
@@ -1210,8 +1209,8 @@ contains
 
     if(DoTest)write(*,*)'DtCoeff,ImplCoeff,Coef1,Coef2=', &
          DtCoeff, ImplCoeff, Coef1, Coef2
-
-    n=0
+       
+    n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
        n = (iBlock-1)*nIJK*nVar !hyzhou
@@ -1300,7 +1299,7 @@ contains
          set_hall_factor_cell
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
          FaceNormal_DDFB, CellSize_DB, CellVolume_GB
-
+    
     integer, intent(in) :: iBlockImpl
     real,    intent(out):: Jac_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
@@ -1326,7 +1325,7 @@ contains
     !--------------------------------------------------------------------------
     iBlock = iBlockFromImpl_B(iBlockImpl)
     call test_start(NameSub, DoTest, iBlock)
-
+    
     Eps = sqrt(JacobianEps)
 
     ! Extract state for this block
@@ -1374,13 +1373,13 @@ contains
     enddo
 
     ! Initialize divB and sPowell_VC arrays
-    if(UseB .and. UseDivBSource)call impl_divbsrc_init
-
+    if(UseB .and. UseDivBSource) call impl_divbsrc_init
+    
     ! Set s_VC=S(Impl_VC)
-    if(UseImplSource)call get_impl_source(iBlock, Impl_VC, s_VC)
-
+    if(UseImplSource) call get_impl_source(iBlock, Impl_VC, s_VC)
+    
     ! The w to be perturbed and jVar is the index for the perturbed variable
-    ImplEps_VC=Impl_VC
+    ImplEps_VC = Impl_VC
 
     do jVar=1,nVar
        ! Remove perturbation from previous jVar if there was a previous one
@@ -1432,11 +1431,6 @@ contains
                   FluxRight_VFD(iVar,iTest,jTest,kTest,iDim),&
                   FluxEpsRight_VF(iVar,iTest,jTest,kTest),&
                   dFdWRight_F(iTest,jTest,kTest)
-
-             ! DEBUG
-             ! if(iDim==3.and.iVar==4.and.jVar==2)&
-             ! write(*,*)'BEFORE addcmax dfdw(iih)=',&
-             !          dFdWLeft_F(iTest,jTest,kTest-1)
 
              ! Add contribution of cmax to dfdwL and dfdwR
              if(iVar == jVar)then
@@ -1527,15 +1521,10 @@ contains
 
        ! Derivatives of local source terms
        if(UseImplSource)then
-          if(DoTest) then
-             write(*,*)'Adding dS/dw'
-             write(*,*) 'iBlock=',iBlock
-             write(*,*)'Before sEps_VC=',sEps_VC(nVar-3:nVar,iTest,jTest,kTest)
-             call stop_mpi('force stop')
-          endif
           
           ! w2=S(Impl_VC+eps*W_jVar)
           call get_impl_source(iBlock, ImplEps_VC, sEps_VC)
+          
           Coeff = 1.0/(Eps*Norm_V(jVar))
           do iVar=1,nVar
              ! JAC(..1) += dS/dW_jVar
@@ -2105,7 +2094,7 @@ contains
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
-
+    
     logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
     real, intent(in)    :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
     ! The actual Var_VCB and Res_VCB arguments may be the same array:
@@ -2152,8 +2141,11 @@ contains
     
     ! Res_VCB = Var_VCB(t+dt)
     call implicit2explicit(Var_VCB)
+
     call exchange_messages
+
     call advance_explicit(DoCalcTimestep, -1)
+
     call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
     
     if(DoSubtract) Res_VCB(:,:,:,:,1:nBlockImpl) = &
@@ -2191,7 +2183,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
-
+    
     integer, intent(in) :: iBlock
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
@@ -2206,18 +2198,18 @@ contains
 
     UseDivbSourceOrig = UseDivbSource
     UseDivbSource     = .false.
-
+    
     call impl2expl(Var_VC, iBlock)
-
+    
     call calc_source(iBlock)
 
     SourceImpl_VC = Source_VC(1:nVar,:,:,:)
-
+    
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
        SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
     end if
-
+    
     UseDivbSource = UseDivbSourceOrig
     call timing_stop(NameSub)
 
@@ -2416,8 +2408,8 @@ contains
 
     ! First calculate max(cmax/dx) for each cell and dimension
     DtLocal=0.0
-    do iBlockImpl=1,nBlockImpl;
-       iBlock = iBlockFromImpl_B(iBlockImpl);
+    do iBlockImpl=1,nBlockImpl
+       iBlock = iBlockFromImpl_B(iBlockImpl)
 
        if(UseB0)then
           B0_DC = B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
