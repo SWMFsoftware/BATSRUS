@@ -545,7 +545,7 @@ test_eosgodunov:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_eosgodunov_compile:
-	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
+	./Config.pl -openmp -e=HdEos -u=Eos -g=10,1,1,100,1
 	$(MAKE) CRASH
 	make PIDL
 
@@ -814,7 +814,7 @@ test_outerheliopui:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
-	./Config.pl -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
+	./Config.pl -openmp -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -824,7 +824,7 @@ test_outerheliopui_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
 
 test_outerheliopui_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerheliopui_check:
@@ -1417,7 +1417,7 @@ test_amr:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
-	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
+	./Config.pl -openmp -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
