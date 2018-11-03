@@ -83,10 +83,10 @@ module ModFaceFlux
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
   !hyzhou: this can be threadprivate but not necessary! just for test!
   ! maybe there're race conditions?
-  !!$omp threadprivate( DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld )
-  !!$omp threadprivate( DoAw, DoRoeOld, DoRoe, DoLfNeutral )
-  !!$omp threadprivate( DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
-  !!$omp threadprivate( DoAwNeutral, DoGodunovNeutral, DoHllcNeutral )
+  !$omp threadprivate( DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld )
+  !$omp threadprivate( DoAw, DoRoeOld, DoRoe, DoLfNeutral )
+  !$omp threadprivate( DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
+  !$omp threadprivate( DoAwNeutral, DoGodunovNeutral, DoHllcNeutral )
   
   ! 1D Burgers' equation, works for Hd equations.
   logical :: DoBurgers = .false.
@@ -217,7 +217,10 @@ module ModFaceFlux
   ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
        DoIonHeatConduction = .false., DoHallInduction = .false.
-
+  !hyzhou: in principle these should all be threadprivate!
+  !$omp threadprivate( DoRadDiffusion, DoHeatConduction )
+  !$omp threadprivate( DoIonHeatConduction, DoHallInduction )
+  
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
 
@@ -480,7 +483,7 @@ contains
          .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
          index(TypeSemiImplicit,'radcond')>0 .or.&
          index(TypeSemiImplicit,'cond')>0)
-
+    
     DoHeatConduction    = UseHeatConduction .and.&
          .not.  index(TypeSemiImplicit,'parcond')>0
 
@@ -517,7 +520,7 @@ contains
        if(nK > 1) &
             call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
     end if
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -536,7 +539,7 @@ contains
          do iVar=1,nVar
             write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
                  LeftState_VX(iVar,iTest,jTest,kTest),&
-                 RightState_VX(iVar,iTest,  jTest,kTest),&
+                 RightState_VX(iVar,iTest,jTest,kTest),&
                  LeftState_VX(iVar,iTest+1,jTest,kTest),&
                  RightState_VX(iVar,iTest+1,jTest,kTest)
          end do
@@ -661,7 +664,7 @@ contains
          endif
 
          VdtFace_x(iFace,jFace,kFace)       = CmaxDt*Area
-
+         
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(x_)
          uDotArea_XI(iFace,jFace,kFace,:)   = Unormal_I*Area
@@ -2216,14 +2219,14 @@ contains
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
-      real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
-      real::RhoSide,UnSide
+      real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
+      real :: RhoSide,UnSide
 
       ! The wave pressure: in the left state, right state and at the wall
-      real::pWaveL=0.0,pWaveR=0.0, pWaveStar=0.0, pWaveSide=0.0
+      real :: pWaveL, pWaveR, pWaveStar, pWaveSide
       real :: PeL, PeR, PeStar, PeSide
       real :: Adiabatic, Isothermal, GammaRatio, Factor
-      integer:: iVar
+      integer :: iVar
 
       ! Scalar variables
       !------------------------------------------------------------------------
@@ -2590,7 +2593,7 @@ contains
                 call get_magnetic_flux
              end if
           end if
-
+          
           ! Calculate HD flux for individual ion and neutral fluids
           call get_hd_flux
        end if
@@ -2707,7 +2710,7 @@ contains
           Flux_V(Hyp_) = 0.0
        end if
     end if
-
+    
     if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(DoHeatConduction)then
        if(UseElectronPressure)then
@@ -3212,7 +3215,7 @@ contains
       ! anisotropic Pe, Peperp contributes
       if (UseElectronPressure .and. .not. UseAnisoPe) then
          PeAdd = State_V(Pe_)
-      else if (UseAnisoPe) then
+      elseif (UseAnisoPe) then
          ! Peperp = (3*pe - Pepar)/2
          PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
       end if
@@ -3297,7 +3300,7 @@ contains
 
       ! Needed for adiabatic source term for electron pressure
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
-
+      
     end subroutine get_hd_flux
     !==========================================================================
 
