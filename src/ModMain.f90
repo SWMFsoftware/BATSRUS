@@ -175,6 +175,7 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
+  !$omp threadprivate( UseDivbSource )
 
   !\
   ! More numerical scheme parameters
