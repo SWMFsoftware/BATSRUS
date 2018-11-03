@@ -93,6 +93,10 @@ module ModPointImplicit
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
   public:: init_point_implicit_num
+  !hyzhou: there is some problem for the init function here. It is called 
+  ! inside a parallel region, so should I just declare the seemingly shared
+  ! vars as threadprivate (even though they don't change), or rewrite the 
+  ! logic?
 
   ! Local variables
   ! Number of point implicit variables
@@ -101,7 +105,7 @@ module ModPointImplicit
   ! Number and indexes of variables with numerical derivatives
   integer :: nVarPointImplNum = 0
   integer, allocatable :: iVarPointImplNum_I(:)
-  !!$omp threadprivate( iVarPointImplNum_I )
+  !$omp threadprivate( iVarPointImplNum_I )
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
   real:: BetaPointImpl = 1.0
@@ -287,7 +291,7 @@ contains
     ! Put back old values into the implicit variables
     ! so the update is relative to the time level n
     ! (this is a steady state preserving scheme).
-    do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar = 1,nVarPointImpl
+    do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar=1,nVarPointImpl
        iVar = iVarPointImpl_I(iIvar)
        State_VGB(iVar,i,j,k,iBlock) = StateOld_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
@@ -348,7 +352,7 @@ contains
 
           if(IsAsymmetric)then
              ! Calculate dS/dU matrix elements
-             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
+             do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon_C
              end do
@@ -364,7 +368,7 @@ contains
              call calc_point_impl_source(iBlock)
              
              ! Calculate dS/dU matrix elements with symmetric differencing
-             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
+             do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
@@ -384,7 +388,7 @@ contains
     ! call timing_stop('pointimplsrc')
 
     if(DoTest)then
-       do iIVar = 1, nVarPointImpl
+       do iIVar=1,nVarPointImpl
           iVar = iVarPointImpl_I(iIVar)
           write(*,'(a,a,i5,a,100es15.6)')NameSub,': DsDu(',iVar,',:)=',  &
                (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
@@ -518,6 +522,7 @@ contains
     character(len=*), parameter:: NameSub = 'init_point_implicit_num'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     nVarPointImplNum = size(iVarPointImpl_I)
     allocate(iVarPointImplNum_I(nVarPointImplNum))
