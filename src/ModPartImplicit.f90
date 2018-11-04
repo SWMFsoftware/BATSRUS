@@ -47,14 +47,14 @@ module ModPartImplicit
   logical:: UseImplSource = .false.
 
   ! Newton iteration parameters
-  logical :: UseNewton     = .false.
+  logical :: UseNewton = .false.
   ! Do a conservative update at the end of the newton iteration?
   logical :: UseConservativeImplicit = .false.
   integer :: MaxIterNewton = 1
   real    :: NewtonErrorMax = 0.001
 
   ! Real number accuracy for numerical derivatives in the Jacobian
-  real:: JacobianEps  = 1.E-12
+  real:: JacobianEps = 1.E-12
 
   ! Default parameters for the implicit linear solver
   type(LinearSolverParamType):: ImplParam = LinearSolverParamType( &
@@ -74,7 +74,7 @@ module ModPartImplicit
   character (len=10) :: TypeKrylovInit ='nul'
 
   ! Spatial order of the implicit part of the residual in dR/dU
-  integer            :: nOrderImpl  = 1
+  integer            :: nOrderImpl = 1
 
   ! Previous time step, explicit time step, ratio of explicit and implicit dt
   real:: DtExpl = -1.0, DtCoeff = -1.0
@@ -858,10 +858,10 @@ contains
        Coef1 = ImplCoeff*DtCoeff
        Coef2 = (1-ImplCoeff)*dt/dt_prev
 
-       do iBlockImpl=1,nBlockImpl;
-          iBlock=iBlockFromImpl_B(iBlockImpl)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-             n=n+1
+       do iBlockImpl=1,nBlockImpl
+          iBlock = iBlockFromImpl_B(iBlockImpl)
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+             n = n + 1
              ! For 1st Newton iteration
              ! RHS = dt*(beta*R + alpha*(w_n-w_n-1)/dt_n-1)/Norm_V
              Rhs_I(n) = (Coef1*ResExpl_VCB(iVar,i,j,k,iBlockImpl) &
@@ -891,10 +891,10 @@ contains
 
     if(UseNewton .or. UseConservativeImplicit)then
        ! Calculate RHS0 used for RHS when nIterNewton > 1
-       n=0
-       do iBlockImpl = 1, nBlockImpl
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-             n=n+1
+       n = 0
+       do iBlockImpl=1,nBlockImpl
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+             n = n + 1
              ! RHS0 = [dt*(R - beta*R_low) + w_n]/Norm_V
              !     = RHS + [-beta*dt*R_low + w_n]/Norm_V
              Rhs0_I(n) = Rhs_I(n) &
@@ -941,7 +941,6 @@ contains
   subroutine impl_newton_loop
 
     use ModProcMH
-    ! use ModMain, ONLY : 
     use ModMpi
 
     integer :: i,j,k,iVar,iBlockImpl,n, iError
@@ -952,9 +951,9 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Caculate RHS for 2nd or later Newton iteration
-    n=0
+    n = 0
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
-       n=n+1
+       n = n + 1
        ! RHS = (dt*R_n - beta*dt*R_n_low
        !       + w_n + beta*dt*R_k_low - Impl_VGB)/Norm
        ! use: RHS0 and ResImpl_VCB = DtExpl * R_k_low
@@ -1014,10 +1013,10 @@ contains
     endif
 
     ! w=w+x_I for all true cells
-    n=0
+    n = 0
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        do iVar = 1, nVar
-          n=n+1
+          n = n + 1
           if(IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)))&
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Impl_VGB(iVar,i,j,k,iBlockImpl) &
@@ -1060,11 +1059,11 @@ contains
     !
     ! DtCoeff = Dt/DtExpl is used to convert to the implicit time step
 
-    n=0
-    do iBlockImpl = 1, nBlockImpl
+    n = 0
+    do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-          n=n+1
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+          n = n + 1
           if(IsImplCell_CB(i,j,k,iBlock)) &
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Rhs0_I(n)*Norm_V(iVar) &
@@ -1333,11 +1332,11 @@ contains
     Dxyz_D = CellSize_DB(:,iBlock)
     if(UseB0)then
        call set_b0_face(iBlock)
-       B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_)=B0_DX(:,1:nI+1,1:nJ,1:nK)
-       B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_)=B0_DY(:,1:nI,1:nJ+1,1:nK)
-       B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_)=B0_DZ(:,1:nI,1:nJ,1:nK+1)
+       B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_) = B0_DX(:,1:nI+1,1:nJ,1:nK)
+       B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_) = B0_DY(:,1:nI,1:nJ+1,1:nK)
+       B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_) = B0_DZ(:,1:nI,1:nJ,1:nK+1)
     else
-       B0_DFD =0.0
+       B0_DFD = 0.0
     end if
 
     if(UseHallResist)call impl_init_hall
@@ -1349,7 +1348,7 @@ contains
     do iDim = 1, nDim
 
        i1 = 1+i_DD(1,iDim); j1= 1+i_DD(2,iDim); k1= 1+i_DD(3,iDim)
-       i2 =nI+i_DD(1,iDim); j2=nJ+i_DD(2,iDim); k2=nK+i_DD(3,iDim);
+       i2 =nI+i_DD(1,iDim); j2=nJ+i_DD(2,iDim); k2=nK+i_DD(3,iDim)
 
        call get_face_flux(Impl_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,iDim),&
             nI, nJ, nK, iDim, iBlock, FluxLeft_VFD(:,i1:i2,j1:j2,k1:k2,iDim))
@@ -1358,7 +1357,7 @@ contains
             nI, nJ, nK, iDim, iBlock, FluxRight_VFD(:,:,:,:,iDim))
 
        ! Average w for each cell interface into ImplEps_VC
-       i1 = 1-i_DD(1,iDim); j1= 1-i_DD(2,iDim); k1= 1-i_DD(3,iDim)
+       i1 = 1-i_DD(1,iDim); j1 = 1-i_DD(2,iDim); k1 = 1-i_DD(3,iDim)
 
        ! Calculate orthogonal cmax for each interface in advance
        call get_cmax_face(                            &
@@ -1369,7 +1368,7 @@ contains
 
        ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
        Coeff = -0.5
-       Cmax_DF(iDim,1:i2,1:j2,1:k2)=Coeff*Cmax_DF(iDim,1:i2,1:j2,1:k2)
+       Cmax_DF(iDim,1:i2,1:j2,1:k2) = Coeff*Cmax_DF(iDim,1:i2,1:j2,1:k2)
     enddo
 
     ! Initialize divB and sPowell_VC arrays
@@ -1383,7 +1382,7 @@ contains
 
     do jVar=1,nVar
        ! Remove perturbation from previous jVar if there was a previous one
-       if(jVar>1)ImplEps_VC(jVar-1,:,:,:)=Impl_VC(jVar-1,:,:,:)
+       if(jVar>1) ImplEps_VC(jVar-1,:,:,:) = Impl_VC(jVar-1,:,:,:)
 
        ! Perturb new jVar variable
        Coeff = Eps*Norm_V(jVar)
@@ -1448,11 +1447,6 @@ contains
              dFdWRight_F(1:nI,1:nJ,1:nK) = dFdWRight_F(1:nI,1:nJ,1:nK) &
                   /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
 
-             ! DEBUG
-             ! if(iDim==3.and.iVar==4.and.jVar==2)&
-             ! write(*,*)'AFTER  addcmax dfdwL(iih)=',&
-             !           dFdWLeft_F(iTest,jTest,kTest-1)
-
              ! Contribution of fluxes to main diagonal (middle cell)
              ! dR_i/dW_i = 0.5/Dx*[(dFxR/dW-cmax)_i-1/2 - (dFxL/dW+cmax)_i+1/2]
 
@@ -1509,6 +1503,7 @@ contains
                   +dFdWRight_F(i1:nI,j1:nJ,k1:nK)
           enddo ! iVar
        enddo ! iDim
+
        if(DoTest)then
           write(*,*)'After fluxes jVar=',jVar,' stencil, row, JAC'
           do iStencil=1,nStencil
@@ -1564,7 +1559,7 @@ contains
 
     ! Multiply JAC by the implicit timestep dt, ImplCoeff, Norm_V, and -1
     if(time_accurate)then
-       do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           if(IsImplCell_CB(i,j,k,iBlock))then
              do jVar=1,nVar; do iVar=1,nVar
                 Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
@@ -1578,7 +1573,7 @@ contains
        end do; end do; end do; end do
     else
        ! Local time stepping has time_BLK=0.0 inside the body
-       do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           do jVar=1,nVar; do iVar=1,nVar
              Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
                   -Jac_VVCI(iVar,jVar,i,j,k,iStencil) &
@@ -1598,7 +1593,7 @@ contains
 
     ! Add unit matrix to main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar = 1, nVar
+       do iVar=1,nVar
           Jac_VVCI(iVar,iVar,i,j,k,1) = Jac_VVCI(iVar,iVar,i,j,k,1) + 1.0
        end do
     end do; end do; end do
@@ -1914,7 +1909,7 @@ contains
     enddo; enddo; enddo; enddo
 
     if(UseResistivePlanet) then
-       do iBlockImpl = 1, nBlockImpl; do k=1, nK; do j=1, nJ; do i=1, nI
+       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
           if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
                IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
        enddo; enddo; enddo; enddo
@@ -2155,9 +2150,9 @@ contains
          Res_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
-       iBlock=iBlockFromImpl_B(iBlockImpl)
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        if(.not. IsImplCell_CB(i,j,k,iBlock)) then
-          Res_VCB(:,i,j,k,iBlockImpl) =0;
+          Res_VCB(:,i,j,k,iBlockImpl) = 0;
        endif
     enddo; enddo; enddo; enddo
 
