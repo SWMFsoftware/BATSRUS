@@ -81,12 +81,6 @@ module ModFaceFlux
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
-  !hyzhou: this can be threadprivate but not necessary! just for test!
-  ! maybe there're race conditions?
-  !$omp threadprivate( DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld )
-  !$omp threadprivate( DoAw, DoRoeOld, DoRoe, DoLfNeutral )
-  !$omp threadprivate( DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
-  !$omp threadprivate( DoAwNeutral, DoGodunovNeutral, DoHllcNeutral )
   
   ! 1D Burgers' equation, works for Hd equations.
   logical :: DoBurgers = .false.
@@ -211,15 +205,11 @@ module ModFaceFlux
   ! to the number of waves, resulting in a well-posed Riemann problem.
   ! This approach is an alternative to the 8-wave scheme.
   logical :: UseRS7 = .false.
-  !$omp threadprivate( UseRS7 )
   
   ! Local logical variables for various terms that may be switched off
   ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
        DoIonHeatConduction = .false., DoHallInduction = .false.
-  !hyzhou: in principle these should all be threadprivate!
-  !$omp threadprivate( DoRadDiffusion, DoHeatConduction )
-  !$omp threadprivate( DoIonHeatConduction, DoHallInduction )
   
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
@@ -418,32 +408,16 @@ contains
 
   end subroutine rotate_flux_vector
   !============================================================================
-  subroutine calc_face_flux(DoResChangeOnly, iBlock)
+  subroutine init_mod_face_flux
 
-    use ModAdvance,  ONLY: TypeFlux => FluxType,&
-         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
-    use ModParallel, ONLY: &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
-    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
-         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-         UseHyperbolicDivb
+    ! Set the logicals of type of flux used in the current session and 
+    ! the logicals of diffusion, conduction and induction.
+
+    use ModMain, ONLY: UseHyperbolicDivb
+    use ModAdvance, ONLY: TypeFlux => FluxType
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
-    use ModWaves,    ONLY: UseWavePressure
-    use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
 
-    logical, intent(in) :: DoResChangeOnly
-    integer, intent(in) :: iBlock
-
-    real:: FaceDivU_I(nFluid)
-    integer, parameter:: cLowOrder = 1
-    real, parameter:: cSmall = 1e-6
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_face_flux'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(DoTest)call print_values
+    !------------------------------------------------------------------------
 
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
@@ -463,11 +437,47 @@ contains
     DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
     DoHllcNeutral    = TypeFluxNeutral == 'HLLC'
 
-    UseRS7 = DoRoe  ! This is always true for the current implementation
-
+    UseRS7 = DoRoe  ! This is always true for the current implementation   
     UseLindeFix = UseB .and. &
          (UseHyperbolicDivb .or. DoHll .or. DoLfdw .or. DoHlldw &
-         .or. DoHlld .or. DoAw)
+         .or. DoHlld .or. DoAw)    
+
+    DoRadDiffusion      = UseRadDiffusion .and.&
+         .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
+         index(TypeSemiImplicit,'radcond')>0 .or.&
+         index(TypeSemiImplicit,'cond')>0)
+
+    DoHeatConduction    = UseHeatConduction .and.&
+         .not.  index(TypeSemiImplicit,'parcond')>0
+
+    DoHallInduction = UseHallResist .and. .not. UseSemiHallResist
+
+
+  end subroutine init_mod_face_flux
+  !============================================================================
+  subroutine calc_face_flux(DoResChangeOnly, iBlock)
+
+    use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+    use ModParallel, ONLY: &
+         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+    use ModWaves,    ONLY: UseWavePressure
+    use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
+
+    logical, intent(in) :: DoResChangeOnly
+    integer, intent(in) :: iBlock
+
+    real:: FaceDivU_I(nFluid)
+    integer, parameter:: cLowOrder = 1
+    real, parameter:: cSmall = 1e-6
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_face_flux'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest)call print_values
 
     ! Make sure that Hall MHD recalculates the magnetic field
     ! in the current block that will be used for the Hall term
@@ -478,16 +488,6 @@ contains
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockViscosity    = .true.
     IsNewBlockAlfven       = .true.
-
-    DoRadDiffusion      = UseRadDiffusion .and.&
-         .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
-         index(TypeSemiImplicit,'radcond')>0 .or.&
-         index(TypeSemiImplicit,'cond')>0)
-    
-    DoHeatConduction    = UseHeatConduction .and.&
-         .not.  index(TypeSemiImplicit,'parcond')>0
-
-    DoHallInduction = UseHallResist .and. .not. UseSemiHallResist
 
     if(UseHallResist)then
        call set_hall_factor_face(iBlock)
@@ -615,7 +615,7 @@ contains
 
       call set_block_values(iBlock, x_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
 
          DoTestCell = DoTest &
               .and. (iFace == iTest .or. iFace == iTest+1) &
@@ -650,7 +650,7 @@ contains
                  LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  DeltaBnL* Normal_D
          else
-            DeltaBnL=0.0;DeltaBnR=0.0
+            DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
@@ -663,7 +663,7 @@ contains
                  Flux_VX(:,iFace,jFace,kFace))
          endif
 
-         VdtFace_x(iFace,jFace,kFace)       = CmaxDt*Area
+         VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
          
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(x_)
@@ -688,7 +688,7 @@ contains
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
          ! is 6th order.
-         do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
             if(UseLowOrder)then
                if(LowOrderCrit_XB(iFace,jFace,kFace,iBlockFace) &
                     >=cLowOrder-cSmall) cycle
@@ -712,7 +712,7 @@ contains
 
       call set_block_values(iBlock, y_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
 
          DoTestCell = DoTest .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
@@ -733,20 +733,20 @@ contains
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnR = sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            RightState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
+            RightState_VY(Bx_:Bz_, iFace, jFace, kFace) =&
                  RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  DeltaBnR* Normal_D
-            DeltaBnL=sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnL = sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))*&
                  Normal_D)
-            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
+            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) =&
                  LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  DeltaBnL* Normal_D
          else
-            DeltaBnL=0.0;DeltaBnR=0.0
+            DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
@@ -760,7 +760,7 @@ contains
                  Flux_VY(:,iFace, jFace, kFace))
          endif
 
-         VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
+         VdtFace_y(iFace, jFace, kFace) = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(y_)
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
@@ -785,10 +785,10 @@ contains
       ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       ! is 6th order.
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
-         do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
             if(UseLowOrder)then
                if(LowOrderCrit_YB(iFace,jFace,kFace,iBlockFace) &
-                    >=cLowOrder-cSmall) cycle
+                    >= cLowOrder-cSmall) cycle
             endif
             do iFlux = 1, nFlux
                Flux_VY(iFlux,iFace,jFace,kFace) = &
@@ -830,20 +830,20 @@ contains
             B0z = B0_DZ(z_,iFace, jFace, kFace)
          end if
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnR = sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
+            RightState_VZ(Bx_:Bz_, iFace, jFace, kFace) =&
                  RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  DeltaBnR* Normal_D
-            DeltaBnL=sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnL = sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*&
                  Normal_D)
-            LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
+            LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace) =&
                  LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  DeltaBnL* Normal_D
          else
-            DeltaBnL=0.0;DeltaBnR=0.0
+            DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
@@ -880,7 +880,7 @@ contains
       end do; end do; end do
 
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
-         do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
             if(UseLowOrder)then
                if(LowOrderCrit_ZB(iFace,jFace,kFace,iBlockFace) &
                     >=cLowOrder-cSmall) cycle
