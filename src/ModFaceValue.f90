@@ -840,7 +840,7 @@ contains
     if(.not.allocated(Primitive_VG))&
          allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-    if(.not. allocated(FaceL_I)) then
+    if(.not.allocated(FaceL_I)) then
        allocate(FaceL_I(1:MaxIJK+2))
        allocate(FaceR_I(0:MaxIJK+1))
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
@@ -1613,7 +1613,7 @@ contains
                call limit_var(iMin, iMax, Ux_)
                uDotArea_XI(iMin:iMax,j,k,1) = CellFace_DB(1,iBlock) &
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
-
+               
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
