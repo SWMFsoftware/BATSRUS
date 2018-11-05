@@ -83,8 +83,8 @@ contains
           call set_low_order_face
        endif
 
-       !hyzhou: potentially this can also be parallelized?
        if(DoConserveFlux) then
+          !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
@@ -110,6 +110,7 @@ contains
              call save_cons_flux(iBlock)
 
           end do
+          !$omp end parallel do
        endif
 
        if(DoTest)write(*,*)NameSub,' done res change only'
