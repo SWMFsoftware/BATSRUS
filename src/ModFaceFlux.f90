@@ -898,7 +898,8 @@ contains
 
     subroutine add_artificial_viscosity(Flux_V)
       ! This subroutine adds artificial viscosity to the fluid 
-      ! density/moment/energy/pressure equations, but not the EM field equations.
+      ! density/moment/energy/pressure equations, but not the EM field 
+      ! equations.
       ! The algorithm is implemented based on the paper of 
       ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
       ! for more details. 
@@ -913,7 +914,8 @@ contains
 
       character(len=*), parameter:: NameSub = 'add_artificial_viscosity'
       !------------------------------------------------------------------------
-      if(.not.all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) RETURN;
+      if(.not.all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace)))&
+           RETURN
 
       do iFluid = 1, nFluid
          iRho   = iRho_I(iFluid)
@@ -991,11 +993,11 @@ contains
     InvDxyz = 1./CellSize_DB(iDim,iBlockFace)
     select case(iDim)
     case(x_)
-       AreaX   = Area; AreaY = 0.0; AreaZ = 0.0
+       AreaX = Area; AreaY = 0.0; AreaZ = 0.0
     case(y_)
-       AreaY   = Area; AreaX = 0.0; AreaZ = 0.0
+       AreaY = Area; AreaX = 0.0; AreaZ = 0.0
     case(z_)
-       AreaZ   = Area; AreaX = 0.0; AreaY = 0.0
+       AreaZ = Area; AreaX = 0.0; AreaY = 0.0
     end select
     Area2 = Area**2
 
@@ -1238,7 +1240,7 @@ contains
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_material_properties
 
-    real,    intent(out):: Flux_V(nFlux)
+    real, intent(out):: Flux_V(nFlux)
 
     real :: State_V(nVar)
 
@@ -2214,7 +2216,7 @@ contains
       ! Called for each fluid separately. Uses iFluid, iRho, ...
 
       use ModAdvance,  ONLY: UseElectronPressure
-      use ModExactRS,  ONLY: wR, wL,  RhoL, RhoR, pL, pR, UnL, UnR, &
+      use ModExactRS,  ONLY: wR, wL, RhoL, RhoR, pL, pR, UnL, UnR, &
            UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModWaves,    ONLY: UseWavePressure, GammaWave
@@ -3205,11 +3207,11 @@ contains
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
-      Rho     = State_V(iRho)
-      Ux      = State_V(iUx)
-      Uy      = State_V(iUy)
-      Uz      = State_V(iUz)
-      p       = State_V(iP)
+      Rho = State_V(iRho)
+      Ux  = State_V(iUx)
+      Uy  = State_V(iUy)
+      Uz  = State_V(iUz)
+      p   = State_V(iP)
 
       ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
       ! anisotropic Pe, Peperp contributes
@@ -3246,11 +3248,11 @@ contains
       StateCons_V(iEnergy) = e
 
       ! Normal velocity
-      Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
-      RhoUn  = Rho*Un
+      Un    = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
+      RhoUn = Rho*Un
 
       ! f_i[rho] = rho*u_i
-      Flux_V(iRho)   = RhoUn
+      Flux_V(iRho) = RhoUn
 
       ! f_i[rhou_k] = u_i*rho*u_k + n_i*[ptotal]
       Flux_V(iRhoUx) = RhoUn*Ux + pTotal*NormalX
@@ -3258,7 +3260,7 @@ contains
       Flux_V(iRhoUz) = RhoUn*Uz + pTotal*NormalZ
 
       ! f_i[p] = u_i*p
-      Flux_V(iP)  = Un*p
+      Flux_V(iP) = Un*p
 
       Flux_V(iEnergy) = Un*(pTotal + e)
 
@@ -3281,7 +3283,7 @@ contains
          Flux_V(iRhoUz) = Flux_V(iRhoUz) + FullBz*DpPerB
 
          ! f_i[Ppar] = u_i*Ppar
-         Flux_V(iPpar)  = Un*State_V(iPpar)
+         Flux_V(iPpar) = Un*State_V(iPpar)
 
          Flux_V(iEnergy) = Flux_V(iEnergy) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
@@ -3461,7 +3463,7 @@ contains
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
 
-                Eta       = 0.0
+                Eta = 0.0
                 if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
 
                 if(UseClimit)  call stop_mpi(&
@@ -3540,7 +3542,7 @@ contains
 
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
-    integer :: iError = -1
+    integer, parameter :: iError = -1
     integer :: iFluid
     
     logical:: DoTest
@@ -3635,7 +3637,7 @@ contains
 
           if (maxval(Cmax_I(iFluidMin:iFluidMax)) > Clight) then
              call error_report( &
-                  'get_speed_max: Clihgt is smaller than maxval(Cmax_I)', &
+                  'get_speed_max: Clight is smaller than maxval(Cmax_I)', &
                   maxval(Cmax_I(iFluidMin:iFluidMax)), iError, .true.)
           end if
        end if
@@ -3976,7 +3978,8 @@ contains
          Ppar  = State_V(Ppar_)
          Pperp = (3*State_V(p_) - Ppar)/2.
          if(.not. IsMhd .and. .not. UseEfield)then
-!!! Most likely the parallel and perpendicular sound speeds should be added up here !!!
+         ! Most likely the parallel and perpendicular sound speeds should be
+         ! added up here !!!
             do jFluid = IonFirst_+1, IonLast_
                Ppar1 = State_V(iPparIon_I(jFluid))
                Ppar  = Ppar + Ppar1
@@ -4024,8 +4027,8 @@ contains
          if(DoTestCell) write(*,*) NameSub,' AnisoP, Sound2, Fast2, Discr=', &
               Sound2, Fast2, Discr
       else
-         Fast2  = Sound2 + Alfven2
-         Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
+         Fast2 = Sound2 + Alfven2
+         Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
          if(DoTestCell) write(*,*) NameSub,' Sound2, Fast2, Discr        =', &
               Sound2, Fast2, Discr
       endif
@@ -4315,7 +4318,8 @@ contains
              do iCell = iFace - 2, iFace + 1
                 Area0_D(1:nDim) = CellCoef_DDGB( &
                      Xi_,:,iCell,jFace,kFace,iBlockFace)
-                Normal0_D(1:nDim) = Area0_D(1:nDim)/sqrt(sum(Area0_D(1:nDim)**2))
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
+                     sqrt(sum(Area0_D(1:nDim)**2))
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
                      State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
@@ -4328,8 +4332,8 @@ contains
              do iCell = jFace - 2, jFace + 1
                 Area0_D(1:nDim) = CellCoef_DDGB( &
                      Eta_,:,iFace,iCell,kFace,iBlockFace)
-                Normal0_D(1:nDim) = Area0_D(1:nDim)/sqrt(sum(Area0_D(1:nDim)**2))
-
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
+                     sqrt(sum(Area0_D(1:nDim)**2))
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
                      State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
@@ -4416,7 +4420,7 @@ contains
     real, dimension(nWaveMhd, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
 
     ! Fluxes
-    real, dimension(nFluxMhd)       :: Diffusion_V      ! Diffusive fluxes
+    real, dimension(nFluxMhd) :: Diffusion_V      ! Diffusive fluxes
 
     ! Misc. scalar variables
     real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv
@@ -4483,9 +4487,9 @@ contains
     !   call stop_mpi
     ! end if
 
-    aL=sqrt(aL)
-    aR=sqrt(aR)
-    aH=sqrt(aH)
+    aL = sqrt(aL)
+    aR = sqrt(aR)
+    aH = sqrt(aH)
 
     eL = aL*aL + BbL*RhoInvL
     CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
@@ -4494,35 +4498,35 @@ contains
     eH = aH**2 + BbH*RhoInvH
     CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
 
-    CfL=sqrt(CfL)
-    CfR=sqrt(CfR)
-    CfH=sqrt(CfH)
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
 
-    CsL  = max(0.,0.5*(eL-CfL))
-    CfL  = 0.5*(eL+CfL)
+    CsL = max(0.,0.5*(eL-CfL))
+    CfL = 0.5*(eL+CfL)
 
-    CsR  = max(0.,0.5*(eR-CfR))
-    CfR  = 0.5*(eR+CfR)
+    CsR = max(0.,0.5*(eR-CfR))
+    CfR = 0.5*(eR+CfR)
 
-    CsH  = max(0.,0.5*(eH-CfH))
-    CfH  = 0.5*(eH+CfH)
+    CsH = max(0.,0.5*(eH-CfH))
+    CfH = 0.5*(eH+CfH)
 
-    UuH  = UnH**2 + Ut1H**2 + Ut2H**2
-    eH   = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
+    UuH = UnH**2 + Ut1H**2 + Ut2H**2
+    eH  = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
 
-    CsL=sqrt(CsL)
-    CsR=sqrt(CsR)
-    CsH=sqrt(CsH)
-    CfL=sqrt(CfL)
-    CfR=sqrt(CfR)
-    CfH=sqrt(CfH)
+    CsL = sqrt(CsL)
+    CsR = sqrt(CsR)
+    CsH = sqrt(CsH)
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
 
-    CsL  = min(CsL,aL)
-    CfL  = max(CfL,aL)
-    CsR  = min(CsR,aR)
-    CfR  = max(CfR,aR)
-    CsH  = min(CsH,aH)
-    CfH  = max(CfH,aH)
+    CsL = min(CsL,aL)
+    CfL = max(CfL,aL)
+    CsR = min(CsR,aR)
+    CfR = max(CfR,aR)
+    CsH = min(CsH,aH)
+    CfH = max(CfH,aH)
 
     !\
     ! Non-dimensional scaling factors
@@ -4557,15 +4561,15 @@ contains
     ! Set some values that are reused over and over
     !/
 
-    RhoSqrtH   =sqrt(RhoH)
-    RhoSqrtL   =sqrt(RhoL)
-    RhoSqrtR   =sqrt(RhoR)
-    RhoInvSqrtH=1./RhoSqrtH
-    RhoInvSqrtL=1./RhoSqrtL
-    RhoInvSqrtR=1./RhoSqrtR
+    RhoSqrtH = sqrt(RhoH)
+    RhoSqrtL = sqrt(RhoL)
+    RhoSqrtR = sqrt(RhoR)
+    RhoInvSqrtH = 1./RhoSqrtH
+    RhoInvSqrtL = 1./RhoSqrtL
+    RhoInvSqrtR = 1./RhoSqrtR
 
     SignBnH     = sign(1.,BnH)
-    Gamma1A2Inv = GammaMinus1 / aH**2
+    Gamma1A2Inv = GammaMinus1/aH**2
 
     !\
     ! Eigenvalues
@@ -4659,9 +4663,9 @@ contains
     !\
     ! Eigenvectors
     !/
-    Tmp1=1./(2.*RhoH*aH**2)
-    Tmp2=RhoInvH*cSqrtHalf
-    Tmp3=RhoInvSqrtH*cSqrtHalf
+    Tmp1 = 1./(2.*RhoH*aH**2)
+    Tmp2 = RhoInvH*cSqrtHalf
+    Tmp3 = RhoInvSqrtH*cSqrtHalf
 
     ! Left eigenvector for Entropy wave
     EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
@@ -4752,7 +4756,7 @@ contains
     EigenvectorL_VV(8,8) = 0.
 
     ! coefficient for pressure component of the Right vector
-    Tmp1=Gamma*max(pL,pR)
+    Tmp1 = Gamma*max(pL,pR)
 
     ! Pressure component is not linearly independent and obeys the
     ! equation as follows:
@@ -4774,7 +4778,7 @@ contains
     EigenvectorR_VV(1,6) = 0.
     EigenvectorR_VV(1,7) = 0.
     EigenvectorR_VV(1,eMhd_) = 0.5*UuH
-    EigenvectorR_VV(1,pMhd_)=0.0
+    EigenvectorR_VV(1,pMhd_) = 0.0
 
     ! Right eigenvector for Alfven wave +
     EigenvectorR_VV(2,1) = 0.
@@ -4786,7 +4790,7 @@ contains
     EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
     EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
          + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(2,pMhd_)=0.0
+    EigenvectorR_VV(2,pMhd_) = 0.0
 
     ! Right eigenvector for Alfven wave -
     EigenvectorR_VV(3,1) = 0.
@@ -4798,7 +4802,7 @@ contains
     EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
     EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
          - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(3,pMhd_)=0.0
+    EigenvectorR_VV(3,pMhd_) = 0.0
 
     ! Right eigenvector for Slow magnetosonic wave +
     EigenvectorR_VV(4,1) = RhoH*AlphaS
@@ -4812,7 +4816,7 @@ contains
          AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
          - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
          - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(4,pMhd_)=Tmp1*AlphaS
+    EigenvectorR_VV(4,pMhd_) = Tmp1*AlphaS
 
     ! Right eigenvector for Fast magnetosonic wave +
     EigenvectorR_VV(5,1) = RhoH*AlphaF
@@ -4826,7 +4830,7 @@ contains
          AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
          + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
          - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(5,pMhd_)=Tmp1*AlphaF
+    EigenvectorR_VV(5,pMhd_) = Tmp1*AlphaF
 
     ! Right eigenvector for Slow magnetosonic wave -
     EigenvectorR_VV(6,1) = RhoH*AlphaS
@@ -4840,7 +4844,7 @@ contains
          AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
          - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
          + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(6,pMhd_)=Tmp1*AlphaS
+    EigenvectorR_VV(6,pMhd_) = Tmp1*AlphaS
 
     ! Right eigenvector for Fast magnetosonic wave -
     EigenvectorR_VV(7,1) = RhoH*AlphaF
@@ -4854,7 +4858,7 @@ contains
          AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
          + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
          + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(7,pMhd_)=Tmp1*AlphaF
+    EigenvectorR_VV(7,pMhd_) = Tmp1*AlphaF
 
     ! Right eigenvector for Divergence wave
     EigenvectorR_VV(8,1) = 0.
