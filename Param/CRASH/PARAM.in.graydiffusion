@@ -137,19 +137,19 @@ raw			StringLogfile
 F			DoSaveRestart
 
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #SAVEPLOT
 2			nPlotfile
 z=0 VAR idl		StringPlot
--1  			DnSavePlot
-0.00025			DtSavePlot
+20  			DnSavePlot
+-0.00025		DtSavePlot
 -1.0			DxSavePlot
 Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
 g
 cut VAR idl		StringPlot
--1  			DnSavePlot
-0.00025			DtSavePlot
+20 			DnSavePlot
+-0.00025		DtSavePlot
 -0.5			xMinCut
 0.5			xMaxCut
 0.000001		yMinCut
