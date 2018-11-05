@@ -625,8 +625,8 @@ test_graydiffusion_run:
 
 test_graydiffusion_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
-		Param/CRASH/TestOutput/zCut_Graydiffusion_ref.out \
-		${TESTDIR}/RESULTS/GM/z=0_var_1_t00000000_n00000020.out > test_graydiffusion.diff)
+		Param/CRASH/TestOutput/log_graydiffusion.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff)
 	ls -l test_graydiffusion.diff
 
 ### END OF CRASH RELATED TESTS #############################################
