@@ -7,12 +7,11 @@ module ModRadDiffusion
   use BATL_lib, ONLY: &
        test_start, test_stop
 
-  ! Solve for gray or multigroup radiation diffusion
-  ! and/or isotropic electron heat conduction in the
-  ! non-relativistic fluid velocity limit.
+  ! Solve for gray or multigroup radiation diffusion and/or isotropic electron
+  ! heat conduction in the non-relativistic fluid velocity limit.
   !
-  ! The unknowns are radiation energy density and black body
-  ! radiation energy density (a*Te**4) representing the material
+  ! The unknowns are radiation energy density and black body radiation energy
+  ! density (a*Te**4) representing the material 
   ! (electron or ion) energy density.
   !
   ! Split semi-implicit schemes is implemented.
@@ -51,8 +50,9 @@ module ModRadDiffusion
   ! Logical for adding radiation diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   !$omp threadprivate( IsNewBlockRadDiffusion )
-  logical, public :: IsNewTimestepRadDiffusion = .true.
 
+  logical, public :: IsNewTimestepRadDiffusion = .true.
+  
   ! Logical for using the electron heat flux limiter
   logical, public :: UseHeatFluxLimiter = .false.
 
@@ -93,6 +93,7 @@ module ModRadDiffusion
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
   !$omp threadprivate( Erad_WG )
+
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_WG(:,:,:,:)
   !$omp threadprivate( Erad1_WG )
@@ -113,6 +114,7 @@ module ModRadDiffusion
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
   !$omp threadprivate( Te_G )
+
   ! temporary electron temperature array needed by set_block_field
   real, allocatable :: Te1_G(:,:,:)
   !$omp threadprivate( Te1_G )
@@ -490,7 +492,7 @@ contains
     
     real :: State_V(nVar)
     integer :: iVarSemi_
-
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
