@@ -24,7 +24,7 @@ contains
     !
     use ModCoordTransform, ONLY: cross_product
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
+    use ModMain, ONLY: time_accurate, n_Step, time_simulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
          plot_type, plot_form, plot_, ObsPos_DI, &
          n_Pix_X, n_Pix_Y, X_Size_Image, Y_Size_Image, &
