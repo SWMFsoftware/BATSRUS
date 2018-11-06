@@ -2003,7 +2003,7 @@ contains
     use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
 
-    real,    intent(in) :: Var_VC(:,:,:,:)
+    real,    intent(in) :: Var_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
     integer :: i,j,k, iFluid
 
@@ -2227,9 +2227,9 @@ contains
     use ModMultiFluid, ONLY: nFluid, iP_I
 
     integer, intent(in):: nI, nJ, nK, iDim, iBlock
-    real, intent(in)   :: StateCons_VC(nVar,nI,nJ,nK)
-    real, intent(in)   :: B0_DC(:,:,:,:)
-    real, intent(out)  :: Flux_VC(:,:,:,:)
+    real, intent(in)   :: StateCons_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
+    real, intent(in)   :: B0_DC(:,:,:,:)        ! dimension(MaxDim,nI,nJ,nK)
+    real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
@@ -2293,9 +2293,9 @@ contains
     use ModAdvance,  ONLY: eFluid_
 
     integer, intent(in):: nFaceI,nFaceJ,nFaceK,iDim,iBlock
-    real, intent(in)   :: Var_VF(:,:,:,:)
-    real, intent(in)   :: B0_DF(:,:,:,:)
-    real, intent(out)  :: Cmax_F(:,:,:)
+    real, intent(in) :: Var_VF(:,:,:,:) ! dimension(nVar,nFaceI,nFaceJ,nFaceK)
+    real, intent(in) :: B0_DF(:,:,:,:)  ! dimension(MaxDim,nFaceI,nFaceJ,nFaceK)
+    real, intent(out):: Cmax_F(:,:,:)   ! dimension(nFaceI,nFaceJ,nFaceK)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
 
