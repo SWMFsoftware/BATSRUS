@@ -73,7 +73,6 @@ module ModB0
   ! Lookup table related variables
   integer:: iTableB0 = -1
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
-  !$omp threadprivate( iTableB0, rMinB0, rMaxB0, dLonB0, FactorB0 )
   
 contains
   !============================================================================
@@ -169,6 +168,8 @@ contains
     if((UseCurlB0 .or. UseB0Source) .and. .not.allocated(CurlB0_DC)) &
          allocate(CurlB0_DC(3,nI,nJ,nK))
 
+    !$omp end parallel
+
     iTableB0 = i_lookup_table('B0')
     if(iTableB0 > 0)then
        call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I)
@@ -176,7 +177,6 @@ contains
        rMaxB0 = Param_I(2)
        if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
     end if
-    !$omp end parallel
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
