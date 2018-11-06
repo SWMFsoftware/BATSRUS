@@ -409,15 +409,15 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_VII(nVar,-1:4,-1:4)
-    real, intent(in) :: Fine1_VII(nVar,2,2)
-    real, intent(in) :: Fine2_VII(nVar,2,2)
+    real, intent(in) :: Coarse2_V(:)
+    real, intent(in) :: Coarse1_VII(:,:,:)
+    real, intent(in) :: Fine1_VII(:,:,:)
+    real, intent(in) :: Fine2_VII(:,:,:)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:)     
+    real, intent(inout):: FineF_VII(:,:,:)    
 
-    real, intent(inout), dimension(nVar, 2, 2)::&
-         CoarseToFineF_VII ,FineToCoarseF_VII , FineF_VII
-
-    integer::iVar,i2,j2
+    integer :: iVar,i2,j2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V
     real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
@@ -435,14 +435,14 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,1,1)
+    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,3,3)
 
     ! Save sign of the gradient
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,1,1) - Coarse2_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,3,3) - Coarse2_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
@@ -450,21 +450,21 @@ contains
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
 
     ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VII(:,1,1) + GradNormalLtd_V
+    FaceMiddle_V = Coarse1_VII(:,3,3) + GradNormalLtd_V
 
     do j2=1,2; do i2=1,2
        ! Calculate transverse gradient between coarse cells
        do iVar = 1, nVar
           ! TransverseSlope = ( (Cside1 - Ccenter) + (Cside2 - Ccenter) ) / 4
           Transverse_V(iVar) = 0.0625* &
-               ( sum(Coarse1_VII(iVar,4*i2-5:4*i2-4,1:2)) &
-               + sum(Coarse1_VII(iVar,1:2,4*j2-5:4*j2-4)) &
+               ( sum(Coarse1_VII(iVar,4*i2-3:4*i2-2,3:4)) &
+               + sum(Coarse1_VII(iVar,3:4,4*j2-3:4*j2-2)) &
                ) - 0.5*Coarse1_VII(iVar,1,1)
        end do
 
        ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,1,1) + max(0.0, Transverse_V)
-       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,1,1) + min(0.0, Transverse_V)
+       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,3,3) + max(0.0, Transverse_V)
+       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,3,3) + min(0.0, Transverse_V)
 
        ! Add transverse gradient and limit it
        CoarseToFineF_VII(:,i2,j2) = &
@@ -483,7 +483,7 @@ contains
     do iVar = 1, nVar
 
        AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VII(iVar, 1, 1)
+       Coarse      = Coarse1_VII(iVar, 3, 3)
        Middle      = FaceMiddle_V(iVar)
 
        ! Check if the |L-M| <= |M-C| condition is satisfied
@@ -526,7 +526,7 @@ contains
        ! The first limiting ensures that the FineToCoarse face value
        ! remains between the Fine1 and Coarse values
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,1,1)), &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,3,3)), &
             Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
 
        FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
@@ -555,13 +555,14 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_VI(nVar,-1:4)
-    real, intent(in) :: Fine1_VI(nVar,2)
-    real, intent(in) :: Fine2_VI(nVar,2)
+    real, intent(in) :: Coarse2_V(:)
+    real, intent(in) :: Coarse1_VI(:,:)
+    real, intent(in) :: Fine1_VI(:,:)
+    real, intent(in) :: Fine2_VI(:,:)
 
-    real, intent(inout), dimension(nVar, 2)::&
-         CoarseToFineF_VI ,FineToCoarseF_VI , FineF_VI
+    real, intent(inout):: CoarseToFineF_VI(:,:)
+    real, intent(inout):: FineToCoarseF_VI(:,:)
+    real, intent(inout):: FineF_VI(:,:)
 
     integer:: iVar, i2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -581,14 +582,14 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
     end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,1)
+    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,3)
 
     ! Save sign of the gradient
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,1) - Coarse2_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,3) - Coarse2_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
@@ -596,20 +597,20 @@ contains
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
 
     ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VI(:,1) + GradNormalLtd_V
+    FaceMiddle_V = Coarse1_VI(:,3) + GradNormalLtd_V
 
     do i2 = 1, 2
        ! Calculate transverse gradient between coarse cells
        do iVar = 1, nVar
           ! TransverseSlope = (Cside1 - Ccenter) / 4
           Transverse_V(iVar) = &
-               0.125*sum(Coarse1_VI(iVar,4*i2-5:4*i2-4)) &
-               - 0.25*Coarse1_VI(iVar,1)
+               0.125*sum(Coarse1_VI(iVar,4*i2-3:4*i2-2)) &
+               - 0.25*Coarse1_VI(iVar,3)
        end do
 
        ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VI(:,i2) = Coarse1_VI(:,1) + max(0.0, Transverse_V)
-       Coarse1Min_VI(:,i2) = Coarse1_VI(:,1) + min(0.0, Transverse_V)
+       Coarse1Max_VI(:,i2) = Coarse1_VI(:,3) + max(0.0, Transverse_V)
+       Coarse1Min_VI(:,i2) = Coarse1_VI(:,3) + min(0.0, Transverse_V)
 
        ! Add transverse gradient and limit it
        CoarseToFineF_VI(:,i2) = &
@@ -626,7 +627,7 @@ contains
     do iVar = 1, nVar
 
        AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VI(iVar,1)
+       Coarse      = Coarse1_VI(iVar,3)
        Middle      = FaceMiddle_V(iVar)
 
        ! Check if the |L-M| <= |M-C| condition is satisfied
@@ -667,7 +668,7 @@ contains
        ! The first limiting ensures that the FineToCoarse face value
        ! remains between the Fine1 and Coarse values
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,1)), &
+            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,3)), &
             Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
 
        FineToCoarseF_VI(:,i2) = Fine1_VI(:,i2) - GradNormalLtd_V
@@ -692,13 +693,14 @@ contains
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
     !_____________!_____________!_______!_______!_
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_V(nVar)
-    real, intent(in) :: Fine1_V(nVar)
-    real, intent(in) :: Fine2_V(nVar)
+    real, intent(in) :: Coarse2_V(:)
+    real, intent(in) :: Coarse1_V(:)
+    real, intent(in) :: Fine1_V(:)
+    real, intent(in) :: Fine2_V(:)
 
-    real, intent(inout), dimension(nVar)::&
-         CoarseToFineF_V ,FineToCoarseF_V , FineF_V
+    real, intent(inout):: CoarseToFineF_V(:)
+    real, intent(inout):: FineToCoarseF_V(:)
+    real, intent(inout):: FineF_V(:)
 
     real, dimension(nVar):: Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
