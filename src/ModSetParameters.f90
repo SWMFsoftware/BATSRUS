@@ -324,7 +324,6 @@ contains
        ! initialize module variables
        call init_mod_main
        call init_mod_advance
-       call init_mod_face_flux
        call init_mod_geometry
        call init_mod_boundary_cells
        call init_mod_nodes
@@ -336,6 +335,7 @@ contains
        if(UseImplicit)      call init_mod_part_impl
        if(UseSemiImplicit)  call init_mod_semi_impl
        call init_mod_point_impl
+       call init_mod_face_flux
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
