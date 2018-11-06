@@ -2483,22 +2483,25 @@ contains
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy, UseAnisoPe
-    use ModWaves
+    use ModWaves,    ONLY: AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_,&
+                           AlfvenWavePlusFirst_, AlfvenWavePlusLast_, &
+                           GammaWave, UseAlfvenWaves, UseWavePressure, &
+                           UseWavePressureLtd
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_BLK
 
-    real,    intent(in) :: State_V(nVar)       ! input primitive state
-    real,    intent(in) :: B0x, B0y, B0z       ! B0
-    real,    intent(out):: StateCons_V(nFlux)  ! conservative states with energy
-    real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
-    real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
-    real,    intent(out):: En                  ! normal electric field
-    real,    intent(out):: Pe                  ! electron pressure for multiion
-    real,    intent(out):: Pwave               ! wave pressure for multiion
-    real,    intent(out):: PeDotArea_D(3)      ! grad Pe stuff for multiion aniso pe
+    real, intent(in) :: State_V(nVar)      ! input primitive state
+    real, intent(in) :: B0x, B0y, B0z      ! B0
+    real, intent(out):: StateCons_V(nFlux) ! conservative states with energy
+    real, intent(out):: Flux_V(nFlux)      ! fluxes for all states
+    real, intent(out):: Un_I(nFluid+1)     ! normal velocities
+    real, intent(out):: En                 ! normal electric field
+    real, intent(out):: Pe                 ! electron pressure for multiion
+    real, intent(out):: Pwave              ! wave pressure for multiion
+    real, intent(out):: PeDotArea_D(3)     ! grad Pe stuff for multiion aniso pe
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
-    real:: FluxBx, FluxBy, FluxBz, FullB2, Peperp, Pepar
+    real:: FluxBx, FluxBy, FluxBz, FullB2, Peperp, Pepar, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
 
     integer:: iVar, iFluid
