@@ -2003,7 +2003,7 @@ contains
     use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
 
-    real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
+    real,    intent(in) :: Var_VC(:,:,:,:)
     integer, intent(in) :: iBlock
     integer :: i,j,k, iFluid
 
@@ -2051,7 +2051,7 @@ contains
     use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
     use ModAdvance, ONLY: State_VGB
 
-    real :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real :: Var_VCB(:,:,:,:,:)
     integer :: iBlockImpl, iBlock
 
     logical:: DoTest
@@ -2091,10 +2091,10 @@ contains
     use ModMpi
     
     logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
-    real, intent(in)    :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real, intent(in)    :: Var_VCB(:,:,:,:,:)
     ! The actual Var_VCB and Res_VCB arguments may be the same array:
     ! intent(inout)
-    real, intent(inout) :: Res_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real, intent(inout) :: Res_VCB(:,:,:,:,:)
 
     real    :: CflTmp
     integer :: nOrderTmp, nStageTmp, iBlockImpl, iBlock
@@ -2228,8 +2228,8 @@ contains
 
     integer, intent(in):: nI, nJ, nK, iDim, iBlock
     real, intent(in)   :: StateCons_VC(nVar,nI,nJ,nK)
-    real, intent(in)   :: B0_DC(MaxDim,nI,nJ,nK)
-    real, intent(out)  :: Flux_VC(nVar,nI,nJ,nK)
+    real, intent(in)   :: B0_DC(:,:,:,:)
+    real, intent(out)  :: Flux_VC(:,:,:,:)
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
@@ -2293,9 +2293,9 @@ contains
     use ModAdvance,  ONLY: eFluid_
 
     integer, intent(in):: nFaceI,nFaceJ,nFaceK,iDim,iBlock
-    real, intent(in)   :: Var_VF(nVar,nFaceI,nFaceJ,nFaceK)
-    real, intent(in)   :: B0_DF(MaxDim,nFaceI,nFaceJ,nFaceK)
-    real, intent(out)  :: Cmax_F(nFaceI,nFaceJ,nFaceK)
+    real, intent(in)   :: Var_VF(:,:,:,:)
+    real, intent(in)   :: B0_DF(:,:,:,:)
+    real, intent(out)  :: Cmax_F(:,:,:)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
 
@@ -2315,7 +2315,7 @@ contains
     UnRight_I(eFluid_) = 0.0
 
     call set_block_values(iBlock, iDim)
-    do kFace = 1, nFaceK; do jFace = 1, nFaceJ; do iFace = 1, nFaceI
+    do kFace=1,nFaceK; do jFace=1,nFaceJ; do iFace=1,nFaceI
 
        DoTestCell = DoTest .and. &
             iFace==iTest .and. jFace==jTest .and. kFace==kTest
@@ -2402,7 +2402,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! First calculate max(cmax/dx) for each cell and dimension
-    DtLocal=0.0
+    DtLocal = 0.0
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
 
