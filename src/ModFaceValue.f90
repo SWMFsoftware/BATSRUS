@@ -238,12 +238,17 @@ contains
     !             !         CToF! FToC FF!
     !_____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
-    real,dimension(nVar),intent(in):: Coarse2_V, Coarse1_V
-    real,dimension(nVar,2,2),intent(in):: Fine1_VII, Fine2_VII
-    real,dimension(nVar,2,2),intent(out):: &
-         CoarseToFineF_VII, FineToCoarseF_VII, FineF_VII
-    logical,intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
-    logical,dimension(2,2),intent(in):: IsTrueFine2_II
+    real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
+    real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(in):: Fine2_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(out):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
+    logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
+    logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
+
+
     integer::iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
@@ -257,16 +262,16 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V= AveragedFine1_V-Coarse1_V
+    GradNormal_V = AveragedFine1_V-Coarse1_V
 
     ! Save gradients squared
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
     if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
        ! Limit gradient in the first coarser cell
-       GradNormalLtd_V= SignGradNormal_V*&
+       GradNormalLtd_V = SignGradNormal_V*&
             max(0.0,&
             min(Beta*cTwoThird*abs(GradNormal_V),&
             Beta*0.5*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
@@ -276,7 +281,7 @@ contains
        do j2=1,2;do i2=1,2
           ! Limit transverse gradients, if they are larger than the normal one
           ! The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
-          CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V +&
                sign(min(abs(GradNormalLtd_V), &
                abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
                Fine1_VII(:,i2,j2)-AveragedFine1_V)
@@ -284,14 +289,14 @@ contains
     else
        do j2=1,2;do i2=1,2
           ! First order scheme
-          CoarseToFineF_VII(:,i2,j2)=Coarse1_V
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V
        end do;end do
     end if
     if(.not.(IsTrueCoarse1.and.IsTrueFine1))then
        do j2=1,2;do i2=1,2
           ! First order scheme
-          FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
-          FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
        end do;end do
     else
        do j2=1,2;do i2=1,2
@@ -307,10 +312,10 @@ contains
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
              ! First order scheme
-             GradNormalLtd_V=0.0
+             GradNormalLtd_V = 0.0
           end if
-          FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
-          FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)+GradNormalLtd_V
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
        end do;end do
     end if
 
@@ -354,7 +359,7 @@ contains
     GradNormal_V = AveragedFine1_V - Coarse1_V
 
     ! Save gradients squared
-    SignGradNormal_V= s ign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
