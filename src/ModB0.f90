@@ -602,7 +602,7 @@ contains
        ! Multiply with B0 factor
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
        ! Scale with r^2 for r > rMaxB0
-       if(r > rMaxB0) B0_D = (r/rMaxB0)**2 * B0_D
+       if(r > rMaxB0) B0_D = (rMaxB0/r)**2 * B0_D
     elseif(UseMagnetogram)then
        call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
