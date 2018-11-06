@@ -333,11 +333,13 @@ contains
     !_____________!_____________!__F1_V__!__F2_V_!_
     !             !             !        !       !
 
-    real,dimension(nVar),intent(in):: Coarse2_V,Coarse1_V
-    real,dimension(nVar,2,2),intent(in):: Fine1_VII,Fine2_VII
-    real,dimension(nVar,2,2),intent(inout)::&
-         CoarseToFineF_VII ,FineToCoarseF_VII , FineF_VII
-    integer::iVar,i2,j2
+    real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)                ! dimension(nVar,2,2)
+
+    integer:: iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V
     real,dimension(nVar):: GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
@@ -349,21 +351,21 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V= AveragedFine1_V-Coarse1_V
+    GradNormal_V = AveragedFine1_V - Coarse1_V
 
     ! Save gradients squared
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V= s ign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
     ! Limit gradient in the first coarser cell
-    GradNormalLtd_V= SignGradNormal_V*max(0.0, min( &
+    GradNormalLtd_V = SignGradNormal_V*max(0.0, min( &
          Beta*cTwoThird*abs(GradNormal_V),&
          Beta*0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V), &
          cThird*abs(GradNormal_V) + 0.25*&
          SignGradNormal_V*(Coarse1_V - Coarse2_V)))
 
-    do j2=1,2;do i2=1,2
+    do j2=1,2; do i2=1,2
        ! Limit transverse gradients, if they are larger than the normal one
        ! Before limiting the transverse gradients are equal to
        ! Fine1_VII-AveragedFine1V
@@ -373,7 +375,7 @@ contains
             Fine1_VII(:,i2,j2) - AveragedFine1_V)
     end do;end do
 
-    do j2=1,2;do i2=1,2
+    do j2=1,2; do i2=1,2
        ! Limit gradient in the first layer of finer cells
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
             SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
@@ -409,13 +411,13 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(:)
-    real, intent(in) :: Coarse1_VII(:,:,:)
-    real, intent(in) :: Fine1_VII(:,:,:)
-    real, intent(in) :: Fine2_VII(:,:,:)
-    real, intent(inout):: CoarseToFineF_VII(:,:,:)
-    real, intent(inout):: FineToCoarseF_VII(:,:,:)     
-    real, intent(inout):: FineF_VII(:,:,:)    
+    real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
+    real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
+    real, intent(in) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(in) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
 
     integer :: iVar,i2,j2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -555,14 +557,14 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(:)
-    real, intent(in) :: Coarse1_VI(:,:)
-    real, intent(in) :: Fine1_VI(:,:)
-    real, intent(in) :: Fine2_VI(:,:)
+    real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
+    real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
+    real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
+    real, intent(in) :: Fine2_VI(:,:)           ! dimension(nVar,2)
 
-    real, intent(inout):: CoarseToFineF_VI(:,:)
-    real, intent(inout):: FineToCoarseF_VI(:,:)
-    real, intent(inout):: FineF_VI(:,:)
+    real, intent(inout):: CoarseToFineF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineToCoarseF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineF_VI(:,:)         ! dimension(nVar,2)
 
     integer:: iVar, i2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -693,14 +695,14 @@ contains
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
     !_____________!_____________!_______!_______!_
 
-    real, intent(in) :: Coarse2_V(:)
-    real, intent(in) :: Coarse1_V(:)
-    real, intent(in) :: Fine1_V(:)
-    real, intent(in) :: Fine2_V(:)
+    real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
+    real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in) :: Fine1_V(:)           ! dimension(nVar)
+    real, intent(in) :: Fine2_V(:)           ! dimension(nVar)
 
-    real, intent(inout):: CoarseToFineF_V(:)
-    real, intent(inout):: FineToCoarseF_V(:)
-    real, intent(inout):: FineF_V(:)
+    real, intent(inout):: CoarseToFineF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineToCoarseF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineF_V(:)         ! dimension(nVar)
 
     real, dimension(nVar):: Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
