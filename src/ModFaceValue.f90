@@ -262,7 +262,7 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V = AveragedFine1_V-Coarse1_V
+    GradNormal_V = AveragedFine1_V - Coarse1_V
 
     ! Save gradients squared
     SignGradNormal_V = sign(1.0,GradNormal_V)
@@ -445,7 +445,7 @@ contains
     GradNormal_V = AveragedFine1_V - Coarse1_VII(:,3,3)
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
@@ -466,7 +466,7 @@ contains
           Transverse_V(iVar) = 0.0625* &
                ( sum(Coarse1_VII(iVar,4*i2-3:4*i2-2,3:4)) &
                + sum(Coarse1_VII(iVar,3:4,4*j2-3:4*j2-2)) &
-               ) - 0.5*Coarse1_VII(iVar,1,1)
+               ) - 0.5*Coarse1_VII(iVar,3,3)
        end do
 
        ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
@@ -592,7 +592,7 @@ contains
     GradNormal_V = AveragedFine1_V - Coarse1_VI(:,3)
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
@@ -721,7 +721,7 @@ contains
     GradNormal_V = Fine1_V - Coarse1_V
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
