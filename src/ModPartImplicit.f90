@@ -2051,7 +2051,7 @@ contains
     use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
     use ModAdvance, ONLY: State_VGB
 
-    real :: Var_VCB(:,:,:,:,:)
+    real :: Var_VCB(:,:,:,:,:)   ! dimension(nVar,nI,nJ,nK,MaxImplBLK)
     integer :: iBlockImpl, iBlock
 
     logical:: DoTest
