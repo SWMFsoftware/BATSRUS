@@ -1822,6 +1822,7 @@ contains
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name
+    use BATL_lib,      ONLY: IsRLonLat, IsCylindrical
 
     ! Arguments
 
@@ -1846,8 +1847,12 @@ contains
        RETURN
     end if
 
-    if(plot_type1(1:3) == 'shl') then
+    if(plot_type1(1:3) == 'shl' .or. &
+         (plot_type1(1:3) == 'cut' .and. IsRLonLat)) then
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
+    elseif(plot_type1(1:3) == 'cut' .and. IsCylindrical)then
+          StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' deg'
     else
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//trim(NameIdlUnit_V(UnitX_))
