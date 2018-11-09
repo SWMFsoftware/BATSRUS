@@ -539,8 +539,8 @@ contains
              j_D = FacRcurrents * b_D/bRcurrents
 
              ! the length of the field line between two cuts: dL = dR*|B|/|Br|
-             ! the cross section area changes proportional to |B|, 
-             ! so the volume element is propor 1/|Br|:
+             ! the cross section area changes proportional to 1/|B|, 
+             ! so the volume element is proportional to 1/|Br|:
              InvBr = r/abs(sum(b_D*XyzMid_D))
              dVol  = dVolCoeff*InvBr
 
