@@ -7,6 +7,7 @@ DEFAULT_EXE    = ${DEFAULT_TARGET}.exe
 default : ${DEFAULT_TARGET}
 
 include Makefile.def
+include Makefile.conf
 
 #
 # Menu of make options
@@ -81,6 +82,7 @@ LIB:
 BATSRUS:
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${TIMINGDIR}; $(MAKE) LIB
+	if [[ "${MPILIB}" == *lNOMPI*  ]]; then make NOMPI; fi
 	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
 	cd ${DEMTDIR}; $(MAKE) LIB
 	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
