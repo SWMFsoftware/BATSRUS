@@ -91,8 +91,8 @@ contains
     use ModSatelliteFile, ONLY: nSatellite, &
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
-    use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
-         UseClimit, UsePoleDiffusion, DoBurgers
+    use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
+         TypeFluxNeutral, UseClimit, UsePoleDiffusion, DoBurgers
     use ModLookupTable,     ONLY: read_lookup_table_param
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -335,6 +335,7 @@ contains
        if(UseImplicit)      call init_mod_part_impl
        if(UseSemiImplicit)  call init_mod_semi_impl
        call init_mod_point_impl
+       call init_mod_face_flux
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)

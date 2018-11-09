@@ -46,7 +46,7 @@ module ModConserveFlux
 
   integer, parameter :: &
        FluxLast_ = nVar + nFluid, &
-       UnFirst_=FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
+       UnFirst_ = FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
        Vdt_ = UnLast_ + 1
   ! The normal components of the magnetic field is exchaned only for
   ! B_>U_ (UseB_ is true)
@@ -366,7 +366,7 @@ contains
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-
+         
          if(.not.(UseB .and. IsCartesianGrid))CYCLE
 
          if(IsCartesian)then

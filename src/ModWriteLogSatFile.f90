@@ -602,7 +602,7 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+                  tmp1_BLK(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
@@ -744,7 +744,8 @@ contains
               *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('epnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
+              LogVar_I(iVarTot) = &
+              Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
       case('uxpnt')
          if(iProc == iProcTest) LogVar_I(iVarTot) = &
               State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest) / &

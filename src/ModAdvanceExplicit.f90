@@ -48,6 +48,7 @@ contains
     use ModElectricField, ONLY: get_num_electric_field
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
+
     
     logical, intent(in) :: DoCalcTimestep
     integer, intent(in) :: iStageMax ! advance only part way
@@ -83,6 +84,7 @@ contains
        endif
 
        if(DoConserveFlux) then
+          !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
@@ -108,6 +110,7 @@ contains
              call save_cons_flux(iBlock)
 
           end do
+          !$omp end parallel do
        endif
 
        if(DoTest)write(*,*)NameSub,' done res change only'
@@ -120,9 +123,8 @@ contains
        call timing_stop('send_cons_flux')
 
        if(DoTest)write(*,*)NameSub,' done message pass'
-
+       
        ! Multi-block solution update.
-       call init_check_variables
        !$omp parallel do
        do iBlock = 1, nBlock
 
@@ -197,7 +199,6 @@ contains
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)
 
-          call do_check_variables
        end do ! Multi-block solution update loop.
        !$omp end parallel do
 

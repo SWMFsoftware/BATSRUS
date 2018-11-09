@@ -589,7 +589,7 @@ contains
              ! iPower==0: Tophat
              ! iPower< 0: Gaussian profile multiplied by smoother:
              !    ampl*exp(-(r/d)^2)*(cos(0.25*pi*r/d))^6 for r/d < 2
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
                 x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
                 y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
                 z = Xyz_DGB(z_,i,j,k,iBlock) - z_V(iVar)
@@ -1129,9 +1129,9 @@ contains
     !    DoTest = iBlock == iBlockTest
     IsFound = .true.
 
-    if (DoShockramp) then
-       SinSlope=ShockSlope/sqrt(1 + ShockSlope**2)
-       CosSlope=         1/sqrt(1 + ShockSlope**2)
+    if(DoShockramp)then
+       SinSlope = ShockSlope/sqrt(1 + ShockSlope**2)
+       CosSlope =         1/sqrt(1 + ShockSlope**2)
 
        ShockRampLeft_I = ShockLeftState_V(Rho_:p_)
        ! Project the velocity in the shock front reference frame into the frame
@@ -1267,7 +1267,8 @@ contains
        case(2)
           State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
-          State_VGB(p_,nI+1:MaxI,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,nI+1:MaxI,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
+          State_VGB(p_,nI+1:MaxI,:,:,iBlock)     = 1.0 - 0.1*&
+               (Xyz_DGB(x_,nI+1:MaxI,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
           call calc_energy_ghost(iBlock)
        case(3)
           State_VGB(:,:,0,:,iBlock) = State_VGB(:,:,1,:,iBlock)
@@ -1338,7 +1339,8 @@ contains
 
        else
 
-          call CON_stop('You can only use user_outerbcs for ADVECTSPHERE in HGC frame')
+          call CON_stop(&
+               'You can only use user_outerbcs for ADVECTSPHERE in HGC frame')
        end if
     end if
 
