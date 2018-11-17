@@ -412,7 +412,7 @@ contains
     iVarTot = 0
     do iVar=1,nLogVar
 
-       iVarTot = iVarTot+1
+       iVarTot = iVarTot + 1
        call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
 
        ! If we are a satellite and not a logfile (iSat>=1) then we should
