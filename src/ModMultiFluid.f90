@@ -13,35 +13,35 @@ module ModMultiFluid
   save
 
   ! Convenient parameters for the ion fluids
-  logical, parameter :: UseMultiIon = IonLast_ > IonFirst_ .and. Ex_ == 1
+  logical, parameter:: UseMultiIon = IonLast_ > IonFirst_ .and. Ex_ == 1
 
   ! Logical for signaling neutral fluid(s)
-  logical, parameter :: UseNeutralFluid = nFluid > IonLast_ .or. B_ == U_
+  logical, parameter:: UseNeutralFluid = nFluid > IonLast_ .or. B_ == U_
 
   ! Index for the first neutral fluid (as long as it exists)
-  integer, parameter :: NeutralFirst_ = min(IonLast_+1, 100*(B_-U_)+1)
+  integer, parameter:: NeutralFirst_ = min(IonLast_+1, 100*(B_-U_)+1)
 
   ! This has to be at least 1 even if there are no ion fluids
-  integer, parameter :: nIonFluid = IonLast_ - IonFirst_ + 1
+  integer, parameter:: nIonFluid = IonLast_ - IonFirst_ + 1
 
   ! The number of true ion fluids if UseEfield
-  integer, parameter :: nTrueIon  = nIonFluid - nElectronFluid
+  integer, parameter:: nTrueIon  = nIonFluid - nElectronFluid
 
   ! Index points to the first electron fluid if UseEfield
-  integer, parameter :: ElectronFirst_ = min(nTrueIon+1,nIonFluid)
+  integer, parameter:: ElectronFirst_ = min(nTrueIon+1,nIonFluid)
 
-  integer, parameter :: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
-  integer, parameter :: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
-  integer, parameter :: iUz_I(nFluid) = iRhoUz_I(1:nFluid)
+  integer, parameter:: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
+  integer, parameter:: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
+  integer, parameter:: iUz_I(nFluid) = iRhoUz_I(1:nFluid)
 
-  integer, parameter :: iRhoIon_I(nIonFluid)   = iRho_I(IonFirst_:IonLast_)
-  integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(IonFirst_:IonLast_)
-  integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(IonFirst_:IonLast_)
-  integer, parameter :: iRhoUzIon_I(nIonFluid) = iRhoUz_I(IonFirst_:IonLast_)
-  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUx_I(IonFirst_:IonLast_)
-  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUy_I(IonFirst_:IonLast_)
-  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
-  integer, parameter :: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
+  integer, parameter:: iRhoIon_I(nIonFluid)   = iRho_I(IonFirst_:IonLast_)
+  integer, parameter:: iRhoUxIon_I(nIonFluid) = iRhoUx_I(IonFirst_:IonLast_)
+  integer, parameter:: iRhoUyIon_I(nIonFluid) = iRhoUy_I(IonFirst_:IonLast_)
+  integer, parameter:: iRhoUzIon_I(nIonFluid) = iRhoUz_I(IonFirst_:IonLast_)
+  integer, parameter:: iUxIon_I(nIonFluid)    = iRhoUx_I(IonFirst_:IonLast_)
+  integer, parameter:: iUyIon_I(nIonFluid)    = iRhoUy_I(IonFirst_:IonLast_)
+  integer, parameter:: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
+  integer, parameter:: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
 
   integer, private:: i_
   logical, parameter:: IsIon_I(nFluid) = &
@@ -68,6 +68,7 @@ module ModMultiFluid
   !$omp threadprivate( iUx, iUy, iUz )
   
   character (len=20) :: NameFluid = ''
+  !$omp threadprivate( NameFluid )
 
   ! Variables for setting fluid boundary condition separately from MHD
   ! variables.
@@ -88,6 +89,9 @@ contains
   subroutine select_fluid(iFluidIn)
     integer :: iFluidIn 
     !--------------------------------------------------------------------------
+    
+    if(nFluid == 1) return
+    
     iRho   = iRho_I(iFluidIn)
     iRhoUx = iRhoUx_I(iFluidIn)
     iRhoUy = iRhoUy_I(iFluidIn)
@@ -102,8 +106,6 @@ contains
     iUy    = iRhoUy
     iUz    = iRhoUz
 
-    NameFluid = NameFluid_I(iFluidIn)
-
   end subroutine select_fluid
   !============================================================================
   subroutine extract_fluid_name(String,iFluidOut)
@@ -117,7 +119,6 @@ contains
     integer, optional, intent(out) :: iFluidOut
     
     integer :: i, l, iFluid
-    character (len=10) :: NameFluid
 
     character(len=*), parameter:: NameSub = 'extract_fluid_name'
     !--------------------------------------------------------------------------
@@ -136,7 +137,10 @@ contains
           EXIT
        end if
     end do
+
     call select_fluid(iFluid)
+
+    NameFluid = NameFluid_I(iFluid)
 
     if(present(iFluidOut)) iFluidOut = iFluid
     
