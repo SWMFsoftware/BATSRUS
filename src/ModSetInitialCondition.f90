@@ -24,7 +24,9 @@ contains
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: true_cell
     use ModIO, ONLY : restart
-    use ModPhysics
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, UseShockTube,&
+       UnitUser_V, ShockLeftState_V, ShockRightState_V, ShockPosition, UnitU_, &
+       Io2No_V
     use ModUserInterface ! user_set_ics
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid

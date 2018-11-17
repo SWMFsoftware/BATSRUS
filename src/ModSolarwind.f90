@@ -629,8 +629,8 @@ contains
     ! respectively.
 
     use ModKind
-    use ModMain
-    use ModPhysics
+    use ModMain, ONLY: xMinBc_, StartTime
+    use ModPhysics, ONLY: FaceState_VI, UnitT_, No2Si_V
     use ModVarIndexes
     use ModNumConst, ONLY: cTiny
     use ModGeometry, ONLY: x1, x2
