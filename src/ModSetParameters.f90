@@ -2367,6 +2367,8 @@ contains
          case('P')
             NameConservative  = trim(NameFluid)//'E'
             NamePrimitiveNT   = trim(NameFluid)//'Temperature'
+         case('Pe')
+            NamePrimitiveNT   = 'Te'
          case('Hype')
             ! also tries to make HypE look better.
             NameConservative  = trim(NameFluid)//'HypE'

@@ -598,6 +598,13 @@ contains
           FaceState_VI(iP_I, iBoundary) = FaceState_VI(iP_I, iBoundary)   &
                *FaceState_VI(iRho_I, iBoundary)
 
+          if(UseElectronPressure) then
+             FaceState_VI(Pe_,iBoundary) = FaceStateDim_VI(Pe_,iBoundary)   &
+                  *Io2No_V(UnitTemperature_)
+             FaceState_VI(Pe_,iBoundary) = FaceState_VI(Pe_,iBoundary)   &
+                  *sum(FaceState_VI(iRhoIon_I, iBoundary))
+          end if
+
           ! Finally convert number density to mass density
           FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
                FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
@@ -632,6 +639,13 @@ contains
           ! iP_I in NO units are n*T
           CellState_VI(iP_I, iBoundary) = CellState_VI(iP_I, iBoundary)   &
                *CellState_VI(iRho_I, iBoundary)
+
+          if(UseElectronPressure) then
+             CellState_VI(Pe_,iBoundary) = CellStateDim_VI(Pe_,iBoundary)   &
+                  *Io2No_V(UnitTemperature_)
+             CellState_VI(Pe_,iBoundary) = CellState_VI(Pe_,iBoundary)   &
+                  *sum(CellState_VI(iRhoIon_I, iBoundary))
+          end if
 
           ! Finally convert number density to mass density
           CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
