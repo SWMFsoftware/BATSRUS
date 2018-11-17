@@ -34,6 +34,7 @@ module ModPhysics
 
   ! adiabatic index (gamma) and derived values for electrons
   real :: GammaElectron          = Gamma0
+  real :: InvGammaElectron       = 1.0/Gamma0
   real :: GammaElectronMinus1    = Gamma0 - 1.0
   real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
 

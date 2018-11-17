@@ -1762,12 +1762,14 @@ contains
           if(UseElectronPressure)then
              call read_var('GammaElectron', GammaElectron)
              ! Derived values for electron
+             InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaElectron - 1.0
              InvGammaElectronMinus1 = 1.0 / GammaElectronMinus1
           else
              ! Default values for electrons are the same as first fluid
              ! so ideal MHD works as expected
              GammaElectron          = Gamma
+             InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaMinus1
              InvGammaElectronMinus1 = InvGammaMinus1
           end if
