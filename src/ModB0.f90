@@ -759,7 +759,7 @@ contains
     ! to the field from the second body should be computed here (inside the
     ! if block.
     !/
-    use ModPhysics
+    use ModPhysics, ONLY: BdpBody2_D, rBody2, xBody2, yBody2, zBody2
     use ModNumConst, ONLY: cTiny
 
     real, intent(in)   :: XyzIn_D(3)
