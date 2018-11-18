@@ -597,7 +597,7 @@ contains
 
        ! Calculate the source term for all the ion fluids
        do iIon = 1, nIonFluid
-          uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
+          uIon_D = [ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) ]
           u_D    = uIon_D - uPlus_D
           ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
@@ -643,7 +643,7 @@ contains
                 if(jIon == iIon) CYCLE
 
                 ! Add collisional terms
-                uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
+                uIon2_D = [ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) ]
 
                 ! Physical collision
                 if(CollisionCoefDim > 0.0)then

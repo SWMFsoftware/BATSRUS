@@ -90,7 +90,7 @@ contains
        ! Translate image center from LOS coordinates to TypeCoordPlot_I(iFile)
        ObsPos_D   = ObsPos_DI(:,iFile)
        Los_D      = ObsPos_D/sqrt(sum(ObsPos_D**2))
-       aUnit_D    = cross_product((/0.,0.,1./), Los_D)
+       aUnit_D    = cross_product([0.,0.,1.], Los_D)
        aUnit_D    = aUnit_D/sqrt(sum(aUnit_D**2))
        bUnit_D    = cross_product(Los_D, aUnit_D)
        bUnit_D    = bUnit_D/sqrt(sum(bUnit_D**2)) ! this should not be needed
@@ -276,10 +276,10 @@ contains
             StringHeaderIn=NameUnit, &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
-            ParamIn_I = (/ ((Rot_DD(i,j), i=1,3), j=1,3) /), &
+            ParamIn_I = [ ((Rot_DD(i,j), i=1,3), j=1,3) ], &
             NameVarIn = NameVar, &
-            CoordMinIn_D = (/ xMin, yMin, zMin /), &
-            CoordMaxIn_D = (/ xMax, yMax, zMax /), &
+            CoordMinIn_D = [ xMin, yMin, zMin ], &
+            CoordMaxIn_D = [ xMax, yMax, zMax ], &
             VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
 

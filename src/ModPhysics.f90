@@ -1194,7 +1194,7 @@ contains
     select case(TypeCoordSystem)
     case('HGI')
        ! In the HGI system the Solar angular velocity vector points towards +Z
-       Omega_D = (/ 0., 0., OmegaBody /)
+       Omega_D = [ 0., 0., OmegaBody ]
     case('GSE')
        if(IsUninitialized)then
           call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)

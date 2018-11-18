@@ -611,7 +611,7 @@ contains
     k2 = ceiling(Coord_D(3))
 
     ! If Coord_D is outside of block, change i,j,k in order to extrapolate.
-    if(any( Coord_D < 1) .or. any(Coord_D > (/nI, nJ, nK/))) then
+    if(any( Coord_D < 1) .or. any(Coord_D > [nI, nJ, nK])) then
        i1 = min(nI-1, max(1, i1));   i2 = i1 + 1
        j1 = min(nJ-1, max(1, j1));   j2 = j1 + 1
        k1 = min(nK-1, max(1, k1));   k2 = k1 + 1
@@ -720,10 +720,10 @@ contains
     real    :: L, Rsat, Rxy2
     ! Conversion matrix between SM and GM coordinates
     ! (to be safe initialized to unit matrix)
-    real :: GmSm_DD(3,3) = reshape( (/ &
+    real :: GmSm_DD(3,3) = reshape( [ &
          1.,0.,0., &
          0.,1.,0., &
-         0.,0.,1. /), (/3,3/) )
+         0.,0.,1. ], [3,3] )
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'GM_trace_sat'
     !--------------------------------------------------------------------------
@@ -742,7 +742,7 @@ contains
        call line_init(nStateVar)
 
        ! Obtain the line data
-       call extract_field_lines(nLine, (/IsParallel/), SatXyz_D)
+       call extract_field_lines(nLine, [IsParallel], SatXyz_D)
 
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)
@@ -767,7 +767,7 @@ contains
        call line_init(nStateVar)
 
        ! Obtain the line data
-       call extract_field_lines(nLine, (/.not.IsParallel/), SatXyz_D)
+       call extract_field_lines(nLine, [.not.IsParallel], SatXyz_D)
 
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)

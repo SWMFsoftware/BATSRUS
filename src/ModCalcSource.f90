@@ -655,7 +655,7 @@ contains
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    if(.not.true_cell(i,j,k,iBlock)) CYCLE
                    ForcePerRho_D = Gbody2 &
-                        * (Xyz_DGB(:,i,j,k,iBlock)-(/xBody2,yBody2,zBody2/)) &
+                        * (Xyz_DGB(:,i,j,k,iBlock)-[xBody2,yBody2,zBody2]) &
                         / r2_BLK(i,j,k,iBlock)**3
                    Source_VC(iRhoUx:iRhoUz,i,j,k) = &
                         Source_VC(iRhoUx:iRhoUz,i,j,k) &

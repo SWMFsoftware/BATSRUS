@@ -1124,7 +1124,7 @@ contains
 
     integer            :: i, j, iDim
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
+    character(len=1)   :: NameDim(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_geoind_restart'
@@ -1164,7 +1164,7 @@ contains
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
+    character(len=1)   :: NameDim(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_geoind_restart'

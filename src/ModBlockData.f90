@@ -683,7 +683,7 @@ contains
     if(i /= 1)write(*,*)'put_block_data failed, iData=',i,' should be 1'
 
     ! Put 3 values as an array (the optional argument should not matter now)
-    call put_block_data(1,3,(/2.0, 3.0, 4.0/)) ! , DoAllowReplace=.true.)
+    call put_block_data(1,3,[2.0, 3.0, 4.0]) ! , DoAllowReplace=.true.)
 
     nData = n_block_data(1)
     if(nData /= 4)write(*,*)'n_block_data(1) failed, n=',nData,' should be 4'
@@ -695,7 +695,7 @@ contains
     if(i /= 4)write(*,*)'put_block_data failed, size(Array)=',i,' should be 4'
 
     ! Put another 6 values as a 2d array
-    call put_block_data(1,2,3,reshape((/1.0,2.0,3.0,4.0,5.0,6.0/), (/2,3/)))
+    call put_block_data(1,2,3,reshape([1.0,2.0,3.0,4.0,5.0,6.0], [2,3]))
 
     nData = n_block_data(1)
     if(nData /= 10)write(*,*)'n_block_data(1) failed, n=',nData,' should be 10'
@@ -729,16 +729,16 @@ contains
 
     ! Get back next 3 values as an array
     call get_block_data(1,3,Value_I, DoNotAdvance=.true.)
-    if(any(Value_I /= (/2.0, 3.0, 4.0/))) &
+    if(any(Value_I /= [2.0, 3.0, 4.0])) &
          write(*,*)'get_block_data do not advance failed, value_I=',&
          Value_I,' should be 2,3,4'
 
     ! Replace next 3 values as an array
-    call put_block_data(1,3,(/2.1, 3.1, 4.1/), DoAllowReplace=.true.)
+    call put_block_data(1,3,[2.1, 3.1, 4.1], DoAllowReplace=.true.)
 
     ! Get back next 6 values as a 2D array
     call get_block_data(1,2,3,Value_II)
-    if(any(Value_II /= reshape( (/1.0, 2.0, 3.0, 4.0, 5.0, 6.0/), (/2,3/)))) &
+    if(any(Value_II /= reshape( [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2,3]))) &
          write(*,*)'get_block_data failed, value_II=',Value_II, &
          ' should be ((2,3),(4,5),(6,7))'
 

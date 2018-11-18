@@ -102,7 +102,7 @@ contains
 
     ! Convert from BATL to BATSRUS ordering of subfaces.
 
-    integer, parameter:: iOrder_I(4) = (/1,3,2,4/)
+    integer, parameter:: iOrder_I(4) = [1,3,2,4]
     integer:: iNodeNei, iNodeNei_I(4)
     integer:: i, j, k
     logical:: DoTest

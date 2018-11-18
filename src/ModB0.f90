@@ -686,7 +686,7 @@ contains
 
     ! Compute dipole moment of the intrinsic magnetic field B0.
 
-    Dipole_D = (/ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp /)
+    Dipole_D = [ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp ]
 
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
@@ -772,7 +772,7 @@ contains
     !/
     character(len=*), parameter:: NameSub = 'add_b0_body2'
     !--------------------------------------------------------------------------
-    Xyz_D = (XyzIn_D - (/xBody2, yBody2, zBody2/))/rBody2
+    Xyz_D = (XyzIn_D - [xBody2, yBody2, zBody2])/rBody2
 
     R0 = sqrt(sum(Xyz_D**2))
 

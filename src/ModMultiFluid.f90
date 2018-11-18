@@ -45,7 +45,7 @@ module ModMultiFluid
 
   integer, private:: i_
   logical, parameter:: IsIon_I(nFluid) = &
-       (/ (i_ >= IonFirst_ .and. i_ <=IonLast_, i_=1, nFluid) /)
+       [ (i_ >= IonFirst_ .and. i_ <=IonLast_, i_=1, nFluid) ]
 
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)

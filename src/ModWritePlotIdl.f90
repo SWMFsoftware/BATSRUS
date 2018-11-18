@@ -95,7 +95,7 @@ contains
           nCell = nCell + 1
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &
-                  + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
+                  + ([i,j,k] - 0.5)*CellSize_DB(:,iBlock)
           else
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
@@ -191,7 +191,7 @@ contains
 
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &
-                  + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
+                  + ([i,j,k] - 0.5)*CellSize_DB(:,iBlock)
           else
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
@@ -246,9 +246,9 @@ contains
 
                 if(DoSaveGenCoord)then
                    Coord_D = CoordMin_DB(:,iBlock) &
-                        + (0.5*(/i+i2,j+j2,k+k2/) - 0.5)*CellSize_DB(:,iBlock)
+                        + (0.5*[i+i2,j+j2,k+k2] - 0.5)*CellSize_DB(:,iBlock)
                 else
-                   Coord_D = (/x, y, z/)*xUnit
+                   Coord_D = [x, y, z]*xUnit
                 end if
 
                 do iVar=1,nPlotVar
