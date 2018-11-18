@@ -3456,7 +3456,7 @@ contains
     real:: a1_I(3), a2_I(3)
 
     ! linear coefficients of four low order polynamials. eq (13)
-    real, parameter:: LinearCoeff_I(4) = (/0.125, 0.25, 0.125, 0.5/)
+    real, parameter:: LinearCoeff_I(4) = [0.125, 0.25, 0.125, 0.5]
 
     ! Smoothness indicators. eq (19)
     real:: ISLocal_I(4)

@@ -57,7 +57,7 @@ module ModSolarwind
   character(len=3) :: NameInputCoord = 'GSM'
 
   ! Normal direction to the (tilted) plane of input data
-  real :: Normal_D(3) = (/ 1.0, 0.0, 0.0 /)
+  real :: Normal_D(3) = [ 1.0, 0.0, 0.0 ]
 
   ! Position of the satellite
   real :: SatelliteXyz_D(3)=0.
@@ -146,7 +146,7 @@ contains
     PlaneAngleXZ = 0.0
 
     nVarInput = 8
-    iVarInput_V(1:8) = (/ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ /)
+    iVarInput_V(1:8) = [ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ ]
     if(UseMultiSpecies) iVarInput_V(7) = SpeciesFirst_
 
     ! Read solar wind file on all processors in parallel
@@ -179,9 +179,9 @@ contains
 
           ! Calculate normal vector
           if( abs(abs(PlaneAngleXY)-cHalfPi) < 1.0e-3 )then
-             Normal_D=(/ 0.0, sign(1.0,PlaneAngleXY), 0.0 /)
+             Normal_D = [ 0.0, sign(1.0,PlaneAngleXY), 0.0 ]
           else if ( abs(abs(PlaneAngleXZ)-cHalfPi) < 1.0e-3 )then
-             Normal_D=(/ 0.0, 0.0, sign(1.0, PlaneAngleXZ) /)
+             Normal_D = [ 0.0, 0.0, sign(1.0, PlaneAngleXZ) ]
           else
              Normal_D(2) = tan(PlaneAngleXY)
              Normal_D(3) = tan(PlaneAngleXZ)
@@ -662,7 +662,7 @@ contains
        RETURN
     end if
 
-    ! DoTestCell = maxval(abs(Xyz_D - (/ xTest, yTest, zTest /))) < 0.1
+    ! DoTestCell = maxval(abs(Xyz_D - [ xTest, yTest, zTest ])) < 0.1
     if(DoTestCell) write(*,*) NameSub, 'TimeSim, Xyz_D=',TimeSimulation, Xyz_D
 
     ! Set the X coordinate of the sattellite if not yet set.

@@ -318,11 +318,11 @@ contains
     ! a = LOS x (0,0,1), b = a x LOS ensures that b is roughly aligned with +Z
     ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
     if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
-       aUnit_D = cross_product(Los_D, (/0.,0.,1./))
+       aUnit_D = cross_product(Los_D, [0.,0.,1.])
        AlignedZ = .true.
     else
        ! Viewing along the Z axis more or less
-       aUnit_D = cross_product(Los_D, (/0.,1.,0./))
+       aUnit_D = cross_product(Los_D, [0.,1.,0.])
     end if
     aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
     bUnit_D = cross_product(aUnit_D, Los_D)
@@ -560,8 +560,8 @@ contains
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn = allnames, &
                   nDimIn = 2, &
-                  CoordMinIn_D = (/-aPix, -aPix/), &
-                  CoordMaxIn_D = (/+aPix, +aPix/), &
+                  CoordMinIn_D = [-aPix, -aPix], &
+                  CoordMaxIn_D = [+aPix, +aPix], &
                   VarIn_VII = Image_VII)
           case('hdf')
              call save_plot_file(filename, &
@@ -573,8 +573,8 @@ contains
                   NameVarIn_I = PlotVarNames, &
                   NameUnitsIn = unitstr_IDL,&
                   nDimIn = 2, &
-                  CoordMinIn_D = (/-aPix, -aPix/), &
-                  CoordMaxIn_D = (/+aPix, +aPix/), &
+                  CoordMinIn_D = [-aPix, -aPix], &
+                  CoordMaxIn_D = [+aPix, +aPix], &
                   VarIn_VII = Image_VII)
           end select
        end if
@@ -914,7 +914,7 @@ contains
       if(IsRzGeometry)then
          ! Radial distance is sqrt(yLos**2+zLos**2)
          CoordNorm_D(1:2) = &
-              ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
+              ( [xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) ] &
               - CoordMinBlock_D(1:2) )/CellSize_D(1:2) + 0.5
          CoordNorm_D(3) = 0.0
       elseif(IsCartesian)then
@@ -1359,7 +1359,7 @@ contains
               iSort_I(1:nIntersect))
       else
          ! No need to sort two points
-         iSort_I(1:2) = (/1,2/)
+         iSort_I(1:2) = [1,2]
       end if
 
       ! Loop through segments connecting the consecutive intersection points
@@ -1594,7 +1594,7 @@ contains
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
-              / (/ CellSize_D(1), CellSize_D(2), CellSize_D(2) /) )
+              / [ CellSize_D(1), CellSize_D(2), CellSize_D(2) ] )
       else
          ! Measure distance in cell size units and add up dimensions
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)

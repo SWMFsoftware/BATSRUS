@@ -756,7 +756,7 @@ contains
          DxyzDcoord_DD(:,3) = InvDz2 &
               *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
       else
-         DxyzDcoord_DD(:,3) = (/ 0., 0., 1./)
+         DxyzDcoord_DD(:,3) = [ 0., 0., 1. ]
       end if
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)

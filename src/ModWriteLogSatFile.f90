@@ -1427,7 +1427,7 @@ contains
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
-                     1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
+                     1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)) )
 
                 select case(TypeAction)
                 case('integrate')
@@ -1561,7 +1561,7 @@ contains
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
-               1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
+               1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)))
 
           Integral = Integral + Average
        end do
@@ -1659,8 +1659,8 @@ contains
     State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
     State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
 
-    call get_point_data(0.0,(/xTest,yTest,zTest/),1,nBlock,1,nVar+3,State_V)
-    call collect_satellite_data((/xTest,yTest,zTest/),State_V)
+    call get_point_data(0.0,[xTest,yTest,zTest],1,nBlock,1,nVar+3,State_V)
+    call collect_satellite_data([xTest,yTest,zTest],State_V)
 
     if(iProc==0)then
        if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&

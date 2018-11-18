@@ -135,11 +135,11 @@ module ModFaceFlux
   real :: UnRight_I(nFluid+1) = 0.0
   !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
   
-  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) ! B x Area for current -> BxJ
-  real :: Enormal = 0.0                         ! normal electric field -> divE
-  real :: Pe      = 0.0                         ! electron pressure -> grad Pe
+  real :: bCrossArea_D(3) = [ 0.0, 0.0, 0.0 ] ! B x Area for current -> BxJ
+  real :: Enormal = 0.0                       ! normal electric field -> divE
+  real :: Pe      = 0.0                       ! electron pressure -> grad Pe
   real :: Pwave   = 0.0
-  real :: PeDotArea_D(3) = (/ 0.0, 0.0, 0.0 /)  ! grad Pe stuff for aniso Pe
+  real :: PeDotArea_D(3) = [ 0.0, 0.0, 0.0 ]  ! grad Pe stuff for aniso Pe
   !$omp threadprivate( bCrossArea_D, Enormal, Pe, Pwave, PeDotArea_D )
   
   ! Variables for normal resistivity
@@ -332,9 +332,9 @@ contains
        Tangent2_D = cross_product(Normal_D, Tangent1_D)
 
        ! B0 on the face
-       B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
-       B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
-       B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
+       B0n   = sum(Normal_D  *[B0x, B0y, B0z])
+       B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
+       B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
        ! Left face
        UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
        Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
@@ -1052,7 +1052,7 @@ contains
           Area2=0.0
        else
           Area = sqrt(Area2)
-          Normal_D=(/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
        end if
     end if
 
@@ -1095,7 +1095,7 @@ contains
           Area2= 0.0
        else
           Area = sqrt(Area2)
-          Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
 
        end if
 
@@ -1131,7 +1131,7 @@ contains
           Area2= 0.0
        else
           Area = sqrt(Area2)
-          Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
        end if
     end if
 
@@ -1393,7 +1393,7 @@ contains
 
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
-               (/B0x,B0y,B0z/), dB0_D,                    &
+               [B0x,B0y,B0z], dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
                DissipationFlux_V, cMax, Unormal_I(1))
@@ -2449,10 +2449,10 @@ contains
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
       if(UseB)then
          write(*,*)'B  =', &
-              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + (/B0x,B0y,B0z/)
+              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z]
          write(*,*)'BB =', &
               sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
-              + (/B0x,B0y,B0z/))**2)
+              + [B0x,B0y,B0z])**2)
       end if
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
@@ -2547,7 +2547,7 @@ contains
           Pepar  = State_V(Pepar_)
           Peperp = (3*Pe - Pepar)/2.0
           PeDotArea_D = Peperp*Normal_D*Area + (Pepar-Peperp)*FullBn &
-               *(/FullBx,FullBy,FullBz/)/FullB2*Area
+               *[FullBx,FullBy,FullBz]/FullB2*Area
 
           if (DoTestCell) then
              write(*,*) NameSub, ' UseElectronPressure'

@@ -76,8 +76,8 @@ contains
              SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
              CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
              ! Set rotational matrix
-             Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
-                  (/2,2/) )
+             Rot_II = reshape( [CosSlope, SinSlope, -SinSlope, CosSlope], &
+                  [2,2] )
              ! calculate normalized left and right states
              ShockLeft_V  = ShockLeftState_V /UnitUser_V(1:nVar)
              ShockRight_V = ShockRightState_V/UnitUser_V(1:nVar)
