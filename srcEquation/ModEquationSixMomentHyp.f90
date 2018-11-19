@@ -26,9 +26,9 @@ module ModVarIndexes
   integer, parameter :: IonFirst_      = 1
   integer, parameter :: IonLast_       = 2
   logical, parameter :: IsMhd          = .false.
-  real               :: MassFluid_I(nFluid) = (/ 1.0, 1.0/1836.0 /)
+  real               :: MassFluid_I(nFluid) = [ 1.0, 1.0/1836.0 ]
 
-  character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Ion', 'El ' /)
+  character (len=3), parameter :: NameFluid_I(nFluid) = [ 'Ion', 'El ' ]
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -62,17 +62,17 @@ module ModVarIndexes
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)     = (/Rho_,   eRho_/)
-  integer, parameter :: iRhoUx_I(nFluid)   = (/RhoUx_, eRhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid)   = (/RhoUy_, eRhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid)   = (/RhoUz_, eRhoUz_/)
-  integer, parameter :: iP_I(nFluid)       = (/p_,     eP_/)
-  integer, parameter :: iPparIon_I(nFluid) = (/Ppar_,  ePpar_/)
+  integer, parameter :: iRho_I(nFluid)     = [Rho_,   eRho_]
+  integer, parameter :: iRhoUx_I(nFluid)   = [RhoUx_, eRhoUx_]
+  integer, parameter :: iRhoUy_I(nFluid)   = [RhoUy_, eRhoUy_]
+  integer, parameter :: iRhoUz_I(nFluid)   = [RhoUz_, eRhoUz_]
+  integer, parameter :: iP_I(nFluid)       = [p_,     eP_]
+  integer, parameter :: iPparIon_I(nFluid) = [Ppar_,  ePpar_]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -94,10 +94,10 @@ module ModVarIndexes
        1.0, & ! ePpar_
        1.0, & ! eP_
        1.0, & ! Energy_
-       1.0 /) ! eEnergy_
+       1.0 ] ! eEnergy_
 
   ! The names of the variables used in i/o
-  character(len=6) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=6) :: NameVar_V(nVar+nFluid) = [ &
        'Rho   ', & ! Rho_
        'Mx    ', & ! RhoUx_
        'My    ', & ! RhoUy_
@@ -119,7 +119,7 @@ module ModVarIndexes
        'ElPpar', & ! eP_
        'ElP   ', & ! eP_
        'E     ', & ! Energy_
-       'ElE   ' /) ! eEnergy_
+       'ElE   ' ] ! eEnergy_
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
