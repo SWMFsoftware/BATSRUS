@@ -27,10 +27,10 @@ module ModVarIndexes
   integer, parameter :: IonFirst_ = 1
   integer, parameter :: IonLast_  = 2
   logical, parameter :: IsMhd     = .false.
-  real :: MassFluid_I(nFluid) = (/ 1.0, 4.0 /)
+  real :: MassFluid_I(nFluid) = [ 1.0, 4.0 ]
 
   character(len=4), parameter :: NameFluid_I(nFluid) = &
-       (/ 'Hp  ', 'He2p' /)
+       [ 'Hp  ', 'He2p' ]
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
@@ -69,18 +69,18 @@ module ModVarIndexes
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   He2pRho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, He2pRhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, He2pRhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, He2pRhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_,     He2pP_/)
+  integer, parameter :: iRho_I(nFluid)   = [Rho_,   He2pRho_]
+  integer, parameter :: iRhoUx_I(nFluid) = [RhoUx_, He2pRhoUx_]
+  integer, parameter :: iRhoUy_I(nFluid) = [RhoUy_, He2pRhoUy_]
+  integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_, He2pRhoUz_]
+  integer, parameter :: iP_I(nFluid)     = [p_,     He2pP_]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2/)
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -98,10 +98,10 @@ module ModVarIndexes
        0.0, & ! He2pRhoUz_
        1.0, & ! He2pP_
        1.0, & ! Energy_
-       1.0 /) ! He2pEnergy_
+       1.0 ] ! He2pEnergy_
 
   ! The names of the variables used in i/o
-  character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=7) :: NameVar_V(nVar+nFluid) = [ &
        'Rho    ', & ! Rho_
        'Mx     ', & ! RhoUx_
        'My     ', & ! RhoUy_
@@ -119,7 +119,7 @@ module ModVarIndexes
        'He2pMz ', & ! He2pRhoUz_
        'He2pP  ', & ! He2pP_             
        'E      ', & ! Energy_
-       'He2pE  ' /) ! He2pEnergy_
+       'He2pE  ' ] ! He2pEnergy_
 
 
   ! Primitive variable names

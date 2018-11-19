@@ -19,10 +19,10 @@ module ModVarIndexes
   integer, parameter :: IonFirst_ = 2        ! First individual ion fluid
   integer, parameter :: IonLast_  = 6        ! Last individual ion fluid
   logical, parameter :: IsMhd     = .true.   ! First total ion fluid obeys MHD
-  real               :: MassFluid_I(2:nFluid) = (/ 1.0, 32.0, 16.0, 44.0, 1.0 /)
+  real               :: MassFluid_I(2:nFluid) = [ 1.0, 32.0, 16.0, 44.0, 1.0 ]
 
   character (len=5), parameter:: NameFluid_I(nFluid) = &
-       (/ 'All  ', 'Hpsw ', 'O2p  ', 'Op   ', 'CO2p ', 'Hp   ' /)
+       [ 'All  ', 'Hpsw ', 'O2p  ', 'Op   ', 'CO2p ', 'Hp   ' ]
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -75,18 +75,18 @@ module ModVarIndexes
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =(/Rho_,   HpswRho_,   O2pRho_,   OpRho_,   CO2pRho_,   HpRho_ /) ,&
-       iRhoUx_I(nFluid)=(/RhoUx_, HpswRhoUx_, O2pRhoUx_, OpRhoUx_, CO2pRhoUx_, HpRhoUx_/),&
-       iRhoUy_I(nFluid)=(/RhoUy_, HpswRhoUy_, O2pRhoUy_, OpRhoUy_, CO2pRhoUy_, HpRhoUy_/),&
-       iRhoUz_I(nFluid)=(/RhoUz_, HpswRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_, HpRhoUz_/),&
-       iP_I(nFluid)    =(/p_,     HpswP_,     O2pP_,     OpP_ ,    CO2pP_,     HpP_ /)
+       iRho_I(nFluid)  =[Rho_,   HpswRho_,   O2pRho_,   OpRho_,   CO2pRho_,   HpRho_ ] ,&
+       iRhoUx_I(nFluid)=[RhoUx_, HpswRhoUx_, O2pRhoUx_, OpRhoUx_, CO2pRhoUx_, HpRhoUx_],&
+       iRhoUy_I(nFluid)=[RhoUy_, HpswRhoUy_, O2pRhoUy_, OpRhoUy_, CO2pRhoUy_, HpRhoUy_],&
+       iRhoUz_I(nFluid)=[RhoUz_, HpswRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_, HpRhoUz_],&
+       iP_I(nFluid)    =[p_,     HpswP_,     O2pP_,     OpP_ ,    CO2pP_,     HpP_ ]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2,3,4,5/)
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2,3,4,5]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -125,11 +125,11 @@ module ModVarIndexes
        1.0, & ! O2pEnergy_
        1.0, & ! OpEnergy_
        1.0, & ! CO2pEnergy_
-       1.0/)  ! HpEnergy
+       1.0]  ! HpEnergy
 
 
   ! The names of the variables used in i/o
-  character(len=8) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=8) :: NameVar_V(nVar+nFluid) = [ &
        'Rho     ', & ! Rho_
        'Mx      ', & ! RhoUx_
        'My      ', & ! RhoUy_
@@ -168,7 +168,7 @@ module ModVarIndexes
        'O2pE    ', & ! O2pEnergy_
        'OpE     ', & ! OpEnergy_
        'CO2pE   ', & ! CO2pEnergy_
-       'HpE     '/)  ! HpEnergy_ 
+       'HpE     ']  ! HpEnergy_ 
 
 
   ! There are no extra scalars
