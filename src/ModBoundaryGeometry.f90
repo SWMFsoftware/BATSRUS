@@ -140,7 +140,7 @@ contains
        ! Note that the second body can move
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           R2_BLK(i,j,k,iBlock) = sqrt( &
-               sum( (Xyz_DGB(:,i,j,k,iBlock)- (/xBody2, yBody2, zBody2/))**2 ))
+               sum( (Xyz_DGB(:,i,j,k,iBlock)- [xBody2, yBody2, zBody2])**2 ))
        end do; end do; end do
        Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
     end if

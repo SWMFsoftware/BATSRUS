@@ -1762,12 +1762,14 @@ contains
           if(UseElectronPressure)then
              call read_var('GammaElectron', GammaElectron)
              ! Derived values for electron
+             InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaElectron - 1.0
              InvGammaElectronMinus1 = 1.0 / GammaElectronMinus1
           else
              ! Default values for electrons are the same as first fluid
              ! so ideal MHD works as expected
              GammaElectron          = Gamma
+             InvGammaElectron       = 1.0/GammaElectron
              GammaElectronMinus1    = GammaMinus1
              InvGammaElectronMinus1 = InvGammaMinus1
           end if
@@ -2367,6 +2369,8 @@ contains
          case('P')
             NameConservative  = trim(NameFluid)//'E'
             NamePrimitiveNT   = trim(NameFluid)//'Temperature'
+         case('Pe')
+            NamePrimitiveNT   = 'Te'
          case('Hype')
             ! also tries to make HypE look better.
             NameConservative  = trim(NameFluid)//'HypE'
@@ -2516,15 +2520,9 @@ contains
       UseB0Source     = UseB0 .and. nDim > 1
 
       UseUpdateCheck  = .true.
-      ! The use of (/../) is correct F90, but it is replaced
-      ! with setting the elements to avoid a compiler bug in
-      ! the Portland Group F90 compiler PGF90/any Linux/x86 3.3-2
-      !    percent_max_rho = (/40., 400./)
-      !    percent_max_p   = (/40., 400./)
-      percent_max_rho(1) = 40.
-      percent_max_rho(2) = 400.
-      percent_max_p(1)   = 40.
-      percent_max_p(2)   = 400.
+
+      percent_max_rho = [40., 400.]
+      percent_max_p = [40., 400.]
 
       optimize_message_pass = 'all'
 
@@ -3192,7 +3190,7 @@ contains
          allocate(iVarUseCmax_I(4))
          ! The electric field should diffuse with Cmax by default in the five
          ! moment simulation.
-         iVarUseCmax_I = (/Ex_, Ey_, Ez_, HypE_/)
+         iVarUseCmax_I = [Ex_, Ey_, Ez_, HypE_]
       end if
 
       if (UseEfield .and. UseHyperbolicDivb .and. ClightDim > 0 &
@@ -3255,28 +3253,28 @@ contains
            iSessionIn=iSessionFirst) > 0) then
          select case(TypeGeometry)
          case('cartesian' ,'rotatedcartesian')
-            XyzMin_D = (/x1, y1, z1/)
-            XyzMax_D = (/x2, y2, z2/)
+            XyzMin_D = [x1, y1, z1]
+            XyzMax_D = [x2, y2, z2]
          case('rz')
             z1 = -0.5
             z2 = +0.5
-            XyzMin_D = (/x1, y1, z1/)
-            XyzMax_D = (/x2, y2, z2/)
+            XyzMin_D = [x1, y1, z1]
+            XyzMax_D = [x2, y2, z2]
          case('spherical', 'spherical_lnr', 'spherical_genr')
             !             R,   Phi, Latitude
-            XyzMin_D = (/ 0.0, 0.0, -cHalfPi/)
-            XyzMax_D = (/ &
+            XyzMin_D = [ 0.0, 0.0, -cHalfPi]
+            XyzMax_D = [ &
                  sqrt(max(x1**2,x2**2)+max(y1**2,y2**2) + max(z1**2,z2**2)), &
-                 cTwoPi, cHalfPi /)
+                 cTwoPi, cHalfPi ]
          case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
             !            R,   Phi, Z
-            XyzMin_D = (/0.0, 0.0, z1/)
-            XyzMax_D = (/sqrt(max(x1**2,x2**2)+max(y1**2,y2**2)), cTwoPi, z2/)
+            XyzMin_D = [0.0, 0.0, z1]
+            XyzMax_D = [sqrt(max(x1**2,x2**2)+max(y1**2,y2**2)), cTwoPi, z2]
          case('roundcube')
             if(rRound0 > rRound1)then
                ! Cartesian outside, so use x1..z2
-               XyzMin_D = (/x1, y1, z1/)
-               XyzMax_D = (/x2, y2, z2/)
+               XyzMin_D = [x1, y1, z1]
+               XyzMax_D = [x2, y2, z2]
             else
                ! Round outside, so fit this inside x1..z2
                if(nDim==2) XyzMax_D = &

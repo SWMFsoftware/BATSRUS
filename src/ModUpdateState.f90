@@ -193,8 +193,8 @@ contains
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)/GammaElectron &
-               * State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron - 1)
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
+               * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
 

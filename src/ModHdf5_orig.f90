@@ -297,23 +297,21 @@ contains
              end if
           end do
        else if (plotType=='x=0') then
-          !              write (*,*) "allocated x=0"
           nPlotDim = 2
-          iPlotDim = (/1,3,0/)
-          nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+          iPlotDim = [1,3,0]
+          nCellsPerBlock = [iSizeGlobal, kSizeGlobal, 1]
+          nNodeCellsPerBlock = [iSizeGlobal+1, kSizeGlobal+1, 1]
        else if(plotType=="y=0)") then
-          !              write (*,*) "allocated y=0"
           nPlotDim = 2
-          iPlotDim = (/1,3,0/)
-          nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+          iPlotDim = [1,3,0]
+          nCellsPerBlock = [iSizeGlobal, kSizeGlobal, 1]
+          nNodeCellsPerBlock = [iSizeGlobal+1, kSizeGlobal+1, 1]
        else if (plotType=='z=0' )then
           !              write (*,*) "allocated z=0"
           nPlotDim = 2
-          iPlotDim = (/1,2,0/)
-          nCellsPerBlock = (/iSizeGlobal, jSizeGlobal, 1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
+          iPlotDim = [1,2,0]
+          nCellsPerBlock = [iSizeGlobal, jSizeGlobal, 1]
+          nNodeCellsPerBlock = [iSizeGlobal+1, jSizeGlobal+1, 1]
        end if
     else
        if (NotACut) then
@@ -337,34 +335,34 @@ contains
 
        else if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
           nPlotDim = 1
-          iPlotDim = (/3,0,0/)
-          nCellsPerBlock = (/kSizeGlobal,1,1/)
-          nNodeCellsPerBlock = (/kSizeGlobal+1,1,1/)
+          iPlotDim = [3,0,0]
+          nCellsPerBlock = [kSizeGlobal,1,1]
+          nNodeCellsPerBlock = [kSizeGlobal+1,1,1]
        else if (iSizeGlobal == 1 .and. kSizeGlobal == 1) then
           nPlotDim = 1
-          iPlotDim = (/2,0,0/)
-          nCellsPerBlock = (/jSizeGlobal,1,1/)
-          nNodeCellsPerBlock = (/jSizeGlobal+1,1,1/)
+          iPlotDim = [2,0,0]
+          nCellsPerBlock = [jSizeGlobal,1,1]
+          nNodeCellsPerBlock = [jSizeGlobal+1,1,1]
        else if (jSizeGlobal == 1 .and. kSizeGlobal == 1) then
           nPlotDim = 1
-          iPlotDim = (/1,0,0/)
-          nCellsPerBlock = (/iSizeGlobal,1,1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1,1,1/)
+          iPlotDim = [1,0,0]
+          nCellsPerBlock = [iSizeGlobal,1,1]
+          nNodeCellsPerBlock = [iSizeGlobal+1,1,1]
        else if (iSizeGlobal == 1) then
           nPlotDim = 2
-          iPlotDim = (/2,3,0/)
-          nCellsPerBlock = (/jSizeGlobal,kSizeGlobal,1/)
-          nNodeCellsPerBlock = (/jSizeGlobal+1,kSizeGlobal+1,1/)
+          iPlotDim = [2,3,0]
+          nCellsPerBlock = [jSizeGlobal,kSizeGlobal,1]
+          nNodeCellsPerBlock = [jSizeGlobal+1,kSizeGlobal+1,1]
        else if (jSizeGlobal == 1) then
           nPlotDim = 2
-          iPlotDim = (/1,3,0/)
-          nCellsPerBlock = (/iSizeGlobal,kSizeGlobal,1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1,kSizeGlobal+1,1/)
+          iPlotDim = [1,3,0]
+          nCellsPerBlock = [iSizeGlobal,kSizeGlobal,1]
+          nNodeCellsPerBlock = [iSizeGlobal+1,kSizeGlobal+1,1]
        else if (kSizeGlobal == 1) then
           nPlotDim = 2
-          iPlotDim = (/1,2,0/)
-          nCellsPerBlock = (/iSizeGlobal,jSizeGlobal,1/)
-          nNodeCellsPerBlock = (/iSizeGlobal+1,jSizeGlobal+1,1/)
+          iPlotDim = [1,2,0]
+          nCellsPerBlock = [iSizeGlobal,jSizeGlobal,1]
+          nNodeCellsPerBlock = [iSizeGlobal+1,jSizeGlobal+1,1]
        end if
     end if
 
@@ -792,9 +790,9 @@ contains
     allocate(unknownNameArray(nPlotVar))
 
     call pad_string_with_null(nPlotVar, int(lNameH5), PlotVarNames, UnknownNameArray)
-    iInteger8=nPlotVar
-    iInteger8a=lNameH5
-    call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
+    iInteger8 = nPlotVar
+    iInteger8a= lNameH5
+    call write_hdf5_data(FileID, "plotVarNames", 1, [iInteger8],&
          CharacterData=UnknownNameArray, nStringChars=iInteger8a)
 
     ! The plugn doesn't need these. However it does use this info to speed some
@@ -812,12 +810,12 @@ contains
        end do
        if (nBlocksUsed == 0 ) then
           iInteger8 = 2
-          call write_hdf5_data(FileID, DatasetNameTemp, 2, (/iInteger8,nBlkUsedGlobal/),&
+          call write_hdf5_data(FileID, DatasetNameTemp, 2, [iInteger8,nBlkUsedGlobal],&
                nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
-               Rank2RealData=reshape((/0.0,0.0,0.0,0.0/),(/2,2/)))
+               Rank2RealData=reshape([0.0,0.0,0.0,0.0],[2,2]))
        else
           iInteger8 = 2
-          call write_hdf5_data(FileID, DatasetNameTemp, 2, (/iInteger8,nBlkUsedGlobal/),&
+          call write_hdf5_data(FileID, DatasetNameTemp, 2, [iInteger8,nBlkUsedGlobal],&
                nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
                Rank2RealData=BlockDataExtents)
        end if
@@ -827,8 +825,8 @@ contains
     deallocate (BlockDataExtents)
 
     do iVar = 1, nPlotVar
-       call write_hdf5_data(FileID, UnknownNameArray(iVar), 4, (/nCellsPerBlock(1), nCellsPerBlock(2),&
-            nCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+       call write_hdf5_data(FileID, UnknownNameArray(iVar), 4, [nCellsPerBlock(1), nCellsPerBlock(2),&
+            nCellsPerBlock(3),nBlkUsedGlobal],nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
             Rank4RealData=PlotVarIdx(:,:,:,:,iVar),&
             RealAttribute1=GlobalVarMin(iVar), RealAttribute2=GlobalVarMax(iVar), &
             NameRealAttribute1="minimum", NameRealAttribute2="maximum")
@@ -836,16 +834,16 @@ contains
 
     allocate(BoundingBox(2,nPlotDim,nBlocksUsed))
     if (nonCartesian) then
-       call write_hdf5_data(FileID, "NodesX", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
-            nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+       call write_hdf5_data(FileID, "NodesX", 4, [nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+            nNodeCellsPerBlock(3),nBlkUsedGlobal],nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
             Rank4RealData=PlotXYZNodes(1,:,:,:,:))
        if (nPlotDim >= 2) then
-          call write_hdf5_data(FileID, "NodesY", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
-               nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+          call write_hdf5_data(FileID, "NodesY", 4, [nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+               nNodeCellsPerBlock(3),nBlkUsedGlobal],nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
                Rank4RealData=PlotXYZNodes(2,:,:,:,:))
           if (nPlotDim == 3) &
-               call write_hdf5_data(FileID, "NodesZ", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
-               nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+               call write_hdf5_data(FileID, "NodesZ", 4, [nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+               nNodeCellsPerBlock(3),nBlkUsedGlobal],nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
                Rank4RealData=PlotXYZNodes(3,:,:,:,:))
        end if
        do iBlock = 1, nBlocksUsed
@@ -867,7 +865,7 @@ contains
        BoundingBox(2,:,:) = CoordMax_DB(iPlotDim(1:nPlotDim), UsedBlocks)
     end if
     iInteger8=2
-    call write_hdf5_data(FileID, "bounding box", 3, (/iInteger8,nPlotDim,nBlkUsedGlobal/),&
+    call write_hdf5_data(FileID, "bounding box", 3, [iInteger8,nPlotDim,nBlkUsedGlobal],&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank3RealData=BoundingBox)
     allocate(Coordinates(nPlotDim, nBlocksUsed))
@@ -878,7 +876,7 @@ contains
     end do
     deallocate(BoundingBox)
     call MPI_Barrier(iPlotComm,Error)
-    call write_hdf5_data(FileID, "coordinates", 2, (/nPlotDim,nBlkUsedGlobal/),&
+    call write_hdf5_data(FileID, "coordinates", 2, [nPlotDim,nBlkUsedGlobal],&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank2RealData=Coordinates)
     deallocate(Coordinates)
@@ -903,7 +901,7 @@ contains
        end do
     end do
 
-    call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
+    call  write_hdf5_data(FileID, "MinLogicalExtents", 2, [nPlotDim,nBlkUsedGlobal],&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank2IntegerData=MinLogicalExtents)
     deallocate(MinLogicalExtents)
@@ -912,7 +910,7 @@ contains
 
     iInteger8=nPlotVar
     iInteger8a=lNameH5
-    call write_hdf5_data(FileID, "plotVarUnits", 1,  (/iInteger8/),&
+    call write_hdf5_data(FileID, "plotVarUnits", 1, [iInteger8],&
          CharacterData=UnknownNameArray, nStringChars=iInteger8a)
 
     call MPI_Barrier(iPlotComm,Error)
@@ -921,32 +919,32 @@ contains
 
     call MPI_Barrier(iPlotComm,Error)
     if (NotACut .and. nBlocksUsed > 0) then
-       call  write_hdf5_data(FileID, "iMortonNode_A", 1, (/nBlkUsedGlobal/),&
+       call  write_hdf5_data(FileID, "iMortonNode_A", 1, [nBlkUsedGlobal],&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
             Rank1IntegerData=iMortonNode_A(UsedNodes))
     else if (NotACut) then
-       call  write_hdf5_data(FileID, "iMortonNode_A", 1, (/nBlkUsedGlobal/),&
+       call  write_hdf5_data(FileID, "iMortonNode_A", 1, [nBlkUsedGlobal],&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
-            Rank1IntegerData=(/0/))
+            Rank1IntegerData=[0])
     end if
     !
     call MPI_Barrier(iPlotComm,Error)
     if (nBlocksUsed > 0 ) then
-       call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsedGlobal/),&
+       call  write_hdf5_data(FileID, "refine level", 1, [nBlkUsedGlobal],&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
             Rank1IntegerData=iTree_IA(Level_,UsedNodes))
        deallocate(usedNodes)
     else
-       call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsedGlobal/),&
+       call  write_hdf5_data(FileID, "refine level", 1, [nBlkUsedGlobal],&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
-            Rank1IntegerData=(/0/))
+            Rank1IntegerData=[0])
        deallocate(usedNodes)
     end if
 
     call MPI_Barrier(iPlotComm,Error)
     allocate(procNum(nBlocksUsed))
     procNum = iPlotProc
-    call  write_hdf5_data(FileID, "Processor Number", 1, (/nBlkUsedGlobal/),&
+    call  write_hdf5_data(FileID, "Processor Number", 1, [nBlkUsedGlobal],&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank1IntegerData=procNum)
     deallocate(procNum)
@@ -973,7 +971,7 @@ contains
 
     call pad_string_with_null(int(nPlotDim), int(lNameH5), UnknownNameArray, UnknownNameArray)
     iInteger8 = lNameH5
-    call write_hdf5_data(FileID, "Axis Labels", 1,  (/nPlotDim/),&
+    call write_hdf5_data(FileID, "Axis Labels", 1, [nPlotDim],&
          CharacterData=UnknownNameArray, nStringChars=iInteger8)
     
     deallocate(UnknownNameArray)
@@ -1070,7 +1068,7 @@ contains
 
     !-------------------------------------------------------------------
     ! write the real Metadata
-    call  write_hdf5_data(FileID, "Real Plot Metadata", 1, (/iData/),&
+    call  write_hdf5_data(FileID, "Real Plot Metadata", 1, [iData],&
          Rank1RealData=RealMetaData)
 
     call test_stop(NameSub, DoTest)
@@ -1143,7 +1141,7 @@ contains
     end if
     !-------------------------------------------------------------------
     ! write the real Metadata
-    call  write_hdf5_data(FileID, "Real Simulation Metadata", 1, (/iData/),&
+    call  write_hdf5_data(FileID, "Real Simulation Metadata", 1, [iData],&
          Rank1RealData=RealMetaData, RealAttribute1=CodeVersion,&
          NameRealAttribute1="CodeVersion")
 
@@ -1253,7 +1251,7 @@ contains
 
     !-------------------------------------------------------------------
     ! write the integer Metadata
-    call  write_hdf5_data(FileID, "Integer Plot Metadata", 1, (/iData/),&
+    call  write_hdf5_data(FileID, "Integer Plot Metadata", 1, [iData],&
          Rank1IntegerData=IntegerMetaData)
 
     call test_stop(NameSub, DoTest)
@@ -1308,7 +1306,7 @@ contains
 
     !-------------------------------------------------------------------
     ! write the integer Metadata
-    call  write_hdf5_data(FileID, "Integer Sim Metadata", 1, (/iData/),&
+    call  write_hdf5_data(FileID, "Integer Sim Metadata", 1, [iData],&
          Rank1IntegerData=IntegerMetaData)
     call test_stop(NameSub, DoTest)
 

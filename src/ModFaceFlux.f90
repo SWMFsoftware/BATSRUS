@@ -52,7 +52,6 @@ module ModFaceFlux
   use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
   use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
-  use ModMultiFluid
   use ModNumConst
   use ModCoronalHeating, ONLY: IsNewBlockAlfven
   use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
@@ -136,11 +135,11 @@ module ModFaceFlux
   real :: UnRight_I(nFluid+1) = 0.0
   !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
   
-  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) ! B x Area for current -> BxJ
-  real :: Enormal = 0.0                         ! normal electric field -> divE
-  real :: Pe      = 0.0                         ! electron pressure -> grad Pe
+  real :: bCrossArea_D(3) = [ 0.0, 0.0, 0.0 ] ! B x Area for current -> BxJ
+  real :: Enormal = 0.0                       ! normal electric field -> divE
+  real :: Pe      = 0.0                       ! electron pressure -> grad Pe
   real :: Pwave   = 0.0
-  real :: PeDotArea_D(3) = (/ 0.0, 0.0, 0.0 /)  ! grad Pe stuff for aniso Pe
+  real :: PeDotArea_D(3) = [ 0.0, 0.0, 0.0 ]  ! grad Pe stuff for aniso Pe
   !$omp threadprivate( bCrossArea_D, Enormal, Pe, Pwave, PeDotArea_D )
   
   ! Variables for normal resistivity
@@ -333,9 +332,9 @@ contains
        Tangent2_D = cross_product(Normal_D, Tangent1_D)
 
        ! B0 on the face
-       B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
-       B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
-       B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
+       B0n   = sum(Normal_D  *[B0x, B0y, B0z])
+       B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
+       B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
        ! Left face
        UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
        Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
@@ -464,6 +463,7 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModWaves,    ONLY: UseWavePressure
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
+    use ModMultiFluid, ONLY: UseMultiIon
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -906,11 +906,12 @@ contains
 
       use ModAdvance, ONLY: State_VGB, Energy_GBI
       use ModPhysics, ONLY: Gamma_I
-      real,     intent(inout) :: Flux_V(nFlux)
+      use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+      real, intent(inout):: Flux_V(nFlux)
       real :: Coef
 
-      real:: FaceDivU, Sound3, s1, s2
-      integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iVar
+      real :: FaceDivU, Sound3, s1, s2
+      integer :: iFluid, iVar
 
       character(len=*), parameter:: NameSub = 'add_artificial_viscosity'
       !------------------------------------------------------------------------
@@ -918,11 +919,7 @@ contains
            RETURN
 
       do iFluid = 1, nFluid
-         iRho   = iRho_I(iFluid)
-         iRhoUx = iRhoUx_I(iFluid)
-         iRhoUy = iRhoUy_I(iFluid)
-         iRhoUz = iRhoUz_I(iFluid)
-         iP     = iP_I(iFluid)
+         call select_fluid(iFluid)
 
          ! Calculate the 5th-order artificial viscosity. 
          ! See eq(36) of P. McCorquodale and P. Colella (2010), where
@@ -1055,7 +1052,7 @@ contains
           Area2=0.0
        else
           Area = sqrt(Area2)
-          Normal_D=(/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
        end if
     end if
 
@@ -1098,7 +1095,7 @@ contains
           Area2= 0.0
        else
           Area = sqrt(Area2)
-          Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
 
        end if
 
@@ -1134,7 +1131,7 @@ contains
           Area2= 0.0
        else
           Area = sqrt(Area2)
-          Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
        end if
     end if
 
@@ -1238,6 +1235,10 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
+    use ModMultiFluid, ONLY: UseMultiIon, NeutralFirst_, ChargeIon_I, &
+       iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
+
     use ModUserInterface ! user_material_properties
 
     real, intent(out):: Flux_V(nFlux)
@@ -1392,7 +1393,7 @@ contains
 
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
-               (/B0x,B0y,B0z/), dB0_D,                    &
+               [B0x,B0y,B0z], dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
                DissipationFlux_V, cMax, Unormal_I(1))
@@ -2219,6 +2220,7 @@ contains
       use ModExactRS,  ONLY: wR, wL, RhoL, RhoR, pL, pR, UnL, UnR, &
            UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
       use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
+      use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
       real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
@@ -2447,10 +2449,10 @@ contains
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
       if(UseB)then
          write(*,*)'B  =', &
-              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + (/B0x,B0y,B0z/)
+              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z]
          write(*,*)'BB =', &
               sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
-              + (/B0x,B0y,B0z/))**2)
+              + [B0x,B0y,B0z])**2)
       end if
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
@@ -2479,7 +2481,6 @@ contains
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave, PeDotArea_D)
 
-    use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy, UseAnisoPe
@@ -2487,6 +2488,9 @@ contains
                            AlfvenWavePlusFirst_, AlfvenWavePlusLast_, &
                            GammaWave, UseAlfvenWaves, UseWavePressure, &
                            UseWavePressureLtd
+    use ModMultiFluid, ONLY: iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I, iPIon_I, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iUx, iUy, iUz, iEnergy, iP, &
+       IsIon_I, nIonFluid, UseMultiIon, ChargePerMass_I, select_fluid
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_BLK
 
@@ -2543,7 +2547,7 @@ contains
           Pepar  = State_V(Pepar_)
           Peperp = (3*Pe - Pepar)/2.0
           PeDotArea_D = Peperp*Normal_D*Area + (Pepar-Peperp)*FullBn &
-               *(/FullBx,FullBy,FullBz/)/FullB2*Area
+               *[FullBx,FullBy,FullBz]/FullB2*Area
 
           if (DoTestCell) then
              write(*,*) NameSub, ' UseElectronPressure'
@@ -2578,7 +2582,7 @@ contains
     HallUn = 0.0
 
     do iFluid=iFluidMin,iFluidMax
-       call select_fluid(iFluid)
+
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
           if(UseBorisCorrection)then
@@ -2600,12 +2604,13 @@ contains
           end if
           
           ! Calculate HD flux for individual ion and neutral fluids
+          call select_fluid(iFluid)
           call get_hd_flux
        end if
 
        if(UseResistivePlanet .and. iFluid == 1)then
           ! Do not evolve magnetic field inside the body
-          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace)  < 1.0 .and. &
+          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < 1.0 .and. &
                r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
                Flux_V(Bx_:Bz_) = 0.0
        end if
@@ -2649,7 +2654,7 @@ contains
        end do
     end if
 
-    if(ViscoCoeff > 0.0 ) then
+    if(ViscoCoeff > 0.0)then
        do iFluid = 1, nFluid
           call select_fluid(iFluid)
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
@@ -3202,6 +3207,7 @@ contains
 
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGammaMinus1_I
+      use ModMultiFluid, ONLY: iPpar
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -3526,7 +3532,11 @@ contains
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
        UseAwSpeedIn)
 
-    use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP
+    use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
+       iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
+       ElectronFirst_, IonFirst_, NeutralFirst_, &
+       nIonFluid, nTrueIon, UseMultiIon, ChargeIon_I, ChargePerMass_I, &
+       MassIon_I
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
          GammaWave, UseAlfvenWaves
     use ModMain,    ONLY: Climit
@@ -3555,7 +3565,6 @@ contains
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid(iFluid)
 
        if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
@@ -3592,6 +3601,7 @@ contains
              UnLeft = UnLeft_I(iFluid)
              UnRight= UnRight_I(iFluid)
           end if
+          call select_fluid(iFluid)
           call get_hd_speed
        end if
 
@@ -3707,7 +3717,7 @@ contains
          Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
-      else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe) then
+      else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe)then
          ! In the anisotropic electron pressure case, Pe is added to the
          ! total pressure while Pepar is added to the total Ppar.
          p     = p + State_V(Pe_)
@@ -3733,7 +3743,7 @@ contains
       if(UseWavePressure) Sound2 = Sound2 + InvRho*GammaWave &
            * (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-      Alfven2= FullB2*InvRho
+      Alfven2       = InvRho*FullB2
       Alfven2Normal = InvRho*FullBn**2
 
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
@@ -3750,7 +3760,7 @@ contains
       Alfven2NormalBoris = Alfven2Normal*GammaA2*GammaU2
 
       ! Approximate slow and fast wave speeds
-      Fast2  = Sound2Boris + Alfven2Boris
+      Fast2 = Sound2Boris + Alfven2Boris
 
       if(UseAnisoPressure .and. FullB2 > 0)then
          Discr = sqrt(max(0.0, Fast2**2  &
@@ -4275,7 +4285,7 @@ contains
     !==========================================================================
     subroutine get_burgers_speed
 
-      real:: Rho
+      real :: Rho
       !------------------------------------------------------------------------
       Rho = State_V(Rho_)
       if(present(Cmax_I))then

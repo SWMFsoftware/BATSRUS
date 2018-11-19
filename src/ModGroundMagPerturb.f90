@@ -88,7 +88,7 @@ module ModGroundMagPerturb
   ! K CONVERSION TABLES
   ! Conversion table for the standard station, Niemegk.
   real, parameter :: &
-       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./)
+       Table50_I(9)=[5.,10.,20.,40.,70.,120.,200.,330.,500.]
 
   ! Headers for Geoindices output file:
   character(len=*), parameter :: NameKpVars = &
@@ -1231,8 +1231,8 @@ contains
            "dB (North-East-Down) [nT]", &
            TimeIn = time_simulation, &
            NameVarIn = NameVar, &
-           CoordMinIn_D = (/ GridLonMin, GridLatMin /), &
-           CoordMaxIn_D = (/ GridLonMax, GridLatMax /), &
+           CoordMinIn_D = [ GridLonMin, GridLatMin ], &
+           CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
            VarIn_VII=MagOut_VII)
 
     end subroutine write_mag_2d

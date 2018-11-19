@@ -489,7 +489,7 @@ contains
          DxyzDcoord_DD(:,3) = InvDz2 &
               *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
       else
-         DxyzDcoord_DD(:,3) = (/ 0., 0., 1./)
+         DxyzDcoord_DD(:,3) = [ 0., 0., 1. ]
       end if
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
@@ -627,7 +627,7 @@ contains
              if(iHemisphere == 0) then
                 ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
                 bCurrent_VII(:,i,j) = &
-                     (/1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
+                     [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                 CYCLE
              end if
           else

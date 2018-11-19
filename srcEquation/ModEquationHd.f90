@@ -36,22 +36,22 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
        1.0, & ! p_
-       1.0 /) ! Energy_
+       1.0 ] ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=5) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=5) :: NameVar_V(nVar+nFluid) = [ &
        'Rho  ', & ! Rho_
        'Mx   ', & ! RhoUx_
        'My   ', & ! RhoUy_
        'Mz   ', & ! RhoUz_
        'P    ', & ! p_
-       'E    '/)  ! Energy_
+       'E    ']  ! Energy_
 
 
   ! Bx_, By_, Bz_ have to be defined so that the code compiles
@@ -61,10 +61,10 @@ module ModVarIndexes
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_/)
+  integer, parameter :: iRho_I(nFluid)   = [Rho_]
+  integer, parameter :: iRhoUx_I(nFluid) = [RhoUx_]
+  integer, parameter :: iRhoUy_I(nFluid) = [RhoUy_]
+  integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_]
+  integer, parameter :: iP_I(nFluid)     = [p_]
 
 end module ModVarIndexes
