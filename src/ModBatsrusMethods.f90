@@ -457,8 +457,13 @@ contains
        RETURN
     end if
 
-    ! We are advancing in time
-    time_loop = .true.
+    ! We are advancing in time. Exchange messages before starting
+    ! the time loop in case some information was received, 
+    ! for example buffer grid filled from another component
+    if(.not.time_loop)then
+       time_loop = .true.
+       call exchange_messages
+    end if
 
     ! Some files should be saved at the beginning of the time step
     call BATS_save_files('BEGINSTEP')
