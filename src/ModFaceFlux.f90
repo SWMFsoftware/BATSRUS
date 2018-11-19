@@ -2610,7 +2610,7 @@ contains
 
        if(UseResistivePlanet .and. iFluid == 1)then
           ! Do not evolve magnetic field inside the body
-          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace)  < 1.0 .and. &
+          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < 1.0 .and. &
                r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
                Flux_V(Bx_:Bz_) = 0.0
        end if
@@ -2654,7 +2654,7 @@ contains
        end do
     end if
 
-    if(ViscoCoeff > 0.0 ) then
+    if(ViscoCoeff > 0.0)then
        do iFluid = 1, nFluid
           call select_fluid(iFluid)
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
@@ -3565,7 +3565,6 @@ contains
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid(iFluid)
 
        if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
@@ -3602,6 +3601,7 @@ contains
              UnLeft = UnLeft_I(iFluid)
              UnRight= UnRight_I(iFluid)
           end if
+          call select_fluid(iFluid)
           call get_hd_speed
        end if
 
@@ -3717,7 +3717,7 @@ contains
          Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
-      else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe) then
+      else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe)then
          ! In the anisotropic electron pressure case, Pe is added to the
          ! total pressure while Pepar is added to the total Ppar.
          p     = p + State_V(Pe_)
@@ -3743,7 +3743,7 @@ contains
       if(UseWavePressure) Sound2 = Sound2 + InvRho*GammaWave &
            * (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
-      Alfven2= FullB2*InvRho
+      Alfven2       = InvRho*FullB2
       Alfven2Normal = InvRho*FullBn**2
 
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
@@ -3760,7 +3760,7 @@ contains
       Alfven2NormalBoris = Alfven2Normal*GammaA2*GammaU2
 
       ! Approximate slow and fast wave speeds
-      Fast2  = Sound2Boris + Alfven2Boris
+      Fast2 = Sound2Boris + Alfven2Boris
 
       if(UseAnisoPressure .and. FullB2 > 0)then
          Discr = sqrt(max(0.0, Fast2**2  &
@@ -4285,7 +4285,7 @@ contains
     !==========================================================================
     subroutine get_burgers_speed
 
-      real:: Rho
+      real :: Rho
       !------------------------------------------------------------------------
       Rho = State_V(Rho_)
       if(present(Cmax_I))then
