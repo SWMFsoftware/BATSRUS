@@ -228,11 +228,11 @@ contains
        case('float', 'outflow')
           call set_float_bc(1, nVarState)
           if(UseOutflowPressure .and. TypeBc == 'outflow') &
-               call set_fixed_bc(p_, p_, (/pOutflow/) )
+               call set_fixed_bc(p_, p_, [pOutflow] )
           if(UseHyperbolicDivb) &
-               call set_fixed_bc(Hyp_, Hyp_, (/0.0/) )
+               call set_fixed_bc(Hyp_, Hyp_, [0.0] )
           if(UseEfield)         &
-               call set_fixed_bc(HypE_, HypE_, (/0.0/) )
+               call set_fixed_bc(HypE_, HypE_, [0.0] )
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
 

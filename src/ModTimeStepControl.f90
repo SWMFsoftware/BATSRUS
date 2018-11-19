@@ -547,7 +547,7 @@ contains
     if(nVarControl < 0)then
        nVarControl = 2
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
-       iVarControl_I = (/Rho_, p_/)
+       iVarControl_I = [Rho_, p_]
     end if
 
     ! Calculate the largest relative drop in the control variables

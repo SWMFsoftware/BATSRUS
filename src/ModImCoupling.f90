@@ -172,7 +172,7 @@ contains
           end if
           LonWeight2 = 1 - LonWeight1
 
-          if(all( IM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
+          if(all( IM_p( [iLat1,iLat2], [iLon1, iLon2] ) > 0.0 ))then
              if(IsMhd)then
                 pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
                      LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
@@ -375,7 +375,7 @@ contains
     if(UseMultiSpecies)then
        nDensity = 3
        allocate(iDens_I(nDensity))
-       iDens_I = (/ Rho_, SpeciesFirst_, SpeciesFirst_+1/)
+       iDens_I = [ Rho_, SpeciesFirst_, SpeciesFirst_+1 ]
     else
        nDensity = nIons
        allocate(iDens_I(nDensity))

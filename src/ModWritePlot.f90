@@ -14,6 +14,7 @@ module ModWritePlot
   public:: adjust_plot_range  ! adjust the range of cut plots
   public:: set_plot_scalars   !
   public:: reverse_field
+
 contains
   !============================================================================
 
@@ -1699,7 +1700,10 @@ contains
        plotvar, plotvar_inBody)
 
     use ModProcMH
-    use ModPhysics
+    use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       No2Io_V, No2Si_V, UnitUser_V, NameVarLower_V
     use ModVarIndexes, ONLY: DefaultState_V
     use ModNumConst, ONLY: cTiny
     use ModUtilities,  ONLY: lower_case
@@ -1818,7 +1822,10 @@ contains
   subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
        StringUnitIdl)
 
-    use ModPhysics
+    use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name

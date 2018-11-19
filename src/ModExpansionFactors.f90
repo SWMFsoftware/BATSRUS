@@ -103,7 +103,7 @@ module ModExpansionFactors
   real, allocatable :: WSAspeed_N(:,:,:)
 
   ! parameters in the WSA models
-  real :: ArgesAlpha_I(10)=(/&
+  real :: ArgesAlpha_I(10)=[&
        240.0,& ! constant speed km/s       !1
        675.0,& ! modulation of speed km/s  !2
        4.5  ,& ! power index               !3
@@ -113,7 +113,7 @@ module ModExpansionFactors
        1.25 ,& ! power index               !7
        3.0  ,& ! power index               !8
        0.0  ,& ! lower bound               !9
-       9999.0/)! upper bound               !10
+       9999.0]! upper bound               !10
 
   ! Speed distribution extracted from Fisk model
   real, allocatable :: Fiskspeed_N(:,:,:)
@@ -479,13 +479,12 @@ contains
       ! Divide by the metric coefficients, to obtain
       ! the vector ||B|| d (r,phi,theta)/dS along the field line
 
-      f_d=f_d/(/1.0,RIn_D(R_)*max(sin(RIn_D(Theta_)),cTol),&
-           & RIn_D(R_)/)
+      f_d = f_d/[1.0,RIn_D(R_)*max(sin(RIn_D(Theta_)),cTol), RIn_D(R_)]
 
       ! Divide by some scale, to limit the displacement within the
       ! integration
       ! step
-      f_d=f_d/sqrt(sum(f_d**2))
+      f_d = f_d/sqrt(sum(f_d**2))
     end function f_d
     !==========================================================================
     function theta_b(Phi,Theta)
@@ -539,7 +538,7 @@ contains
     ! H_PFSSM above that of the magnetic field measurements!
     !/
 
-    R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
+    R_PFSSM = min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
 
     !\
     ! Transform Phi_PFSSM from the component's frame to the
@@ -551,37 +550,37 @@ contains
     !\
     ! Take a residual for the bi-linear interpolation
     !/
-    Res_D=(/R_PFSSM,Phi_PFSSM,Theta_PFSSM/)
+    Res_D = [R_PFSSM,Phi_PFSSM,Theta_PFSSM]
 
     ! Limit a value of R:
-    Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
+    Res_D(R_) = max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
 
-    Res_D(R_)=Res_D(R_)-Ro_PFSSM
+    Res_D(R_) = Res_D(R_)-Ro_PFSSM
 
     call correct_angles(Res_D)
-    Res_D(Theta_)=cos(Res_D(Theta_)) &! This is sin(latitude)
+    Res_D(Theta_) = cos(Res_D(Theta_)) &! This is sin(latitude)
          -sin_latitude(0)     ! the same for the iTheta=0 node
     ! of the grid
-    Res_D=Res_D*dInv_D
-    Node_D=floor(Res_D)
-    if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
-    Res_D=Res_D-real(Node_D)
-    if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
+    Res_D = Res_D*dInv_D
+    Node_D = floor(Res_D)
+    if(Node_D(R_) == nR) Node_D(R_) = Node_D(R_) - 1
+    Res_D = Res_D - real(Node_D)
+    if(Node_D(Phi_) == nPhi) Node_D(Phi_) = 0
 
-    if(Node_D(Theta_)>=nTheta)then
-       Node_D(Theta_)=nTheta-1
-       Res_D(Theta_)=1.0
-    elseif(Node_D(Theta_)<=-1)then
-       Node_D(Theta_)=0
-       Res_D(Theta_)=0.0
+    if(Node_D(Theta_) >= nTheta)then
+       Node_D(Theta_) = nTheta - 1
+       Res_D(Theta_) = 1.0
+    elseif(Node_D(Theta_) <= -1)then
+       Node_D(Theta_) = 0
+       Res_D(Theta_) = 0.0
     end if
 
-    Weight_III(0,:,:)=1.0-Res_D(R_)
-    Weight_III(1,:,:)=Res_D(R_)
-    Weight_III(:,0,:)=Weight_III(:,0,:)*(1.0-Res_D(Phi_))
-    Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
-    Weight_III(:,:,0)=Weight_III(:,:,0)*(1.0-Res_D(Theta_))
-    Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
+    Weight_III(0,:,:) = 1.0 - Res_D(R_)
+    Weight_III(1,:,:) = Res_D(R_)
+    Weight_III(:,0,:) = Weight_III(:,0,:)*(1.0-Res_D(Phi_))
+    Weight_III(:,1,:) = Weight_III(:,1,:)*Res_D(Phi_)
+    Weight_III(:,:,0) = Weight_III(:,:,0)*(1.0-Res_D(Theta_))
+    Weight_III(:,:,1) = Weight_III(:,:,1)*Res_D(Theta_)
 
     Output= sum(Weight_III*Array_N( Node_D(R_):Node_D(R_)+1,&
          & Node_D(Phi_):Node_D(Phi_)+1,&
@@ -652,7 +651,7 @@ contains
 
        gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
     else
-       call get_bernoulli_integral((/xx,yy,zz/), Uf)
+       call get_bernoulli_integral([xx,yy,zz], Uf)
        BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
             (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
             *(R1-RR)*&
@@ -697,7 +696,7 @@ contains
     end if
 
     ! v_\infty from WSA model:
-    call get_bernoulli_integral((/X,Y,Z/), Uf)
+    call get_bernoulli_integral([X,Y,Z], Uf)
 
     ! An expansion factor
     call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)

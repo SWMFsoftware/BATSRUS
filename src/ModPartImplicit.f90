@@ -747,8 +747,8 @@ contains
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
              write(*,*) 'x,y,z =', Xyz_DGB(:,i,j,k,iBlock)
-             write(*,*) 'RhoOld,pOld=', StateOld_VGB((/Rho_,P_/),i,j,k,iBlock)
-             write(*,*) 'RhoNew,pNew=', State_VGB((/Rho_,P_/),i,j,k,iBlock)
+             write(*,*) 'RhoOld,pOld=', StateOld_VGB([Rho_,P_],i,j,k,iBlock)
+             write(*,*) 'RhoNew,pNew=', State_VGB([Rho_,P_],i,j,k,iBlock)
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
        else
