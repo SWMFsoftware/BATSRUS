@@ -22,6 +22,7 @@ ModUser.f90.safe
 ModEquation.f90
 ModEquation.f90.safe
 ModImplHypre.f90
+ModHdf5.f90
 Tmp_*
 util/
 share/
