@@ -35,6 +35,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    VarsGhostFace_V = 0.0
+
     call stop_user(NameSub)
   end subroutine user_set_face_boundary
   !============================================================================
@@ -132,6 +134,9 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_amr_criteria'
     !--------------------------------------------------------------------------
+    UserCriteria = 0.0
+    IsFound = .false.
+
     call stop_user(NameSub//'(TypeCrit='//TypeCriteria//')')
 
   end subroutine user_amr_criteria
@@ -153,6 +158,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
+    VarValue = 0.0
+    
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
   end subroutine user_get_log_var
@@ -177,6 +184,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
+    PlotVar_G = 0.0
+    PlotVarBody = 0.0
+    UsePlotVarBody = 0.0
+
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
   end subroutine user_set_plot_var
@@ -249,6 +260,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
+    Eta_G = 0.0
+
     call stop_user(NameSub)
 
   end subroutine user_set_resistivity
