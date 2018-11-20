@@ -186,7 +186,7 @@ contains
     !--------------------------------------------------------------------------
     PlotVar_G = 0.0
     PlotVarBody = 0.0
-    UsePlotVarBody = 0.0
+    UsePlotVarBody = .false.
     IsFound = .false.
 
     call stop_user(NameSub//'(NameVar='//NameVar//')')
