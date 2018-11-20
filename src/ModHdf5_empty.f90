@@ -73,6 +73,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_var_hdf5'
     !--------------------------------------------------------------------------
+    nCell = 0
+    H5advance = .false.
+
   end subroutine write_var_hdf5
   !============================================================================
 
