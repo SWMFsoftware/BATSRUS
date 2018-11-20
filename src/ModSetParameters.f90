@@ -1484,6 +1484,21 @@ contains
           ! couple GM and IM in anisotropic pressure mode
           call read_Var('DoAnisoPressureIMCoupling', DoAnisoPressureIMCoupling)
 
+       case('#PSCOUPLING')
+          call read_var('TauCouplePs',TauCoupleIm)
+                    if(TauCoupleIm < 1.0)then
+             TauCoupleIM = 1.0/TauCoupleIM
+             if(iProc==0)then
+                write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
+                if(UseStrict) call stop_mpi('Correct PARAM.in!')
+                write(*,*)NameSub//' using the inverse:',TauCoupleIm
+             end if
+          end if
+          call read_var('DoCouplePsPressure', DoCoupleImPressure)
+          call read_var('DoCouplePsDensity',  DoCoupleImDensity)
+          if(DoCoupleImDensity) &
+               call read_var('DensityCoupleFloor', RhoMinDimIm)
+             
        case("#RBSATCOUPLING")
           call read_var('DoRbSatTrace',DoRbSatTrace)
        case("#USERFLAGS", "#USER_FLAGS")
