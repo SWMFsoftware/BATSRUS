@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUserEmpty
 
-  ! This module contains empty user routines.  They should be "used"
+  ! This module contains empty user routines. They should be "used"
   ! (included) in the srcUser/ModUser*.f90 files for routines that the user
   ! does not wish to implement.
 
