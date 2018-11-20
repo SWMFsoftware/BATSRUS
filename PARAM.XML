@@ -7176,7 +7176,29 @@ isotropy is assumed in the coupling (even if both GM and IM allow for
 anisotropy).
 </command>
 
+<command name="PSCOUPLING">
+	<parameter name="TauCouplePs" type="real" min="1"/>
+	<parameter name="DoCouplePsPressure" type="logical" default="T"/>
+	<parameter name="DoCouplePsDensity"  type="logical" default="T"/>
+	<parameter name="DensityCoupleFloor" type="real" min="0" default="0"
+		   if="$DoCoupleImPressure"/>
 
+#PSCOUPLING
+20.0			TauCouplePs
+T			DoCouplePsPressure
+T			DoCouplePsDensity
+.1			DensityCoupleFloor
+
+This command controls density and pressure coupling from the plasmasphere (PS) component into
+BATS-R-US.  TauCouplePs sets the rate at which MHD fluids are "nudged" towards the PS solution
+in the exact fashion as #IMCOUPLING.  DoCouplePsPressure and DoCouplePsDensity select which
+values are nudged.  DensityCoupleFloor controls the minimum density that results from this
+coupling.  Setting this to a reasonable value helps prevent near-zero time steps.
+
+The default action is to not couple density or pressure from PS.
+
+</command>
+	
 <command name="PICUNIT">
  	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
 	 <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
