@@ -80,9 +80,9 @@ module ModParticleFieldLine
   integer, parameter:: nVarAvail = 3, nIndexAvail = 2, nDataMax = &
        nVarAvail + nIndexAvail +1
   character(len=2), parameter:: NameVarAvail_V(nVarAvail) = &
-       (/'xx', 'yy', 'zz'/)
+       ['xx', 'yy', 'zz']
   character(len=2), parameter:: NameIndexAvail_I(0:nIndexAvail) = &
-       (/'bk','fl', 'id'/)
+       ['bk','fl', 'id']
 
   ! spatial step limits at the field line extraction
   real   :: SpaceStepMin = 0.0
@@ -818,9 +818,9 @@ contains
       integer, save:: iSeed=0
       !---------------------------------------------------------------------
       ! first, find perpendicular directions
-      DirPerp1_D = cross_product((/1.0,0.0,0.0/),Dir_D)
-      if(all(DirPerp1_D==0.0))&
-           DirPerp1_D = cross_product((/0.0,1.0,0.0/),Dir_D)
+      DirPerp1_D = cross_product([1.0,0.0,0.0],Dir_D)
+      if(all(DirPerp1_D == 0.0))&
+           DirPerp1_D = cross_product([0.0,1.0,0.0],Dir_D)
       DirPerp1_D = DirPerp1_D / sqrt(sum(DirPerp1_D**2))
       DirPerp2_D = cross_product(DirPerp1_D, Dir_D )
       
@@ -844,8 +844,8 @@ contains
   subroutine copy_end_to_regular(iParticleIn)
     integer, optional, intent(in) :: iParticleIn
     ! copies indicated variables of known end particles to regular particles
-    integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
-    integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
+    integer, parameter:: iVarCopy_I(3)   = [x_, y_, z_]
+    integer, parameter:: iIndexCopy_I(3) = [0, fl_, id_]
     integer:: iParticle, iParticleStart, iParticleEnd
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'copy_end_to_regular'

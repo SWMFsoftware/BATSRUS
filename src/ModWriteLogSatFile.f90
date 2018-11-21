@@ -412,7 +412,7 @@ contains
     iVarTot = 0
     do iVar=1,nLogVar
 
-       iVarTot = iVarTot+1
+       iVarTot = iVarTot + 1
        call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
 
        ! If we are a satellite and not a logfile (iSat>=1) then we should
@@ -602,7 +602,7 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+                  tmp1_BLK(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
@@ -744,7 +744,8 @@ contains
               *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('epnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
+              LogVar_I(iVarTot) = &
+              Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
       case('uxpnt')
          if(iProc == iProcTest) LogVar_I(iVarTot) = &
               State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest) / &
@@ -1426,7 +1427,7 @@ contains
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
-                     1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
+                     1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)) )
 
                 select case(TypeAction)
                 case('integrate')
@@ -1560,7 +1561,7 @@ contains
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
-               1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
+               1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)))
 
           Integral = Integral + Average
        end do
@@ -1658,8 +1659,8 @@ contains
     State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
     State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
 
-    call get_point_data(0.0,(/xTest,yTest,zTest/),1,nBlock,1,nVar+3,State_V)
-    call collect_satellite_data((/xTest,yTest,zTest/),State_V)
+    call get_point_data(0.0,[xTest,yTest,zTest],1,nBlock,1,nVar+3,State_V)
+    call collect_satellite_data([xTest,yTest,zTest],State_V)
 
     if(iProc==0)then
        if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&

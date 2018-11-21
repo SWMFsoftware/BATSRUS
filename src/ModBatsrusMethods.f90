@@ -457,8 +457,13 @@ contains
        RETURN
     end if
 
-    ! We are advancing in time
-    time_loop = .true.
+    ! We are advancing in time. Exchange messages before starting
+    ! the time loop in case some information was received, 
+    ! for example buffer grid filled from another component
+    if(.not.time_loop)then
+       time_loop = .true.
+       call exchange_messages
+    end if
 
     ! Some files should be saved at the beginning of the time step
     call BATS_save_files('BEGINSTEP')
@@ -787,24 +792,24 @@ contains
       integer :: t_output_current
 
       !------------------------------------------------------------------------
-      do iFile = 1, nFile
+      do iFile=1,nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
-         if( (iFile==magfile_ .or. iFile==maggridfile_) &
+         if( (iFile == magfile_ .or. iFile == maggridfile_) &
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
-         if(dn_output(ifile)>=0)then
-            if(dn_output(ifile)==0)then
+         if(dn_output(ifile) >= 0)then
+            if(dn_output(ifile) == 0)then
                call save_file
-            else if(mod(n_step,dn_output(ifile))==0)then
+            else if(mod(n_step,dn_output(ifile)) == 0)then
                call save_file
             end if
-         else if(time_accurate .and. dt_output(ifile)>0.)then
+         else if(time_accurate .and. dt_output(ifile) > 0.)then
             t_output_current = int(time_simulation/dt_output(ifile))
             DoSave = .false.
-            if(t_output_current>t_output_last(ifile)) DoSave = .true.
+            if(t_output_current > t_output_last(ifile)) DoSave = .true.
             if(DoSave)then
-               t_output_last(ifile)=t_output_current
+               t_output_last(ifile) = t_output_current
                call save_file
             end if
          end if
@@ -814,7 +819,7 @@ contains
       ! in ghost cells.
 
       if(DoExchangeAgain)then
-         if(iProc==0.and.lVerbose>0)then
+         if(iProc == 0 .and. lVerbose > 0)then
             call write_prefix; write(iUnitOut,*)&
                  'Calling exchange_messages to reset ghost cells ...'
          end if

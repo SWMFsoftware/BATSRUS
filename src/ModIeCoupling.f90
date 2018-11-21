@@ -181,7 +181,7 @@ contains
 
     ! Interpolate the potential on the ionospheric grid
     Potential = bilinear(IonoPotential_II, 1, nThetaIono, 1, nPhiIono, &
-         (/ Theta/dThetaIono+1, Phi/dPhiIono+1 /))
+         [ Theta/dThetaIono+1, Phi/dPhiIono+1 ])
 
     call test_stop(NameSub, DoTest)
   end subroutine get_ie_potential

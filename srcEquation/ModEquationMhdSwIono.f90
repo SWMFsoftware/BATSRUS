@@ -41,16 +41,16 @@ module ModVarIndexes
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_/)
+  integer, parameter :: iRho_I(nFluid)   = [Rho_]
+  integer, parameter :: iRhoUx_I(nFluid) = [RhoUx_]
+  integer, parameter :: iRhoUy_I(nFluid) = [RhoUy_]
+  integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_]
+  integer, parameter :: iP_I(nFluid)     = [p_]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = (/ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ & 
        1.0, & ! Rho_
        1.0, & ! RhoSw_
        1.0, & ! RhoIon_
@@ -61,10 +61,10 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        1.0, & ! p_
-       1.0 /) ! Energy_
+       1.0 ] ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=6) :: NameVar_V(nVar+1) = (/ &
+  character(len=6) :: NameVar_V(nVar+1) = [ &
        'Rho   ', & ! Rho_
        'RhoSw ', & ! RhoSw_
        'RhoIon', & ! RhoIon_
@@ -75,7 +75,7 @@ module ModVarIndexes
        'By    ', & ! By_
        'Bz    ', & ! Bz_
        'p     ', & ! p_
-       'e     ' /) ! Energy_
+       'e     ' ] ! Energy_
 
 
   ! Primitive variable names
@@ -89,6 +89,6 @@ module ModVarIndexes
   integer, parameter :: SpeciesLast_    = ScalarLast_
 
   ! Molecular mass of solarwind and ionosphere species in AMU:
-  real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = (/ 1.0, 1.0 /)
+  real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = [ 1.0, 1.0 ]
 
 end module ModVarIndexes

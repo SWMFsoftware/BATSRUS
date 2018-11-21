@@ -116,8 +116,8 @@ program BATSRUS
         !\
         ! Stop this session if stopping conditions are fulfilled
         !/
-        if (stop_condition_true()) EXIT TIMELOOP
-        if(is_time_to_stop())EXIT SESSIONLOOP
+        if(stop_condition_true()) EXIT TIMELOOP
+        if(is_time_to_stop())     EXIT SESSIONLOOP
 
         call timing_step(n_step+1)
 
@@ -134,7 +134,7 @@ program BATSRUS
      if(IsLastRead)then
         EXIT SESSIONLOOP
      else
-        if(iProc==0.and.lVerbose>=0) &
+        if(iProc == 0 .and. lVerbose >= 0) &
              write(*,*)'----- End of Session   ',iSession,' ------'
         iSession=iSession+1
         if (dn_timing > -2) call timing_report
@@ -144,7 +144,7 @@ program BATSRUS
   end do SESSIONLOOP
   time_loop = .false.
 
-  if(iProc==0.and.lVerbose>=0)then
+  if(iProc == 0 .and. lVerbose >= 0)then
      write(*,*)
      write(*,'(a)')'    Finished Numerical Simulation'
      write(*,'(a)')'    -----------------------------'
@@ -157,7 +157,7 @@ program BATSRUS
 
   call BATS_save_files('FINALWITHRESTART')
 
-  if(iProc==0.and.lVerbose>0)then
+  if(iProc == 0 .and. lVerbose > 0)then
      write(*,*)
      write(*,'(a)')'    Finished Saving Output Files'
      write(*,'(a)')'    ----------------------------'
@@ -205,7 +205,7 @@ contains
     !--------------------------------------------------------------------------
     IsTimeToStop = .false.
 
-    if(iProc==0)then
+    if(iProc == 0)then
        if(cputime_max > 0.0 .and. MPI_WTIME()-CpuTimeStart >= cputime_max)then
           write(*,*)'CPU time exceeded:',cputime_max,MPI_WTIME()-CpuTimeStart
           IsTimeToStop=.true.
@@ -255,7 +255,7 @@ contains
                CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
-          write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e10.4,a)') 'Speed is',&
+          write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e11.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&

@@ -18,6 +18,15 @@ module ModPhysics
 
   implicit none
   save
+  public  
+
+  public :: set_physics_constants
+  public :: init_mhd_variables
+  public :: init_vector_variables
+  public :: calc_corotation_velocity
+
+  private :: set_units
+  private :: set_unit_conversion_array_indices
 
   ! default adiabatic index value
   real, parameter:: Gamma0 = 5./3.
@@ -34,36 +43,37 @@ module ModPhysics
 
   ! adiabatic index (gamma) and derived values for electrons
   real :: GammaElectron          = Gamma0
+  real :: InvGammaElectron       = 1.0/Gamma0
   real :: GammaElectronMinus1    = Gamma0 - 1.0
   real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
 
   ! gamma of the waves
-  real:: GammaWave = 1.5
+  real :: GammaWave = 1.5
 
   ! electron charge in normalized units (actually proton charge/mass)
-  real:: ElectronCharge
+  real :: ElectronCharge
 
   ! electron gyro-frequency coefficient in normalized units
-  real:: ElectronGyroFreqCoef
+  real :: ElectronGyroFreqCoef
 
   ! Coulomb logarithm (spatially independent)
-  real:: CoulombLog = 20.0
+  real :: CoulombLog = 20.0
 
   ! plasma parameters
-  real:: AverageIonCharge         = 1.0
-  real:: ElectronTemperatureRatio = 0.0
-  real:: ElectronPressureRatio    = 0.0
-  real:: PePerPtotal              = 0.0
-  real:: IonMassPerCharge         = 1.0
+  real :: AverageIonCharge         = 1.0
+  real :: ElectronTemperatureRatio = 0.0
+  real :: ElectronPressureRatio    = 0.0
+  real :: PePerPtotal              = 0.0
+  real :: IonMassPerCharge         = 1.0
 
   ! Ion charge for multi-species.
-  real:: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
+  real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
 
   ! thermal/total energy ratio limits for correctP
-  real    :: Pratio_lo=0.01, Pratio_hi=0.1
+  real :: Pratio_lo=0.01, Pratio_hi=0.1
 
   ! Artificial speed of light set by #LIGHTSPEED
-  real:: ClightDim = -1.0
+  real :: ClightDim = -1.0
 
   ! speed of light, inverse, square, inverse of square, reduction factor
   real :: Clight, InvClight, C2light, InvClight2
@@ -78,7 +88,7 @@ module ModPhysics
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   !/
-  real :: MonopoleStrength = 0.0, MonopoleStrengthSi = 0.0 ! the monopole B0
+  real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
   real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
   real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
   real :: Oop(3,3,3)=0.0                       ! the octupole moment of B0
@@ -161,7 +171,7 @@ module ModPhysics
   real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
 
   ! Boundary pressure for subsonic outflow
-  logical:: UseOutflowPressure = .false.
+  logical :: UseOutflowPressure = .false.
   real :: pOutflowSi = -1.0, pOutflow = -1.0
 
   ! Relaxation time for anisotropic pressure
@@ -258,7 +268,7 @@ module ModPhysics
   real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
 
   ! Number and indexes of vector variables in State_VGB
-  integer:: nVectorVar = 0
+  integer :: nVectorVar=0
   integer, allocatable:: iVectorVar_I(:) ! Index of first components
 
 contains
@@ -598,6 +608,13 @@ contains
           FaceState_VI(iP_I, iBoundary) = FaceState_VI(iP_I, iBoundary)   &
                *FaceState_VI(iRho_I, iBoundary)
 
+          if(UseElectronPressure) then
+             FaceState_VI(Pe_,iBoundary) = FaceStateDim_VI(Pe_,iBoundary)   &
+                  *Io2No_V(UnitTemperature_)
+             FaceState_VI(Pe_,iBoundary) = FaceState_VI(Pe_,iBoundary)   &
+                  *sum(FaceState_VI(iRhoIon_I, iBoundary))
+          end if
+
           ! Finally convert number density to mass density
           FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
                FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
@@ -632,6 +649,13 @@ contains
           ! iP_I in NO units are n*T
           CellState_VI(iP_I, iBoundary) = CellState_VI(iP_I, iBoundary)   &
                *CellState_VI(iRho_I, iBoundary)
+
+          if(UseElectronPressure) then
+             CellState_VI(Pe_,iBoundary) = CellStateDim_VI(Pe_,iBoundary)   &
+                  *Io2No_V(UnitTemperature_)
+             CellState_VI(Pe_,iBoundary) = CellState_VI(Pe_,iBoundary)   &
+                  *sum(CellState_VI(iRhoIon_I, iBoundary))
+          end if
 
           ! Finally convert number density to mass density
           CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
@@ -1162,6 +1186,7 @@ contains
     real, intent(out):: uRot_D(3)
 
     real, save:: Omega_D(3)
+    !$omp threadprivate( Omega_D )
     logical   :: IsUninitialized = .true.
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
@@ -1169,7 +1194,7 @@ contains
     select case(TypeCoordSystem)
     case('HGI')
        ! In the HGI system the Solar angular velocity vector points towards +Z
-       Omega_D = (/ 0., 0., OmegaBody /)
+       Omega_D = [ 0., 0., OmegaBody ]
     case('GSE')
        if(IsUninitialized)then
           call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)

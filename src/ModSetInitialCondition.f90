@@ -24,7 +24,9 @@ contains
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: true_cell
     use ModIO, ONLY : restart
-    use ModPhysics
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, UseShockTube,&
+       UnitUser_V, ShockLeftState_V, ShockRightState_V, ShockPosition, UnitU_, &
+       Io2No_V
     use ModUserInterface ! user_set_ics
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
@@ -74,8 +76,8 @@ contains
              SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
              CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
              ! Set rotational matrix
-             Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
-                  (/2,2/) )
+             Rot_II = reshape( [CosSlope, SinSlope, -SinSlope, CosSlope], &
+                  [2,2] )
              ! calculate normalized left and right states
              ShockLeft_V  = ShockLeftState_V /UnitUser_V(1:nVar)
              ShockRight_V = ShockRightState_V/UnitUser_V(1:nVar)

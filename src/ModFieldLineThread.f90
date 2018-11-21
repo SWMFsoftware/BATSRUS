@@ -829,9 +829,9 @@ contains
             NameVar =                                               &
             'logTe logNe '//                                        &
             'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
-            nIndex_I = (/500,2/),                                   &
-            IndexMin_I =(/1.0e4, 1.0e8/),                           &
-            IndexMax_I =(/1.0e8, 1.0e18/),                          &
+            nIndex_I = [500,2],                                   &
+            IndexMin_I = [1.0e4, 1.0e8],                           &
+            IndexMax_I = [1.0e8, 1.0e18],                          &
             NameFile = 'TR.dat',                                    &
             TypeFile = TypeFile,                                    &
             StringDescription = &
@@ -940,9 +940,9 @@ contains
             DeltaLogTe
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
+    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = [ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
-         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)/)
+         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)]
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_tr_table

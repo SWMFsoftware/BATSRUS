@@ -376,7 +376,7 @@ contains
        UseFirstOrderBc = .false.
     end if
     if(UseFirstOrderBc)then
-       iFace_D = (/iFace, jFace, kFace/)
+       iFace_D = [iFace, jFace, kFace]
        UseRightStateOnly = any(&
             iFace_D(1:nDim)==1.and.NeiLev(1:(2*nDim-1):2,iBlock)==NOBLK)
        UseLeftStateOnly =  any(&

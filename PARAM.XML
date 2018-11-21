@@ -8105,8 +8105,8 @@ the electrons (usually is).
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction should work fine.
 
-The default is UseElectronEnetropy false, so the electron pressure equation is
-used.
+The default is UseElectronEnetropy true, because the solution near strong
+shocks is more reliable. 
 </command>
 
 <command name="ANISOTROPICPRESSURE">
