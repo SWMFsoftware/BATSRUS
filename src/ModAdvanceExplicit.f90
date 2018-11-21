@@ -179,7 +179,7 @@ contains
           if(DoCalcElectricField .and. iStage == nStage) &
                call get_num_electric_field(iBlock)
 
-          if(UseConstrainB .and. iStage==nStage)then
+          if(UseConstrainB .and. iStage == nStage)then
              call timing_start('constrain_B')
              call get_VxB(iBlock)
              call bound_VxB(iBlock)
@@ -279,8 +279,8 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Update second body coordinates
-    xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
-    yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
+    xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
+    yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
 
     do iBlock = 1, nBlock
        ! This might not work together with solid
