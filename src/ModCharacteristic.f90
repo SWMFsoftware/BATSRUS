@@ -95,7 +95,7 @@ contains
        EigenvalueL_V,       &
        EigenvalueR_V)
 
-    real, intent(in):: Normal_D(3)
+    real,intent(in) :: Normal_D(3)
     real,intent(in) :: StateL_V(nVar), StateR_V(nVar) ! Primitive vars:Rho,u,B,P
     real,intent(in) :: B0_D(3)
     real,intent(out):: Eigenvector_VV(nVar,nVar) ! Rho, RhoU, B, P+XH*Rho
@@ -151,84 +151,83 @@ contains
 
     character(len=*), parameter:: NameSub = 'decompose_state'
     !--------------------------------------------------------------------------
-    dState_V=StateL_V-StateR_V
+    dState_V = StateL_V - StateR_V
     ! Scalar variables
-    RhoL    =  StateL_V(rho_)
-    RhoInvL =  1.0/RhoL
-    aL      =  Gamma * StateL_V(P_ ) * RhoInvL
+    RhoL     = StateL_V(rho_)
+    RhoInvL  = 1.0/RhoL
+    aL       = Gamma * StateL_V(P_ ) * RhoInvL
 
-    RhoR    =  StateR_V(rho_)
-    RhoInvR =  1.0/RhoR
-    aR      =  Gamma * StateR_V(P_ ) * RhoInvR
+    RhoR     = StateR_V(rho_)
+    RhoInvR  = 1.0/RhoR
+    aR       = Gamma * StateR_V(P_ ) * RhoInvR
 
     !\
     ! Set some values that are reused over and over
     !/
 
-    RhoSqrtL   =sqrt(RhoL)
-    RhoSqrtR   =sqrt(RhoR)
+    RhoSqrtL = sqrt(RhoL)
+    RhoSqrtR = sqrt(RhoR)
 
-    ! Srart averaging
-    RhoH       = RhoSqrtL * RhoSqrtR
+    ! Start averaging
+    RhoH     = RhoSqrtL * RhoSqrtR
     !\
     ! Set some values that are reused over and over
     !/
-    RhoInvH     = 1.0/RhoH
-    RhoSqrtH    = sqrt(RhoH)
+    RhoInvH  = 1.0/RhoH
+    RhoSqrtH = sqrt(RhoH)
 
-    WeightInv=1.0/(RhoSqrtL + RhoSqrtR)
-    ! Average velocity:
+    WeightInv= 1.0/(RhoSqrtL + RhoSqrtR)
+    ! Average velocity
+    UL_D = StateL_V(Ux_:Uz_)
+    UR_D = StateR_V(Ux_:Uz_)
 
-    UL_D=StateL_V(Ux_:Uz_)
-    UR_D=StateR_V(Ux_:Uz_)
+    UH_D = WeightInv * (RhoSqrtL*UL_D + RhoSqrtR*UR_D)
 
-    UH_D=WeightInv * (RhoSqrtL * UL_D + RhoSqrtR * UR_D)
+    BL_D = StateL_V(Bx_:Bz_)
+    BR_D = StateR_V(Bx_:Bz_)
 
-    BL_D=StateL_V(Bx_:Bz_)
-    BR_D=StateR_V(Bx_:Bz_)
+    BnL  = sum(Normal_D*BL_D)
+    BnR  = sum(Normal_D*BR_D)
 
-    BnL         =sum(Normal_D*BL_D)
-    BnR         =sum(Normal_D*BR_D)
-
-    ! Leave only tangential components in the magnetic field vectors:
-
-    BL_D=BL_D-BnL*Normal_D; BR_D=BR_D-BnR*Normal_D
+    ! Leave only tangential components in the magnetic field vectors
+    BL_D = BL_D - BnL*Normal_D
+    BR_D = BR_D - BnR*Normal_D
 
     ! Average them with the density dependent weights and add
     ! the arithmetic average of the normal components:
-    B1H_D=WeightInv * (RhoSqrtL * BR_D + RhoSqrtR * BL_D)&
-         + 0.5 * (BnL+BnR) * Normal_D
+    B1H_D = WeightInv*(RhoSqrtL*BR_D + RhoSqrtR*BL_D) &
+         + 0.5*(BnL + BnR)*Normal_D
 
-    XnH = 0.25*RhoInvH*(BnR-BnL)**2
-    XH  =0.5*WeightInv**2*sum((BL_D-BR_D)**2)
+    XnH = 0.25*RhoInvH*(BnR - BnL)**2
+    XH  = 0.5*WeightInv**2*sum((BL_D - BR_D)**2)
 
     ! Average the speed of sound
-    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) + &
-         Gamma*XH + GammaMinus1*(XnH + 0.5 * sum(dState_V(Ux_:Uz_)**2)*&
-         RhoH  * WeightInv**2)
+    aH  = WeightInv*(RhoSqrtL*aL + RhoSqrtR*aR) + &
+         Gamma*XH + GammaMinus1*(XnH + 0.5*sum(dState_V(Ux_:Uz_)**2)* &
+         RhoH*WeightInv**2)
 
     ! Below B1H is used only in the transformation matrix for the
     ! conservative variables. Add B0 field
 
-    BH_D=B1H_D+B0_D
-    BnH=sum(Normal_D*BH_D)
+    BH_D = B1H_D + B0_D
+    BnH = sum(Normal_D*BH_D)
 
     ! Leave only tangential components in the magnetic field
-    BH_D=BH_D-BnH*Normal_D
+    BH_D = BH_D - BnH*Normal_D
 
     call get_characteristic_speeds(aH,RhoInvH,RhoSqrtH,BnH,BH_D,CsH,CaH,CfH)
 
     ! The components of eigenvectors for fast- and slow- sounds depend
     ! on sgn(BnH) and Alphas
-    SignBnH     = sign(1.0,BnH)
+    SignBnH = sign(1.0,BnH)
     Tmp = CfH**2 - CsH**2
-    if (Tmp > cTolerance2) then
+    if(Tmp > cTolerance2)then
        AlphaF = max(0.0,(aH**2  - CsH**2)/Tmp)
        AlphaS = max(0.0,(CfH**2 - aH**2 )/Tmp)
 
        AlphaF = sqrt(AlphaF)
        AlphaS = sqrt(AlphaS)
-    else if (BnH**2 * RhoInvH <= aH**2 ) then
+    else if(BnH**2 * RhoInvH <= aH**2)then
        AlphaF = 1.0
        AlphaS = 0.0
     else
@@ -237,98 +236,94 @@ contains
     endif
 
     ! Set the vectors of direction
-    if(BTang2<cTolerance2)then
-       ! The direction of Tangent1_D vector is set more or less arbitralily
+    if(BTang2 < cTolerance2)then
+       ! The direction of Tangent1_D vector is set more or less arbitrarily
        call generate_tangent12(Normal_D,Tangent1_D,Tangent2_D)
     else
        ! In non-degenerated case Tangent1_D is along the
        ! averaged magnetic field
-       Tangent1_D=BH_D/sqrt(BTang2)
-       Tangent2_D=cross_product(Normal_D,Tangent1_D)
+       Tangent1_D = BH_D/sqrt(BTang2)
+       Tangent2_D = cross_product(Normal_D,Tangent1_D)
     end if
 
     ! Calculate jumps
-    dRho=dState_V(rho_)
-    dUnRho =sum(Normal_D  *dState_V(Ux_:Uz_))*RhoH
-    dUt1Rho=sum(Tangent1_D*dState_V(Ux_:Uz_))*RhoH
-    dUt2Rho=sum(Tangent2_D*dState_V(Ux_:Uz_))*RhoH
-    dBn =sum(Normal_D  *dState_V(Bx_:Bz_))
-    dBt1=sum(Tangent1_D*dState_V(Bx_:Bz_))
-    dBt2=sum(Tangent2_D*dState_V(Bx_:Bz_))
-    dP  =dState_V(p_)+XH*dRho
+    dRho   = dState_V(rho_)
+    dUnRho = sum(Normal_D  *dState_V(Ux_:Uz_))*RhoH
+    dUt1Rho= sum(Tangent1_D*dState_V(Ux_:Uz_))*RhoH
+    dUt2Rho= sum(Tangent2_D*dState_V(Ux_:Uz_))*RhoH
+    dBn    = sum(Normal_D  *dState_V(Bx_:Bz_))
+    dBt1   = sum(Tangent1_D*dState_V(Bx_:Bz_))
+    dBt2   = sum(Tangent2_D*dState_V(Bx_:Bz_))
+    dP     = dState_V(p_) + XH*dRho
 
     ! Calculate wave amplitudes and eigenvectors
-    Eigenvector_VV=0.0; DeltaWave_V=0.0 ; NormCoef=0.5/(RhoH*aH*aH)
-    !---------------------------------------------------------------------!
-    DeltaWave_V(EntropyW_)     = dRho*RhoInvH-dP*2*NormCoef
+    Eigenvector_VV = 0.0; DeltaWave_V = 0.0 ; NormCoef = 0.5/(RhoH*aH*aH)
+    !---------------------------------------------------------------------
+    DeltaWave_V(EntropyW_) = dRho*RhoInvH - dP*2*NormCoef
 
-    Eigenvector_VV(rho_,EntropyW_)= RhoH
-    !---------------------------------------------------------------------!
+    Eigenvector_VV(rho_,EntropyW_) = RhoH
+    !---------------------------------------------------------------------
 
-    DeltaWave_V(AlfvenRW_)  = NormCoef*(-aH*dUt2Rho + SignBnH*RhoSqrtH*aH*dBt2)
+    DeltaWave_V(AlfvenRW_) = NormCoef*(-aH*dUt2Rho + SignBnH*RhoSqrtH*aH*dBt2)
 
-    Eigenvector_VV(RhoUx_:RhoUz_,AlfvenRW_)=            -RhoH*aH*Tangent2_D
-    Eigenvector_VV(Bx_:Bz_,      AlfvenRW_)= SignBnH*RhoSqrtH*aH*Tangent2_D
-    !---------------------------------------------------------------------!
-    DeltaWave_V(AlfvenLW_)  = NormCoef*( aH*dUt2Rho + SignBnH*RhoSqrtH*aH*dBt2)
+    Eigenvector_VV(RhoUx_:RhoUz_,AlfvenRW_) =            -RhoH*aH*Tangent2_D
+    Eigenvector_VV(Bx_:Bz_,      AlfvenRW_) = SignBnH*RhoSqrtH*aH*Tangent2_D
+    !---------------------------------------------------------------------
+    DeltaWave_V(AlfvenLW_) = NormCoef*( aH*dUt2Rho + SignBnH*RhoSqrtH*aH*dBt2)
 
-    Eigenvector_VV(RhoUx_:RhoUz_,AlfvenLW_)=             RhoH*aH*Tangent2_D
-    Eigenvector_VV(Bx_:Bz_,      AlfvenLW_)= SignBnH*RhoSqrtH*aH*Tangent2_D
-    !---------------------------------------------------------------------!
-    DeltaWave_V(SlowRW_)    = NormCoef*(AlphaS*( dP        +CsH*dUnRho) + &
-         AlphaF*( CfH*dUt1Rho*SignBnH &
-         -RhoSqrtH*aH*dBt1))
+    Eigenvector_VV(RhoUx_:RhoUz_,AlfvenLW_) =             RhoH*aH*Tangent2_D
+    Eigenvector_VV(Bx_:Bz_,      AlfvenLW_) = SignBnH*RhoSqrtH*aH*Tangent2_D
+    !---------------------------------------------------------------------
+    DeltaWave_V(SlowRW_) = NormCoef*(AlphaS*(dP + CsH*dUnRho) + &
+         AlphaF*( CfH*dUt1Rho*SignBnH - RhoSqrtH*aH*dBt1))
 
-    Eigenvector_VV(rho_         ,SlowRW_)=  RhoH*AlphaS
-    Eigenvector_VV(RhoUx_:RhoUz_,SlowRW_)=  RhoH*(AlphaS*CsH*Normal_D  &
+    Eigenvector_VV(rho_         ,SlowRW_) =  RhoH*AlphaS
+    Eigenvector_VV(RhoUx_:RhoUz_,SlowRW_) =  RhoH*(AlphaS*CsH*Normal_D  &
          + AlphaF*CfH*SignBnH*Tangent1_D)
-    Eigenvector_VV(Bx_:Bz_      ,SlowRW_)= -RhoSqrtH*AlphaF*aH*Tangent1_D
-    Eigenvector_VV(P_           ,SlowRW_)=  RhoH*AlphaS*aH**2
+    Eigenvector_VV(Bx_:Bz_      ,SlowRW_) = -RhoSqrtH*AlphaF*aH*Tangent1_D
+    Eigenvector_VV(P_           ,SlowRW_) =  RhoH*AlphaS*aH**2
     !------------------------------------------------------------------------!
-    DeltaWave_V(FastRW_)    = NormCoef*(AlphaF*( dP        +CfH*dUnRho) + &
-         AlphaS*(-CsH*dUt1Rho*SignBnH &
-         +RhoSqrtH*aH*dBt1))
+    DeltaWave_V(FastRW_) = NormCoef*(AlphaF*(dP + CfH*dUnRho) + &
+         AlphaS*(-CsH*dUt1Rho*SignBnH + RhoSqrtH*aH*dBt1))
 
-    Eigenvector_VV(rho_         ,FastRW_)=  RhoH*AlphaF
-    Eigenvector_VV(RhoUx_:RhoUz_,FastRW_)=  RhoH*(AlphaF*CfH*Normal_D  &
+    Eigenvector_VV(rho_         ,FastRW_) =  RhoH*AlphaF
+    Eigenvector_VV(RhoUx_:RhoUz_,FastRW_) =  RhoH*(AlphaF*CfH*Normal_D  &
          - AlphaS*CsH*SignBnH*Tangent1_D)
-    Eigenvector_VV(Bx_:Bz_      ,FastRW_)=  RhoSqrtH*AlphaS*aH*Tangent1_D
-    Eigenvector_VV(P_           ,FastRW_)=  RhoH*AlphaF*aH**2
+    Eigenvector_VV(Bx_:Bz_      ,FastRW_) =  RhoSqrtH*AlphaS*aH*Tangent1_D
+    Eigenvector_VV(P_           ,FastRW_) =  RhoH*AlphaF*aH**2
     !------------------------------------------------------------------------!
-    DeltaWave_V(SlowLW_)    = NormCoef*(AlphaS*( dP        -CsH*dUnRho) + &
-         AlphaF*(-CfH*dUt1Rho*SignBnH &
-         -RhoSqrtH*aH*dBt1))
+    DeltaWave_V(SlowLW_) = NormCoef*(AlphaS*(dP - CsH*dUnRho) + &
+         AlphaF*(-CfH*dUt1Rho*SignBnH - RhoSqrtH*aH*dBt1))
 
-    Eigenvector_VV(rho_         ,SlowLW_)=  RhoH*AlphaS
-    Eigenvector_VV(RhoUx_:RhoUz_,SlowLW_)=  RhoH*(-AlphaS*CsH*Normal_D  &
+    Eigenvector_VV(rho_         ,SlowLW_) =  RhoH*AlphaS
+    Eigenvector_VV(RhoUx_:RhoUz_,SlowLW_) =  RhoH*(-AlphaS*CsH*Normal_D  &
          - AlphaF*CfH*SignBnH*Tangent1_D)
-    Eigenvector_VV(Bx_:Bz_      ,SlowLW_)= -RhoSqrtH*AlphaF*aH*Tangent1_D
-    Eigenvector_VV(P_           ,SlowLW_)=  RhoH*AlphaS*aH**2
+    Eigenvector_VV(Bx_:Bz_      ,SlowLW_) = -RhoSqrtH*AlphaF*aH*Tangent1_D
+    Eigenvector_VV(P_           ,SlowLW_) =  RhoH*AlphaS*aH**2
 
     !------------------------------------------------------------------------!
-    DeltaWave_V(FastLW_)    = NormCoef*(AlphaF*( dP        -CfH*dUnRho) + &
-         AlphaS*( CsH*dUt1Rho*SignBnH &
-         +RhoSqrtH*aH*dBt1))
+    DeltaWave_V(FastLW_) = NormCoef*(AlphaF*(dP - CfH*dUnRho) + &
+         AlphaS*( CsH*dUt1Rho*SignBnH + RhoSqrtH*aH*dBt1))
 
-    Eigenvector_VV(rho_         ,FastLW_)=  RhoH*AlphaF
-    Eigenvector_VV(RhoUx_:RhoUz_,FastLW_)=  RhoH*(-AlphaF*CfH*Normal_D  &
+    Eigenvector_VV(rho_         ,FastLW_) =  RhoH*AlphaF
+    Eigenvector_VV(RhoUx_:RhoUz_,FastLW_) =  RhoH*(-AlphaF*CfH*Normal_D  &
          + AlphaS*CsH*SignBnH*Tangent1_D)
-    Eigenvector_VV(Bx_:Bz_      ,FastLW_)=  RhoSqrtH*AlphaS*aH*Tangent1_D
-    Eigenvector_VV(P_           ,FastLW_)=  RhoH*AlphaF*aH**2
+    Eigenvector_VV(Bx_:Bz_      ,FastLW_) =  RhoSqrtH*AlphaS*aH*Tangent1_D
+    Eigenvector_VV(P_           ,FastLW_) =  RhoH*AlphaF*aH**2
     !------------------------------------------------------------------------!
 
-    DeltaWave_V(DivBW_)     = dBn
+    DeltaWave_V(DivBW_) = dBn
 
-    Eigenvector_VV(Bx_:Bz_,DivBW_)      = Normal_D
+    Eigenvector_VV(Bx_:Bz_,DivBW_) = Normal_D
     !------------------------------------------------------------------------!
-    do iScalar = ScalarFirst_, ScalarLast_
-       ScalarAvr=WeightInv*(StateL_V(iScalar)*RhoSqrtR+&
+    do iScalar=ScalarFirst_,ScalarLast_
+       ScalarAvr = WeightInv*(StateL_V(iScalar)*RhoSqrtR + &
             StateR_V(iScalar)*RhoSqrtL)
-       Tmp=ScalarAvr*RhoInvH
+       Tmp = ScalarAvr*RhoInvH
 
-       DeltaWave_V(iScalar)=dState_V(iScalar)-Tmp*dRho
+       DeltaWave_V(iScalar) = dState_V(iScalar) - Tmp*dRho
 
-       Eigenvector_VV(iScalar,iScalar)  = 1.0
+       Eigenvector_VV(iScalar,iScalar) = 1.0
 
        ! All these waves advect the density, hence, the passive scalar
 
@@ -337,35 +332,34 @@ contains
        Eigenvector_VV(iScalar,FastRW_ )  = Eigenvector_VV(rho_,FastRW_  )*Tmp
        Eigenvector_VV(iScalar,SlowLW_ )  = Eigenvector_VV(rho_,SlowLW_  )*Tmp
        Eigenvector_VV(iScalar,FastLW_ )  = Eigenvector_VV(rho_,FastLW_  )*Tmp
-
     end do
 
     if(.not.present(Eigenvalue_V))RETURN
     ! Calculate eigenvalues:add the normal velocity first
-    Eigenvalue_V =sum(UH_D*Normal_D)
+    Eigenvalue_V = sum(UH_D*Normal_D)
     call set_eigenvalues(Eigenvalue_V,CsH,CaH,CfH)
 
     if(.not.present(EigenvalueL_V))RETURN
-    EigenvalueL_V=sum(UL_D*Normal_D)
-    EigenvalueR_V=sum(UR_D*Normal_D)
+    EigenvalueL_V = sum(UL_D*Normal_D)
+    EigenvalueR_V = sum(UR_D*Normal_D)
 
     ! For left and right stetes we need first to add the B0 field
     ! Split it for normal and tangential components:
 
-    B0n=sum(Normal_D*B0_D)
+    B0n = sum(Normal_D*B0_D)
     B0Tangent_D = B0_D - B0n*Normal_D
 
     BnL = BnL + B0n; BL_D = BL_D + B0Tangent_D
     call get_characteristic_speeds(aL,RhoInvL,RhoSqrtL,&
          BnH,BL_D,CsL,CaL,CfL)
 
-    ! CaL=CaL*sign(1.0,BnL)*SignBnH
+    ! CaL = CaL*sign(1.0,BnL)*SignBnH
     call set_eigenvalues(EigenvalueL_V,CsL,CaL,CfL)
 
-    BnR=BnR+B0n; BR_D = BR_D+B0Tangent_D
+    BnR = BnR + B0n; BR_D = BR_D + B0Tangent_D
     call get_characteristic_speeds(aR,RhoInvR,RhoSqrtR,&
          BnH,BR_D,CsR,CaR,CfR)
-    ! CaR=CaR*sign(1.0,BnR)*SignBnH
+    ! CaR = CaR*sign(1.0,BnR)*SignBnH
     call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
   contains
@@ -477,7 +471,7 @@ contains
          RhoH, XH, UH_D, B1H_D, &   ! Transformation coefficients
          Eigenvalue_V, EigenvalueL_V, EigenvalueR_V)
 
-    LambdaB0=sqrt((sum(DeltaB0_D**2))/RhoH)
+    LambdaB0 = sqrt((sum(DeltaB0_D**2))/RhoH)
     call get_fixed_abs_eigenvalue(&
          Eigenvalue_V,&
          EigenvalueL_V,&
@@ -486,7 +480,7 @@ contains
          EigenvalueFixed_V(1:nVar-1),&
          CMax,IsBoundary)
 
-    UnL= sum(uL_D*Dir_D); UnR=sum(uR_D*Dir_D)
+    UnL = sum(uL_D*Dir_D); UnR = sum(uR_D*Dir_D)
     if(Climit > 0.0)then
        EigenvalueFixed_V(DivBW_) = min(cLimit, max(abs(UnL), abs(UnR)))
        cMax = max(cMax, abs(UnL), abs(UnR))
@@ -496,7 +490,7 @@ contains
        cMax = max(cMax, EigenvalueFixed_V(DivBW_))
        if(IsBoundary)EigenvalueFixed_V = cMax
     end if
-    FluxPseudoChar_V=0.0
+    FluxPseudoChar_V = 0.0
 
     do iWave=1,nVar-1
        FluxPseudoChar_V = FluxPseudoChar_V + &
