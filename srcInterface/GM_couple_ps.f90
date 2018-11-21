@@ -27,6 +27,7 @@ contains
   subroutine GM_put_from_ps(Buffer_IIV, iSizeIn, jSizeIn, nVarPsGm, NameVarIn)
 
     use CON_coupler
+    use ModConst,           ONLY: cProtonMass
     use CON_world,          ONLY: get_comp_info
     use ModProcessVarName,  ONLY: process_var_name
     use ModFieldTrace,      ONLY: UseAccurateTrace, DoMapEquatorRay
@@ -98,7 +99,6 @@ contains
     end if
 
     ! Store PS variables as IM for internal use.
-    ! PS will know
     IM_p    = Buffer_IIV(:,:,pres_)
     IM_dens = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
@@ -107,7 +107,7 @@ contains
        write(*,*)NameSub//': Max/Min values received from PS:'
        write(*,*)NameSub//': Negative values mean NO COUPLING.'
        write(*,'(a,2e12.3)')'   Density [cm-3] = ', &
-            maxval(IM_dens)/1e6, minval(IM_dens)/1e6
+            maxval(IM_dens)/1e6/cProtonMass, minval(IM_dens)/1e6/cProtonMass
        write(*,'(a,2e12.3)')'   Pressure [Pa]  = ', &
             maxval(IM_p), minval(IM_p)
     end if
@@ -122,12 +122,12 @@ contains
        if(DoTestMe) then
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Hp Density [cm-3] = ', &
-               maxval(IM_Hpdens)/1e6, minval(IM_Hpdens)/1e6
+               maxval(IM_Hpdens)/1e6/cProtonMass, minval(IM_Hpdens)/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Hp Pressure [Pa]  = ', &
                maxval(IM_Hpp), minval(IM_Hpp)
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Op Density [cm-3] = ', &
-               maxval(IM_Opdens)/1e6, minval(IM_Opdens)/1e6
+               maxval(IM_Opdens)/1e6/cProtonMass, minval(IM_Opdens)/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Op Pressure [Pa]  = ', &
                maxval(IM_Opp), minval(IM_Opp)
        end if
