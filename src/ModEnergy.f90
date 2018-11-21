@@ -249,17 +249,12 @@ contains
     character(len=*), parameter:: NameSub = 'calc_pressure'
     !--------------------------------------------------------------------------
 
-    !if(DoTest)write(*,*)NameSub, &
-    !     ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
-    !     iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
-
     do iFluid = iFluidMin, iFluidMax
        call select_fluid(iFluid)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = &
-               GammaMinus1_I(iFluid)*                        &
-               (Energy_GBI(i,j,k,iBlock,iFluid) - 0.5*       &
-               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
+               0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /State_VGB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
