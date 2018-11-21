@@ -23,11 +23,11 @@ module ModVarIndexes
   integer, parameter :: IonFirst_ = 2        ! First individual ion fluid
   integer, parameter :: IonLast_  = 4        ! Last individual ion fluid
   logical, parameter :: IsMhd     = .true.   ! First total ion fluid obeys MHD
-  real               :: MassFluid_I(2:nFluid) = (/ 1.0, 1.0, 17.0 /)
+  real               :: MassFluid_I(2:nFluid) = [ 1.0, 1.0, 17.0 ]
 
   ! Fluids: total fluid, solar wind protons, cometary protons, water ions
   character (len=4), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All ', 'Sw  ', 'Hp  ', 'H2Op' /)
+       [ 'All ', 'Sw  ', 'Hp  ', 'H2Op' ]
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -68,18 +68,18 @@ module ModVarIndexes
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =(/Rho_,   SwRho_,   HpRho_,   H2OpRho_ /) ,&
-       iRhoUx_I(nFluid)=(/RhoUx_, SwRhoUx_, HpRhoUx_, H2OpRhoUx_ /),&
-       iRhoUy_I(nFluid)=(/RhoUy_, SwRhoUy_, HpRhoUy_, H2OpRhoUy_ /),&
-       iRhoUz_I(nFluid)=(/RhoUz_, SwRhoUz_, HpRhoUz_, H2OpRhoUz_ /),&
-       iP_I(nFluid)    =(/p_,     SwP_,     HpP_,     H2OpP_ /)
+       iRho_I(nFluid)  =[Rho_,   SwRho_,   HpRho_,   H2OpRho_ ] ,&
+       iRhoUx_I(nFluid)=[RhoUx_, SwRhoUx_, HpRhoUx_, H2OpRhoUx_ ],&
+       iRhoUy_I(nFluid)=[RhoUy_, SwRhoUy_, HpRhoUy_, H2OpRhoUy_ ],&
+       iRhoUz_I(nFluid)=[RhoUz_, SwRhoUz_, HpRhoUz_, H2OpRhoUz_ ],&
+       iP_I(nFluid)    =[p_,     SwP_,     HpP_,     H2OpP_ ]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2,3/)
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2,3]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -107,10 +107,10 @@ module ModVarIndexes
        1.0, & ! Energy_
        1.0, & ! SwEnergy_
        1.0, & ! HpEnergy_
-       1.0 /) ! H2OpEnergy_
+       1.0 ] ! H2OpEnergy_
 
   ! The names of the variables used in i/o
-  character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=7) :: NameVar_V(nVar+nFluid) = [ &
        'Rho    ', & ! Rho_
        'Mx     ', & ! RhoUx_
        'My     ', & ! RhoUy_
@@ -138,7 +138,7 @@ module ModVarIndexes
        'E      ', & ! Energy_
        'SwE    ', & ! SwEnergy_
        'HpE    ', & ! HpEnergy_
-       'H2OpE  ' /) ! H2OpEnergy_
+       'H2OpE  ' ] ! H2OpEnergy_
 
 
   ! There are no extra scalars (Pe has its own flux)

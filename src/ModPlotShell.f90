@@ -222,8 +222,8 @@ contains
             nStepIn=n_step, &
             TimeIn=time_simulation, &
             NameVarIn = NameVar, &
-            CoordMinIn_D = (/rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin/), &
-            CoordMaxIn_D = (/rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax/), &
+            CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
+            CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
             VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
 

@@ -591,11 +591,11 @@ contains
                if(IsCartesianGrid)then
                   select case(iSide)
                   case(1, 2)
-                     Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
+                     Brefl_D = [ 2*Borig_D(x_), 0.0, 0.0 ]
                   case(3, 4)
-                     Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
+                     Brefl_D = [ 0.0, 2*Borig_D(y_), 0.0 ]
                   case(5, 6)
-                     Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+                     Brefl_D = [ 0.0, 0.0, 2*Borig_D(z_) ]
                   end select
                else
                   iDir = (iSide+1)/2
@@ -738,7 +738,7 @@ contains
                         GeoFaceCoords_D = FaceCoords_D
                      endif
                      GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
-                          (/0,0,1/))
+                          [0,0,1])
 
                      ! For the cap region (refer to Tom Moore 2003?)
                      ! Get the Op flux from IE calculation

@@ -258,7 +258,7 @@ test_partsteady_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.partsteady PARAM.in
 
 test_partsteady_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_partsteady_check:
@@ -417,7 +417,7 @@ test_magnetometer_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/magin.dat .
 	
 test_magnetometer_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 
 test_magnetometer_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
@@ -487,7 +487,7 @@ test_mhdions_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
 
 test_mhdions_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdions_check:
@@ -545,7 +545,7 @@ test_eosgodunov:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_eosgodunov_compile:
-	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
+	./Config.pl -openmp -e=HdEos -u=Eos -g=10,1,1,100,1
 	$(MAKE) CRASH
 	make PIDL
 
@@ -554,7 +554,7 @@ test_eosgodunov_rundir: test_rundir
 	ln -s ${BINDIR}/CRASH.exe . 
 
 test_eosgodunov_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
@@ -587,7 +587,7 @@ test_laserpackage_rundir: test_rundir
 	cd ${TESTDIR}; ln -s ../dataCRASH/LookupTables Tables
 
 test_laserpackage_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
@@ -611,7 +611,7 @@ test_graydiffusion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
+	./Config.pl -openmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -620,7 +620,7 @@ test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie3.dat .
 
 test_graydiffusion_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
@@ -689,7 +689,7 @@ test_coronasph_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
 
 test_coronasph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_coronasph_check:
@@ -724,7 +724,7 @@ test_awsomfluids_rundir:
 	cd ${TESTDIR}; gunzip HeatPartition.dat.gz
 
 test_awsomfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomfluids_check:
@@ -814,7 +814,7 @@ test_outerheliopui:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
-	./Config.pl -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
+	./Config.pl -openmp -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -824,7 +824,7 @@ test_outerheliopui_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
 
 test_outerheliopui_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerheliopui_check:
@@ -1202,7 +1202,7 @@ test_mercurysph_rundir: test_rundir
 		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_mercurysph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1287,7 +1287,7 @@ test_comet_rundir: test_rundir
 		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_comet_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_comet_check:
@@ -1324,7 +1324,7 @@ test_cometfluids_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_cometfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
@@ -1417,7 +1417,7 @@ test_amr:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
-	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
+	./Config.pl -openmp -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1426,7 +1426,7 @@ test_amr_rundir: test_rundir
 		cp Param/AMR/PARAM.in PARAM.in
 
 test_amr_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amr_check:
@@ -1459,7 +1459,7 @@ test_amrsph_rundir: test_rundir
 		cp Param/AMR/PARAM.in.sph PARAM.in
 
 test_amrsph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amrsph_check:
@@ -1493,7 +1493,7 @@ test_2bodyplot_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_2bodyplot_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1573,7 +1573,7 @@ test_cometCGhd_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_cometCGhd_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGhd_check:
