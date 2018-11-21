@@ -733,17 +733,17 @@ contains
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
-                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+            DeltaBnR = sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
                  Normal_D)
-            RightState_VY(Bx_:Bz_, iFace, jFace, kFace) =&
-                 RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+            RightState_VY(Bx_:Bz_, iFace, jFace, kFace) = &
+                 RightState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
-                 State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))*&
+            DeltaBnL = sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+                 State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
                  Normal_D)
-            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) =&
-                 LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) = &
+                 LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
