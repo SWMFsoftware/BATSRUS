@@ -1494,7 +1494,7 @@ contains
               Ga2Boris - BzFull*uBC2Inv
       else
          Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
-         do iFluid = 2, nFluid
+         do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
             RhoInv = 1/Primitive_VG(iRho,i,j,k)
             Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
@@ -2472,8 +2472,8 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
-      do k=kMin, kMax; do j=jMin, jMax;
-         Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+      do k=kMin, kMax; do j=jMin, jMax
+         Primitive_VI(:,iMin-2:iMax+1) = Primitive_VG(:,iMin-2:iMax+1,j,k)
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
@@ -2491,7 +2491,7 @@ contains
                  call limiter(iMaxSharp+1, iMax, BetaLimiterResChange)
          end if
          do i=iMin,iMax
-            i1=i-1
+            i1 = i - 1
             LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
             RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
          end do
@@ -2516,7 +2516,7 @@ contains
       endif
 
       do k=kMin, kMax; do i=iMin,iMax
-         Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
+         Primitive_VI(:,jMin-2:jMax+1) = Primitive_VG(:,i,jMin-2:jMax+1,k)
          if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
@@ -2534,7 +2534,7 @@ contains
                  call limiter(jMaxSharp+1, jMax, BetaLimiterResChange)
          end if
          do j=jMin, jMax
-            j1=j-1
+            j1 = j - 1
             LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
             RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
          end do
@@ -2558,7 +2558,7 @@ contains
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
       do j=jMin,jMax; do i=iMin,iMax;
-         Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
+         Primitive_VI(:,kMin-2:kMax+1) = Primitive_VG(:,i,j,kMin-2:kMax+1)
          if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
@@ -2576,7 +2576,7 @@ contains
                  call limiter(kMaxSharp+1, kMax, BetaLimiterResChange)
          end if
          do k=kMin,kMax
-            k1=k-1
+            k1 = k - 1
             LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
             RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
          end do
@@ -2886,7 +2886,7 @@ contains
 
       ! Set criteria for low order scheme
       
-      use ModAdvance, ONLY:Vel_IDGB
+      use ModAdvance, ONLY: Vel_IDGB
 
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
@@ -2950,23 +2950,20 @@ contains
     real function low_order_face_criteria(State_VI, Vel_II)      
 
       use ModMain, ONLY: UseB
+      use ModMultiFluid, ONLY: iRho, iP, select_fluid
 
       real, intent(in):: State_VI(nVar,-3:2)
       real, intent(in):: Vel_II(nFluid,-3:2)
 
-      integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+      integer:: iFluid
       real:: pTotal_I(-3:2), Sound_I(-3:2)
       real:: crit, pRatio, VelRatio, SoundMin
       !--------------------------------------------------------------------
 
       pTotal_I = 0
       VelRatio = 0
-      do iFluid = 1, nFluid
-         iRho   = iRho_I(iFluid)
-         iRhoUx = iRhoUx_I(iFluid)
-         iRhoUy = iRhoUy_I(iFluid)
-         iRhoUz = iRhoUz_I(iFluid)
-         iP     = iP_I(iFluid)
+      do iFluid=1,nFluid
+         call select_fluid(iFluid)
 
          pTotal_I = pTotal_I + State_VI(iP,:)
 
@@ -3056,18 +3053,18 @@ contains
 
                 ijkDir_DD(:,x_) = Xyz_DGB(:,min(i+iDim_,iMax),j,k,iBlock) - &
                      Xyz_DGB(:,max(i-iDim_,iMin),j,k,iBlock)
-                ijkDir_DD(:,x_) = ijkDir_DD(:,x_)/sqrt(sum(ijkDir_DD(:,x_)**2))
+                ijkDir_DD(:,x_) = ijkDir_DD(:,x_)/norm2(ijkDir_DD(:,x_))
 
                 if(nDim>1) then
                    ijkDir_DD(:,y_) = Xyz_DGB(:,i,min(j+jDim_,jMax),k,iBlock) - &
                         Xyz_DGB(:,i,max(j-jDim_,jMin),k,iBlock)
-                   ijkDir_DD(:,y_) = ijkDir_DD(:,y_)/sqrt(sum(ijkDir_DD(:,y_)**2))
+                   ijkDir_DD(:,y_) = ijkDir_DD(:,y_)/norm2(ijkDir_DD(:,y_))
                 endif
 
                 if(nDim>2) then
                    ijkDir_DD(:,z_) = Xyz_DGB(:,i,j,min(k+kDim_,kMax),iBlock) - &
                         Xyz_DGB(:,i,j,max(k-kDim_,kMin),iBlock)
-                   ijkDir_DD(:,z_) = ijkDir_DD(:,z_)/sqrt(sum(ijkDir_DD(:,z_)**2))
+                   ijkDir_DD(:,z_) = ijkDir_DD(:,z_)/norm2(ijkDir_DD(:,z_))
                 endif
 
                 do iDim = 1, MaxDim
@@ -3773,7 +3770,7 @@ contains
 
     real,dimension(Hi3_):: dVar1_I, dVar2_I !
     real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
-    integer::l
+    integer :: l
 
     character(len=*), parameter:: NameSub = 'limiter_body'
     !--------------------------------------------------------------------------

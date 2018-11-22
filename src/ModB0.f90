@@ -607,7 +607,7 @@ contains
        call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
     elseif(MonopoleStrength /= 0.0)then
-       r = sqrt(sum(Xyz_D(1:nDim)**2))
+       r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
     elseif(DipoleStrengthSi==0.0)then
        B0_D = 0.0
@@ -774,7 +774,7 @@ contains
     !--------------------------------------------------------------------------
     Xyz_D = (XyzIn_D - [xBody2, yBody2, zBody2])/rBody2
 
-    R0 = sqrt(sum(Xyz_D**2))
+    R0 = norm2(Xyz_D)
 
     ! Avoid calculating B0 inside a critical normalized radius = cTiny
     if(R0 <= cTiny) RETURN

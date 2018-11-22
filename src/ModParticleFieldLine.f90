@@ -429,7 +429,7 @@ contains
             if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
             if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
                CosBR_CB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
-                    (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
+                    (norm2(BCell_D)*R_BLK(i,j,k,iBlock))
             else
                CosBR_CB(i,j,k,iBlock) = 0.0
             end if
@@ -536,7 +536,7 @@ contains
        ! to the previous step
        StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
             StateEnd_VI(x_:z_,  iParticle) / &
-            sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+            norm2(StateEnd_VI(x_:z_, iParticle))
        iIndexEnd_II(Pass_, iParticle) = Normal_
 
        call stage1
@@ -591,7 +591,7 @@ contains
       ! get cosine of angle between field and radial direction
       !
       CosBR =  sum(StateEnd_VI(x_:z_, iParticle)*DirB_D) / &
-           sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+           norm2(StateEnd_VI(x_:z_, iParticle))
       ! save cos(b,r) for the second stage
       StateEnd_VI(CosBR_, iParticle) = CosBR
 
@@ -667,10 +667,10 @@ contains
       ! Achieve that the change in the radial distance
       ! equals StateEnd_VI(Ds_, iParticle)*sum(Dir_D*DirR_D)
       !/
-      ROld = sqrt(sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2))
+      ROld = norm2(StateEnd_VI(XOld_:ZOld_,iParticle))
       DirR_D = StateEnd_VI(XOld_:ZOld_,iParticle)/ROld
 
-      RNew = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+      RNew = norm2(StateEnd_VI(x_:z_,iParticle))
       StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle)/RNew*&
            ( ROld + StateEnd_VI(Ds_, iParticle)*sum(DirLine_D*DirR_D) )
 
@@ -741,7 +741,7 @@ contains
       !\
       ! Heliocentric distance, to compare with RCorrection
       !/
-      R = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+      R = norm2(StateEnd_VI(x_:z_,iParticle))
 
       ! if the line deviates to0 much -> correct its direction
       ! to go along surface B_R = 0
@@ -754,7 +754,7 @@ contains
          ! unit vector along gradient of cosBR
          DirGradCosBR_D = &
               StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)/ &
-              sqrt(sum(StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)**2))
+              norm2(StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle))
          !\
          ! Change the direction of line for the unit vector, which
          ! (1) is perpendicular to GradCosBR (or, the same, is parallel
@@ -821,7 +821,7 @@ contains
       DirPerp1_D = cross_product([1.0,0.0,0.0],Dir_D)
       if(all(DirPerp1_D == 0.0))&
            DirPerp1_D = cross_product([0.0,1.0,0.0],Dir_D)
-      DirPerp1_D = DirPerp1_D / sqrt(sum(DirPerp1_D**2))
+      DirPerp1_D = DirPerp1_D / norm2(DirPerp1_D)
       DirPerp2_D = cross_product(DirPerp1_D, Dir_D )
       
       ! find 2D gaussian
@@ -831,7 +831,7 @@ contains
       RndGauss2 = sqrt(-2*log(RndUnif1)) * sin(cTwoPi*RndUnif2)
 
       ! displace the particle
-      Radius = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+      Radius = norm2(StateEnd_VI(x_:z_,iParticle))
       ! see Laitinen et al. (2016), doi:10.1051/0004-6361/201527801
       StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle) + &
                   sqrt(2 * Radius * No2Si_V(UnitX_) / cAu *&

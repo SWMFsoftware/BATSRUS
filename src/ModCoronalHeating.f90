@@ -300,7 +300,7 @@ contains
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
 
-    Bmagnitude = sqrt(sum(B_D**2))
+    Bmagnitude = norm2(B_D)
 
     if(DtUpdateFlux <= 0.0)then
        HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
@@ -646,7 +646,7 @@ contains
 
     if(UseExponentialHeating.and.UseArComponent) then
 
-       Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
+       Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
        FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
        CoronalHeating = max(CoronalHeating, &
@@ -766,7 +766,7 @@ contains
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
 
-          Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
+          Bcell = No2Io_V(UnitB_) * norm2(B_D)
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
           CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), &
@@ -799,7 +799,7 @@ contains
     else
        FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
-    FullB = sqrt(sum(FullB_D**2))
+    FullB = norm2(FullB_D)
 
     Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
@@ -842,7 +842,7 @@ contains
     else
        FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
-    FullB = sqrt(sum(FullB_D**2))
+    FullB = norm2(FullB_D)
 
     Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)) &
          /LperpTimesSqrtB
@@ -895,7 +895,7 @@ contains
        else
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
-       FullB = sqrt(sum(FullB_D**2))
+       FullB = norm2(FullB_D)
        b_D = FullB_D/max(1e-15, FullB)
 
        Rho = State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)

@@ -345,7 +345,7 @@ contains
          IsNewBlock, Te_G, FaceGrad_D)
 
     ! calculate the unit vector of the total magnetic field
-    TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
+    TotalFaceBunit_D = TotalFaceB_D / norm2(TotalFaceB_D)
 
     ! calculate the heat conduction term in the REB numerator
     qCondSi = 0.5 * kappa_0_e(20.) * TeTRTopSi**3 &

@@ -30,15 +30,15 @@ contains
     integer,dimension(1)::iMinAbs
     character(len=*), parameter:: NameSub = 'generate_tangent12'
     !--------------------------------------------------------------------------
-    iMinAbs=minloc(abs(Normal_D))
+    iMinAbs = minloc(abs(Normal_D))
 
     ! Construct the vector along one of the coordinate axis which is
     ! farthest from the direction of Normal_D
 
-    Tangent2_D=0.0;Tangent2_D(iMinAbs(1))=1.0
-    Tangent1_D=-cross_product(Normal_D,Tangent2_D)
-    Tangent1_D=Tangent1_D/sqrt(sum(Tangent1_D**2))
-    Tangent2_D=cross_product(Normal_D,Tangent1_D)
+    Tangent2_D = 0.0;Tangent2_D(iMinAbs(1))=1.0
+    Tangent1_D = -cross_product(Normal_D,Tangent2_D)
+    Tangent1_D = Tangent1_D/norm2(Tangent1_D)
+    Tangent2_D = cross_product(Normal_D,Tangent1_D)
 
   end subroutine generate_tangent12
   !============================================================================
@@ -398,11 +398,11 @@ contains
 
       ! BTang2 is reused while constructing the coordinate system
       BTang2 = sum(BTang_D**2)
-      Tmp=BTang2*RhoInv
+      Tmp = BTang2*RhoInv
 
-      Ca=abs(Bn)/RhoSqrt                                 ! Alfven speed
-      Cf=0.5*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) ! Fast magnetossonic
-      Cs=Ca * A/Cf                                       ! Slow magnetosonic
+      Ca = abs(Bn)/RhoSqrt                                 ! Alfven speed
+      Cf = 0.5*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) ! Fast magnetossonic
+      Cs = Ca * A/Cf                                       ! Slow magnetosonic
 
     end subroutine get_characteristic_speeds
     !==========================================================================

@@ -405,7 +405,7 @@ contains
     do j = 1, nPhiIono; do i = 1, nThetaIono
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
        call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
-       bIono = sqrt(sum(bIono_D**2))
+       bIono = norm2(bIono_D)
 
        ! map out to GM (caution! , not like map down to the ionosphere,
        ! there is always a corresponding position.)
@@ -418,7 +418,7 @@ contains
           IonoJouleHeating_II(i,j) = 0
        else
           call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
-          b = sqrt(sum(B_D**2))
+          b = norm2(B_D)
 
           ! scale the jouleheating
           IonoJouleHeating_II(i,j) = IonoJouleHeating_II(i,j) * b/bIono
@@ -520,7 +520,7 @@ contains
        ! Calculate magnetic field direction for the Hall current
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
        call get_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', bUnit_D)
-       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
+       bUnit_D = bUnit_D/norm2(bUnit_D)
 
        ! Calculate spherical components of the electric field from the
        ! derivatives of the potential in dIonoPotential_DII: E = -grad(Phi)
@@ -633,7 +633,7 @@ contains
           dXyz_D = XyzSm_DI(:,iMag) - XyzIono_D
 
           ! Surface element area divided by (4pi*distance cubed)
-          Coef = Coef0/sqrt(sum(dXyz_D**2))**3
+          Coef = Coef0/norm2(dXyz_D)**3
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
           dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
@@ -651,7 +651,7 @@ contains
              write(*,*)NameSub,': dArea, r3    =', &
                   rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)&
                   *No2Si_V(UnitX_)**2, &
-                  sqrt(sum(dXyz_D**2))**3*No2Si_V(UnitX_)**3
+                  norm2(dXyz_D)**3*No2Si_V(UnitX_)**3
              write(*,*)NameSub,': dBHall,  sum =', &
                   Coef*cross_product(jHall_DII(:,i,j), dXyz_D) &
                   *No2Si_V(UnitB_), dBHall_DI(:,iMag)*No2Si_V(UnitB_)

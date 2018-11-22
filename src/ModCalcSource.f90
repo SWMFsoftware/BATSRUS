@@ -130,7 +130,7 @@ contains
                    ! Calculate unit vector parallel with full B field
                    b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                    if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                   b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+                   b_D = b_D/norm2(b_D)
 
                    ! Calculate b.grad u.b
                    bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
@@ -373,7 +373,7 @@ contains
              ! Calculate unit vector parallel with full B field
              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-             b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+             b_D = b_D/norm2(b_D)
 
              ! Calculate b.grad u.b
              bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))

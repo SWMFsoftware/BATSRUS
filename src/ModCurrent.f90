@@ -659,7 +659,7 @@ contains
              write(*,*)'Phi,Theta=',Phi,Theta
              write(*,*)'XyzIn_D  =', XyzIn_D
              write(*,*)'Xyz_D    =',Xyz_D
-             write(*,*)'rCurrents=',rCurrents, sqrt(sum(Xyz_D**2))
+             write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
              write(*,*)'B0_D     =',B0_D
              write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
              call stop_mpi('DEBUG')
@@ -698,7 +698,7 @@ contains
              Jr_D = bCurrent_VII(4:6,i,j)
 
              ! The strength of the field
-             bRcurrents = sqrt(sum(b_D**2))
+             bRcurrents = norm2(b_D)
 
              ! Convert b_D into a unit vector
              bUnit_D = b_D / bRcurrents
@@ -717,7 +717,7 @@ contains
 
                 ! Convert to normalized units and get magnitude
                 bIn_D = bIn_D*Si2No_V(UnitB_)
-                bIn   = sqrt(sum(bIn_D**2))
+                bIn   = norm2(bIn_D)
 
                 ! Multiply by the ratio of the magnetic field strengths
                 Fac = bIn / bRcurrents * Fac

@@ -1303,7 +1303,7 @@ contains
           case('integrate')
              ! Integrate in theta
              do k = 1, nK
-                SinTheta = sqrt(sum(Xyz_DGB(x_:y_,1,1,k,iBlock)**2)) &
+                SinTheta = norm2(Xyz_DGB(x_:y_,1,1,k,iBlock)) &
                      / r_BLK(1,1,k,iBlock)
                 ! Integrate in Phi by adding up 1..nJ and interpolate in R
                 Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &

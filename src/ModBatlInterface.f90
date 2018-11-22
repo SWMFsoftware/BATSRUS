@@ -237,7 +237,7 @@ contains
     XyzStart_BLK(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
+       r_BLK(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
     end do; end do; end do
 
     Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
