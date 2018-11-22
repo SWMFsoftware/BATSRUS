@@ -752,12 +752,12 @@ contains
             CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
             CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
             CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
-            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D     ! Block size
-            CellSize_D      = CoordSizeBlock_D / nIjk_D             ! Cell size
+            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
+            CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
-               write(*, '(A, 3E12.5))')NameSub//': CoordMin=', CoordMinBlock_D
-               write(*, '(A, 3E12.5))')NameSub//': CoordMax=', CoordMaxBlock_D
+               write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D
+               write(*, '(A, 3E12.5)')NameSub//': CoordMax=', CoordMaxBlock_D
             end if
 
          end if

@@ -113,10 +113,10 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        ! Default is negative, which means that do not nudge GM values
-       pIm_IC(:,i,j,k) = -1.0
+       pIm_IC(:,i,j,k)   = -1.0
        RhoIm_IC(:,i,j,k) = -1.0
-       PparIm_C(i,j,k) = -1.0
-       BminIm_C(i,j,k) = -1.0
+       PparIm_C(i,j,k)   = -1.0
+       BminIm_C(i,j,k)   = -1.0
 
        ! For closed field lines nudge towards IM pressure/density
        if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
@@ -425,14 +425,22 @@ contains
              end if
           end if
           if(DoCoupleImDensity)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
-                State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
-                     State_VGB(iDens_I,i,j,k,iBlock) &
-                     + Factor * TauCoeffIm_C(i,j,k) &
-                     * (RhoIm_IC(1:nDensity,i,j,k) &
-                     - State_VGB(iDens_I,i,j,k,iBlock)))
-             end do; end do; end do
+             do iFluid =1, nIons
+                where(RhoIm_IC(iFluid,:,:,:)>0.0) &
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock)=&
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock) &
+                     + Factor * TauCoeffIm_C &
+                     * (RhoIm_IC(iFluid,:,:,:) - &
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
+             end do
+             !do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             !   if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
+             !   State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
+             !        State_VGB(iDens_I,i,j,k,iBlock) &
+             !        + Factor * TauCoeffIm_C(i,j,k) &
+             !        * (RhoIm_IC(1:nDensity,i,j,k) &
+             !        - State_VGB(iDens_I,i,j,k,iBlock)))
+             !end do; end do; end do
           end if
        else
           if(DoCoupleImPressure)then

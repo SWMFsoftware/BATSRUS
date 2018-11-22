@@ -255,7 +255,7 @@ contains
                CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
-          write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e10.4,a)') 'Speed is',&
+          write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e11.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
