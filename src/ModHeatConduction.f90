@@ -515,7 +515,7 @@ contains
 
     ! The magnetic field should nowhere be zero. The following fix will
     ! push the magnitude of Bunit_D  to zero if B_D is approaching zero.
-    Bnorm = sqrt(sum(B_D**2))
+    Bnorm = norm2(B_D)
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     ! Calculate the electron temperature in SI units
@@ -687,7 +687,7 @@ contains
 
     ! The magnetic field should nowhere be zero. The following fix will
     ! turn the magnitude of the field direction to zero.
-    Bnorm = sqrt(sum(B_D**2))
+    Bnorm = norm2(B_D)
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
@@ -727,7 +727,7 @@ contains
        x_D = 0.5*(Xyz_DGB(:,iFace,jFace,kFace-1,iBlock) &
             +     Xyz_DGB(:,iFace,jFace,kFace  ,iBlock))
     end select
-    r = sqrt(sum(x_D**2))
+    r = norm2(x_D)
     if(rCollisionless < 0.0)then
        heat_cond_factor = 1.0/((r/rCollisional)**2 + 1)
     elseif(r <= rCollisional)then
@@ -1240,7 +1240,7 @@ contains
 
       ! The magnetic field should nowhere be zero. The following fix will
       ! turn the magnitude of the field direction to zero.
-      Bnorm = sqrt(sum(B_D**2))
+      Bnorm = norm2(B_D)
       Bunit_D = B_D / max( Bnorm, cTolerance )
 
       if(DoWeakFieldConduction)then

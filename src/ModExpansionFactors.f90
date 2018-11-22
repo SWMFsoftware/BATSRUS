@@ -242,12 +242,11 @@ contains
                 call interpolate_field(RSS_D,BSS_D)
                 call interpolate_field(RSun_D,BSun_D)
                 ! Get factors for the grid point
-                ExpansionFactorInv_N(iR,iPhi,iTheta)=&
-                     & (sqrt(dot_product(BSS_D,BSS_D)) &
-                     &/sqrt(dot_product(BSun_D,BSun_D)))* (Rs_PFSSM&
-                     &/Ro_PFSSM)**2
-                FiskFactor_N(iR,iPhi,iTheta) = abs(BSun_D(R_))/&
-                     & sqrt(dot_product(BSun_D,BSun_D))
+                ExpansionFactorInv_N(iR,iPhi,iTheta) = norm2(BSS_D)/ &
+                  norm2(BSun_D)*(Rs_PFSSM/Ro_PFSSM)**2
+
+                FiskFactor_N(iR,iPhi,iTheta) = abs(BSun_D(R_))/ &
+                  norm2(BSun_D)
              end if
           end do
        end do
@@ -484,7 +483,7 @@ contains
       ! Divide by some scale, to limit the displacement within the
       ! integration
       ! step
-      f_d = f_d/sqrt(sum(f_d**2))
+      f_d = f_d/norm2(f_d)
     end function f_d
     !==========================================================================
     function theta_b(Phi,Theta)
@@ -525,8 +524,8 @@ contains
     !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
     !/
-    if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
-       Output= 0.0
+    if (Rin_PFSSM < max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
+       Output = 0.0
        RETURN
     end if
     Theta_PFSSM = acos(zInput/Rin_PFSSM)
@@ -632,27 +631,27 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_gamma_emp'
     !--------------------------------------------------------------------------
-    R1=Rs_PFSSM
+    R1 = Rs_PFSSM
     !\
     ! Calculate cell-centered spherical coordinates::
-    RR   = sqrt(xx**2+yy**2+zz**2)
+    RR = sqrt(xx**2+yy**2+zz**2)
     !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
     !/
-    if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
-       gammaOut= gammaSS
+    if (RR < max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
+       gammaOut = gammaSS
        RETURN
     end if
 
     ! Calculate gamma
     if(RR >= R2)then
-       gammaOut=gammaIH
+       gammaOut = gammaIH
     else if(RR >= R1)then
 
-       gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
+       gammaOut = gammaSS + (RR-R1)*(gammaIH-gammaSS)/(R2-R1)
     else
        call get_bernoulli_integral([xx,yy,zz], Uf)
-       BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
+       BernoulliFactor = (0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
             (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
             *(R1-RR)*&
             & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&

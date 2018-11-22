@@ -248,7 +248,7 @@ contains
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 Coeff = 1/(PperpInvPpar &
                      + min(1.0, &
-                     BminIm_C(i,j,k)/sqrt(sum(b_D**2)))*(1 - PperpInvPpar))
+                     BminIm_C(i,j,k)/norm2(b_D))*(1 - PperpInvPpar))
 
                 ! pressures and density at arbitrary location of a field line
                 pIm_IC(1,i,j,k) = pIm_IC(1,i,j,k)*Coeff &

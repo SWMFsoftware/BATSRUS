@@ -205,11 +205,11 @@ contains
 
     ! Rotate observation point from HGI system to the current coordinate system
     ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,iFile))
-    ObsDistance = sqrt(sum(ObsPos_D**2))
+    ObsDistance = norm2(ObsPos_D)
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
     ! Rotation with offset angle
-    Los_D =matmul( rot_matrix_z(OffsetAngle), Los_D)
+    Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
     ! Observer distance from image plane
     ObsDistance = abs(sum(ObsPos_D*Los_D))
 
@@ -324,9 +324,9 @@ contains
        ! Viewing along the Z axis more or less
        aUnit_D = cross_product(Los_D, [0.,1.,0.])
     end if
-    aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
+    aUnit_D = aUnit_D/norm2(aUnit_D)
     bUnit_D = cross_product(aUnit_D, Los_D)
-    bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
+    bUnit_D = bUnit_D/norm2(bUnit_D)
 
     ! 3D vector pointing from the origin to the image center
     ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
@@ -626,7 +626,7 @@ contains
 
             ! Unit vector pointing from pixel center to observer
             LosPix_D = - XyzPix_D + ObsPos_D
-            Distance = sqrt(sum(LosPix_D**2))
+            Distance = norm2(LosPix_D)
             LosPix_D = LosPix_D/Distance
 
             ! Calculate whether there are intersections with the rInner sphere
@@ -1134,7 +1134,7 @@ contains
       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
 
-      rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+      rBlockCenter = norm2(XyzBlockCenter_D)
 
       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then
          ! in cartesian grid, the rBody boundary cuts through blocks and,
@@ -1150,7 +1150,7 @@ contains
          rInner = max(rBody, RadiusMin)
 
          if(body1 .and. rMin_BLK(iBlock) < rBody ) &
-              rInner = rBody + sqrt(sum(CellSize_D**2))
+              rInner = rBody + norm2(CellSize_D)
       end if
 
       FixedXyzBlockCenter_D = XyzBlockCenter_D
@@ -1223,7 +1223,7 @@ contains
 
             ! Unit vector pointing from observer to pixel center
             LosPix_D = ObsPos_D - XyzPix_D
-            LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+            LosPix_D = LosPix_D/norm2(LosPix_D)
 
             ! Do not let LOS direction to be perfectly aligned with major axes
             where(LosPix_D == 0.0) LosPix_D = cTiny

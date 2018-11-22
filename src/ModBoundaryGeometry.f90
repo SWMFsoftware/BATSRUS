@@ -135,12 +135,12 @@ contains
     DoSolveSolid = .true.
     if(present(DoSolveSolidIn)) DoSolveSolid = DoSolveSolidIn
 
-    if (UseBody2) then
+    if(UseBody2)then
        ! calculate the radius as measured from the second body
        ! Note that the second body can move
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          R2_BLK(i,j,k,iBlock) = sqrt( &
-               sum( (Xyz_DGB(:,i,j,k,iBlock)- [xBody2, yBody2, zBody2])**2 ))
+          R2_BLK(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
+               [xBody2, yBody2, zBody2])
        end do; end do; end do
        Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
     end if

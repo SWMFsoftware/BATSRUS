@@ -664,7 +664,7 @@ contains
                VarsGhostFace_V(iRho_I) = PolarRho_I
 
                ! Align flow with the magnetic field
-               bUnit_D = B0Face_D / sqrt(sum(B0Face_D**2))
+               bUnit_D = B0Face_D / norm2(B0Face_D)
                ! Make sure it points outward
                if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
                VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
@@ -725,7 +725,7 @@ contains
                endif
 
                SinLatitudeCap = sin(LatitudeCap * cDegToRad)
-               zCap = sqrt(sum(SmgFaceCoords_D**2))*SinLatitudeCap
+               zCap = norm2(SmgFaceCoords_D)*SinLatitudeCap
 
                if(abs(SmgFaceCoords_D(z_)) > zCap)then
                   ! for the polar region
@@ -750,7 +750,7 @@ contains
                      ! get the magnetic field
                      call get_planet_field(TimeBc, FaceCoords_D,&
                           TypeCoordSystem//'NORM', bFace_D)
-                     b =  sqrt(sum(bFace_D**2))
+                     b =  norm2(bFace_D)
                      bUnit_D = bFace_D / B
 
                      ! get the magnetic field at 4000km = 4e6m
@@ -761,7 +761,7 @@ contains
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
 
-                     b4 =  sqrt(sum(bFace_D**2))
+                     b4 =  norm2(bFace_D)
 
                      ! get the joule heating mapped from the ionosphere
                      ! (already in nomalized unit)
@@ -798,7 +798,7 @@ contains
                         ePar = 0.
                      end if
 
-                     if(OutflowVelocity<0)then
+                     if(OutflowVelocity < 0)then
                         ! If outflowvelocity <0,
                         ! get the velocity along B, superpose the parallel
                         ! velocity and the thermal velocity
@@ -820,7 +820,7 @@ contains
                      ! angle between solar ray and equatorial plane),
                      ! dt is local time angle
                      TheTmp = asin(GeoFaceCoords_D(z_)/ &
-                          sqrt(sum(GeoFaceCoords_D**2)))      ! latitutde
+                          norm2(GeoFaceCoords_D))      ! latitutde
                      DaTmp = acos(GseToGeo_D(z_))               ! declination
                      DtTmp = acos(SmgFaceCoords_D(x_)/ &
                           sqrt(SmgFaceCoords_D(x_)**2 + &
@@ -837,7 +837,7 @@ contains
                           XyzMap_d, iHemisphere)
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
-                     b1 =  sqrt(sum(bFace_D**2))
+                     b1 =  norm2(bFace_D)
 
                      ! get the Hp flux by mapping the flux at 1000km
                      ! into the inner boudnary

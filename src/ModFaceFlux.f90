@@ -327,7 +327,7 @@ contains
           Tangent1_D(z_) = -Normal_D(y_)
        end if
        ! Normalize Tangent1 vector
-       Tangent1_D = Tangent1_D/sqrt(sum(Tangent1_D**2))
+       Tangent1_D = Tangent1_D/norm2(Tangent1_D)
        ! Tangent2 = Normal x Tangent1
        Tangent2_D = cross_product(Normal_D, Tangent1_D)
 
@@ -1047,9 +1047,9 @@ contains
           ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
-          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
-          Area =0.0
-          Area2=0.0
+          Normal_D = Normal_D/norm2(Normal_D)
+          Area  = 0.0
+          Area2 = 0.0
        else
           Area = sqrt(Area2)
           Normal_D = [AreaX, AreaY, AreaZ]/Area
@@ -1090,9 +1090,9 @@ contains
           ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
-          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
-          Area = 0.0
-          Area2= 0.0
+          Normal_D = Normal_D/norm2(Normal_D)
+          Area  = 0.0
+          Area2 = 0.0
        else
           Area = sqrt(Area2)
           Normal_D = [AreaX, AreaY, AreaZ]/Area
@@ -1125,10 +1125,10 @@ contains
           ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
-          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
+          Normal_D = Normal_D/norm2(Normal_D)
 
-          Area = 0.0
-          Area2= 0.0
+          Area  = 0.0
+          Area2 = 0.0
        else
           Area = sqrt(Area2)
           Normal_D = [AreaX, AreaY, AreaZ]/Area
@@ -1203,9 +1203,8 @@ contains
 
        ! InvDxyz is needed for the time step limit of the explicit evaluation
        ! of the diffusion operator
-       InvDxyz = 1.0/sqrt( sum( &
-            ( Xyz_DGB(:,iRight,jRight,kRight, iBlockFace)          &
-            - Xyz_DGB(:,iLeft, jLeft  ,kLeft, iBlockFace))**2) )
+       InvDxyz = 1.0/norm2(Xyz_DGB(:,iRight,jRight,kRight, iBlockFace) - &
+                           Xyz_DGB(:,iLeft, jLeft  ,kLeft, iBlockFace))
     end if
 
     if(UseClimit)then
@@ -4332,7 +4331,7 @@ contains
                 Area0_D(1:nDim) = CellCoef_DDGB( &
                      Xi_,:,iCell,jFace,kFace,iBlockFace)
                 Normal0_D(1:nDim) = Area0_D(1:nDim)/&
-                     sqrt(sum(Area0_D(1:nDim)**2))
+                     norm2(Area0_D(1:nDim))
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
                      State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
@@ -4346,7 +4345,7 @@ contains
                 Area0_D(1:nDim) = CellCoef_DDGB( &
                      Eta_,:,iFace,iCell,kFace,iBlockFace)
                 Normal0_D(1:nDim) = Area0_D(1:nDim)/&
-                     sqrt(sum(Area0_D(1:nDim)**2))
+                     norm2(Area0_D(1:nDim))
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
                      State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
@@ -4358,7 +4357,7 @@ contains
              do iCell = kFace - 2, kFace + 1
                 Area0_D = CellCoef_DDGB( &
                      Zeta_,:,iFace,jFace,iCell,iBlockFace)
-                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+                Normal0_D = Area0_D/norm2(Area0_D)
 
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iFace,jFace,iCell,iBlockFace)/&
@@ -4547,7 +4546,7 @@ contains
     Tmp1 = Bt1H**2 + Bt2H**2
 
     if(Tmp1 > 1e-8)then
-       Tmp1=sqrt(1./Tmp1)
+       Tmp1 = sqrt(1./Tmp1)
        BetaY = Bt1H*Tmp1
        BetaZ = Bt2H*Tmp1
     else

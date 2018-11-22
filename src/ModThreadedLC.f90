@@ -1216,9 +1216,9 @@ contains
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
-       BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
+       BDir_D = BDir_D/max(norm2(BDir_D**2), 1e-30)
        DirR_D = Xyz_DGB(:,1,j,k,iBlock)
-       DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
+       DirR_D = DirR_D/max(norm2(DirR_D**2),1e-30)
 
        if(sum(BDir_D*DirR_D) <  0.0)then
           BDir_D = -BDir_D

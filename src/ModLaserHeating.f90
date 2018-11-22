@@ -221,7 +221,7 @@ contains
 
        Xyz_D = Position_DI(:,iRay)
        if(Is3DBeamInRz)then
-          Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+          Xyz_D(2) = norm2(Xyz_D(2:MaxDim))
           Xyz_D(3) = 0.0
        end if
 
@@ -846,7 +846,7 @@ contains
       !------------------------------------------------------------------------
       do iDim = 1, nDim
          if(Is3DBeamInRz .and. iDim == 2)then
-            Radius = sqrt(sum(Position_DI(2:3,iRay)**2))
+            Radius = norm2(Position_DI(2:3,iRay))
             if(Radius > XyzMax_D(iDim))then
                if(TypeBoundaryUp_D(iDim) == 'reflect')then
                   Runit_D(2:3) = [Position_DI(2,iRay),Position_DI(3,iRay)] &
@@ -1481,7 +1481,7 @@ contains
 
           Xyz_D = Position_DI(:,iRay)
           if(Is3DBeamInRz)then
-             Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+             Xyz_D(2) = norm2(Xyz_D(2:MaxDim))
              Xyz_D(3) = 0.0
           end if
 

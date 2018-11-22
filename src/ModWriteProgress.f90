@@ -182,7 +182,7 @@ contains
        write(iUnitOut,'(10X,''UseBody2: .true.'')')
        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
             'rBody2:      ',RBody2   ,', BdpDimBody2: ',&
-            sqrt(sum(BdpDimBody2_D**2))
+            norm2(BdpDimBody2_D)
        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
             'xBody2:      ',xBody2   ,', Bdp2Body_x:    ',BdpBody2_D(1)
        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &

@@ -89,11 +89,11 @@ contains
 
        ! Translate image center from LOS coordinates to TypeCoordPlot_I(iFile)
        ObsPos_D   = ObsPos_DI(:,iFile)
-       Los_D      = ObsPos_D/sqrt(sum(ObsPos_D**2))
+       Los_D      = ObsPos_D/norm2(ObsPos_D)
        aUnit_D    = cross_product([0.,0.,1.], Los_D)
-       aUnit_D    = aUnit_D/sqrt(sum(aUnit_D**2))
+       aUnit_D    = aUnit_D/norm2(aUnit_D)
        bUnit_D    = cross_product(Los_D, aUnit_D)
-       bUnit_D    = bUnit_D/sqrt(sum(bUnit_D**2)) ! this should not be needed
+       bUnit_D    = bUnit_D/norm2(bUnit_D) ! this should not be needed
        Xyz0Plot_D = Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
 
        ! Observer position is with respect to center of box.
@@ -192,7 +192,7 @@ contains
              XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0Plot_D)
 
              ! When inside Body keep default plot values
-             if(sqrt(sum(XyzGm_D**2)) < rBody .and. body1)CYCLE
+             if(norm2(XyzGm_D) < rBody .and. body1)CYCLE
 
              ! Get generalized coordinates
              call xyz_to_coord(XyzGm_D, Coord_D)

@@ -818,28 +818,28 @@ contains
                modulo(cRadToDeg *atan2(SatXyzIono_D(2),SatXyzIono_D(1)),360.0)
 
           ! set closed flag
-          SatRay_D(3)=3.0
+          SatRay_D(3) = 3.0
        else
-          SatRay_D(1)=-100.0
-          SatRay_D(2)=-200.0
-          SatRay_D(3)=0.0
+          SatRay_D(1) = -100.0
+          SatRay_D(2) = -200.0
+          SatRay_D(3) = 0.0
 
        endif
     else
        ! When planet is inside rBody use dipole assumption
-       Rsat=sqrt(sum(SatXyz_D(1:3)**2))
-       Rxy2=sum(SatXyz_D(1:2)**2)
-       if (Rxy2>0.0) then
-          L=Rsat**3.0/Rxy2
-          SatRay_D(1)=acos(1/sqrt(L))*cRadToDeg
+       Rsat = norm2(SatXyz_D(1:3))
+       Rxy2 = sum(SatXyz_D(1:2)**2)
+       if(Rxy2 > 0.0)then
+          L = Rsat**3.0/Rxy2
+          SatRay_D(1) = acos(1/sqrt(L))*cRadToDeg
        else
-          SatRay_D(1)=90.0
+          SatRay_D(1) = 90.0
        endif
 
        SatRay_D(2) =  &
             modulo(cRadToDeg *atan2(SatXyz_D(2),SatXyz_D(1)),360.0)
        ! set closed flag
-       SatRay_D(3)=3.0
+       SatRay_D(3) = 3.0
     endif
     call test_stop(NameSub, DoTest)
   end subroutine GM_trace_sat

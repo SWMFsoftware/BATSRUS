@@ -117,7 +117,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_gamma_collisionless'
     !--------------------------------------------------------------------------
-    r = sqrt(sum(x_D**2))
+    r = norm2(x_D)
 
     if(UseElectronPressure)then
        GammaCollisionless = &
