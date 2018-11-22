@@ -1,14 +1,14 @@
 Begin session: 1
 
-#ECHO
-T                       DoEcho
-
 #DESCRIPTION
 Two-fluid MHD test	StringDescription
 
 #EQUATION
 MHD with electron pressure and hyperbolic cleaning	NameEquation
 10							nVar
+
+#ELECTRONENTROPY
+F
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma
