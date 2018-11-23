@@ -102,7 +102,7 @@ CRASH:
 	cd src; make CRASH
 
 NOMPI:
-	cd util/NOMPI/src; $(MAKE) LIB
+	cd ${NOMPIDIR}; $(MAKE) LIB
 
 PIDL:
 	cd ${SHAREDIR}; $(MAKE) PIDL
