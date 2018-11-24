@@ -16,6 +16,7 @@ contains
        isNonCartesian, NotACut)
 
     ! Arguments
+
     integer, intent(in) :: iFile
     integer, intent(in) :: nPlotVar
     real,    intent(in) :: xMin, xMax, yMin, yMax, zMin, zMax
@@ -49,7 +50,7 @@ contains
 
   end subroutine write_plot_hdf5
   !============================================================================
-  subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar,&
+  subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
        isNonCartesian, NotACut, nCell,H5Advance)
 
@@ -58,6 +59,7 @@ contains
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     ! Arguments
+
     integer, intent(in)   :: iFile, iBlock, H5Index
     integer, intent(in)   :: nPlotVar
     real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
