@@ -42,7 +42,7 @@ module ModAdvance
 
   ! Use entropy equation for electrons instead of pressure by default
   ! This should provide more robust results near strong shocks
-  logical:: UseElectronEntropy = UseElectronPressure
+  logical:: UseElectronEntropy = .false. !!! UseElectronPressure
 
   logical:: UseWavePressure = .false.
 
