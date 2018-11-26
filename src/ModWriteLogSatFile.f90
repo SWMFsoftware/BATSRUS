@@ -11,6 +11,8 @@ module ModWriteLogSatFile
 
   private ! except
 
+  integer :: iFluid ! to make iFluid local in this module
+  
   public:: write_logfile          ! write one line into the log file
   public:: collect_satellite_data ! collect data from multiple processors
   public:: calc_sphere            ! calculate values on spherical surface
@@ -325,7 +327,7 @@ contains
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
     use ModIO, ONLY: write_myname, lNameLogVar
-    use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
+    use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: integrate_grid, maxval_grid, minval_grid
 
@@ -410,7 +412,7 @@ contains
     iVarTot = 0
     do iVar=1,nLogVar
 
-       iVarTot = iVarTot+1
+       iVarTot = iVarTot + 1
        call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
 
        ! If we are a satellite and not a logfile (iSat>=1) then we should
@@ -600,7 +602,7 @@ contains
                     Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
                     Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
                     Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                  tmp1_BLK(i,j,k,iBlock)=0.0
+                  tmp1_BLK(i,j,k,iBlock) = 0.0
                   CYCLE
                end if
                call get_current(i,j,k,iBlock,Current_D)
@@ -742,7 +744,8 @@ contains
               *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('epnt')
          if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
+              LogVar_I(iVarTot) = &
+              Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
       case('uxpnt')
          if(iProc == iProcTest) LogVar_I(iVarTot) = &
               State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest) / &
@@ -1300,7 +1303,7 @@ contains
           case('integrate')
              ! Integrate in theta
              do k = 1, nK
-                SinTheta = sqrt(sum(Xyz_DGB(x_:y_,1,1,k,iBlock)**2)) &
+                SinTheta = norm2(Xyz_DGB(x_:y_,1,1,k,iBlock)) &
                      / r_BLK(1,1,k,iBlock)
                 ! Integrate in Phi by adding up 1..nJ and interpolate in R
                 Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &
@@ -1424,7 +1427,7 @@ contains
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
-                     1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
+                     1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)) )
 
                 select case(TypeAction)
                 case('integrate')
@@ -1558,7 +1561,7 @@ contains
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
-               1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
+               1 + InvDxyz_D*([ x, y, z ] - XyzStart_Blk(:,iBlock)))
 
           Integral = Integral + Average
        end do
@@ -1656,8 +1659,8 @@ contains
     State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
     State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
 
-    call get_point_data(0.0,(/xTest,yTest,zTest/),1,nBlock,1,nVar+3,State_V)
-    call collect_satellite_data((/xTest,yTest,zTest/),State_V)
+    call get_point_data(0.0,[xTest,yTest,zTest],1,nBlock,1,nVar+3,State_V)
+    call collect_satellite_data([xTest,yTest,zTest],State_V)
 
     if(iProc==0)then
        if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&
@@ -1700,7 +1703,7 @@ contains
     ! Switch to all lower case
     call lower_case(NameOut)
 
-    call extract_fluid_name(NameOut)
+    call extract_fluid_name(NameOut,iFluid)
 
     ! Replace mx with rhoux, my with rhouy, mz with rhouz
     select case(NameOut(1:2))

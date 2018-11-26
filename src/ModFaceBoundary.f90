@@ -23,31 +23,39 @@ module ModFaceBoundary
 
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
+  !$omp threadprivate( DoResChangeOnly )
 
   ! The type and index of the boundary
   character(len=20), public :: TypeBc
-
+  !$omp threadprivate( TypeBc )
+  
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
   ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
   ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY
   integer, public :: iBoundary
+  !$omp threadprivate( iBoundary )
 
   ! Index of the face
   integer, public :: iFace, jFace, kFace, iBlockBc
-
+  !$omp threadprivate( iFace,jFace,kFace,iBlockBc )
+  
   ! The side of the cell defined with respect to the cell inside the domain
   integer, public :: iSide
-
+  !$omp threadprivate( iSide )
+  
   ! The values on the physical side and the ghost cell side of the boundary
   real, public :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
-
+  !$omp threadprivate( VarsTrueFace_V, VarsGhostFace_V )
+  
   ! The coordinates of the face center and the B0 field at that point
   real, public :: FaceCoords_D(3), B0Face_D(3)
-
+  !$omp threadprivate( FaceCoords_D, B0Face_D )
+  
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
-
+  !$omp threadprivate( TimeBc )
+  
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -73,19 +81,19 @@ module ModFaceBoundary
   ! The lower bound of pe/p at inner boundary when the electron 
   ! pressure equation is used. 
   real :: RatioPe2P = 0
-
+  
 contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
 
     use ModReadParam,  ONLY: read_var
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
-    use ModMultiFluid, ONLY: iFluid, nFluid, IonFirst_
+    use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
     character(len=*), intent(in):: NameCommand
 
-    integer:: iDensity
+    integer:: iDensity, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_face_boundary_param'
@@ -492,7 +500,8 @@ contains
            TheTmp,DtTmp,DaTmp, Cosx, Jlocal_D(3), Jpar
       integer:: iHemisphere
       integer :: iIonSecond
-
+      integer :: iFluid
+      
       ! Variables for the absorbing BC
       real:: UdotR, r2Inv
 
@@ -500,16 +509,13 @@ contains
       integer:: iDir
       real:: Normal_D(MaxDim)
 
-      ! logical:: DoTestCell
+      !logical:: DoTestCell
       logical, parameter:: DoTestCell = .false.
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
 
-      ! DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
-
-      if(DoTestCell)write(*,*) NameSubSub,' starting with ijkTrue, ijkGhost=',&
-           iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
-
+      !DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest-1
+      
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
       TypeBc = TypeFaceBc_I(iBoundary)
 
@@ -585,11 +591,11 @@ contains
                if(IsCartesianGrid)then
                   select case(iSide)
                   case(1, 2)
-                     Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
+                     Brefl_D = [ 2*Borig_D(x_), 0.0, 0.0 ]
                   case(3, 4)
-                     Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
+                     Brefl_D = [ 0.0, 2*Borig_D(y_), 0.0 ]
                   case(5, 6)
-                     Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+                     Brefl_D = [ 0.0, 0.0, 2*Borig_D(z_) ]
                   end select
                else
                   iDir = (iSide+1)/2
@@ -658,7 +664,7 @@ contains
                VarsGhostFace_V(iRho_I) = PolarRho_I
 
                ! Align flow with the magnetic field
-               bUnit_D = B0Face_D / sqrt(sum(B0Face_D**2))
+               bUnit_D = B0Face_D / norm2(B0Face_D)
                ! Make sure it points outward
                if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
                VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
@@ -719,7 +725,7 @@ contains
                endif
 
                SinLatitudeCap = sin(LatitudeCap * cDegToRad)
-               zCap = sqrt(sum(SmgFaceCoords_D**2))*SinLatitudeCap
+               zCap = norm2(SmgFaceCoords_D)*SinLatitudeCap
 
                if(abs(SmgFaceCoords_D(z_)) > zCap)then
                   ! for the polar region
@@ -732,7 +738,7 @@ contains
                         GeoFaceCoords_D = FaceCoords_D
                      endif
                      GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
-                          (/0,0,1/))
+                          [0,0,1])
 
                      ! For the cap region (refer to Tom Moore 2003?)
                      ! Get the Op flux from IE calculation
@@ -744,7 +750,7 @@ contains
                      ! get the magnetic field
                      call get_planet_field(TimeBc, FaceCoords_D,&
                           TypeCoordSystem//'NORM', bFace_D)
-                     b =  sqrt(sum(bFace_D**2))
+                     b =  norm2(bFace_D)
                      bUnit_D = bFace_D / B
 
                      ! get the magnetic field at 4000km = 4e6m
@@ -755,7 +761,7 @@ contains
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
 
-                     b4 =  sqrt(sum(bFace_D**2))
+                     b4 =  norm2(bFace_D)
 
                      ! get the joule heating mapped from the ionosphere
                      ! (already in nomalized unit)
@@ -792,7 +798,7 @@ contains
                         ePar = 0.
                      end if
 
-                     if(OutflowVelocity<0)then
+                     if(OutflowVelocity < 0)then
                         ! If outflowvelocity <0,
                         ! get the velocity along B, superpose the parallel
                         ! velocity and the thermal velocity
@@ -814,7 +820,7 @@ contains
                      ! angle between solar ray and equatorial plane),
                      ! dt is local time angle
                      TheTmp = asin(GeoFaceCoords_D(z_)/ &
-                          sqrt(sum(GeoFaceCoords_D**2)))      ! latitutde
+                          norm2(GeoFaceCoords_D))      ! latitutde
                      DaTmp = acos(GseToGeo_D(z_))               ! declination
                      DtTmp = acos(SmgFaceCoords_D(x_)/ &
                           sqrt(SmgFaceCoords_D(x_)**2 + &
@@ -831,7 +837,7 @@ contains
                           XyzMap_d, iHemisphere)
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
-                     b1 =  sqrt(sum(bFace_D**2))
+                     b1 =  norm2(bFace_D)
 
                      ! get the Hp flux by mapping the flux at 1000km
                      ! into the inner boudnary

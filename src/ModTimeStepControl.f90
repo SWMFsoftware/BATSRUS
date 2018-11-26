@@ -18,8 +18,8 @@ module ModTimeStepControl
   public:: set_global_timestep
   public:: control_time_step
 
-  logical, public:: UseTimeStepControl   = .false.
-  real,    public:: TimeStepControlInit  = 1.0
+  logical, public:: UseTimeStepControl  = .false.
+  real,    public:: TimeStepControlInit = 1.0
   logical, public:: UseMaxTimeStep      = .false. ! calculate max time step
   real,    public:: DtMin = -1.0, DtMax = -1.0    ! value of min/max time steps
 
@@ -547,7 +547,7 @@ contains
     if(nVarControl < 0)then
        nVarControl = 2
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
-       iVarControl_I = (/Rho_, p_/)
+       iVarControl_I = [Rho_, p_]
     end if
 
     ! Calculate the largest relative drop in the control variables

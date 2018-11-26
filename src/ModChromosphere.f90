@@ -46,7 +46,8 @@ module ModChromosphere
 
   ! Electron temperature in K:
   real :: TeSi_C(nI,nJ,nK)
-
+  !$omp threadprivate( TeSi_C )
+  
 contains
   !============================================================================
 

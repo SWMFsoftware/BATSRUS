@@ -52,7 +52,7 @@ module ModImplHypre
   integer:: nPart = 1 ! grid consists of one or more parts
   integer:: nVar  = 1 ! there is only one variable per grid cell
   integer:: iVar  = 0 ! index of the variable
-  integer:: iVarType_I(1) = (/ HYPRE_SSTRUCT_VARIABLE_CELL /)
+  integer:: iVarType_I(1) = [ HYPRE_SSTRUCT_VARIABLE_CELL ]
   integer:: iLower_D(nDim), iUpper_D(nDim) ! index limits for each box
 
   integer:: iLowerBc_D(nDim), iUpperBc_D(nDim) ! index limit for ghost cells
@@ -60,12 +60,12 @@ module ModImplHypre
 
   ! Mapping between boundaries: same index order and same direction
   integer:: iDim
-  integer, parameter:: iIndexMap_D(nDim) = (/ (iDim, iDim=0,nDim-1)/)
+  integer, parameter:: iIndexMap_D(nDim) = [ (iDim, iDim=0,nDim-1)]
   integer, parameter:: iIndexDir_D(nDim) = 1
 
   ! Stencil description
   integer:: iStencil
-  integer:: iStencil_I(nStencil) = (/ (iStencil, iStencil=0,nStencil-1) /)
+  integer:: iStencil_I(nStencil) = [ (iStencil, iStencil=0,nStencil-1) ]
   integer:: DiStencil_DI(nDim,nStencil)
 
   integer:: iObjectType = HYPRE_PARCSR
@@ -742,7 +742,7 @@ contains
              Jac = Jacobian_CI(1,j,k,Stencil2_)/nStencilExtra
              do iStencil = nStencil, nStencil + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                     iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(1,j,k) = iStencil
 
@@ -771,7 +771,7 @@ contains
              Jac = Jacobian_CI(nI,j,k,Stencil3_)/nStencilExtra
              do iStencil = nStencil, nStencil + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iCoord_D, iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(nI,j,k) = iStencil
 
@@ -805,7 +805,7 @@ contains
              iStencilFirst = iStencilExtra_C(i,1,k)
              do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                     iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(i,1,k) = iStencil
 
@@ -836,7 +836,7 @@ contains
              iStencilFirst = iStencilExtra_C(i,nJ,k)
              do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iCoord_D, iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(i,nJ,k) = iStencil
 
@@ -870,7 +870,7 @@ contains
              iStencilFirst = iStencilExtra_C(i,j,1)
              do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, iCoord_D, &
-                     iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(i,j,1) = iStencil
 
@@ -901,7 +901,7 @@ contains
              iStencilFirst = iStencilExtra_C(i,j,nK)
              do iStencil = iStencilFirst, iStencilFirst + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, &
-                     iCoord_D, iVar, 1, (/iStencil/), (/Jac/), iError)
+                     iCoord_D, iVar, 1, [iStencil], [Jac], iError)
              end do
              iStencilExtra_C(i,j,nK) = iStencil
 

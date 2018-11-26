@@ -28,7 +28,7 @@ contains
     use ModProcMH
     use ModMain
     use ModAdvance
-    use ModMultiFluid, ONLY: iFluid, nFluid
+    use ModMultiFluid, ONLY:  nFluid
     use BATL_lib, ONLY: CellVolume_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
@@ -36,7 +36,7 @@ contains
     use ModMessagePass, ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
-    integer :: iVar
+    integer :: iVar, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
@@ -137,13 +137,15 @@ contains
     use ModMessagePass, ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
          ion_electron_init_point_impl, HypEDecay
+    use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
+         iRhoUzIon_I, nIonFluid
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
 
     ! These variables have to be double precision for accurate Boris scheme
-    real:: DtLocal, DtFactor, Coeff
+    real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
@@ -156,7 +158,7 @@ contains
     ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
     ! and heat exchange between electrons and ions (mult-ion is not coded).
-
+    
     if(.not.UseMultiIon .and. UseResistivity .and. &
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
@@ -191,10 +193,11 @@ contains
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)/GammaElectron &
-               * State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron - 1)
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
+               * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
+
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
        Source_VC(:,i,j,k) = &
@@ -291,7 +294,7 @@ contains
     end if
 
     ! Add point implicit user or multi-ion source terms
-    if (UsePointImplicit)then
+    if(UsePointImplicit)then
        if(IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock)) then
           if(UseEfield)then
              call update_point_implicit(iBlock, ion_electron_source_impl, &
@@ -310,7 +313,43 @@ contains
                call fix_multi_ion_update(iBlock)
 
           ! Make sure that energy is consistent
-          call calc_energy_cell(iBlock)
+          if(UseEfield)then
+             if(.not. UseNonconservative) then
+                ! Add q/m rhou.E to ion energy source terms for the 
+                ! energy equation, q/m*rho*(E dot u) if UseEfield.
+                ! Tests show that putting the energy source terms after
+                ! the point implicit update is more stable than putting
+                ! the source terms in ModCalcSource.
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
+
+                   SourceIonEnergy_I = ChargePerMass_I* (         &
+                        State_VGB(Ex_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUxIon_I,i,j,k,iBlock)    + &
+                        State_VGB(Ey_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUyIon_I,i,j,k,iBlock)    + &
+                        State_VGB(Ez_,i,j,k,iBlock)               &
+                        *State_VGB(iRhoUzIon_I,i,j,k,iBlock) )
+
+                   SourceIonEnergy_I = SourceIonEnergy_I*DtLocal
+
+                   Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_) =     &
+                        Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_)  &
+                        + SourceIonEnergy_I
+                end do; end do; end do
+
+                ! Re-calculate the pressure from the energy.
+                ! In this case, the pressure source terms in the user file
+                ! would not contribute to the pressure. It requires that
+                ! the user MUST provide the corresponding source terms  for 
+                ! the energy equation in the user file.
+                call calc_pressure_cell(iBlock)
+             else
+                call calc_energy_cell(iBlock)
+             end if
+          else
+             call calc_energy_cell(iBlock)
+          end if
 
           if(DoTest)write(*,'(2x,2a,15es20.12)') &
                NameSub, ' after point impl state              =', &
@@ -362,7 +401,7 @@ contains
       !------------------------------------------------------------------------
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call mhd_to_boris(iBlock)
-         
+
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
@@ -394,7 +433,7 @@ contains
          end do; end do; end do
 
          ! Update energy variables
-         do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
                  + Source_VC(nVar+iFluid,i,j,k)
@@ -471,12 +510,12 @@ contains
          ! Interpolation step for 2nd and 3rd order Runge-Kutta schemes
 
          ! Runge-Kutta scheme coefficients
-         if (nStage==2) then
+         if(nStage==2)then
             Coeff1 = 0.5
-         elseif (nStage==3) then
-            if (iStage==2) then
+         elseif(nStage==3)then
+            if(iStage==2)then
                Coeff1 = 0.75
-            elseif (iStage==3) then
+            elseif(iStage==3)then
                Coeff1 = 1./3.
             end if
          end if
@@ -490,7 +529,7 @@ contains
          end do; end do; end do
 
          ! Interpolate energies
-         do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  Coeff1*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
                  Coeff2*Energy_GBI(i,j,k,iBlock,iFluid)
@@ -505,7 +544,7 @@ contains
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call boris_to_mhd(iBlock)
-      
+
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
@@ -1483,12 +1522,12 @@ contains
             write(*,*) NameSub, ': default IsConserv is true'
     endif
 
-    do iBlock = 1, nBlock
+    do iBlock=1,nBlock
        if( Unused_B(iBlock) ) CYCLE
 
        ! Apply geometry based criteria
        ! Any of these can switch from conservative to non-conservative
-       do iCrit = 1, nConservCrit
+       do iCrit=1,nConservCrit
           select case(TypeConservCrit_I(iCrit))
           case('r')
              ! Switch to non-conservative inside radius rConserv
@@ -1535,14 +1574,14 @@ contains
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
     use ModGeometry, ONLY: true_cell
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iP, iPpar
+    use ModMultiFluid, ONLY: select_fluid, iP, iPpar
     use ModVarIndexes, ONLY: nFluid
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
     real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm
 
-    integer:: i, j, k, iBlock
+    integer:: i, j, k, iBlock, iFluid
 
     logical :: UseConstantTau
     real    :: TauInstability, TauGlobal
@@ -1557,8 +1596,7 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           do iFluid = 1, nFluid
-
-             call select_fluid
+             call select_fluid(iFluid)
 
              UseConstantTau = UseConstantTau_I(iFluid)
              TauInstability = TauInstability_I(iFluid)

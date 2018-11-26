@@ -8,6 +8,7 @@ module GM_wrapper
   use GM_couple_pt          !^CMP IF PT
   use GM_couple_ie          !^CMP IF IE
   use GM_couple_im          !^CMP IF IM
+  use GM_couple_ps          !^CMP IF PS
   use GM_couple_ih          !^CMP IF IH
   use GM_couple_rb          !^CMP IF RB
   use GM_couple_pw          !^CMP IF PW
@@ -63,6 +64,10 @@ module GM_wrapper
   public:: GM_put_from_im           ! from IM
   !^CMP END IM
 
+  !^CMP IF PS BEGIN
+  public:: GM_put_from_ps
+  !^CMP END PS
+  
   !^CMP IF PC BEGIN
   public:: GM_get_for_pc_dt
   public:: GM_get_for_pc_init
@@ -316,7 +321,7 @@ contains
 
     use ModMain,     ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
     use ModMain,     ONLY: UseIM
-    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
+    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -329,7 +334,7 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-    UseIm = Couple_CC(IM_,GM_) % DoThis
+    UseIm = Couple_CC(IM_,GM_) % DoThis .or. Couple_CC(PS_,GM_) % DoThis
     UsePw = Couple_CC(PW_,GM_) % DoThis
     UseIe = Couple_CC(IE_,GM_) % DoThis
 

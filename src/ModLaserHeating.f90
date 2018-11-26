@@ -221,7 +221,7 @@ contains
 
        Xyz_D = Position_DI(:,iRay)
        if(Is3DBeamInRz)then
-          Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+          Xyz_D(2) = norm2(Xyz_D(2:MaxDim))
           Xyz_D(3) = 0.0
        end if
 
@@ -846,10 +846,10 @@ contains
       !------------------------------------------------------------------------
       do iDim = 1, nDim
          if(Is3DBeamInRz .and. iDim == 2)then
-            Radius = sqrt(sum(Position_DI(2:3,iRay)**2))
+            Radius = norm2(Position_DI(2:3,iRay))
             if(Radius > XyzMax_D(iDim))then
                if(TypeBoundaryUp_D(iDim) == 'reflect')then
-                  Runit_D(2:3) = (/Position_DI(2,iRay),Position_DI(3,iRay)/) &
+                  Runit_D(2:3) = [Position_DI(2,iRay),Position_DI(3,iRay)] &
                        /Radius
                   Position_DI(2:3,iRay) = Position_DI(2:3,iRay) &
                        - 2*(Radius - XyzMax_D(iDim))*Runit_D(2:3)
@@ -1084,9 +1084,9 @@ contains
 
           if(.not.IsInside) CYCLE
 
-          XyzRay_DI(:,nRayInside) = (/xStart, yStart, zStart/)
+          XyzRay_DI(:,nRayInside) = [xStart, yStart, zStart]
           SlopeRay_DI(:,nRayInside) = &
-               (/CosTheta, SinTheta*CosPhi, SinTheta*SinPhi/)
+              [CosTheta, SinTheta*CosPhi, SinTheta*SinPhi]
 
        end do ! iRay
     end do ! iBeam
@@ -1164,11 +1164,11 @@ contains
           if(.not.IsInside) CYCLE
 
           if(yStart > 0)then
-             XyzRay_DI(:,nRayInside) = (/xStart, yStart, 0.0/)
-             SlopeRay_DI(:,nRayInside) = (/CosTheta, SinTheta, 0.0/)
+             XyzRay_DI(:,nRayInside) = [xStart, yStart, 0.0]
+             SlopeRay_DI(:,nRayInside) = [CosTheta, SinTheta, 0.0]
           else
-             XyzRay_DI(:,nRayInside) = (/xStart, -yStart, 0.0/)
-             SlopeRay_DI(:,nRayInside) = (/CosTheta, -SinTheta, 0.0/)
+             XyzRay_DI(:,nRayInside) = [xStart, -yStart, 0.0]
+             SlopeRay_DI(:,nRayInside) = [CosTheta, -SinTheta, 0.0]
           end if
 
        end do ! iRay
@@ -1278,9 +1278,9 @@ contains
 
 		  if(.not. IsInside) CYCLE
 
-          XyzRay_DI(:, nRayInside) = (/xPlane, yPlane, 0.0/)
+          XyzRay_DI(:, nRayInside) = [xPlane, yPlane, 0.0]
           SlopeRay_DI(:, nRayInside) = &
-               (/CosTheta, SinTheta, 0.0/)
+               [CosTheta, SinTheta, 0.0]
 
        end do
     end do
@@ -1481,7 +1481,7 @@ contains
 
           Xyz_D = Position_DI(:,iRay)
           if(Is3DBeamInRz)then
-             Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+             Xyz_D(2) = norm2(Xyz_D(2:MaxDim))
              Xyz_D(3) = 0.0
           end if
 

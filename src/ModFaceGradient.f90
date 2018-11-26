@@ -9,6 +9,7 @@ module ModFaceGradient
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
        jRatio, kRatio, InvIjkRatio
+  use omp_lib
 
   implicit none
   save
@@ -25,7 +26,8 @@ module ModFaceGradient
 
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-
+  !$omp threadprivate( DcoordDxyz_DDFD )
+  
 contains
   !============================================================================
 

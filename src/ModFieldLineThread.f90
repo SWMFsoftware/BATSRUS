@@ -452,10 +452,10 @@ contains
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
 
-       B0Start = sqrt( sum( B0Start_D**2 ) )
+       B0Start = norm2(B0Start_D)
        BoundaryThreads_B(iBlock) % B_III(0, j, k) = B0Start
 
-       RStart = sqrt( sum( XyzStart_D**2 ) )
+       RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
@@ -500,12 +500,11 @@ contains
                 Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0Aux_D = B0Aux_D + Bcme_D
              end if
-             DirB_D = SignBr*B0Aux_D/max(&
-                  sqrt(sum(B0Aux_D**2)), cTolerance**2)
+             DirB_D = SignBr*B0Aux_D/max(norm2(B0Aux_D), cTolerance**2)
              if(nTrial==nCoarseMax)call limit_cosBR
              ! 3. New grid point:
              Xyz_D = Xyz_D - Ds*DirB_D
-             R = sqrt( sum( Xyz_D**2 ) )
+             R = norm2(Xyz_D)
              if(R <= rBody)EXIT COARSEN
              if(R > RStart)CYCLE COARSEN
              !\
@@ -520,7 +519,7 @@ contains
                 Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0_D = B0_D + Bcme_D
              end if
-             B0 = sqrt( sum( B0_D**2 ) )
+             B0 = norm2(B0_D)
              BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
           end do POINTS
        end do COARSEN
@@ -539,7 +538,7 @@ contains
        !/
        BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/RBody
        call get_b0(Xyz_D, B0_D)
-       B0 = sqrt( sum( B0_D**2 ) )
+       B0 = norm2(B0_D)
        BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
        !\
        ! Store the number of points. This will be the number of temperature
@@ -684,7 +683,7 @@ contains
             BoundaryThreads_B(iBlock) % B_III(0, j, k))
 
        BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
-            sqrt(sum((Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock))**2))
+            norm2(Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock) )
 
        call limit_temperature(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
@@ -829,9 +828,9 @@ contains
             NameVar =                                               &
             'logTe logNe '//                                        &
             'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
-            nIndex_I = (/500,2/),                                   &
-            IndexMin_I =(/1.0e4, 1.0e8/),                           &
-            IndexMax_I =(/1.0e8, 1.0e18/),                          &
+            nIndex_I = [500,2],                                   &
+            IndexMin_I = [1.0e4, 1.0e8],                           &
+            IndexMax_I = [1.0e8, 1.0e18],                          &
             NameFile = 'TR.dat',                                    &
             TypeFile = TypeFile,                                    &
             StringDescription = &
@@ -940,9 +939,9 @@ contains
             DeltaLogTe
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
+    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = [ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
-         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)/)
+         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)]
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_tr_table

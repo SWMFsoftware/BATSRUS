@@ -56,6 +56,7 @@ module ModPointImplicit
   use ModSize, ONLY: MaxBlock
   use ModMultiFluid, ONLY: UseMultiIon
   use ModAdvance, ONLY: UseEfield
+  use omp_lib
   implicit none
 
   save
@@ -75,18 +76,27 @@ module ModPointImplicit
 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
+  !$omp threadprivate( iVarPointImpl_I )
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
-
+  !$omp threadprivate( IsPointImplSource )
+  !$omp threadprivate( IsPointImplMatrixSet )
+  !$omp threadprivate( IsPointImplPerturbed )
+  
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
-
+  !$omp threadprivate( EpsPointImpl_V, DsDu_VVC )
+  
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
   public:: init_point_implicit_num
+  !hyzhou: there is some problem for the init function here. It is called 
+  ! inside a parallel region, so should I just declare the seemingly shared
+  ! vars as threadprivate (even though they don't change), or rewrite the 
+  ! logic?
 
   ! Local variables
   ! Number of point implicit variables
@@ -95,6 +105,7 @@ module ModPointImplicit
   ! Number and indexes of variables with numerical derivatives
   integer :: nVarPointImplNum = 0
   integer, allocatable :: iVarPointImplNum_I(:)
+  !$omp threadprivate( iVarPointImplNum_I )
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
   real:: BetaPointImpl = 1.0
@@ -104,7 +115,7 @@ module ModPointImplicit
 
   ! Normalize variables cell-by-cell or per block
   logical:: DoNormalizeCell = .false.
-
+  
 contains
   !============================================================================  
   subroutine init_mod_point_impl
@@ -154,8 +165,7 @@ contains
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
-         DoReplaceDensity, &
-         UseMultiSpecies
+         DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
     use ModGeometry, ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
@@ -179,7 +189,8 @@ contains
     real :: State0_C(nI,nJ,nK)
 
     real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
-
+    !$omp threadprivate( Matrix_II, Rhs_I )
+    
     logical :: DoTestCell
 
     logical:: DoTest
@@ -229,7 +240,7 @@ contains
        ! iVarPointImplNum_I index array may be set with the number and indexes
        ! of point implicit variables that require numerical derivatives
        ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
-       ! Finally, init_point_implicit  may also modify the EpsPointImpl and
+       ! Finally, init_point_implicit may also modify the EpsPointImpl and
        ! EpsPointImpl_V parameters.
 
        nVarPointImplNum = 0
@@ -280,7 +291,7 @@ contains
     ! Put back old values into the implicit variables
     ! so the update is relative to the time level n
     ! (this is a steady state preserving scheme).
-    do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar = 1,nVarPointImpl
+    do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar=1,nVarPointImpl
        iVar = iVarPointImpl_I(iIvar)
        State_VGB(iVar,i,j,k,iBlock) = StateOld_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
@@ -297,7 +308,7 @@ contains
 
     call calc_point_impl_source(iBlock)
 
-    ! Calculate (part of) Jacobean numerically if necessary
+    ! Calculate (part of) Jacobian numerically if necessary
     if(.not.IsPointImplMatrixSet)then
 
        ! Let the source subroutine know that the state is perturbed
@@ -307,7 +318,8 @@ contains
        Source0_VC = Source_VC(1:nVar,:,:,:)
 
        ! Perturb all point implicit variables one by one
-       do iIVar = 1,nVarPointImplNum; iVar = iVarPointImplNum_I(iIvar)
+       do iIVar = 1,nVarPointImplNum
+          iVar = iVarPointImplNum_I(iIvar)
 
           ! Store unperturbed state
           State0_C = State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock)
@@ -339,13 +351,11 @@ contains
           call calc_point_impl_source(iBlock)
 
           if(IsAsymmetric)then
-
              ! Calculate dS/dU matrix elements
-             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
+             do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon_C
              end do
-
           else
              ! Store perturbed source corresponding to +Epsilon_C perturbation
              Source1_VC = Source_VC(1:nVar,:,:,:)
@@ -356,9 +366,9 @@ contains
              ! Calculate perturbed source
              Source_VC = 0.0
              call calc_point_impl_source(iBlock)
-
+             
              ! Calculate dS/dU matrix elements with symmetric differencing
-             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
+             do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
@@ -367,7 +377,6 @@ contains
 
           ! Restore unperturbed state
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C
-
        end do
 
        ! Restore unperturbed source
@@ -379,7 +388,8 @@ contains
     ! call timing_stop('pointimplsrc')
 
     if(DoTest)then
-       do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
+       do iIVar=1,nVarPointImpl
+          iVar = iVarPointImpl_I(iIVar)
           write(*,'(a,a,i5,a,100es15.6)')NameSub,': DsDu(',iVar,',:)=',  &
                (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
                iJVar = 1, nVarPointImpl)
@@ -398,15 +408,18 @@ contains
        DtCell = Cfl*time_BLK(i,j,k,iBlock)*iStage/real(nStage)
 
        ! The right hand side is Uexpl - Uold + Sold
-       do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
+       do iIVar = 1, nVarPointImpl
+          iVar = iVarPointImpl_I(iIVar)
           Rhs_I(iIVar) = StateExpl_VC(iVar,i,j,k) &
                - StateOld_VGB(iVar,i,j,k,iBlock) &
                + DtCell * Source_VC(iVar,i,j,k)
        end do
 
        ! The matrix to be solved for is A = (I - beta*Dt*dS/dU)
-       do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
-          do iJVar = 1, nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+       do iIVar = 1, nVarPointImpl
+          iVar = iVarPointImpl_I(iIVar)
+          do iJVar = 1, nVarPointImpl
+             jVar = iVarPointImpl_I(iJVar)
              Matrix_II(iIVar,iJVar) = - BetaStage*DtCell* &
                   DsDu_VVC(iVar,jVar,i,j,k)
           end do
@@ -450,7 +463,8 @@ contains
        ! call timing_start('pointimplupdate')
 
        ! Update: U^n+1 = U^n + dU
-       do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
+       do iIVar = 1, nVarPointImpl
+          iVar = iVarPointImpl_I(iIVar)
           State_VGB(iVar,i,j,k,iBlock) =&
                StateOld_VGB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
        end do
@@ -508,6 +522,7 @@ contains
     character(len=*), parameter:: NameSub = 'init_point_implicit_num'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     nVarPointImplNum = size(iVarPointImpl_I)
     allocate(iVarPointImplNum_I(nVarPointImplNum))

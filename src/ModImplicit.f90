@@ -117,7 +117,7 @@ module ModImplicit
   real               :: Rimplicit
 
   ! Second order in time implicit scheme (uses previous time step)
-  logical:: UseBDF2    = .false.
+  logical:: UseBDF2 = .false.
 
   ! Time step when the previous state was stored
   integer :: n_prev=-100
@@ -126,13 +126,13 @@ module ModImplicit
   real, allocatable :: ImplOld_VCB(:,:,:,:,:)
 
   ! Previous time step
-  real::  dt_prev = -1.0
+  real ::  dt_prev = -1.0
 
   ! CFL number for explicit scheme
-  real   :: ExplCfl = 0.8
+  real :: ExplCfl = 0.8
 
   ! Implicit scheme
-  character (len=10) :: FluxTypeImpl = 'default' ! same as explicit
+  character(len=10) :: FluxTypeImpl = 'default' ! same as explicit
 
 end module ModImplicit
 !==============================================================================

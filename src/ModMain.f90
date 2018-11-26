@@ -71,8 +71,8 @@ module ModMain
   logical :: UseHelioBuffer3D = .false.
   integer :: nPhiBuff = 90,   nThetaBuff = 45, nRBuff = 2
   real    :: dSphBuff_D(3)
-  real    :: BufferMin_D(3) = (/ 19.0,    0.0, 0.0/)
-  real    :: BufferMax_D(3) = (/ 21.0, cTwoPi, cPi/)
+  real    :: BufferMin_D(3) = [ 19.0,    0.0, 0.0]
+  real    :: BufferMax_D(3) = [ 21.0, cTwoPi, cPi]
 
   real, allocatable:: BufferState_VG(:,:,:,:)
   ! Named indexes for the spherical buffer (left handed coordinates!!! )
@@ -232,7 +232,7 @@ module ModMain
   real :: Time_SimulationOld = 0.0
 
   ! This is the same default value as in the SWMF
-  integer, dimension(7) :: iStartTime_I = (/2000,3,21,10,45,0,0/)
+  integer, dimension(7) :: iStartTime_I = [2000,3,21,10,45,0,0]
   real(Real8_)          :: StartTime
 
   !\
@@ -240,7 +240,7 @@ module ModMain
   !/
   logical :: UseEndTime = .false.
 
-  integer,dimension(7)  :: iEndTime_I   = (/2000,3,21,10,45,0,0/)
+  integer,dimension(7)  :: iEndTime_I   = [2000,3,21,10,45,0,0]
   real(Real8_)          :: EndTime
 
   ! Timing variables

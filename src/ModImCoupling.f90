@@ -74,7 +74,6 @@ contains
     use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
     use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_, UseMultiSpecies
     use ModB0,       ONLY: B0_DGB
-    use ModMultiFluid, ONLY: iFluid
     use ModVarIndexes, ONLY: IonFirst_, IonLast_, IsMhd
 
     integer, intent(in)  :: iBlock
@@ -86,7 +85,7 @@ contains
 
     real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
 
-    integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
+    integer :: i,j,k, iFluid, n, iLat1,iLat2, iLon1,iLon2
 
     real :: Lat,Lon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
     real :: LatMaxIm
@@ -114,10 +113,10 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        ! Default is negative, which means that do not nudge GM values
-       pIm_IC(:,i,j,k) = -1.0
+       pIm_IC(:,i,j,k)   = -1.0
        RhoIm_IC(:,i,j,k) = -1.0
-       PparIm_C(i,j,k) = -1.0
-       BminIm_C(i,j,k) = -1.0
+       PparIm_C(i,j,k)   = -1.0
+       BminIm_C(i,j,k)   = -1.0
 
        ! For closed field lines nudge towards IM pressure/density
        if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
@@ -173,7 +172,7 @@ contains
           end if
           LonWeight2 = 1 - LonWeight1
 
-          if(all( IM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
+          if(all( IM_p( [iLat1,iLat2], [iLon1, iLon2] ) > 0.0 ))then
              if(IsMhd)then
                 pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
                      LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
@@ -249,7 +248,7 @@ contains
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 Coeff = 1/(PperpInvPpar &
                      + min(1.0, &
-                     BminIm_C(i,j,k)/sqrt(sum(b_D**2)))*(1 - PperpInvPpar))
+                     BminIm_C(i,j,k)/norm2(b_D))*(1 - PperpInvPpar))
 
                 ! pressures and density at arbitrary location of a field line
                 pIm_IC(1,i,j,k) = pIm_IC(1,i,j,k)*Coeff &
@@ -301,7 +300,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
-         iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid
+         iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModEnergy, ONLY: calc_energy_cell
     use ModFieldTrace, ONLY: trace_field_grid
 
@@ -314,7 +313,7 @@ contains
 
     integer :: iLastPIm = -1, iLastGrid = -1
     integer :: iIonSecond, nIons
-    integer :: i, j, k, iBlock, nDensity
+    integer :: i, j, k, iBlock, iFluid, nDensity
     integer, allocatable:: iDens_I(:)
 
     logical:: DoTest
@@ -376,7 +375,7 @@ contains
     if(UseMultiSpecies)then
        nDensity = 3
        allocate(iDens_I(nDensity))
-       iDens_I = (/ Rho_, SpeciesFirst_, SpeciesFirst_+1/)
+       iDens_I = [ Rho_, SpeciesFirst_, SpeciesFirst_+1 ]
     else
        nDensity = nIons
        allocate(iDens_I(nDensity))
@@ -426,14 +425,22 @@ contains
              end if
           end if
           if(DoCoupleImDensity)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
-                State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
-                     State_VGB(iDens_I,i,j,k,iBlock) &
-                     + Factor * TauCoeffIm_C(i,j,k) &
-                     * (RhoIm_IC(1:nDensity,i,j,k) &
-                     - State_VGB(iDens_I,i,j,k,iBlock)))
-             end do; end do; end do
+             do iFluid =1, nIons
+                where(RhoIm_IC(iFluid,:,:,:)>0.0) &
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock)=&
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock) &
+                     + Factor * TauCoeffIm_C &
+                     * (RhoIm_IC(iFluid,:,:,:) - &
+                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
+             end do
+             !do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             !   if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
+             !   State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
+             !        State_VGB(iDens_I,i,j,k,iBlock) &
+             !        + Factor * TauCoeffIm_C(i,j,k) &
+             !        * (RhoIm_IC(1:nDensity,i,j,k) &
+             !        - State_VGB(iDens_I,i,j,k,iBlock)))
+             !end do; end do; end do
           end if
        else
           if(DoCoupleImPressure)then

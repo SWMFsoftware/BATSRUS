@@ -51,19 +51,22 @@ module ModMultiIon
        Pe_X(0:nI+2,0:nJ+1,0:nK+1), &
        Pe_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pe_Z(0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( Pe_X, PE_Y, PE_Z )
+  
   ! anisotropic pe dot area on the faces for grad Pe
   real, public:: &
        PeDotArea_DX(3,0:nI+2,0:nJ+1,0:nK+1), &
        PeDotArea_DY(3,0:nI+1,0:nJ+2,0:nK+1), &
        PeDotArea_DZ(3,0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ )
+  
   ! wave pressure on the faces for grad Pwave
   real, public:: &
        Pwave_X(0:nI+2,0:nJ+1,0:nK+1), &
        Pwave_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pwave_Z(0:nI+1,0:nJ+1,0:nK+2)
-
+  !$omp threadprivate( Pwave_X, Pwave_Y, Pwave_Z )
+  
   ! collision coefficient
   real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
@@ -594,7 +597,7 @@ contains
 
        ! Calculate the source term for all the ion fluids
        do iIon = 1, nIonFluid
-          uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
+          uIon_D = [ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) ]
           u_D    = uIon_D - uPlus_D
           ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
@@ -640,7 +643,7 @@ contains
                 if(jIon == iIon) CYCLE
 
                 ! Add collisional terms
-                uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
+                uIon2_D = [ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) ]
 
                 ! Physical collision
                 if(CollisionCoefDim > 0.0)then
@@ -851,7 +854,7 @@ contains
     integer, intent(in) :: iBlock
     logical, intent(in) :: IsFinal  ! true for the final update
 
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
     real    :: State_V(nVar), Rho, InvRho, p, IonSum, InvSum
     real    :: TeRatio1, InvTeRatio1
     logical :: IsMultiIon

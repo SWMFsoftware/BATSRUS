@@ -9,7 +9,7 @@ module ModGroundMagPerturb
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product
-  use ModConst,          ONLY: cHalfPi, cDegToRad
+  use ModConst,          ONLY: cDegToRad
 
   implicit none
   save
@@ -88,7 +88,7 @@ module ModGroundMagPerturb
   ! K CONVERSION TABLES
   ! Conversion table for the standard station, Niemegk.
   real, parameter :: &
-       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./)
+       Table50_I(9)=[5.,10.,20.,40.,70.,120.,200.,330.,500.]
 
   ! Headers for Geoindices output file:
   character(len=*), parameter :: NameKpVars = &
@@ -441,22 +441,24 @@ contains
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
 
-    integer, intent(in)   :: nMag
-    real, intent(in)      :: Xyz_DI(3,nMag)
-    real, intent(out)     :: MagPerturb_DI(3,nMag)
+    integer, intent(in) :: nMag
+    real,    intent(in) :: Xyz_DI(3,nMag)
+    real,    intent(out):: MagPerturb_DI(3,nMag)
 
-    real, parameter       :: rIonosphere = 1.01725 ! rEarth + iono_height
-    integer, parameter    :: nTheta =181, nPhi =181, nCuts = 30
+    real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
+    integer, parameter:: nTheta =181, nPhi =181, nR = 30
 
-    integer               :: k, iHemisphere, iError
-    integer               :: iTheta,iPhi,iLine,iMag
-    real                  :: dR_Trace, Theta, Phi, r_tmp
-    real                  :: dL, dS, dTheta, dPhi ,iLat, SinTheta
-    real                  :: b, Fac, bRcurrents,JrRcurrents
-    real, dimension(3)    :: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
-         XyzTmp_D, j_D, temp_D
-    real                  :: FacRcurrents_II(nTheta,nPhi)
-    real                  :: bRcurrents_DII(3,nTheta,nPhi)
+    integer           :: k, iHemisphere, iError
+    integer           :: iTheta,iPhi,iLine,iMag
+    real              :: dR, r, Theta, Phi
+    real              :: dTheta, dPhi, SinTheta, dVol, dVolCoeff
+    real              :: InvBr, BrRcurrents, FacRcurrents, bRcurrents
+    real, dimension(3):: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
+         XyzMid_D, j_D, Pert_D
+    real              :: FacRcurrents_II(nTheta,nPhi)
+    real              :: bRcurrents_DII(3,nTheta,nPhi)
+
+    ! real:: Volume, Height=2.0 !!!
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
@@ -468,7 +470,7 @@ contains
 
     dTheta = cPi    / (nTheta-1)
     dPhi   = cTwoPi / (nPhi-1)
-    dR_Trace = (rCurrents - rIonosphere) / nCuts
+    dR     = (rCurrents - rIonosphere) / nR
 
     ! Get the current and B at the ionosphere boundary
     call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
@@ -479,79 +481,89 @@ contains
        call MPI_Bcast(bRcurrents_DII, 3*nTheta*nPhi,MPI_REAL,0,iComm,iError)
     end if
 
-    ! only need those currents that are between certain thresholds ???
-    where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4 &
-         .or. abs(FacRcurrents_II) * No2Io_V(UnitJ_) >  1.0e3)&
+    ! only need those currents that are significant
+    where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4) &
          FacRcurrents_II = 0.0
+
+    ! CHECK
+    ! Volume = 0.
 
     iLine = -1
     do iTheta = 1, nTheta
        Theta = (iTheta-1) * dTheta
-       if(iTheta==1 .or. iTheta == nTheta)Theta = 1.0E-4
-       SinTheta = sin(Theta)
+       ! At the poles sin(Theta)=0, but the area of the triangle 
+       ! formed by the pole and the latitude segment at Theta=dTheta/2
+       ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
+       ! replaced with dTheta/8.
+       SinTheta = max(sin(Theta), dTheta/8)
 
        do iPhi=1, nPhi
+
           Phi = (iPhi-1) * dPhi
 
-          ! if the FAC is under certain threshold, do nothing
+          ! If the FAC is under certain threshold, do nothing
+          ! This  should be commented out for testing the volume
           if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
 
-          iLine = iLine +1
+          iLine = iLine + 1
 
           ! do parallel computation among the processors
           if(mod(iLine, nProc) /= iProc)CYCLE
 
           call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
-          ! extract the field aligned current and B field
-          JrRcurrents = FacRcurrents_II(iTheta,iPhi)
+          ! the field aligned current and B field at r=rCurrents
+          FacRcurrents = FacRcurrents_II(iTheta,iPhi)
+          bRcurrents_D = bRcurrents_DII(:,iTheta,iPhi)
+          bRcurrents   = sqrt(sum(bRcurrents_D**2))
 
-          bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
-          bRcurrents = sqrt(sum(bRcurrents_D**2))
+          ! Calculate volume element multiplied by |Br|
+          ! dVolume = dS_sphere*dR = dS_tube*dL and dR/dL = Br/|B|
+          BrRcurrents = abs(sum(bRcurrents_D*XyzRcurrents_D))/rCurrents
+          dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
 
-          do k = 1, nCuts
+          do k = 1, nR
 
              ! Second order integration in radial direction
-             r_tmp = rCurrents - dR_Trace * (k-0.5)
+             r = rCurrents - dR*(k-0.5)
 
              ! get next position along the field line
-             call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
-                  r_tmp, XyzTmp_D,iHemisphere)
+             call map_planet_field(Time_Simulation, XyzRcurrents_D, &
+                  'SMG NORM', r, XyzMid_D, iHemisphere)
 
              ! get the B field at this position
-             call get_planet_field(Time_Simulation, XyzTmp_D,'SMG NORM',B_D)
-             B_D = B_D *Si2No_V(UnitB_)
-             b = sqrt(sum(B_D**2))
+             call get_planet_field(Time_Simulation, XyzMid_D, 'SMG NORM', b_D)
+             b_D = b_D*Si2No_V(UnitB_)
 
-             ! get the field alinged current at this position
-             Fac = b/bRcurrents * JrRcurrents
+             ! The (x,y,z) components of the field aligned current here
+             j_D = FacRcurrents * b_D/bRcurrents
 
-             ! get the (x,y,z) components of the Jr
-             j_D = Fac * B_D/b
+             ! the length of the field line between two cuts: dL = dR*|B|/|Br|
+             ! the cross section area changes proportional to 1/|B|, 
+             ! so the volume element is proportional to 1/|Br|:
+             InvBr = r/abs(sum(b_D*XyzMid_D))
+             dVol  = dVolCoeff*InvBr
 
-             ! the length of the field line between two cuts
-             iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
-             dL = dR_Trace * sqrt(1 + 3*(sin(iLat))**2)/(2*sin(iLat))
-
-             ! the cross section area by conservation of magnetic flux
-             dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
+             !!! Check
+             ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume = Volume + dVol
 
              do iMag = 1, nMag
                 Xyz_D = Xyz_DI(:,iMag)
-
-                if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
-                     .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
-
+                
                 ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
-                temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) &
-                     * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
+                Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
+                     /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
 
-                MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag)+temp_D/(4*cPi)
+                MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag) + Pert_D
              end do
 
           end do
        end do
     end do
+
+    ! Volume of the two spherical caps above Height (should be filled
+    ! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
+    !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
 
     call timing_stop('ground_db_fac')
 
@@ -1219,8 +1231,8 @@ contains
            "dB (North-East-Down) [nT]", &
            TimeIn = time_simulation, &
            NameVarIn = NameVar, &
-           CoordMinIn_D = (/ GridLonMin, GridLatMin /), &
-           CoordMaxIn_D = (/ GridLonMax, GridLatMax /), &
+           CoordMinIn_D = [ GridLonMin, GridLatMin ], &
+           CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
            VarIn_VII=MagOut_VII)
 
     end subroutine write_mag_2d

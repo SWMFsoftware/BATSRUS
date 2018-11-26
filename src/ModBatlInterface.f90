@@ -102,7 +102,7 @@ contains
 
     ! Convert from BATL to BATSRUS ordering of subfaces.
 
-    integer, parameter:: iOrder_I(4) = (/1,3,2,4/)
+    integer, parameter:: iOrder_I(4) = [1,3,2,4]
     integer:: iNodeNei, iNodeNei_I(4)
     integer:: i, j, k
     logical:: DoTest
@@ -237,7 +237,7 @@ contains
     XyzStart_BLK(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
+       r_BLK(i,j,k,iBlock) = norm2(Xyz_DGB(1:nDim,i,j,k,iBlock))
     end do; end do; end do
 
     Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
@@ -301,7 +301,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer:: i, j, k
+    integer:: i, j, k, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_other_vars'
     !--------------------------------------------------------------------------
@@ -319,7 +319,7 @@ contains
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body1_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              State_VGB(iRhoUx,i,j,k,iBlock) = &
                   FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
              State_VGB(iRhoUy,i,j,k,iBlock) = &
@@ -336,7 +336,7 @@ contains
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
           ! Convert velocity to momentum
           do iFluid = 1, nFluid
-             call select_fluid
+             call select_fluid(iFluid)
              State_VGB(iRhoUx,i,j,k,iBlock) = &
                   FaceState_VI(iUx,body2_)*FaceState_VI(iRho,body2_)
              State_VGB(iRhoUy,i,j,k,iBlock) = &

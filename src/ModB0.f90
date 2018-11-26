@@ -56,11 +56,13 @@ module ModB0
 
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
-
+  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
+  
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
-
+  !$omp threadprivate( CurlB0_DC, DivB0_C )
+  
   ! Local variables
 
   ! B0 field at the resolution change interfaces
@@ -71,10 +73,6 @@ module ModB0
   ! Lookup table related variables
   integer:: iTableB0 = -1
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
-
-  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  !$omp threadprivate( CurlB0_DC, DivB0_C )
-  !$omp threadprivate( iTableB0, rMinB0, rMaxB0, dLonB0, FactorB0 )
   
 contains
   !============================================================================
@@ -170,6 +168,8 @@ contains
     if((UseCurlB0 .or. UseB0Source) .and. .not.allocated(CurlB0_DC)) &
          allocate(CurlB0_DC(3,nI,nJ,nK))
 
+    !$omp end parallel
+
     iTableB0 = i_lookup_table('B0')
     if(iTableB0 > 0)then
        call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I)
@@ -177,7 +177,6 @@ contains
        rMaxB0 = Param_I(2)
        if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
     end if
-    !$omp end parallel
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
@@ -603,12 +602,12 @@ contains
        ! Multiply with B0 factor
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
        ! Scale with r^2 for r > rMaxB0
-       if(r > rMaxB0) B0_D = (r/rMaxB0)**2 * B0_D
+       if(r > rMaxB0) B0_D = (rMaxB0/r)**2 * B0_D
     elseif(UseMagnetogram)then
        call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
     elseif(MonopoleStrength /= 0.0)then
-       r = sqrt(sum(Xyz_D(1:nDim)**2))
+       r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
     elseif(DipoleStrengthSi==0.0)then
        B0_D = 0.0
@@ -687,7 +686,7 @@ contains
 
     ! Compute dipole moment of the intrinsic magnetic field B0.
 
-    Dipole_D = (/ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp /)
+    Dipole_D = [ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp ]
 
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
@@ -760,7 +759,7 @@ contains
     ! to the field from the second body should be computed here (inside the
     ! if block.
     !/
-    use ModPhysics
+    use ModPhysics, ONLY: BdpBody2_D, rBody2, xBody2, yBody2, zBody2
     use ModNumConst, ONLY: cTiny
 
     real, intent(in)   :: XyzIn_D(3)
@@ -773,9 +772,9 @@ contains
     !/
     character(len=*), parameter:: NameSub = 'add_b0_body2'
     !--------------------------------------------------------------------------
-    Xyz_D = (XyzIn_D - (/xBody2, yBody2, zBody2/))/rBody2
+    Xyz_D = (XyzIn_D - [xBody2, yBody2, zBody2])/rBody2
 
-    R0 = sqrt(sum(Xyz_D**2))
+    R0 = norm2(Xyz_D)
 
     ! Avoid calculating B0 inside a critical normalized radius = cTiny
     if(R0 <= cTiny) RETURN

@@ -7,7 +7,7 @@ module ModEnergy
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModExtraVariables, ONLY: Pepar_
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
-  use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
+  use ModMultiFluid, ONLY: nFluid, IonLast_, &
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -46,7 +46,7 @@ contains
     ! the value of UseNonConservative and IsConserv_CB
 
     integer, intent(in) :: iBlock
-    integer::i,j,k
+    integer:: i,j,k,iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_energy_or_pressure'
     !--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ contains
           EXIT FLUIDLOOP
        end if
 
-       call select_fluid
+       call select_fluid(iFluid)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
              State_VGB(iP,i,j,k,iBlock) =                                 &
@@ -147,14 +147,14 @@ contains
     !
 
     integer, intent(in) :: iBlock
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_old_pressure'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
-       call select_fluid
+       call select_fluid(iFluid)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VGB(iP, i, j, k,iBlock) = &
                GammaMinus1_I(iFluid)*                           &
@@ -192,14 +192,14 @@ contains
     !   E = P/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
 
     integer, intent(in) :: iBlock
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_old_energy'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
-       call select_fluid
+       call select_fluid(iFluid)
        ! Calculate thermal plus kinetic energy
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (StateOld_VGB(iRho,i,j,k,iBlock) <= 0.0)then
@@ -245,21 +245,16 @@ contains
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
     character(len=*), parameter:: NameSub = 'calc_pressure'
     !--------------------------------------------------------------------------
 
-    !if(DoTest)write(*,*)NameSub, &
-    !     ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
-    !     iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
-
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid
+       call select_fluid(iFluid)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = &
-               GammaMinus1_I(iFluid)*                        &
-               (Energy_GBI(i,j,k,iBlock,iFluid) - 0.5*       &
-               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
+               0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /State_VGB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
@@ -302,14 +297,14 @@ contains
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
-    integer::i,j,k
+    integer:: i,j,k,iFluid
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid
+       call select_fluid(iFluid)
        ! Calculate thermal plus kinetic energy
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
@@ -379,7 +374,7 @@ contains
     integer, intent(in) :: iBlock
     logical, optional, intent(in) :: DoResChangeOnlyIn
 
-    integer :: i, j, k
+    integer :: i, j, k, iFluid
     logical :: DoResChangeOnly
 
     logical:: DoTest
@@ -396,8 +391,7 @@ contains
     call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
 
     do iFluid = 1, nFluid
-
-       call select_fluid
+       call select_fluid(iFluid)
 
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
@@ -457,7 +451,7 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
     logical, intent(in), optional:: DoUpdateEnergy ! if present should be true
 
-    integer:: i, j, k
+    integer:: i, j, k, iFluid
     real :: NumDens, p, pMin, Ne
 
     character(len=*), parameter:: NameSub = 'limit_pressure'

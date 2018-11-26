@@ -205,11 +205,11 @@ contains
 
     ! Rotate observation point from HGI system to the current coordinate system
     ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,iFile))
-    ObsDistance = sqrt(sum(ObsPos_D**2))
+    ObsDistance = norm2(ObsPos_D)
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
     ! Rotation with offset angle
-    Los_D =matmul( rot_matrix_z(OffsetAngle), Los_D)
+    Los_D = matmul( rot_matrix_z(OffsetAngle), Los_D)
     ! Observer distance from image plane
     ObsDistance = abs(sum(ObsPos_D*Los_D))
 
@@ -318,15 +318,15 @@ contains
     ! a = LOS x (0,0,1), b = a x LOS ensures that b is roughly aligned with +Z
     ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
     if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
-       aUnit_D = cross_product(Los_D, (/0.,0.,1./))
+       aUnit_D = cross_product(Los_D, [0.,0.,1.])
        AlignedZ = .true.
     else
        ! Viewing along the Z axis more or less
-       aUnit_D = cross_product(Los_D, (/0.,1.,0./))
+       aUnit_D = cross_product(Los_D, [0.,1.,0.])
     end if
-    aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
+    aUnit_D = aUnit_D/norm2(aUnit_D)
     bUnit_D = cross_product(aUnit_D, Los_D)
-    bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
+    bUnit_D = bUnit_D/norm2(bUnit_D)
 
     ! 3D vector pointing from the origin to the image center
     ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
@@ -560,8 +560,8 @@ contains
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn = allnames, &
                   nDimIn = 2, &
-                  CoordMinIn_D = (/-aPix, -aPix/), &
-                  CoordMaxIn_D = (/+aPix, +aPix/), &
+                  CoordMinIn_D = [-aPix, -aPix], &
+                  CoordMaxIn_D = [+aPix, +aPix], &
                   VarIn_VII = Image_VII)
           case('hdf')
              call save_plot_file(filename, &
@@ -573,8 +573,8 @@ contains
                   NameVarIn_I = PlotVarNames, &
                   NameUnitsIn = unitstr_IDL,&
                   nDimIn = 2, &
-                  CoordMinIn_D = (/-aPix, -aPix/), &
-                  CoordMaxIn_D = (/+aPix, +aPix/), &
+                  CoordMinIn_D = [-aPix, -aPix], &
+                  CoordMaxIn_D = [+aPix, +aPix], &
                   VarIn_VII = Image_VII)
           end select
        end if
@@ -626,7 +626,7 @@ contains
 
             ! Unit vector pointing from pixel center to observer
             LosPix_D = - XyzPix_D + ObsPos_D
-            Distance = sqrt(sum(LosPix_D**2))
+            Distance = norm2(LosPix_D)
             LosPix_D = LosPix_D/Distance
 
             ! Calculate whether there are intersections with the rInner sphere
@@ -752,12 +752,12 @@ contains
             CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
             CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
             CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
-            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D     ! Block size
-            CellSize_D      = CoordSizeBlock_D / nIjk_D             ! Cell size
+            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
+            CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
-               write(*, '(A, 3E12.5))')NameSub//': CoordMin=', CoordMinBlock_D
-               write(*, '(A, 3E12.5))')NameSub//': CoordMax=', CoordMaxBlock_D
+               write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D
+               write(*, '(A, 3E12.5)')NameSub//': CoordMax=', CoordMaxBlock_D
             end if
 
          end if
@@ -914,7 +914,7 @@ contains
       if(IsRzGeometry)then
          ! Radial distance is sqrt(yLos**2+zLos**2)
          CoordNorm_D(1:2) = &
-              ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
+              ( [xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) ] &
               - CoordMinBlock_D(1:2) )/CellSize_D(1:2) + 0.5
          CoordNorm_D(3) = 0.0
       elseif(IsCartesian)then
@@ -1134,7 +1134,7 @@ contains
       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
 
-      rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+      rBlockCenter = norm2(XyzBlockCenter_D)
 
       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then
          ! in cartesian grid, the rBody boundary cuts through blocks and,
@@ -1150,7 +1150,7 @@ contains
          rInner = max(rBody, RadiusMin)
 
          if(body1 .and. rMin_BLK(iBlock) < rBody ) &
-              rInner = rBody + sqrt(sum(CellSize_D**2))
+              rInner = rBody + norm2(CellSize_D)
       end if
 
       FixedXyzBlockCenter_D = XyzBlockCenter_D
@@ -1223,7 +1223,7 @@ contains
 
             ! Unit vector pointing from observer to pixel center
             LosPix_D = ObsPos_D - XyzPix_D
-            LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+            LosPix_D = LosPix_D/norm2(LosPix_D)
 
             ! Do not let LOS direction to be perfectly aligned with major axes
             where(LosPix_D == 0.0) LosPix_D = cTiny
@@ -1359,7 +1359,7 @@ contains
               iSort_I(1:nIntersect))
       else
          ! No need to sort two points
-         iSort_I(1:2) = (/1,2/)
+         iSort_I(1:2) = [1,2]
       end if
 
       ! Loop through segments connecting the consecutive intersection points
@@ -1594,7 +1594,7 @@ contains
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
-              / (/ CellSize_D(1), CellSize_D(2), CellSize_D(2) /) )
+              / [ CellSize_D(1), CellSize_D(2), CellSize_D(2) ] )
       else
          ! Measure distance in cell size units and add up dimensions
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)

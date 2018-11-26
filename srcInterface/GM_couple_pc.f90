@@ -43,7 +43,7 @@ contains
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi, LenPic_DI, R_DDI
+         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, LenPic_DI, R_DDI
     use BATL_lib,      ONLY: x_, y_, z_, nDim
 
     integer, intent(inout) :: nParamInt, nParamReal
@@ -62,10 +62,10 @@ contains
        nParamInt = 8 + nIonFluid*4
 
        ! Charge and mass per species/fluid
-       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD = 18 variables for each region
-       ! PePerPtotal + xUnitPicSi + uUnitPicSi + mUnitPicSi + rPlanet
-       ! + No2Si_V(UnitX_) = 6 variables
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*18 + 6
+       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units  = 21 variables 
+       ! for each region
+       ! PePerPtotal + rPlanet + No2Si_V(UnitX_) = 3 variables
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*21 + 3
 
        RETURN
     end if
@@ -118,7 +118,12 @@ contains
           endif
           n = n+1
        enddo; enddo              
-    end do
+
+       ! Units
+       Param_I(n) = xUnitPicSi_I(iRegion); n = n+1
+       Param_I(n) = uUnitPicSi_I(iRegion); n = n+1
+       Param_I(n) = mUnitPicSi_I(iRegion); n = n+1
+    end do ! iRegion
 
     ! Send charge and mass of each species/fluids
     if(UseMultiSpecies)then
@@ -136,10 +141,6 @@ contains
     ! Electron pressure ratio
     Param_I(n) = PePerPtotal; n = n+1
 
-    ! Units
-    Param_I(n) = xUnitPicSi; n = n+1
-    Param_I(n) = uUnitPicSi; n = n+1
-    Param_I(n) = mUnitPicSi; n = n+1
     Param_I(n) = rPlanetSi;  n = n+1
     Param_I(n) = No2Si_V(UnitX_)
     

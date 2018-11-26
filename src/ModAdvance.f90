@@ -40,7 +40,9 @@ module ModAdvance
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
   logical, parameter:: UseEfield = Ex_ > 1
 
-  logical:: UseElectronEntropy = .false.
+  ! Use entropy equation for electrons instead of pressure by default
+  ! This should provide more robust results near strong shocks
+  logical:: UseElectronEntropy = .false. !!! UseElectronPressure
 
   logical:: UseWavePressure = .false.
 
@@ -109,7 +111,8 @@ module ModAdvance
 
   ! Local cell-centered source terms and divB.
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
-
+  !$omp threadprivate( Source_VC )
+  
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
   ! Extra source terms coming from other models in the SWMF
@@ -119,13 +122,13 @@ module ModAdvance
   real, allocatable :: DivB1_GB(:,:,:,:)
 
   ! Switch between low and high order schemes 
-  logical:: UseLowOrder     = .false.  ! some faces are low order
+  logical:: UseLowOrder = .false.  ! some faces are low order
   logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
   logical:: UseLowOrderRegion = .false.
   logical:: UseAdaptiveLowOrder = .false. 
   real, allocatable:: LowOrderCrit_XB(:,:,:,:),LowOrderCrit_YB(:,:,:,:), &
        LowOrderCrit_ZB(:,:,:,:) ! The ratio of the low order face values
-
+  
   ! Cell centered velocities in ijk direction.
   real, allocatable:: Vel_IDGB(:,:,:,:,:,:) 
 
@@ -135,7 +138,10 @@ module ModAdvance
   real, allocatable:: LeftState_VX(:,:,:,:), RightState_VX(:,:,:,:)
   real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
   real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
-
+  !$omp threadprivate( LeftState_VX, RightState_VX )
+  !$omp threadprivate( LeftState_VY, RightState_VY )
+  !$omp threadprivate( LeftState_VZ, RightState_VZ )
+  
   ! Face centered div(U)*dl
   real, allocatable:: FaceDivU_IX(:,:,:,:)
   real, allocatable:: FaceDivU_IY(:,:,:,:)
@@ -144,30 +150,37 @@ module ModAdvance
   
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
-
+  !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
+  
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
-
+  !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
+  
   ! Cell centered fluxes
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
-
+  !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
+  
   ! Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false., DoCorrectFace = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
-
+  !$omp threadprivate( FluxCenter_VGD )
+  
   ! CWENO weight used to limit flux.
   real, allocatable:: Weight_IVX(:,:,:,:,:), Weight_IVY(:,:,:,:,:), &
        Weight_IVZ(:,:,:,:,:)
-
+  !$omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
+  
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable:: &
        uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)
-
+  !$omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
+  
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
   real, allocatable:: &
        bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
-
+  !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
+  
   !\
   ! Merge cells around the polar axis in spherical geometry
   !/
@@ -187,21 +200,6 @@ module ModAdvance
        SteadyBoundBlock_=2, & ! Blocks surrounding the evolving blocks
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
-
-  ! For OpenMP declaration  
-  !$omp threadprivate( Source_VC )
-  !$omp threadprivate( LeftState_VX, RightState_VX )
-  !$omp threadprivate( LeftState_VY, RightState_VY )
-  !$omp threadprivate( LeftState_VZ, RightState_VZ )
-  !$omp threadprivate( UseLowOrder )
-  !$omp threadprivate( UseLowOrderRegion )
-  !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
-  !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
-  !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
-  !$omp threadprivate( FluxCenter_VGD )
-  !$omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
-  !$omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
-  !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
   
 contains
   !============================================================================

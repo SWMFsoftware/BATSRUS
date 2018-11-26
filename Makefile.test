@@ -8,7 +8,6 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
-	Config.pl -noopenmp
 	-@($(MAKE) test_shockramp)
 	./Config.pl -ng=2
 	-@($(MAKE) test_partsteady)
@@ -47,6 +46,7 @@ test:
 	-@($(MAKE) test_region2d)
 	-@($(MAKE) test_fivemoment)
 	-@($(MAKE) test_func)
+	./Config.pl -noopenmp
 	@ls -l *.diff
 
 # !!! NOTE: In the above list "test_func" should be the last test
@@ -63,6 +63,7 @@ test_help:
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
+	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_amr                   (run AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
@@ -215,7 +216,7 @@ test_shockramp:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shockramp_compile:
-	./Config.pl -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
+	./Config.pl -openmp -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -223,7 +224,7 @@ test_shockramp_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.shockramp PARAM.in
 
 test_shockramp_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shockramp_check:
@@ -257,7 +258,7 @@ test_partsteady_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.partsteady PARAM.in
 
 test_partsteady_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_partsteady_check:
@@ -282,7 +283,7 @@ test_hallmhd:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hallmhd_compile:
-	./Config.pl -u=Waves -e=Mhd -f -g=4,2,2,100,100
+	./Config.pl -openmp -u=Waves -e=Mhd -f -g=4,2,2,100,100
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -290,7 +291,7 @@ test_hallmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HallTest PARAM.in
 
 test_hallmhd_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hallmhd_check:
@@ -313,7 +314,7 @@ test_viscosity:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_viscosity_compile:
-	./Config.pl -e=Hd -u=Waves -g=16,4,1,200,1 
+	./Config.pl -openmp -e=Hd -u=Waves -g=16,4,1,200,1 
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -321,7 +322,7 @@ test_viscosity_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/VISCOSITY/PARAM.in PARAM.in
 
 test_viscosity_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_viscosity_check:
@@ -345,7 +346,7 @@ test_twofluidmhd:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_twofluidmhd_compile:
-	./Config.pl -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
+	./Config.pl -openmp -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -353,7 +354,7 @@ test_twofluidmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwofluidTest PARAM.in
 
 test_twofluidmhd_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_twofluidmhd_check:
@@ -376,7 +377,7 @@ test_multifluid:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multifluid_compile:
-	./Config.pl -u=Default -e=MhdHd -f -g=64,2,2,10,1
+	./Config.pl -openmp -u=Default -e=MhdHd -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -384,7 +385,7 @@ test_multifluid_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIFLUID/PARAM.in .
 
 test_multifluid_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_multifluid_check:
@@ -416,7 +417,7 @@ test_magnetometer_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/magin.dat .
 	
 test_magnetometer_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 
 test_magnetometer_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
@@ -447,7 +448,7 @@ test_multiion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multiion_compile:
-	./Config.pl -u=Default -e=MultiIon -f -g=64,2,2,10,1
+	./Config.pl -openmp -u=Default -e=MultiIon -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -455,7 +456,7 @@ test_multiion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIION/PARAM.in .
 
 test_multiion_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_multiion_check:
@@ -486,7 +487,7 @@ test_mhdions_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
 
 test_mhdions_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdions_check:
@@ -510,7 +511,7 @@ test_mhdnoncons:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdnoncons_compile:
-	./Config.pl -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
+	./Config.pl -openmp -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -518,7 +519,7 @@ test_mhdnoncons_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDNONCONS/PARAM.in .
 
 test_mhdnoncons_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdnoncons_check:
@@ -544,7 +545,7 @@ test_eosgodunov:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_eosgodunov_compile:
-	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
+	./Config.pl -openmp -e=HdEos -u=Eos -g=10,1,1,100,1
 	$(MAKE) CRASH
 	make PIDL
 
@@ -553,7 +554,7 @@ test_eosgodunov_rundir: test_rundir
 	ln -s ${BINDIR}/CRASH.exe . 
 
 test_eosgodunov_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
@@ -586,7 +587,7 @@ test_laserpackage_rundir: test_rundir
 	cd ${TESTDIR}; ln -s ../dataCRASH/LookupTables Tables
 
 test_laserpackage_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
@@ -610,7 +611,7 @@ test_graydiffusion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
+	./Config.pl -openmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -619,7 +620,7 @@ test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie3.dat .
 
 test_graydiffusion_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
@@ -644,7 +645,7 @@ test_corona:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_corona_compile:
-	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4,3000,1
+	./Config.pl -openmp -u=Sc -e=MhdCorona -g=4,4,4,3000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -655,7 +656,7 @@ test_corona_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
 
 test_corona_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_corona_check:
@@ -688,7 +689,7 @@ test_coronasph_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
 
 test_coronasph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_coronasph_check:
@@ -723,7 +724,7 @@ test_awsomfluids_rundir:
 	cd ${TESTDIR}; gunzip HeatPartition.dat.gz
 
 test_awsomfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomfluids_check:
@@ -746,7 +747,7 @@ test_chromo:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
-	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
+	./Config.pl -openmp -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -758,7 +759,7 @@ test_chromo_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 
 test_chromo_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_chromo_check:
@@ -782,7 +783,7 @@ test_outerhelio:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerhelio_compile:
-	./Config.pl -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
+	./Config.pl -openmp -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -792,7 +793,7 @@ test_outerhelio_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in .
 
 test_outerhelio_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerhelio_check:
@@ -813,7 +814,7 @@ test_outerheliopui:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
-	./Config.pl -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
+	./Config.pl -openmp -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -823,7 +824,7 @@ test_outerheliopui_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
 
 test_outerheliopui_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerheliopui_check:
@@ -876,7 +877,7 @@ test_titan_start:
 	$(MAKE) test_titan_check
 
 test_titan_compile:
-	./Config.pl -u=Titan -e=MhdTitan -g=6,6,6,1000,200
+	./Config.pl -openmp -u=Titan -e=MhdTitan -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -887,7 +888,7 @@ test_titan_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_titan_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_titan_check:
@@ -946,7 +947,7 @@ test_mars_start:
 	$(MAKE) test_mars_check
 
 test_mars_compile:
-	./Config.pl -u=Mars -e=MhdMars -g=6,6,6,1000,200
+	./Config.pl -openmp -u=Mars -e=MhdMars -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -957,7 +958,7 @@ test_mars_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_mars_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_mars_check:
@@ -1017,7 +1018,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
+	./Config.pl -openmp -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1027,7 +1028,7 @@ test_marsfluids_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_marsfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_marsfluids_check:
@@ -1089,7 +1090,7 @@ test_venus_start:
 	$(MAKE) test_venus_check
 
 test_venus_compile:
-	./Config.pl -u=Venus -e=MhdMars -g=6,6,6,1000,200
+	./Config.pl -openmp -u=Venus -e=MhdMars -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1099,7 +1100,7 @@ test_venus_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_venus_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_venus_check:
@@ -1157,7 +1158,7 @@ test_saturn_start:
 	$(MAKE) test_saturn_check
 
 test_saturn_compile:
-	./Config.pl -u=Saturn -e=MhdHyp -g=8,8,8,720,1
+	./Config.pl -openmp -u=Saturn -e=MhdHyp -g=8,8,8,720,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1167,7 +1168,7 @@ test_saturn_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_saturn_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_saturn_check:
@@ -1201,7 +1202,7 @@ test_mercurysph_rundir: test_rundir
 		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_mercurysph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1238,7 +1239,7 @@ test_ganymede:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ganymede_compile:
-	./Config.pl -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
+	./Config.pl -openmp -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1248,7 +1249,7 @@ test_ganymede_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_ganymede_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1286,7 +1287,7 @@ test_comet_rundir: test_rundir
 		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_comet_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_comet_check:
@@ -1323,7 +1324,7 @@ test_cometfluids_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_cometfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
@@ -1381,7 +1382,7 @@ test_earthsph_start:
 	$(MAKE) test_earthsph_check
 
 test_earthsph_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
+	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,8,600,300
 	${MAKE} BATSRUS
 	make PIDL
 
@@ -1392,7 +1393,7 @@ test_earthsph_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_earthsph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
@@ -1416,7 +1417,7 @@ test_amr:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
-	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
+	./Config.pl -openmp -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1425,7 +1426,7 @@ test_amr_rundir: test_rundir
 		cp Param/AMR/PARAM.in PARAM.in
 
 test_amr_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amr_check:
@@ -1458,7 +1459,7 @@ test_amrsph_rundir: test_rundir
 		cp Param/AMR/PARAM.in.sph PARAM.in
 
 test_amrsph_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amrsph_check:
@@ -1482,7 +1483,7 @@ test_2bodyplot:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_2bodyplot_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,8,8,700,300
+	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,8,700,300
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1492,7 +1493,7 @@ test_2bodyplot_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_2bodyplot_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
@@ -1530,7 +1531,7 @@ test_anisotropic:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_anisotropic_compile:
-	./Config.pl -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
+	./Config.pl -openmp -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1538,7 +1539,7 @@ test_anisotropic_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.anisope.fastwave PARAM.in
 
 test_anisotropic_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_anisotropic_check:
@@ -1572,7 +1573,7 @@ test_cometCGhd_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_cometCGhd_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGhd_check:
@@ -1599,7 +1600,7 @@ test_cometCGfluids_start:
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
-	./Config.pl -u=CometCGfluids -e=MhdCometCG3FluidsPe -g=4,4,4,400,1
+	./Config.pl -openmp -u=CometCGfluids -e=MhdCometCG3FluidsPe -g=4,4,4,400,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1611,7 +1612,7 @@ test_cometCGfluids_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_cometCGfluids_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGfluids_check:
@@ -1634,7 +1635,7 @@ test_region2d:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_region2d_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,8,1,700,1
+	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,1,700,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1643,13 +1644,13 @@ test_region2d_rundir: test_rundir
 	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 
 test_region2d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/2d
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl_lnr PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
 
 test_region2d_check:
@@ -1696,7 +1697,7 @@ test_fivemoment_alfven:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_alfven_compile:
-	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,20,1
+	./Config.pl -openmp -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1705,7 +1706,7 @@ test_fivemoment_alfven_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_fivemoment_alfven_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_alfven_check:
@@ -1727,7 +1728,7 @@ test_fivemoment_shock:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_shock_compile:
-	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,20,1
+	./Config.pl -openmp -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1736,7 +1737,7 @@ test_fivemoment_shock_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_fivemoment_shock_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
@@ -1758,7 +1759,7 @@ test_fivemoment_langmuir:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_langmuir_compile:
-	./Config.pl -u=Waves -e=FiveMoment -g=50,50,1,10,1
+	./Config.pl -openmp -u=Waves -e=FiveMoment -g=50,50,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1767,7 +1768,7 @@ test_fivemoment_langmuir_rundir: test_rundir
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_fivemoment_langmuir_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_langmuir_check:
