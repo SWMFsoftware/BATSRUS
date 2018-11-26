@@ -53,11 +53,11 @@ contains
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
 
-    use ModUserInterface ! user_calc_sources
+    use ModUserInterface,   ONLY: user_calc_sources
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iVar
+    integer :: i, j, k, iVar, iFluid
     real :: Pe, Pwave, DivU
     real :: Coef
 
@@ -98,11 +98,11 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     Source_VC = 0.0
-
+    
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
-       do iFluid = 1, nFluid
-          call select_fluid
+       do iFluid=1,nFluid
+          call select_fluid(iFluid)
 
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
@@ -110,7 +110,7 @@ contains
              if(UseViscosity)call set_visco_factor_cell(iBlock)
 
              ! Source terms for anisotropic pressure equations
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 DoTestCell = DoTest .and. i==iTest .and. &
                      j==jTest .and. k==kTest
 
@@ -130,7 +130,7 @@ contains
                    ! Calculate unit vector parallel with full B field
                    b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                    if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                   b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+                   b_D = b_D/norm2(b_D)
 
                    ! Calculate b.grad u.b
                    bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
@@ -193,7 +193,7 @@ contains
           end if
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
              DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
@@ -218,7 +218,7 @@ contains
     end if
 
     if(UseWavePressure)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseMultiIon)then
@@ -301,8 +301,8 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
              call apportion_coronal_heating(i, j, k, iBlock, &
-                  CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
-                  QePerQtotal)
+                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
+                  QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
@@ -373,10 +373,10 @@ contains
              ! Calculate unit vector parallel with full B field
              b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-             b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+             b_D = b_D/norm2(b_D)
 
              ! Calculate b.grad u.b
-             bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+             bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
              ! p parallel: -2*ppar*b.(b.(Grad U))
              Source_VC(Pepar_,i,j,k) = Source_VC(Pepar_,i,j,k) &
@@ -422,7 +422,7 @@ contains
        end do; end do; end do
        if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
     end if
-
+    
     if(IsRzGeometry)then
        ! The following geometrical source terms are added for the MHD equations
        ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
@@ -635,8 +635,8 @@ contains
     end if
 
     ! These source terms apply to all the fluids
-    do iFluid = 1, nFluid
-       call select_fluid
+    do iFluid=1,nFluid
+       call select_fluid(iFluid)
        if(UseGravity)then
           ! Add gravitational force
           if(GravityDir == 0)then
@@ -652,10 +652,10 @@ contains
              end do; end do; end do
 
              if(UseBody2)then
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do k=1,nK; do j=1,nJ; do i=1,nI
                    if(.not.true_cell(i,j,k,iBlock)) CYCLE
                    ForcePerRho_D = Gbody2 &
-                        * (Xyz_DGB(:,i,j,k,iBlock)-(/xBody2,yBody2,zBody2/)) &
+                        * (Xyz_DGB(:,i,j,k,iBlock)-[xBody2,yBody2,zBody2]) &
                         / r2_BLK(i,j,k,iBlock)**3
                    Source_VC(iRhoUx:iRhoUz,i,j,k) = &
                         Source_VC(iRhoUx:iRhoUz,i,j,k) &
@@ -667,7 +667,7 @@ contains
              end if
           else
              iRhoUGrav = iRhoUx - 1 + GravityDir
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &
                      + Gbody*State_VGB(iRho,i,j,k,iBlock)
@@ -735,7 +735,6 @@ contains
           Source_VC(HypE_,i,j,k) = Clight*C2light * &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
        end do; end do; end do
-
     end if
 
     if(UseEfield .and. .not.UsePointImplicit)then
@@ -753,9 +752,9 @@ contains
 
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
-
+    
     if(SignB_>1 .and. DoThinCurrentSheet)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
@@ -773,9 +772,9 @@ contains
        call user_calc_sources(iBlock)
        if(DoTest) call write_source('After user sources')
     end if
-
+    
     if(DoTest) call write_source('final')
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================

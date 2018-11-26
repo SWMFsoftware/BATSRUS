@@ -86,10 +86,10 @@ module ModFieldTrace
 
   ! Conversion matrix between SM and GM coordinates
   ! (to be safe initialized to unit matrix)
-  real, public :: GmSm_DD(3,3) = reshape( (/ &
+  real, public :: GmSm_DD(3,3) = reshape( [ &
        1.,0.,0., &
        0.,1.,0., &
-       0.,0.,1. /), (/3,3/) )
+       0.,0.,1. ], [3,3] )
 
   ! Local variables --------------------------------
   real:: R2_raytrace=1.
@@ -105,7 +105,7 @@ module ModFieldTrace
 
   ! Number of rays per dimension on the starting grid
   ! This is needed for DoExtractRay = .true. only
-  integer :: nRay_D(4) = (/0, 0, 0, 0/)
+  integer :: nRay_D(4) = [0, 0, 0, 0]
 
   ! The vector field to trace: B/U/J
   character         :: NameVectorField = 'B'
@@ -475,7 +475,7 @@ contains
     DoMapRay       = .false.
     DoIntegrateRay = .false.
     DoExtractRay   = .false.
-    nRay_D         = (/ nI, nJ, nK, nBlock /)
+    nRay_D         = [ nI, nJ, nK, nBlock ]
     NameVectorField = 'B'
 
     ! (Re)initialize CON_ray_trace
@@ -513,8 +513,8 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           oktest_ray = DoTest .and. &
-               all( (/i,j,k,iBlock,iProc/)== &
-               (/iTest,jTest,kTest,iBlockTest,iProcTest/) )
+               all( [i,j,k,iBlock,iProc]== &
+               [iTest,jTest,kTest,iBlockTest,iProcTest] )
 
           do iRay = 1,2
              ! Short cut for inner and false cells
@@ -528,10 +528,10 @@ contains
              if(oktest_ray)write(*,*)'calling follow_ray iProc,iRay=',iProc,iRay
 
              ! Follow ray in direction iRay
-             call follow_ray(iRay, (/i,j,k,iBlock/), Xyz_DGB(:,i,j,k,iBlock))
+             call follow_ray(iRay, [i,j,k,iBlock], Xyz_DGB(:,i,j,k,iBlock))
 
-          end do             ! iRay
-       end do          ! iBlock
+          end do ! iRay
+       end do    ! iBlock
     end do; end do; end do  ! i, j, k
 
     ! Do remaining rays passed from other PE-s
@@ -573,7 +573,7 @@ contains
 
     ! This subroutine is a simple interface for the last call to follow_ray
     !--------------------------------------------------------------------------
-    call follow_ray(0, (/0, 0, 0, 0/), (/ 0., 0., 0. /))
+    call follow_ray(0, [0, 0, 0, 0], [ 0., 0., 0. ])
 
   end subroutine finish_ray
   !============================================================================
@@ -946,11 +946,11 @@ contains
       !------------------------------------------------------------------------
       if(DoIntegrateRay)then
          ! Test the ray starting from a given Lat-Lon grid point
-         oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iLatTest,iLonTest/))
+         oktest_ray = DoTest .and. all(iStart_D(1:2) == [iLatTest,iLonTest])
       else if(DoTraceRay)then
          ! Test the ray starting from a given grid cell
          oktest_ray = DoTest .and. iProcStart == iProcTest .and. &
-              all(iStart_D == (/iTest,jTest,kTest,iBlockTest/))
+              all(iStart_D == [iTest,jTest,kTest,iBlockTest])
       else
          ! Check the ray indexed in line plot files.
          oktest_ray = DoTest .and. iStart_D(1) == iTest
@@ -1088,8 +1088,8 @@ contains
     ! Set the boundaries of the control volume in block coordinates
     ! We go out to the first ghost cell centers for sake of speed and to avoid
     ! problems at the boundaries
-    xmin=(/   0.0,   0.0,   0.0/)
-    xmax=(/nI+1.0,nJ+1.0,nK+1.0/)
+    xmin = [0.0, 0.0, 0.0]
+    xmax = [nI+1.0, nJ+1.0, nK+1.0]
 
     ! Go out to the block interface at the edges of the computational domain
     where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmax-1.0) > XyzMax_D)xmax = xmax - 0.5
@@ -1118,7 +1118,7 @@ contains
     dxOpt = 0.01*dlMax
 
     ! Reference Ijk
-    Ijk_D = (/ nI/2, nJ/2, nK/2 /)
+    Ijk_D = [ nI/2, nJ/2, nK/2 ]
 
     ! Length and maximum length of ray within control volume
     nSegment = 0
@@ -1297,9 +1297,9 @@ contains
 
        ! Step size in MH units  !!! Use simpler formula for cubic cells ???
        if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
-          dLength = abs(dl)*sqrt( sum((bNormMid_D*Dxyz_D)**2) )
+          dLength = abs(dl)*norm2(bNormMid_D*Dxyz_D)
        else
-          dLength = sqrt( sum((XyzCur_D - XyzIni_D)**2) )
+          dLength = norm2(XyzCur_D - XyzIni_D)
        end if
 
        ! Update ray length
@@ -1329,7 +1329,7 @@ contains
                +          dz2*Extra_VGB(:,i1,j1,k1,iBlock)))
 
           ! Calculate physical step size divided by physical field strength
-          InvBDl = dLength / sqrt( sum(b_D**2) )
+          InvBDl = dLength / norm2(b_D)
 
           ! Intgrate field line volume = \int dl/B
           RayIntegral_V(InvB_) = RayIntegral_V(InvB_) + InvBDl
@@ -1376,8 +1376,8 @@ contains
                         'Inside R_raytrace at me,iBlock,nSegment,IjkCur_D,XyzCur_D=',&
                         iProc,iBlock,nSegment,IjkCur_D,XyzCur_D
 
-                   rCur=sqrt(r2Cur)
-                   rIni=sqrt(sum(XyzIni_D**2))
+                   rCur = sqrt(r2Cur)
+                   rIni = norm2(XyzIni_D)
 
                    ! The fraction of the last step inside body is estimated from
                    ! the radii.
@@ -1523,7 +1523,7 @@ contains
          RayIntegral_V(Z0x_:Z0y_) = XySm_D
 
          ! Assign Z0b_ as the middle point value of the magnetic field
-         RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
+         RayIntegral_V(Z0b_) = norm2(b_D)
          if(oktest_ray)then
             write(*,'(a,3es12.4)') &
                  'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
@@ -1578,14 +1578,14 @@ contains
       ! Set bNorm_D only if the magnetic field is not very small.
       ! Otherwise continue in the previous direction.
       if(.not.(UseOldMethodOfRayTrace .and. IsCartesianGrid))then
-         AbsB = sqrt(sum(b_D**2))
+         AbsB = norm2(b_D)
          if(AbsB > cTiny) bNorm_D = b_D/AbsB
          RETURN
       end if
 
       ! Stretch according to normalized coordinates
       Dir0_D = b_D/Dxyz_D
-      AbsB = sqrt(sum(Dir0_D**2))
+      AbsB = norm2(Dir0_D)
       if(AbsB > cTiny)bNorm_D = Dir0_D/AbsB
 
     end subroutine interpolate_b
@@ -1928,7 +1928,7 @@ contains
     ! spherical grid.
 
     real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
-    integer :: iBlock, iLat, iLon, iHemisphere, iRay
+    integer :: iBlock, iFluid, iLat, iLon, iHemisphere, iRay
     integer :: iProcFound, iBlockFound, i, j, k
     integer :: nStateVar
     integer :: iError
@@ -1963,7 +1963,7 @@ contains
          DoIntegrateRay,DoExtractRay,DoTraceRay
 
     if(DoExtractRay)then
-       nRay_D  = (/ nLat, nLon, 0, 0 /)
+       nRay_D  = [ nLat, nLon, 0, 0 ]
        DoExtractState = .true.
        DoExtractUnitSi= .true.
        nStateVar = 4 + nVar
@@ -2080,7 +2080,7 @@ contains
                 write(*,'(a,3es12.4)')'Xyz_D    =',Xyz_D
              end if
 
-             call follow_ray(iRay, (/iLat, iLon, 0, iBlockFound/), Xyz_D)
+             call follow_ray(iRay, [iLat, iLon, 0, iBlockFound], Xyz_D)
 
           end if
        end do
@@ -2138,7 +2138,7 @@ contains
 
     real    :: Xyz_D(3)
     integer :: iPt
-    integer :: iProcFound, iBlockFound, i, j, k, iBlock
+    integer :: iProcFound, iBlockFound, i, j, k, iBlock, iFluid
     integer :: nStateVar
     integer :: iError
 
@@ -2169,7 +2169,7 @@ contains
          DoIntegrateRay,DoExtractRay,DoTraceRay
 
     if(DoExtractRay)then
-       nRay_D  = (/ 2, nPts, 0, 0 /)
+       nRay_D  = [ 2, nPts, 0, 0 ]
        DoExtractState = .true.
        DoExtractUnitSi= .true.
        nStateVar = 4 + nVar
@@ -2239,8 +2239,8 @@ contains
 
        ! If location is on this PE, follow and integrate ray
        if(iProc == iProcFound)then
-          call follow_ray(1, (/1, iPt, 0, iBlockFound/), Xyz_D)
-          call follow_ray(2, (/2, iPt, 0, iBlockFound/), Xyz_D)
+          call follow_ray(1, [1, iPt, 0, iBlockFound], Xyz_D)
+          call follow_ray(2, [2, iPt, 0, iBlockFound], Xyz_D)
        end if
     end do
 
@@ -2536,8 +2536,8 @@ contains
          TimeIn       = time_simulation, &
          nStepIn      = n_step, &
          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
-         CoordMinIn_D = (/rMin,   0.0/), &
-         CoordMaxIn_D = (/rMax, 360.0/), &
+         CoordMinIn_D = [rMin,   0.0], &
+         CoordMaxIn_D = [rMax, 360.0], &
          VarIn_VII  = RayMap_DSII(:,1,:,:))
 
     NameFile = trim(NamePlotDir)//"map_south"//NameFileEnd
@@ -2548,8 +2548,8 @@ contains
          TimeIn       = time_simulation, &
          nStepIn      = n_step, &
          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
-         CoordMinIn_D = (/rMin,   0.0/), &
-         CoordMaxIn_D = (/rMax, 360.0/), &
+         CoordMinIn_D = [rMin,   0.0], &
+         CoordMaxIn_D = [rMax, 360.0], &
          VarIn_VII  = RayMap_DSII(:,2,:,:))
 
     deallocate(RayMap_DSII)
@@ -2691,7 +2691,7 @@ contains
        end do
     end if
 
-    nRay_D  = (/ 2, nRadius, nLon, 0 /)
+    nRay_D  = [ 2, nRadius, nLon, 0 ]
     DoExtractState = .true.
     DoExtractUnitSi= .true.
     nStateVar = 4 + nVar
@@ -2742,8 +2742,8 @@ contains
           ! If location is on this PE, follow and integrate ray
           if(iProc == iProcFound)then
 
-             call follow_ray(1, (/1, iR, iLon, iBlockFound/), Xyz_D)
-             call follow_ray(2, (/2, iR, iLon, iBlockFound/), Xyz_D)
+             call follow_ray(1, [1, iR, iLon, iBlockFound], Xyz_D)
+             call follow_ray(2, [2, iR, iLon, iBlockFound], Xyz_D)
 
           end if
        end do
@@ -2922,7 +2922,7 @@ contains
     DoMapRay       = .false.
     DoIntegrateRay = .false.
     DoExtractRay   = .true.
-    nRay_D = (/ nLine, 0, 0, 0 /)
+    nRay_D = [ nLine, 0, 0, 0 ]
 
     ! (Re)initialize CON_ray_trace
     call ray_init(iComm)
@@ -2989,7 +2989,7 @@ contains
           else
              iRay = 2
           end if
-          call follow_ray(iRay, (/iLine, 0, 0, iBlockFound/), Xyz_D)
+          call follow_ray(iRay, [iLine, 0, 0, iBlockFound], Xyz_D)
        end if
     end do
 
@@ -3415,29 +3415,29 @@ contains
                 if(SaveIntegrals) Integrals = -1.
 
                 call line_get(nVarOut, nPoint)
-                if(nPoint>0)then
+                if(nPoint > 0)then
                    ! PlotVar_VI variables = 'iLine l x y z rho ux uy uz bx by bz p'
                    allocate(PlotVar_VI(0:nVarOut, nPoint))
                    call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
-                   k=0
+                   k = 0
                    do iPoint = 1, nPoint
-                      nLine=PlotVar_VI(0,iPoint)
+                      nLine = PlotVar_VI(0,iPoint)
                       if(k == nLine) CYCLE
                       Odd=.true.;  if( (nLine/2)*2 == nLine )Odd=.false.
 
                       !\\
                       ! finish previous line
-                      if(k/=0)then
+                      if(k /= 0)then
                          if(Odd)then
                             iEnd = iPoint-1
                             Map2 = .false.
                             Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
-                            if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map2 = .true.
+                            if(norm2(Xyz_D) < 1.5*rBody) Map2 = .true.
 
                             if(Map1 .and. Map2)then
-                               iLC=k/2
-                               jStart=iStart; jMid=iMid; jEnd=iEnd
+                               iLC = k/2
+                               jStart = iStart; jMid = iMid; jEnd = iEnd
                                if(SaveIntegrals)then
                                   Integrals(1) = &
                                        sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
@@ -3453,13 +3453,13 @@ contains
                             iEnd = iPoint-1
                             Map1 = .false.
                             Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
-                            if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map1 = .true.
+                            if(norm2(Xyz_D) < 1.5*rBody) Map1 = .true.
                          end if
                       end if
 
                       !\\
                       ! start new line counters
-                      k=nLine
+                      k = nLine
                       if(Odd)then
                          iStart = iPoint
                       else
@@ -3473,11 +3473,11 @@ contains
                       iEnd = nPoint
                       Map2 = .false.
                       Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
-                      if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)Map2 = .true.
+                      if(norm2(Xyz_D) < 1.5*rBody) Map2 = .true.
 
                       if(Map1 .and. Map2)then
-                         iLC=k/2
-                         jStart=iStart; jMid=iMid; jEnd=iEnd
+                         iLC = k/2
+                         jStart = iStart; jMid = iMid; jEnd = iEnd
                          if(SaveIntegrals)then
                             Integrals(1) = &
                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
@@ -3494,7 +3494,7 @@ contains
                    !\\
                    ! write only last closed
                    if(iD == nD .and. iLC /= -9)then
-                      j=(jEnd-jStart)+2*nTP
+                      j = (jEnd-jStart)+2*nTP
                       write(UnitTmp_,'(a,f7.2,a,a,i8,a)') 'ZONE T="LCB lon=',Lon,'"', &
                            ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
                       Xyz_D = PlotVar_VI(2:4,jMid-1) * Si2No_V(UnitX_)
@@ -3665,10 +3665,10 @@ contains
              end if
              write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "Lat", "Lon", "OC"'
 
-             k=0
-             LonOC=-1.
+             k = 0
+             LonOC = -1.
              do iPoint = 1, nPoint
-                nLine=PlotVar_VI(0,iPoint)
+                nLine = PlotVar_VI(0,iPoint)
                 if(k /= nLine)then
                    !\\
                    ! finish previous line
@@ -3676,16 +3676,12 @@ contains
                       iEnd = iPoint-1
                       MapDown = .false.
                       Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
-                      if(sqrt(Xyz_D(1)**2 + Xyz_D(2)**2 + Xyz_D(3)**2)<1.5*rBody)MapDown = .true.
-                      j=(1+iEnd-iStart)+(nTP+1)
-                      if(MapDown)j=j+(nTP+1)
-                      OC=-1; if(MapDown)OC=2
-                      if(MapDown .and. LonOC/=Lon)OC=1
+                      if(norm2(Xyz_D) < 1.5*rBody) MapDown = .true.
+                      j = (1+iEnd-iStart) + (nTP+1)
+                      if(MapDown) j = j + (nTP+1)
+                      OC = -1; if(MapDown) OC = 2
+                      if(MapDown .and. LonOC /= Lon) OC = 1
 
-                      !\
-                      !                     write(UnitTmp_,'(a,2f7.2,a,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
-                      !                          ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
-                      !-
                       write(UnitTmp_,'(a,2f7.2,a,a,f7.2,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
                            ', STRANDID=1, SOLUTIONTIME=',Lon, &
                            ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
@@ -3754,12 +3750,12 @@ contains
              if(k/=0)then
                 iEnd = nPoint
                 MapDown = .false.
-                Xyz_D=PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
-                if(sqrt(sum(Xyz_D**2))<1.5*rBody) MapDown = .true.
-                j=(1+iEnd-iStart)+(nTP+1)
-                if(MapDown)j=j+(nTP+1)
-                OC=-1; if(MapDown)OC=2
-                if(MapDown .and. LonOC/=Lon)OC=1
+                Xyz_D = PlotVar_VI(2:4,iEnd) * Si2No_V(UnitX_)
+                if(norm2(Xyz_D) < 1.5*rBody) MapDown = .true.
+                j = (1+iEnd-iStart)+(nTP+1)
+                if(MapDown) j = j + (nTP+1)
+                OC = -1; if(MapDown) OC = 2
+                if(MapDown .and. LonOC /= Lon) OC = 1
                 !\
                 !              write(UnitTmp_,'(a,2f7.2,a,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
                 !                   ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
@@ -3923,8 +3919,8 @@ contains
 
     ! Control volume limits in local coordinates
     real, dimension(3), parameter :: &
-         xmin=(/   0.5,   0.5,   0.5/),&
-         xmax=(/nI+0.5,nJ+0.5,nK+0.5/)
+         xmin=[   0.5,   0.5,   0.5],&
+         xmax=[nI+0.5,nJ+0.5,nK+0.5]
 
     ! Stride for ix
     integer :: i_stride
@@ -4068,39 +4064,30 @@ contains
                    if(neiLEV(1,iBlock)==NOBLK.and.ix==   1)CYCLE
                    if(neiLEV(2,iBlock)==NOBLK.and.ix==nI+1)CYCLE
 
-                   ! oktest_ray = DoTest .and. iBlockTest==iBlock .and. &
-                   !     ix==iTest.and.iy==jTest.and.iz==kTest
-
                    if(oktest_ray)write(*,*)'TESTING RAY: me,iBlock,ix,iy,iz,xx',&
                         iProc,iBlock,ix,iy,iz,&
                         Xyz_DGB(:,ix,iy,iz,iBlock)-0.5*CellSize_DB(:,iBlock)
 
-                   ! Debug
-                   !                  if(DoTest) then
-                   !                     oktest_ray = .true.
-                   !                     write(*,*)'iBlock,ix,iy,iz=',iBlock,ix,iy,iz
-                   !                  end if
-
                    if(ray_iter==0)then
                       do iray=1,2
                          ! Follow ray in direction iray
-                         iface=follow_fast(.true.,ix-0.5,iy-0.5,iz-0.5)
+                         iface = follow_fast(.true.,ix-0.5,iy-0.5,iz-0.5)
 
                          ! Assign value to rayface
                          call assign_ray(.true.,rayface(:,iray,ix,iy,iz,iBlock))
 
                          ! Memorize ray integration results
-                         rayend_ind(1,iray,ix,iy,iz,iBlock)=iface
+                         rayend_ind(1,iray,ix,iy,iz,iBlock) = iface
                          if(iface>0)then
                             select case(iface)
                             case(1,2)
-                               rayend_ind(2:3,iray,ix,iy,iz,iBlock)=(/j1,k1/)
+                               rayend_ind(2:3,iray,ix,iy,iz,iBlock) = [j1,k1]
                             case(3,4)
-                               rayend_ind(2:3,iray,ix,iy,iz,iBlock)=(/i1,k1/)
+                               rayend_ind(2:3,iray,ix,iy,iz,iBlock) = [i1,k1]
                             case(6,5)
-                               rayend_ind(2:3,iray,ix,iy,iz,iBlock)=(/i1,j1/)
+                               rayend_ind(2:3,iray,ix,iy,iz,iBlock) = [i1,j1]
                             end select
-                            rayend_pos(:,iray,ix,iy,iz,iBlock)=weight
+                            rayend_pos(:,iray,ix,iy,iz,iBlock) = weight
                          end if
                       end do
 !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -4137,17 +4124,7 @@ contains
                                i1=rayend_ind(2,iray,ix,iy,iz,iBlock); i2=i1+1
                                j1=rayend_ind(3,iray,ix,iy,iz,iBlock); j2=j1+1
                             end select
-                            ! Debug
-                            ! if(oktest_ray)then
-                            !   write(*,*)'before rayface_interpolate:'
-                            !   write(*,*)'ix,iy,iz,iBlock=',ix,iy,iz,iBlock
-                            !   write(*,*)'i1..k2=',i1,i2,j1,j2,k1,k2
-                            !   write(*,*)'rayface=',&
-                            !        rayface(:,iray,i1:i2,j1:j2,k1:k2,iBlock)
-                            !   write(*,*)'weight=',&
-                            !        rayend_pos(:,iray,ix,iy,iz,iBlock)
-                            ! end if
-
+ 
                             call rayface_interpolate(&
                                  rayface(:,iray,i1:i2,j1:j2,k1:k2,iBlock),&
                                  rayend_pos(:,iray,ix,iy,iz,iBlock),4,&
@@ -4155,17 +4132,6 @@ contains
 
                             rayface(:,iray,ix,iy,iz,iBlock)=qqray
 
-                            ! if(oktest_ray)then
-                            !   write(*,*)'after rayface_interpolate:'
-                            !   write(*,*)'ix,iy,iz,iBlock=',ix,iy,iz,iBlock
-                            !   write(*,*)'i1..k2=',i1,i2,j1,j2,k1,k2
-                            !   write(*,*)'rayface=',&
-                            !        rayface(:,iray,i1:i2,j1:j2,k1:k2,iBlock)
-                            !   write(*,*)'weight=',&
-                            !        rayend_pos(:,iray,ix,iy,iz,iBlock)
-                            !   write(*,*)'rayface=',&
-                            !        rayface(:,iray,ix,iy,iz,iBlock)
-                            ! end if
                          end if
                       end do
                    end if ! ray_iter==0
@@ -4180,32 +4146,15 @@ contains
        call ray_pass
        call timing_stop('ray_pass')
 
-       ! if(DoTest)then
-       !   write(*,*)'ray_trace finishing ray_pass'
-       !   write(*,*)'rayface(:,1)=',rayface(:,1,iTest,jTest,kTest,iBlockTest)
-       !   write(*,*)'rayface(:,2)=',rayface(:,2,iTest,jTest,kTest,iBlockTest)
-       ! end if
+       ray_iter = ray_iter + 1
 
-!!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-!!$!     if(ray_iter==0)then
-!!$        do iBlock=1,nBlock
-!!$           if(Unused_B(iBlock))CYCLE
-!!$           do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
-!!$              call print_test(ray_iter)
-!!$           end do; end do; end do
-!!$        end do
-!!$!     end if
-!!$//////////////////////////////
-
-       ray_iter=ray_iter+1
-
-       if(oktime.and.iProc==0.and.ray_iter==1)then
+       if(oktime .and. iProc == 0 .and. ray_iter == 1)then
           write(*,'(a)',ADVANCE='NO') 'first iteration:'
           call timing_show('ray_trace',1)
        end if
 
        ! Check if we are done by checking for significant changes in rayface
-       done_me=all(abs(ray(:,:,:,:,:,1:nBlock) - &
+       done_me = all(abs(ray(:,:,:,:,:,1:nBlock) - &
             rayface(:,:,:,:,:,1:nBlock)) < dray_min)
 
        call MPI_allreduce(done_me,done,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
@@ -4421,7 +4370,7 @@ contains
       integer, intent(in) :: inInt
 
       !------------------------------------------------------------------------
-      if(  all(abs( (/4.0,6.0,-6.5/) &
+      if(  all(abs( [4.0,6.0,-6.5] &
            - Xyz_DGB(:,ix,iy,iz,iBlock) + 0.5*CellSize_DB(:,iBlock)) < 0.01))then
          write(*,'(i3,a,i3,a,i4,a,3i2,a,3f9.2,a,6i3,a,6f10.3)') inInt, &
               ' DEBUG LOOPRAYFACE: PE=',iProc,' BLK=',iBlock,' loc=',ix,iy,iz,&
@@ -4506,9 +4455,9 @@ contains
 
             xx = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x - 1.)
 
-            r2=sum(xx**2)
+            r2 = sum(xx**2)
 
-            if(r2<=R2_raytrace)then
+            if(r2 <= R2_raytrace)then
 
                if(oktest_ray)write(*,*)&
                     'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
@@ -4516,22 +4465,23 @@ contains
 
                if(r2<=rIonosphere2)then
                   if(nsegment==0)then
-                     qface=ray_body_
+                     qface = ray_body_
                      if(oktest_ray)write(*,*)&
                           'Initial point inside rIonosphere at me,iBlock,xx=',&
                           iProc,iBlock,xx
                   else
-                     r=sqrt(r2)
-                     xx_ini = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x_ini-1.)
+                     r = sqrt(r2)
+                     xx_ini = Xyz_DGB(:,1,1,1,iBlock) + &
+                        CellSize_DB(:,iBlock)*(x_ini-1.)
 
-                     r_ini=sqrt(sum(xx_ini**2))
+                     r_ini = norm2(xx_ini)
                      ! Interpolate to the surface linearly along last segment
-                     xx=(xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r)) &
+                     xx = (xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r)) &
                           /(r_ini-r)
                      ! Normalize xx in radial direction
-                     xx=rIonosphere*xx/sqrt(sum(xx**2))
-                     x=xx
-                     qface=ray_iono_
+                     xx = rIonosphere*xx/norm2(xx)
+                     x = xx
+                     qface = ray_iono_
                   end if
                   EXIT
                end if
@@ -4776,9 +4726,9 @@ contains
 
       ! Determine cell indices corresponding to location qx
 
-      i1=floor(qx(1)+0.5); i2=i1+1
-      j1=floor(qx(2)+0.5); j2=j1+1
-      k1=floor(qx(3)+0.5); k2=k1+1
+      i1 = floor(qx(1)+0.5); i2 = i1 + 1
+      j1 = floor(qx(2)+0.5); j2 = j1 + 1
+      k1 = floor(qx(3)+0.5); k2 = k1 + 1
 
       if(i1<0.or.i2>nI+2.or.j1<0.or.j2>nJ+2.or.k1<0.or.k2>nK+2)then
          write(*,*)'interpolate_bb_node: iProc, iBlock, qx=',iProc,iBlock, qx
@@ -4792,33 +4742,33 @@ contains
       if(UseB0)then
          call get_b0(xx, qb)
       else
-         qb=0.00
+         qb = 0.00
       end if
 
       ! Make sure that the interpolation uses inside indexes only
 
-      i1=max(1,i1)   ; j1=max(1,j1);    k1=max(1,k1)
-      i2=min(nI+1,i2); j2=min(nJ+1,j2); k2=min(nK+1,k2)
+      i1 = max(1,i1)   ; j1 = max(1,j1);    k1 = max(1,k1)
+      i2 = min(nI+1,i2); j2 = min(nJ+1,j2); k2 = min(nK+1,k2)
 
       ! Distances relative to the nodes
 
-      dx1=qx(1)+0.5-i1; dx2=1.-dx1
-      dy1=qx(2)+0.5-j1; dy2=1.-dy1
-      dz1=qx(3)+0.5-k1; dz2=1.-dz1
+      dx1 = qx(1)+0.5-i1; dx2 = 1.-dx1
+      dy1 = qx(2)+0.5-j1; dy2 = 1.-dy1
+      dz1 = qx(3)+0.5-k1; dz2 = 1.-dz1
 
       ! Add in node interpolated B1 values and take aspect ratios into account
 
-      qb(1)=(qb(1)+interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBlock)
-      qb(2)=(qb(2)+interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBlock)
-      qb(3)=(qb(3)+interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBlock)
+      qb(1) = (qb(1)+interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBlock)
+      qb(2) = (qb(2)+interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBlock)
+      qb(3) = (qb(3)+interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBlock)
 
       ! Normalize
-      qbD=sqrt(qb(1)**2 + qb(2)**2 + qb(3)**2)
+      qbD = norm2(qb)
 
-      if(qbD>smallB)then
-         qb=qb/qbD
+      if(qbD > smallB)then
+         qb = qb/qbD
       else
-         qb=0.
+         qb = 0.
       end if
 
     end subroutine interpolate_bb_node
@@ -4897,13 +4847,13 @@ contains
       ! Take aspect ratio of cells into account
       qb = qb / CellSize_DB(:,iBlock)
 
-      if(sum(abs(qb))==0.0)then
+      if(sum(abs(qb)) == 0.0)then
          write(*,*)'GM_ERROR in ray_trace::evaluate_bb: qb==0 at qx=',qx
          call stop_mpi('GM_ERROR in ray_trace::evaluate_bb')
       end if
 
       ! Normalize
-      qb=qb/sqrt(sum(qb**2))
+      qb = qb/norm2(qb)
 
     end subroutine evaluate_bb
     !==========================================================================
@@ -5237,8 +5187,8 @@ contains
 
     ! Control volume limits in local coordinates
     real, dimension(3), parameter :: &
-         xmin=(/   0.5,   0.5,   0.5/),&
-         xmax=(/nI+0.5,nJ+0.5,nK+0.5/)
+         xmin=[   0.5,   0.5,   0.5],&
+         xmax=[nI+0.5,nJ+0.5,nK+0.5]
 
     ! Current position of ray in normalized and physical coordinates
     real, dimension(3) :: x, xx
@@ -5280,42 +5230,42 @@ contains
     fvol=0.; rvol=0.; pvol=0.
 
     ! Set flag if checking on the ionosphere is necessary
-    check_inside=Rmin_BLK(iBlock)<R_raytrace
+    check_inside = Rmin_BLK(iBlock)<R_raytrace
 
     ! Step size limits
-    dl_max=0.05
-    dl_min=0.01
-    dl_tiny=1.e-6
+    dl_max = 0.05
+    dl_min = 0.01
+    dl_tiny = 1.e-6
 
     do iray=1,2
        if(dbg)write(*,*)'Starting iray=',iray
 
        ! Initial value
-       dl_next=sign(dl_max,1.5-iray)
+       dl_next = sign(dl_max,1.5-iray)
 
        ! Accuracy in terms of x in normalized coordinates
-       dx_opt=0.01
+       dx_opt = 0.01
 
        ! Length and maximum length of ray within control volume
-       l=0
-       lmax=10*maxval(xmax-xmin)
-       nsegment=0
+       l = 0
+       lmax = 10*maxval(xmax-xmin)
+       nsegment = 0
 
        ! Initial position
-       x = 1.+( (/x_0, y_0, z_0/) - Xyz_DGB(:,1,1,1,iBlock))/CellSize_DB(:,iBlock)
+       x = 1.+( [x_0, y_0, z_0] - Xyz_DGB(:,1,1,1,iBlock))/CellSize_DB(:,iBlock)
 
-       end_inside=.false.
-       local_fvol=0.; local_rvol=0.; local_pvol=0.
+       end_inside = .false.
+       local_fvol = 0.; local_rvol = 0.; local_pvol = 0.
 
        if(dbg)write(*,*)'  initial values: dl_next=',dl_next,' dx_opt=',dx_opt, &
             ' lmax=',lmax,' x=',x,' check_inside=',check_inside
-       if(iray==1 .or. check_inside)then
+       if(iray == 1 .or. check_inside)then
           call do_integration
 
-          if(iray==1 .or. (iray==2 .and. end_inside)) then
-             fvol=fvol+local_fvol
-             rvol=rvol+local_rvol
-             pvol=pvol+local_pvol
+          if(iray == 1 .or. (iray == 2 .and. end_inside)) then
+             fvol = fvol + local_fvol
+             rvol = rvol + local_rvol
+             pvol = pvol + local_pvol
           end if
        end if
 
@@ -5399,11 +5349,10 @@ contains
          ! amount2add = abs( dl * CellSize_DB(x_,iBlock))/bNORM
 
          ! dl/|B| for a cell with arbitrary aspect ratio
-         amount2add = abs(dl) * sqrt( &
-              sum( (b_mid*CellSize_DB(:,iBlock))**2 )) / bNORM
-         local_fvol=local_fvol+amount2add
-         local_rvol=local_rvol+amount2add*rNORM
-         local_pvol=local_pvol+amount2add*pNORM
+         amount2add = abs(dl) * norm2(b_mid*CellSize_DB(:,iBlock)) / bNORM
+         local_fvol = local_fvol + amount2add
+         local_rvol = local_rvol + amount2add*rNORM
+         local_pvol = local_pvol + amount2add*pNORM
 
          if(dbg)then
             write(*,*)'  take step:',CellSize_DB(:,iBlock), dl
@@ -5411,8 +5360,8 @@ contains
             write(*,*)'  take step and add:',amount2add,rNORM,pNORM
          end if
 
-         nsegment=nsegment+1
-         l=l+abs(dl)
+         nsegment = nsegment + 1
+         l = l + abs(dl)
 
          if(any(x<xmin) .or. any(x>xmax))then
 
@@ -5429,13 +5378,12 @@ contains
             ! Hit the wall, backup so that x is almost exactly on the wall
             ! just a little bit outside
             dl_back = dl*maxval(max(xmin-x,x-xmax)/(abs(x-x_ini)+dl_tiny))
-            x=x-dl_back*b_mid
+            x = x-dl_back*b_mid
             ! dl/|B| for arbitrary aspect ratio
-            amount2add = abs(dl_back) * sqrt( &
-                 sum( (CellSize_DB(:,iBlock)*b_mid)**2 )) / bNORM
-            local_fvol=local_fvol-amount2add
-            local_rvol=local_rvol-amount2add*rNORM
-            local_pvol=local_pvol-amount2add*pNORM
+            amount2add = abs(dl_back)*norm2(CellSize_DB(:,iBlock)*b_mid)/bNORM
+            local_fvol = local_fvol - amount2add
+            local_rvol = local_rvol - amount2add*rNORM
+            local_pvol = local_pvol - amount2add*pNORM
 
             if(dbg)write(*,*)'  adjust step and subtract:',amount2add,rNORM,pNORM
 
@@ -5490,27 +5438,27 @@ contains
 
       ! Distance relative to the cell centers
 
-      dx1=qx(1)-i1; dx2=1.-dx1
-      dy1=qx(2)-j1; dy2=1.-dy1
-      dz1=qx(3)-k1; dz2=1.-dz1
+      dx1 = qx(1) - i1; dx2 = 1. - dx1
+      dy1 = qx(2) - j1; dy2 = 1. - dy1
+      dz1 = qx(3) - k1; dz2 = 1. - dz1
 
       ! Add in interpolated B1 values
-      Aux_V=interpolate_bb_v(nVar,State_VGB)
-      qb=qb+Aux_V(Bx_:Bz_)
+      Aux_V = interpolate_bb_v(nVar,State_VGB)
+      qb = qb + Aux_V(Bx_:Bz_)
 
       ! Get density and pressure
 
       qrD = Aux_V(rho_)
       qpD = Aux_V(P_)
-      qbD = sqrt(qb(1)**2 + qb(2)**2 + qb(3)**2)
+      qbD = norm2(qb)
 
       ! Normalize
-      if(qbD>smallB)then
+      if(qbD > smallB)then
          ! Take aspect ratio of cells into account
          qb = qb/CellSize_DB(:,iBlock)
-         qb=qb/sqrt(sum(qb**2))
+         qb = qb/qbD
       else
-         qb=0.
+         qb = 0.
       end if
 
     end subroutine interpolate_bbN

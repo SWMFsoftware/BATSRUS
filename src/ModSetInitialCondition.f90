@@ -24,7 +24,9 @@ contains
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: true_cell
     use ModIO, ONLY : restart
-    use ModPhysics
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, UseShockTube,&
+       UnitUser_V, ShockLeftState_V, ShockRightState_V, ShockPosition, UnitU_, &
+       Io2No_V
     use ModUserInterface ! user_set_ics
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
@@ -38,7 +40,7 @@ contains
 
     real   :: SinSlope, CosSlope, Rot_II(2,2)
     real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
-    integer:: i, j, k, iVar, iBoundary
+    integer:: i, j, k, iVar, iBoundary, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_initial_condition'
@@ -74,15 +76,15 @@ contains
              SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
              CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
              ! Set rotational matrix
-             Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
-                  (/2,2/) )
+             Rot_II = reshape( [CosSlope, SinSlope, -SinSlope, CosSlope], &
+                  [2,2] )
              ! calculate normalized left and right states
              ShockLeft_V  = ShockLeftState_V /UnitUser_V(1:nVar)
              ShockRight_V = ShockRightState_V/UnitUser_V(1:nVar)
 
              ! fix the units for the velocities
              do iFluid = 1, nFluid
-                call select_fluid
+                call select_fluid(iFluid)
                 ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *Io2No_V(UnitU_)
                 ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*Io2No_V(UnitU_)
              end do
@@ -98,7 +100,7 @@ contains
 
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid
+                   call select_fluid(iFluid)
                    State_VGB(iRhoUx,i,j,k,iBlock) = &
                         FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUy,i,j,k,iBlock) = &
@@ -117,7 +119,7 @@ contains
 
                    ! Rotate vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid
+                      call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockLeft_V(iUx:iUy))
                    end do
@@ -128,7 +130,7 @@ contains
                    State_VGB(:,i,j,k,iBlock)   = ShockRight_V
                    ! Set vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid
+                      call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockRight_V(iUx:iUy))
                    end do
@@ -137,7 +139,7 @@ contains
                 end if
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid
+                   call select_fluid(iFluid)
                    State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)

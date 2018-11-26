@@ -21,7 +21,7 @@ module ModVarIndexes
   integer, parameter :: IonFirst_ = 2
   integer, parameter :: IonLast_  = 3
   logical, parameter :: IsMhd     = .true.
-  real               :: MassFluid_I(2:nFluid) = (/ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 /)
+  real               :: MassFluid_I(2:nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
 
 
   ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
@@ -29,7 +29,7 @@ module ModVarIndexes
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
-       NameFluid_I(nFluid) = (/'All', 'SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'/) 
+       NameFluid_I(nFluid) = ['All', 'SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -89,18 +89,18 @@ module ModVarIndexes
 
   ! These arrays are needed for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)   = (/ Rho_,   SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   /), &
-       iRhoUx_I(nFluid) = (/ RhoUx_, SWHRhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ /), &
-       iRhoUy_I(nFluid) = (/ RhoUy_, SWHRhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ /), &
-       iRhoUz_I(nFluid) = (/ RhoUz_, SWHRhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ /), &
-       iP_I(nFluid)     = (/ P_,     SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ /)
+       iRho_I(nFluid)   = [ Rho_,   SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
+       iRhoUx_I(nFluid) = [ RhoUx_, SWHRhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
+       iRhoUy_I(nFluid) = [ RhoUy_, SWHRhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
+       iRhoUz_I(nFluid) = [ RhoUz_, SWHRhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
+       iP_I(nFluid)     = [ P_,     SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2/)
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ &
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0,           & ! Rho_
        0.0, 0.0, 0.0, & ! RhoUx_ .. RhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
@@ -129,10 +129,10 @@ module ModVarIndexes
        1.0,           & ! NeuEnergy_
        1.0,           & ! Neu2Energy_
        1.0,           & ! Neu3Energy_
-       1.0 /)           ! Neu4Energy_
+       1.0 ]           ! Neu4Energy_
 
   ! The names of the variables used in i/o
-  character(len=6):: NameVar_V(nVar+nFluid) = (/ &
+  character(len=6):: NameVar_V(nVar+nFluid) = [ &
        'Rho   ', & ! Rho_
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_  RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
@@ -161,7 +161,7 @@ module ModVarIndexes
        'NeuE  ', & ! NeuEnergy_
        'Ne2E  ', & ! Ne2Energy_
        'Ne3E  ', & ! Ne3Energy_
-       'Ne4E  ' /) ! Ne4Energy_
+       'Ne4E  ' ] ! Ne4Energy_
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1

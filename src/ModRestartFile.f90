@@ -38,11 +38,11 @@ module ModRestartFile
 
   private ! except
 
-  public read_restart_parameters
-  public write_restart_files
-  public read_restart_files
-  public init_mod_restart_file
-  public string_append_iter
+  public :: read_restart_parameters
+  public :: write_restart_files
+  public :: read_restart_files
+  public :: init_mod_restart_file
+  public :: string_append_iter
 
   ! Directories for input and output restart files
   character(len=100), public :: NameRestartInDir ="GM/restartIN/"
@@ -1124,7 +1124,7 @@ contains
 
     integer            :: i, j, iDim
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
+    character(len=1)   :: NameDim(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_geoind_restart'
@@ -1164,7 +1164,7 @@ contains
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
-    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
+    character(len=1)   :: NameDim(2) = ['x', 'y']
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_geoind_restart'

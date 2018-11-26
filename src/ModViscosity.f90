@@ -5,7 +5,7 @@ module ModViscosity
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-
+  use omp_lib
 
   implicit none
 
@@ -25,34 +25,42 @@ module ModViscosity
 
   ! Visosity tensor for each fluid
   real, public, allocatable:: Visco_DDI(:,:,:)
-
-  ! Logical needed to fil up ghost cells only once per  block
+  !$omp threadprivate( Visco_DDI )
+  
+  ! Logical needed to fill up ghost cells only once per block
   logical, public :: IsNewBlockViscosity = .true.
-
+  !$omp threadprivate( IsNewBlockViscosity )
+  
   ! Viscosity factor on the faces and in the cell centers
   real, public, allocatable:: ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
-
-  ! Logical is true if call set_visco_factor* sets any non-zero viscosity factors
+  !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
+  
+  ! Logical is true if call set_visco_factor* sets any non-zero viscosity
+  ! factors
   logical, public:: IsViscoBlock
-
+  !$omp threadprivate( IsViscoBlock )
+  
   ! Local variables
 
-  ! Velosity vector for each block and fluid
+  ! Velocity vector for each block and fluid
   real, allocatable:: u_DGI(:,:,:,:,:)
-
+  !$omp threadprivate( u_DGI )
+  
   ! Gradient of velocity centered for faces
   real, allocatable:: GradU_DDI(:,:,:)
-
-  real:: ViscoCoeff = 0.0, ViscoCoeffSi = 0.0
+  !$omp threadprivate( GradU_DDI )
+  
+  real :: ViscoCoeff=0.0, ViscoCoeffSi=0.0
 
   ! Name/shape of the regions where Visco effect is used
-  character(len=20):: StringViscoRegion ='none'
+  character(len=20):: StringViscoRegion='none'
 
   ! Indexes of regions defined with the #REGION commands
   integer, allocatable:: iRegionVisco_I(:)
-
+  !$omp threadprivate( iRegionVisco_I )
+  
   ! Artificial viscosity.
-  logical, public :: UseArtificialVisco = .false.
+  logical, public :: UseArtificialVisco=.false.
   real,    public :: AlphaVisco, BetaVisco
 
 contains
@@ -86,7 +94,7 @@ contains
   end subroutine viscosity_read_param
   !============================================================================
 
-  subroutine  viscosity_init
+  subroutine viscosity_init
 
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nDim, &
          get_region_indexes
@@ -100,10 +108,11 @@ contains
 
     ViscoCoeff = ViscoCoeffSi*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
+    !$omp parallel
     if(allocated(u_DGI))     deallocate(u_DGI)
     if(allocated(GradU_DDI)) deallocate(GradU_DDI)
     if(allocated(Visco_DDI)) deallocate(Visco_DDI)
-
+    
     allocate(u_DGI(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nFluid))
     u_DGI = 0.0
 
@@ -112,10 +121,11 @@ contains
 
     allocate(Visco_DDI(nDim,nDim,nFluid))
     Visco_DDI = 0.0
-
+    
     ! Get signed indexes for viscosity region(s)
     call get_region_indexes(StringViscoRegion, iRegionVisco_I)
-
+    !$omp end parallel
+    
     call test_stop(NameSub, DoTest)
   end subroutine viscosity_init
   !============================================================================
@@ -128,13 +138,16 @@ contains
     call test_start(NameSub, DoTest)
     if(.not.UseViscosity) RETURN
 
+    !$omp parallel
     if(allocated(u_DGI))          deallocate(u_DGI)
     if(allocated(GradU_DDI))      deallocate(GradU_DDI)
     if(allocated(Visco_DDI))      deallocate(Visco_DDI)
     if(allocated(iRegionVisco_I)) deallocate(iRegionVisco_I)
-    StringViscoRegion ='none'
+    !$omp end parallel
 
-    UseViscosity=.false.
+    StringViscoRegion = 'none'
+
+    UseViscosity = .false.
 
     call test_stop(NameSub, DoTest)
   end subroutine viscosity_clean
@@ -161,7 +174,7 @@ contains
     else
        call block_inside_regions(iRegionVisco_I, iBlock, &
             size(ViscoFactor_C), 'cells', IsViscoBlock, Value_I=ViscoFactor_C)
-
+       
        ! Nothing to do if the block does not intersect with the Visco region
        if(.not.IsViscoBlock) RETURN
 
@@ -194,7 +207,7 @@ contains
     else
        call block_inside_regions(iRegionVisco_I, iBlock, &
             size(ViscoFactor_DF), 'face', IsViscoBlock, Value_I=ViscoFactor_DF)
-
+       
        ! Nothing to do if the block does not intersect with the Visco region
        if(.not.IsViscoBlock) RETURN
 
@@ -211,7 +224,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iRho, iRhoUx
+    use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
 
     integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
@@ -221,13 +234,13 @@ contains
     real    :: Diag
     logical :: IsNewBlock = .true.
     real, parameter :: TraceCoeff = 2.0/3.0
-    integer :: i,j,k
+    integer :: i,j,k, iFluid
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
        do iFluid = iFluidMin, iFluidMax
-          call select_fluid
+          call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then
                 u_DGI(:,i,j,k,iFluid) = &

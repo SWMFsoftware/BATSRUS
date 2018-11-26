@@ -50,11 +50,12 @@ module ModFaceValue
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
-
+  
   ! Region parameters for low order scheme
   character(len=200), public:: StringLowOrderRegion = 'none'
   integer, allocatable, public:: iRegionLowOrder_I(:)
-
+  !$omp threadprivate( iRegionLowOrder_I )
+  
   ! Local variables -----------------
 
   ! Parameters for the limiter applied near resolution changes
@@ -75,7 +76,8 @@ module ModFaceValue
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
-
+  !$omp threadprivate( iVarLimitRatio_I )
+  
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
   logical :: UseDuFlat     = .false.
@@ -95,19 +97,22 @@ module ModFaceValue
 
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
-
+  !$omp threadprivate( Primitive_VG )
+  
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
-
+  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
+  
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-
+  
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
-
+  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
+  
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
@@ -115,23 +120,14 @@ module ModFaceValue
   real:: Face_I(0:MaxIJK+2)
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
+  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
+  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+  
   real:: LowOrderCrit_I(1:MaxIJK+1)
   !$omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-
-  ! OpenMP declaration
-  !$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
-  !$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
-  !$omp threadprivate( iVarLimitRatio_I )
-  !$omp threadprivate( Primitive_VG )
-  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
-  !$omp threadprivate( UseLowOrder_I )
-  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
-  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
   !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
@@ -242,12 +238,17 @@ contains
     !             !         CToF! FToC FF!
     !_____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
-    real,dimension(nVar),intent(in):: Coarse2_V, Coarse1_V
-    real,dimension(nVar,2,2),intent(in):: Fine1_VII, Fine2_VII
-    real,dimension(nVar,2,2),intent(out):: &
-         CoarseToFineF_VII, FineToCoarseF_VII, FineF_VII
-    logical,intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
-    logical,dimension(2,2),intent(in):: IsTrueFine2_II
+    real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
+    real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(in):: Fine2_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(out):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
+    logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
+    logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
+
+
     integer::iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
@@ -261,16 +262,16 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V= AveragedFine1_V-Coarse1_V
+    GradNormal_V = AveragedFine1_V - Coarse1_V
 
     ! Save gradients squared
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
     if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
        ! Limit gradient in the first coarser cell
-       GradNormalLtd_V= SignGradNormal_V*&
+       GradNormalLtd_V = SignGradNormal_V*&
             max(0.0,&
             min(Beta*cTwoThird*abs(GradNormal_V),&
             Beta*0.5*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
@@ -280,7 +281,7 @@ contains
        do j2=1,2;do i2=1,2
           ! Limit transverse gradients, if they are larger than the normal one
           ! The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
-          CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V +&
                sign(min(abs(GradNormalLtd_V), &
                abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
                Fine1_VII(:,i2,j2)-AveragedFine1_V)
@@ -288,14 +289,14 @@ contains
     else
        do j2=1,2;do i2=1,2
           ! First order scheme
-          CoarseToFineF_VII(:,i2,j2)=Coarse1_V
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V
        end do;end do
     end if
     if(.not.(IsTrueCoarse1.and.IsTrueFine1))then
        do j2=1,2;do i2=1,2
           ! First order scheme
-          FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
-          FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
        end do;end do
     else
        do j2=1,2;do i2=1,2
@@ -311,10 +312,10 @@ contains
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
              ! First order scheme
-             GradNormalLtd_V=0.0
+             GradNormalLtd_V = 0.0
           end if
-          FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
-          FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)+GradNormalLtd_V
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
        end do;end do
     end if
 
@@ -337,11 +338,13 @@ contains
     !_____________!_____________!__F1_V__!__F2_V_!_
     !             !             !        !       !
 
-    real,dimension(nVar),intent(in):: Coarse2_V,Coarse1_V
-    real,dimension(nVar,2,2),intent(in):: Fine1_VII,Fine2_VII
-    real,dimension(nVar,2,2),intent(inout)::&
-         CoarseToFineF_VII ,FineToCoarseF_VII , FineF_VII
-    integer::iVar,i2,j2
+    real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)                ! dimension(nVar,2,2)
+
+    integer:: iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V
     real,dimension(nVar):: GradNormal_V,SignGradNormal_V
     real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
@@ -353,21 +356,21 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V= AveragedFine1_V-Coarse1_V
+    GradNormal_V = AveragedFine1_V - Coarse1_V
 
     ! Save gradients squared
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
     ! Limit gradient in the first coarser cell
-    GradNormalLtd_V= SignGradNormal_V*max(0.0, min( &
+    GradNormalLtd_V = SignGradNormal_V*max(0.0, min( &
          Beta*cTwoThird*abs(GradNormal_V),&
          Beta*0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V), &
          cThird*abs(GradNormal_V) + 0.25*&
          SignGradNormal_V*(Coarse1_V - Coarse2_V)))
 
-    do j2=1,2;do i2=1,2
+    do j2=1,2; do i2=1,2
        ! Limit transverse gradients, if they are larger than the normal one
        ! Before limiting the transverse gradients are equal to
        ! Fine1_VII-AveragedFine1V
@@ -377,7 +380,7 @@ contains
             Fine1_VII(:,i2,j2) - AveragedFine1_V)
     end do;end do
 
-    do j2=1,2;do i2=1,2
+    do j2=1,2; do i2=1,2
        ! Limit gradient in the first layer of finer cells
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
             SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
@@ -413,15 +416,15 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_VII(nVar,-1:4,-1:4)
-    real, intent(in) :: Fine1_VII(nVar,2,2)
-    real, intent(in) :: Fine2_VII(nVar,2,2)
+    real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
+    real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
+    real, intent(in) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(in) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
 
-    real, intent(inout), dimension(nVar, 2, 2)::&
-         CoarseToFineF_VII ,FineToCoarseF_VII , FineF_VII
-
-    integer::iVar,i2,j2
+    integer :: iVar,i2,j2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V
     real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
@@ -439,14 +442,14 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,1,1)
+    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,3,3)
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,1,1) - Coarse2_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,3,3) - Coarse2_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
@@ -454,21 +457,21 @@ contains
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
 
     ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VII(:,1,1) + GradNormalLtd_V
+    FaceMiddle_V = Coarse1_VII(:,3,3) + GradNormalLtd_V
 
     do j2=1,2; do i2=1,2
        ! Calculate transverse gradient between coarse cells
        do iVar = 1, nVar
           ! TransverseSlope = ( (Cside1 - Ccenter) + (Cside2 - Ccenter) ) / 4
           Transverse_V(iVar) = 0.0625* &
-               ( sum(Coarse1_VII(iVar,4*i2-5:4*i2-4,1:2)) &
-               + sum(Coarse1_VII(iVar,1:2,4*j2-5:4*j2-4)) &
-               ) - 0.5*Coarse1_VII(iVar,1,1)
+               ( sum(Coarse1_VII(iVar,4*i2-3:4*i2-2,3:4)) &
+               + sum(Coarse1_VII(iVar,3:4,4*j2-3:4*j2-2)) &
+               ) - 0.5*Coarse1_VII(iVar,3,3)
        end do
 
        ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,1,1) + max(0.0, Transverse_V)
-       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,1,1) + min(0.0, Transverse_V)
+       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,3,3) + max(0.0, Transverse_V)
+       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,3,3) + min(0.0, Transverse_V)
 
        ! Add transverse gradient and limit it
        CoarseToFineF_VII(:,i2,j2) = &
@@ -487,7 +490,7 @@ contains
     do iVar = 1, nVar
 
        AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VII(iVar, 1, 1)
+       Coarse      = Coarse1_VII(iVar, 3, 3)
        Middle      = FaceMiddle_V(iVar)
 
        ! Check if the |L-M| <= |M-C| condition is satisfied
@@ -530,7 +533,7 @@ contains
        ! The first limiting ensures that the FineToCoarse face value
        ! remains between the Fine1 and Coarse values
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,1,1)), &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,3,3)), &
             Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
 
        FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
@@ -559,13 +562,14 @@ contains
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_VI(nVar,-1:4)
-    real, intent(in) :: Fine1_VI(nVar,2)
-    real, intent(in) :: Fine2_VI(nVar,2)
+    real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
+    real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
+    real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
+    real, intent(in) :: Fine2_VI(:,:)           ! dimension(nVar,2)
 
-    real, intent(inout), dimension(nVar, 2)::&
-         CoarseToFineF_VI ,FineToCoarseF_VI , FineF_VI
+    real, intent(inout):: CoarseToFineF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineToCoarseF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineF_VI(:,:)         ! dimension(nVar,2)
 
     integer:: iVar, i2
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
@@ -585,14 +589,14 @@ contains
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
     end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,1)
+    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,3)
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,1) - Coarse2_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,3) - Coarse2_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
@@ -600,20 +604,20 @@ contains
          Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
 
     ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VI(:,1) + GradNormalLtd_V
+    FaceMiddle_V = Coarse1_VI(:,3) + GradNormalLtd_V
 
     do i2 = 1, 2
        ! Calculate transverse gradient between coarse cells
        do iVar = 1, nVar
           ! TransverseSlope = (Cside1 - Ccenter) / 4
           Transverse_V(iVar) = &
-               0.125*sum(Coarse1_VI(iVar,4*i2-5:4*i2-4)) &
-               - 0.25*Coarse1_VI(iVar,1)
+               0.125*sum(Coarse1_VI(iVar,4*i2-3:4*i2-2)) &
+               - 0.25*Coarse1_VI(iVar,3)
        end do
 
        ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VI(:,i2) = Coarse1_VI(:,1) + max(0.0, Transverse_V)
-       Coarse1Min_VI(:,i2) = Coarse1_VI(:,1) + min(0.0, Transverse_V)
+       Coarse1Max_VI(:,i2) = Coarse1_VI(:,3) + max(0.0, Transverse_V)
+       Coarse1Min_VI(:,i2) = Coarse1_VI(:,3) + min(0.0, Transverse_V)
 
        ! Add transverse gradient and limit it
        CoarseToFineF_VI(:,i2) = &
@@ -630,7 +634,7 @@ contains
     do iVar = 1, nVar
 
        AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VI(iVar,1)
+       Coarse      = Coarse1_VI(iVar,3)
        Middle      = FaceMiddle_V(iVar)
 
        ! Check if the |L-M| <= |M-C| condition is satisfied
@@ -671,7 +675,7 @@ contains
        ! The first limiting ensures that the FineToCoarse face value
        ! remains between the Fine1 and Coarse values
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,1)), &
+            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,3)), &
             Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
 
        FineToCoarseF_VI(:,i2) = Fine1_VI(:,i2) - GradNormalLtd_V
@@ -696,13 +700,14 @@ contains
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
     !_____________!_____________!_______!_______!_
 
-    real, intent(in) :: Coarse2_V(nVar)
-    real, intent(in) :: Coarse1_V(nVar)
-    real, intent(in) :: Fine1_V(nVar)
-    real, intent(in) :: Fine2_V(nVar)
+    real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
+    real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in) :: Fine1_V(:)           ! dimension(nVar)
+    real, intent(in) :: Fine2_V(:)           ! dimension(nVar)
 
-    real, intent(inout), dimension(nVar)::&
-         CoarseToFineF_V ,FineToCoarseF_V , FineF_V
+    real, intent(inout):: CoarseToFineF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineToCoarseF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineF_V(:)         ! dimension(nVar)
 
     real, dimension(nVar):: Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
@@ -716,7 +721,7 @@ contains
     GradNormal_V = Fine1_V - Coarse1_V
 
     ! Save sign of the gradient
-    SignGradNormal_V=sign(1.0,GradNormal_V)
+    SignGradNormal_V = sign(1.0,GradNormal_V)
 
     ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
@@ -844,7 +849,7 @@ contains
     if(.not.allocated(Primitive_VG))&
          allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-    if(.not. allocated(FaceL_I)) then
+    if(.not.allocated(FaceL_I)) then
        allocate(FaceL_I(1:MaxIJK+2))
        allocate(FaceR_I(0:MaxIJK+1))
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
@@ -907,7 +912,7 @@ contains
        end if
     end if
     if(UseAccurateResChange .or. nOrder==4)then
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           call calc_primitives         ! all cells
        end do; end do; end do
        if(nOrder == 4 .and. UseVolumeIntegral4)then
@@ -923,7 +928,7 @@ contains
           Prim_VG = Primitive_VG
 
           ! Convert to pointwise conservative variable (eq. 12)
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
 
              ! Store cell averaged value
              State_V = State_VGB(:,i,j,k,iBlock)
@@ -1489,7 +1494,7 @@ contains
               Ga2Boris - BzFull*uBC2Inv
       else
          Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
-         do iFluid = 2, nFluid
+         do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
             RhoInv = 1/Primitive_VG(iRho,i,j,k)
             Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
@@ -1524,6 +1529,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
+      !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
 
@@ -1616,7 +1622,7 @@ contains
                call limit_var(iMin, iMax, Ux_)
                uDotArea_XI(iMin:iMax,j,k,1) = CellFace_DB(1,iBlock) &
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
-
+               
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
@@ -1685,6 +1691,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
+      !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -1841,6 +1848,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VZ(:,:,:,:)
+      !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -2464,8 +2472,8 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
-      do k=kMin, kMax; do j=jMin, jMax;
-         Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+      do k=kMin, kMax; do j=jMin, jMax
+         Primitive_VI(:,iMin-2:iMax+1) = Primitive_VG(:,iMin-2:iMax+1,j,k)
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
@@ -2483,7 +2491,7 @@ contains
                  call limiter(iMaxSharp+1, iMax, BetaLimiterResChange)
          end if
          do i=iMin,iMax
-            i1=i-1
+            i1 = i - 1
             LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
             RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
          end do
@@ -2508,7 +2516,7 @@ contains
       endif
 
       do k=kMin, kMax; do i=iMin,iMax
-         Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
+         Primitive_VI(:,jMin-2:jMax+1) = Primitive_VG(:,i,jMin-2:jMax+1,k)
          if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
@@ -2526,7 +2534,7 @@ contains
                  call limiter(jMaxSharp+1, jMax, BetaLimiterResChange)
          end if
          do j=jMin, jMax
-            j1=j-1
+            j1 = j - 1
             LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
             RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
          end do
@@ -2550,7 +2558,7 @@ contains
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
       do j=jMin,jMax; do i=iMin,iMax;
-         Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
+         Primitive_VI(:,kMin-2:kMax+1) = Primitive_VG(:,i,j,kMin-2:kMax+1)
          if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
@@ -2568,7 +2576,7 @@ contains
                  call limiter(kMaxSharp+1, kMax, BetaLimiterResChange)
          end if
          do k=kMin,kMax
-            k1=k-1
+            k1 = k - 1
             LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
             RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
          end do
@@ -2581,7 +2589,7 @@ contains
 
     subroutine flatten(Prim_VG)
 
-      use ModMultiFluid, ONLY: iFluid, iRho, iUx, iUy, iUz, iP, select_fluid
+      use ModMultiFluid, ONLY: iRho, iUx, iUy, iUz, iP, select_fluid
 
       real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -2592,7 +2600,7 @@ contains
       real:: FlatCoef_I(-1:MaxIJK+2)
       real, allocatable:: FlatCoef_G(:,:,:)
 
-      integer:: i, j, k
+      integer:: i, j, k, iFluid
       !------------------------------------------------------------------------
       ! call timing_start('flatten')
 
@@ -2603,7 +2611,7 @@ contains
 
       FLUIDLOOP: do iFluid = 1, nFluid
 
-         call select_fluid
+         call select_fluid(iFluid)
 
          do k = 1-kDim_,nK+kDim_; do j = 1-jDim_,nJ+jDim_
             do i = -1, nI+2
@@ -2780,8 +2788,8 @@ contains
     real:: LowOrderCrit_X(nIFace,nJ,nK)
     real:: LowOrderCrit_Y(nI,nJFace,nK)
     real:: LowOrderCrit_Z(nI,nJ,nKFace)
-    integer:: cLowOrder = 1
-    real:: cSmall = 1e-6
+    integer, parameter:: cLowOrder = 1
+    real, parameter:: cSmall = 1e-6
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_low_order_face'
@@ -2878,7 +2886,7 @@ contains
 
       ! Set criteria for low order scheme
       
-      use ModAdvance, ONLY:Vel_IDGB
+      use ModAdvance, ONLY: Vel_IDGB
 
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
@@ -2942,23 +2950,20 @@ contains
     real function low_order_face_criteria(State_VI, Vel_II)      
 
       use ModMain, ONLY: UseB
+      use ModMultiFluid, ONLY: iRho, iP, select_fluid
 
       real, intent(in):: State_VI(nVar,-3:2)
       real, intent(in):: Vel_II(nFluid,-3:2)
 
-      integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+      integer:: iFluid
       real:: pTotal_I(-3:2), Sound_I(-3:2)
       real:: crit, pRatio, VelRatio, SoundMin
       !--------------------------------------------------------------------
 
       pTotal_I = 0
       VelRatio = 0
-      do iFluid = 1, nFluid
-         iRho   = iRho_I(iFluid)
-         iRhoUx = iRhoUx_I(iFluid)
-         iRhoUy = iRhoUy_I(iFluid)
-         iRhoUz = iRhoUz_I(iFluid)
-         iP     = iP_I(iFluid)
+      do iFluid=1,nFluid
+         call select_fluid(iFluid)
 
          pTotal_I = pTotal_I + State_VI(iP,:)
 
@@ -3048,18 +3053,18 @@ contains
 
                 ijkDir_DD(:,x_) = Xyz_DGB(:,min(i+iDim_,iMax),j,k,iBlock) - &
                      Xyz_DGB(:,max(i-iDim_,iMin),j,k,iBlock)
-                ijkDir_DD(:,x_) = ijkDir_DD(:,x_)/sqrt(sum(ijkDir_DD(:,x_)**2))
+                ijkDir_DD(:,x_) = ijkDir_DD(:,x_)/norm2(ijkDir_DD(:,x_))
 
                 if(nDim>1) then
                    ijkDir_DD(:,y_) = Xyz_DGB(:,i,min(j+jDim_,jMax),k,iBlock) - &
                         Xyz_DGB(:,i,max(j-jDim_,jMin),k,iBlock)
-                   ijkDir_DD(:,y_) = ijkDir_DD(:,y_)/sqrt(sum(ijkDir_DD(:,y_)**2))
+                   ijkDir_DD(:,y_) = ijkDir_DD(:,y_)/norm2(ijkDir_DD(:,y_))
                 endif
 
                 if(nDim>2) then
                    ijkDir_DD(:,z_) = Xyz_DGB(:,i,j,min(k+kDim_,kMax),iBlock) - &
                         Xyz_DGB(:,i,j,max(k-kDim_,kMin),iBlock)
-                   ijkDir_DD(:,z_) = ijkDir_DD(:,z_)/sqrt(sum(ijkDir_DD(:,z_)**2))
+                   ijkDir_DD(:,z_) = ijkDir_DD(:,z_)/norm2(ijkDir_DD(:,z_))
                 endif
 
                 do iDim = 1, MaxDim
@@ -3448,7 +3453,7 @@ contains
     real:: a1_I(3), a2_I(3)
 
     ! linear coefficients of four low order polynamials. eq (13)
-    real, parameter:: LinearCoeff_I(4) = (/0.125, 0.25, 0.125, 0.5/)
+    real, parameter:: LinearCoeff_I(4) = [0.125, 0.25, 0.125, 0.5]
 
     ! Smoothness indicators. eq (19)
     real:: ISLocal_I(4)
@@ -3765,7 +3770,7 @@ contains
 
     real,dimension(Hi3_):: dVar1_I, dVar2_I !
     real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
-    integer::l
+    integer :: l
 
     character(len=*), parameter:: NameSub = 'limiter_body'
     !--------------------------------------------------------------------------

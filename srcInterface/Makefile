@@ -11,6 +11,7 @@ include Makefile.DEPEND
 
 OBJ_IH = GM_couple_ih.o read_ih_buffer.o                    #^CMP IF IH
 OBJ_IM = GM_couple_im.o	 				    #^CMP IF IM
+OBJ_PS = GM_couple_ps.o	 				    #^CMP IF PS
 OBJ_RB = GM_couple_rb.o                                     #^CMP IF RB
 OBJ_IE = GM_couple_ie.o                                     #^CMP IF IE
 OBJ_PT = GM_couple_pt.o                                     #^CMP IF PT
@@ -21,7 +22,7 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
 	GM_wrapper.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC)
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC) $(OBJ_PS)
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I../src -I../srcBATL -I${CRASHDIR}

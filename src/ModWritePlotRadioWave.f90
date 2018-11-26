@@ -24,7 +24,7 @@ contains
     !
     use ModCoordTransform, ONLY: cross_product
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
+    use ModMain, ONLY: time_accurate, n_Step, time_simulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
          plot_type, plot_form, plot_, ObsPos_DI, &
          n_Pix_X, n_Pix_Y, X_Size_Image, Y_Size_Image, &
@@ -72,7 +72,7 @@ contains
     real :: XPixel, YPixel  
     ! Unity vector normal to the image plane 
     real :: Normal_D(MaxDim)                                          
-    real :: ZAxisOrt_D(MaxDim) = (/0, 0, 1/)
+    real :: ZAxisOrt_D(MaxDim) = [0, 0, 1]
     ! Image plane inner Cartesian orts
     real :: Tau_D(MaxDim), Xi_D(MaxDim) 
     !\
@@ -239,7 +239,7 @@ contains
        FrequencySi_W(WaveLast_ ) = 1
        call ray_bunch_intensity(RadioFrequency_I(iFreq))
        Intensity_IIV(:,:,iFreq) = &
-            reshape(Intensity_I(1:nRay), (/nXPixel,nYPixel/))
+            reshape(Intensity_I(1:nRay), [nXPixel,nYPixel])
 
        if (iProc == 0) write(*,*) 'RAYTRACE END'
     end do
@@ -276,9 +276,9 @@ contains
                nStepIn=n_step, TimeIn=Time_Simulation,    &
                NameVarIn='  X  Y '//trim(NameVarAll),     &
                CoordMinIn_D=&
-               (/XLower + 0.5*DxPixel, YLower + 0.5*DyPixel/),&
+               [XLower + 0.5*DxPixel, YLower + 0.5*DyPixel],&
                CoordMaxIn_D=&
-               (/XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel/),&
+               [XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel],&
                VarIn_IIV=Intensity_IIV, StringFormatIn = '(30(E14.6))')
        case('idl')
           ! description of file contains units, physics and dimension
@@ -287,9 +287,9 @@ contains
                nStepIn=n_step, TimeIn=Time_Simulation,    &
                NameVarIn='  X  Y '//trim(NameVarAll),     &
                CoordMinIn_D=&
-               (/XLower + 0.5*DxPixel, YLower + 0.5*DyPixel/),&
+               [XLower + 0.5*DxPixel, YLower + 0.5*DyPixel],&
                CoordMaxIn_D=&
-               (/XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel/),&
+               [XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel],&
                VarIn_IIV=Intensity_IIV, StringFormatIn = '(30es13.5)')
        end select
 

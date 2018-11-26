@@ -26,7 +26,8 @@ module ModRadiativeCooling
   ! in RadCooling
 
   real :: RadCooling_C(1:nI,1:nJ,1:nK)
-
+  !$omp threadprivate( RadCooling_C )
+  
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   ! erg = 1e-7 J
        /1.0e-6    ! cm3 = 1e-6 m3
@@ -344,7 +345,7 @@ contains
          IsNewBlock, Te_G, FaceGrad_D)
 
     ! calculate the unit vector of the total magnetic field
-    TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
+    TotalFaceBunit_D = TotalFaceB_D / norm2(TotalFaceB_D)
 
     ! calculate the heat conduction term in the REB numerator
     qCondSi = 0.5 * kappa_0_e(20.) * TeTRTopSi**3 &

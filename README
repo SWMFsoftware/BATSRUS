@@ -13,55 +13,48 @@ user manual please follow the instructions below.
 # Obtain BATSRUS #
 ##################
 
-# Get the source code from CVS (UM only) or from the tar balls.
+# Get the source code from Git or from the tar balls.
 
 # The minimim requirement is the BATSRUS repository. 
 
-# You may also need the BATSRUS_data repository that contains large data files. 
-# At the UofM the BATSRUS_data may already be available through a shared disk as
-
-/csem1/SWMF_data/GM/BATSRUS/data
-
-# If it is not availble through the shared disk, the repository 
-# can be put into the home directory or into the BATSRUS directory.
-# If you have installed the SWMF_data already, it contains the BATSRUS data too.
+# You may also need the SWMF_data repository that contains large data files
+# for BATSRUS in the GM/BATSRUS/data/ and SC/BATSRUS/data subdirectories.
+# The other subdirectories can be removed to save disk space.
+# The SWMF_data can be put into the home directory or into the BATSRUS directory.
 
 # Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
-# are in the CRASH_data repository. On many machines at the UofM this is 
-# already available through a shared disk as
+# are in the CRASH_data repository.
+# If needed, it has to be placed into the home directory.
 
-/csem1/CRASH_data
-
-# Otherwise it has to be placed into the home directory.
-
-# !!! Getting BATSRUS from CVS (requires CVS access) !!!
-# Set the CVS environment variables (with your user name)
-
-setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/FRAMEWORK
-setenv CVS_RSH ssh
+# !!! Getting BATSRUS from Git (requires access to herot) !!!
+# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf
+# about setting up the "herot" ssh alias, passwordless access to herot,
+# and defining the "gitclone" alias/function. 
 
 # Check out the BATSRUS distribution
-cd {where_you_want_to_have_the_swmf}
-cvs checkout BATSRUS
+cd {where_you_want_to_have_batsrus}
+gitclone BATSRUS
 
-# Check out the BATSRUS_data distribution into the home directory if needed
+# Check out the SWMF_data distribution into the home directory if needed
 cd
-cvs checkout BATSRUS_data
+gitclone SWMF_data
+cd SWMF_data; rm -rf IM PT PW RB SP UA    # if not needed
 
 # Check out the CRASH_data distribution into the home directory if needed
 cd
-cvs checkout CRASH_data
+gitclone CRASH_data
 
 # !!! Opening tar balls !!!
 
-# Open SWMF tar ball
-cd {where_you_want_to_have_the_swmf}
-tar -xzf {path_to_file}/SWMF_v{version_number}.tgz
+# Open BATSRUS tar ball
+cd {where_you_want_to_have_batsrus}
+tar -xzf {path_to_file}/BATSRUS_v{version_number}.tgz
 
 # If needed, open the SWMF_data tar ball (this contains the BATSRUS data as well)
 # into the home directory
 cd
 tar -xzf {path_to_file}/SWMF_data.tgz
+cd SWMF_data; rm -rf IM PT PW RB SP UA    # if not needed
 
 # If needed, open the CRASH_data tar ball into the home directory
 cd
@@ -154,13 +147,14 @@ make -j test
 
 # To run the tests on more (up to 8) cores use
 
-make -j test MPIRUN='mpirun -np 4'
+make -j test NP=4
 
 # You can also run an individual test. The list of available SWMF tests
 # can be listed with
 
 make test_help
 
-# For example, to run test_shocktube on a single core use
+# For example, to run test_shocktube in a serial mode (without MPI)
+# but multithreaded with 4 threads (using OpenMP):
 
-make -j test_shocktube MPIRUN=
+make -j test_shocktube MPIRUN= NTHREAD=4

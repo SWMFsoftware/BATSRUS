@@ -57,10 +57,11 @@ module ModSolarwind
   character(len=3) :: NameInputCoord = 'GSM'
 
   ! Normal direction to the (tilted) plane of input data
-  real :: Normal_D(3) = (/ 1.0, 0.0, 0.0 /)
+  real :: Normal_D(3) = [ 1.0, 0.0, 0.0 ]
 
   ! Position of the satellite
   real :: SatelliteXyz_D(3)=0.
+  !$omp threadprivate( SatelliteXyz_D )
 
   ! Shall we reread the file
   logical :: DoReadAgain = .false.
@@ -145,7 +146,7 @@ contains
     PlaneAngleXZ = 0.0
 
     nVarInput = 8
-    iVarInput_V(1:8) = (/ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ /)
+    iVarInput_V(1:8) = [ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ ]
     if(UseMultiSpecies) iVarInput_V(7) = SpeciesFirst_
 
     ! Read solar wind file on all processors in parallel
@@ -178,9 +179,9 @@ contains
 
           ! Calculate normal vector
           if( abs(abs(PlaneAngleXY)-cHalfPi) < 1.0e-3 )then
-             Normal_D=(/ 0.0, sign(1.0,PlaneAngleXY), 0.0 /)
+             Normal_D = [ 0.0, sign(1.0,PlaneAngleXY), 0.0 ]
           else if ( abs(abs(PlaneAngleXZ)-cHalfPi) < 1.0e-3 )then
-             Normal_D=(/ 0.0, 0.0, sign(1.0, PlaneAngleXZ) /)
+             Normal_D = [ 0.0, 0.0, sign(1.0, PlaneAngleXZ) ]
           else
              Normal_D(2) = tan(PlaneAngleXY)
              Normal_D(3) = tan(PlaneAngleXZ)
@@ -430,11 +431,11 @@ contains
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
          LowDensityRatio, ElectronPressureRatio
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, &
+    use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUy, iUz, &
          iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
 
-    integer:: iData
+    integer:: iData, iFluid
     integer:: T_= p_
     real :: Solarwind_V(nVar)
 
@@ -499,7 +500,7 @@ contains
 
        ! Set or normalize other fluids for multi-fluid equations
        do iFluid = 2, nFluid
-          call select_fluid
+          call select_fluid(iFluid)
 
           ! Set fluid density
           if(.not.IsInput_V(iRho)) then
@@ -628,8 +629,8 @@ contains
     ! respectively.
 
     use ModKind
-    use ModMain
-    use ModPhysics
+    use ModMain, ONLY: xMinBc_, StartTime
+    use ModPhysics, ONLY: FaceState_VI, UnitT_, No2Si_V
     use ModVarIndexes
     use ModNumConst, ONLY: cTiny
     use ModGeometry, ONLY: x1, x2
@@ -661,7 +662,7 @@ contains
        RETURN
     end if
 
-    ! DoTestCell = maxval(abs(Xyz_D - (/ xTest, yTest, zTest /))) < 0.1
+    ! DoTestCell = maxval(abs(Xyz_D - [ xTest, yTest, zTest ])) < 0.1
     if(DoTestCell) write(*,*) NameSub, 'TimeSim, Xyz_D=',TimeSimulation, Xyz_D
 
     ! Set the X coordinate of the sattellite if not yet set.

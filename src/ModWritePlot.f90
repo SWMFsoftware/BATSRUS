@@ -14,6 +14,7 @@ module ModWritePlot
   public:: adjust_plot_range  ! adjust the range of cut plots
   public:: set_plot_scalars   !
   public:: reverse_field
+
 contains
   !============================================================================
 
@@ -986,7 +987,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
-         IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
          ChargeIon_I
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
@@ -1018,7 +1019,7 @@ contains
     real, allocatable :: J_DC(:,:,:,:)
     real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:)
 
-    integer :: iVar, itmp, jtmp, jVar, iIon
+    integer :: iVar, itmp, jtmp, jVar, iIon, iFluid
     integer :: i,j,k
 
     integer:: iDir, Di, Dj, Dk
@@ -1066,7 +1067,7 @@ contains
 
        call lower_case(NamePlotVar)
        String = NamePlotVar
-       call extract_fluid_name(String)
+       call extract_fluid_name(String,iFluid)
 
        ! Set plotvar_inBody to something reasonable for inside the body.
        ! Load zeros (0) for most values - load something better for rho, p, and T
@@ -1699,7 +1700,10 @@ contains
        plotvar, plotvar_inBody)
 
     use ModProcMH
-    use ModPhysics
+    use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       No2Io_V, No2Si_V, UnitUser_V, NameVarLower_V
     use ModVarIndexes, ONLY: DefaultState_V
     use ModNumConst, ONLY: cTiny
     use ModUtilities,  ONLY: lower_case
@@ -1818,10 +1822,14 @@ contains
   subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
        StringUnitIdl)
 
-    use ModPhysics
+    use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
+       UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
+       UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
+       NameIdlUnit_V, NameUnitUserIdl_V, UnitAngle_, NameVarLower_V
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
     use ModMultiFluid, ONLY: extract_fluid_name
+    use BATL_lib,      ONLY: IsRLonLat, IsCylindrical
 
     ! Arguments
 
@@ -1846,8 +1854,12 @@ contains
        RETURN
     end if
 
-    if(plot_type1(1:3) == 'shl') then
+    if(plot_type1(1:3) == 'shl' .or. &
+         (plot_type1(1:3) == 'cut' .and. IsRLonLat)) then
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
+    elseif(plot_type1(1:3) == 'cut' .and. IsCylindrical)then
+          StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
+               trim(NameIdlUnit_V(UnitX_))//' deg'
     else
        StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//trim(NameIdlUnit_V(UnitX_))

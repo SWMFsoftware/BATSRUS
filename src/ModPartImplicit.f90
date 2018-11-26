@@ -47,14 +47,14 @@ module ModPartImplicit
   logical:: UseImplSource = .false.
 
   ! Newton iteration parameters
-  logical :: UseNewton     = .false.
+  logical :: UseNewton = .false.
   ! Do a conservative update at the end of the newton iteration?
   logical :: UseConservativeImplicit = .false.
   integer :: MaxIterNewton = 1
   real    :: NewtonErrorMax = 0.001
 
   ! Real number accuracy for numerical derivatives in the Jacobian
-  real:: JacobianEps  = 1.E-12
+  real:: JacobianEps = 1.E-12
 
   ! Default parameters for the implicit linear solver
   type(LinearSolverParamType):: ImplParam = LinearSolverParamType( &
@@ -74,7 +74,7 @@ module ModPartImplicit
   character (len=10) :: TypeKrylovInit ='nul'
 
   ! Spatial order of the implicit part of the residual in dR/dU
-  integer            :: nOrderImpl  = 1
+  integer            :: nOrderImpl = 1
 
   ! Previous time step, explicit time step, ratio of explicit and implicit dt
   real:: DtExpl = -1.0, DtCoeff = -1.0
@@ -381,7 +381,7 @@ contains
          n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
-    use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
+    use ModMultifluid, ONLY: select_fluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
@@ -400,13 +400,13 @@ contains
     use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB, minval_grid
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
-
-    integer :: i, j, k, iVar, iBlock, iBlockImpl
+    
+    integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
     integer :: nIterNewton
     integer :: iError, iError1
     real    :: NormX, NormLocal_V(nVar), JacSum
 
-    logical:: IsConverged
+    logical :: IsConverged
 
     real :: TimeSimulationOrig, HallCmaxFactorOrig
 
@@ -426,6 +426,7 @@ contains
 
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
 
+    
     ! Initialize some variables in ModImplicit
     call implicit_init
 
@@ -464,18 +465,20 @@ contains
           ! Save the current state into the previous state for BDF2 scheme
           ! This is needed for explicit blocks, because they may become
           ! implicit in the next time step...
+          !$omp parallel do
           do iBlock = 1, nBlock
              if(iTypeAdvance_B(iBlock) /= ExplBlock_)CYCLE
              ImplOld_VCB(:,:,:,:,iBlock) = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
 
              if(.not. UseImplicitEnergy) CYCLE
              ! Overwrite pressure with energy
-             do iFluid = 1, nFluid
-                call select_fluid
+             do iFluid=1,nFluid
+                call select_fluid(iFluid)
                 ImplOld_VCB(iP,:,:,:,iBlock) = &
                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
              end do
           end do
+          !$omp end parallel do
        end if
 
        if(.not.UsePartImplicit2)then
@@ -501,7 +504,7 @@ contains
 
        if(.not.UsePartImplicit2)then
           ! update ghost cells for the implicit blocks to time level n+1
-          iNewDecomposition=mod(iNewDecomposition+1, 10000)
+          iNewDecomposition = mod(iNewDecomposition+1, 10000)
           Unused_BP(1:nBlockMax,:) = &
                iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
           Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
@@ -510,12 +513,12 @@ contains
        call exchange_messages
 
        ! The implicit scheme is only applied on implicit blocks
-       iNewDecomposition=mod(iNewDecomposition+1, 10000)
+       iNewDecomposition = mod(iNewDecomposition+1, 10000)
        Unused_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
     end if
-
+    
     !\
     ! Advance implicitly treated blocks
     !/
@@ -534,7 +537,7 @@ contains
     UseCoarseAxis      = .false.
     ! Use implicit time step
     if(.not.UseDtFixed)Cfl = CflImpl
-
+    
     if(UseDtFixed)then
        if(DoTest)write(*,*)NameSub,': call get_dt_courant'
        call get_dt_courant(DtExpl)
@@ -544,7 +547,7 @@ contains
        if(DoTest)write(*,*)NameSub,': no call of get_dt_courant'
        DtCoeff = CflImpl/0.5
     endif
-
+    
     if (UseBDF2.and.n_step==n_prev+1) then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
@@ -554,7 +557,7 @@ contains
 
     ! Advance time to level n+1 in case there is explicit time dependence:
     !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
-    ! so the Jacobian should be evaliated at t^n+1
+    ! so the Jacobian should be evaluated at t^n+1
 
     Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
@@ -567,7 +570,7 @@ contains
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
        ! can be restored.
        ! The implicit blocks haven't been updated, so save current state
-       do iBlockImpl = 1, nBlockImpl
+       do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
           ImplOld_VCB(:,:,:,:,iBlock) = Impl_VGB(:,1:nI,1:nJ,1:nK,iBlockImpl)
        end do
@@ -575,7 +578,7 @@ contains
 
     ! Initialize right hand side and x_I. Uses ImplOld_VCB for BDF2 scheme.
     call impl_newton_init
-
+    
     ! Save previous timestep for 3 level scheme
     if(UseBDF2)then
        n_prev  = n_step
@@ -613,7 +616,7 @@ contains
              call exchange_messages
              call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
           end if
-
+             
           call timing_start('impl_jacobian')
 
           ! Initialize variables for preconditioner calculation
@@ -623,10 +626,13 @@ contains
                call init_impl_hall_resist
 
           ! Calculate approximate dR/dU matrix
-          do iBlockImpl = 1, nBlockImpl
+          !$omp parallel do
+          do iBlockImpl=1,nBlockImpl
+             !hyzhou: why is this JacImpl_VVCIB so strange?
              call impl_jacobian(iBlockImpl, &
                   JacImpl_VVCIB(1,1,1,1,1,1,iBlockImpl))
           end do
+          !$omp end parallel do
           call timing_stop('impl_jacobian')
 
           if(DoTest)then
@@ -638,7 +644,7 @@ contains
        endif
 
        ! Update rhs and initial x_I if required
-       if (nIterNewton > 1) call impl_newton_loop
+       if(nIterNewton > 1) call impl_newton_loop
 
        if(DoTest.and.nBlockImpl>0)write(*,*)NameSub,&
             ': initial x_I(test), rhs(test)=',x_I(nTest),Rhs_I(nTest)
@@ -712,8 +718,8 @@ contains
        StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
 
        if(UseImplicitEnergy) then
-          do iFluid = 1, nFluid
-             call select_fluid
+          do iFluid=1,nFluid
+             call select_fluid(iFluid)
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
           call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
@@ -741,8 +747,8 @@ contains
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
              write(*,*) 'x,y,z =', Xyz_DGB(:,i,j,k,iBlock)
-             write(*,*) 'RhoOld,pOld=', StateOld_VGB((/Rho_,P_/),i,j,k,iBlock)
-             write(*,*) 'RhoNew,pNew=', State_VGB((/Rho_,P_/),i,j,k,iBlock)
+             write(*,*) 'RhoOld,pOld=', StateOld_VGB([Rho_,P_],i,j,k,iBlock)
+             write(*,*) 'RhoNew,pNew=', State_VGB([Rho_,P_],i,j,k,iBlock)
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
        else
@@ -809,7 +815,7 @@ contains
     use ModAdvance, ONLY : FluxType
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
-
+    
     integer :: i, j, k, n, iVar, iBlockImpl, iBlock, iError
     real :: Coef1, Coef2, q1, q2, q3
 
@@ -820,15 +826,15 @@ contains
 
     ! Calculate high and low order residuals
     ! ResExpl_VCB= DtExpl * R
-
+    
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
-
+    
     !                not low,  dt,  subtract
     call get_residual(.false.,.true.,.true., &
          Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
-
+    
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
-
+    
     if (nOrder==nOrderImpl .and. FluxType==FluxTypeImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
@@ -844,7 +850,7 @@ contains
          ResImpl_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     ! Calculate rhs used for nIterNewton=1
-    n=0
+    n = 0
     if(UseBDF2.and.n_step==n_prev+1)then
        ! Collect RHS terms from Eq 8 in Paper implvac
        ! Newton-Raphson iteration. The BDF2 scheme implies
@@ -852,10 +858,10 @@ contains
        Coef1 = ImplCoeff*DtCoeff
        Coef2 = (1-ImplCoeff)*dt/dt_prev
 
-       do iBlockImpl=1,nBlockImpl;
-          iBlock=iBlockFromImpl_B(iBlockImpl)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-             n=n+1
+       do iBlockImpl=1,nBlockImpl
+          iBlock = iBlockFromImpl_B(iBlockImpl)
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+             n = n + 1
              ! For 1st Newton iteration
              ! RHS = dt*(beta*R + alpha*(w_n-w_n-1)/dt_n-1)/Norm_V
              Rhs_I(n) = (Coef1*ResExpl_VCB(iVar,i,j,k,iBlockImpl) &
@@ -864,9 +870,9 @@ contains
           end do; end do; enddo; enddo;
        enddo
     else
-       do iBlockImpl = 1, nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-          do iVar = 1, nVar
-             n=n+1
+       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+          do iVar=1,nVar
+             n = n + 1
              ! RHS = dt*R/Norm_V for the first iteration
              Rhs_I(n) = ResExpl_VCB(iVar,i,j,k,iBlockImpl)*DtCoeff/Norm_V(iVar)
           end do
@@ -874,9 +880,9 @@ contains
 
     endif
 
-    do iBlockImpl = 1, nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar = 1, nVar
-          n=n+1
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iVar=1,nVar
+          n = n + 1
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
              Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
           endif
@@ -885,10 +891,10 @@ contains
 
     if(UseNewton .or. UseConservativeImplicit)then
        ! Calculate RHS0 used for RHS when nIterNewton > 1
-       n=0
-       do iBlockImpl = 1, nBlockImpl
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-             n=n+1
+       n = 0
+       do iBlockImpl=1,nBlockImpl
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+             n = n + 1
              ! RHS0 = [dt*(R - beta*R_low) + w_n]/Norm_V
              !     = RHS + [-beta*dt*R_low + w_n]/Norm_V
              Rhs0_I(n) = Rhs_I(n) &
@@ -935,7 +941,6 @@ contains
   subroutine impl_newton_loop
 
     use ModProcMH
-    use ModMain, ONLY : 
     use ModMpi
 
     integer :: i,j,k,iVar,iBlockImpl,n, iError
@@ -946,9 +951,9 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Caculate RHS for 2nd or later Newton iteration
-    n=0
+    n = 0
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
-       n=n+1
+       n = n + 1
        ! RHS = (dt*R_n - beta*dt*R_n_low
        !       + w_n + beta*dt*R_k_low - Impl_VGB)/Norm
        ! use: RHS0 and ResImpl_VCB = DtExpl * R_k_low
@@ -1008,10 +1013,10 @@ contains
     endif
 
     ! w=w+x_I for all true cells
-    n=0
+    n = 0
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        do iVar = 1, nVar
-          n=n+1
+          n = n + 1
           if(IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)))&
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Impl_VGB(iVar,i,j,k,iBlockImpl) &
@@ -1054,11 +1059,11 @@ contains
     !
     ! DtCoeff = Dt/DtExpl is used to convert to the implicit time step
 
-    n=0
-    do iBlockImpl = 1, nBlockImpl
+    n = 0
+    do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
-          n=n+1
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+          n = n + 1
           if(IsImplCell_CB(i,j,k,iBlock)) &
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Rhs0_I(n)*Norm_V(iVar) &
@@ -1173,18 +1178,21 @@ contains
 
     Eps = sqrt(JacobianEps)/xNorm
 
-    if(DoTest)write(*,*)'Eps, xNorm =',Eps,xNorm
-
-    n=0
-    do iBlock=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
-       n = n + 1
-       ImplEps_VCB(iVar,i,j,k,iBlock) = Impl_VGB(iVar,i,j,k,iBlock) &
-            + Eps*x_I(n)*Norm_V(iVar)
-    enddo; enddo; enddo; enddo; enddo
-
+    n = 0
+    !$omp parallel do private( n )
+    do iBlock=1,nBlockImpl
+       n = (iBlock-1)*nIJK*nVar !hyzhou
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+          n = n + 1
+          ImplEps_VCB(iVar,i,j,k,iBlock) = Impl_VGB(iVar,i,j,k,iBlock) &
+               + Eps*x_I(n)*Norm_V(iVar)
+       enddo; enddo; enddo; enddo
+    enddo
+    !$omp end parallel do
+    
     ! Advance ImplEps_VCB:low order,  no dt, don't subtract
     call get_residual(.true., .false., .false., ImplEps_VCB, ImplEps_VCB)
-
+    
     ! Calculate y = L.x = (1 + beta*DtCoeff)*x
     !                       - beta*DtCoeff*(ImplEps_VCB' - Impl_VGB')/eps
     ! where ImplEps_VCB  = Impl_VGB + eps*x,
@@ -1200,17 +1208,22 @@ contains
 
     if(DoTest)write(*,*)'DtCoeff,ImplCoeff,Coef1,Coef2=', &
          DtCoeff, ImplCoeff, Coef1, Coef2
-
-    n=0
-    do iBlock=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
-       n=n+1
-       y_I(n) = Coef1*x_I(n) - Coef2*(ImplEps_VCB(iVar,i,j,k,iBlock) &
-            - Impl_VGB(iVar,i,j,k,iBlock) &
-            - ResImpl_VCB(iVar,i,j,k,iBlock))/Norm_V(iVar)
-       if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlock))) then
-          y_I(n) = Rhs_I(n)
-       endif
-    enddo; enddo; enddo; enddo; enddo
+       
+    n = 0
+    !$omp parallel do private( n )
+    do iBlock=1,nBlockImpl
+       n = (iBlock-1)*nIJK*nVar !hyzhou
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+          n = n + 1
+          y_I(n) = Coef1*x_I(n) - Coef2*(ImplEps_VCB(iVar,i,j,k,iBlock) &
+               - Impl_VGB(iVar,i,j,k,iBlock) &
+               - ResImpl_VCB(iVar,i,j,k,iBlock))/Norm_V(iVar)
+          if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlock))) then
+             y_I(n) = Rhs_I(n)
+          endif
+       enddo; enddo; enddo; enddo;
+    enddo
+    !$omp end parallel do
 
     call timing_stop(NameSub)
 
@@ -1285,7 +1298,7 @@ contains
          set_hall_factor_cell
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
          FaceNormal_DDFB, CellSize_DB, CellVolume_GB
-
+    
     integer, intent(in) :: iBlockImpl
     real,    intent(out):: Jac_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
@@ -1311,7 +1324,7 @@ contains
     !--------------------------------------------------------------------------
     iBlock = iBlockFromImpl_B(iBlockImpl)
     call test_start(NameSub, DoTest, iBlock)
-
+    
     Eps = sqrt(JacobianEps)
 
     ! Extract state for this block
@@ -1319,11 +1332,11 @@ contains
     Dxyz_D = CellSize_DB(:,iBlock)
     if(UseB0)then
        call set_b0_face(iBlock)
-       B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_)=B0_DX(:,1:nI+1,1:nJ,1:nK)
-       B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_)=B0_DY(:,1:nI,1:nJ+1,1:nK)
-       B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_)=B0_DZ(:,1:nI,1:nJ,1:nK+1)
+       B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_) = B0_DX(:,1:nI+1,1:nJ,1:nK)
+       B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_) = B0_DY(:,1:nI,1:nJ+1,1:nK)
+       B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_) = B0_DZ(:,1:nI,1:nJ,1:nK+1)
     else
-       B0_DFD =0.0
+       B0_DFD = 0.0
     end if
 
     if(UseHallResist)call impl_init_hall
@@ -1335,7 +1348,7 @@ contains
     do iDim = 1, nDim
 
        i1 = 1+i_DD(1,iDim); j1= 1+i_DD(2,iDim); k1= 1+i_DD(3,iDim)
-       i2 =nI+i_DD(1,iDim); j2=nJ+i_DD(2,iDim); k2=nK+i_DD(3,iDim);
+       i2 =nI+i_DD(1,iDim); j2=nJ+i_DD(2,iDim); k2=nK+i_DD(3,iDim)
 
        call get_face_flux(Impl_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,iDim),&
             nI, nJ, nK, iDim, iBlock, FluxLeft_VFD(:,i1:i2,j1:j2,k1:k2,iDim))
@@ -1344,7 +1357,7 @@ contains
             nI, nJ, nK, iDim, iBlock, FluxRight_VFD(:,:,:,:,iDim))
 
        ! Average w for each cell interface into ImplEps_VC
-       i1 = 1-i_DD(1,iDim); j1= 1-i_DD(2,iDim); k1= 1-i_DD(3,iDim)
+       i1 = 1-i_DD(1,iDim); j1 = 1-i_DD(2,iDim); k1 = 1-i_DD(3,iDim)
 
        ! Calculate orthogonal cmax for each interface in advance
        call get_cmax_face(                            &
@@ -1355,27 +1368,27 @@ contains
 
        ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
        Coeff = -0.5
-       Cmax_DF(iDim,1:i2,1:j2,1:k2)=Coeff*Cmax_DF(iDim,1:i2,1:j2,1:k2)
+       Cmax_DF(iDim,1:i2,1:j2,1:k2) = Coeff*Cmax_DF(iDim,1:i2,1:j2,1:k2)
     enddo
 
     ! Initialize divB and sPowell_VC arrays
-    if(UseB .and. UseDivBSource)call impl_divbsrc_init
-
+    if(UseB .and. UseDivBSource) call impl_divbsrc_init
+    
     ! Set s_VC=S(Impl_VC)
-    if(UseImplSource)call get_impl_source(iBlock, Impl_VC, s_VC)
-
+    if(UseImplSource) call get_impl_source(iBlock, Impl_VC, s_VC)
+    
     ! The w to be perturbed and jVar is the index for the perturbed variable
-    ImplEps_VC=Impl_VC
+    ImplEps_VC = Impl_VC
 
-    do jVar=1,nVar;
+    do jVar=1,nVar
        ! Remove perturbation from previous jVar if there was a previous one
-       if(jVar>1)ImplEps_VC(jVar-1,:,:,:)=Impl_VC(jVar-1,:,:,:)
+       if(jVar>1) ImplEps_VC(jVar-1,:,:,:) = Impl_VC(jVar-1,:,:,:)
 
        ! Perturb new jVar variable
        Coeff = Eps*Norm_V(jVar)
        ImplEps_VC(jVar,:,:,:) = Impl_VC(jVar,:,:,:) + Coeff
 
-       do iDim = 1, nDim
+       do iDim=1,nDim
           ! Index limits for faces and shifted centers
           i1 = 1+i_DD(1,iDim); j1= 1+i_DD(2,iDim); k1= 1+i_DD(3,iDim)
           i2 =nI+i_DD(1,iDim); j2=nJ+i_DD(2,iDim); k2=nK+i_DD(3,iDim);
@@ -1389,7 +1402,7 @@ contains
 
           ! Calculate dfdw=(feps-f0)/eps for each iVar variable and both
           ! left and right sides
-          do iVar = 1, nVar
+          do iVar=1,nVar
 
              ! call getflux(ImplEps_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,iDim),&
              !     nI,nJ,nK,iVar,iDim,iBlockImpl,fepsLface(i1:i2,j1:j2,k1:k2))
@@ -1418,11 +1431,6 @@ contains
                   FluxEpsRight_VF(iVar,iTest,jTest,kTest),&
                   dFdWRight_F(iTest,jTest,kTest)
 
-             ! DEBUG
-             ! if(iDim==3.and.iVar==4.and.jVar==2)&
-             ! write(*,*)'BEFORE addcmax dfdw(iih)=',&
-             !          dFdWLeft_F(iTest,jTest,kTest-1)
-
              ! Add contribution of cmax to dfdwL and dfdwR
              if(iVar == jVar)then
                 ! FxL_i-1/2 <-- (FxL + cmax)_i-1/2
@@ -1438,11 +1446,6 @@ contains
                   /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
              dFdWRight_F(1:nI,1:nJ,1:nK) = dFdWRight_F(1:nI,1:nJ,1:nK) &
                   /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
-
-             ! DEBUG
-             ! if(iDim==3.and.iVar==4.and.jVar==2)&
-             ! write(*,*)'AFTER  addcmax dfdwL(iih)=',&
-             !           dFdWLeft_F(iTest,jTest,kTest-1)
 
              ! Contribution of fluxes to main diagonal (middle cell)
              ! dR_i/dW_i = 0.5/Dx*[(dFxR/dW-cmax)_i-1/2 - (dFxL/dW+cmax)_i+1/2]
@@ -1500,9 +1503,10 @@ contains
                   +dFdWRight_F(i1:nI,j1:nJ,k1:nK)
           enddo ! iVar
        enddo ! iDim
+
        if(DoTest)then
           write(*,*)'After fluxes jVar=',jVar,' stencil, row, JAC'
-          do iStencil = 1, nStencil
+          do iStencil=1,nStencil
              do kVar=1,nVar
                 write(*,'(i1,a,i1,a,20(f9.5))')iStencil,',',kVar,':',&
                      Jac_VVCI(:,kVar,iTest,jTest,kTest,iStencil)
@@ -1512,22 +1516,23 @@ contains
 
        ! Derivatives of local source terms
        if(UseImplSource)then
-          if(DoTest)write(*,*)'Adding dS/dw'
-
+          
           ! w2=S(Impl_VC+eps*W_jVar)
           call get_impl_source(iBlock, ImplEps_VC, sEps_VC)
+          
           Coeff = 1.0/(Eps*Norm_V(jVar))
-          do iVar = 1, nVar
+          do iVar=1,nVar
              ! JAC(..1) += dS/dW_jVar
-             Jac_VVCI(iVar,jVar,:,:,:,1)=Jac_VVCI(iVar,jVar,:,:,:,1)&
+             Jac_VVCI(iVar,jVar,:,:,:,1) = Jac_VVCI(iVar,jVar,:,:,:,1)&
                   + Coeff*(sEps_VC(iVar,:,:,:) - s_VC(iVar,:,:,:))
           enddo
        endif
     enddo
 
-    if(DoTest)write(*,*)'After fluxes and sources:  Jac_VVCI(...,1):', &
+    if(DoTest) &
+         write(*,*)'After fluxes and sources:  Jac_VVCI(...,1):', &
          Jac_VVCI(1:nVar,1:nVar,iTest,jTest,kTest,1)
-
+         
     ! Contribution of middle to Powell's source terms
     if(UseB .and. UseDivBSource)then
        ! JAC(...1) += d(Q/divB)/dW*divB
@@ -1554,7 +1559,7 @@ contains
 
     ! Multiply JAC by the implicit timestep dt, ImplCoeff, Norm_V, and -1
     if(time_accurate)then
-       do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           if(IsImplCell_CB(i,j,k,iBlock))then
              do jVar=1,nVar; do iVar=1,nVar
                 Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
@@ -1568,7 +1573,7 @@ contains
        end do; end do; end do; end do
     else
        ! Local time stepping has time_BLK=0.0 inside the body
-       do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iStencil=1,nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
           do jVar=1,nVar; do iVar=1,nVar
              Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
                   -Jac_VVCI(iVar,jVar,i,j,k,iStencil) &
@@ -1588,7 +1593,7 @@ contains
 
     ! Add unit matrix to main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar = 1, nVar
+       do iVar=1,nVar
           Jac_VVCI(iVar,iVar,i,j,k,1) = Jac_VVCI(iVar,iVar,i,j,k,1) + 1.0
        end do
     end do; end do; end do
@@ -1898,13 +1903,13 @@ contains
     end do
 
     IsImplCell_CB = .false.
-    do iBlockImpl = 1, nBlockImpl; do k=1, nK; do j=1, nJ; do i=1, nI
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
             true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
     enddo; enddo; enddo; enddo
 
     if(UseResistivePlanet) then
-       do iBlockImpl = 1, nBlockImpl; do k=1, nK; do j=1, nJ; do i=1, nI
+       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
           if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
                IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
        enddo; enddo; enddo; enddo
@@ -1912,7 +1917,8 @@ contains
 
     ! The index of the test variable in the linear array
     nTest = &
-         iVarTest+nVar*(iTest-1+nI*(jTest-1+nJ*(kTest-1+nK*(iBlockImplTest-1))))
+         iVarTest + &
+         nVar*(iTest-1+nI*(jTest-1+nJ*(kTest-1+nK*(iBlockImplTest-1))))
 
     call test_stop(NameSub, DoTest)
   end subroutine implicit_init
@@ -1924,13 +1930,13 @@ contains
 
     use ModMain
     use ModAdvance, ONLY : State_VGB, Energy_GBI
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, iRho_I
+    use ModMultiFluid, ONLY: select_fluid, nFluid, iP, iRho_I
     use ModSize, ONLY: nG, nI, nJ, nK
 
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
     real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxImplBLK)
 
-    integer :: iBlockImpl, iBlock, i, j, k
+    integer :: iBlockImpl, iBlock, i, j, k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'explicit2implicit'
@@ -1943,35 +1949,40 @@ contains
 
     call timing_start('expl2impl')
 
+    !$omp parallel
+    !$omp do private( iBlock )
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        Var_VGB(:,:,:,:,iBlockImpl) = &
             State_VGB(:,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
 
        if(UseImplicitEnergy)then
-          do iFluid = 1, nFluid
-             call select_fluid
+          do iFluid=1,nFluid
+             call select_fluid(iFluid)
              Var_VGB(iP,:,:,:,iBlockImpl) = &
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
        end if
     end do
+    !$omp end do
 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
+    !$omp do private( iBlock )
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        ! The max velocity at each face is calculated later in get_cmax_face(),
        ! which is calculated block-by-block. If a cell is not a implicit cell
        ! and is not a 'ghost' cell of a implicit cell, then set the
        ! density to 1 and all the other variables to 0, so that the maximum
        ! velocity at these faces is 0.
-       iBlock=iBlockFromImpl_B(iBlockImpl)
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
             max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
           Var_VGB(:,i,j,k,iBlockImpl) = 0
           Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
        endif
-
     enddo; enddo; enddo; enddo
-
+    !$omp end do
+    !$omp end parallel
+    
     call timing_stop('expl2impl')
 
     if(DoTest .and. nBlockImpl > 0) &
@@ -1989,12 +2000,12 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: nVar, State_VGB, Energy_GBI
     use ModEnergy,     ONLY: calc_pressure_cell, calc_energy_cell
-    use ModMultiFluid, ONLY: iFluid, nFluid, iRho, iRho_I, iP_I, iP
+    use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
 
-    real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
+    real,    intent(in) :: Var_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
-    integer :: i,j,k
+    integer :: i,j,k, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'impl2expl'
@@ -2002,24 +2013,24 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     call timing_start('impl2expl')
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.IsImplCell_CB(i,j,k,iBlock)) CYCLE
        State_VGB(1:nVar,i,j,k,iBlock) = Var_VC(1:nVar,i,j,k)
     end do; end do; end do
 
-    do iFluid = 1, nFluid
+    do iFluid=1,nFluid
        if(RhoMin_I(iFluid) < 0) CYCLE
        iRho = iRho_I(iFluid)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k=1,nK; do j=1,nJ; do i=1,nI
           State_VGB(iRho,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
                State_VGB(iRho,i,j,k,iBlock))
        end do; end do; end do
     end do
 
     if(UseImplicitEnergy)then
-       do iFluid = 1, nFluid
+       do iFluid=1,nFluid
           iP = iP_I(iFluid)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.IsImplCell_CB(i,j,k,iBlock)) CYCLE
              Energy_GBI(i,j,k,iBlock,iFluid) = Var_VC(iP,i,j,k)
           end do; end do; end do
@@ -2040,7 +2051,7 @@ contains
     use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
     use ModAdvance, ONLY: State_VGB
 
-    real :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real :: Var_VCB(:,:,:,:,:)   ! dimension(nVar,nI,nJ,nK,MaxImplBLK)
     integer :: iBlockImpl, iBlock
 
     logical:: DoTest
@@ -2048,10 +2059,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$omp parallel do private( iBlock )
     do iBlockImpl=1,nBlockImpl
-       iBlock=iBlockFromImpl_B(iBlockImpl)
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        call impl2expl(Var_VCB(:,:,:,:,iBlockImpl),iBlock)
     end do
+    !$omp end parallel do
 
     if(DoTest)write(*,*) NameSub,': State_VGB=',&
          State_VGB(:,iTest,jTest,kTest,iBlockTest)
@@ -2076,12 +2089,12 @@ contains
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
-
+    
     logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
-    real, intent(in)    :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real, intent(in)    :: Var_VCB(:,:,:,:,:)
     ! The actual Var_VCB and Res_VCB arguments may be the same array:
     ! intent(inout)
-    real, intent(inout) :: Res_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+    real, intent(inout) :: Res_VCB(:,:,:,:,:)
 
     real    :: CflTmp
     integer :: nOrderTmp, nStageTmp, iBlockImpl, iBlock
@@ -2120,13 +2133,16 @@ contains
        CflTmp = Cfl
        Cfl    = 0.5
     end if
-
+    
     ! Res_VCB = Var_VCB(t+dt)
     call implicit2explicit(Var_VCB)
-    call exchange_messages
-    call advance_explicit(DoCalcTimestep, -1)
-    call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
 
+    call exchange_messages
+
+    call advance_explicit(DoCalcTimestep, -1)
+
+    call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
+    
     if(DoSubtract) Res_VCB(:,:,:,:,1:nBlockImpl) = &
          Res_VCB(:,:,:,:,1:nBlockImpl) - Var_VCB(:,:,:,:,1:nBlockImpl)
 
@@ -2134,9 +2150,9 @@ contains
          Res_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
-       iBlock=iBlockFromImpl_B(iBlockImpl)
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        if(.not. IsImplCell_CB(i,j,k,iBlock)) then
-          Res_VCB(:,i,j,k,iBlockImpl) =0;
+          Res_VCB(:,i,j,k,iBlockImpl) = 0;
        endif
     enddo; enddo; enddo; enddo
 
@@ -2162,7 +2178,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
-
+    
     integer, intent(in) :: iBlock
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
@@ -2177,18 +2193,18 @@ contains
 
     UseDivbSourceOrig = UseDivbSource
     UseDivbSource     = .false.
-
+    
     call impl2expl(Var_VC, iBlock)
-
+    
     call calc_source(iBlock)
 
     SourceImpl_VC = Source_VC(1:nVar,:,:,:)
-
+    
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
        SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
     end if
-
+    
     UseDivbSource = UseDivbSourceOrig
     call timing_stop(NameSub)
 
@@ -2211,9 +2227,9 @@ contains
     use ModMultiFluid, ONLY: nFluid, iP_I
 
     integer, intent(in):: nI, nJ, nK, iDim, iBlock
-    real, intent(in)   :: StateCons_VC(nVar,nI,nJ,nK)
-    real, intent(in)   :: B0_DC(MaxDim,nI,nJ,nK)
-    real, intent(out)  :: Flux_VC(nVar,nI,nJ,nK)
+    real, intent(in)   :: StateCons_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
+    real, intent(in)   :: B0_DC(:,:,:,:)        ! dimension(MaxDim,nI,nJ,nK)
+    real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
@@ -2277,9 +2293,9 @@ contains
     use ModAdvance,  ONLY: eFluid_
 
     integer, intent(in):: nFaceI,nFaceJ,nFaceK,iDim,iBlock
-    real, intent(in)   :: Var_VF(nVar,nFaceI,nFaceJ,nFaceK)
-    real, intent(in)   :: B0_DF(MaxDim,nFaceI,nFaceJ,nFaceK)
-    real, intent(out)  :: Cmax_F(nFaceI,nFaceJ,nFaceK)
+    real, intent(in) :: Var_VF(:,:,:,:) ! dimension(nVar,nFaceI,nFaceJ,nFaceK)
+    real, intent(in) :: B0_DF(:,:,:,:)  ! dimension(MaxDim,nFaceI,nFaceJ,nFaceK)
+    real, intent(out):: Cmax_F(:,:,:)   ! dimension(nFaceI,nFaceJ,nFaceK)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
 
@@ -2299,7 +2315,7 @@ contains
     UnRight_I(eFluid_) = 0.0
 
     call set_block_values(iBlock, iDim)
-    do kFace = 1, nFaceK; do jFace = 1, nFaceJ; do iFace = 1, nFaceI
+    do kFace=1,nFaceK; do jFace=1,nFaceJ; do iFace=1,nFaceI
 
        DoTestCell = DoTest .and. &
             iFace==iTest .and. jFace==jTest .and. kFace==kTest
@@ -2331,17 +2347,18 @@ contains
 
     use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
     use ModMultiFluid, ONLY: select_fluid, &
-         iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
+         iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModPhysics, ONLY: GammaMinus1_I, GammaMinus1
 
     real, intent(inout):: State_V(nVar)
     real :: InvRho, InvRho_I(nFluid)
+    integer :: iFluid
     character(len=*), parameter:: NameSub = 'conservative_to_primitive'
     !--------------------------------------------------------------------------
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
-          call select_fluid
+          call select_fluid(iFluid)
 
           InvRho = 1.0/State_V(iRho)
 
@@ -2385,9 +2402,9 @@ contains
     call test_start(NameSub, DoTest)
 
     ! First calculate max(cmax/dx) for each cell and dimension
-    DtLocal=0.0
-    do iBlockImpl=1,nBlockImpl;
-       iBlock = iBlockFromImpl_B(iBlockImpl);
+    DtLocal = 0.0
+    do iBlockImpl=1,nBlockImpl
+       iBlock = iBlockFromImpl_B(iBlockImpl)
 
        if(UseB0)then
           B0_DC = B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)

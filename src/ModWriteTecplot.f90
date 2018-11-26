@@ -1854,7 +1854,7 @@ contains
     use ModIO,         ONLY: plot_dimensional, plot_type1
     use ModVarIndexes, ONLY: IsMhd
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
-    use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
+    use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
     use BATL_lib,      ONLY: nDim
 
     ! Arguments
@@ -1865,7 +1865,7 @@ contains
 
     character (len=20) :: NameTecFluid
     character (len=20) :: String, NamePlotVar, NameTecVar, NameUnit
-    integer            :: iPlotVar, iVar
+    integer            :: iPlotVar, iVar, iFluid
 
     ! Coordinate names and units
     logical:: DoTest
@@ -1906,7 +1906,7 @@ contains
        NamePlotVar = NamePlotVar_V(iPlotVar)
        call lower_case(NamePlotVar)
        String = NamePlotVar
-       call extract_fluid_name(String)
+       call extract_fluid_name(String,iFluid)
        NameTecFluid = ''
        if(iFluid > 1 .or. .not. IsMhd) NameTecFluid = '^'//NameFluid
 

@@ -10,6 +10,7 @@ module ModHeatConduction
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
   use BATL_size, ONLY: nDim, MaxDim
+  use omp_lib
 
   implicit none
   save
@@ -30,7 +31,8 @@ module ModHeatConduction
   ! Logical for adding field-aligned heat conduction
   logical, public :: IsNewBlockHeatCond = .true.
   logical, public :: IsNewBlockIonHeatCond = .true.
-
+  !$omp threadprivate( IsNewBlockHeatCond, IsNewBlockIonHeatCond )
+  
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'spitzer'
   logical :: DoUserHeatConduction
@@ -57,7 +59,8 @@ module ModHeatConduction
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
-
+  !$omp threadprivate( Te_G, Ti_G )
+  
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
   ! TiFraction is defined such that Ti = p/rho * TiFraction
@@ -66,17 +69,21 @@ module ModHeatConduction
 
   ! Array needed for second order interpolation of ghost cells
   real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-
+  !$omp threadprivate( State1_VG, State2_VG )
+  
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-
+  !$omp threadprivate( FluxImpl_VFD )
+  
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_G(:,:,:), bb_DDG(:,:,:,:,:)
+  !$omp threadprivate( HeatCoef_G, bb_DDG )
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
-
+  !$omp threadprivate( FreeStreamFlux_G )
+  
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
@@ -281,18 +288,22 @@ contains
     DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
+       !$omp parallel
+       !$omp single
+       allocate(HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
+       !$omp end single
        allocate( &
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-            HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock), &
             Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
        if(UseHeatFluxLimiter) &
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
-
+       !$omp end parallel
+       
        if(UseElectronPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_CB(nI,nJ,nK,MaxBlock))
           if(UseAnisoPressure)then
@@ -351,7 +362,9 @@ contains
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
-
+    !$omp threadprivate( UseFirstOrderBc )
+    !$omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
+    
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
@@ -363,7 +376,7 @@ contains
        UseFirstOrderBc = .false.
     end if
     if(UseFirstOrderBc)then
-       iFace_D = (/iFace, jFace, kFace/)
+       iFace_D = [iFace, jFace, kFace]
        UseRightStateOnly = any(&
             iFace_D(1:nDim)==1.and.NeiLev(1:(2*nDim-1):2,iBlock)==NOBLK)
        UseLeftStateOnly =  any(&
@@ -502,7 +515,7 @@ contains
 
     ! The magnetic field should nowhere be zero. The following fix will
     ! push the magnitude of Bunit_D  to zero if B_D is approaching zero.
-    Bnorm = sqrt(sum(B_D**2))
+    Bnorm = norm2(B_D)
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     ! Calculate the electron temperature in SI units
@@ -674,7 +687,7 @@ contains
 
     ! The magnetic field should nowhere be zero. The following fix will
     ! turn the magnitude of the field direction to zero.
-    Bnorm = sqrt(sum(B_D**2))
+    Bnorm = norm2(B_D)
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
@@ -714,7 +727,7 @@ contains
        x_D = 0.5*(Xyz_DGB(:,iFace,jFace,kFace-1,iBlock) &
             +     Xyz_DGB(:,iFace,jFace,kFace  ,iBlock))
     end select
-    r = sqrt(sum(x_D**2))
+    r = norm2(x_D)
     if(rCollisionless < 0.0)then
        heat_cond_factor = 1.0/((r/rCollisional)**2 + 1)
     elseif(r <= rCollisional)then
@@ -870,7 +883,8 @@ contains
     real :: DtLocal
     real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
-    real :: TeEpsilonSi = 1.0, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
+    real, parameter:: TeEpsilonSi = 1.0
+    real :: TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     real :: bb_DD(nDim,nDim)
     logical :: IsNewBlockTe
 
@@ -1226,7 +1240,7 @@ contains
 
       ! The magnetic field should nowhere be zero. The following fix will
       ! turn the magnitude of the field direction to zero.
-      Bnorm = sqrt(sum(B_D**2))
+      Bnorm = norm2(B_D)
       Bunit_D = B_D / max( Bnorm, cTolerance )
 
       if(DoWeakFieldConduction)then
@@ -1299,7 +1313,7 @@ contains
           call get_face_gradient(iDim, i, j, k, iBlock, &
                IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D,&
                UseFirstOrderBcIn=UseFirstOrderBC)
-
+          
           FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 

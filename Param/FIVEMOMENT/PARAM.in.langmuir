@@ -3,7 +3,7 @@
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma
-1.30			VersionUserModule
+1.40			VersionUserModule
 
 #CHECKGRIDSIZE
       50                              nI
@@ -93,7 +93,7 @@ float                   TypeBcBottom
 float                   TypeBcTop
 
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #SCHEME
 2			nOrder
