@@ -1955,6 +1955,9 @@ contains
           NameTecVar = 'B_t'
           NameUnit   = NameTecUnit_V(UnitB_)
           !
+       case('hyp')
+          NameTecVar = 'Hyp'
+          NameUnit   = NameTecUnit_V(UnitB_)
        case('e')
           NameTecVar = 'E'//NameTecFluid
           NameUnit   = NameTecUnit_V(UnitEnergydens_)
@@ -2047,6 +2050,9 @@ contains
           NameUnit   = NameTecUnit_V(UnitElectric_)
        case('ezind')
           NameTecVar = 'Eind_z'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('hype')
+          NameTecVar = 'HypE'
           NameUnit   = NameTecUnit_V(UnitElectric_)
        case('gradpex')
           NameTecVar = 'GradPe_x'
