@@ -15,6 +15,10 @@ $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 1
 	${COMPILE.f90} ${Cflag0} ModFieldLineThread.f90
 
+# Particle field line module works with 0 optimization only
+$Compiler eq "crayftn"
+	${COMPILE.f90} ${Cflag0} ModParticleFieldLine.f90
+
 # There is no point optimizing this code, speed up compilation
 1
 	${COMPILE.f90} ${Cflag0} ModSetParameters.f90
