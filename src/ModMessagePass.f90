@@ -20,9 +20,11 @@ module ModMessagePass
   public:: fix_buffer_grid     ! restore old values in the buffer grid
   public:: fill_in_from_buffer ! set cells of the block covered by buffer grid
 
+  ! Set to true if there is a need for extra message passing
+  logical, public:: DoExtraMessagePass = .false.
+
   ! True if it is sufficient to fill in the fine ghost cells with a single
-  ! layer of the coarse cell values.
-  ! set from MH_set_parameters
+  ! layer of the coarse cell values. Set in ModSetParameters.
   logical, public:: DoOneCoarserLayer = .true.
 
 contains
@@ -77,6 +79,12 @@ contains
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    if(DoExtraMessagePass)then
+       if(DoTest) write(*,*) NameSub,': doing extra message pass'
+       ! Switch off request
+       DoExtraMessagePass = .false.
+    end if
 
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
