@@ -911,6 +911,9 @@ contains
           call set_clight_face(iBlock)
        end if
     end if
+
+    primitive_VG = State_VGB(:,:,:,:,iBlock)
+
     if(UseAccurateResChange .or. nOrder==4)then
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           call calc_primitives         ! all cells
@@ -1463,9 +1466,9 @@ contains
       
       integer:: iVar
       !------------------------------------------------------------------------
-      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
 
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
+      
       if(DoLimitMomentum)then
          ! momentum is limited
 
