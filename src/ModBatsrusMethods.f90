@@ -417,7 +417,7 @@ contains
     use ModParticleFieldLine, ONLY: advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
-    use ModMessagePass, ONLY: exchange_messages
+    use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
     use ModTimeStepControl, ONLY: set_global_timestep
     use ModB0, ONLY: DoUpdateB0, DtUpdateB0
     use ModResistivity, ONLY: &
@@ -457,13 +457,12 @@ contains
        RETURN
     end if
 
-    ! We are advancing in time. Exchange messages before starting
-    ! the time loop in case some information was received, 
-    ! for example buffer grid filled from another component
-    if(.not.time_loop)then
-       time_loop = .true.
-       call exchange_messages
-    end if
+    ! We are advancing in time. 
+    time_loop = .true.
+
+    ! Exchange messages if some information was received 
+    ! from another SWMF component, for example.
+    if(DoExtraMessagePass) call exchange_messages
 
     ! Some files should be saved at the beginning of the time step
     call BATS_save_files('BEGINSTEP')
