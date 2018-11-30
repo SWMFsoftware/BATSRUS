@@ -401,7 +401,7 @@ contains
       Tmp = BTang2*RhoInv
 
       Ca = abs(Bn)/RhoSqrt                                 ! Alfven speed
-      Cf = 0.5*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) ! Fast magnetossonic
+      Cf = 0.5*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp))   ! Fast magnetosonic
       Cs = Ca * A/Cf                                       ! Slow magnetosonic
 
     end subroutine get_characteristic_speeds
