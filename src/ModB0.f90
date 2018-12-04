@@ -107,7 +107,7 @@ contains
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
-    case("B0FACTOR")
+    case("#B0FACTOR")
        call read_var('FactorB0', FactorB0)
 
     case default
