@@ -474,12 +474,16 @@ pro read_data
      if nfile gt 1 then begin
         case ifile of
            0: begin
+              help,x,w,x0,w0
               w0=w
               x0=x
+              help,x0,w0
            end
            1: begin
+              help,x,w,x0,w0,x1,w1
               w1=w
               x1=x
+              help,x,w,x0,w0,x1,w1
            end
            2: begin
               w2=w
@@ -2149,21 +2153,21 @@ pro get_pict_asc,unit,npict
   1: begin
     x=dblarr(nx(0),ndim)
     w=dblarr(nx(0),nw)
-    for x0=0L,nx(0)-1 do begin
+    for ix=0L,nx(0)-1 do begin
       readf,unit,xrow,wrow
-      x(x0,0:ndim-1)=xrow(0:ndim-1)
-      w(x0,0:nw-1)  =wrow(0:nw-1)
+      x(ix,0:ndim-1)=xrow(0:ndim-1)
+      w(ix,0:nw-1)  =wrow(0:nw-1)
     endfor
   end
   ;-------------- 2D ----------------------
   2: begin
     x=dblarr(nx(0),nx(1),ndim)
     w=dblarr(nx(0),nx(1),nw)
-    for x1=0L,nx(1)-1 do begin
-      for x0=0L,nx(0)-1 do begin
+    for jx=0L,nx(1)-1 do begin
+      for ix=0L,nx(0)-1 do begin
         readf,unit,xrow,wrow
-        x(x0,x1,0:ndim-1)=xrow(0:ndim-1)
-        w(x0,x1,0:nw-1)  =wrow(0:nw-1)
+        x(ix,jx,0:ndim-1)=xrow(0:ndim-1)
+        w(ix,jx,0:nw-1)  =wrow(0:nw-1)
       endfor
     endfor
   end
@@ -2171,12 +2175,12 @@ pro get_pict_asc,unit,npict
   3: begin
     x=dblarr(nx(0),nx(1),nx(2),ndim)
     w=dblarr(nx(0),nx(1),nx(2),nw)
-    for x2=0L,nx(2)-1 do begin
-      for x1=0L,nx(1)-1 do begin
-        for x0=0L,nx(0)-1 do begin
+    for kx=0L,nx(2)-1 do begin
+      for jx=0L,nx(1)-1 do begin
+        for ix=0L,nx(0)-1 do begin
           readf,unit,xrow,wrow
-          x(x0,x1,x2,0:ndim-1)=xrow(0:ndim-1)
-          w(x0,x1,x2,0:nw-1)=wrow(0:nw-1)
+          x(ix,jx,kx,0:ndim-1)=xrow(0:ndim-1)
+          w(ix,jx,kx,0:nw-1)=wrow(0:nw-1)
         endfor
       endfor
     endfor
