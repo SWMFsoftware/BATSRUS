@@ -474,16 +474,13 @@ pro read_data
      if nfile gt 1 then begin
         case ifile of
            0: begin
-              help,x,w,x0,w0
               w0=w
               x0=x
               help,x0,w0
            end
            1: begin
-              help,x,w,x0,w0,x1,w1
               w1=w
               x1=x
-              help,x,w,x0,w0,x1,w1
            end
            2: begin
               w2=w
