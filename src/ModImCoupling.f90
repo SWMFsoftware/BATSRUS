@@ -425,22 +425,16 @@ contains
              end if
           end if
           if(DoCoupleImDensity)then
-             do iFluid =1, nIons
-                where(RhoIm_IC(iFluid,:,:,:)>0.0) &
-                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock)=&
-                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock) &
-                     + Factor * TauCoeffIm_C &
-                     * (RhoIm_IC(iFluid,:,:,:) - &
-                     State_VGB(iDens_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
-             end do
-             !do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             !   if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
-             !   State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
-             !        State_VGB(iDens_I,i,j,k,iBlock) &
-             !        + Factor * TauCoeffIm_C(i,j,k) &
-             !        * (RhoIm_IC(1:nDensity,i,j,k) &
-             !        - State_VGB(iDens_I,i,j,k,iBlock)))
-             !end do; end do; end do
+             ! Negative first fluid density signals cells not covered by IM
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
+                ! Here iDens_I can index multiple species or fluids
+                State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
+                     State_VGB(iDens_I,i,j,k,iBlock) &
+                     + Factor * TauCoeffIm_C(i,j,k) &
+                     * (RhoIm_IC(1:nDensity,i,j,k) &
+                     - State_VGB(iDens_I,i,j,k,iBlock)))
+             end do; end do; end do
           end if
        else
           if(DoCoupleImPressure)then
