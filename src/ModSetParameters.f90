@@ -219,7 +219,7 @@ contains
     end if
 
     ! restart in first session only
-    if(.not.IsFirstSession) restart=.false. 
+    if(.not.IsFirstSession) restart=.false.
 
     if(DoReadSatelliteFiles)then
        call read_satellite_input_files
@@ -413,7 +413,7 @@ contains
        end if
 
        IsFirstSession = .false.
-       
+
        RETURN
     case('read','Read','READ')
        if(iProc==0)then
@@ -566,7 +566,7 @@ contains
 
        case("#LINEARSOLVERACCURATESUM")
           call read_var('UseAccurateSum', UseAccurateSum)
-          
+
        case("#IMPLICIT", &
             "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
             "#PARTIMPL", "#PARTIMPLICIT",     &
@@ -1189,7 +1189,7 @@ contains
           if(nOrder == 5) then
              ! Some of the settings below can be overwritten by #SCHEME5
              UseFDFaceFlux    = .true.
-             DoCorrectFace    = .true. 
+             DoCorrectFace    = .true.
              UseCweno         = .false.
              ! HighResChange does not work for 1D, but works for 2D and 3D
              UseHighResChange = nDIm > 1
@@ -1212,10 +1212,10 @@ contains
           ! If UseFDFaceFlux is true, use ECHO scheme, which is based on
           ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
           ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
-          call read_var('UseFDFaceFlux', UseFDFaceFlux)          
+          call read_var('UseFDFaceFlux', UseFDFaceFlux)
           call read_Var('TypeLimiter5', TypeLimiter5, IsLowerCase=.true.)
           call read_var('UseHighResChange', UseHighResChange)
-          call read_var('UseHighOrderAMR',UseHighOrderAMR)          
+          call read_var('UseHighOrderAMR',UseHighOrderAMR)
           if(UseFDFaceFlux) call read_var('DoCorrectFace',DoCorrectFace)
           if(.not.UseFDFaceFlux) DoCorrectFace = .false.
 
@@ -1507,7 +1507,7 @@ contains
           call read_var('DoCouplePsDensity',  DoCoupleImDensity)
           if(DoCoupleImDensity) &
                call read_var('DensityCoupleFloor', RhoMinDimIm)
-             
+
        case("#RBSATCOUPLING")
           call read_var('DoRbSatTrace',DoRbSatTrace)
        case("#USERFLAGS", "#USER_FLAGS")
@@ -1995,7 +1995,7 @@ contains
 
        case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
             '#MAGNETICAXIS','#MAGNETICCENTER','#ROTATION','#DIPOLE', &
-            '#NONDIPOLE','#UPDATEB0')
+            '#NONDIPOLE','#UPDATEB0', '#USEMULTIPOLE')
 
           call check_stand_alone
           if(.not.is_first_session())CYCLE READPARAM
