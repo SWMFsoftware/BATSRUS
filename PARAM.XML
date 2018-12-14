@@ -466,19 +466,22 @@ F               IsMagAxisPrimary
 but much shorter.
 </command>
 
-<command name="USEMULTIPOLE" if="$_IsStandAlone">
+<command name="MULTIPOLEB0" if="$_IsStandAlone">
 	<parameter name="MaxHarmonicDegree" type="integer" default="-1" />
 	<parameter name="NamePlanetHarmonicsFile" type="string" default="0.0" />
 
-Through the use of the #USEMULTIPOLE command, one can specify the
+Through the use of the #MULTIPOLEB0 command, one can specify the
 planetary magnetic field (B0) in the form of the Spherical Harmonic
 expansion. This is useful for e.g. to model the IGRF or complicated
 planetary magnetic field. As of now this feature cannot be used
 with the IE solver, and should be used in standalone GM/BATSRUS
-only.
+only. Also note that this has been implemented for a coordinate
+system in which the Z-axis is aligned with the planet's rotation
+axis.
 
-#USEMULTIPOLE
-10		MaxHarmonicDegree
+#MULTIPOLEB0
+T               UseMultipoleBField
+10              MaxHarmonicDegree
 planetharmonics.txt 		NamePlanetaryHarmonicsFile
 
 The planetharmonics.txt file should be of the form -

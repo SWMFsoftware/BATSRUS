@@ -1995,7 +1995,7 @@ contains
 
        case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
             '#MAGNETICAXIS','#MAGNETICCENTER','#ROTATION','#DIPOLE', &
-            '#NONDIPOLE','#UPDATEB0', '#USEMULTIPOLE')
+            '#NONDIPOLE','#UPDATEB0', '#MULTIPOLEB0')
 
           call check_stand_alone
           if(.not.is_first_session())CYCLE READPARAM
