@@ -11,7 +11,7 @@ module ModFaceFlux
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: UseB, UseB0, cLimit
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
-       UseIonHeatConduction, DoThinCurrentSheet
+       UseIonHeatConduction
   use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
        EDotFA_X, EDotFA_Y, EDotFA_Z                     ! output: E.Area
   use ModGeometry,   ONLY: true_cell
@@ -2640,9 +2640,6 @@ contains
 
     if(UseAlfvenWaves)then
        AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
-       if(SignB_>1 .and. DoThinCurrentSheet)then
-          if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
-       end if
 
        do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
           Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
