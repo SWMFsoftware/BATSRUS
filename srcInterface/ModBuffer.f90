@@ -40,7 +40,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
   use ModMultiFluid, ONLY: IsFullyCoupledFluid
-
+  use ModWaves,      ONLY: UseAlfvenWaves
   use ModCoordTransform, ONLY: xyz_to_sph
 
   implicit none
@@ -50,6 +50,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   real,   intent(out):: State_V(nVar)
 
   real             :: Sph_D(MaxDim)
+  real             :: Ewave
 
   character (len=3) :: TypeCoordSource
   real, save        :: SourceTarget_DD(MaxDim, MaxDim)
@@ -141,6 +142,12 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
         ! In both IH and OH we have no B0, so we ignore that !         
         if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
            State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
+           if(WaveFirst_ > 1 .and. UseAlfvenWaves)then
+              Ewave = State_V(WaveFirst_)
+              State_V(WaveFirst_) = State_V(WaveLast_)
+              State_V(WaveLast_) = Ewave
+           end if
+           
            State_V(SignB_)=-1.0
         else
            State_V(SignB_)= 1.0

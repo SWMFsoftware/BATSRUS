@@ -1948,19 +1948,28 @@ contains
 
     use ModAdvance,    ONLY: State_VGB
     use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModVarIndexes, ONLY: Bx_, Bz_, SignB_
+    use ModVarIndexes, ONLY: Bx_, Bz_, SignB_, WaveFirst_, WaveLast_
+    use ModWaves,      ONLY: UseAlfvenWaves
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    real :: Ewave
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'reverse_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(State_VGB(SignB_,i,j,k,iBlock) < 0.0)then
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseAlfvenWaves)then
+             Ewave = State_VGB(WaveFirst_,i,j,k,iBlock)
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                  State_VGB(WaveLast_,i,j,k,iBlock)
+             State_VGB(WaveLast_,i,j,k,iBlock) = Ewave
+          end if
+       end if
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
