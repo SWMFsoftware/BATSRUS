@@ -1625,6 +1625,9 @@ contains
        case('#STEADYSTATESATELLITE')
           call read_satellite_parameters(NameCommand)
 
+       case('#MAGPERTURBINTEGRAL')
+          call read_magperturb_param(NameCommand)
+
        case('#GEOMAGINDICES')
           call read_magperturb_param(NameCommand)
           nFile = max(nFile, indexfile_)
