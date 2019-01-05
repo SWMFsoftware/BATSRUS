@@ -22,23 +22,35 @@ module ModGroundMagPerturb
   public:: write_magnetometers
   public:: write_geoindices
 
-  logical,            public:: DoSaveMags = .false.
-  integer,            public:: nMagnetometer=0, nMagTotal=0
-  real, allocatable,  public:: PosMagnetometer_II(:,:)
-  character(len=100), public:: MagInputFile
-  character(len=3),   public:: TypeCoordMag='MAG', TypeCoordGrid='SMG'
-  character(len=7),   public:: TypeMagFileOut='single '
+  logical, public:: DoSaveMags = .false.
+  logical, public:: DoSaveGridmag = .false.
+  integer, public:: nMagTotal = 0
+
+  real,    public:: Kp=0.0   ! Resulting indices
+
+  ! Public geomagnetic indices variables
+  logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
+  logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
+  integer, public           :: iSizeKpWindow = 0 ! Size of MagHistory_II
+  integer, public, parameter:: nKpMag = 24, nAeMag = 24
+  real, public, allocatable :: MagHistory_DII(:,:,:)  ! Mag time history.
+
+  ! Local variables ------
+
+  real               :: AeIndex_I(4)
+  integer            :: nMagnetometer=0
+  real, allocatable  :: PosMagnetometer_II(:,:)
+  character(len=100) :: MagInputFile
+  character(len=3)   :: TypeCoordMag='MAG', TypeCoordGrid='SMG'
+  character(len=7)   :: TypeMagFileOut='single '
 
   ! Variables for grid of magnetometers:
-  logical, public:: DoSaveGridmag = .false.
-  integer, public:: nGridMag = 0
+  integer:: nGridMag = 0
 
-  character(len=7), public :: TypeGridFileOut='single'
+  character(len=7):: TypeGridFileOut='single'
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
-  real, allocatable,  public:: IeMagPerturb_DII(:,:,:)
-
-  ! Local variables
+  real, allocatable:: IeMagPerturb_DII(:,:,:)
 
   ! Fast algorithms: 
   real, allocatable:: LineContrib_DII(:,:,:)
@@ -55,14 +67,6 @@ module ModGroundMagPerturb
 
   ! Output for magnetometer grid
   real, allocatable:: MagOut_VII(:,:,:)
-
-  ! Public geomagnetic indices variables:
-  logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
-  logical, public :: IsFirstCalc=.true., IsSecondCalc=.true.
-  integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_II
-  integer, public, parameter    :: nKpMag = 24, nAeMag = 24
-  real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
-  real,    public               :: Kp=0.0, AeIndex_I(4)   ! Resulting indices
 
   ! Private geomagnetic indices variables:
   integer :: nIndexMag = 0  ! Total number of mags required by indices.
@@ -497,7 +501,7 @@ contains
 
     ! Get the current and B at the ionosphere boundary
     call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-         FacRcurrents_II, bRcurrents_DII)
+         FacRcurrents_II, bRcurrents_DII, TypeCoordFacGrid='SMG')
 
     if(nProc > 1)then
        call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
@@ -543,7 +547,6 @@ contains
     end if
 
     if(UseFastFacIntegral_I(iGroup))then
-       write(*,*)'!!! using fast fac method for group', NameGroup
        iLineProc = 0
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
