@@ -18,12 +18,9 @@ module ModGroundMagPerturb
 
   public:: read_magperturb_param
   public:: init_mod_magperturb
-  public:: open_magnetometer_output_file
   public:: finalize_magnetometer
   public:: write_magnetometers
   public:: write_geoindices
-  public:: ground_mag_perturb
-  public:: ground_mag_perturb_fac
 
   logical,            public:: DoSaveMags = .false.
   integer,            public:: nMagnetometer=0, nMagTotal=0
@@ -42,6 +39,12 @@ module ModGroundMagPerturb
   real, allocatable,  public:: IeMagPerturb_DII(:,:,:)
 
   ! Local variables
+
+  ! Fast algorithms: 
+  real, allocatable:: LineContrib_DII(:,:,:)
+  logical:: UseFastFacIntegral = .false. ! true for fast FAC integral
+  logical:: UseSurfaceIntegral = .false. ! true for fast surface integral
+
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
   character(len=3), allocatable :: MagName_I(:)
@@ -102,7 +105,8 @@ contains
   subroutine read_magperturb_param(NameCommand)
     ! Handle params for all magnetometer-related commands.
 
-    use ModIO,        ONLY: magfile_,maggridfile_,indexfile_, dn_output,dt_output
+    use ModIO,        ONLY: magfile_, maggridfile_, indexfile_, &
+         dn_output,dt_output
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -113,6 +117,10 @@ contains
     call test_start(NameSub, DoTest)
 
     select case(NameCommand)
+    case("#MAGPERTURBINTEGRAL")
+       call read_var('UseSurfaceIntegral', UseSurfaceIntegral)
+       call read_var('UseFastFacIntegral', UseFastFacIntegral)
+
     case("#MAGNETOMETER")
        DoSaveMags = .true.
        call read_var('MagInputFile', MagInputFile)
@@ -282,9 +290,9 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Set number of shared magnetometers.
-    if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
-    if(DoCalcAe)  nIndexMag = nIndexMag+nAeMag
-    ! if(DoCalcDst) nIndexMag = nIndexMag+nDstMag !Not yet implemented..
+    if(DoCalcKp)  nIndexMag = nIndexMag + nKpMag
+    if(DoCalcAe)  nIndexMag = nIndexMag + nAeMag
+    ! if(DoCalcDst) nIndexMag = nIndexMag + nDstMag !Not yet implemented..
     ! ...etc.
 
     if(DoTest) write(*,*)'Number of IndexMags used: ', nIndexMag
@@ -425,7 +433,7 @@ contains
   end subroutine ground_mag_perturb
   !============================================================================
 
-  subroutine ground_mag_perturb_fac(nMag, Xyz_DI, MagPerturb_DI)
+  subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, MagPerturb_DI)
 
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
     ! pertubation of the magnetic field (returned as MagPerturb_DI) due
@@ -441,6 +449,7 @@ contains
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
 
+    character(len=*), intent(in):: NameGroup
     integer, intent(in) :: nMag
     real,    intent(in) :: Xyz_DI(3,nMag)
     real,    intent(out):: MagPerturb_DI(3,nMag)
@@ -458,7 +467,21 @@ contains
     real              :: FacRcurrents_II(nTheta,nPhi)
     real              :: bRcurrents_DII(3,nTheta,nPhi)
 
-    ! real:: Volume, Height=2.0 !!!
+    ! Variables for fast FAC integration (using Igor Sokolov's idea)
+    ! The Biot-Savart integral for a given magnetometer indexed by iMag
+    ! depends linearly on the FAC(rCurrents,iTheta,iPhi), so the contribution
+    ! can be precalculated, which eliminates the expensive part of the 
+    ! calculation. Storage of the contribution factors is distributed among
+    ! the processors.
+
+    integer:: iLineProc, nLineProc    ! linear line index for Lon-Lat grid
+    integer, parameter:: nGroup = 4   ! number of magnetometer groups
+    integer:: iGroup = 1              ! group index
+    integer:: iMag0                   ! magnetometer index shift
+    ! this logical becomes true once the first integration was done for the group
+    logical:: UseFastFacIntegral_I(nGroup) = .false. 
+
+    ! real:: Volume, Height=2.0 !!! to test volume integration
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
@@ -485,82 +508,155 @@ contains
     where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4) &
          FacRcurrents_II = 0.0
 
-    ! CHECK
-    ! Volume = 0.
-
     iLine = -1
-    do iTheta = 1, nTheta
-       Theta = (iTheta-1) * dTheta
-       ! At the poles sin(Theta)=0, but the area of the triangle 
-       ! formed by the pole and the latitude segment at Theta=dTheta/2
-       ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
-       ! replaced with dTheta/8.
-       SinTheta = max(sin(Theta), dTheta/8)
 
-       do iPhi=1, nPhi
+    if(UseFastFacIntegral)then
 
-          Phi = (iPhi-1) * dPhi
+       ! Allocate storage for all magnetometers
+       if(.not.allocated(LineContrib_DII))then
+          nLineProc = 1 + (nTheta*nPhi-1)/nProc
+          allocate(LineContrib_DII(3,nMagTotal,nLineProc))
+          LineContrib_DII = 0.0
+          if(iProc==0) write(*,*) NameSub, &
+               ' allocated LineContrib_DII(3,',nMagTotal,',',nLineProc,')'
+       end if
 
-          ! If the FAC is under certain threshold, do nothing
-          ! This  should be commented out for testing the volume
-          if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
+       ! Set group index iGroup and 
+       ! starting magnetometer index iMag0 for LineContrib_DII
+       select case(NameGroup)
+       case('stat')
+          iGroup = 1
+          iMag0 = 0
+       case('grid')
+          iGroup = 2
+          iMag0 = nMagnetometer
+       case('kp')
+          iGroup = 3
+          iMag0 = nMagnetometer + nGridMag
+       case('ae')
+          iGroup = 4
+          iMag0 = nMagnetometer + nGridMag
+          if(DoCalcKp) iMag0 = iMag0 + nKpMag
+       case default
+          call stop_mpi(NameSub//': unknown NameGroup='//NameGroup)
+       end select
+    end if
 
-          iLine = iLine + 1
+    if(UseFastFacIntegral_I(iGroup))then
+       write(*,*)'!!! using fast fac method for group', NameGroup
+       iLineProc = 0
+       do iTheta = 1, nTheta
+          do iPhi = 1, nPhi
+             iLine = iLine + 1
+             if(mod(iLine, nProc) /= iProc)CYCLE
 
-          ! do parallel computation among the processors
-          if(mod(iLine, nProc) /= iProc)CYCLE
+             iLineProc = iLineProc + 1
 
-          call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
-
-          ! the field aligned current and B field at r=rCurrents
-          FacRcurrents = FacRcurrents_II(iTheta,iPhi)
-          bRcurrents_D = bRcurrents_DII(:,iTheta,iPhi)
-          bRcurrents   = sqrt(sum(bRcurrents_D**2))
-
-          ! Calculate volume element multiplied by |Br|
-          ! dVolume = dS_sphere*dR = dS_tube*dL and dR/dL = Br/|B|
-          BrRcurrents = abs(sum(bRcurrents_D*XyzRcurrents_D))/rCurrents
-          dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
-
-          do k = 1, nR
-
-             ! Second order integration in radial direction
-             r = rCurrents - dR*(k-0.5)
-
-             ! get next position along the field line
-             call map_planet_field(Time_Simulation, XyzRcurrents_D, &
-                  'SMG NORM', r, XyzMid_D, iHemisphere)
-
-             ! get the B field at this position
-             call get_planet_field(Time_Simulation, XyzMid_D, 'SMG NORM', b_D)
-             b_D = b_D*Si2No_V(UnitB_)
-
-             ! The (x,y,z) components of the field aligned current here
-             j_D = FacRcurrents * b_D/bRcurrents
-
-             ! the length of the field line between two cuts: dL = dR*|B|/|Br|
-             ! the cross section area changes proportional to 1/|B|, 
-             ! so the volume element is proportional to 1/|Br|:
-             InvBr = r/abs(sum(b_D*XyzMid_D))
-             dVol  = dVolCoeff*InvBr
-
-             !!! Check
-             ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume = Volume + dVol
+             FacRcurrents = FacRcurrents_II(iTheta,iPhi)
+             if(FacRcurrents == 0.0) CYCLE
 
              do iMag = 1, nMag
-                Xyz_D = Xyz_DI(:,iMag)
-                
-                ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
-                Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
-                     /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
 
-                MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag) + Pert_D
+                ! Add contribution from this line to this magnetometer
+                MagPerturb_DI(:,iMag) = MagPerturb_DI(:,iMag) + &
+                     FacRcurrents * LineContrib_DII(:,iMag+iMag0,iLineProc)
              end do
-
           end do
        end do
-    end do
+    else
+       if(UseFastFacIntegral)then
+          iLineProc = 0
+          ! Next time the integrals can be reused
+          UseFastFacIntegral_I(iGroup) = .true.
+       end if
 
+       ! CHECK
+       ! Volume = 0.
+
+       do iTheta = 1, nTheta
+          Theta = (iTheta-1) * dTheta
+          ! At the poles sin(Theta)=0, but the area of the triangle 
+          ! formed by the pole and the latitude segment at Theta=dTheta/2
+          ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
+          ! replaced with dTheta/8.
+          SinTheta = max(sin(Theta), dTheta/8)
+
+          do iPhi = 1, nPhi
+
+             Phi = (iPhi-1) * dPhi
+
+             ! If the FAC is under certain threshold, do nothing
+             ! This  should be commented out for testing the volume
+             if (FacRcurrents_II(iTheta,iPhi) == 0.0 &
+                  .and. .not. UseFastFacIntegral) CYCLE
+
+             iLine = iLine + 1
+
+             ! do parallel computation among the processors
+             if(mod(iLine, nProc) /= iProc)CYCLE
+
+             ! Count local line index
+             if(UseFastFacIntegral) iLineProc = iLineProc + 1
+
+             call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
+
+             ! the field aligned current and B field at r=rCurrents
+             FacRcurrents = FacRcurrents_II(iTheta,iPhi)
+             bRcurrents_D = bRcurrents_DII(:,iTheta,iPhi)
+             bRcurrents   = sqrt(sum(bRcurrents_D**2))
+
+             ! Calculate volume element multiplied by |Br|
+             ! dVolume = dS_sphere*dR = dS_tube*dL and dR/dL = Br/|B|
+             BrRcurrents = abs(sum(bRcurrents_D*XyzRcurrents_D))/rCurrents
+             dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
+
+             do k = 1, nR
+
+                ! Second order integration in radial direction
+                r = rCurrents - dR*(k-0.5)
+
+                ! get next position along the field line
+                call map_planet_field(Time_Simulation, XyzRcurrents_D, &
+                     'SMG NORM', r, XyzMid_D, iHemisphere)
+
+                ! get the B field at this position
+                call get_planet_field(&
+                     Time_Simulation, XyzMid_D, 'SMG NORM', b_D)
+                b_D = b_D*Si2No_V(UnitB_)
+
+                ! The (x,y,z) components of the field aligned current here
+                ! assuming FAC(rCurrents)=1 (we multiply with it at the end)
+                j_D = b_D/bRcurrents
+
+                ! length of the field line between two cuts: dL = dR*|B|/|Br|
+                ! the cross section area changes proportional to 1/|B|, 
+                ! so the volume element is proportional to 1/|Br|:
+                InvBr = r/abs(sum(b_D*XyzMid_D))
+                dVol  = dVolCoeff*InvBr
+
+                !! Check
+                ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume=Volume+dVol
+
+                do iMag = 1, nMag
+                   Xyz_D = Xyz_DI(:,iMag)
+
+                   ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
+                   Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
+                        /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
+
+                   MagPerturb_DI(:,iMag) = MagPerturb_DI(:,iMag) + &
+                        FacRcurrents*Pert_D
+
+                   ! Store contribution for fast method
+                   if(UseFastFacIntegral)LineContrib_DII(:,iMag+iMag0,iLineProc) &
+                        = LineContrib_DII(:,iMag+iMag0,iLineProc) + Pert_D
+
+                end do
+
+             end do
+          end do
+       end do
+    end if
     ! Volume of the two spherical caps above Height (should be filled
     ! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
     !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
@@ -599,7 +695,7 @@ contains
 
     ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nKpMag, XyzGm_DI, dBmag_DI)
-    call ground_mag_perturb_fac(nKpMag, XyzKp_DI, dBfac_DI)
+    call ground_mag_perturb_fac('kp', nKpMag, XyzKp_DI, dBfac_DI)
     call calc_ie_mag_perturb(   nKpMag, XyzKp_DI, dBHall_DI, dBPedersen_DI)
 
     ! Add up contributions and convert to IO units (nT)
@@ -694,7 +790,7 @@ contains
 
     ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nAeMag, XyzGm_DI, dBmag_DI)
-    call ground_mag_perturb_fac(nAeMag, XyzAe_DI, dBfac_DI)
+    call ground_mag_perturb_fac('ae', nAeMag, XyzAe_DI, dBfac_DI)
     call calc_ie_mag_perturb(   nAeMag, XyzAe_DI, dBHall_DI, dBPedersen_DI)
 
     ! Add up contributions and convert to IO units (nT)
@@ -881,7 +977,7 @@ contains
   end subroutine read_mag_input_file
   !============================================================================
 
-  subroutine open_magnetometer_output_file(NameGroupIn)
+  subroutine open_magnetometer_output_file(NameGroup)
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
 
@@ -890,7 +986,7 @@ contains
     use ModIO,     ONLY: NamePlotDir, IsLogName_e
     use ModUtilities, ONLY: flush_unit, open_file
 
-    character(len=4), intent(in) :: NameGroupIn
+    character(len=4), intent(in) :: NameGroup
 
     character(len=100):: NameFile, StringPrefix, TypeFileNow
     integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
@@ -902,19 +998,19 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Magnetometer grid file or regular file?
-    if(NameGroupIn == 'stat')then
+    if(NameGroup == 'stat')then
        StringPrefix = 'magnetometers'
        iStart       = 0
        iEnd         = nMagnetometer
        TypeFileNow = TypeMagFileOut
-    else if(NameGroupIn == 'grid')then
+    else if(NameGroup == 'grid')then
        StringPrefix = 'gridMags'
        iStart       = nMagnetometer
        iEnd         = nMagnetometer+nGridMag
        TypeFileNow  = TypeGridFileOut
     else
        call stop_mpi('open_magnetometer_output_files: unrecognized ' // &
-            'magnetometer group: '//NameGroupIn)
+            'magnetometer group: '//NameGroup)
     end if
 
     ! Total number of magnetometers written out now:
@@ -951,9 +1047,9 @@ contains
          'dBnHal dBeHal dBdHal dBnPed dBePed dBdPed'
 
     ! Save file IO unit.
-    if(NameGroupIn == 'stat')then
+    if(NameGroup == 'stat')then
        iUnitMag=iUnitNow
-    else if(NameGroupIn == 'grid')then
+    else if(NameGroup == 'grid')then
        iUnitGrid=iUnitNow
     end if
 
@@ -1008,7 +1104,7 @@ contains
   end subroutine write_geoindices
   !============================================================================
 
-  subroutine write_magnetometers(NameGroupIn)
+  subroutine write_magnetometers(NameGroup)
     ! Write ground magnetometer field perturbations to file.  Values, IO units,
     ! and other information is gathered from module level variables.
 
@@ -1019,9 +1115,9 @@ contains
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
-    ! NameGroupIn determines which group of magnetometers will be written
+    ! NameGroup determines which group of magnetometers will be written
     ! to file: regular stations ('stat') or grid magnetometers ('grid').
-    character(len=4), intent(in) :: NameGroupIn
+    character(len=4), intent(in) :: NameGroup
 
     integer :: iMag, iError, iStart, iEnd, iUnitOut, nMagNow
 
@@ -1041,13 +1137,13 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Configure output to cover specific magnetometer group:
-    if (NameGroupIn == 'stat') then
+    if (NameGroup == 'stat') then
        iStart       = 0
        iEnd         = nMagnetometer
        iUnitOut     = iUnitMag
        TypeCoordNow = TypeCoordMag
        TypeFileNow  = TypeMagFileOut
-    else if (NameGroupIn == 'grid') then
+    else if (NameGroup == 'grid') then
        iStart       = nMagnetometer
        iEnd         = nMagnetometer+nGridMag
        iUnitOut     = iUnitGrid
@@ -1055,14 +1151,14 @@ contains
        TypeFileNow  = TypeGridFileOut  ! should be "2d"
     else
        call stop_mpi(NameSub// &
-            ': Unrecognized magnetometer group: '//NameGroupIn)
+            ': Unrecognized magnetometer group: '//NameGroup)
     end if
 
     ! Total number of magnetometers written out now:
     nMagNow = iEnd - iStart
 
     if(DoTest) then
-       write(*,*) 'WRITING MAGNETOMETERS: Type=', NameGroupIn
+       write(*,*) 'WRITING MAGNETOMETERS: Type=', NameGroup
        write(*,'(a, 3i4, 1x, a)') 'iStart, iEnd, iUnitOut, TypeCoordNow = ', &
             iStart, iEnd, iUnitOut, TypeCoordNow
        write(*,*) 'nMagNow = ', nMagNow
@@ -1102,7 +1198,7 @@ contains
 
     ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nMagNow, MagGmXyz_DI, dBMhd_DI)
-    call ground_mag_perturb_fac(nMagNow, MagSmXyz_DI, dBFac_DI)
+    call ground_mag_perturb_fac(NameGroup, nMagNow, MagSmXyz_DI, dBFac_DI)
     call calc_ie_mag_perturb(nMagNow, MagSmXyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Collect the variables from all the PEs
@@ -1194,9 +1290,6 @@ contains
       integer ::  iTime_I(7), iLon, iLat, iMag
 
       character(len=100):: NameFile
-
-      ! if(NameGroup == "grid")then
-
       !------------------------------------------------------------------------
       if(allocated(MagOut_VII))then
          if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)
@@ -1281,9 +1374,9 @@ contains
       !------------------------------------------------------------------------
       call get_date_time(iTime_I)
 
-      if(NameGroupIn == 'stat') then
+      if(NameGroup == 'stat') then
          StringPrefix='magnetometers'
-      else if (NameGroupIn == 'grid') then
+      else if (NameGroup == 'grid') then
          StringPrefix='gridMags'
       endif
 
@@ -1349,6 +1442,7 @@ contains
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
     if (allocated(MagName_I)) deallocate(MagName_I)
     if (allocated(MagHistory_DII)) deallocate(MagHistory_DII)
+    if (allocated(LineContrib_DII)) deallocate(LineContrib_DII)
 
     call test_stop(NameSub, DoTest)
   end subroutine finalize_magnetometer
