@@ -535,8 +535,8 @@ contains
   end subroutine get_current
   !============================================================================
 
-  subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, bSm_DII, &
-       LatBoundary, Theta_I, Phi_I)
+  subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, Brin_DII, &
+       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
@@ -549,7 +549,7 @@ contains
     ! Map the grid points from the rIn radius to rCurrents.
     ! Calculate the field aligned currents there, use the ratio of the
     ! magnetic field strength.
-    ! The result is saved into Fac_II, bSm_DII.
+    ! The result is saved into Fac_II, Brin_DII.
 
     ! Size of spherical grid at rIn
     integer, intent(in) :: nTheta, nPhi
@@ -560,8 +560,8 @@ contains
     ! Field aligned current at rIn
     real, intent(out):: Fac_II(nTheta,nPhi)
 
-    ! Magnetic field at rIn in SM coordinates
-    real, intent(out):: bSm_DII(3,nTheta,nPhi)
+    ! Magnetic field at rIn in FAC coordinates
+    real, intent(out):: Brin_DII(3,nTheta,nPhi)
 
     ! Lowest latitude that maps up to rCurrents
     real, intent(out), optional :: LatBoundary
@@ -570,6 +570,12 @@ contains
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
 
+    ! Coordinate system of the Theta-Phi grid and Brin
+    character(len=3), intent(in), optional:: TypeCoordFacGrid
+
+    ! Local variables
+    character(len=3):: TypeCoordFac
+
     ! Interpolation weight, interpolated agnetic field and current 
     real, allocatable :: bCurrent_VII(:,:,:)
 
@@ -577,7 +583,7 @@ contains
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3),B0_D(3)
     real    :: b_D(3), bRcurrents,Fac, Jr_D(3),bUnit_D(3)
     real    :: bIn_D(3), bIn
-    real    :: GmSmg_DD(3,3)
+    real    :: GmFac_DD(3,3)
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
     logical :: DoMap
@@ -585,17 +591,21 @@ contains
     character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    TypeCoordFac = 'SMG'
+    if(present(TypeCoordFacGrid)) TypeCoordFac = TypeCoordFacGrid
+
     if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6,nTheta,nPhi))
 
-    bCurrent_VII      = 0.0
+    bCurrent_VII = 0.0
 
     Fac_II = 0.0
 
-    GmSmg_DD = transform_matrix(Time_Simulation, 'SMG', TypeCoordSystem)
+    GmFac_DD = transform_matrix(Time_Simulation, TypeCoordFac, TypeCoordSystem)
 
     if(present(LatBoundary)) LatBoundary = 100.0
 
-    if (abs(rIn-rCurrents)<1.0e-3)then
+    if (abs(rIn - rCurrents) < 1.0e-3)then
        DoMap = .false.
     else
        DoMap = .true.
@@ -620,11 +630,11 @@ contains
           call sph_to_xyz(rIn,Theta,Phi, XyzIn_D)
 
           if (DoMap)then
-             ! if not reach to the mapped position, then skip this line
-             call map_planet_field(Time_Simulation, XyzIn_D, 'SMG NORM', &
-                  rCurrents, Xyz_D, iHemisphere)
+             call map_planet_field(Time_Simulation, XyzIn_D, &
+                  TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
 
              if(iHemisphere == 0) then
+                ! This point does not map
                 ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
                 bCurrent_VII(:,i,j) = &
                      [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -635,7 +645,7 @@ contains
           end if
 
           ! Convert to GM coordinates
-          Xyz_D = matmul(GmSmg_DD, Xyz_D)
+          Xyz_D = matmul(GmFac_DD, Xyz_D)
 
           if(present(LatBoundary)) &
                LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
@@ -670,10 +680,7 @@ contains
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
          iComm,iError)
 
-    !\
     ! Map the field aligned current to rIn sphere
-    !/
-
     if(iProc==0)then
 
        do j = 1, nPhi
@@ -710,7 +717,7 @@ contains
                 call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
 
                 ! Convert to GM coordinates
-                XyzIn_D = matmul(GmSmg_DD, XyzIn_D)
+                XyzIn_D = matmul(GmFac_DD, XyzIn_D)
 
                 call get_planet_field(Time_Simulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)
@@ -727,8 +734,8 @@ contains
              ! store the field alinged current
              Fac_II(i,j) = Fac
 
-             ! store the B field in SM coordinates !!
-             bSm_DII(:,i,j) = matmul(bIn_D, GmSmg_DD)
+             ! store the B field in the FAC coordinates
+             Brin_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
 
           end do
        end do
