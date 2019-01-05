@@ -3598,6 +3598,28 @@ For more than one satellite (two satellites in the above given
 example), the start and end times should be set for all of them.
 </command>
 
+<command name="MAGPERTURBINTEGRAL">
+	<parameter name="UseSurfaceIntegral" type="logical" default="F"/>
+	<parameter name="UseFastFacIntegral" type="logical" default="F"/>
+#MAGPERTURBINTEGRAL
+T			UseSurfaceIntegral
+T			UseFastFacIntegral
+
+Control what method is used to do the Biot-Savart integrals to
+calculate the magnetic perturbations. If UseSurfaceIntegral is true,
+the volume integral over the MHD grid is replaced with a surface
+integral using Igor Sokolov's formulas (not yet implemented).
+If UseFastFacIntegral is true, the integrals across the gap region
+are precalculated for each magnetometer and each line starting 
+from the lat-lon grid and stored into an array LineContrib_DII.
+At any given time this array can be multiplied with the FAC 
+values calculated at rCurrents to obtain the perturbation at
+a given magnetometer. The storage as well as the calculation
+is parallel.
+
+Default values are false for backward compatibility. Likely to change.
+</command>
+
 <command name="GEOMAGINDICES">
 	<parameter name="nSizeKpWindow" type="integer" min="15" default="180"/>
 	<parameter name="DtOutput" type="real" min="-1" default="60"/>
