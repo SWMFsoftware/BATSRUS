@@ -218,13 +218,14 @@ contains
 
   subroutine pic_init_region
 
-    use ModProcMH,    ONLY: iProc
-    use BATL_lib,     ONLY: nDim
+    use ModProcMH,    ONLY: iProc, iComm
+    use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, x_, y_, z_
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
-    use ModHallResist, ONLY: HallFactorMax
+    use ModHallResist, ONLY: HallFactorMax, UseHallResist, HallFactor_C, set_hall_factor_cell
     use ModPhysics,   ONLY: IonMassPerCharge
-    use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
-    use ModVarIndexes, ONLY: IsMhd
+    use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
+    use ModVarIndexes,ONLY: IsMhd
+    use ModMpi,       ONLY: MPI_REAL
 
     ! PIC grid indexes
     integer:: iRegion
@@ -237,6 +238,9 @@ contains
 
     ! Region check
     integer :: nCell
+
+    integer :: iProcPic, iBlockPic, iCell_D(MaxDim), iError
+    real:: PicMiddle_D(MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_init_region'
@@ -306,19 +310,6 @@ contains
     if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     do iRegion = 1, nRegionPic      
-       mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
-            (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
-       mUnitPicSi_I(iRegion) = mUnitPicSi
-
-       if(iProc==0)then
-          write(*,*) NameSub,': iRegion = ', iRegion
-          write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
-          write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi_I(iRegion)
-          write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi_I(iRegion)
-          write(*,*) NameSub,': ScalingFactor = ',ScalingFactor_I(iRegion)
-          write(*,*) NameSub,': mUnitPicSi = ',mUnitPicSi_I(iRegion)
-       end if
-
        ! extending the region sizes with 1 ghost cell
        do i=1, nDim
           ! Number of nodes (not cells! )
@@ -328,6 +319,41 @@ contains
        end do
 
        XyzMinPic_DI(:,iRegion) = XyzPic0_DI(:,iRegion) - DxyzPic_DI(:,iRegion)
+
+       if(UseHallResist) then
+          ! If UseHallResist is true, find out the Hall factor in the middle
+          ! of this PIC region, and use this Hall factor as the scaling factor.
+          PicMiddle_D = 0
+          PicMiddle_D(1:nDim) = XyzMinPic_DI(:,iRegion) + 0.5*LenPic_DI(:,iRegion)
+          call find_grid_block(PicMiddle_D, iProcPic,iBlockPic, &
+               iCellOut_D=iCell_D)
+
+          if(iProcPic == iProc) then
+             call set_hall_factor_cell(iBlockPic, .false.)
+             ScalingFactor_I(iRegion) = HallFactor_C( & 
+                  iCell_D(x_), iCell_D(y_), iCell_D(z_))
+             ! If Hall is not used around this PIC region, then use 
+             ! HallFactorMax as the scaling factor.
+             if(ScalingFactor_I(iRegion) == 0) &
+                  ScalingFactor_I(iRegion) = HallFactorMax
+          endif
+          call MPI_Bcast(ScalingFactor_I(iRegion),1,MPI_REAL, &
+               iProcPic,iComm,iError)          
+       endif
+       
+       mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
+            (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
+       mUnitPicSi_I(iRegion) = mUnitPicSi
+       
+       if(iProc==0)then
+          write(*,*) NameSub,': iRegion            = ', iRegion
+          write(*,*) NameSub,': IonMassPerChargeSi = ', IonMassPerChargeSi
+          write(*,*) NameSub,': xUnitPicSi         = ', xUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': uUnitPicSi         = ', uUnitPicSi_I(iRegion)
+          write(*,*) NameSub,': ScalingFactor      = ', ScalingFactor_I(iRegion)
+          write(*,*) NameSub,': mUnitPicSi         = ', mUnitPicSi_I(iRegion)
+       end if
+
     end do
 
     if(iProc == 0) then

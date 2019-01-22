@@ -314,6 +314,7 @@ contains
     use ModUserInterface ! user_initial_perturbation
     use ModProcMH, ONLY: iProc
     use ModLoadBalance, ONLY: load_balance, select_stepping
+    use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell
 
     ! Local variables
@@ -359,6 +360,8 @@ contains
          call BATS_init_constrain_b
 
     if(UseHallResist .or. UseBiermannBattery)call init_hall_resist
+
+    if(UsePic) call pic_init_region
 
     if(UseHeatConduction .or. UseIonHeatConduction) &
          call init_heat_conduction

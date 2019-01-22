@@ -4894,6 +4894,17 @@ doubleconez0 tapered	StringShape
   2.0			Taper
 
 #REGION
+region10		NameRegion
+box weight tapered	StringShape
+-30.0			xMinBox
+-30.0			yMinBox
+-2.0			xMaxBox
+30.0			yMaxBox
+2.0			Taper
+2.0			Weight
+
+
+#REGION
 magnetosphere		NameRegion
 paraboloidx stretched	StringShape
  10.0			xPosition
@@ -4974,6 +4985,10 @@ the X, Y and Z axes (in this order) in 3D simulations. These are the
 Tait-Bryan angles (yaw, pitch and roll) corresponding the X-Y-Z
 extrinsic rotations in a fixed coordinate system or Z-Y-X
 intrinsic rotations in a rotating coordinate system.
+
+If the word 'weight' is used in StringShape, the parameter Weight 
+is read. The weight is the Hall factor when this region 
+is used by the #HALLREGION command. 
 
 If NameShape starts with 'user', the shape is defined by the subroutine
 user_specify_region. Any parameters for the user region should be read
@@ -7299,6 +7314,9 @@ Similar to command #PICUNIT, but this command allows/needs setting different
 normalization units for different PIC regions. ScalingFactor is used to
 scale up kinetic scales. See Toth et al. 2017 for more details.
 
+If Hall MHD is used, the scaling factors in this command will not be used,
+and PIC boxes use the surrounding Hall factors as the scaling factor.
+
 Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 
 </command>
@@ -8064,6 +8082,10 @@ The StringHallRegion string can specify the region(s) where the Hall
 resistivity is used.  The regions must be described with the #REGION
 commands.  Note the 'tapered' option in the shape desciption that can
 be used to make the transition smoother.
+
+Each region has its own Hall factor, which is the 'Weight' associated
+with the #REGION command. If 'Weight' is not read in, then HallFactorMax,
+which is set by #HALLRESISTIVITY, is used as the default. 
 
 The default is to apply the Hall MHD scheme everywhere if it is switched on.
 </command>

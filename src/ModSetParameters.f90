@@ -103,7 +103,7 @@ contains
     use ModSort, ONLY: sort_quick
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
-    use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
+    use ModPIC, ONLY: pic_read_param
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I
     use ModFaceBoundary, ONLY: read_face_boundary_param
     ! CORONA SPECIFIC PARAMETERS
@@ -375,8 +375,6 @@ contains
              call read_potential_field(NamePlotDir, iProc, nProc, iComm)
           end if
        end if
-
-       if(UsePic) call pic_init_region
 
        if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
             call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
