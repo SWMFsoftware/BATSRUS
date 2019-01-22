@@ -236,13 +236,11 @@ contains
        HallFactor_C = HallFactorMax
     else
        call block_inside_regions(iRegionHall_I, iBlock, &
-            size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C)
+            size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C, &
+            WeightDefaultIn=HallFactorMax)
 
        ! Nothing to do if the block does not intersect with the Hall region
        if(.not.IsHallBlock) RETURN
-
-       ! Multiply by HallFactorMax
-       if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
     end if
 
     if(present(UseIonMassPerCharge))then
