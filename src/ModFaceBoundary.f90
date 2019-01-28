@@ -5,7 +5,7 @@ module ModFaceBoundary
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest
-
+  use ModUtilities, ONLY: norm2
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid, ONLY: nIonFluid
   use ModAdvance,    ONLY: nSpecies

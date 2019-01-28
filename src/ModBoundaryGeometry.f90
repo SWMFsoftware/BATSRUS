@@ -6,6 +6,7 @@ module ModBoundaryGeometry
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
+  use ModUtilities, ONLY: norm2
 
   implicit none
   SAVE

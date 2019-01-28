@@ -7,13 +7,12 @@ module ModFaceValue
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
-
+  use ModUtilities, ONLY: norm2
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder
-
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
        UseBorisRegion, set_clight_cell, set_clight_face, Clight_G
