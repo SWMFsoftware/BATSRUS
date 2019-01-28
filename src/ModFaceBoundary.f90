@@ -228,17 +228,18 @@ contains
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ,    &
          RightState_VX, RightState_VY, RightState_VZ, &
-         UseAnisoPe
+         UseAnisoPe, UseMultiSpecies
     use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
     use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
-         Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
+         Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_, BodyNSpeciesDim_I
     use ModSolarwind,  ONLY: get_solar_wind_point
     use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB
+    use ModProcMH,     ONLY: iProc
     use ModGroundMagPerturb, ONLY: Kp
     
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
@@ -275,10 +276,22 @@ contains
     ! Use Young et al. 1982 empirical relationship to set
     ! inner boundary density based on expected composition.
     if(UseYoungBc .and. UseIe)then
+       ! Limit Kp to be within [1.0,7.0]
+       Kp        = min(max(Kp, 1.0),7.0)
+       ! Limit F10.7 to be within [115.0,230.0]
+       F107Young = min(max(F107Young, 115.0), 230.0)
+
        ! Apply empirical formula from Young et al. to get the ratio
        ! of minor species to H+:
        RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
        !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
+
+       if (RatioOH > 1.0) then
+          write(*,*) 'RatioOH too large, RatioOH =', RatioOH
+       end if
+
+       ! O+ should not exceed H+
+       RatioOH = min(RatioOH, 1.0)
 
        ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
        ! is both light and very minor.
@@ -286,16 +299,30 @@ contains
        FracO = RatioOH  * FracH
 
        ! Use species fractions to obtain the total mass density.
-       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I(IonFirst_)*(FracH + 16*FracO)
+       if (UseMultiSpecies) then
+          if (nIonDensity > 2) call stop_mpi(NameSub// &
+               ': ONLY two species/fluids for Young BC.')
+          ! assuming the first species/fluid is H+
+          RhoCpcp_I(1) = Io2No_V(UnitRho_)*sum(BodyNSpeciesDim_I)
+          ! assuming the second species/fluid is O+, Mass is taken to be 16
+          RhoCpcp_I(2) = Io2No_V(UnitRho_)*sum(BodyNSpeciesDim_I)*RatioOH*16
+       else
+          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+       end if
 
        ! Debug some stuff:
-       !if(iProc==0)then
-       !   write(*,*) "DEBUG YOUNG ET AL IBCs:"
-       !   write(*,*) "  Young et al parameters: Kp, F107 = ", Kp, F107Young
-       !   write(*,*) "  FracO, FracH = ", fracO, fracH
-       !   write(*,*) "  Initial, resulting mass dens = ", &
-       !        BodyNDim_I(IonFirst_), BodyNDim_I(IonFirst_)*(FracH + 16*FracO)
-       !endif
+       if(iProc == 230 .and. .false.)then
+          write(*,*) "DEBUG YOUNG ET AL IBCs, iProc =", iProc
+          write(*,*) "  Young et al parameters: Kp, F107 = ", Kp, F107Young
+          write(*,*) "  FracO, FracH = ", fracO, fracH
+          if (UseMultiSpecies) then
+             write(*,*) "  BodyNSpeciesDim_I =", BodyNSpeciesDim_I
+             write(*,*) "  RhoCpcp_I         =", RhoCpcp_I
+          else
+             write(*,*) "  Initial, resulting mass dens = ", &
+                  BodyNDim_I(IonFirst_), BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+          end if
+       endif
     endif
 
     !\
