@@ -6,8 +6,8 @@ module ModParticleFieldLine
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-
-  ! the module contains subroutine for extracting magnetic field lines
+  use ModUtilities, ONLY: norm2
+  ! This module contains subroutine for extracting magnetic field lines
   ! for passing to other codes;
   ! field line intergration is performed with use of BATL library including
   ! - continuous AMR interpolation

@@ -7,7 +7,7 @@ module ModFieldTrace
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProcTest
-
+  use ModUtilities, ONLY: norm2
   use ModSize
   use ModKind
   use ModIO,         ONLY: iUnitOut, write_prefix
