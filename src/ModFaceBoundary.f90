@@ -293,36 +293,24 @@ contains
        ! O+ should not exceed H+
        RatioOH = min(RatioOH, 1.0)
 
-       ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
-       ! is both light and very minor.
-       FracH = 1.0 / (1.0 + RatioOH)
-       FracO = RatioOH  * FracH
-
        ! Use species fractions to obtain the total mass density.
        if (UseMultiSpecies) then
           if (nIonDensity > 2) call stop_mpi(NameSub// &
                ': ONLY two species/fluids for Young BC.')
+
           ! assuming the first species/fluid is H+
-          RhoCpcp_I(1) = Io2No_V(UnitRho_)*sum(BodyNSpeciesDim_I)
+          RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
+
           ! assuming the second species/fluid is O+, Mass is taken to be 16
-          RhoCpcp_I(2) = Io2No_V(UnitRho_)*sum(BodyNSpeciesDim_I)*RatioOH*16
+          RhoCpcp_I(2) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
        else
+          ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
+          ! is both light and very minor.
+          FracH = 1.0 / (1.0 + RatioOH)
+          FracO = RatioOH  * FracH
           RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
        end if
 
-       ! Debug some stuff:
-       if(iProc == 230 .and. .false.)then
-          write(*,*) "DEBUG YOUNG ET AL IBCs, iProc =", iProc
-          write(*,*) "  Young et al parameters: Kp, F107 = ", Kp, F107Young
-          write(*,*) "  FracO, FracH = ", fracO, fracH
-          if (UseMultiSpecies) then
-             write(*,*) "  BodyNSpeciesDim_I =", BodyNSpeciesDim_I
-             write(*,*) "  RhoCpcp_I         =", RhoCpcp_I
-          else
-             write(*,*) "  Initial, resulting mass dens = ", &
-                  BodyNDim_I(IonFirst_), BodyNDim_I(IonFirst_)*(FracH+16*FracO)
-          end if
-       endif
     endif
 
     !\
