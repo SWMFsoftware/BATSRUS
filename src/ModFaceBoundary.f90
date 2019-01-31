@@ -302,7 +302,9 @@ contains
           RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
 
           ! assuming the second species/fluid is O+, Mass is taken to be 16
-          RhoCpcp_I(2) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
+          ! use nIonDensity instead of 2 to avoid index out of range
+          RhoCpcp_I(nIonDensity) = &
+               Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
        else
           ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
           ! is both light and very minor.
