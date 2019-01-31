@@ -361,7 +361,7 @@ contains
 
     use ModProcMH,     ONLY: iProc
     use ModMain,       ONLY: Time_Simulation, TypeCoordSystem
-    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_, nVar
     use ModIO,         ONLY: NamePrimitiveVarOrig
     use CON_comp_param,   ONLY: lNameVersion
     use CON_world,        ONLY: get_comp_info
@@ -369,7 +369,8 @@ contains
     use CON_coupler,      ONLY: Grid_C, IM_
     use CON_axes,         ONLY: transform_matrix
     use ModMultiFluid,    ONLY: nFluid, iUx_I, iUz_I
-    use ModFieldTrace,    ONLY: DoExtractBGradB1, trace_field_equator
+    use ModFieldTrace,    ONLY: DoExtractBGradB1, DoExtractEfield, &
+         trace_field_equator
 
     integer, intent(in)           :: nRadius, nLon
     integer, intent(out)          :: nVarLine, nPointLine
@@ -401,14 +402,17 @@ contains
     call get_comp_info(IM_, NameVersion=NameVersionIm)
     if(NameVersionIm(1:7) == 'RAM-SCB')then
        DoExtractBGradB1 = .false. ! RAM-SCB does not need BGradB1
+       DoExtractEfield  = .false. ! RAM-SCB does not need Efield
     else
-       DoExtractBGradB1 = .true.  ! Other IM models do need BGradB1
+       DoExtractBGradB1 = .true.  ! HEIDI needs BGradB1
+       DoExtractEfield  = .true.  ! HEIDI needs Efield
     end if
 
     ! The variables to be passed: line index, length along line, 
     ! coordinatess and primitive variables. Total is 5 + nVar.
     NameVar = 'iLine Length x y z '//NamePrimitiveVarOrig
     if(DoExtractBGradB1) NameVar = trim(NameVar)//' bgradb1x bgradb1y bgradb1z'
+    if(DoExtractEfield)  NameVar = trim(NameVar)//' Ex Ey Ez Epotx Epoty Epotz'
 
     call trace_field_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
@@ -438,8 +442,16 @@ contains
 
        ! b.grad(B1)
        if(DoExtractBGradB1) &
-            StateLine_VI(nVarLine-2:nVarLine,iPoint) = &
-            matmul(SmGm_DD, StateLine_VI(nVarLine-2:nVarLine,iPoint)) 
+            StateLine_VI(nVar+6:nVar+8,iPoint) = &
+            matmul(SmGm_DD, StateLine_VI(nVar+6:nVar+8,iPoint))
+
+       ! E and Epot
+       if(DoExtractEfield)then
+          StateLine_VI(nVar+9:nVar+11,iPoint) = &
+               matmul(SmGm_DD, StateLine_VI(nVar+9:nVar+11,iPoint))
+          StateLine_VI(nVar+12:nVar+14,iPoint) = &
+               matmul(SmGm_DD, StateLine_VI(nVar+12:nVar+14,iPoint))
+       end if
 
     end do
 
