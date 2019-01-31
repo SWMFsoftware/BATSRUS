@@ -30,9 +30,10 @@ module ModFieldTrace
   public:: write_plot_equator         !
 
   ! extracting variables (in SI units?) along the field trace
-  logical, public:: DoExtractState  = .false.
-  logical, public:: DoExtractUnitSi = .false.
+  logical, public:: DoExtractState   = .false.
+  logical, public:: DoExtractUnitSi  = .false.
   logical, public:: DoExtractBGradB1 = .false.
+  logical, public:: DoExtractEfield  = .false.
 
   ! mapping to the ionosphere
   real, public, allocatable:: RayMapLocal_DSII(:,:,:,:), RayMap_DSII(:,:,:,:)
@@ -449,12 +450,12 @@ contains
     ! Trace field lines from cell centers to the outer or inner boundaries
 
     use ModProcMH
-    use CON_ray_trace,  ONLY: ray_init
+    use CON_ray_trace,    ONLY: ray_init
     use ModMain
-    use ModAdvance,     ONLY: State_VGB, Bx_, Bz_
-    use ModB0,          ONLY: B0_DGB
-    use ModGeometry,    ONLY: r_BLK, true_cell
-    use BATL_lib,       ONLY: Xyz_DGB, message_pass_cell
+    use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
+    use ModB0,            ONLY: B0_DGB
+    use ModGeometry,      ONLY: r_BLK, true_cell
+    use BATL_lib,         ONLY: Xyz_DGB, message_pass_cell
     use ModMpi
 
     ! Indices corresponding to the starting point and directon of the ray
@@ -973,7 +974,7 @@ contains
     ! Integrate and/or extract values if required.
     ! Also return Length increased by the length of the ray in this block.
     !
-    ! Return iFace = 1..6 if the ray hit the east,west,south,north,bot,top walls
+    ! Return iFace = 1..6 if the ray hit outer domain boundary
     ! Return ray_block_   if the ray hit the block boundary
     ! Return ray_iono_    if the ray hit the ionosphere
     ! Return ray_loop_    if the ray did not hit anything
@@ -1674,8 +1675,8 @@ contains
 
       use CON_line_extract, ONLY: line_put
       use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, iUnitPrim_V
-      use ModAdvance, ONLY: State_VGB, nVar, &
-           Bx_, Bz_
+      use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_, Efield_DGB
+      use ModElectricField, ONLY: Epot_DGB
       use ModMain, ONLY: UseB0
       use ModB0,   ONLY: get_b0
       use ModInterpolate, ONLY: trilinear
@@ -1683,7 +1684,7 @@ contains
       real, intent(in) :: x_D(3)   ! normalized coordinates
       real, intent(in) :: Xyz_D(3) ! Cartesian coordinates
 
-      real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar+4)
+      real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar+10)
       integer :: n, iLine
 
       !------------------------------------------------------------------------
@@ -1751,7 +1752,7 @@ contains
 
             n = n + 3
 
-            ! Interpolate b.grad B1 into the last 3 elements
+            ! Interpolate b.grad B1 into the next 3 elements
             PlotVar_V(n-2:n) = &
                  trilinear(bGradB1_DGB(:,:,:,:,iBlock), &
                  3, 0, nI+1, 0, nJ+1, 0, nK+1, x_D, DoExtrapolate=.false.)
@@ -1761,6 +1762,23 @@ contains
 
          end if
 
+         if(DoExtractEfield)then
+
+            n = n + 3
+            ! Interpolate Efield into next 3 elements
+            PlotVar_V(n-2:n) = &
+                 trilinear(Efield_DGB(:,:,:,:,iBlock), &
+                 3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_D, &
+                 DoExtrapolate=.false.)
+
+            n = n + 3
+            ! Interpolate Epot into next 3 elements
+            PlotVar_V(n-2:n) = &
+                 trilinear(Epot_DGB(:,:,:,:,iBlock), &
+                 3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_D, &
+                 DoExtrapolate=.false.)
+
+         end if
       else
          n = 4
       end if
@@ -2561,21 +2579,22 @@ contains
   subroutine trace_field_equator(nRadius, nLon, Radius_I, Longitude_I, &
        DoMessagePass)
 
-    use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
+    use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
     use CON_ray_trace, ONLY: ray_init
-    use CON_axes, ONLY: transform_matrix
-    use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
-    use ModPhysics, ONLY: rBody
-    use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_
-    use ModB0,      ONLY: B0_DGB
-    use ModProcMH,  ONLY: iProc, iComm
-    use ModMpi
+    use CON_axes,      ONLY: transform_matrix
+    use ModMain,       ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
+    use ModPhysics,    ONLY: rBody
+    use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
+    use ModB0,         ONLY: B0_DGB
     use ModGeometry,       ONLY: CellSize_DB
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use BATL_lib,          ONLY: message_pass_cell, find_grid_block, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModCoordTransform, ONLY: xyz_to_sph
     use ModMessagePass,    ONLY: exchange_messages
+    use ModElectricField,  ONLY: calc_inductive_e
+
+    use BATL_lib,          ONLY: message_pass_cell, find_grid_block, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, iComm
+    use ModMpi
 
     !INPUT ARGUMENTS:
     integer, intent(in):: nRadius, nLon
@@ -2691,12 +2710,16 @@ contains
        end do
     end if
 
+    ! Calculate total, potential and inductive electric fields
+    if(DoExtractEfield) call calc_inductive_e
+
     nRay_D  = [ 2, nRadius, nLon, 0 ]
     DoExtractState = .true.
     DoExtractUnitSi= .true.
     nStateVar = 4 + nVar
-    if(DoExtractBGradB1) nStateVar = nStateVar + 3
+    if(DoExtractBGradB1)    nStateVar = nStateVar + 3
     if(DoExtractCurvatureB) nStateVar = nStateVar + 1
+    if(DoExtractEfield)     nStateVar = nStateVar + 6
     call line_init(nStateVar)
 
     NameVectorField = 'B'
@@ -2733,7 +2756,7 @@ contains
           XyzSm_D(y_) = r*sin(Phi)
           XyzSm_D(z_) = 0.0
 
-          ! Convert SM position to GM (Note: these are identical for ideal axes)
+          ! Convert SM position to GM (Note: these are same for ideal axes)
           Xyz_D = matmul(GmSm_DD, XyzSm_D)
 
           ! Find processor and block for the location
