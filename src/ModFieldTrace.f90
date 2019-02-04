@@ -1674,7 +1674,7 @@ contains
     subroutine ray_extract(x_D,Xyz_D)
 
       use CON_line_extract, ONLY: line_put
-      use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, iUnitPrim_V
+      use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, UnitElectric_, iUnitPrim_V
       use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_, Efield_DGB
       use ModElectricField, ONLY: Epot_DGB
       use ModMain, ONLY: UseB0
@@ -1777,6 +1777,9 @@ contains
                  trilinear(Epot_DGB(:,:,:,:,iBlock), &
                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_D, &
                  DoExtrapolate=.false.)
+
+            if(DoExtractUnitSi) PlotVar_V(n-5:n) = &
+                 PlotVar_V(n-5:n) * No2Si_V(UnitElectric_)
 
          end if
       else
