@@ -15,7 +15,7 @@ module ModAdvanceExplicit
 contains
   !============================================================================
 
-  subroutine advance_explicit(DoCalcTimestep, iStageMax)
+  subroutine advance_explicit(DoCalcTimestep)
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
@@ -51,7 +51,7 @@ contains
 
     
     logical, intent(in) :: DoCalcTimestep
-    integer, intent(in) :: iStageMax ! advance only part way
+
     integer :: iBlock
 
     logical:: DoTest
@@ -251,9 +251,6 @@ contains
        end if
 
        if(DoTest)write(*,*)NameSub,' finished stage=',istage
-
-       ! exit if exceeded requested maximum stage limit
-       if ((iStageMax >= 0) .and. (iStage >= iStageMax)) EXIT STAGELOOP
 
     end do STAGELOOP  ! Multi-stage solution update loop.
 

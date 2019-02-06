@@ -499,7 +499,7 @@ contains
     elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate) then
        call advance_localstep(TimeSimulationLimit)
     else
-       call advance_explicit(.true., -1)
+       call advance_explicit(DoCalcTimestep=.true.)
     endif
 
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
@@ -790,9 +790,6 @@ contains
     !==========================================================================
     subroutine save_files
 
-      logical :: DoSave = .false.
-      integer :: t_output_current
-
       !------------------------------------------------------------------------
       do iFile=1,nFile
          ! We want to use the IE magnetic perturbations that were passed
@@ -807,11 +804,8 @@ contains
                call save_file
             end if
          else if(time_accurate .and. dt_output(ifile) > 0.)then
-            t_output_current = int(time_simulation/dt_output(ifile))
-            DoSave = .false.
-            if(t_output_current > t_output_last(ifile)) DoSave = .true.
-            if(DoSave)then
-               t_output_last(ifile) = t_output_current
+            if(int(time_simulation/dt_output(ifile))>t_output_last(ifile))then
+               t_output_last(ifile) = int(time_simulation/dt_output(ifile))
                call save_file
             end if
          end if
@@ -863,8 +857,7 @@ contains
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
 
-      if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0 &
-           .and. (n_step/=0 .or. ifile/=restart_) ) RETURN
+      if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
 
       if(ifile==restart_) then
          ! Case for restart file
