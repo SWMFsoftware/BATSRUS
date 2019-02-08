@@ -498,7 +498,7 @@ contains
           HallCmaxFactor = 1.0
        endif
 
-       call advance_explicit(.true., -1)
+       call advance_explicit(DoCalcTimestep=.true.)
 
        if(UseHallResist) HallCmaxFactor = HallCmaxFactorOrig
 
@@ -2139,7 +2139,7 @@ contains
 
     call exchange_messages
 
-    call advance_explicit(DoCalcTimestep, -1)
+    call advance_explicit(DoCalcTimestep)
 
     call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
     
