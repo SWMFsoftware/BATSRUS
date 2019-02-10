@@ -5,7 +5,7 @@ module ModExpansionFactors
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-
+  use ModUtilities, ONLY: norm2
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new
   use ModMagnetogram, ONLY: nR, nRExt, nPhi, nTheta, nThetaPerProc, &

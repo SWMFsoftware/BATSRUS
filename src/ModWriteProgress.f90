@@ -4,8 +4,8 @@
 
 module ModWriteProgress
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+  use BATL_lib,     ONLY: test_start, test_stop, lVerbose
+  use ModUtilities, ONLY: norm2
 
   implicit none
 
@@ -27,7 +27,6 @@ contains
     use omp_lib
     
     integer, intent(in) :: inopt
-    integer:: MaxThread = 1
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_progress'
     !--------------------------------------------------------------------------
@@ -46,11 +45,11 @@ contains
             " University of Michigan, 1995-2017"
        write(iUnitOut,*)
        if(IsStandAlone)then
-          !$ MaxThread = omp_get_max_threads()
+          !$ nThread = omp_get_max_threads()
           call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a,i3,a)') &
                ' BATSRUS version ',CodeVersion, &
                ' is running as '//NameThisComp//' on ', nProc, &
-               ' PE(s) with up to', MaxThread, ' OpenMP threads/PE'
+               ' PE(s) with up to', nThread, ' OpenMP threads/PE'
           write(iUnitOut,*)
        end if
        call write_prefix; write(iUnitOut,'(a)') &

@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModProcMH
 
-  use BATL_lib, ONLY: iProc, nProc, iComm
+  use BATL_lib, ONLY: iProc, nProc, nThread,iComm
 
 end module ModProcMH
 !==============================================================================
