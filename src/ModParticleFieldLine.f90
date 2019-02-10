@@ -121,7 +121,7 @@ module ModParticleFieldLine
 
   ! field line random walk (FLRW)
   logical:: UseFLRW = .false.
-  real:: DiffusionFLRW = 0.0
+  real:: DeltaPhiFLRW = 0.0
 
   ! initialization related info
   integer:: nLineInit
@@ -143,6 +143,7 @@ contains
 
     use ModMain,      ONLY: UseParticles
     use ModReadParam, ONLY: read_var
+    use ModNumConst,  ONLY: cPi
 
     character(len=*), intent(in) :: NameCommand
 
@@ -229,8 +230,9 @@ contains
        ! field line random walk may be enabled
        call read_var('UseFLRW', UseFLRW)
        if(UseFLRW)then
-          ! read the value of field line diffusion coefficient
-          call read_var('DiffusionFLRW', DiffusionFLRW)
+          ! read root-mean-square angle of field line diffusion coefficient
+          call read_var('DeltaPhiFLRW [degree]', DeltaPhiFLRW)
+          DeltaPhiFLRW = DeltaPhiFLRW * cPi / 180
        end if
     end select
     call test_stop(NameSub, DoTest)
@@ -834,9 +836,8 @@ contains
       Radius = norm2(StateEnd_VI(x_:z_,iParticle))
       ! see Laitinen et al. (2016), doi:10.1051/0004-6361/201527801
       StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle) + &
-                  sqrt(2 * Radius * No2Si_V(UnitX_) / cAu *&
-                  DiffusionFLRW * StateEnd_VI(Ds_, iParticle)&
-                  ) * (DirPerp1_D * RndGauss1 + DirPerp2_D * RndGauss2)
+                  DeltaPhiFLRW * sqrt(Radius * StateEnd_VI(Ds_, iParticle)) * &
+                  (DirPerp1_D * RndGauss1 + DirPerp2_D * RndGauss2)
     end subroutine apply_random_walk
     !==========================================================================
   end subroutine particle_line
