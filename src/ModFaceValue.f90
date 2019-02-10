@@ -7,13 +7,12 @@ module ModFaceValue
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
-
+  use ModUtilities, ONLY: norm2
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder
-
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
        UseBorisRegion, set_clight_cell, set_clight_face, Clight_G
@@ -64,13 +63,11 @@ module ModFaceValue
   integer :: nFaceLimiterResChange = 2
 
   ! Parameters for limiting the logarithm of variables
-  logical :: UseLogLimiter    = .false., UseLogLimiter_V(nVar) = .false.
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
 
   ! Parameters for limiting the total pressure (p + p_e + p_wave)
   logical :: UsePtotalLtd     = .false.
-  logical :: UsePtotalLimiter = .false.
 
   ! Parameters for limiting the variable divided by density
   logical :: UseScalarToRhoRatioLtd = .false.
@@ -811,6 +808,11 @@ contains
 
     real:: State_V(nVar), Energy
     integer:: iVarSmoothLast, iVarSmooth
+
+    ! Logicals for limiting the logarithm of variables
+    logical :: UseLogLimiter, UseLogLimiter_V(nVar)
+    ! Logicals for limiting the total pressure
+    logical :: UsePtotalLimiter
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_value'
@@ -2955,8 +2957,8 @@ contains
       use ModMain, ONLY: UseB
       use ModMultiFluid, ONLY: iRho, iP, select_fluid
 
-      real, intent(in):: State_VI(nVar,-3:2)
-      real, intent(in):: Vel_II(nFluid,-3:2)
+      real, intent(in):: State_VI(:,:) ! (nVar,-3:2)
+      real, intent(in):: Vel_II(:,:) ! (nFluid,-3:2)
 
       integer:: iFluid
       real:: pTotal_I(-3:2), Sound_I(-3:2)

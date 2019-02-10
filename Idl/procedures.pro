@@ -884,7 +884,10 @@ pro animate_data
      if !d.window lt 0 then window
      wshow
   endif
-  if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,(npict-1)/npict1+1]
+  if doanimate then begin
+    if xregistered("XInterAnimate") then xinteranimate, /close
+    xinteranimate,set=[!d.x_size,!d.y_size,(npict-1)/npict1+1]
+  end
 
   ipict=0
   ipict1=0

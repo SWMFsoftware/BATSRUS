@@ -1768,7 +1768,7 @@ contains
        case('eta','visco')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
                (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-       case('ux','uy','uz','uxrot','uyrot','uzrot','clight')
+       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
 
        case('gradpex','gradpey','gradpez','gradper')

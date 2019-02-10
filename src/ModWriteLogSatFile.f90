@@ -6,6 +6,7 @@ module ModWriteLogSatFile
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, XyzTestCell_D, &
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
+  use ModUtilities, ONLY: norm2
 
   implicit none
 

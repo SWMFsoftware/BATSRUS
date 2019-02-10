@@ -3991,7 +3991,6 @@ No magnetometer grid file is saved by default.
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
--1.			DtSavePlot
 -10.			Coord1MinCut
 10.			Coord1MaxCut
 -10.			Coord2MinCut

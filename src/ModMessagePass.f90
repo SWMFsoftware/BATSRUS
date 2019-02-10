@@ -198,6 +198,8 @@ contains
        end do
     end if
 
+    call timing_start('exch_energy')
+    !$omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
@@ -218,6 +220,8 @@ contains
             call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
 
     end do
+    !$omp end parallel do
+    call timing_stop('exch_energy')
 
     call timing_stop('exch_msgs')
     if(DoTest)call timing_show('exch_msgs',1)
