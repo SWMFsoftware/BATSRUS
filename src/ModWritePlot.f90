@@ -402,7 +402,7 @@ contains
 
        if(DoPassPlotVar) then
           ! Copy precalculated plot variables including ghost cells
-          do iVar = 1 , nPlotVar
+          do iVar = 1, nPlotVar
              PlotVar(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBlock)
           end do
        else
