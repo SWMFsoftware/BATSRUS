@@ -22,7 +22,9 @@ program earth_traj
 
   implicit none
 
-  real :: R, Xyz_D(3)
+  real, parameter :: cAU2rSun = cAU/Rsun  
+
+  real :: Xyz_D(3), Aux
   real :: StartTimeRel=0.0, EndTimeRel=0.0, TimeStep=0.0
   real :: StartTime, EndTime, CurrentTime
   character(len=32) :: NameCommand
@@ -53,7 +55,7 @@ program earth_traj
         do i = 1, 6
            read(iFile,*,end=9000,err=9000) iStartTime(i)
         end do
-        read(iFile,*,end=9000,err=9000)R   !Auxiliary
+        read(iFile,*,end=9000,err=9000) Aux  !Auxiliary
         iStartTime(7) = 0
      case("#TIMELOOP")
         read(iFile,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
@@ -85,9 +87,6 @@ program earth_traj
        call CON_stop('+++ TimeStep MUST be positive +++')
   if (EndTimeRel > StartTimeRel + TimeStep*49999) &
        call CON_stop('+++ Output file cannot have more than 50000 lines +++')
-
-  R=cAU/Rsun
-
   oUnit=6
   write(oUnit,'(a)') '#COOR'
   write(oUnit,'(a)') trim(CoordSys)
@@ -111,12 +110,15 @@ program earth_traj
      call CON_recalc(iCT(1), iCT(2), iCT(3), iCT(4), iCT(5), iCT(6))
      select case(CoordSys)
      case('HAE')
-        write(oUnit,'(7i4,3f12.2)') iCT, Sun2EarthDirHae_D*SunEMBDistance*R
+        write(oUnit,'(7i4,3f12.2)') iCT, &
+             Sun2EarthDirHae_D*SunEMBDistance*cAU/Rsun
      case('HGI')
-        write(oUnit,'(7i4,3f12.2)') iCT, Sun2EarthDirHgi_D*SunEMBDistance*R
+        write(oUnit,'(7i4,3f12.2)') iCT, &
+             Sun2EarthDirHgi_D*SunEMBDistance*cAU/Rsun
      case('HGR')
         Xyz_D =  matmul(HgrHgi_DD,Sun2EarthDirHgi_D)
-        write(oUnit,'(7i4,3f12.2)') iCT, Xyz_D*SunEMBDistance*R
+        write(oUnit,'(7i4,3f12.2)') iCT, &
+             Xyz_D*SunEMBDistance*cAU/Rsun
      end select
      CurrentTime = CurrentTime + TimeStep
   end do
