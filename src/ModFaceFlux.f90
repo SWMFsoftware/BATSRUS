@@ -1248,7 +1248,7 @@ contains
     real :: DiffBn_D(3), DiffE
     real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
-    real :: dB0_D(3), Current_D(3)
+    real :: B0_D(3), dB0_D(3), Current_D(3)
     real :: PeDotAreaLeft_D(3), PeDotAreaRight_D(3)
 
     real :: GradPe_D(3)
@@ -1390,9 +1390,11 @@ contains
              dB0_D = 0.0
           end if
 
+          B0_D = [B0x,B0y,B0z]
+
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
-               [B0x,B0y,B0z], dB0_D,                    &
+               B0_D, dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
                DissipationFlux_V, cMax, Unormal_I(1))
