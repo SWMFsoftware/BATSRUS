@@ -41,13 +41,11 @@ contains
   !-------------------------------------
   subroutine read_coarse_axis_param
     use ModReadParam, ONLY:read_var
-    use ModFaceFlux, ONLY: UsePoleDiffusion
     use ModSize, ONLY: nJ
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_coarse_axis_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call read_var('UsePoleDiffusion', UsePoleDiffusion)
     call read_var('UseCoarseAxis', UseCoarseAxis)
     call read_var('nCoarseLayer', nCoarseLayer)
     if( ( nJ/(2**nCoarseLayer) )*(2**nCoarseLayer)/=nJ)&
