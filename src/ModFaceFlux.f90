@@ -165,7 +165,7 @@ module ModFaceFlux
   logical, public:: UseHallGradPe = .false.
   logical :: IsNewBlockGradPe = .true.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
-  real, allocatable, public, save:: Pe_G(:,:,:)
+  real, allocatable, public:: Pe_G(:,:,:)
   !$omp threadprivate( UseHallGradPe, IsNewBlockGradPe )
   !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
   !$omp threadprivate( Pe_G )
