@@ -2218,7 +2218,7 @@ contains
     ! the implicit scheme general for all equations, we reuse
     ! subroutine get_physical_flux from ModFaceFlux.
 
-    use ModVarIndexes, ONLY: nFluid, nVar, Energy_
+    use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
          set_block_values, set_cell_values, get_physical_flux, &
@@ -2288,9 +2288,10 @@ contains
 
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
-         set_block_values, set_cell_values, get_speed_max, nFluid, &
+         set_block_values, set_cell_values, get_speed_max, &
          DoLf, DoAw, DoRoe, DoHll, DoHlld, UnLeft_I, UnRight_I
     use ModAdvance,  ONLY: eFluid_
+    use ModMultiFluid, ONLY: nFluid
 
     integer, intent(in):: nFaceI,nFaceJ,nFaceK,iDim,iBlock
     real, intent(in) :: Var_VF(:,:,:,:) ! dimension(nVar,nFaceI,nFaceJ,nFaceK)

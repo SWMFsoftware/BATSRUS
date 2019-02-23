@@ -51,7 +51,7 @@ contains
     integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
     real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict
     real :: xMin1, xMax1, yMin1, yMax1, zMin1, zMax1
-    real :: Plot_V(nPlotVarMax)
+    real :: Plot_V(nPlotVar)
     logical:: IsBinary
 
     real:: cHalfMinusTiny
@@ -100,7 +100,8 @@ contains
              Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
           end if
           if(IsBinary)then
-             write(UnitTmp_) DxBlock*xUnit, Coord_D, PlotVar(i,j,k,1:nPlotVar)
+             Plot_V = PlotVar(i,j,k,1:nPlotVar)
+             write(UnitTmp_) DxBlock*xUnit, Coord_D, Plot_V
           else
              do iVar=1,nPlotVar
                 Plot_V(iVar) = PlotVar(i,j,k,iVar)
@@ -197,7 +198,8 @@ contains
           end if
 
           if(IsBinary)then
-             write(UnitTmp_) DxBlock*xUnit, Coord_D, PlotVar(i,j,k,1:nPlotVar)
+             Plot_V = PlotVar(i,j,k,1:nPlotVar)
+             write(UnitTmp_) DxBlock*xUnit, Coord_D, Plot_V
           else
              do iVar=1, nPlotVar
                 Plot_V(iVar) = PlotVar(i,j,k,iVar)
