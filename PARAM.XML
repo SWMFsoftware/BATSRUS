@@ -887,7 +887,7 @@ This command is only used in the restart header file.
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session)
 -1                      nDepthTiming   (-1 for arbitrary depth)
-cumu                    TypeTimingReport   ('cumu', 'list', or 'tree')
+cumu                    TypeTimingReport   ('cumu', 'list', or 'tree' + optional 'all')
 
 This command can only be used in stand alone mode. In the SWMF the
 #TIMING command should be issued for CON.
@@ -909,6 +909,9 @@ TypeTimingReport determines the format of the timing reports:
 'cumu' - cumulative list sorted by timings
 'list' - list based on caller and sorted by timings
 'tree' - tree based on calling sequence
+
+If the word 'all' is added, the timing is done on all the CPU-s. One output
+file will be created for each processor.
 
 The default values are shown above.
 </command>
@@ -2128,22 +2131,17 @@ The default is UseUniformAxis=T.
 </command>
 
 <command name="FIXAXIS">
-	<parameter name="UsePoleDiffusion" type="logical" default="F"/>
 	<parameter name="DoFixAxis" type="logical" default="F"/>
 	<parameter name="rFixAxis"  type="real" min="0" default="0"/>
 	<parameter name="r2FixAxis" type="real" min="0"
 				max="$rFixAxis" default="0"/>
 #FIXAXIS
-F			UsePoleDiffusion
 T			DoFixAxis
 5.0			rFixAxis
 1.5			r2FixAxis
 
 The computational cells become very small near the symmetry axis
-of a spherical or cylindrical grid. When UsePoleDiffusion is true,
-some numerical diffusion applied between the cells on the opposite
-side of the axis. This diffusion may smooth out some artifacts that
-show up when a discontinuity crosses the axis.
+of a spherical or cylindrical grid.
 
 When DoFixAxis is true, the cells around the pole are merged into one
 'supercell' for the blocks that are (partially) inside radius rFixAxis.
@@ -2156,30 +2154,25 @@ Note that the super-cell algorithm requires that there is no
 resolution change around the axis in the phi direction. See
 the #UNIFORMAXIS command for more discussion.
 
-Default is false for both UsePoleDiffusion and DoFixAxis.
+Default is false for DoFixAxis.
 </command>
 
 <command name="COARSEAXIS">
-	<parameter name="UsePoleDiffusion" type="logical" default="F"/>
 	<parameter name="UseCoarseAxis" type="logical" default="F"/>
 	<parameter name="nCoarseLayer"  type="integer" min="1" default="1"/>
 
 #COARSEAXIS
-T			UsePoleDiffusion
 T			UseCoarseAxis
 1			nCoarseLayer
 
 The computational cells become very small near the symmetry axis
-of a spherical or grid. When UsePoleDiffusion is true,
-some numerical diffusion applied between the cells on the opposite
-side of the axis. This diffusion may smooth out some artifacts that
-show up when a discontinuity crosses the axis.
+of a spherical or grid.
 
 When UseCoarseAxis is true, the cells around the pole are merged into pairs, if
 nCoarseLayer=1. If nCoarseLayer=2, then around the pole each 4 cells are merged
 and in the second (from the pole) layer each 2 cells are merged.
 
-Default is false for both UsePoleDiffusion and UseCoarseAxis.
+Default is false for both UseCoarseAxis.
 </command>
 
 </commandgroup>

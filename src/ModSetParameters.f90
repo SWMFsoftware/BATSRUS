@@ -92,7 +92,7 @@ contains
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
-         TypeFluxNeutral, UseClimit, UsePoleDiffusion, DoBurgers
+         TypeFluxNeutral, UseClimit, DoBurgers
     use ModLookupTable,     ONLY: read_lookup_table_param
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -1691,7 +1691,6 @@ contains
           call read_var('UseUniformAxis', UseUniformAxis)
 
        case("#FIXAXIS")
-          call read_var('UsePoleDiffusion', UsePoleDiffusion)
           call read_var('DoFixAxis',DoFixAxis)
           call read_var('rFixAxis',rFixAxis)
           call read_var('r2FixAxis',r2FixAxis)
@@ -3101,11 +3100,10 @@ contains
            (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI))
 
       if(TypeGeometry == 'cartesian')then
-         if(UsePoleDiffusion .or. DoFixAxis)then
-            UsePoleDiffusion = .false.
+         if(DoFixAxis)then
             DoFixAxis = .false.
             if(iProc == 0) write(*,*) NameSub// &
-                 ' setting UsePoleDiffusion and DoFixAxis to FALSE'
+                 ' setting DoFixAxis to FALSE'
          end if
       end if
 
