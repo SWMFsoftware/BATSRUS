@@ -772,6 +772,7 @@ contains
        do num_checks = 1,max_checks
           percent_chg_rho = 0.1
           percent_chg_p   = 0.1
+          !$omp parallel do
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
              if (num_checks == 1) then
@@ -820,6 +821,8 @@ contains
                   StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                   /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
           end do
+          !$omp end parallel do
+
           if(DoTest)then
              ! Find location of maximum change
              call MPI_allreduce(percent_chg_rho, RhoChangeMax_I, 2, &
@@ -827,6 +830,7 @@ contains
              call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
 
+             !$omp parallel do
              do iBlock = 1, nBlockMax
                 if (Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
@@ -888,7 +892,9 @@ contains
                    end do
                 end do; end do; end do
              end do
+             !$omp end parallel do
           end if ! DoTest
+
           time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
           call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
@@ -941,6 +947,7 @@ contains
        !///
        report_tf = 1.
        PercentChangePE = 0.
+       !$omp parallel do
        do iBlock = 1, nBlockMax
           if (Unused_B(iBlock)) CYCLE
           if(UseB0)then
@@ -1034,6 +1041,8 @@ contains
              report_tf = min(report_tf, cell_time_fraction)
           end do; end do; end do
        end do
+       !$omp end parallel do
+
        call MPI_allreduce(report_tf, report_tf_all, 1, &
             MPI_REAL, MPI_MIN, iComm, iError)
        report_tf = report_tf_all
@@ -1044,16 +1053,17 @@ contains
        end if
     end if
 
-    if(DoTest1.and.iStage==nStage) then
+    if(DoTest1 .and. iStage == nStage) then
        call MPI_allreduce(PercentChangePE,  PercentChangeMax, 4, &
             MPI_REAL, MPI_MAX, iComm, iError)
-       if(iProc==0) then
+       if(iProc == 0) then
           write(*,*)'Maximum change in pressure on proc 0:',&
                - PercentChangeMax(3),' %,   ',  PercentChangeMax(4),' %'
           write(*,*) 'Maximum change in other positive variables:', &
                - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
        end if
        if(DoTest3) then
+          !$omp parallel do
           do iBlock = 1,nBlockMax
              if(Unused_B(iBlock))CYCLE
              do k=1,nK;do j=1,nJ; do i=1,nI
@@ -1101,15 +1111,17 @@ contains
                      'value_new=',State_VGB(p_,i,j,k,iBlock)
              end do; end do; end do
           end do
+          !$omp end parallel do
        end if
     end if
 
-    if(iProc == 0 .and. report_tf<1.)&
+    if(iProc == 0 .and. report_tf < 1.0)&
          call error_report('Time step reduction, min(factor)',&
          report_tf,iError1,.true.)
 
     ! Check for positivity of variables
     IsNegative = .false.
+    !$omp parallel do
     do iBlock = 1, nBlockMax
        if (Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
@@ -1137,8 +1149,9 @@ contains
           end if
        end do
     end do
-    if (IsNegative) then
-       if(time_accurate) then
+    !$omp end parallel do
+    if(IsNegative)then
+       if(time_accurate)then
           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
                'Negative updated value: PE=',iProc, &
                'update_check TA:',' nStep=',n_step, &
@@ -1293,9 +1306,9 @@ contains
          ! rhoU = 1/(rho c^2 + B^2) * (I rho c^2 + B B) * rhoU_Boris
          !      = 1/[1+BB/(rho c^2)]* (rhoU_Boris + (rhoUBorisdotB/(rho c^2) * B)
 
-         State_VGB(rhoUx_,i,j,k,iBlock) =  gA2_Boris * (rhoUx_Boris + UdotBc2*fullBx)
-         State_VGB(rhoUy_,i,j,k,iBlock) =  gA2_Boris * (rhoUy_Boris + UdotBc2*fullBy)
-         State_VGB(rhoUz_,i,j,k,iBlock) =  gA2_Boris * (rhoUz_Boris + UdotBc2*fullBz)
+         State_VGB(rhoUx_,i,j,k,iBlock) = gA2_Boris*(rhoUx_Boris + UdotBc2*fullBx)
+         State_VGB(rhoUy_,i,j,k,iBlock) = gA2_Boris*(rhoUy_Boris + UdotBc2*fullBy)
+         State_VGB(rhoUz_,i,j,k,iBlock) = gA2_Boris*(rhoUz_Boris + UdotBc2*fullBz)
 
          if(IsConserv)then
             E_boris= &
@@ -1312,8 +1325,8 @@ contains
                  -State_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
                  )/State_VGB(rho_,i,j,k,iBlock)**2               )
 
-            if((nStage==1.and..not.time_accurate).or.&
-                 (nStage>1.and.iStage==1)) &
+            if((nStage==1 .and. .not.time_accurate) .or. &
+                 (nStage > 1 .and. iStage == 1)) &
                  Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
                  (0.5/time_fraction - 0.5)*&
                  ((State_VGB(Bx_,i,j,k,iBlock) - &
@@ -1340,7 +1353,7 @@ contains
 
             call calc_energy(i,i,j,j,k,k,iBlock,1,1)
          end if
-      else                      ! Non-Boris interpolation
+      else ! Non-Boris interpolation
 
          State_VGB(1:nVar,i,j,k,iBlock) = &
               (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
