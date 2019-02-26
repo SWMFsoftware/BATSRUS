@@ -1538,14 +1538,16 @@ contains
 
        case("#CHANGEVARIABLES")
           call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
+          if (DoChangeRestartVariables) UseStrict = .false.
 
        case("#SPECIFYRESTARTVARMAPPING")
           ! If user sets restart variables mapping, DoChangeRestartVariables
           ! should be set to true.
-          DoChangeRestartVariables = .true.
           call read_var('DoSpecifyRestartVarMapping', &
                DoSpecifyRestartVarMapping)
           if (DoSpecifyRestartVarMapping) then
+             DoChangeRestartVariables = .true.
+             UseStrict = .false.
              if (allocated(NameVarRestartFrom_V))  &
                   deallocate(NameVarRestartFrom_V)
              if (allocated(NameVarRestartTo_V))    &
