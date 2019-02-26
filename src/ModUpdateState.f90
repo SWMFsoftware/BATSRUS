@@ -773,13 +773,13 @@ contains
           percent_chg_rho = 0.1
           percent_chg_p   = 0.1
           !$omp parallel do private(iVar, i, j, k) &
-          !$omp reduction(max:percent_chg_rho,percent_chg_p)
+          !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
              if (num_checks == 1) then
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if (DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) <= cTiny) CYCLE
 
                       ! For sake of backward compatibility
                       if(iVar == P_) CYCLE
@@ -832,12 +832,12 @@ contains
                   MPI_REAL, MPI_MAX, iComm, iError)
 
              !$omp parallel do private(time_fraction) &
-             !$omp reduction(max:percent_chg_rho,percent_chg_p)
+             !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
              do iBlock = 1, nBlockMax
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if (DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) <= cTiny) CYCLE
 
                       if(UseMultiSpecies .and. &
                            iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
@@ -948,11 +948,11 @@ contains
        !///
        report_tf = 1.
        PercentChangePE = 0.
-       !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
-       !$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
-       !$omp private(time_fraction) &
-       !$omp reduction(max:percent_chg_rho, percent_chg_p) &
-       !$omp reduction(min:report_tf)
+       !!$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
+       !!$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
+       !!$omp private(time_fraction) &
+       !!$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p) &
+       !!$omp reduction(min:report_tf)
        do iBlock = 1, nBlockMax
           if(Unused_B(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -998,7 +998,7 @@ contains
                 time_fraction_rho = 1/maxval(percent_chg_rho/percent_max_rho)
                 time_fraction_p   = 1/maxval(percent_chg_p  /percent_max_p  )
                 if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
-                   if (num_checks == 1) then
+                   if(num_checks == 1) then
                       time_fraction = 1.
                       if (time_fraction_rho < 1.) &
                            time_fraction = 0.9*time_fraction_rho
@@ -1041,7 +1041,7 @@ contains
              report_tf = min(report_tf, cell_time_fraction)
           end do; end do; end do
        end do
-       !$omp end parallel do
+       !!$omp end parallel do
 
        call MPI_allreduce(report_tf, report_tf_all, 1, &
             MPI_REAL, MPI_MIN, iComm, iError)
@@ -1064,7 +1064,7 @@ contains
        end if
 
        if(DoTest3)then
-          !$omp parallel do private(i,j,k)
+          !!$omp parallel do private(i,j,k)
           do iBlock = 1,nBlockMax
              if(Unused_B(iBlock))CYCLE
              do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1112,7 +1112,7 @@ contains
                      'value_new=',State_VGB(p_,i,j,k,iBlock)
              end do; end do; end do
           end do
-          !$omp end parallel do
+          !!$omp end parallel do
        end if
     end if
 
@@ -1122,7 +1122,7 @@ contains
 
     ! Check for positivity of variables
     IsNegative = .false.
-    !$omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
+    !!$omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
@@ -1150,7 +1150,7 @@ contains
           end if
        end do
     end do
-    !$omp end parallel do
+    !!$omp end parallel do
     if(IsNegative)then
        if(time_accurate)then
           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
