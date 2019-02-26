@@ -735,7 +735,7 @@ contains
     use BATL_lib, ONLY: Xyz_DGB
 
     integer, parameter :: max_checks=25
-    integer :: i,j,k, iVar, iBlock,num_checks, iError
+    integer :: i,j,k, iVar, iBlock, num_checks, iError
     real :: time_fraction_rho, min_time_fraction_rho
     real :: time_fraction_p,   min_time_fraction_p
     real :: time_fraction, cell_time_fraction, report_tf, report_tf_all
@@ -743,7 +743,7 @@ contains
     real, dimension(2) :: percent_chg_p
     real, dimension(4) :: PercentChangePE, PercentChangeMax
 
-    real :: Value,B0_DC(3,nI,nJ,nK)
+    real :: Value
     integer :: i_D(3)
     logical :: update_check_done, IsNegative, DoStop
     logical :: DoTest1
@@ -772,7 +772,8 @@ contains
        do num_checks = 1,max_checks
           percent_chg_rho = 0.1
           percent_chg_p   = 0.1
-          !$omp parallel do
+          !$omp parallel do private(iVar, i, j, k) &
+          !$omp reduction(max:percent_chg_rho,percent_chg_p)
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
              if (num_checks == 1) then
@@ -830,9 +831,10 @@ contains
              call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
 
-             !$omp parallel do
+             !$omp parallel do private(time_fraction) &
+             !$omp reduction(max:percent_chg_rho,percent_chg_p)
              do iBlock = 1, nBlockMax
-                if (Unused_B(iBlock)) CYCLE
+                if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
                       if (DefaultState_V(iVar) <= cTiny) CYCLE
@@ -894,16 +896,15 @@ contains
              end do
              !$omp end parallel do
           end if ! DoTest
-
           time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
           call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
           time_fraction_p   = 1.0 / maxval(percent_chg_p  /percent_max_p  )
           call MPI_allreduce(time_fraction_p, min_time_fraction_p, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
-          if (min_time_fraction_rho >= 1. .and. min_time_fraction_p >= 1.) EXIT
+          if(min_time_fraction_rho >= 1. .and. min_time_fraction_p >= 1.) EXIT
 
-          if (num_checks == 1) then
+          if(num_checks == 1)then
              time_fraction = 1.
              if (min_time_fraction_rho < 1.) &
                   time_fraction = 0.9*min_time_fraction_rho
@@ -914,19 +915,19 @@ contains
           end if
           dt = dt * time_fraction
           report_tf = report_tf*time_fraction
+
+          !$omp parallel do
           do iBlock = 1, nBlockMax
-             if (Unused_B(iBlock)) CYCLE
-             if(UseB0)then
-                B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
-             else
-                B0_DC=0.00
-             end if
+             if(Unused_B(iBlock)) CYCLE
+
              ! Fix the update in the cells
              do k=1,nK; do j=1,nJ; do i=1,nI
                 call fix_update
              end do; end do; end do
           end do
+          !$omp end parallel do
        end do
+
        PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
        PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
 
@@ -947,14 +948,13 @@ contains
        !///
        report_tf = 1.
        PercentChangePE = 0.
-       !$omp parallel do
+       !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
+       !$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
+       !$omp private(time_fraction) &
+       !$omp reduction(max:percent_chg_rho, percent_chg_p) &
+       !$omp reduction(min:report_tf)
        do iBlock = 1, nBlockMax
-          if (Unused_B(iBlock)) CYCLE
-          if(UseB0)then
-             B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
-          else
-             B0_DC=0.00
-          end if
+          if(Unused_B(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
              cell_time_fraction = 1.
              do num_checks = 1, max_checks
@@ -1032,7 +1032,7 @@ contains
                            '   ',NameVar_V(p_),'=', State_VGB(p_,i,j,k,iBlock)
                    end if
                 end if
-                if (update_check_done) EXIT
+                if(update_check_done) EXIT
              end do
              PercentChangePE(1:2) = &
                   max(percent_chg_rho(1:2)-0.1, PercentChangePE(1:2))
@@ -1062,13 +1062,14 @@ contains
           write(*,*) 'Maximum change in other positive variables:', &
                - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
        end if
-       if(DoTest3) then
-          !$omp parallel do
+
+       if(DoTest3)then
+          !$omp parallel do private(i,j,k)
           do iBlock = 1,nBlockMax
              if(Unused_B(iBlock))CYCLE
-             do k=1,nK;do j=1,nJ; do i=1,nI
+             do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.true_cell(i,j,k,iBlock))CYCLE
-                if (abs(100. * abs( min( 0., &
+                if(abs(100. * abs( min( 0., &
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
@@ -1078,7 +1079,7 @@ contains
                      ': rho_old = ',StateOld_VGB(Rho_,i,j,k,iBlock),&
                      ' rho_new = ',State_VGB(Rho_,i,j,k,iBlock)
 
-                if (abs(100. * abs( max( 0., &
+                if(abs(100. * abs( max( 0., &
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
@@ -1089,7 +1090,7 @@ contains
                      StateOld_VGB(Rho_,i,j,k,iBlock),&
                      'rho_new=',State_VGB(Rho_,i,j,k,iBlock)
 
-                if (abs(100. * abs( min( 0., &
+                if(abs(100. * abs( min( 0., &
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
@@ -1099,7 +1100,7 @@ contains
                      Xyz_DGB(:,i,j,k,iBlock),&
                      'is: valeu_old = ',StateOld_VGB(P_,i,j,k,iBlock),&
                      'value_new=',State_VGB(p_,i,j,k,iBlock)
-                if (abs(100. * abs( max( 0., &
+                if(abs(100. * abs( max( 0., &
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
@@ -1121,9 +1122,9 @@ contains
 
     ! Check for positivity of variables
     IsNegative = .false.
-    !$omp parallel do
+    !$omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
     do iBlock = 1, nBlockMax
-       if (Unused_B(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
           ! Ignore variables that do not have to be positive
           if(DefaultState_V(iVar) < cTiny) CYCLE
@@ -1165,7 +1166,7 @@ contains
     end if
 
     call MPI_allreduce(IsNegative, DoStop,1,MPI_LOGICAL,MPI_LOR,iComm,iError)
-    if (DoStop) call stop_mpi('Stopping, negative density or pressure')
+    if(DoStop) call stop_mpi('Stopping, negative density or pressure')
 
     call test_stop(NameSub, DoTest)
   contains
@@ -1174,7 +1175,6 @@ contains
     subroutine fix_update
 
       logical :: IsConserv
-
       real :: fullBx, fullBy, fullBz, fullBB, UdotBc2, rhoc2, gA2_Boris
       real :: rhoUx_Boris, rhoUy_Boris, rhoUz_Boris, E_Boris, &
            rhoUx_o_Boris, rhoUy_o_Boris, rhoUz_o_Boris, E_o_Boris
@@ -1200,12 +1200,15 @@ contains
       if(UseBorisCorrection .and. nFluid==1) then
 
          ! Convert old state
-         fullBx = B0_DC(x_,i,j,k) + &
-              StateOld_VGB(Bx_,i,j,k,iBlock)
-         fullBy = B0_DC(y_,i,j,k) + &
-              StateOld_VGB(By_,i,j,k,iBlock)
-         fullBz = B0_DC(z_,i,j,k) + &
-              StateOld_VGB(Bz_,i,j,k,iBlock)
+         if(UseB0)then
+            fullBx = B0_DGB(x_,i,j,k,iBlock) + StateOld_VGB(Bx_,i,j,k,iBlock)
+            fullBy = B0_DGB(y_,i,j,k,iBlock) + StateOld_VGB(By_,i,j,k,iBlock)
+            fullBz = B0_DGB(z_,i,j,k,iBlock) + StateOld_VGB(Bz_,i,j,k,iBlock)
+         else
+            fullBx = StateOld_VGB(Bx_,i,j,k,iBlock)
+            fullBy = StateOld_VGB(By_,i,j,k,iBlock)
+            fullBz = StateOld_VGB(Bz_,i,j,k,iBlock)
+         end if
          fullBB = fullBx**2 + fullBy**2 + fullBz**2
          rhoc2  = &
               StateOld_VGB(rho_,i,j,k,iBlock)*c2LIGHT
@@ -1237,9 +1240,15 @@ contains
          end if
 
          ! Convert current state
-         fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
-         fullBy = B0_DC(y_,i,j,k) + State_VGB(By_,i,j,k,iBlock)
-         fullBz = B0_DC(z_,i,j,k) + State_VGB(Bz_,i,j,k,iBlock)
+         if(UseB0)then
+            fullBx = B0_DGB(x_,i,j,k,iBlock) + StateOld_VGB(Bx_,i,j,k,iBlock)
+            fullBy = B0_DGB(y_,i,j,k,iBlock) + StateOld_VGB(By_,i,j,k,iBlock)
+            fullBz = B0_DGB(z_,i,j,k,iBlock) + StateOld_VGB(Bz_,i,j,k,iBlock)
+         else
+            fullBx = StateOld_VGB(Bx_,i,j,k,iBlock)
+            fullBy = StateOld_VGB(By_,i,j,k,iBlock)
+            fullBz = StateOld_VGB(Bz_,i,j,k,iBlock)
+         end if
          fullBB = fullBx**2 + fullBy**2 + fullBz**2
          rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
          UdotBc2= (State_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
@@ -1250,9 +1259,12 @@ contains
          ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
          !            = rhoU + (U B^2 - B U.B)/c^2
          !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
-         rhoUx_Boris = State_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - fullBx*UdotBc2
-         rhoUy_Boris = State_VGB(rhoUy_,i,j,k,iBlock)*ga2_Boris - fullBy*UdotBc2
-         rhoUz_Boris = State_VGB(rhoUz_,i,j,k,iBlock)*ga2_Boris - fullBz*UdotBc2
+         rhoUx_Boris = State_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
+              fullBx*UdotBc2
+         rhoUy_Boris = State_VGB(rhoUy_,i,j,k,iBlock)*ga2_Boris - &
+              fullBy*UdotBc2
+         rhoUz_Boris = State_VGB(rhoUz_,i,j,k,iBlock)*ga2_Boris - &
+              fullBz*UdotBc2
 
          if(IsConserv)then
             ! e_boris = e + 0.5/c^2 * (V x B)^2
@@ -1272,47 +1284,56 @@ contains
          !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
          !     (1.0-time_fraction) * StateOld_VGB(iRho_I,i,j,k,iBlock)
          State_VGB(rho_,i,j,k,iBlock) = &
-              (   time_fraction) *   State_VGB(rho_,i,j,k,iBlock) + &
+              (    time_fraction) *    State_VGB(rho_,i,j,k,iBlock) + &
               (1.0-time_fraction) * StateOld_VGB(rho_,i,j,k,iBlock)
          rhoUx_Boris = &
-              (   time_fraction) * rhoUx_Boris + &
+              (    time_fraction) * rhoUx_Boris + &
               (1.0-time_fraction) * rhoUx_o_Boris
          rhoUy_Boris = &
-              (   time_fraction) * rhoUy_Boris + &
+              (    time_fraction) * rhoUy_Boris + &
               (1.0-time_fraction) * rhoUy_o_Boris
          rhoUz_Boris = &
-              (   time_fraction) * rhoUz_Boris + &
+              (    time_fraction) * rhoUz_Boris + &
               (1.0-time_fraction) * rhoUz_o_Boris
          State_VGB(Bx_,i,j,k,iBlock) = &
-              (   time_fraction) *   State_VGB(Bx_,i,j,k,iBlock) + &
+              (    time_fraction) *    State_VGB(Bx_,i,j,k,iBlock) + &
               (1.0-time_fraction) * StateOld_VGB(Bx_,i,j,k,iBlock)
          State_VGB(By_,i,j,k,iBlock) = &
-              (   time_fraction) *   State_VGB(By_,i,j,k,iBlock) + &
+              (    time_fraction) *    State_VGB(By_,i,j,k,iBlock) + &
               (1.0-time_fraction) * StateOld_VGB(By_,i,j,k,iBlock)
          State_VGB(Bz_,i,j,k,iBlock) = &
-              (   time_fraction) *   State_VGB(Bz_,i,j,k,iBlock) + &
+              (    time_fraction) *    State_VGB(Bz_,i,j,k,iBlock) + &
               (1.0-time_fraction) * StateOld_VGB(Bz_,i,j,k,iBlock)
 
          ! Convert Back
-         fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
-         fullBy = B0_DC(y_,i,j,k) + State_VGB(By_,i,j,k,iBlock)
-         fullBz = B0_DC(z_,i,j,k) + State_VGB(Bz_,i,j,k,iBlock)
+         if(UseB0)then
+            fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
+            fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
+            fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
+         else
+            fullBx = State_VGB(Bx_,i,j,k,iBlock)
+            fullBy = State_VGB(By_,i,j,k,iBlock)
+            fullBz = State_VGB(Bz_,i,j,k,iBlock)
+         end if
          fullBB = fullBx**2 + fullBy**2 + fullBz**2
          rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-         UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + rhoUz_Boris*fullBz)&
-              /rhoc2
+         UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + &
+              rhoUz_Boris*fullBz) / rhoc2
          gA2_Boris= 1.0/(1.0+fullBB/rhoc2)
 
          ! rhoU = 1/(rho c^2 + B^2) * (I rho c^2 + B B) * rhoU_Boris
-         !      = 1/[1+BB/(rho c^2)]* (rhoU_Boris + (rhoUBorisdotB/(rho c^2) * B)
+         !      = 1/[1+BB/(rho c^2)]* (rhoU_Boris + (rhoUBorisdotB/(rho c^2)*B)
 
-         State_VGB(rhoUx_,i,j,k,iBlock) = gA2_Boris*(rhoUx_Boris + UdotBc2*fullBx)
-         State_VGB(rhoUy_,i,j,k,iBlock) = gA2_Boris*(rhoUy_Boris + UdotBc2*fullBy)
-         State_VGB(rhoUz_,i,j,k,iBlock) = gA2_Boris*(rhoUz_Boris + UdotBc2*fullBz)
+         State_VGB(rhoUx_,i,j,k,iBlock) = gA2_Boris*(rhoUx_Boris + &
+              UdotBc2*fullBx)
+         State_VGB(rhoUy_,i,j,k,iBlock) = gA2_Boris*(rhoUy_Boris + &
+              UdotBc2*fullBy)
+         State_VGB(rhoUz_,i,j,k,iBlock) = gA2_Boris*(rhoUz_Boris + &
+              UdotBc2*fullBz)
 
          if(IsConserv)then
             E_boris= &
-                 (   time_fraction) * E_Boris + &
+                 (    time_fraction) * E_Boris + &
                  (1.0-time_fraction) * E_o_Boris
 
             ! E = E_boris - 0.5/c^2 * (V x B)^2
@@ -1617,7 +1638,8 @@ contains
 
              ! Avoid Pperp < 0
              State_VGB(iPpar,i,j,k,iBlock) = &
-                  min(3*State_VGB(ip,i,j,k,iBlock),State_VGB(iPpar,i,j,k,iBlock))
+                  min(3*State_VGB(ip,i,j,k,iBlock),&
+                  State_VGB(iPpar,i,j,k,iBlock))
 
              ! Do not apply the relaxation term in this case
              if(UseConstantTau .and. TauInstability < 0.0) CYCLE
