@@ -587,15 +587,15 @@ contains
     case(2)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="2D   '//textNandT//'"', &
-            ', N=', nPointAll, &
-            ', E=', nBrickAll, &
-            ', F=FEPOINT, ET=QUADRILATERAL'
+            ', NODES=', nPointAll, &
+            ', ELEMENTS=', nBrickAll, &
+            ', DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL'
     case(3)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="3D   '//textNandT//'"', &
-            ', N=', nPointAll, &
-            ', E=', nBrickAll, &
-            ', F=FEPOINT, ET=BRICK'
+            ', NODES=', nPointAll, &
+            ', ELEMENTS=', nBrickAll, &
+            ', DATAPACKING=POINT, ZONETYPE=FEBRICK'
     end select
     call write_tecplot_auxdata
     call close_file

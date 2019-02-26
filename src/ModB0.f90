@@ -5,6 +5,7 @@ module ModB0
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
+  use ModUtilities, ONLY: norm2
 
   ! The magnetic field can be split into an analytic and numeric part.
   ! The analytic part is B0. It should satisfy div(B0) = 0,
@@ -187,8 +188,11 @@ contains
     if(allocated(B0_DGB)) deallocate(B0_DGB, &
          B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
+    !$omp parallel
     if(allocated(DivB0_C))   deallocate(DivB0_C)
     if(allocated(CurlB0_DC)) deallocate(CurlB0_DC)
+    if(allocated(B0_DX)) deallocate(B0_DX,B0_DY,B0_DZ)
+    !$omp end parallel
 
   end subroutine clean_mod_b0
   !============================================================================
