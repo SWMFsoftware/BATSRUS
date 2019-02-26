@@ -5,7 +5,7 @@ module ModFaceFlux
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iDimTest
-
+  use ModUtilities, ONLY: norm2
   use ModProcMH,     ONLY: iProc
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -60,9 +60,21 @@ module ModFaceFlux
   use omp_lib
   
   implicit none
+  save
+
+  public :: calc_face_flux
+  public :: calc_cell_flux
+  public :: face_flux_set_parameters
+  public :: init_mod_face_flux
+  public :: set_block_values
+  public :: set_cell_values
+  public :: get_physical_flux
+  public :: get_speed_max
+
+  private ! except
 
   ! Number of fluxes including pressure and energy fluxes
-  integer, parameter :: nFlux=nVar+nFluid
+  integer, parameter, public:: nFlux=nVar+nFluid
 
   ! Range of fluid and variable indexes for the current solver
   integer:: iFluidMin = 1, iFluidMax = nFluid
@@ -73,19 +85,19 @@ module ModFaceFlux
   
   ! Neutral fluids may use different flux function
   logical:: UseDifferentNeutralFlux = .false.
-  character(len=10):: TypeFluxNeutral = 'default'
+  character(len=10), public:: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
-  logical :: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
+  logical, public:: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
   
   ! 1D Burgers' equation, works for Hd equations.
-  logical :: DoBurgers = .false.
+  logical, public:: DoBurgers = .false.
 
   logical :: UseLindeFix
-  logical :: DoTestCell
+  logical, public:: DoTestCell
   logical :: IsBoundary
   !$omp threadprivate( DoTestCell, IsBoundary )
   
@@ -98,7 +110,7 @@ module ModFaceFlux
   !$omp threadprivate( iDimFace )
   
   ! index of the face
-  integer :: iFace, jFace, kFace
+  integer, public:: iFace, jFace, kFace
   !$omp threadprivate( iFace, jFace, kFace )
   
   ! index of cell in the negative and positive directions from face
@@ -113,7 +125,8 @@ module ModFaceFlux
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
   real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL = 0.0, DeltaBnR = 0.0
-  real :: Area = 0.0, Area2 = 0.0, AreaX, AreaY, AreaZ
+  real, public:: Area = 0.0
+  real :: Area2 = 0.0, AreaX, AreaY, AreaZ
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
   !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
   !$omp threadprivate( DissipationFlux_V )
@@ -122,17 +135,14 @@ module ModFaceFlux
   !$omp threadprivate( DeltaBnL, DeltaBnR )
   !$omp threadprivate( Area, Area2, AreaX, AreaY, AreaZ )
   
-  ! Allow diffusion across the pole
-  logical :: UsePoleDiffusion = .false.
-
   ! Maximum speed for the Courant condition
   real :: CmaxDt = 0.0
   !$omp threadprivate( CmaxDt )
   
   ! Normal velocities for all fluids plus electrons
   real :: Unormal_I(nFluid+1) = 0.0
-  real :: UnLeft_I(nFluid+1)  = 0.0
-  real :: UnRight_I(nFluid+1) = 0.0
+  real, public:: UnLeft_I(nFluid+1)  = 0.0
+  real, public:: UnRight_I(nFluid+1) = 0.0
   !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
   
   real :: bCrossArea_D(3) = [ 0.0, 0.0, 0.0 ] ! B x Area for current -> BxJ
@@ -147,13 +157,15 @@ module ModFaceFlux
   !$omp threadprivate( EtaJx, EtaJy, EtaJz, Eta )
   
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
+  real :: InvDxyz, HallCoeff
+  real, public:: HallJx, HallJy, HallJz
   !$omp threadprivate( InvDxyz, HallCoeff, HallJx, HallJy, HallJz )
   
   ! Variables needed for Biermann battery term
-  logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
+  logical, public:: UseHallGradPe = .false.
+  logical :: IsNewBlockGradPe = .true.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
-  real, allocatable, save :: Pe_G(:,:,:)
+  real, allocatable, public:: Pe_G(:,:,:)
   !$omp threadprivate( UseHallGradPe, IsNewBlockGradPe )
   !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
   !$omp threadprivate( Pe_G )
@@ -189,8 +201,8 @@ module ModFaceFlux
   !$omp threadprivate( UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R )
   
   ! Limit propagation speeds to reduce numerical diffusion
-  logical :: UseClimit = .false.
-  real    :: ClimitDim = -1.0, rClimit = -1.0
+  logical, public:: UseClimit = .false.
+  real :: ClimitDim = -1.0, rClimit = -1.0
 
   ! Variables introduced for regional Boris correction
   real :: InvClightFace, InvClight2Face
@@ -1248,7 +1260,7 @@ contains
     real :: DiffBn_D(3), DiffE
     real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
-    real :: dB0_D(3), Current_D(3)
+    real :: B0_D(3), dB0_D(3), Current_D(3)
     real :: PeDotAreaLeft_D(3), PeDotAreaRight_D(3)
 
     real :: GradPe_D(3)
@@ -1390,9 +1402,11 @@ contains
              dB0_D = 0.0
           end if
 
+          B0_D = [B0x,B0y,B0z]
+
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
-               [B0x,B0y,B0z], dB0_D,                    &
+               B0_D, dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
                DissipationFlux_V, cMax, Unormal_I(1))

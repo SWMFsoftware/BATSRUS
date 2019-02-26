@@ -5,6 +5,7 @@ module ModWritePlotLos
 
   use BATL_lib, ONLY: &
        test_start, test_stop
+  use ModUtilities, ONLY: norm2
 
   implicit none
 

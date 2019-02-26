@@ -4,6 +4,7 @@
 module ModThreadedLC
 
   use BATL_lib, ONLY: test_start, test_stop
+  use ModUtilities, ONLY: norm2
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &

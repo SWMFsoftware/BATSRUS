@@ -145,7 +145,6 @@ T			UseUniformAxis
 F                     	UseImplicitEnergy  
                  
 #FIXAXIS                                              
-F                       UsePoleDiffusion 
 F                   	DoFixAxis                 
 1.2              	rFixAxis
 -1.0                	r2FixAxis                         
@@ -153,7 +152,6 @@ F                   	DoFixAxis
 ! This command is helpful. But for this test with very coarse grid the code will
 ! crash with this command.
 COARSEAXIS                            
-F                       UsePoleDiffusion              
 T                       UseCoarseAxis                  
 1                       nCoarseLayer         
 

@@ -5,6 +5,7 @@ module ModRadiativeCooling
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest
+  use ModUtilities, ONLY: norm2
   use ModChromosphere
   use ModSize
   implicit none

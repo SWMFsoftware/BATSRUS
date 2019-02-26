@@ -3,6 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModCharacteristicMhd
 
+  use ModUtilities, ONLY: norm2
   use ModCoordTransform, ONLY: cross_product
   use ModVarIndexes
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
