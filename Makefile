@@ -51,6 +51,9 @@ help:
 	@echo '    distclean (equivalent to ./Config.pl -uninstall)'
 	@echo '    dist      (create source distribution tar file)'
 
+info:
+	@echo "Total lines of Fortran: `wc -l src*/*.f* | tail -1`"
+
 INSTALLFILES =	src/Makefile.DEPEND \
 		src/Makefile.RULES \
 		srcBATL/Makefile.DEPEND \

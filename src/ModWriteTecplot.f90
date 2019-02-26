@@ -1936,23 +1936,23 @@ contains
           NameTecVar = 'B_z'
           NameUnit   = NameTecUnit_V(UnitB_)
           ! face centered magnetic field
-       case('bxl') ! east
-          NameTecVar = 'B_e'
+       case('bxl')
+          NameTecVar = 'B_xl'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bxr') ! west
-          NameTecVar = 'B_w'
+       case('bxr')
+          NameTecVar = 'B_xr'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byl') ! south
-          NameTecVar = 'B_s'
+       case('byl')
+          NameTecVar = 'B_yl'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byr') ! north
-          NameTecVar = 'B_n'
+       case('byr')
+          NameTecVar = 'B_yr'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzl') ! bottom
-          NameTecVar = 'B_b'
+       case('bzl')
+          NameTecVar = 'B_zl'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzr') ! top
-          NameTecVar = 'B_t'
+       case('bzr')
+          NameTecVar = 'B_zr'
           NameUnit   = NameTecUnit_V(UnitB_)
           !
        case('hyp')
@@ -2140,6 +2140,7 @@ contains
           ! Try to find the plot variable among the basic variables
           do iVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
+             NameTecVar = NameVar_V(iVar)
              NameUnit = NameUnitUserTec_V(iVar)
              EXIT
           end do
