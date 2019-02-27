@@ -916,13 +916,13 @@ contains
           dt = dt * time_fraction
           report_tf = report_tf*time_fraction
 
-          !$omp parallel do
+          !$omp parallel do private(i,j,k)
           do iBlock = 1, nBlockMax
              if(Unused_B(iBlock)) CYCLE
 
              ! Fix the update in the cells
              do k=1,nK; do j=1,nJ; do i=1,nI
-                call fix_update
+                call fix_update(i,j,k,iBlock,time_fraction)
              end do; end do; end do
           end do
           !$omp end parallel do
@@ -1174,8 +1174,8 @@ contains
 
     subroutine fix_update(i,j,k,iBlock,time_fraction)
 
-      integer, intent(in), optional:: i,j,k,iBlock
-      real, intent(in), optional:: time_fraction
+      integer, intent(in):: i,j,k,iBlock
+      real,    intent(in):: time_fraction
 
       logical :: IsConserv
       real :: fullBx, fullBy, fullBz, fullBB, UdotBc2, rhoc2, gA2_Boris
