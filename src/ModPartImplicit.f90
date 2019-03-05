@@ -2122,12 +2122,14 @@ contains
        FluxType     = FluxTypeImpl
     endif
     if(UseDtFixed)then
+       !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
-          iBlock=iBlockFromImpl_B(iBlockImpl)
+          iBlock = iBlockFromImpl_B(iBlockImpl)
           time_BLK(:,:,:,iBlock)=0.0
           where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
+       !$omp end parallel do
     else
        CflTmp = Cfl
        Cfl    = 0.5
@@ -2148,12 +2150,14 @@ contains
     if(DoTest .and. nBlockImpl > 0)write(*,*)'get_residual Res_VCB:',&
          Res_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
+    !$omp parallel do private( iBlock )
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        iBlock = iBlockFromImpl_B(iBlockImpl)
        if(.not. IsImplCell_CB(i,j,k,iBlock)) then
           Res_VCB(:,i,j,k,iBlockImpl) = 0;
        endif
     enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
     ! Restore global variables
     nStage      = nStageTmp
@@ -2161,7 +2165,7 @@ contains
        nOrder   = nOrderTmp
        FluxType = TypeFluxTmp
     end if
-    if (.not.UseDtFixed) Cfl = CflTmp
+    if(.not.UseDtFixed) Cfl = CflTmp
 
     call timing_stop('get_residual')
 
