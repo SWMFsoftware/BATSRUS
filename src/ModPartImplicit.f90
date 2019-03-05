@@ -628,9 +628,8 @@ contains
           ! Calculate approximate dR/dU matrix
           !$omp parallel do
           do iBlockImpl=1,nBlockImpl
-             !hyzhou: why is this JacImpl_VVCIB so strange?
              call impl_jacobian(iBlockImpl, &
-                  JacImpl_VVCIB(1,1,1,1,1,1,iBlockImpl))
+                  JacImpl_VVCIB(:,:,:,:,:,:,iBlockImpl))
           end do
           !$omp end parallel do
           call timing_stop('impl_jacobian')
@@ -1212,7 +1211,7 @@ contains
     n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
-       n = (iBlock-1)*nIJK*nVar !hyzhou
+       n = (iBlock-1)*nIJK*nVar
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           n = n + 1
           y_I(n) = Coef1*x_I(n) - Coef2*(ImplEps_VCB(iVar,i,j,k,iBlock) &
