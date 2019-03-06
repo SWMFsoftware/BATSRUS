@@ -773,13 +773,13 @@ contains
           percent_chg_rho = 0.1
           percent_chg_p   = 0.1
           !$omp parallel do private(iVar, i, j, k) &
-          !$omp reduction(max:percent_chg_rho,percent_chg_p)
+          !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
              if (num_checks == 1) then
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if (DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) <= cTiny) CYCLE
 
                       ! For sake of backward compatibility
                       if(iVar == P_) CYCLE
@@ -831,13 +831,13 @@ contains
              call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
 
-             !$omp parallel do private(time_fraction) &
-             !$omp reduction(max:percent_chg_rho,percent_chg_p)
+             !$omp parallel do &
+             !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
              do iBlock = 1, nBlockMax
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if (DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) <= cTiny) CYCLE
 
                       if(UseMultiSpecies .and. &
                            iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
@@ -916,13 +916,13 @@ contains
           dt = dt * time_fraction
           report_tf = report_tf*time_fraction
 
-          !$omp parallel do
+          !$omp parallel do private(i,j,k)
           do iBlock = 1, nBlockMax
              if(Unused_B(iBlock)) CYCLE
 
              ! Fix the update in the cells
              do k=1,nK; do j=1,nJ; do i=1,nI
-                call fix_update
+                call fix_update(i,j,k,iBlock,time_fraction)
              end do; end do; end do
           end do
           !$omp end parallel do
@@ -950,8 +950,8 @@ contains
        PercentChangePE = 0.
        !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
        !$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
-       !$omp private(time_fraction) &
-       !$omp reduction(max:percent_chg_rho, percent_chg_p) &
+       !$omp private(time_fraction, percent_chg_rho, percent_chg_p) &
+       !$omp reduction(max:PercentChangePE) &
        !$omp reduction(min:report_tf)
        do iBlock = 1, nBlockMax
           if(Unused_B(iBlock)) CYCLE
@@ -998,7 +998,7 @@ contains
                 time_fraction_rho = 1/maxval(percent_chg_rho/percent_max_rho)
                 time_fraction_p   = 1/maxval(percent_chg_p  /percent_max_p  )
                 if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
-                   if (num_checks == 1) then
+                   if(num_checks == 1) then
                       time_fraction = 1.
                       if (time_fraction_rho < 1.) &
                            time_fraction = 0.9*time_fraction_rho
@@ -1024,7 +1024,7 @@ contains
                            NameVar_V(1),'=',State_VGB(1,i,j,k,iBlock), &
                            '   ', NameVar_V(nVar),State_VGB(nVar,i,j,k,iBlock)
                    end if
-                   call fix_update
+                   call fix_update(i,j,k,iblock,time_fraction)
                    if(DoTest2) then
                       write(*,*) &
                            iProc,' ',iBlock,' ',i,' ',j,' ',k,' NEW: ', &
@@ -1172,7 +1172,10 @@ contains
   contains
     !==========================================================================
 
-    subroutine fix_update
+    subroutine fix_update(i,j,k,iBlock,time_fraction)
+
+      integer, intent(in):: i,j,k,iBlock
+      real,    intent(in):: time_fraction
 
       logical :: IsConserv
       real :: fullBx, fullBy, fullBz, fullBB, UdotBc2, rhoc2, gA2_Boris
@@ -1279,7 +1282,7 @@ contains
          end if
 
          ! Interpolate
-         ! For possible extension to multifluid
+         ! For possible extension to multifluid:
          ! State_VGB(iRho_I,i,j,k,iBlock) = &
          !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
          !     (1.0-time_fraction) * StateOld_VGB(iRho_I,i,j,k,iBlock)
@@ -1376,12 +1379,12 @@ contains
          end if
       else ! Non-Boris interpolation
 
-         State_VGB(1:nVar,i,j,k,iBlock) = &
-              (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(1:nVar,i,j,k,iBlock)
+         State_VGB(:,i,j,k,iBlock) = &
+              (    time_fraction) *    State_VGB(:,i,j,k,iBlock) + &
+              (1.0-time_fraction) * StateOld_VGB(:,i,j,k,iBlock)
          if(IsConserv)then
             Energy_GBI(i,j,k,iBlock,:) = &
-                 (   time_fraction) *   Energy_GBI(i,j,k,iBlock,:) + &
+                 (    time_fraction) *    Energy_GBI(i,j,k,iBlock,:) + &
                  (1.0-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
 
             if(IsMhd .and. (nStage==1.and..not.time_accurate).or.&
@@ -1398,6 +1401,7 @@ contains
             call calc_energy_point(i,j,k,iBlock)
          end if
       end if
+
       time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
 
       if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)

@@ -1852,7 +1852,7 @@ contains
     use ModPhysics
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_dimensional, plot_type1
-    use ModVarIndexes, ONLY: IsMhd
+    use ModVarIndexes, ONLY: IsMhd, NameVar_V
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
     use BATL_lib,      ONLY: nDim
