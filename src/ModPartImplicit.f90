@@ -628,9 +628,8 @@ contains
           ! Calculate approximate dR/dU matrix
           !$omp parallel do
           do iBlockImpl=1,nBlockImpl
-             !hyzhou: why is this JacImpl_VVCIB so strange?
              call impl_jacobian(iBlockImpl, &
-                  JacImpl_VVCIB(1,1,1,1,1,1,iBlockImpl))
+                  JacImpl_VVCIB(:,:,:,:,:,:,iBlockImpl))
           end do
           !$omp end parallel do
           call timing_stop('impl_jacobian')
@@ -1212,7 +1211,7 @@ contains
     n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
-       n = (iBlock-1)*nIJK*nVar !hyzhou
+       n = (iBlock-1)*nIJK*nVar
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           n = n + 1
           y_I(n) = Coef1*x_I(n) - Coef2*(ImplEps_VCB(iVar,i,j,k,iBlock) &
@@ -2123,12 +2122,14 @@ contains
        FluxType     = FluxTypeImpl
     endif
     if(UseDtFixed)then
+       !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
-          iBlock=iBlockFromImpl_B(iBlockImpl)
+          iBlock = iBlockFromImpl_B(iBlockImpl)
           time_BLK(:,:,:,iBlock)=0.0
           where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
+       !$omp end parallel do
     else
        CflTmp = Cfl
        Cfl    = 0.5
@@ -2149,12 +2150,14 @@ contains
     if(DoTest .and. nBlockImpl > 0)write(*,*)'get_residual Res_VCB:',&
          Res_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
+    !$omp parallel do private( iBlock )
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        iBlock = iBlockFromImpl_B(iBlockImpl)
        if(.not. IsImplCell_CB(i,j,k,iBlock)) then
           Res_VCB(:,i,j,k,iBlockImpl) = 0;
        endif
     enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
     ! Restore global variables
     nStage      = nStageTmp
@@ -2162,7 +2165,7 @@ contains
        nOrder   = nOrderTmp
        FluxType = TypeFluxTmp
     end if
-    if (.not.UseDtFixed) Cfl = CflTmp
+    if(.not.UseDtFixed) Cfl = CflTmp
 
     call timing_stop('get_residual')
 
