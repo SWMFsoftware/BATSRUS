@@ -169,11 +169,11 @@ F                       UseUserUpdateStates
 0.0                     Resistivity
 0.95                    Radius
 6e11			Resistivity
-0.6                     Radius
+0.70                    Radius
 6e11			Resistivity
-0.52                    Radius
+0.60                    Radius
 6e9			Resistivity
-0.50		        Radius
+0.55		        Radius
 0.0		        Resistivity
 
 #USERINPUTEND ----------------------
@@ -193,7 +193,7 @@ T			UseSemiImplicit
 resistivity		TypeSemiImplicit
 
 #SAVEINITIAL
-T	
+F	
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -203,7 +203,7 @@ RAW			StringLogfile
 
 #SAVEPLOT
 1			nPlotFiles
-y=0 VAR idl             StringPlot
+y=0 VAR idl_ascii       StringPlot
 10                   	DnSavePlot
 -1.                     DtSavePlot
 -1.                     Dx

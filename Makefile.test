@@ -1258,8 +1258,13 @@ SORT = sort -k1 -k2 -k3 -n
 
 test_ganymede_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
-		Param/GANYMEDE/TestOutput/REFlog_n000000.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_ganymede.diff)
+		Param/GANYMEDE/TestOutput/REFlog_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_ganymede.diff)
+	gunzip -c Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
+	        ${TESTDIR}/RESULTS/GM/REFy=0.out
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/GM/REFy=0.out \
+		${TESTDIR}/RESULTS/GM/y\=0_var_1_n00000005.out >> test_ganymede.diff)
 	ls -l test_ganymede.diff
 
 
