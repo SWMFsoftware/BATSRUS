@@ -72,6 +72,7 @@ OBJECTS = \
 	ModNodes.o \
 	ModParallel.o \
 	ModParticleFieldLine.o \
+	ModParticleMover.o \
 	ModParticles.o \
 	ModPartImplicit.o \
 	ModPartSteady.o \
