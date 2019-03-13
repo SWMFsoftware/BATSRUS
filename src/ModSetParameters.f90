@@ -649,7 +649,7 @@ contains
        case("#PARTICLELINE","#PARTICLELINERANDOMWALK")
           call read_particle_line_param(NameCommand)
 
-       case("#CHARGEDPARTICLE")
+       case("#CHARGEDPARTICLES")
           call read_charged_particle_param(NameCommand)
 
        case("#SAVELOGFILE")
