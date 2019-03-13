@@ -53,6 +53,47 @@ contains
   !16.0                   Mass
   !7.0                    Charge
   !500000                 nParticleMax
+  !--------------------------------------------------------------------------
+  subroutine read_charged_particle_param(NameCommand)
+
+    use ModMain,      ONLY: UseParticles, NameThisComp
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=100) :: StringInitMode
+    character(len=100) :: StringOrderMode
+    integer:: iLine, iDim ! loop variables
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_charged_particle__param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    select case(NameCommand)
+    case("#CHARGEDPARTICLES")
+       call read_var('UseParticles', UseParticles)
+       if(UseParticles)then
+          call read_var('nKindChargedParticles', nKindChargedParticles)
+          if(nKindChargedParticles<= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
+               ': invalid number of charged particle kinds')
+          call read_var('Mass_I', Mass_I)
+          if(Mass_I<= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
+               ': invalid mass of charged particle kind')
+          call read_var('Charge_I', Charge_I)
+          if(Charge_I<= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
+               ': invalid charge of charged particle kind')
+          call read_var('nParticleMax_I', nParticleMax_I)
+          if(nParticleMax_I<= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
+               ': invalid number of charged particles for ikind')
+       end if 
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine read_charged_particle_param 
+  !====================================================
   subroutine allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
     real,    intent(in)    :: Mass_I(:), Charge_I(:)
     integer, intent(in)    :: nParticleMax_I(:)
@@ -78,7 +119,7 @@ contains
     end do
     call test_stop(NameSub, DoTest)
   end subroutine allocate_charged_particles
-  !==================
+  !====================================================
   subroutine trace_charged_particles(iSort, Xyz_DI, iIndex_II, UseInputInGenCoord)
     integer, intent(in) :: iSort
     ! trace particle locations starting at Xyz_DI;
