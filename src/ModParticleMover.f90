@@ -38,6 +38,8 @@ module ModParticleMover
   integer, parameter :: nVar = 2*nDim +1, x_ = 1, y_ = 2, z_=nDim,&
        Ux_ = nDim + x_, Uy_= nDim + y_, Uz_ = 2*nDim, Mass = Uz_ +1
   logical :: DoInit = .true.
+  real, allocatable :: Mass_I(:), Charge_I(:)
+  integer, allocatable:: nParticleMax_I(:)
 contains
   !====================================================
   !=============read_param=============================!
@@ -68,27 +70,30 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#CHARGEDPARTICLES")
-       call read_var('UseParticles', UseParticles)
-       if(UseParticles)then
-          call read_var('nKindChargedParticles', nKindChargedParticles)
-          if(nKindChargedParticles<= 0) call stop_mpi(&
+       call read_var('nKindChargedParticles', nKindChargedParticles)
+       if(nKindChargedParticles<= 0) then
+          UseParticles = .false.
+          RETURN
+       end if
+       UseParticles = .true.
+       allocate(  Mass_I(nKindParticles))
+       allocate(Charge_I(nKindParticles))
+       allocate(nParticleMax_I(nKindParticles))
+       do iKind = 1, nKindChargedParticles 
+          call read_var('Mass_I', Mass_I(iKind))
+          if(Mass_I(iKind)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
-               ': invalid number of charged particle kinds')
-          end if 
-          do iKind = 1, nKindChargedParticles 
-             call read_var('Mass_I', Mass_I)
-             if(Mass_I<= 0) call stop_mpi(&
-                  NameThisComp//':'//NameSub//&
-                  ': invalid mass of charged particle kind')
-             call read_var('Charge_I', Charge_I)
-             if(Charge_I<= 0) call stop_mpi(&
-                  NameThisComp//':'//NameSub//&
-                  ': invalid charge of charged particle kind')
-             call read_var('nParticleMax_I', nParticleMax_I)
-             if(nParticleMax_I<= 0) call stop_mpi(&
-                  NameThisComp//':'//NameSub//&
-                  ': invalid number of charged particles for ikind')
-         end do
+               ': invalid mass of charged particle kind')
+          call read_var('Charge_I', Charge_I(iKind))
+          call read_var('nParticleMax_I', nParticleMax_I(iKind))
+          if(nParticleMax_I(iKind)<= 0) call stop_mpi(&
+               NameThisComp//':'//NameSub//&
+               ': invalid number of charged particles for ikind')
+       end do
+    case default
+       call stop_mpi(&
+            NameThisComp//':'//NameSub//&
+            ': Unknown command '//NameCommand//' in PARAM.in')
     end select
     call test_stop(NameSub, DoTest)
   end subroutine read_charged_particle_param 
