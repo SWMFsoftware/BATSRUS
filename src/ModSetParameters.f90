@@ -74,7 +74,7 @@ contains
     use ModHallResist,    ONLY: &
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
-    use ModParticleMover, ONLY: read_charged_particle_param
+    use ModParticleMover, ONLY: read_charged_particle_param=>read_param
     use ModHeatConduction, ONLY: read_heatconduction_param
     use ModHeatFluxCollisionless, ONLY: read_heatflux_param
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
