@@ -299,7 +299,7 @@ contains
 
     use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
          UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
-         UseProjection, UseConstrainB, UseParticles, UseLocalTimeStepNew
+         UseProjection, UseConstrainB,  UseLocalTimeStepNew
     use ModSetInitialCondition, ONLY: add_rotational_velocity
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModProjectDivB, ONLY: project_divb
@@ -308,7 +308,7 @@ contains
     use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
     use ModRadDiffusion, ONLY: init_rad_diffusion
     use ModHeatConduction, ONLY: init_heat_conduction
-    use ModParticleFieldLine, ONLY: init_particle_line
+    use ModParticleFieldLine, ONLY: UseParticles, init_particle_line
     use ModRestartFile, ONLY: UseRestartOutSeries
     use ModMessagePass, ONLY: exchange_messages
     use ModUserInterface ! user_initial_perturbation
@@ -417,7 +417,7 @@ contains
     use ModIeCoupling, ONLY: apply_ie_velocity
     use ModImCoupling, ONLY: apply_im_pressure
     use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
-    use ModParticleFieldLine, ONLY: advect_particle_line
+    use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass

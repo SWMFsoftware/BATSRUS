@@ -36,7 +36,8 @@ module ModParticleFieldLine
   public:: write_plot_particle
 
   ! Local variables ----------------------
-
+  ! use particles in the simulation
+  logical, public :: UseParticles = .false.
   ! kinds of particles used to generate a magnetic field line
   integer :: &
        KindEnd_ = -1, &
@@ -141,7 +142,6 @@ contains
   !============================================================================
   subroutine read_particle_line_param(NameCommand)
 
-    use ModMain,      ONLY: UseParticles
     use ModReadParam, ONLY: read_var
     use ModNumConst,  ONLY: cPi
 

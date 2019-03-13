@@ -222,7 +222,7 @@ contains
     use ModProcMH
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
-         UseLocalTimeStep, UseParticles
+         UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
