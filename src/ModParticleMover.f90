@@ -56,17 +56,13 @@ contains
   !--------------------------------------------------------------------------
   subroutine read_charged_particle_param(NameCommand)
 
-    use ModMain,      ONLY: UseParticles, NameThisComp
+    use ModMain,      ONLY: NameThisComp
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=100) :: StringInitMode
-    character(len=100) :: StringOrderMode
-    integer:: iLine, iDim ! loop variables
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_charged_particle__param'
+    logical:: DoTest, UseParticles = .false.
+    character(len=*), parameter:: NameSub = 'read_charged_particle_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
