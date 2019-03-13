@@ -316,9 +316,6 @@ module ModMain
   ! Use resistivity planetary interior. It may be set to true in the
   ! ModUserMercury.f90.
   logical :: UseResistivePlanet = .false.
-
-  ! use particles in the simulation
-  logical :: UseParticles = .false.
   
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
