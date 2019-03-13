@@ -62,6 +62,7 @@ contains
     character(len=*), intent(in) :: NameCommand
 
     logical:: DoTest, UseParticles = .false.
+    integer :: iKind
     character(len=*), parameter:: NameSub = 'read_charged_particle_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -73,19 +74,21 @@ contains
           if(nKindChargedParticles<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid number of charged particle kinds')
-          call read_var('Mass_I', Mass_I)
-          if(Mass_I<= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid mass of charged particle kind')
-          call read_var('Charge_I', Charge_I)
-          if(Charge_I<= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid charge of charged particle kind')
-          call read_var('nParticleMax_I', nParticleMax_I)
-          if(nParticleMax_I<= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid number of charged particles for ikind')
-       end if 
+          end if 
+          do iKind = 1, nKindChargedParticles 
+             call read_var('Mass_I', Mass_I)
+             if(Mass_I<= 0) call stop_mpi(&
+                  NameThisComp//':'//NameSub//&
+                  ': invalid mass of charged particle kind')
+             call read_var('Charge_I', Charge_I)
+             if(Charge_I<= 0) call stop_mpi(&
+                  NameThisComp//':'//NameSub//&
+                  ': invalid charge of charged particle kind')
+             call read_var('nParticleMax_I', nParticleMax_I)
+             if(nParticleMax_I<= 0) call stop_mpi(&
+                  NameThisComp//':'//NameSub//&
+                  ': invalid number of charged particles for ikind')
+         end do
     end select
     call test_stop(NameSub, DoTest)
   end subroutine read_charged_particle_param 
