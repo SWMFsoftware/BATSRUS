@@ -86,7 +86,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
     iStateMax = min(iVarMax, nVar)
@@ -106,7 +106,7 @@ contains
     BLOCK: do iBlock = iBlockMin, iBlockMax
        if(Unused_B(iBlock)) CYCLE
 
-       if(DoTest)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
+       ! if(DoTest)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
        ! Put cell size of current block into an array
        Dxyz_D = CellSize_DB(:,iBlock)
@@ -160,12 +160,12 @@ contains
           end if
        end do
 
-       if(DoTest)then
-          write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
-               iProc,iBlock,IjkLo_D
-          write(*,*)'iProc, XyzStart_BLK,Dx=', iProc, &
-               XyzStart_BLK(:,iBlock), Dxyz_D(1)
-       end if
+       ! if(DoTest)then
+       !    write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
+       !         iProc,iBlock,IjkLo_D
+       !    write(*,*)'iProc, XyzStart_BLK,Dx=', iProc, &
+       !         XyzStart_BLK(:,iBlock), Dxyz_D(1)
+       ! end if
 
        ! Set the index range for the physical cells
        iLo = max(IjkLo_D(1),1)
@@ -215,15 +215,15 @@ contains
                            + WeightXyz * Current_D
                    end if
 
-                   if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
-                        iProc,i,j,k,WeightXyz
+                   ! if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
+                   !     iProc,i,j,k,WeightXyz
                 end if
              end do
           end do
        end do
     end do BLOCK
 
-    call test_stop(NameSub, DoTest)
+    ! call test_stop(NameSub, DoTest)
   end subroutine get_point_data
   !============================================================================
 
