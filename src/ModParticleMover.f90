@@ -56,7 +56,7 @@ contains
   !7.0                    Charge
   !500000                 nParticleMax
   !--------------------------------------------------------------------------
-  subroutine read_charged_particle_param(NameCommand)
+  subroutine read_param(NameCommand)
 
     use ModMain,      ONLY: NameThisComp
     use ModReadParam, ONLY: read_var
@@ -97,7 +97,7 @@ contains
     end select
     call allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
-  end subroutine read_charged_particle_param 
+  end subroutine read_param
   !====================================================
   subroutine allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
     real,    intent(in)    :: Mass_I(nKindChargedParticles) 
