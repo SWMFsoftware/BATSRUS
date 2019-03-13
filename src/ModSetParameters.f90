@@ -74,6 +74,7 @@ contains
     use ModHallResist,    ONLY: &
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
+    use ModParticleMover, ONLY: read_charged_particle_param
     use ModHeatConduction, ONLY: read_heatconduction_param
     use ModHeatFluxCollisionless, ONLY: read_heatflux_param
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -647,6 +648,9 @@ contains
 
        case("#PARTICLELINE","#PARTICLELINERANDOMWALK")
           call read_particle_line_param(NameCommand)
+
+       case("#CHARGEDPARTICLE")
+          call read_charged_particle_param(NameCommand)
 
        case("#SAVELOGFILE")
           call read_var('DoSaveLogfile',save_logfile)
