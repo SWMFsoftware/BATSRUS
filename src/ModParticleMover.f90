@@ -95,12 +95,14 @@ contains
             NameThisComp//':'//NameSub//&
             ': Unknown command '//NameCommand//' in PARAM.in')
     end select
+    call allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_charged_particle_param 
   !====================================================
   subroutine allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
-    real,    intent(in)    :: Mass_I(:), Charge_I(:)
-    integer, intent(in)    :: nParticleMax_I(:)
+    real,    intent(in)    :: Mass_I(nKindChargedParticles) 
+    real,    intent(in)    :: Charge_I(nKindChargedParticles)
+    integer, intent(in)    :: nParticleMax_I(nKindChargedParticles)
     integer :: iKind
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'allocate_charged_particles'
@@ -109,7 +111,6 @@ contains
     if(.not.DoInit) RETURN
     DoInit = .false.
     !Allocate enough arrays for all Charged Particle Types
-    nKindChargedParticles = size(nParticleMax_I)
     allocate(iKindParticle_I(nKindChargedParticles)) 
     allocate(Charge2Mass_I(nKindChargedParticles))
     Charge2Mass_I = Charge_I/Mass_I
@@ -124,7 +125,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine allocate_charged_particles
   !====================================================
-  subroutine trace_charged_particles(iSort, Xyz_DI, iIndex_II, UseInputInGenCoord)
+  subroutine trace_charged_particles(iSort, Xyz_DI, iIndex_II, &
+    UseInputInGenCoord)
     integer, intent(in) :: iSort
     ! trace particle locations starting at Xyz_DI;
     real,            intent(in) ::Xyz_DI(:, :)
