@@ -39,8 +39,20 @@ module ModParticleMover
        Ux_ = nDim + x_, Uy_= nDim + y_, Uz_ = 2*nDim, Mass = Uz_ +1
   logical :: DoInit = .true.
 contains
-  !============================================================================
-
+  !====================================================
+  !=============read_param=============================!
+  !subroutine reads the following paramaters from the PARAM.in file:
+  !#CHARGEDPARTICLES
+  !3                      nKindChargedParticles
+  !4.0                    Mass
+  !2.0                    Charge
+  !1000000                nParticleMax
+  !16.0                   Mass
+  !6.0                    Charge
+  !500000                 nParticleMax
+  !16.0                   Mass
+  !7.0                    Charge
+  !500000                 nParticleMax
   subroutine allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
     real,    intent(in)    :: Mass_I(:), Charge_I(:)
     integer, intent(in)    :: nParticleMax_I(:)
@@ -53,15 +65,16 @@ contains
     DoInit = .false.
     !Allocate enough arrays for all Charged Particle Types
     nKindChargedParticles = size(nParticleMax_I)
-    allocate(iKindParticle_I(nKindChargedParticles), Charge2Mass_I(nKindChargedParticles))
+    allocate(iKindParticle_I(nKindChargedParticles)) 
+    allocate(Charge2Mass_I(nKindChargedParticles))
     Charge2Mass_I = Charge_I/Mass_I
     iKindParticle_I = -1
     do iKind = 1, nKindChargedParticles 
-    call allocate_particles(&
-         iKindParticle = iKindParticle_I(iKind), &
-         nVar          = nVar    , &
-         nIndex        = 1  , &
-         nParticleMax  = nParticleMax_I(iKind)    )
+       call allocate_particles(&
+            iKindParticle = iKindParticle_I(iKind), &
+            nVar          = nVar    , &
+            nIndex        = 1  , &
+            nParticleMax  = nParticleMax_I(iKind)    )
     end do
     call test_stop(NameSub, DoTest)
   end subroutine allocate_charged_particles
