@@ -59,6 +59,7 @@ contains
   subroutine read_param(NameCommand)
 
     use ModMain,      ONLY: NameThisComp
+    use ModParticles, ONLY: deallocate_particles
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -72,6 +73,15 @@ contains
     case("#CHARGEDPARTICLES")
        call read_var('nKindChargedParticles', nKindChargedParticles)
        if(nKindChargedParticles<= 0) then
+          if(UseParticles)then
+             !\
+             ! Deallocate particles used in the previous session
+             !/
+             do iKind = 1, size(iKindParticle_I)
+                call deallocate_particles(&
+                      iKindParticle_I(iKind))
+             end do
+          end if
           UseParticles = .false.
           RETURN
        end if
@@ -96,6 +106,7 @@ contains
             ': Unknown command '//NameCommand//' in PARAM.in')
     end select
     call allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
+    deallocate(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_param
   !====================================================
