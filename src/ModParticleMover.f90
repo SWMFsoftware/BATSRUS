@@ -169,18 +169,22 @@ contains
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
+    use ModCoordTransform, ONLY: cross_product
+
     integer, intent(in)  :: iParticle
     logical, intent(out) :: EndOfSegment
     !\
     ! Coords
     !/
     real :: Xyz_D(MaxDim)
-    real :: Uxyz_D(MaxDim)
+    real,dimension(x_:z_)   :: U_D(MaxDim), U12_D(MaxDim),&
+            EForce_D, BForce_D
     integer  :: iBlock
     ! magnetic field
     real   :: B_D(MaxDim) = 0.0
+    real   :: E_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
-    integer:: nCell, iCell_II(0:nDim, 2**nDim), iSort
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
     real:: QDtPerM
     integer:: iCell ! loop variable
@@ -201,26 +205,8 @@ contains
        call interpolate_grid_amr_gc(&
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
              ! reset the interpoalted values
-       Uxyz_D  = 0
        ! get the velocity
-       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I, &
-            EndOfSegment)
-       if(EndOfSegment)then
-          call mark_undefined(iKind,iParticle);RETURN
-       end if
-       ! interpolate the local density and momentum
-       do iCell = 1, nCell
-          i_D = 1
-          i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
-               call stop_mpi(&
-               NameThisComp//':'//NameSub//": zero or negative plasma density")
-          ! convert momentum to velocity
-          Uxyz_D = Uxyz_D + &
-               State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock) / &
-               State_VGB(Rho_,         i_D(1),i_D(2),i_D(3),iBlock) * &
-               Weight_I(iCell)
-       end do
+       U_D  = Coord_DI(Ux_:Uz_, iParticle) 
        !\
        ! Interpolate magnetic field with obtained weight coefficients
        !/
@@ -234,36 +220,37 @@ contains
                State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
        !\
-       ! Collect electric charge and current moments 
-       ! \rho_c(x_j)=\sum \phi_{j,s} q_s
-       ! J_i(x_j)=\sum \phi_{j,s} q_s u_s
-       !/
-       !\
        ! Interpolate electric field 
        !/
-       do iSort=1,nKindChargedParticles
-          QDtPerM = cHalf * Dt * Charge2Mass_I(iSort)
+       do iCell = 1, nCell
+          i_D = 1
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
+          E_D = E_D + &
+               State_VGB(Ex_:Ez_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
 
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          call get_electric_field_block(iBlock)
-       end do
-   
-       ! Fill in ghost cells
-       call message_pass_cell(3, Efield_DGB)
-   
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-   
-          ! Fill outer ghost cells with floating values
-          if(far_field_bcs_blk(iBlock)) &
-             call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
-               TypeBcIn = 'float')
-       end do
        !\
-       ! Update velocity: Main part of Boris Algorithm
+       ! Calculate individual contributions from E, B field on  velocity 
        !/
+       QDtPerM = cHalf * Dt * Charge2Mass_I(iKind)
+       !Electric field force, divided by particle mass
+       !and multiplied by \Delta t/2
+       Eforce_D = QDtPerM * E_D 
+       !Acceleration from the electric field, for the
+       !first half of the time step:
+       U_D = U_D + Eforce_D
+       !Get magnetic force divided by particle mass and by c
+       !and multiplied by \Delta t/2
+       BForce_D = QDtPerM * B_D
+       !Add a half of the magnetic rotation:
+       U12_D = U_D + cross_product(U_D,BForce_D)
+       !Multiply the magnetic force by 2 to take a whole
+       !rotation and reduce its magnitude not to perturb energy
+       BForce_D = (2.0/(1.0 + sum(BForce_D**2))) * BForce_D
+       !\
+       ! Update velocity
+       !/
+       U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
 
        !\
        ! Update coordinates
