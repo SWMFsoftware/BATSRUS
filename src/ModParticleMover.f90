@@ -177,8 +177,7 @@ contains
     ! Coords
     !/
     real :: Xyz_D(MaxDim)
-    real,dimension(x_:z_)   :: U_D(MaxDim), U12_D(MaxDim),&
-            EForce_D, BForce_D
+    real   :: U_D(MaxDim), U12_D(MaxDim), EForce_D(MaxDim), BForce_D(MaxDim)
     integer  :: iBlock
     ! magnetic field
     real   :: B_D(MaxDim) = 0.0
@@ -206,6 +205,7 @@ contains
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
              ! reset the interpoalted values
        ! get the velocity
+       U_D  = 0.0
        U_D  = Coord_DI(Ux_:Uz_, iParticle) 
        !\
        ! Interpolate magnetic field with obtained weight coefficients
@@ -222,6 +222,7 @@ contains
        !\
        ! Interpolate electric field 
        !/
+       E_D = 0.0
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
