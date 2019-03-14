@@ -176,12 +176,10 @@ contains
     !\
     ! Coords
     !/
-    real :: Xyz_D(MaxDim)
-    real   :: U_D(MaxDim), U12_D(MaxDim), EForce_D(MaxDim), BForce_D(MaxDim)
+    real :: Xyz_D(nDim)
+    real,dimension(x_:z_) :: U_D, U12_D, EForce_D, BForce_D, B_D, E_D
     integer  :: iBlock
     ! magnetic field
-    real   :: B_D(MaxDim) = 0.0
-    real   :: E_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
@@ -199,7 +197,7 @@ contains
        !/
        ! Coordinates and block #
        Xyz_D   = 0.0
-       Xyz_D(1:nDim)   = Coord_DI(x_:z_, iParticle)
+       Xyz_D(1:nDim)   = Coord_DI(x_:nDim, iParticle)
        iBlock          = Index_II(0,iParticle)
        call interpolate_grid_amr_gc(&
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
@@ -210,6 +208,7 @@ contains
        !\
        ! Interpolate magnetic field with obtained weight coefficients
        !/
+       B_D = 0.0
        ! get potential part of the magnetic field at current coordinates 
        if(UseB0)call get_b0(Xyz_D, B_D)
        ! interpolate the remaining non-potential part of the magnetic field
@@ -256,7 +255,7 @@ contains
        !\
        ! Update coordinates
        !/
-       Coord_DI(x_:z_, iParticle) = Coord_DI(x_:z_, iParticle) + &
+       Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
             Dt*Coord_DI(Ux_:Uz_,iParticle)
        ! check location, schedule for message pass, if needed
        call check_particle_location(       &
@@ -282,7 +281,7 @@ contains
     end if
     ! Coordinates and block #
     Xyz_D   = 0.0
-    Xyz_D(1:nDim)   = Coord_DI(x_:z_, iParticle)
+    Xyz_D(1:nDim)   = Coord_DI(x_:nDim, iParticle)
     iBlock          = Index_II(0,iParticle)
     call interpolate_grid_amr_gc(&
          Xyz_D, iBlock, nCell, iCell_II, Weight_I)
