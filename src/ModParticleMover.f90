@@ -10,7 +10,10 @@ module ModParticleMover
        nBlock, MaxBlock, Unused_B, &
        iProc, iComm, message_pass_cell
 
-  use ModAdvance,      ONLY: Efield_DGB
+  use ModMain,      ONLY: NameThisComp
+  use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
+  use ModElectricField
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ex_, Ez_
   use ModMain,         ONLY: n_step
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
@@ -18,6 +21,7 @@ module ModParticleMover
   use BATL_particles,  ONLY: Particle_I, remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, &
        set_pointer_to_particles, trace_particles
+  use ModNumConst
   implicit none
   SAVE
   !\
@@ -68,7 +72,6 @@ contains
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
 
-    use ModMain,      ONLY: NameThisComp
     use ModParticles, ONLY: deallocate_particles
     use ModReadParam, ONLY: read_var
 
@@ -164,34 +167,104 @@ contains
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
+    use ModMain, ONLY: UseB0
+    use ModB0, ONLY: get_b0
     integer, intent(in)  :: iParticle
     logical, intent(out) :: EndOfSegment
     !\
     ! Coords
     !/
     real :: Xyz_D(MaxDim)
+    real :: Uxyz_D(MaxDim)
     integer  :: iBlock
+    ! magnetic field
+    real   :: B_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
-    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    integer:: nCell, iCell_II(0:nDim, 2**nDim), iSort
     real   :: Weight_I(2**nDim)
+    real:: QDtPerM
+    integer:: iCell ! loop variable
+    integer:: i_D(MaxDim)
     logical :: IsGone, DoMove
+    character(len=*), parameter:: NameSub = 'interpolate_Bfield'
     !---------------------
     EndOfSegment = .true. !Do not repeat
     if(Index_II(Status_, iParticle) == Done_)RETURN
     if(Index_II(Status_, iParticle) == DoAll_)then
+       !\
+       ! Interpolate particle coordinates and velocities into BATSRUS grid
+       !/
        ! Coordinates and block #
        Xyz_D   = 0.0
        Xyz_D(1:nDim)   = Coord_DI(x_:z_, iParticle)
        iBlock          = Index_II(0,iParticle)
        call interpolate_grid_amr_gc(&
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+             ! reset the interpoalted values
+       Uxyz_D  = 0
+       ! get the velocity
+       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I, &
+            EndOfSegment)
+       if(EndOfSegment)then
+          call mark_undefined(iKind,iParticle);RETURN
+       end if
+       ! interpolate the local density and momentum
+       do iCell = 1, nCell
+          i_D = 1
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
+          if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
+               call stop_mpi(&
+               NameThisComp//':'//NameSub//": zero or negative plasma density")
+          ! convert momentum to velocity
+          Uxyz_D = Uxyz_D + &
+               State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock) / &
+               State_VGB(Rho_,         i_D(1),i_D(2),i_D(3),iBlock) * &
+               Weight_I(iCell)
+       end do
        !\
-       ! Interpolate field with obtained weight coefficients
+       ! Interpolate magnetic field with obtained weight coefficients
+       !/
+       ! get potential part of the magnetic field at current coordinates 
+       if(UseB0)call get_b0(Xyz_D, B_D)
+       ! interpolate the remaining non-potential part of the magnetic field
+       do iCell = 1, nCell
+          i_D = 1
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
+          B_D = B_D + &
+               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+       end do
+       !\
+       ! Collect electric charge and current moments 
+       ! \rho_c(x_j)=\sum \phi_{j,s} q_s
+       ! J_i(x_j)=\sum \phi_{j,s} q_s u_s
        !/
        !\
-       ! Update velocity
+       ! Interpolate electric field 
        !/
-       !.................
+       do iSort=1,nKindChargedParticles
+          QDtPerM = cHalf * Dt * Charge2Mass_I(iSort)
+       end do
+
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          call get_electric_field_block(iBlock)
+       end do
+   
+       ! Fill in ghost cells
+       call message_pass_cell(3, Efield_DGB)
+   
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+   
+          ! Fill outer ghost cells with floating values
+          if(far_field_bcs_blk(iBlock)) &
+             call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
+               TypeBcIn = 'float')
+       end do
+       !\
+       ! Update velocity: Main part of Boris Algorithm
+       !/
+
        !\
        ! Update coordinates
        !/
