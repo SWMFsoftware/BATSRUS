@@ -42,19 +42,38 @@ module ModParticleMover
   !\
   ! Named indexes
   !/
-  integer, parameter :: nVar = 2*nDim +1, x_ = 1, y_ = 2, z_=nDim,  &
-       Ux_ = nDim + x_, Uy_= nDim + y_, Uz_ = 2*nDim, Mass = Uz_ +1,&
+  !\
+  ! Indexes in coordinate-velocity-mass array
+  !/
+  integer, parameter :: x_ = 1, y_ = 2, z_=3,   U_ = nDim,       &
+       Ux_ = U_ + x_, Uy_= U_ + y_, Uz_ = U_ + z_, Mass_= Uz_ +1,&
+       nVar = Mass_
+  !\
+  ! Indexes in the index array
+  !/
+  integer, parameter :: &
        Status_ = 1, DoAll_ = 1, DoCollect_ = 2, Done_= 3 
   logical :: DoInit = .true.
+  !\
+  ! Just to read the particle mass (A), charge (Z) and 
+  ! #of particle from parameter file
+  !/
   real, allocatable :: Mass_I(:), Charge_I(:)
   integer, allocatable:: nParticleMax_I(:)
+  !\
+  ! For conveniently address to coordinates and 
+  ! indexes of a particular sort of particle
+  !/
   real,    pointer :: Coord_DI(:,:)
   integer, pointer :: Index_II(:,:)
   !\
   ! Global variables to be shared by more than one routine
   real    :: Dt          !Time step
   integer :: iKind       !Sort of particles
-  real    :: Charge2Mass !For a given sort of particles
+  !\
+  ! (Dt/2)*Zq/(Am_p), to convert field to force
+  !/
+  real:: QDtPerM      !For a given sort of particles
 contains
   !=============read_param=============================!
   !subroutine read the following paramaters from the PARAM.in file:
@@ -159,6 +178,10 @@ contains
        call set_pointer_to_particles(&
             iKind, Coord_DI, Index_II, &
             nParticle=nParticle)
+       !\
+       ! (Dt/2)*Zq/(Am_p), to convert field to force
+       !/
+       QDtPerM = cHalf * Dt * Charge2Mass_I(iKind)
        Index_II(Status_,1:nParticle) = DoAll_
        call trace_particles(iKind, boris_scheme, check_done)
     end do
@@ -176,14 +199,13 @@ contains
     !\
     ! Coords
     !/
-    real :: Xyz_D(nDim)
+    real :: Xyz_D(MaxDim)
     real,dimension(x_:z_) :: U_D, U12_D, EForce_D, BForce_D, B_D, E_D
     integer  :: iBlock
     ! magnetic field
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim)
-    real:: QDtPerM
+    real   :: Weight_I(2**nDim), Mass
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     logical :: IsGone, DoMove
@@ -202,44 +224,35 @@ contains
        call interpolate_grid_amr_gc(&
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
              ! reset the interpoalted values
-       ! get the velocity
-       U_D  = 0.0
-       U_D  = Coord_DI(Ux_:Uz_, iParticle) 
        !\
        ! Interpolate magnetic field with obtained weight coefficients
        !/
-       B_D = 0.0
+       B_D = 0.0;   E_D = 0.0
        ! get potential part of the magnetic field at current coordinates 
        if(UseB0)call get_b0(Xyz_D, B_D)
-       ! interpolate the remaining non-potential part of the magnetic field
+       !\
+       ! Interpolate electric field and the remaining non-potential part 
+       ! of the magnetic field
+       !/ 
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
           B_D = B_D + &
                State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-       end do
-       !\
-       ! Interpolate electric field 
-       !/
-       E_D = 0.0
-       do iCell = 1, nCell
-          i_D = 1
-          i_D(1:nDim) = iCell_II(1:nDim, iCell)
           E_D = E_D + &
                State_VGB(Ex_:Ez_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
-
        !\
        ! Calculate individual contributions from E, B field on  velocity 
        !/
-       QDtPerM = cHalf * Dt * Charge2Mass_I(iKind)
        !Electric field force, divided by particle mass
        !and multiplied by \Delta t/2
        Eforce_D = QDtPerM * E_D 
-       !Acceleration from the electric field, for the
-       !first half of the time step:
-       U_D = U_D + Eforce_D
-       !Get magnetic force divided by particle mass and by c
+       ! Get the velocity, add
+       ! acceleration from the electric field, for the
+       ! first half of the time step:
+       U_D =  Coord_DI(Ux_:Uz_, iParticle)  + Eforce_D
+       !Get magnetic force divided by particle mass
        !and multiplied by \Delta t/2
        BForce_D = QDtPerM * B_D
        !Add a half of the magnetic rotation:
@@ -251,12 +264,31 @@ contains
        ! Update velocity
        !/
        U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
-
+       !\
+       ! Particle mass
+       !/
+       Mass = Coord_DI(Mass_, iParticle)
+       !\
+       ! Collect the current of a given particle
+       !/
+       do iCell = 1, nCell
+          i_D = 1
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
+          !\
+          ! Current^-(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+          !  Current^-(:, i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+          !  Mass*U_D*Weight_I(iCell)
+          !/
+       end do
+       !\
+       ! Update coordinate array
+       !/
+       Coord_DI(Ux_:Uz_,iParticle) = U_D
        !\
        ! Update coordinates
        !/
        Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
-            Dt*Coord_DI(Ux_:Uz_,iParticle)
+            Dt*Coord_DI(Ux_:U_+nDim,iParticle)
        ! check location, schedule for message pass, if needed
        call check_particle_location(       &
             iKindParticle = iKind         ,&
