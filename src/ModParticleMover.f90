@@ -6,7 +6,7 @@ module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop
   use BATL_lib, ONLY: nDim, nI, nJ, nK, nIJK, nG, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
        nBlock, MaxBlock, Unused_B, &
        iProc, iComm, message_pass_cell
 
@@ -16,7 +16,10 @@ module ModParticleMover
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModParticles,    ONLY: allocate_particles, message_pass_particles
   use BATL_particles,  ONLY: Particle_I, remove_undefined_particles, &
-       mark_undefined, check_particle_location, put_particles, trace_particles
+       mark_undefined, check_particle_location, put_particles, &
+       set_pointer_to_particles, trace_particles
+  implicit none
+  SAVE
   !\
   !Parameters
   !/
@@ -35,15 +38,22 @@ module ModParticleMover
   !\
   ! Named indexes
   !/
-  integer, parameter :: nVar = 2*nDim +1, x_ = 1, y_ = 2, z_=nDim,&
-       Ux_ = nDim + x_, Uy_= nDim + y_, Uz_ = 2*nDim, Mass = Uz_ +1
+  integer, parameter :: nVar = 2*nDim +1, x_ = 1, y_ = 2, z_=nDim,  &
+       Ux_ = nDim + x_, Uy_= nDim + y_, Uz_ = 2*nDim, Mass = Uz_ +1,&
+       Status_ = 1, DoAll_ = 1, DoCollect_ = 2, Done_= 3 
   logical :: DoInit = .true.
   real, allocatable :: Mass_I(:), Charge_I(:)
   integer, allocatable:: nParticleMax_I(:)
+  real,    pointer :: Coord_DI(:,:)
+  integer, pointer :: Index_II(:,:)
+  !\
+  ! Global variables to be shared by more than one routine
+  real    :: Dt          !Time step
+  integer :: iKind       !Sort of particles
+  real    :: Charge2Mass !For a given sort of particles
 contains
-  !====================================================
   !=============read_param=============================!
-  !subroutine reads the following paramaters from the PARAM.in file:
+  !subroutine read the following paramaters from the PARAM.in file:
   !#CHARGEDPARTICLES
   !3                      nKindChargedParticles
   !4.0                    Mass
@@ -67,7 +77,7 @@ contains
     logical:: DoTest, UseParticles = .false.
     integer :: iKind
     character(len=*), parameter:: NameSub = 'read_charged_particle_param'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#CHARGEDPARTICLES")
@@ -86,9 +96,9 @@ contains
           RETURN
        end if
        UseParticles = .true.
-       allocate(  Mass_I(nKindParticles))
-       allocate(Charge_I(nKindParticles))
-       allocate(nParticleMax_I(nKindParticles))
+       allocate(  Mass_I(nKindChargedParticles))
+       allocate(Charge_I(nKindChargedParticles))
+       allocate(nParticleMax_I(nKindChargedParticles))
        do iKind = 1, nKindChargedParticles 
           call read_var('Mass_I', Mass_I(iKind))
           if(Mass_I(iKind)<= 0) call stop_mpi(&
@@ -135,22 +145,98 @@ contains
     end do
     call test_stop(NameSub, DoTest)
   end subroutine allocate_charged_particles
-  !====================================================
-  subroutine trace_charged_particles(iSort, Xyz_DI, iIndex_II, &
-    UseInputInGenCoord)
-    integer, intent(in) :: iSort
-    ! trace particle locations starting at Xyz_DI;
-    real,            intent(in) ::Xyz_DI(:, :)
-    ! initial particle indices for starting particles
-    integer,optional,intent(in) :: iIndex_II(:,:)
+  !===============================================!
+  subroutine trace_charged_particles(DtIn)
+    real, intent(in) :: DtIn
+    integer :: iLoop, nParticle
+    !----------------------
+    Dt = DtIn
+    do iLoop = 1, nKindChargedParticles
+       iKind = iKindParticle_I(iKind)
+       call set_pointer_to_particles(&
+            iKind, Coord_DI, Index_II, &
+            nParticle=nParticle)
+       Index_II(Status_,1:nParticle) = DoAll_
+       call trace_particles(iKind, boris_scheme, check_done)
+    end do
 
-    ! An input can be in generalized coordinates
-    logical, optional,intent(in) :: UseInputInGenCoord
-    integer :: nParticleOld ! number of already existing charged particles
-    integer :: nParticleAll ! number of all particles on all PEs
-
-    !=======================PARTICLE MOVER=========================!
-    !Advance the particles in one timestep; calculate cell-centered
-    !number density and velocity moments
   end subroutine trace_charged_particles
+  !=====================================
+  subroutine boris_scheme(iParticle, EndOfSegment)
+    use ModBatlInterface, ONLY: interpolate_grid_amr_gc
+    integer, intent(in)  :: iParticle
+    logical, intent(out) :: EndOfSegment
+    !\
+    ! Coords
+    !/
+    real :: Xyz_D(MaxDim)
+    integer  :: iBlock
+    ! interpolation data: number of cells, cell indices, weights
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    real   :: Weight_I(2**nDim)
+    logical :: IsGone, DoMove
+    !---------------------
+    EndOfSegment = .true. !Do not repeat
+    if(Index_II(Status_, iParticle) == Done_)RETURN
+    if(Index_II(Status_, iParticle) == DoAll_)then
+       ! Coordinates and block #
+       Xyz_D   = 0.0
+       Xyz_D(1:nDim)   = Coord_DI(x_:z_, iParticle)
+       iBlock          = Index_II(0,iParticle)
+       call interpolate_grid_amr_gc(&
+            Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+       !\
+       ! Interpolate field with obtained weight coefficients
+       !/
+       !\
+       ! Update velocity
+       !/
+       !.................
+       !\
+       ! Update coordinates
+       !/
+       Coord_DI(x_:z_, iParticle) = Coord_DI(x_:z_, iParticle) + &
+            Dt*Coord_DI(Ux_:Uz_,iParticle)
+       ! check location, schedule for message pass, if needed
+       call check_particle_location(       &
+            iKindParticle = iKind         ,&
+            iParticle     = iParticle,     &
+            DoMove        = DoMove        ,&
+            IsGone        = IsGone    )
+       if(IsGone)then
+          !\
+          ! Particle left the computational domain, schedule for 
+          ! removal
+          !/
+          call mark_undefined(iKind, iParticle)
+          RETURN
+       elseif(DoMove)then
+          !\
+          ! Particle will be send to other processor, the current
+          ! will be collected there
+          !/
+          Index_II(Status_,iParticle) = DoCollect_
+          RETURN
+       end if
+    end if
+    ! Coordinates and block #
+    Xyz_D   = 0.0
+    Xyz_D(1:nDim)   = Coord_DI(x_:z_, iParticle)
+    iBlock          = Index_II(0,iParticle)
+    call interpolate_grid_amr_gc(&
+         Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+    !\
+    ! Collect current with updated weight coefficients
+    !/
+    !..................................
+    Index_II(Status_, iParticle) = Done_
+  end subroutine boris_scheme
+  !==========================
+  subroutine check_done(Done)
+    ! check whether all paritcles have been advanced through 
+    ! full time step
+    logical, intent(out):: Done
+    !--------------------------------------------------------------------------
+    Done = all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
+  end subroutine check_done
 end module ModParticleMover
