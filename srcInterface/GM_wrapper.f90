@@ -171,14 +171,14 @@ contains
     !USES:
     use MH_domain_decomposition
     use CON_coupler
-    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, UseParticles
+    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple
     use ModPhysics,      ONLY: No2Si_V, UnitX_
     use ModVarIndexes,   ONLY: nVar
     use ModAdvance,      ONLY: State_VGB
     use CON_comp_param,  ONLY: GM_
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D, Particle_I
-    use ModParticleFieldLine, ONLY: KindReg_
+    use ModParticleFieldLine, ONLY: KindReg_, UseParticles
 
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
