@@ -65,7 +65,7 @@ module ModParticleMover
   ! Moments of the particle VDFs
   !/
   real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
-  real,    allocatable :: Moments_plusDGBI(:,:,:,:,:,:)
+  real,    allocatable :: MomentsPlus_DGBI(:,:,:,:,:,:)
 
   !\
   ! Global variables to be shared by more than one routine
@@ -173,7 +173,7 @@ contains
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, Moments_DGBI, &
-            Moments_plusDGBI)
+            MomentsPlus_DGBI)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
@@ -207,7 +207,7 @@ contains
     allocate(Moments_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindChargedParticles))
-    allocate(Moments_plusDGBI(Rho_:RhoUz_,&
+    allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindChargedParticles))
 
@@ -220,7 +220,7 @@ contains
     !----------------------
     Dt = DtIn
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
-    Moments_plusDGBI = 0.0 !Prepare storage for the VDF moments
+    MomentsPlus_DGBI = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindChargedParticles
        iKind = iKindParticle_I(iKind)
        call set_pointer_to_particles(&
@@ -367,14 +367,21 @@ contains
     call interpolate_grid_amr_gc(&
          Xyz_D, iBlock, nCell, iCell_II, Weight_I)
     !\
-    ! Collect current with updated weight coefficients
+    ! Get the contribution to moments of VDF, 
+    ! from a given particle
+    !/
+    Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
+    Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*&
+         Coord_DI(Ux_:Uz_, iParticle)
+    !\
+    ! Collect Contribution with updated weight coefficients
     !/
     !..................................
     do iCell = 1, nCell
        i_D = 1
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
-       Moments_plusDGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-            Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+       MomentsPlus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+            MomentsPlus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
             Moments_V*Weight_I(iCell)
     end do
     Index_II(Status_, iParticle) = Done_
