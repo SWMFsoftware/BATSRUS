@@ -247,21 +247,26 @@ contains
     ! Plasma Physics via Computer Simulation, 
     ! Editors: Birdsall, C. K.; Langdon, A. B., 
     ! The Adam Hilger Series on Plasma Physics, 1991.
-    ! A centered difference method for solving the Newton-Lorentz equations of
-    ! motion is detailed in Subestion 4.3, Eq. (3). 
+    ! A time-centered difference method for solving the Newton-Lorentz 
+    ! equations of motion is detailed in Subestion 4.3, Eq. (3). 
     ! This method makes use of A) the Buneman 1967 method, through Eq. (4)-(6),
     ! in order to simplify Eq. (3) by subtracting the drift velocity from v, and
     ! B) the Boris Scheme, which separates the electric and magnetic fields , 
     ! through Eq. (7) - (9).
+    !/
+    !\
+    ! WITHIN THE FRAMEWORK OF HYBRYD SCHEME:
     ! At the beginning of the Boris Scheme the 
     ! known vector quantities are: x(N+1/2), u(N).
     ! At the end of the time-step trac_particles has:
     ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
-    ! 2. Calculated the E, B-fields: E(N+1/2), B(N+1/2)
+    ! 2. Uses the E, B-fields: E(N+1/2), B(N+1/2), interpolated to
+    !    the particle location at x(N+1/2).
     ! 3. Collected the current and charge densities at two different points:
     !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1))     : Moments_DGBI
     !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
-    ! This algorithm corresponds to Step 2 of the CAM Algorithm in
+    ! Thus collected moments of the VDFs are needed by Step 2 of the 
+    ! CAM Algorithm in
     ! Matthews, 1993, J. Comput. Phys, 112, 102.
     !/
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
