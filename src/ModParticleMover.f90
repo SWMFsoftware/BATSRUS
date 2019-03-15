@@ -5,20 +5,17 @@
 module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use BATL_lib, ONLY: nDim, nI, nJ, nK, nIJK, nG, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim, &
+  use BATL_lib, ONLY: nDim,  MaxDim, &
        nBlock, MaxBlock, Unused_B, &
        iProc, iComm, message_pass_cell
 
-  use ModMain,      ONLY: NameThisComp
+  use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ex_, Ez_
-  use ModMain,         ONLY: n_step
-  use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
-  use ModCellBoundary, ONLY: set_cell_boundary
-  use ModParticles,    ONLY: allocate_particles, message_pass_particles
-  use BATL_particles,  ONLY: Particle_I, remove_undefined_particles, &
-       mark_undefined, check_particle_location, put_particles, &
+  use ModVarIndexes,   ONLY: Bx_, Bz_, Ex_, Ez_
+  use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
+       gen_deallocate_particles=>deallocate_particles
+  use BATL_particles,  ONLY: Particle_I, &
+       mark_undefined, check_particle_location, &
        set_pointer_to_particles, trace_particles
   use ModNumConst
   implicit none
@@ -39,10 +36,6 @@ module ModParticleMover
   !/
   real,    allocatable :: Charge2Mass_I(:)
   !\
-  ! Electric current array
-  !/
-  real,    allocatable :: Current_GDB(:,:,:,:,:,:)
-  !\
   ! Named indexes
   !/
   !\
@@ -52,27 +45,26 @@ module ModParticleMover
        Ux_ = U_ + x_, Uy_= U_ + y_, Uz_ = U_ + z_, Mass_= Uz_ +1,&
        nVar = Mass_
   !\
-  ! Indexes in current array
-  !/
-  integer, parameter :: Jx_ = 1, Jy_ = 2, Jz_=3, J_ = nDim
-  !\
   ! Indexes in the index array
   !/
   integer, parameter :: &
        Status_ = 1, DoAll_ = 1, DoCollect_ = 2, Done_= 3 
   logical :: DoInit = .true.
   !\
-  ! Just to read the particle mass (A), charge (Z) and 
-  ! #of particle from parameter file
-  !/
-  real, allocatable :: Mass_I(:), Charge_I(:)
-  integer, allocatable:: nParticleMax_I(:)
-  !\
   ! For conveniently address to coordinates and 
   ! indexes of a particular sort of particle
   !/
   real,    pointer :: Coord_DI(:,:)
   integer, pointer :: Index_II(:,:)
+  !\
+  ! Indexes in the array to collect particle VDF moments
+  !/
+  integer, parameter :: Rho_ = 1, RhoU_ = 1, RhoUx_ = RhoU_ + x_, &
+       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_
+  !\
+  ! Moments of the particle VDFs
+  !/
+  real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
   !\
   ! Global variables to be shared by more than one routine
   real    :: Dt          !Time step
@@ -81,6 +73,7 @@ module ModParticleMover
   ! (Dt/2)*Zq/(Am_p), to convert field to force
   !/
   real:: QDtPerM      !For a given sort of particles
+  character(len=*), parameter:: NameMod = 'ModParticleMover:' 
 contains
   !=============read_param=============================!
   !subroutine read the following paramaters from the PARAM.in file:
@@ -95,47 +88,64 @@ contains
   !16.0                   Mass
   !7.0                    Charge
   !500000                 nParticleMax
+  !and allocate particle arrays immediately.
+  !To reallocate, first, use command
+  !#CHARGEDPARTICLES
+  !0                      nKindChargedParticles
+  !to deallocate arrays.
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
 
-    use ModParticles, ONLY: deallocate_particles
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
 
     logical:: DoTest, UseParticles = .false.
-    integer :: iKind
-    character(len=*), parameter:: NameSub = 'read_charged_particle_param'
+    integer :: iLoop
+    !\
+    !Arrays to read A and Z for different ion particles
+    !/
+    real, allocatable :: Mass_I(:), Charge_I(:)
+    !\
+    ! array to read maximum number of particles for different
+    ! sorts of ions
+    !/
+    integer, allocatable :: nParticleMax_I(:)
+    character(len=*), parameter:: NameSub = NameMod//'read_param'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
+
     case("#CHARGEDPARTICLES")
        call read_var('nKindChargedParticles', nKindChargedParticles)
        if(nKindChargedParticles<= 0) then
-          if(UseParticles)then
-             !\
-             ! Deallocate particles used in the previous session
-             !/
-             do iKind = 1, size(iKindParticle_I)
-                call deallocate_particles(&
-                      iKindParticle_I(iKind))
-             end do
-          end if
+          !\
+          ! Clean particle arrays
+          !/
+          if(UseParticles)call deallocate_particles
           UseParticles = .false.
           RETURN
        end if
+       !\
+       ! The particle arrays can be reset, however,
+       ! first nKindParticle should be set to zero
+       ! to deallocate available arrays
+       !/
+       if(UseParticles)call stop_mpi(NameThisComp//':'//NameSub//&
+               ': To reset particle arrays first use '//&
+               '#CHARGEDPARTICLES command with nKindParticles=0')
        UseParticles = .true.
        allocate(  Mass_I(nKindChargedParticles))
        allocate(Charge_I(nKindChargedParticles))
        allocate(nParticleMax_I(nKindChargedParticles))
-       do iKind = 1, nKindChargedParticles 
-          call read_var('Mass_I', Mass_I(iKind))
-          if(Mass_I(iKind)<= 0) call stop_mpi(&
+       do iLoop = 1, nKindChargedParticles 
+          call read_var('Mass_I', Mass_I(iLoop))
+          if(Mass_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid mass of charged particle kind')
-          call read_var('Charge_I', Charge_I(iKind))
-          call read_var('nParticleMax_I', nParticleMax_I(iKind))
-          if(nParticleMax_I(iKind)<= 0) call stop_mpi(&
+          call read_var('Charge_I', Charge_I(iLoop))
+          call read_var('nParticleMax_I', nParticleMax_I(iLoop))
+          if(nParticleMax_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid number of charged particles for ikind')
        end do
@@ -144,12 +154,27 @@ contains
             NameThisComp//':'//NameSub//&
             ': Unknown command '//NameCommand//' in PARAM.in')
     end select
-    call allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
+    call allocate_particles(Mass_I, Charge_I, nParticleMax_I)
     deallocate(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_param
+  !===================== DEALLOCATE====================
+  subroutine deallocate_particles
+    integer :: iLoop
+    !----------------
+    nullify(Coord_DI)
+    nullify(Index_II)
+    !\
+    ! Deallocate particle arrays
+    !/
+    do iLoop = 1, size(iKindParticle_I)
+       call gen_deallocate_particles(iKindParticle_I(iLoop))
+    end do
+    deallocate(iKindParticle_I, Charge2Mass_I, Moments_DGBI)
+  end subroutine deallocate_particles
   !====================================================
-  subroutine allocate_charged_particles(Mass_I, Charge_I, nParticleMax_I)
+  subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     real,    intent(in)    :: Mass_I(nKindChargedParticles) 
     real,    intent(in)    :: Charge_I(nKindChargedParticles)
     integer, intent(in)    :: nParticleMax_I(nKindChargedParticles)
@@ -158,28 +183,37 @@ contains
     character(len=*), parameter:: NameSub = 'allocate_charged_particles'
     !-----------------------------!
     call test_start(NameSub, DoTest)
+
     if(.not.DoInit) RETURN
     DoInit = .false.
+
     !Allocate enough arrays for all Charged Particle Types
     allocate(iKindParticle_I(nKindChargedParticles)) 
     allocate(Charge2Mass_I(nKindChargedParticles))
+
     Charge2Mass_I = Charge_I/Mass_I
+    
     iKindParticle_I = -1
     do iKind = 1, nKindChargedParticles 
-       call allocate_particles(&
+       call gen_allocate_particles(&
             iKindParticle = iKindParticle_I(iKind), &
             nVar          = nVar    , &
             nIndex        = 1  , &
             nParticleMax  = nParticleMax_I(iKind)    )
     end do
+    allocate(Moments_DGBI(Rho_:RhoUz_,&
+         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
+         nKindChargedParticles))
+
     call test_stop(NameSub, DoTest)
-  end subroutine allocate_charged_particles
+  end subroutine allocate_particles
   !===============================================!
   subroutine trace_charged_particles(DtIn)
     real, intent(in) :: DtIn
     integer :: iLoop, nParticle
     !----------------------
     Dt = DtIn
+    Moments_DGBI = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindChargedParticles
        iKind = iKindParticle_I(iKind)
        call set_pointer_to_particles(&
@@ -212,7 +246,7 @@ contains
     ! magnetic field
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim), Mass
+    real   :: Weight_I(2**nDim), Mass, Moments_V(Rho_:RhoUz_)
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     logical :: IsGone, DoMove
@@ -276,17 +310,17 @@ contains
        !/
        Mass = Coord_DI(Mass_, iParticle)
        !\
-       ! Collect the current of a given particle
+       ! Collect the contribution to moments of VDF, 
+       ! from a given particle
        !/
-       allocate(Current_GDB(Jx_:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind))
-       Current_GDB = 0.0
-
+       Moments_V(Rho_) = Mass
+       Moments_V(RhoUx_:RhoUz_) = Mass*U_D
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          Current_GDB(1:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-            Current_GDB(Jx_:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-            Mass*U_D*Weight_I(iCell)
+          Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+               Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+               Moments_V*Weight_I(iCell)
        end do
        !\
        ! Update coordinate array
