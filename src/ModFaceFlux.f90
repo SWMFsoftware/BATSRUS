@@ -3106,7 +3106,8 @@ contains
 
       if(DoTestCell)then
          ! This is used for multi-ion MHD check
-         write(*,*)'ChargeDens_I,InvRho         =', &
+         if (UseMultiIon) &
+              write(*,*)'ChargeDens_I,InvRho         =', &
               ChargeDens_I, InvRho
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
          if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
