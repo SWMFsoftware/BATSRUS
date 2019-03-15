@@ -228,7 +228,10 @@ contains
     ! At the end of the time-step trac_particles has:
     ! 1. Advanced the velocity and location vectors: u(N+1/2), x(N+1)
     ! 2. Calculated the E, B-fields: E(N), B(N)
-    ! 3. Collected the current and charge densities: \rho(N+1), J(N+1/2)
+    ! 3. Collected the current and charge densities at two different points:
+    !     a. \rho_c(x(N),u(N+1/2)), J(x(N),u(N+1/2))     : Moments_DGBI
+    !     b. \rho_c(x(N+1),u(N+1/2)), J(x(N+1),u(N+1/2)) : MomentsPlus_DGBI
+    !According to Step 2 of the CAM Algorithm in Matthews 1993 paper.
     !/
     !----------------------
     Dt = DtIn
@@ -370,7 +373,7 @@ contains
                Moments_V*Weight_I(iCell)
        end do
        !\
-       ! Update coordinate array
+       ! Save coordinate array
        !/
        Coord_DI(Ux_:Uz_,iParticle) = U_D
        !\
@@ -421,7 +424,6 @@ contains
     !\
     ! Collect Contribution with updated weight coefficients
     !/
-    !..................................
     do iCell = 1, nCell
        i_D = 1
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
