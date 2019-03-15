@@ -67,8 +67,10 @@ module ModParticleMover
   !\
   ! Moments of the particle VDFs
   !/
-  real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
+  real,    allocatable :: MomentsMinus_DGBI(:,:,:,:,:,:)
   real,    allocatable :: MomentsPlus_DGBI(:,:,:,:,:,:)
+  real,    allocatable :: MomentsStar_DGBI(:,:,:,:,:,:)
+  real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
 
   !\
   ! Global variables to be shared by more than one routine
@@ -175,8 +177,8 @@ contains
     do iLoop = 1, size(iKindParticle_I)
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
-    deallocate(iKindParticle_I, Charge2Mass_I, Moments_DGBI, &
-            MomentsPlus_DGBI)
+    deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
+            MomentsPlus_DGBI, MomentsStar_DGBI, Moments_DGBI)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
@@ -207,10 +209,16 @@ contains
             nIndex        = Status_  , &
             nParticleMax  = nParticleMax_I(iKind)    )
     end do
-    allocate(Moments_DGBI(Rho_:RhoUz_,&
+    allocate(MomentsMinus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
+         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
+         nKindParticles))
+    allocate(MomentsStar_DGBI(Rho_:RhoUz_,&
+         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
+         nKindParticles))
+    allocate(Moments_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
 
@@ -224,8 +232,10 @@ contains
     integer :: iLoop, nParticle
     !----------------------
     Dt = DtIn
-    Moments_DGBI = 0.0 !Prepare storage for the VDF moments
+    MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
     MomentsPlus_DGBI = 0.0 !Prepare storage for the VDF moments
+    MomentsStar_DGBI = 0.0 !Prepare storage for the VDF moments
+    Moments_DGBI = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -259,8 +269,10 @@ contains
     ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
     ! 2. Calculated the E, B-fields: E(N+1/2), B(N+1/2)
     ! 3. Collected the current and charge densities at two different points:
-    !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1))     : Moments_DGBI
-    !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
+    !     a. \rho_c(x(N+1/2),u(N)), J(x(N+1/2),u(N)) : MomentsStar_DGBI
+    !     b. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1)) : MomentsMinus_DGBI
+    !     c. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
+    !     d. \rho_c(x(N+1),u(N+1)), J(x(N+1),u(N+1)) : Moments_DGBI
     ! This algorithm corresponds to Step 2 of the CAM Algorithm in
     ! Matthews, 1993, J. Comput. Phys, 112, 102.
     !/
@@ -325,6 +337,25 @@ contains
        iBlock          = Index_II(0,iParticle)
        call interpolate_grid_amr_gc(&
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+       ! Coordinates and block #
+       U_D =  Coord_DI(Ux_:Uz_, iParticle)
+       !\
+       ! Particle mass
+       !/
+       Mass = Coord_DI(Mass_, iParticle)
+       !\
+       ! Collect the contribution to moments of VDF,
+       ! from a given particle
+       !/
+       Moments_V(Rho_) = Mass
+       Moments_V(RhoUx_:RhoUz_) = Mass*U_D
+       do iCell = 1, nCell
+          i_D = 1
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
+          MomentsStar_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+               MomentsStar_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+               Moments_V*Weight_I(iCell)
+       end do
              ! reset the interpoalted values
        !\
        ! Interpolate fields with obtained weight coefficients
@@ -353,7 +384,7 @@ contains
        ! Get the velocity, add
        ! acceleration from the electric field, for the
        ! first half of the time step:
-       U_D =  Coord_DI(Ux_:Uz_, iParticle)  + Eforce_D
+       U_D = U_D  + Eforce_D
        !Get magnetic force divided by particle mass
        !and multiplied by \Delta t/2
        BForce_D = QDtPerM*B_D
@@ -367,10 +398,6 @@ contains
        !/
        U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
        !\
-       ! Particle mass
-       !/
-       Mass = Coord_DI(Mass_, iParticle)
-       !\
        ! Collect the contribution to moments of VDF, 
        ! from a given particle
        !/
@@ -379,8 +406,8 @@ contains
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-               Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+          MomentsMinus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+               MomentsMinus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
                Moments_V*Weight_I(iCell)
        end do
        !\
@@ -442,6 +469,7 @@ contains
             MomentsPlus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
             Moments_V*Weight_I(iCell)
     end do
+    Moments_DGBI = cHalf * (MomentsPlus_DGBI + MomentsMinus_DGBI)
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
   !==========================
@@ -453,6 +481,4 @@ contains
     Done = all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
   end subroutine check_done
   !==========================
-  subroutine current_advance_method()
-  end subroutine current_advance_method
 end module ModParticleMover
