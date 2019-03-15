@@ -222,17 +222,6 @@ contains
          batl_trace_particles=>trace_particles
     real, intent(in) :: DtIn
     integer :: iLoop, nParticle
-    !\
-    ! At the beginning of trace_particles known vector quantities are:
-    ! x(N), u(N-1/2).
-    ! At the end of the time-step trac_particles has:
-    ! 1. Advanced the velocity and location vectors: u(N+1/2), x(N+1)
-    ! 2. Calculated the E, B-fields: E(N), B(N)
-    ! 3. Collected the current and charge densities at two different points:
-    !     a. \rho_c(x(N),u(N+1/2)), J(x(N),u(N+1/2))     : Moments_DGBI
-    !     b. \rho_c(x(N+1),u(N+1/2)), J(x(N+1),u(N+1/2)) : MomentsPlus_DGBI
-    !According to Step 2 of the CAM Algorithm in Matthews 1993 paper.
-    !/
     !----------------------
     Dt = DtIn
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
@@ -253,6 +242,28 @@ contains
   end subroutine trace_particles
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
+    !\
+    ! In this routine we follow the formulation described in the Book: 
+    ! Plasma Physics via Computer Simulation, 
+    ! Editors: Birdsall, C. K.; Langdon, A. B., 
+    ! The Adam Hilger Series on Plasma Physics, 1991.
+    ! A centered difference method for solving the Newton-Lorentz equations of
+    ! motion is detailed in Subestion 4.3, Eq. (3). 
+    ! This method makes use of A) the Buneman 1967 method, through Eq. (4)-(6),
+    ! in order to simplify Eq. (3) by subtracting the drift velocity from v, and
+    ! B) the Boris Scheme, which separates the electric and magnetic fields , 
+    ! through Eq. (7) - (9).
+    ! At the beginning of the Boris Scheme the 
+    ! known vector quantities are: x(N+1/2), u(N).
+    ! At the end of the time-step trac_particles has:
+    ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
+    ! 2. Calculated the E, B-fields: E(N+1/2), B(N+1/2)
+    ! 3. Collected the current and charge densities at two different points:
+    !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1))     : Moments_DGBI
+    !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
+    ! This algorithm corresponds to Step 2 of the CAM Algorithm in
+    ! Matthews, 1993, J. Comput. Phys, 112, 102.
+    !/
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
@@ -441,4 +452,7 @@ contains
     !--------------------------------------------------------------------------
     Done = all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
   end subroutine check_done
+  !==========================
+  subroutine current_advance_method()
+  end subroutine current_advance_method
 end module ModParticleMover
