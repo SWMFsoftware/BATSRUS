@@ -12,7 +12,6 @@ module ModParticleMover
 
   use ModMain,      ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
-  use ModElectricField
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ex_, Ez_
   use ModMain,         ONLY: n_step
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
@@ -40,14 +39,22 @@ module ModParticleMover
   !/
   real,    allocatable :: Charge2Mass_I(:)
   !\
+  ! Electric current array
+  !/
+  real,    allocatable :: Current_GDB(:,:,:,:,:,:)
+  !\
   ! Named indexes
   !/
   !\
   ! Indexes in coordinate-velocity-mass array
   !/
-  integer, parameter :: x_ = 1, y_ = 2, z_=3,   U_ = nDim,       &
+  integer, parameter :: x_ = 1, y_ = 2, z_=3, U_ = nDim,       &
        Ux_ = U_ + x_, Uy_= U_ + y_, Uz_ = U_ + z_, Mass_= Uz_ +1,&
        nVar = Mass_
+  !\
+  ! Indexes in current array
+  !/
+  integer, parameter :: Jx_ = 1, Jy_ = 2, Jz_=3, J_ = nDim
   !\
   ! Indexes in the index array
   !/
@@ -240,7 +247,7 @@ contains
           B_D = B_D + &
                State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
           E_D = E_D + &
-               State_VGB(Ex_:Ez_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+               Efield_DGB(Ex_:Ez_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
        !\
        ! Calculate individual contributions from E, B field on  velocity 
@@ -271,14 +278,15 @@ contains
        !\
        ! Collect the current of a given particle
        !/
+       allocate(Current_GDB(Jx_:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind))
+       Current_GDB = 0.0
+
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          !\
-          ! Current^-(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-          !  Current^-(:, i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-          !  Mass*U_D*Weight_I(iCell)
-          !/
+          Current_GDB(1:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+            Current_GDB(Jx_:nDim,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+            Mass*U_D*Weight_I(iCell)
        end do
        !\
        ! Update coordinate array
