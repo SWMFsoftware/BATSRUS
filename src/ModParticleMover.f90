@@ -5,26 +5,29 @@
 module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use BATL_lib, ONLY: nDim,  MaxDim, &
-       nBlock, MaxBlock, Unused_B, &
-       iProc, iComm, message_pass_cell
+  use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm
 
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
-  use ModVarIndexes,   ONLY: Bx_, Bz_, Ex_, Ez_
+  use ModVarIndexes,   ONLY: Bx_, Bz_
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
   use BATL_particles,  ONLY: Particle_I, &
        mark_undefined, check_particle_location, &
-       set_pointer_to_particles, trace_particles
+       set_pointer_to_particles
   use ModNumConst
   implicit none
   SAVE
   !\
+  ! If true, the particles are allocated and may be traced
+  !/
+  logical :: UseParticles = .false.
+  !\
   !Parameters
   !/
+  !\
   ! number of particles with different charge-to-mass ratios
-  integer :: nKindChargedParticles = 0 
+  integer :: nKindParticles = 0 
   !\
   ! The order number of this kind of particle in the whole 
   ! BATL_particle repository
@@ -80,7 +83,7 @@ contains
   !=============read_param=============================!
   !subroutine read the following paramaters from the PARAM.in file:
   !#CHARGEDPARTICLES
-  !3                      nKindChargedParticles
+  !3                      nKindParticles
   !4.0                    Mass
   !2.0                    Charge
   !1000000                nParticleMax
@@ -93,7 +96,7 @@ contains
   !and allocate particle arrays immediately.
   !To reallocate, first, use command
   !#CHARGEDPARTICLES
-  !0                      nKindChargedParticles
+  !0                      nKindParticles
   !to deallocate arrays.
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
@@ -102,7 +105,7 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    logical:: DoTest, UseParticles = .false.
+    logical:: DoTest
     integer :: iLoop
     !\
     !Arrays to read A and Z for different ion particles
@@ -119,8 +122,8 @@ contains
     select case(NameCommand)
 
     case("#CHARGEDPARTICLES")
-       call read_var('nKindChargedParticles', nKindChargedParticles)
-       if(nKindChargedParticles<= 0) then
+       call read_var('nKindParticles', nKindParticles)
+       if(nKindParticles<= 0) then
           !\
           ! Clean particle arrays
           !/
@@ -137,10 +140,10 @@ contains
                ': To reset particle arrays first use '//&
                '#CHARGEDPARTICLES command with nKindParticles=0')
        UseParticles = .true.
-       allocate(  Mass_I(nKindChargedParticles))
-       allocate(Charge_I(nKindChargedParticles))
-       allocate(nParticleMax_I(nKindChargedParticles))
-       do iLoop = 1, nKindChargedParticles 
+       allocate(  Mass_I(nKindParticles))
+       allocate(Charge_I(nKindParticles))
+       allocate(nParticleMax_I(nKindParticles))
+       do iLoop = 1, nKindParticles 
           call read_var('Mass_I', Mass_I(iLoop))
           if(Mass_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
@@ -178,9 +181,9 @@ contains
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    real,    intent(in)    :: Mass_I(nKindChargedParticles) 
-    real,    intent(in)    :: Charge_I(nKindChargedParticles)
-    integer, intent(in)    :: nParticleMax_I(nKindChargedParticles)
+    real,    intent(in)    :: Mass_I(nKindParticles) 
+    real,    intent(in)    :: Charge_I(nKindParticles)
+    integer, intent(in)    :: nParticleMax_I(nKindParticles)
     integer :: iKind
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'allocate_charged_particles'
@@ -191,38 +194,40 @@ contains
     DoInit = .false.
 
     !Allocate enough arrays for all Charged Particle Types
-    allocate(iKindParticle_I(nKindChargedParticles)) 
-    allocate(Charge2Mass_I(nKindChargedParticles))
+    allocate(iKindParticle_I(nKindParticles)) 
+    allocate(Charge2Mass_I(nKindParticles))
 
     Charge2Mass_I = Charge_I/Mass_I
     
     iKindParticle_I = -1
-    do iKind = 1, nKindChargedParticles 
+    do iKind = 1, nKindParticles 
        call gen_allocate_particles(&
             iKindParticle = iKindParticle_I(iKind), &
-            nVar          = nVar    , &
-            nIndex        = 1  , &
+            nVar          = nVar     , &
+            nIndex        = Status_  , &
             nParticleMax  = nParticleMax_I(iKind)    )
     end do
     allocate(Moments_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         nKindChargedParticles))
+         nKindParticles))
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         nKindChargedParticles))
+         nKindParticles))
 
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
   !===============================================!
-  subroutine trace_charged_particles(DtIn)
+  subroutine trace_particles(DtIn)
+    use BATL_particles, ONLY: &
+         batl_trace_particles=>trace_particles
     real, intent(in) :: DtIn
     integer :: iLoop, nParticle
     !----------------------
     Dt = DtIn
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
     MomentsPlus_DGBI = 0.0 !Prepare storage for the VDF moments
-    do iLoop = 1, nKindChargedParticles
-       iKind = iKindParticle_I(iKind)
+    do iLoop = 1, nKindParticles
+       iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
             iKind, Coord_DI, Index_II, &
             nParticle=nParticle)
@@ -231,10 +236,10 @@ contains
        !/
        QDtPerM = cHalf * Dt * Charge2Mass_I(iKind)
        Index_II(Status_,1:nParticle) = DoAll_
-       call trace_particles(iKind, boris_scheme, check_done)
+       call batl_trace_particles(iKind, boris_scheme, check_done)
     end do
 
-  end subroutine trace_charged_particles
+  end subroutine trace_particles
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
@@ -248,19 +253,46 @@ contains
     ! Coords
     !/
     real :: Xyz_D(MaxDim)
-    real,dimension(x_:z_) :: U_D, U12_D, EForce_D, BForce_D, B_D, E_D
+    !\
+    ! Velocity vectors at different stages
+    !/
+    real,dimension(x_:z_) :: U_D, U12_D 
+    !\
+    ! Magnetic and electric field vectors
+    !/
+    real,dimension(x_:z_) :: B_D, E_D
+    !\
+    ! Fields multiplied by (Dt/2)*(Charge/Mass)
+    !/
+    real,dimension(x_:z_) :: EForce_D, BForce_D
+    !\
+    ! Block in which the interpolation is possible
     integer  :: iBlock
-    ! magnetic field
+    !\
     ! interpolation data: number of cells, cell indices, weights
+    !/
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim), Mass, Moments_V(Rho_:RhoUz_)
+    real   :: Weight_I(2**nDim) 
+    !\
+    ! Particle mass and momentum
+    !/
+    real   :: Mass, Moments_V(Rho_:RhoUz_)
+    !Misc
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
+    !\
+    ! Outputs from check_location routine
+    !/
     logical :: IsGone, DoMove
     character(len=*), parameter:: NameSub = 'interpolate_Bfield'
     !---------------------
-    EndOfSegment = .true. !Do not repeat
-    if(Index_II(Status_, iParticle) == Done_)RETURN
+    !\
+    ! Routine either completes advance or needs to move the particle
+    ! In both situation the external batl_trace_particles routine
+    ! does not need to call routine boris_scheme again immediately. 
+    ! Therefore,
+    EndOfSegment = .true.
+    if(Index_II(Status_, iParticle) == Done_ )RETURN
     if(Index_II(Status_, iParticle) == DoAll_)then
        !\
        ! Interpolate particle coordinates and velocities into BATSRUS grid
@@ -273,7 +305,7 @@ contains
             Xyz_D, iBlock, nCell, iCell_II, Weight_I)
              ! reset the interpoalted values
        !\
-       ! Interpolate magnetic field with obtained weight coefficients
+       ! Interpolate fields with obtained weight coefficients
        !/
        B_D = 0.0;   E_D = 0.0
        ! get potential part of the magnetic field at current coordinates 
@@ -288,21 +320,21 @@ contains
           B_D = B_D + &
                State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
           E_D = E_D + &
-               Efield_DGB(Ex_:Ez_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+               Efield_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
        !\
        ! Calculate individual contributions from E, B field on  velocity 
        !/
        !Electric field force, divided by particle mass
        !and multiplied by \Delta t/2
-       Eforce_D = QDtPerM * E_D 
+       Eforce_D = QDtPerM*E_D 
        ! Get the velocity, add
        ! acceleration from the electric field, for the
        ! first half of the time step:
        U_D =  Coord_DI(Ux_:Uz_, iParticle)  + Eforce_D
        !Get magnetic force divided by particle mass
        !and multiplied by \Delta t/2
-       BForce_D = QDtPerM * B_D
+       BForce_D = QDtPerM*B_D
        !Add a half of the magnetic rotation:
        U12_D = U_D + cross_product(U_D,BForce_D)
        !Multiply the magnetic force by 2 to take a whole
@@ -350,6 +382,11 @@ contains
           ! removal
           !/
           call mark_undefined(iKind, iParticle)
+          !\
+          ! Mark as done for not calling the routine for 
+          ! this particle any longer
+          !/
+          Index_II(Status_,iParticle) = Done_
           RETURN
        elseif(DoMove)then
           !\
