@@ -222,6 +222,14 @@ contains
          batl_trace_particles=>trace_particles
     real, intent(in) :: DtIn
     integer :: iLoop, nParticle
+    !\
+    ! At the beginning of trace_particles known vector quantities are:
+    ! x(N), u(N-1/2).
+    ! At the end of the time-step trac_particles has:
+    ! 1. Advanced the velocity and location vectors: u(N), x(N+1)
+    ! 2. Calculated the E, B-fields: E(N), B(N)
+    ! 3. Collected the current and charge densities: \rho(N+1), J(N+1/2)
+    !/
     !----------------------
     Dt = DtIn
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
