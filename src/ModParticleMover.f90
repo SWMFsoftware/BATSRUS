@@ -363,6 +363,13 @@ contains
     ! Collect current with updated weight coefficients
     !/
     !..................................
+    do iCell = 1, nCell
+       i_D = 1
+       i_D(1:nDim) = iCell_II(1:nDim, iCell)
+       Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+           (2.0 * Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+            Moments_V*Weight_I(iCell))*cHalf
+    end do
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
   !==========================
