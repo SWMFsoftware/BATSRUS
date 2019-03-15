@@ -65,6 +65,8 @@ module ModParticleMover
   ! Moments of the particle VDFs
   !/
   real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
+  real,    allocatable :: Moments_plusDGBI(:,:,:,:,:,:)
+
   !\
   ! Global variables to be shared by more than one routine
   real    :: Dt          !Time step
@@ -170,7 +172,8 @@ contains
     do iLoop = 1, size(iKindParticle_I)
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
-    deallocate(iKindParticle_I, Charge2Mass_I, Moments_DGBI)
+    deallocate(iKindParticle_I, Charge2Mass_I, Moments_DGBI, &
+            Moments_plusDGBI)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
@@ -204,6 +207,9 @@ contains
     allocate(Moments_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindChargedParticles))
+    allocate(Moments_plusDGBI(Rho_:RhoUz_,&
+         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
+         nKindChargedParticles))
 
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
@@ -214,6 +220,7 @@ contains
     !----------------------
     Dt = DtIn
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
+    Moments_plusDGBI = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindChargedParticles
        iKind = iKindParticle_I(iKind)
        call set_pointer_to_particles(&
@@ -366,9 +373,9 @@ contains
     do iCell = 1, nCell
        i_D = 1
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
-       Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-           (2.0 * Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-            Moments_V*Weight_I(iCell))*cHalf
+       Moments_plusDGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+            Moments_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+            Moments_V*Weight_I(iCell)
     end do
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
