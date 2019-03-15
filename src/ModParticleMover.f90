@@ -226,7 +226,7 @@ contains
     ! At the beginning of trace_particles known vector quantities are:
     ! x(N), u(N-1/2).
     ! At the end of the time-step trac_particles has:
-    ! 1. Advanced the velocity and location vectors: u(N), x(N+1)
+    ! 1. Advanced the velocity and location vectors: u(N+1/2), x(N+1)
     ! 2. Calculated the E, B-fields: E(N), B(N)
     ! 3. Collected the current and charge densities: \rho(N+1), J(N+1/2)
     !/
