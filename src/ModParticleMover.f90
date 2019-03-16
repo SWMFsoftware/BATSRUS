@@ -69,7 +69,6 @@ module ModParticleMover
   !/
   real,    allocatable :: MomentsMinus_DGBI(:,:,:,:,:,:)
   real,    allocatable :: MomentsPlus_DGBI(:,:,:,:,:,:)
-  real,    allocatable :: MomentsStar_DGBI(:,:,:,:,:,:)
   real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
 
   !\
@@ -178,7 +177,7 @@ contains
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
-            MomentsPlus_DGBI, MomentsStar_DGBI, Moments_DGBI)
+            MomentsPlus_DGBI, Moments_DGBI)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
@@ -215,9 +214,6 @@ contains
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
-    allocate(MomentsStar_DGBI(Rho_:RhoUz_,&
-         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         nKindParticles))
     allocate(Moments_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
@@ -234,7 +230,6 @@ contains
     Dt = DtIn
     MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
     MomentsPlus_DGBI = 0.0 !Prepare storage for the VDF moments
-    MomentsStar_DGBI = 0.0 !Prepare storage for the VDF moments
     Moments_DGBI = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
@@ -272,13 +267,15 @@ contains
     ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
     ! 2. Uses the E, B-fields: E(N+1/2), B(N+1/2), interpolated to
     !    the particle location at x(N+1/2).
+    !    This algorithm corresponds to Step 2(a) (p.109)of the CAM Algorithm
+    !     in Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
     ! 3. Collected the current and charge densities at two different points:
-    !     a. \rho_c(x(N+1/2),u(N)), J(x(N+1/2),u(N)) : MomentsStar_DGBI
-    !     b. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1)) : MomentsMinus_DGBI
-    !     c. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
-    !     d. \rho_c(x(N+1),u(N+1)), J(x(N+1),u(N+1)) : Moments_DGBI
-    ! This algorithm corresponds to Step 2 of the CAM Algorithm in
-    ! Matthews, 1993, J. Comput. Phys, 112, 102.
+    !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1)) : MomentsMinus_DGBI
+    !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
+    ! This algorithm corresponds to Step 2(b) of the CAM Algorithm in
+    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
+    ! They are collected for each species separately, as described on page
+    ! 110, item 2(b)(i)
     !/
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
     use ModMain, ONLY: UseB0
@@ -344,24 +341,6 @@ contains
        ! Coordinates and block #
        U_D =  Coord_DI(Ux_:Uz_, iParticle)
        !\
-       ! Particle mass
-       !/
-       Mass = Coord_DI(Mass_, iParticle)
-       !\
-       ! Collect the contribution to moments of VDF,
-       ! from a given particle
-       !/
-       Moments_V(Rho_) = Mass
-       Moments_V(RhoUx_:RhoUz_) = Mass*U_D
-       do iCell = 1, nCell
-          i_D = 1
-          i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          MomentsStar_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-               MomentsStar_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-               Moments_V*Weight_I(iCell)
-       end do
-             ! reset the interpoalted values
-       !\
        ! Interpolate fields with obtained weight coefficients
        !/
        B_D = 0.0;   E_D = 0.0
@@ -403,7 +382,8 @@ contains
        U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
        !\
        ! Collect the contribution to moments of VDF, 
-       ! from a given particle
+       ! from a given particle with coordinates at half time step
+       ! before velocity
        !/
        Moments_V(Rho_) = Mass
        Moments_V(RhoUx_:RhoUz_) = Mass*U_D
@@ -458,8 +438,9 @@ contains
          Xyz_D, iBlock, nCell, iCell_II, Weight_I)
     !\
     ! Get the contribution to moments of VDF, 
-    ! from a given particle
-    !/
+    ! from a given particle with coordinates at half time step
+    ! after velocity.
+     !/
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
     Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*&
          Coord_DI(Ux_:Uz_, iParticle)
@@ -473,7 +454,6 @@ contains
             MomentsPlus_DGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
             Moments_V*Weight_I(iCell)
     end do
-    Moments_DGBI = cHalf * (MomentsPlus_DGBI + MomentsMinus_DGBI)
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
   !==========================
