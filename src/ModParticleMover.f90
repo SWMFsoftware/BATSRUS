@@ -5,7 +5,8 @@
 module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm
+  use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm,&
+       nI, nJ, nK, jDim_, kDim_, Unused_B
 
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
@@ -68,9 +69,7 @@ module ModParticleMover
   ! Moments of the particle VDFs
   !/
   real,    allocatable :: MomentsMinus_DGBI(:,:,:,:,:,:)
-  real,    allocatable :: MomentsPlus_DGBI(:,:,:,:,:,:)
-  real,    allocatable :: Moments_DGBI(:,:,:,:,:,:)
-
+  real,    allocatable :: MomentsPlus_DGBI( :,:,:,:,:,:)
   !\
   ! Global variables to be shared by more than one routine
   real    :: Dt          !Time step
@@ -177,11 +176,16 @@ contains
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
-            MomentsPlus_DGBI, Moments_DGBI)
+            MomentsPlus_DGBI)
   end subroutine deallocate_particles
   !====================================================
-  subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
-    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I) 
+    !\
+    ! Redefine MinI:...:MaxK for a single ghost cell layer
+    !/ 
+    integer, parameter:: nG = 1, MinI = 1-nG, MaxI = nI+nG, &
+         MinJ = 1-nG*jDim_, MaxJ = nJ+nG*jDim_,             &
+         MinK = 1-nG*kDim_, MaxK = nK+nG*kDim_
     real,    intent(in)    :: Mass_I(nKindParticles) 
     real,    intent(in)    :: Charge_I(nKindParticles)
     integer, intent(in)    :: nParticleMax_I(nKindParticles)
@@ -214,9 +218,6 @@ contains
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
-    allocate(Moments_DGBI(Rho_:RhoUz_,&
-         MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         nKindParticles))
 
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
@@ -224,13 +225,13 @@ contains
   subroutine trace_particles(DtIn)
     use BATL_particles, ONLY: &
          batl_trace_particles=>trace_particles
+    use BATL_pass_face_field, ONLY: add_ghost_cell_field
     real, intent(in) :: DtIn
-    integer :: iLoop, nParticle
+    integer :: iLoop, nParticle, iBlock
     !----------------------
     Dt = DtIn
     MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
-    MomentsPlus_DGBI = 0.0 !Prepare storage for the VDF moments
-    Moments_DGBI = 0.0 !Prepare storage for the VDF moments
+    MomentsPlus_DGBI  = 0.0 !Prepare storage for the VDF moments
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -242,8 +243,26 @@ contains
        QDtPerM = cHalf * Dt * Charge2Mass_I(iKind)
        Index_II(Status_,1:nParticle) = DoAll_
        call batl_trace_particles(iKind, boris_scheme, check_done)
+       !\
+       ! For particles near the block boundary, contributions are
+       ! may be assigned to ghost cells 
+       call add_ghost_cell_field(RhoUz_, 1, &
+            MomentsMinus_DGBI(:,:,:,:,:,iKind))
+       call add_ghost_cell_field(RhoUz_, 1, &
+            MomentsPlus_DGBI(:,:,:,:,:,iKind))
     end do
-
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       !\
+       ! Average Plus (for x(N+1/2), U(N) ) 
+       ! and    Minus (for x(N-1/2), U(N) ) arrays to get
+       ! moments at X(N), U(N) - see Step 3 in Matthews 
+       ! algorithm on page 109. Store the results in Minus array
+       !/
+       MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) = 0.50*(&
+            MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) +  &
+            MomentsPlus_DGBI( :,1:nI,1:nJ,1:nK,iBlock,:)    )
+    end do
   end subroutine trace_particles
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
