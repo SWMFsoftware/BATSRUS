@@ -1735,8 +1735,9 @@ contains
 
   subroutine update_b0
 
-    use ModMain,          ONLY: nBlock, Unused_B, UseNewMagnetogram, &
-         time_simulation, NameThisComp, t_max, tMagnetogram, DoThreads_B
+    use ModMain,          ONLY: nBlock, Unused_B, UseNewMagnetogram,      &
+         time_simulation, NameThisComp, t_max, tMagnetogram, DoThreads_B, &
+         time_accurate
     use ModPhysics,       ONLY: ThetaTilt
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
     use ModGeometry,      ONLY: true_cell, body_BLK
@@ -1785,7 +1786,12 @@ contains
        ! Split total B again using new B0
        State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
             - B0_DGB(:,:,:,:,iBlock)
+    end do
 
+    if (time_accurate) call exchange_messages(DoResChangeOnlyIn=.true.)
+
+    do iBlock=1,nBlock
+       if(Unused_B(iBlock)) CYCLE
        ! Set B1 to 0 inside bodies
        if(Body_BLK(iBlock))then
           where(.not.true_cell(:,:,:,iBlock))
