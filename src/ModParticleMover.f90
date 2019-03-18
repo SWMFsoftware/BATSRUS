@@ -73,18 +73,18 @@ module ModParticleMover
   !\
   ! Charge and current densities
   !/
-  real,    allocatable :: DensityMinus_V(:,:,:,:,:)
-  real,    allocatable :: DensityPlus_V(:,:,:,:,:)
+  real,    allocatable :: DensityMinus_VCB(:,:,:,:,:)
+  real,    allocatable :: DensityPlus_VCB( :,:,:,:,:)
   !\
   ! Indexes in the array to collect current and charge densities 
   !/
   integer, parameter :: RhoC_ = 1, J_ = 1, Jx_ = J_ + x_, &
        Jy_ = J_ + y_, Jz_ = J_ + z_, Lambda_ = Jz_ + 1, &
-       Gamma_ = Lambda_ + 1, Gammax_ = Gamma_ + x_, &
-       Gammay_ = Gamma_ + y_, Gammaz_ = Gamma_ + z_
+       Gamma_ = Lambda_, GammaX_ = Gamma_ + x_, &
+       GammaY_ = Gamma_ + y_, GammaZ_ = Gamma_ + z_
   !\
   ! Global variables to be shared by more than one routine
-  real,    allocatable :: Charge_I(:)
+  !/
   real    :: Dt          !Time step
   integer :: iKind       !Sort of particles
   !\
@@ -124,6 +124,7 @@ contains
     !Arrays to read A and Z for different ion particles
     !/
     real, allocatable :: Mass_I(:)
+    real, allocatable :: Charge_I(:)
     !\
     ! array to read maximum number of particles for different
     ! sorts of ions
@@ -189,7 +190,7 @@ contains
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
-            MomentsPlus_DGBI, DensityMinus_V, DensityPlus_V)
+            MomentsPlus_DGBI, DensityMinus_VCB, DensityPlus_VCB)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I) 
@@ -231,10 +232,10 @@ contains
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
-    allocate(DensityPlus_V(RhoC_:Gamma_,&
-            MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock))
-    allocate(DensityMinus_V(RhoC_:Gamma_,&
-            MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock))
+    allocate(DensityPlus_VCB(RhoC_:Gamma_,&
+            1:nI,  1:nJ, 1:nK, MaxBlock))
+    allocate(DensityMinus_VCB(RhoC_:Jz_,&
+            1:nI,  1:nJ, 1:nK, MaxBlock))
 
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
@@ -249,8 +250,8 @@ contains
     Dt = DtIn
     MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
     MomentsPlus_DGBI  = 0.0 !Prepare storage for the VDF moments
-    DensityMinus_V = 0.0 !Prepare storage for the charge and current densities 
-    DensityPlus_V  = 0.0 !Prepare storage for the charge and current densities 
+    DensityMinus_VCB  = 0.0 !Same for the charge and current densities 
+    DensityPlus_VCB   = 0.0 !Same for the charge and current densities 
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -268,22 +269,7 @@ contains
        call add_ghost_cell_field(RhoUz_, 1, &
             MomentsMinus_DGBI(:,:,:,:,:,iKind))
        call add_ghost_cell_field(RhoUz_, 1, &
-            MomentsPlus_DGBI(:,:,:,:,:,iKind))
-       !\
-       ! Calculate charge and current densities from the moments
-       !/
-       DensityMinus_V(RhoC_,:,:,:,:) = Charge_I(iKind) * &
-               MomentsMinus_DGBI(Rho_,:,:,:,:,iKind)
-       DensityMinus_V(Jx_:Jz_,:,:,:,:) = Charge_I(iKind) * &
-               MomentsMinus_DGBI(RhoUx_:RhoUz_,:,:,:,:,iKind)
-       DensityPlus_V(RhoC_,:,:,:,:) = Charge_I(iKind) * &
-               MomentsPlus_DGBI(Rho_,:,:,:,:,iKind)
-       DensityPlus_V(Jx_:Jz_,:,:,:,:) = Charge_I(iKind) * &
-               MomentsMinus_DGBI(RhoUx_:RhoUz_,:,:,:,:,iKind)
-       DensityPlus_V(Lambda_,:,:,:,:) = 2.0 * Charge2Mass_I(iKind) * &
-               Charge_I(iKind) * MomentsPlus_DGBI(Rho_,:,:,:,:,iKind)
-       DensityPlus_V(Gammax_:Gammaz_,:,:,:,:) = 2.0 * Charge2Mass_I(iKind) * &
-               Charge_I(iKind) * MomentsPlus_DGBI(RhoUx_:RhoUz_,:,:,:,:,iKind)
+            MomentsPlus_DGBI( :,:,:,:,:,iKind))
     end do
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -293,12 +279,28 @@ contains
        ! moments at X(N), U(N) - see Step 3 in Matthews 
        ! algorithm on page 109. Store the results in Minus array
        !/
-!       MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) = 0.50*(&
-!            MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) +  &
-!            MomentsPlus_DGBI( :,1:nI,1:nJ,1:nK,iBlock,:)    )
-       DensityMinus_V(:,1:nI,1:nJ,1:nK,iBlock) = cHalf * (&
-            DensityMinus_V(:,1:nI,1:nJ,1:nK,iBlock) +  &
-            DensityPlus_V( :,1:nI,1:nJ,1:nK,iBlock)    )
+       MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) = 0.50*(&
+            MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) +  &
+            MomentsPlus_DGBI( :,1:nI,1:nJ,1:nK,iBlock,:)    )
+       do iLoop = 1, nKindParticles
+          iKind = iKindParticle_I(iLoop)
+          !\
+          ! Sum up contributions to charge and current densities from 
+          ! the moments
+          !/
+          DensityMinus_VCB(RhoC_:Jz_,:,:,:,iBlock) = &
+               DensityMinus_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
+               Charge2Mass_I(iKind) * &
+               MomentsMinus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+          DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) = &
+               DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
+               Charge2Mass_I(iKind) * &
+               MomentsPlus_DGBI( Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+          DensityPlus_VCB(Lambda_:Gammaz_,:,:,:,iBlock) = &
+               DensityPlus_VCB(Lambda_:Gammaz_,:,:,:,iBlock) + &
+               2.0 * Charge2Mass_I(iKind)**2 * &
+               MomentsPlus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+       end do
     end do
   end subroutine trace_particles
   !=====================================
