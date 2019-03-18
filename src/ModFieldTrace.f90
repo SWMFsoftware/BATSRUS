@@ -1933,6 +1933,7 @@ contains
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
     use CON_planet,        ONLY: DipoleStrength
     use ModMultiFluid
+    use ModMessagePass,    ONLY: exchange_messages
 
     !INPUT ARGUMENTS:
     integer, intent(in):: nLat, nLon
@@ -2122,6 +2123,8 @@ contains
        call line_collect(iComm,0)
        if(iProc /= 0) call line_clean
     end if
+
+    call exchange_messages
 
     call timing_stop(NameSub)
 
@@ -5046,7 +5049,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'rayface_interpolate'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    ! call test_start(NameSub, DoTest)
 
     if(.not.UsePreferredInterpolation .and. &
          maxval(weight)-minval(weight) > 0.0001)then
@@ -5152,7 +5155,7 @@ contains
        write(*,*)'rayface_interpolate finished with qray=',qray
     end if
 
-    call test_stop(NameSub, DoTest)
+    ! call test_stop(NameSub, DoTest)
   end subroutine rayface_interpolate
   !============================================================================
 
