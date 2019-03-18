@@ -321,8 +321,11 @@ contains
                    ! Skip hyperbolic scalar variables
                    if(UseHyperbolicDivB .and. iVar==Hyp_)  CYCLE
                    if(HypE_ > 1         .and. iVar==Hype_) CYCLE
-                   State_VGB(iVar,i,j,k,iBlock) = &
-                        Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
+
+                   if(iPoint_I(iPoint) .ne. -1) then
+                      State_VGB(iVar,i,j,k,iBlock) = &
+                           Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
+                   end if
                 end do
                 if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
