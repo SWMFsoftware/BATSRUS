@@ -75,11 +75,12 @@ module ModParticleMover
   !/
   real,    allocatable :: DensityMinus_VCB(:,:,:,:,:)
   real,    allocatable :: DensityPlus_VCB( :,:,:,:,:)
+  real,    allocatable :: CAMcoef_VCB( :,:,:,:,:)
   !\
   ! Indexes in the array to collect current and charge densities 
   !/
   integer, parameter :: RhoC_ = 1, J_ = 1, Jx_ = J_ + x_, &
-       Jy_ = J_ + y_, Jz_ = J_ + z_, Lambda_ = Jz_ + 1, &
+       Jy_ = J_ + y_, Jz_ = J_ + z_, Lambda_ = 1, &
        Gamma_ = Lambda_, GammaX_ = Gamma_ + x_, &
        GammaY_ = Gamma_ + y_, GammaZ_ = Gamma_ + z_
   !\
@@ -190,7 +191,8 @@ contains
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
-            MomentsPlus_DGBI, DensityMinus_VCB, DensityPlus_VCB)
+            MomentsPlus_DGBI, DensityMinus_VCB, DensityPlus_VCB, &
+            CAMcoef_VCB)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I) 
@@ -232,9 +234,11 @@ contains
     allocate(MomentsPlus_DGBI(Rho_:RhoUz_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          nKindParticles))
-    allocate(DensityPlus_VCB(RhoC_:Gamma_,&
+    allocate(DensityPlus_VCB(RhoC_:Jz_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(DensityMinus_VCB(RhoC_:Jz_,&
+            1:nI,  1:nJ, 1:nK, MaxBlock))
+    allocate(CAMcoef_VCB(Lambda_:GammaZ_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
 
     call test_stop(NameSub, DoTest)
@@ -252,6 +256,7 @@ contains
     MomentsPlus_DGBI  = 0.0 !Prepare storage for the VDF moments
     DensityMinus_VCB  = 0.0 !Same for the charge and current densities 
     DensityPlus_VCB   = 0.0 !Same for the charge and current densities 
+    CAMcoef_VCB   = 0.0 !Same for the charge and current densities 
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -296,8 +301,8 @@ contains
                DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
                MomentsPlus_DGBI( Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
-          DensityPlus_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
-               DensityPlus_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
+          CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
+               CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind)**2 * &
                MomentsPlus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
        end do
