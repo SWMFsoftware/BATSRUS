@@ -296,9 +296,9 @@ contains
                DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
                MomentsPlus_DGBI( Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
-          DensityPlus_VCB(Lambda_:Gammaz_,:,:,:,iBlock) = &
-               DensityPlus_VCB(Lambda_:Gammaz_,:,:,:,iBlock) + &
-               2.0 * Charge2Mass_I(iKind)**2 * &
+          DensityPlus_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
+               DensityPlus_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
+               Charge2Mass_I(iKind)**2 * &
                MomentsPlus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
        end do
     end do
