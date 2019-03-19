@@ -28,6 +28,7 @@ module ModFaceFlux
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
+       HDFluxRhoU_VX, HDFluxRhoU_VY, HDFluxRhoU_VZ,& ! output: HD momentum flux
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
@@ -120,6 +121,9 @@ module ModFaceFlux
   
   real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
   real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
+  real :: HDFluxRhoU_V(     RhoUx_:RhoUz_)     = 0.0
+  real :: HDFluxRhoULeft_V( RhoUx_:RhoUz_)     = 0.0 
+  real :: HDFluxRhoURight_V(RhoUx_:RhoUz_)     = 0.0 
   real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
   real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
@@ -129,6 +133,7 @@ module ModFaceFlux
   real :: Area2 = 0.0, AreaX, AreaY, AreaZ
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
   !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
+  !$omp threadprivate( HDFluxRhoU_V, HDFluxRhoULeft_V, HDFluxRhoURight_V)
   !$omp threadprivate( DissipationFlux_V )
   !$omp threadprivate( B0x, B0y, B0z )
   !$omp threadprivate( DiffBb )
@@ -669,6 +674,10 @@ contains
                   
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
+         if(IsMhd.and.(.not.UseBorisCorrection))then
+            HDFluxRhoU_VX(:,iFace, jFace, kFace) = HDFluxRhoU_V            
+         end if
+
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
             call add_artificial_viscosity( &
@@ -765,6 +774,10 @@ contains
          StateRight_V = RightState_VY(:, iFace, jFace, kFace)
 
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
+
+         if(IsMhd.and.(.not.UseBorisCorrection))then
+            HDFluxRhoU_VY(:,iFace, jFace, kFace) = HDFluxRhoU_V            
+         end if
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace, jFace, kFace)
@@ -863,6 +876,9 @@ contains
 
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
+         if(IsMhd.and.(.not.UseBorisCorrection))then
+            HDFluxRhoU_VZ(:,iFace, jFace, kFace) = HDFluxRhoU_V            
+         end if
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace, jFace, kFace)
             call add_artificial_viscosity( &
@@ -1451,10 +1467,13 @@ contains
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft, &
             PeDotAreaLeft_D)
+       HDFluxRhoULeft_V  = HDFluxRhoU_V
        
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight, PeDotAreaRight_D)
+       HDFluxRhoURight_V = HDFluxRhoU_V
+
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V, UnLeft_I(1))
@@ -2912,7 +2931,7 @@ contains
 
       ! Calculate some intermediate values for flux calculations
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
-      pTotal  = p + 0.5*B2 + B0B1
+      pTotal  = 0.5*B2 + B0B1
 
       if(UseElectronPressure) pTotal = pTotal + PeAdd
 
@@ -2973,16 +2992,19 @@ contains
          RhoUn_I = State_V(iRhoIon_I) &
               *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
 
-         Flux_V(RhoUx_)=sum(RhoUn_I*Ux_I) - Bn*FullBx - B0n*Bx + pTotal*NormalX
-         Flux_V(RhoUy_)=sum(RhoUn_I*Uy_I) - Bn*FullBy - B0n*By + pTotal*NormalY
-         Flux_V(RhoUz_)=sum(RhoUn_I*Uz_I) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+         HDFluxRhoU_V(RhoUx_)=sum(RhoUn_I*Ux_I) + p*NormalX
+         HDFluxRhoU_V(RhoUy_)=sum(RhoUn_I*Uy_I) + p*NormalY 
+         HDFluxRhoU_V(RhoUz_)=sum(RhoUn_I*Uz_I) + p*NormalZ
       else
          ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
-         Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*NormalX
-         Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By + pTotal*NormalY
-         Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+         HDFluxRhoU_V(RhoUx_) = Un*Rho*Ux + p*NormalX
+         HDFluxRhoU_V(RhoUy_) = Un*Rho*Uy + p*NormalY
+         HDFluxRhoU_V(RhoUz_) = Un*Rho*Uz + p*NormalZ
       end if
-
+      Flux_V(RhoUx_)=HDFluxRhoU_V(RhoUx_) - Bn*FullBx - B0n*Bx + pTotal*NormalX
+      Flux_V(RhoUy_)=HDFluxRhoU_V(RhoUy_) - Bn*FullBy - B0n*By + pTotal*NormalY
+      Flux_V(RhoUz_)=HDFluxRhoU_V(RhoUz_) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      pTotal = pTotal + p
       ! f_n[b_k] = u_n*(b_k + B0_k) - u_k*(b_n + B0_n)
       if(HallCoeff > 0.0)then
          ! Note that the HallCoeff contains the ion mass/charge.
