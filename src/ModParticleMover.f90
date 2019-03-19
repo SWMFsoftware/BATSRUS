@@ -79,7 +79,7 @@ module ModParticleMover
   ! \Lambda and \Gamma coefficients used by the Current Advance Method (CAM)
   ! as described in Matthews 1993 paper 
   !/
-  real,    allocatable :: CAMcoef_VCB( :,:,:,:,:)
+  real,    allocatable :: CAMCoef_VCB( :,:,:,:,:)
   !\
   ! Indexes in the array to collect current and charge densities 
   !/
@@ -196,7 +196,7 @@ contains
     end do
     deallocate(iKindParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
             MomentsPlus_DGBI, DensityMinus_VCB, DensityPlus_VCB, &
-            CAMcoef_VCB)
+            CAMCoef_VCB)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I) 
@@ -242,7 +242,7 @@ contains
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(DensityMinus_VCB(RhoC_:Jz_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
-    allocate(CAMcoef_VCB(Lambda_:GammaZ_,&
+    allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
 
     call test_stop(NameSub, DoTest)
@@ -260,7 +260,7 @@ contains
     MomentsPlus_DGBI  = 0.0 !Prepare storage for the VDF moments
     DensityMinus_VCB  = 0.0 !Same for the charge and current densities 
     DensityPlus_VCB   = 0.0 !Same for the charge and current densities 
-    CAMcoef_VCB   = 0.0 !Same for the \Lambda and \Gamma coefficients 
+    CAMCoef_VCB       = 0.0 !Same for the \Lambda and \Gamma coefficients 
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
