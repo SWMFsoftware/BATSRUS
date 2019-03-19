@@ -75,6 +75,10 @@ module ModParticleMover
   !/
   real,    allocatable :: DensityMinus_VCB(:,:,:,:,:)
   real,    allocatable :: DensityPlus_VCB( :,:,:,:,:)
+  !\
+  ! \Lambda and \Gamma coefficients used by the Current Advance Method (CAM)
+  ! as described in Matthews 1993 paper 
+  !/
   real,    allocatable :: CAMcoef_VCB( :,:,:,:,:)
   !\
   ! Indexes in the array to collect current and charge densities 
@@ -256,7 +260,7 @@ contains
     MomentsPlus_DGBI  = 0.0 !Prepare storage for the VDF moments
     DensityMinus_VCB  = 0.0 !Same for the charge and current densities 
     DensityPlus_VCB   = 0.0 !Same for the charge and current densities 
-    CAMcoef_VCB   = 0.0 !Same for the charge and current densities 
+    CAMcoef_VCB   = 0.0 !Same for the \Lambda and \Gamma coefficients 
     do iLoop = 1, nKindParticles
        iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -301,6 +305,12 @@ contains
                DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
                MomentsPlus_DGBI( Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+          !\
+          ! \Lambda and \Gamma coefficients as described in 
+          ! Eq. (24a) and (24b) of the CAM algorithm in the paper
+          ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
+          ! These coefficients are used to advance the current using Eq. (23) 
+          !/
           CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
                CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind)**2 * &
