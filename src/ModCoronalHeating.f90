@@ -1146,35 +1146,31 @@ contains
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
 
-    integer :: iIon
+    integer :: iIon, iPrev
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
-    real :: Emajor, Eminor, EwavePlus, EwaveMinus, EmajorGyro
+    real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
-    real :: RhoProton, Ppar, Vpar2, SignWave
-    real :: QratioProton, ExtensionCoef, Qmajor
-    real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
-         CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qtotal_I
+    real :: RhoProton, Ppar, Vpar2, Sigma, SignMajor
+    real :: QratioProton, ExtensionCoef, Qmajor, Qminor
+    real, dimension(nIonFluid) :: HeatFractionMinor_I, HeatFractionMajor_I, &
+         CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
+         QperpPerQtotal_I, GyroRadiusTimesB_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
     real :: Value_I(6)
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
     if(UseStochasticHeating)then
-       ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
-       ! Below we will use the total (major+minor) wave dissipation, but
-       ! the analysis is only valid for the major wave dissipation.
-       ! For the minor waves, the cascade time at the gyroscale is shorter,
-       ! which would result in a different heat partition for the minor waves.
        if(DoExtendTransitionRegion)then
           ExtensionCoef = extension_factor(TeSi_C(i,j,k))
        else
           ExtensionCoef = 1.0
        end if
-       Qtotal = CoronalHeating*ExtensionCoef
+       Qtotal = max(CoronalHeating*ExtensionCoef, 1e-30)
 
        if(UseB0) then
           B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -1186,23 +1182,25 @@ contains
 
        RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
 
-       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+       Wplus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       Wminus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       if(UseNewHeatPartition)then
-          Emajor = max(EwavePlus, EwaveMinus)
-          Eminor = min(EwavePlus, EwaveMinus)
-          ! Sign of fractional cross helicity
-          SignWave = sign(1.0, EwavePlus-EwaveMinus)
+       Wmajor = max(Wplus, Wminus)
+       Wminor = min(Wplus, Wminus)
 
-          if(SignWave > 0.0)then
-             Qmajor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
-          else
-             Qmajor = WaveDissipation_V(WaveLast_)*ExtensionCoef
-          end if
+       ! alpha-gyroscale fractional cross helicity, which equals
+       ! fractional cross helicity
+       Sigma = (Wplus - Wminus)/(Wplus + Wminus)
+
+       ! Sign of major wave
+       SignMajor = sign(1.0, Wplus - Wminus)
+
+       if(SignMajor > 0.0)then
+          Qmajor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
+          Qminor = WaveDissipation_V(WaveLast_)*ExtensionCoef
        else
-          Emajor = EwavePlus + EwaveMinus
-          Qmajor = Qtotal
+          Qmajor = WaveDissipation_V(WaveLast_)*ExtensionCoef
+          Qminor = WaveDissipation_V(WaveFirst_)*ExtensionCoef
        end if
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
@@ -1241,7 +1239,7 @@ contains
                BetaParProton, abs(Upar)/Valfven, Tp/Ta, Tp/Te, Na/Np, &
                Value_I, DoExtrapolate = .false.)
 
-          if(SignWave*Upar < 0.0)then
+          if(SignMajor*Upar < 0.0)then
              ! Backward propagating
              DampingPar_I(1) = Value_I(4)
              DampingPar_I(nIonFluid) = Value_I(6)
@@ -1266,10 +1264,8 @@ contains
                *exp(-1.3/max(BetaProton, 1.0e-8))
        end if
 
-       Qmajor_I(nIonFluid) = Qmajor
-       Qtotal_I(nIonFluid) = Qtotal
-
-       ! Loop in reverse order for energy subtraction
+       ! Stochasting heating contributes to perpendicular ion heating.
+       ! Loop in reverse order for cascade power subtraction.
        do iIon = nIonFluid, 1, -1
 
           if(UseAnisoPressure)then
@@ -1283,17 +1279,53 @@ contains
           ! Perpendicular ion thermal speed
           Vperp = sqrt(2.0*Pperp/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock))
 
-          InvGyroRadius = &
-               B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
-          LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+          GyroRadiusTimesB_I(iIon) = Vperp &
+               *IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon)
 
-          EmajorGyro = Emajor/sqrt(LperpInvGyroRad)
+          InvGyroRadius = B/GyroRadiusTimesB_I(iIon)
 
-          ! Cascade timescale for z_major at the gyroscale
-          CascadeTimeMajor_I(iIon) = EmajorGyro/max(Qmajor_I(iIon),1e-30)
+          if(iIon == nIonFluid)then
+             Qmajor_I(iIon) = Qmajor
+             Qminor_I(iIon) = Qminor
 
-          ! For protons the following would be DeltaU at ion gyro radius
-          DeltaU = sqrt(EmajorGyro/RhoProton)
+             LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+
+             WmajorGyro = Wmajor/sqrt(LperpInvGyroRad)
+             WminorGyro = Wminor/sqrt(LperpInvGyroRad)
+          else
+             iPrev = iIon + 1
+             ! Subtract what was used for stochastic heating of alphas
+             Qmajor_I(iIon) = &
+                  Qmajor_I(iPrev)*(1.0 - HeatFractionMajor_I(iPrev))
+             Qminor_I(iIon) = &
+                  Qminor_I(iPrev)*(1.0 - HeatFractionMinor_I(iPrev))
+
+             ! Reduce similarly the cascade power and exploit non-alignment
+             ! (Boldyrev, 2005) of small-scale fluctuations to arrive at
+             ! Wmajor and Wminor at the proton gyro-radius
+             WmajorGyro = WmajorGyro &
+                  *( (1.0 - HeatFractionMajor_I(iPrev))**2 &
+                  /(1.0 - HeatFractionMinor_I(iPrev)) )**(2.0/3.0) &
+                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+             WminorGyro = WminorGyro &
+                  *( (1.0 - HeatFractionMinor_I(iPrev))**2 &
+                  /(1.0 - HeatFractionMajor_I(iPrev)) )**(2.0/3.0) &
+                  *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
+          end if
+
+          Wgyro = WmajorGyro + WminorGyro
+
+          ! Cascade timescale at the gyroscale
+          CascadeTimeMajor_I(iIon) = WmajorGyro/max(Qmajor_I(iIon),1e-30)
+          if(UseNewHeatPartition)then
+             CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
+          else
+             CascadeTimeMinor_I(iIon) = CascadeTimeMajor_I(iIon)
+          end if
+
+          ! For protons the following would be DeltaU at ion gyro radius,
+          ! except that we assumed that the Alfven ratio is one.
+          DeltaU = sqrt(Wgyro/RhoProton)
 
           ! For other ions, correct for velocity difference between alphas
           ! and protons
@@ -1304,64 +1336,57 @@ contains
              ! The appearance of Vpar2 is due to averaging (using
              ! distribution function) to avoid that there is no heating
              ! when Upar = Valfven.
-             ! We further assumed gyroscale Alfven ratio to be one and
-             ! gyroscale fractional cross helicity to be 1 or -1 (this
-             ! is due to equipartition at gyroscale)
-             DeltaU = DeltaU*sqrt((1 - SignWave*Upar/Valfven)**2 &
+             ! We further assumed gyroscale Alfven ratio to be one.
+             DeltaU = DeltaU*sqrt((1 - Sigma*Upar/Valfven)**2 &
                   + 0.5*Vpar2/Valfven**2)
           end if
 
           Epsilon = DeltaU/Vperp
 
-          ! Damping rate times cascade time
+          ! Damping rate for stochastic heating
           DampingPerp_I(iIon) = StochasticAmplitude &
                *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
                *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               /EmajorGyro*CascadeTimeMajor_I(iIon)
+               /Wgyro
 
           if(iIon > 1)then
-             HeatFraction_I(iIon) = &
-                  DampingPerp_I(iIon)/(1.0 + DampingPerp_I(iIon))
-
-             ! Subtract energy that is used for stochastic heating of alphas
-             Qmajor_I(iIon-1) = Qmajor_I(iIon)*(1.0 - HeatFraction_I(iIon))
-             Qtotal_I(iIon-1) = Qtotal_I(iIon)*(1.0 - HeatFraction_I(iIon))
-             Emajor = Emajor*(1.0 - HeatFraction_I(iIon))
+             HeatFractionMajor_I(iIon) = &
+                  DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon) &
+                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon))
+             HeatFractionMinor_I(iIon) = &
+                  DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon) &
+                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon))
           end if
        end do
 
-       if(UseNewHeatPartition)then
-          ! Cascade timescale for z_minor at the gyroscale
-          CascadeTimeMinor_I = &
-               CascadeTimeMajor_I*max(sqrt(Eminor/Emajor),1e-8)
+       ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
+       DampingElectron = DampingElectron/CascadeTimeMinor_I(1)
+       DampingPar_I = DampingPar_I/CascadeTimeMinor_I(1)
 
-          ! Set k_parallel*V_Alfven = 1/t_minor and multiply by t_major
-          DampingElectron = DampingElectron*CascadeTimeMajor_I(1) &
-               /CascadeTimeMinor_I(1)
-          DampingPar_I = DampingPar_I*CascadeTimeMajor_I(1) &
-               /CascadeTimeMinor_I(1)
-       end if
-
-       ! Total damping rate times cascade time around proton gyroscale
+       ! Total damping rate around proton gyroscale
        DampingProton = DampingElectron + sum(DampingPar_I) &
             + DampingPerp_I(1)
 
-       HeatFraction_I(1) = DampingProton/(1.0 + DampingProton)
+       HeatFractionMajor_I(1) = DampingProton*CascadeTimeMajor_I(1) &
+            /(1.0 + DampingProton*CascadeTimeMajor_I(1))
+       HeatFractionMinor_I(1) = DampingProton*CascadeTimeMinor_I(1) &
+            /(1.0 + DampingProton*CascadeTimeMinor_I(1))
 
-       QratioProton = Qtotal_I(1)/max(Qtotal, 1e-30)
+       QratioProton = (HeatFractionMajor_I(1)*Qmajor_I(1) &
+            + HeatFractionMinor_I(1)*Qminor_I(1))/Qtotal
 
-       QparPerQtotal_I = HeatFraction_I(1)*DampingPar_I/DampingProton &
-            *QratioProton
+       QparPerQtotal_I = DampingPar_I/DampingProton*QratioProton
 
-       QperpPerQtotal_I(1) = HeatFraction_I(1)*DampingPerp_I(1)/DampingProton &
-            *QratioProton
-       if(nIonFluid > 1) QperpPerQtotal_I(2:) = HeatFraction_I(2:) &
-            *Qtotal_I(2:)/max(Qtotal, 1e-30)
+       QperpPerQtotal_I(1) = DampingPerp_I(1)/DampingProton*QratioProton
+
+       if(nIonFluid > 1) QperpPerQtotal_I(2:) = &
+            (HeatFractionMajor_I(2:)*Qmajor_I(2:) &
+            + HeatFractionMinor_I(2:)*Qminor_I(2:))/Qtotal
 
        QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
 
-       QePerQtotal = (HeatFraction_I(1)*DampingElectron/DampingProton &
-            + (1.0 - HeatFraction_I(1)))*QratioProton
+       QePerQtotal = (DampingElectron/DampingProton - 1)*QratioProton &
+            + (Qmajor_I(1) + Qminor_I(1))/Qtotal
 
     elseif(UseUniformHeatPartition)then
        QPerQtotal_I = QionRatio_I
@@ -1369,7 +1394,7 @@ contains
        QePerQtotal = QeRatio
 
     else
-       call stop_mpi(NameSub//' Unknown heat partitioning')
+       call stop_mpi(NameSub//' Unknown energy partitioning')
     end if
 
   end subroutine apportion_coronal_heating
