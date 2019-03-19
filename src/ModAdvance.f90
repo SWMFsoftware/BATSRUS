@@ -180,6 +180,12 @@ module ModAdvance
   real, allocatable:: &
        bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
   !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
+
+  ! Hydro part of the momentum flux. May be subtracted for calculating
+  ! electric field
+  real, allocatable:: &
+       HDFluxRhoU_VX(:,:,:,:), HDFluxRhoU_VY(:,:,:,:), HDFluxRhoU_VZ(:,:,:,:)
+  !$omp threadprivate( HDFluxRhoU_VX, HDFluxRhoU_VY, HDFluxRhoU_VZ )
   
   !\
   ! Merge cells around the polar axis in spherical geometry
@@ -263,18 +269,21 @@ contains
     allocate(RightState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
     allocate(VdtFace_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(HDFluxRhoU_VX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
 
     allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(VdtFace_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(HDFluxRhoU_VY(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
 
     allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(HDFluxRhoU_VZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
     allocate(FaceDivU_IX(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
