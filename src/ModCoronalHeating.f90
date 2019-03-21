@@ -92,9 +92,6 @@ module ModCoronalHeating
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
 
-  ! Corrected critical-balance condition
-  logical, public :: UseNewHeatPartition = .false.
-
   logical :: DoInit = .true.
 
   public :: get_coronal_heat_factor
@@ -1317,11 +1314,7 @@ contains
 
           ! Cascade timescale at the gyroscale
           CascadeTimeMajor_I(iIon) = WmajorGyro/max(Qmajor_I(iIon),1e-30)
-          if(UseNewHeatPartition)then
-             CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
-          else
-             CascadeTimeMinor_I(iIon) = CascadeTimeMajor_I(iIon)
-          end if
+          CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
 
           ! For protons the following would be DeltaU at ion gyro radius,
           ! except that we assumed that the Alfven ratio is one.

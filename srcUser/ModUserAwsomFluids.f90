@@ -164,7 +164,6 @@ contains
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
     use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass, cProtonMass
-    Use ModCoronalHeating, ONLY: UseNewHeatPartition
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_, &
@@ -185,7 +184,6 @@ contains
 
     UseAlfvenWaves = .true.
     UseWavePressure = .true.
-    UseNewHeatPartition = .true.
 
     ! convert to normalized units
     Nchromo_I = NchromoSi_I*Si2No_V(UnitN_)
