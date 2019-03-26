@@ -467,33 +467,43 @@ but much shorter.
 </command>
 
 <command name="MULTIPOLEB0" if="$_IsStandAlone">
+        <parameter name="UseMultipoleB0" type="logical" default="F" />
 	<parameter name="MaxHarmonicDegree" type="integer" default="-1" />
 	<parameter name="NamePlanetHarmonicsFile" type="string" default="0.0" />
 
-Through the use of the #MULTIPOLEB0 command, one can specify the
-planetary magnetic field (B0) in the form of the Spherical Harmonic
+Using this command, you can specify the
+planetary magnetic field (B0) using the Spherical Harmonics
 expansion. This is useful for e.g. to model the IGRF or complicated
-planetary magnetic field. As of now this feature cannot be used
-with the IE solver, and should be used in standalone GM/BATSRUS
-only. Also note that this has been implemented for a coordinate
-system in which the Z-axis is aligned with the planet's rotation
-axis.
+planetary magnetic field. Planetary rotation is allowed when using 
+this option. We suggest using the GSE coordinate system using 
+the #COORDSYSTEM command. If UseMultipoleB0 is true, the 
+#IDEALAXES command is enforced i.e. the dipole magnetic axis 
+is aligned with the rotation axis. No matter what coordinate system
+you use in GM, the multipole B0 calculation is always done in the 
+GEO coordinate system. 
+
+As of now this feature cannot be used with the IE solver, and 
+should be used in standalone GM/BATSRUS only. Secular variation 
+has not been implemented yet. 
+
+#COORDSYSTEM
+GSE             (GSM could work too since GSE==GSM if axes are aligned)
 
 #MULTIPOLEB0
-T               UseMultipoleBField
-10              MaxHarmonicDegree
-planetharmonics.txt 		NamePlanetaryHarmonicsFile
+T                        UseMultipoleB0
+10                       MaxHarmonicDegree
+planetharmonics.txt      NamePlanetaryHarmonicsFile
 
 The planetharmonics.txt file should be of the form -
 
 \begin{verbatim}
 Header line (is not read) - n m g h (follow this specific order)
-0 0 0 0
-1 0 1111.0 111.0
-1 1 0.0 0.0
-2 0 213.2 3324.5
-2 1 883.2 99.92
-2 2 0.0 0.0
+0  0   0.000000      0.000000
+1  0  -29619.400000  0.000000
+1  1  -1728.200000   5186.100000
+2  0  -2267.700000   0.000000
+2  1   3068.400000  -2481.600000
+2  2   1670.900000  -458.000000
 \end{verbatim}
 
 Where g and h are the Legendre coefficients in units of nT.
