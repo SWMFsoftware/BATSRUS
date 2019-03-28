@@ -1244,13 +1244,13 @@ contains
 
          ! Convert current state
          if(UseB0)then
-            fullBx = B0_DGB(x_,i,j,k,iBlock) + StateOld_VGB(Bx_,i,j,k,iBlock)
-            fullBy = B0_DGB(y_,i,j,k,iBlock) + StateOld_VGB(By_,i,j,k,iBlock)
-            fullBz = B0_DGB(z_,i,j,k,iBlock) + StateOld_VGB(Bz_,i,j,k,iBlock)
+            fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
+            fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
+            fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
          else
-            fullBx = StateOld_VGB(Bx_,i,j,k,iBlock)
-            fullBy = StateOld_VGB(By_,i,j,k,iBlock)
-            fullBz = StateOld_VGB(Bz_,i,j,k,iBlock)
+            fullBx = State_VGB(Bx_,i,j,k,iBlock)
+            fullBy = State_VGB(By_,i,j,k,iBlock)
+            fullBz = State_VGB(Bz_,i,j,k,iBlock)
          end if
          fullBB = fullBx**2 + fullBy**2 + fullBz**2
          rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
@@ -1642,7 +1642,7 @@ contains
 
              ! Avoid Pperp < 0
              State_VGB(iPpar,i,j,k,iBlock) = &
-                  min(3*State_VGB(ip,i,j,k,iBlock),&
+                  min(3*State_VGB(iP,i,j,k,iBlock),&
                   State_VGB(iPpar,i,j,k,iBlock))
 
              ! Do not apply the relaxation term in this case
