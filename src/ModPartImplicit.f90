@@ -457,7 +457,7 @@ contains
 
     ! Advance explicitly treated blocks if any
     if(UsePartImplicit .and. nBlockExplALL > 0)then
-
+       call timing_start('part_expl')
        if(DoTest)write(*,*)NameSub,': advance explicit blocks'
 
        if(UseBDF2)then
@@ -517,6 +517,8 @@ contains
        Unused_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
+    
+       call timing_stop('part_expl')
     end if
     
     !\
@@ -658,11 +660,13 @@ contains
        ! the inner loop only needs to reduce the error somewhat.
        if(UseNewton) ImplParam%ErrorMax = 0.1
 
+       call timing_start('krylov')
        call test_start('krylov', DoTestKrylov)
        call solve_linear_multiblock(ImplParam, &
             nVar, nDim, nI, nJ, nK, nBlockImpl, iComm, &
             impl_matvec, Rhs_I, x_I, DoTestKrylov, JacImpl_VVCIB)
        call test_stop('krylov', DoTestKrylov)
+       call timing_stop('krylov')
 
        if(DoTest .and. nBlockImpl>0)&
             write(*,*)NameSub,': final     x_I(test)=',x_I(nTest)
