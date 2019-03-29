@@ -1126,7 +1126,7 @@ contains
     ! how the Alfven waves dissipate at length scales << Lperp
 
     use ModMain, ONLY: UseB0
-    use ModPhysics, ONLY: IonMassPerCharge
+    use ModPhysics, ONLY: IonMassPerCharge, pMin_I
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
          Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
@@ -1155,7 +1155,7 @@ contains
     real, dimension(nIonFluid) :: HeatFractionMinor_I, HeatFractionMajor_I, &
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
          QperpPerQtotal_I, GyroRadiusTimesB_I
-    real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te
+    real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
     real :: Value_I(6)
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
@@ -1204,17 +1204,19 @@ contains
        ! waves contributes to electron and parallel ion heating
        if(UseMultiIon)then
           if(UseAnisoPressure)then
-             Ppar = State_VGB(iPparIon_I(IonFirst_),i,j,k,iBlock)
+             Ppar = max(State_VGB(iPparIon_I(IonFirst_),i,j,k,iBlock), &
+                  pMin_I(1))
           else
-             Ppar = State_VGB(iPIon_I(IonFirst_),i,j,k,iBlock)
+             Ppar = max(State_VGB(iPIon_I(IonFirst_),i,j,k,iBlock), pMin_I(1))
           end if
           BetaParProton = 2.0*Ppar/B2
           Np = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
           Na = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
                /MassIon_I(nIonFluid)
           Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
-          Tp = State_VGB(iPIon_I(1),i,j,k,iBlock)/Np
-          Ta = State_VGB(iPIon_I(nIonFluid),i,j,k,iBlock)/Na
+          Tp = max(State_VGB(iPIon_I(1),i,j,k,iBlock), pMin_I(1))/Np
+          Ta = max(State_VGB(iPIon_I(nIonFluid),i,j,k,iBlock), &
+               pMin_I(nIonFluid))/Na
           Te = State_VGB(Pe_,i,j,k,iBlock)/Ne
 
           ! difference bulk speed between alphas and protons
@@ -1248,17 +1250,17 @@ contains
              DampingElectron = Value_I(2)
           end if
        else
-          TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-               /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
+          Pp = max(State_VGB(iPIon_I(1),i,j,k,iBlock), pMin_I(1))
+          TeByTp = State_VGB(Pe_,i,j,k,iBlock)/Pp
 
           BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
-          BetaProton = 2.0*State_VGB(iPIon_I(1),i,j,k,iBlock)/B2
+          BetaProton = 2.0*Pp/B2
 
-          DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
+          DampingElectron = 0.01*sqrt(TeByTp/BetaProton) &
                *(1.0 + 0.17*BetaProton**1.3) &
                /(1.0 +(2800.0*BetaElectron)**(-1.25))
           DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
-               *exp(-1.3/max(BetaProton, 1.0e-8))
+               *exp(-1.3/BetaProton)
        end if
 
        ! Stochasting heating contributes to perpendicular ion heating.
@@ -1272,6 +1274,8 @@ contains
              Ppar  = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
              Pperp = Ppar
           end if
+          Ppar  = max(Ppar, pMin_I(iIon))
+          Pperp = max(Pperp, pMin_I(iIon))
 
           ! Perpendicular ion thermal speed
           Vperp = sqrt(2.0*Pperp/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock))

@@ -471,14 +471,14 @@ contains
              end if
              if(UseAnisoPressure .and. IsIon_I(iFluid)) &
                   State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
+                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
           end do; end do; end do
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
              if(UseAnisoPressure .and. IsIon_I(iFluid))&
                   State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
+                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
           end do; end do; end do
        end if
     end do
@@ -499,7 +499,7 @@ contains
              end if
              if(UseAnisoPressure .and. IsIon_I(iFluid))&
                   State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
+                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
           end do; end do; end do
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -508,7 +508,7 @@ contains
              State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
              if(UseAnisoPressure .and. IsIon_I(iFluid))&
                   State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
+                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
           end do; end do; end do
        end if
     end do
