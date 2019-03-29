@@ -570,10 +570,12 @@ contains
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
        ! can be restored.
        ! The implicit blocks haven't been updated, so save current state
+       !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
           ImplOld_VCB(:,:,:,:,iBlock) = Impl_VGB(:,1:nI,1:nJ,1:nK,iBlockImpl)
        end do
+       !$omp end parallel do
     end if
 
     ! Initialize right hand side and x_I. Uses ImplOld_VCB for BDF2 scheme.
@@ -587,10 +589,12 @@ contains
        ! Save the current state into ImplOld_VCB so that StateOld_VGB
        ! can be restored.
        ! The implicit blocks haven't been updated, so save current state
+       !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
           ImplOld_VCB(:,:,:,:,iBlock) = Impl_VGB(:,1:nI,1:nJ,1:nK,iBlockImpl)
        end do
+       !$omp end parallel do
     endif
 
     ! Newton-Raphson iteration and iterative linear solver
@@ -712,8 +716,9 @@ contains
          nIterNewton, NormX
 
     ! Restore StateOld and EnergyOld in the implicit blocks
+    !$omp parallel do private( iBlock )
     do iBlockImpl=1,nBlockImpl
-       iBlock=iBlockFromImpl_B(iBlockImpl)
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
 
        if(UseImplicitEnergy) then
@@ -726,19 +731,22 @@ contains
           call calc_old_energy(iBlock) ! restore EnergyOld_CBI
        end if
     end do
+    !$omp end parallel do
 
     if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
 
        ! Calculate the largest relative drop in density or pressure
+       !$omp parallel do 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           ! Check p and rho
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBlock)=&
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) =&
                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) / &
                StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock), &
                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) / &
                StateOld_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) )
        end do
+       !$omp end parallel do
 
        if(index(StringTest, 'updatecheck') > 0)then
           pRhoRelativeMin = minval_grid(tmp1_BLK, iLoc_I=iLoc_I)
@@ -760,6 +768,7 @@ contains
           ! Do not use previous step in BDF2 scheme
           n_prev = -1
           ! Reset the state variable, the energy and set time_BLK variable to 0
+          !$omp parallel do 
           do iBlock = 1,nBlock
              if(Unused_B(iBlock)) CYCLE
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
@@ -767,6 +776,7 @@ contains
              Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)= EnergyOld_CBI(:,:,:,iBlock,:)
              time_BLK(1:nI,1:nJ,1:nK,iBlock)    = 0.0
           end do
+          !$omp end parallel do
           ! Reduce next time step
           DtFixed = RejectStepFactor*DtFixed
           if(index(StringTest, 'updatecheck') > 0) write(*,*) NameSub, &
@@ -806,7 +816,7 @@ contains
   !============================================================================
   subroutine impl_newton_init
 
-    ! initialization for NR
+    ! Initialization for NR
 
     use ModProcMH
     use ModMain, ONLY : n_step,dt,nOrder, &
@@ -849,16 +859,17 @@ contains
          ResImpl_VCB(iVarTest,iTest,jTest,kTest,iBlockImplTest)
 
     ! Calculate rhs used for nIterNewton=1
-    n = 0
-    if(UseBDF2.and.n_step==n_prev+1)then
+    if(UseBDF2 .and. n_step==n_prev+1)then
        ! Collect RHS terms from Eq 8 in Paper implvac
        ! Newton-Raphson iteration. The BDF2 scheme implies
        ! beta+alpha=1 and beta=(dt_n+dt_n-1)/(2*dt_n+dt_n-1)
        Coef1 = ImplCoeff*DtCoeff
        Coef2 = (1-ImplCoeff)*dt/dt_prev
 
+       !$omp parallel do private(iBlock, n)
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
+          n = (iBlockImpl-1)*nIJK*nVar
           do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
              n = n + 1
              ! For 1st Newton iteration
@@ -868,30 +879,37 @@ contains
                   -        ImplOld_VCB(iVar,i,j,k,iBlock)))/Norm_V(iVar)
           end do; end do; enddo; enddo;
        enddo
+       !$omp end parallel do
     else
-       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-          do iVar=1,nVar
+       !$omp parallel do private( n )
+       do iBlockImpl=1,nBlockImpl
+          n = (iBlockImpl-1)*nIJK*nVar
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
              n = n + 1
              ! RHS = dt*R/Norm_V for the first iteration
              Rhs_I(n) = ResExpl_VCB(iVar,i,j,k,iBlockImpl)*DtCoeff/Norm_V(iVar)
           end do
        end do; enddo; enddo; enddo
-
+       !$omp end parallel do
     endif
 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar=1,nVar
+    !$omp parallel do private( n )
+    do iBlockImpl=1,nBlockImpl
+       n = (iBlockImpl-1)*nIJK*nVar
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           n = n + 1
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
              Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
           endif
        end do
     end do; enddo; enddo; enddo
+    !$omp end parallel do
 
     if(UseNewton .or. UseConservativeImplicit)then
        ! Calculate RHS0 used for RHS when nIterNewton > 1
-       n = 0
+       !$omp parallel do private( n )
        do iBlockImpl=1,nBlockImpl
+          n = (iBlockImpl-1)*nIJK*nVar
           do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
              n = n + 1
              ! RHS0 = [dt*(R - beta*R_low) + w_n]/Norm_V
@@ -901,6 +919,7 @@ contains
                   + Impl_VGB(iVar,i,j,k,iBlockImpl))/Norm_V(iVar)
           end do; end do; enddo; enddo
        enddo
+       !$omp end parallel do
     endif
 
     if(DoTest)then
@@ -950,8 +969,10 @@ contains
     call test_start(NameSub, DoTest)
 
     ! Caculate RHS for 2nd or later Newton iteration
-    n = 0
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
+    !$omp parallel do private( n )
+    do iBlockImpl=1,nBlockImpl
+       n = (iBlockImpl-1)*nIJK*nVar
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
        n = n + 1
        ! RHS = (dt*R_n - beta*dt*R_n_low
        !       + w_n + beta*dt*R_k_low - Impl_VGB)/Norm
@@ -960,6 +981,7 @@ contains
             + (ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl) &
             - Impl_VGB(iVar,i,j,k,iBlockImpl))/Norm_V(iVar)
     enddo; enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
     if(DoTest)then
        call MPI_allreduce(sum(Rhs_I(1:nImpl)**2),q1,1,MPI_REAL,MPI_SUM,&
@@ -1012,9 +1034,10 @@ contains
     endif
 
     ! w=w+x_I for all true cells
-    n = 0
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar = 1, nVar
+    !$omp parallel do private( n )
+    do iBlockImpl=1,nBlockImpl
+       n = (iBlockImpl-1)*nIJK*nVar
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
           n = n + 1
           if(IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)))&
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
@@ -1022,6 +1045,7 @@ contains
                + x_I(n)*Norm_V(iVar)
        enddo
     enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
     if(UseConservativeImplicit .or. .not.IsConverged) then
        ! calculate low order residual ResImpl_VCB = DtExpl*RES_low(k+1)
@@ -1058,9 +1082,10 @@ contains
     !
     ! DtCoeff = Dt/DtExpl is used to convert to the implicit time step
 
-    n = 0
+    !$omp parallel do private( iBlock,n )
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
+       n = (iBlockImpl-1)*nIJK*nVar
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           n = n + 1
           if(IsImplCell_CB(i,j,k,iBlock)) &
@@ -1069,6 +1094,7 @@ contains
                + ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl)
        enddo
     enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine impl_newton_conserve
@@ -1177,10 +1203,9 @@ contains
 
     Eps = sqrt(JacobianEps)/xNorm
 
-    n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
-       n = (iBlock-1)*nIJK*nVar !hyzhou
+       n = (iBlock-1)*nIJK*nVar
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           n = n + 1
           ImplEps_VCB(iVar,i,j,k,iBlock) = Impl_VGB(iVar,i,j,k,iBlock) &
@@ -1208,7 +1233,6 @@ contains
     if(DoTest)write(*,*)'DtCoeff,ImplCoeff,Coef1,Coef2=', &
          DtCoeff, ImplCoeff, Coef1, Coef2
        
-    n = 0
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
        n = (iBlock-1)*nIJK*nVar
@@ -1902,16 +1926,21 @@ contains
     end do
 
     IsImplCell_CB = .false.
+    
+    !$omp parallel do 
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
             true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
     enddo; enddo; enddo; enddo
+    !$omp end parallel do
 
-    if(UseResistivePlanet) then
+    if(UseResistivePlanet)then
+       !$omp parallel do 
        do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
           if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
                IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
        enddo; enddo; enddo; enddo
+       !$omp end parallel do
     endif
 
     ! The index of the test variable in the linear array
@@ -2108,7 +2137,7 @@ contains
 
     call timing_start('get_residual')
 
-    if(DoTest.and.nBlockImpl>0)&
+    if(DoTest .and. nBlockImpl>0)&
          write(*,*)'get_residual DoSubtract,IsLowOrder,Var_VCB=',&
          DoSubtract, IsLowOrder, &
          Var_VCB(kTest,iVarTest,iTest,jTest,iBlockImplTest)
@@ -2125,7 +2154,7 @@ contains
        !$omp parallel do private( iBlock )
        do iBlockImpl=1,nBlockImpl
           iBlock = iBlockFromImpl_B(iBlockImpl)
-          time_BLK(:,:,:,iBlock)=0.0
+          time_BLK(:,:,:,iBlock) = 0.0
           where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
@@ -2407,6 +2436,8 @@ contains
 
     ! First calculate max(cmax/dx) for each cell and dimension
     DtLocal = 0.0
+    !$omp parallel do private( iBlock, B0_DC, Cmax_C ) &
+    !$omp reduction(max:DtLocal)
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
 
@@ -2420,10 +2451,9 @@ contains
        ! the Hall factor is needed on the face.
        ! Also note that if HallCmaxFactor is zero, then the whistler speed
        ! gets ignored. This may or may not be intentional !!!
-       if(UseHallResist)call set_hall_factor_face(iBlock)
+       if(UseHallResist) call set_hall_factor_face(iBlock)
 
        do iDim = 1, nDim
-
           call get_cmax_face(Impl_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlockImpl), &
                B0_DC, nI, nJ, nK, iDim, iBlock, Cmax_C)
 
@@ -2433,11 +2463,9 @@ contains
 
           DtLocal = max(DtLocal, &
                maxval(Cmax_C/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)))
-
-          if(DoTest)write(*,*) NameSub,': iDim,dx,cmax,1/DtOut=',&
-               iDim, Cmax_C(iTest,jTest,kTest),DtLocal
        end do
     end do
+    !$omp end parallel do
 
     ! Take global maximum
     call MPI_allreduce(DtLocal, DtOut, 1, MPI_REAL, MPI_MAX, iComm, iError)
