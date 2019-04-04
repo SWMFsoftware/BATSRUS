@@ -73,7 +73,7 @@ contains
     character(len=*), parameter:: NameSub = 'init_load_balance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
+    DoSendRay = UseIM .or. index(log_vars, 'status') > 0  ! to be improved
 
     nBuffer = nScalarData
 

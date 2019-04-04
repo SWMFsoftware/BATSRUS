@@ -145,14 +145,14 @@ contains
     ! Move points with the velocity
     Xyz_DI = XyzOld_DI + Dt * State_VI(Ux_:Uz_,:)
 
-!!!
+    
     if(DoTest)then
        write(*,*)NameSub,' Dt        =',Dt
        write(*,*)NameSub,' Velocity  =',State_VI(Ux_:Uz_,:)
        write(*,*)NameSub,' new Xyz_DI=',Xyz_DI(1:3,1)
     end if
     ! Move back along field lines
-!!! to be implemented
+    ! !! to be implemented
 
     ! Deallocate arrays
     deallocate(State_VI)

@@ -3440,7 +3440,7 @@ contains
          FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
          FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
 
-    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
+    UseHallGradPe = .false. ! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)
@@ -3455,7 +3455,7 @@ contains
        do k = MinK, MaxK; kFace = k
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
-                !!! call set_cell_values
+                ! call set_cell_values
 
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
@@ -3551,7 +3551,7 @@ contains
     if(UseViscosity) call stop_mpi(NameSub// &
          ": Viscosity has not been implemented!")
 
-    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
+    UseHallGradPe = .false. ! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)

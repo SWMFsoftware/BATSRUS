@@ -188,7 +188,7 @@ contains
     if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
     if(UsePartSteady)then
-       ! Convert iTypeAdvance_BP to _A !!! should use _A all the time
+       ! Convert iTypeAdvance_BP to _A ! should use _A all the time
        allocate(iTypeAdvance_A(MaxNode))
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
@@ -227,7 +227,7 @@ contains
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
-         SkippedBlock_ !!!
+         SkippedBlock_
     use ModLoadBalance, ONLY: load_balance
     use ModFieldTrace, ONLY: ray
     use ModBlockData, ONLY: clean_block_data
@@ -236,7 +236,7 @@ contains
 
     use BATL_lib,         ONLY: regrid_batl, &
          nNode, iTree_IA, nLevelMin, nLevelMax, &
-         IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_ !!!
+         IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModMessagePass,   ONLY: exchange_messages

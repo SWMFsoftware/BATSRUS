@@ -100,22 +100,22 @@ module ModParticleMover
 contains
   !=============read_param=============================!
   !subroutine read the following paramaters from the PARAM.in file:
-  !#CHARGEDPARTICLES
-  !3                      nKindParticles
-  !4.0                    Mass
-  !2.0                    Charge
-  !1000000                nParticleMax
-  !16.0                   Mass
-  !6.0                    Charge
-  !500000                 nParticleMax
-  !16.0                   Mass
-  !7.0                    Charge
-  !500000                 nParticleMax
-  !and allocate particle arrays immediately.
-  !To reallocate, first, use command
-  !#CHARGEDPARTICLES
-  !0                      nKindParticles
-  !to deallocate arrays.
+  ! #CHARGEDPARTICLES
+  ! 3                      nKindParticles
+  ! 4.0                    Mass
+  ! 2.0                    Charge
+  ! 1000000                nParticleMax
+  ! 16.0                   Mass
+  ! 6.0                    Charge
+  ! 500000                 nParticleMax
+  ! 16.0                   Mass
+  ! 7.0                    Charge
+  ! 500000                 nParticleMax
+  ! and allocate particle arrays immediately.
+  ! To reallocate, first, use command
+  ! #CHARGEDPARTICLES
+  ! 0                      nKindParticles
+  ! to deallocate arrays.
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
 

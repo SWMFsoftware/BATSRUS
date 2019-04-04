@@ -583,7 +583,7 @@ contains
        Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
-!!! n_prev = -1
+       ! !!n_prev = -1
        ! Reset the state variable, the energy and set time_BLK variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE

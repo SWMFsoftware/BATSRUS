@@ -662,7 +662,7 @@ contains
        call Bcenter2Bface(iBlock)
        ! Calculate energy (it is not set in set_initial_condition)
        ! because the projection scheme will need it
-!!! call calc_energy(iBlock)
+       ! !!call calc_energy(iBlock)
     end do
 
     call proj_get_divb(tmp1_BLK)

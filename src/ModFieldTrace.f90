@@ -1084,7 +1084,7 @@ contains
 
     ! Set flag if checking for open rays is useful
     DoCheckOpen = .false.
-!!!! any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
+    ! !! any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
 
     ! Set the boundaries of the control volume in block coordinates
     ! We go out to the first ghost cell centers for sake of speed and to avoid
@@ -1594,7 +1594,7 @@ contains
 
     subroutine interpolate_xyz(IjkIn_D,XyzOut_D)
 
-!!! We should use share/Library/src/ModInterpolate !!!
+      ! !! We should use share/Library/src/ModInterpolate !!!
 
       ! Interpolate X/Y/Z at normalized location IjkIn_D
       ! and return the result in XyzOut_D.
@@ -2972,10 +2972,10 @@ contains
        end do
     case('J')
        ! Store current
-!!! this needs to be improved a lot:
-!!! call get_current_D for cell centers
-!!! call message_pass_cell(Bxyz_DGB...)
-!!! outer boundaries???
+       ! !! this needs to be improved a lot:
+       ! !! call get_current_D for cell centers
+       ! !! call message_pass_cell(Bxyz_DGB...)
+       ! !! outer boundaries???
        do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
           Dx2Inv = 0.5/CellSize_DB(x_,iBlock)
           Dy2Inv = 0.5/CellSize_DB(y_,iBlock)
@@ -4031,9 +4031,9 @@ contains
           bb_y(i,j,k,iBlock)=sum(Bxyz_DGB(y_,i-1:i,j-1:j,k-1:k,iBlock))*0.125
           bb_z(i,j,k,iBlock)=sum(Bxyz_DGB(z_,i-1:i,j-1:j,k-1:k,iBlock))*0.125
 
-          !! if(abs(bb_x(i,j,k,iBlock))<cTiny)bb_x(i,j,k,iBlock)=cTiny
-          !! if(abs(bb_y(i,j,k,iBlock))<cTiny)bb_y(i,j,k,iBlock)=cTiny
-          !! if(abs(bb_z(i,j,k,iBlock))<cTiny)bb_z(i,j,k,iBlock)=cTiny
+          ! if(abs(bb_x(i,j,k,iBlock))<cTiny)bb_x(i,j,k,iBlock)=cTiny
+          ! if(abs(bb_y(i,j,k,iBlock))<cTiny)bb_y(i,j,k,iBlock)=cTiny
+          ! if(abs(bb_z(i,j,k,iBlock))<cTiny)bb_z(i,j,k,iBlock)=cTiny
        end do; end do; end do
 
     end do ! iBlock
@@ -4119,9 +4119,9 @@ contains
                             rayend_pos(:,iray,ix,iy,iz,iBlock) = weight
                          end if
                       end do
-!!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-!!$                    call print_test(0)
-!!$//////////////////////////////
+
+                      ! call print_test(0)
+
                    else
                       do iray=1,2
                          ! Use stored values
@@ -4192,7 +4192,7 @@ contains
           Done_me = .true.
           do iBlock=1,nBlock
              if(Unused_B(iBlock))CYCLE
-             Done_me = all(rayface(1,:,:,:,:,iBlock) > LOOPRAY) !!! NORAY)
+             Done_me = all(rayface(1,:,:,:,:,iBlock) > LOOPRAY) ! !!NORAY)
              if(.not.Done_me)EXIT
           end do
           call MPI_allreduce(Done_me,Done,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
@@ -4208,14 +4208,14 @@ contains
 
     end do ! ray iteration
 
-!!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-!!$  do iBlock=1,nBlock
-!!$     if(Unused_B(iBlock))CYCLE
-!!$     do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
-!!$        call print_test(999)
-!!$     end do; end do; end do
-!!$  end do
-!!$//////////////////////////////
+! !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+! !!$  do iBlock=1,nBlock
+! !!$     if(Unused_B(iBlock))CYCLE
+! !!$     do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
+! !!$        call print_test(999)
+! !!$     end do; end do; end do
+! !!$  end do
+! !!$//////////////////////////////
 
     ! Check for unassigned rayface in every used block
     if(DoTest)then
@@ -4261,14 +4261,6 @@ contains
           end if
 
           do iz=1,nK; do iy=1,nJ; do ix=1,nI
-!!$           oktest_ray = DoTest .and. iBlockTest==iBlock .and. &
-!!$                ix==iTest.and.iy==jTest.and.iz==kTest
-
-             if(oktest_ray)write(*,*)'TESTING'
-
-             ! Debug
-             ! write(*,*)'me,iBlock,ix,iy,iz=',iProc,iBlock,ix,iy,iz
-             ! oktest_ray = .true.
 
              ! Short cuts for inner and false cells
              if(R_BLK(ix,iy,iz,iBlock)<rIonosphere .or. &
@@ -5055,7 +5047,7 @@ contains
          maxval(weight)-minval(weight) > 0.0001)then
        qweight(1:nvalue)=weight
     else
-       ValueMax = maxval(qrayface(1,:), MASK = weight > 0.0) !!! 0.01)
+       ValueMax = maxval(qrayface(1,:), MASK = weight > 0.0) ! 0.01)
 
        if(ValueMax < CLOSEDRAY)then
           !     if(ValueMax < OPENRAY-0.01)then
@@ -5537,8 +5529,8 @@ contains
 
     !  do i=1,3; do j=1,2
 
-    !!     call pass_and_max_nodes(.false.,rayface(i,j,:,:,:,:))
-!!$     call pass_and_max_nodes(.true.,rayface(i,j,:,:,:,:))
+    ! !     call pass_and_max_nodes(.false.,rayface(i,j,:,:,:,:))
+    ! !     call pass_and_max_nodes(.true.,rayface(i,j,:,:,:,:))
     !  end do; end do
 
     logical:: DoTest

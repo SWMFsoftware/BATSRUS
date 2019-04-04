@@ -1216,7 +1216,7 @@ contains
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
 
-!!$       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
+!       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
        ! The following is conform the H2D strategy for following rays
        do iRay = 1, nRayPerBeam  ! just for beams pointed at the symmetry axix
 
@@ -1404,18 +1404,6 @@ contains
     DeltaS_I = DeltaS
 
     call get_density_and_absorption(nRayInside)
-
-!!$    if(DoVerbose .and. iProc==0)then
-!!$       NameFile='Rays_n0000'
-!!$       write(*,*)trim(NameFile)
-!!$       open(UnitTmp_, file=NameFile, status='replace')
-!!$       do iRay = 1, nRay
-!!$          write(UnitTmp_,*)Position_DI(1:2,iRay), Density_I(iRay), &
-!!$               GradDensity_DI(:,iRay), DeltaSNew_I(iRay), &
-!!$               AbsorptionCoeff_I(iRay)
-!!$       end do
-!!$       close(UnitTmp_)
-!!$    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine init_laser_package

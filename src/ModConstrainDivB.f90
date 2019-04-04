@@ -247,15 +247,15 @@ contains
        end do; end do
     end if
 
-!!! Set VxB to zero on the cell edges of the body cells !!!
+    ! Set VxB to zero on the cell edges of the body cells
     if(body_BLK(iBlock))then
        ! Apply inner boundary condition on the electric field
        ! Make sure that edges belonging to body ghost cells are also corrected
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           if(.not.true_cell(i,j,k,iBlock))then
-             VxB_x(i,j:j+1,k:k+1,iBlock)=0.0
-             VxB_y(i:i+1,j,k:k+1,iBlock)=0.0
-             VxB_z(i:i+1,j:j+1,k,iBlock)=0.0
+             VxB_x(i,j:j+1,k:k+1,iBlock) = 0.0
+             VxB_y(i:i+1,j,k:k+1,iBlock) = 0.0
+             VxB_z(i:i+1,j:j+1,k,iBlock) = 0.0
           end if
        end do; end do; end do
     end if
@@ -430,7 +430,7 @@ contains
 
   subroutine bound_Bface(iBlock)
 
-!!! Set Bface to zero on the cell faces of the body cells !!!
+    ! Set Bface to zero on the cell faces of the body cells
     ! Make sure that ghost cells inside the body are taken into account
     ! This may have to be generalized later
 

@@ -319,7 +319,7 @@ contains
          (nDim==2 .and. (plot_type1(1:3) == '2d_' &
          .or.            plot_type1(1:3) == 'z=0'))
 
-    !! START IDL
+    ! START IDL
     ! initialize values used in the plotting
     xmin = PlotRange_I(1)
     xmax = PlotRange_I(2)
@@ -335,7 +335,7 @@ contains
     dzblk=XyzMax_D(3)-XyzMin_D(3)
     nPEcells=0; nPEcellsN=0; nPEcellsS=0
     nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
-    !! END IDL
+    ! END IDL
 
     ! To plot the criteria used for AMR we need to
     ! recalulate them for the existing grid.
@@ -556,7 +556,7 @@ contains
 
     if(DoSaveOneTecFile) call close_file(iUnit)
 
-    !! START IDL
+    ! START IDL
     if (plot_form(iFile)=='idl')then
        ! Find smallest cell size and total number of cells
        call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
@@ -565,7 +565,7 @@ contains
 
        if(DoTest) write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
     end if
-    !! END IDL
+    ! END IDL
 
     ! write header file
     if(iProc==0)then
