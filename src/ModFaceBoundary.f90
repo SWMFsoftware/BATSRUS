@@ -176,7 +176,7 @@ contains
     if(DoTest)call write_face_state('Initial')
 
     ! This call may be needed for moving bodies, but not in general
-    !!! call set_boundary_cells(iBlockBc)
+    ! !! call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
          .not.(iBoundary_GB(:,:,:,iBlockBc) == domain_)

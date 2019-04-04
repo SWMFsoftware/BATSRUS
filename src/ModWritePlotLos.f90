@@ -337,7 +337,7 @@ contains
     aOffset = dot_product(ImageCenter_D, aUnit_D)
     bOffset = dot_product(ImageCenter_D, bUnit_D)
 
-!!! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
+    ! !! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
 
     allocate( &
          ImagePe_VII(nPlotVar,nPix,nPix), &
@@ -940,8 +940,8 @@ contains
 
       if(UseEuv .or. UseSxr .or. UseTableGen)then
 
-!!! All these log and 10** should be eliminated.
-!!! The general table should be log based, so it does the log internally
+! !! All these log and 10** should be eliminated.
+! !! The general table should be log based, so it does the log internally
 
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -956,16 +956,16 @@ contains
             Te = State_V(p_)*PePerPtotal/Ne
          end if
 
-!!! So minimum temperature is cTolerance in SI units???
+! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
-!!! This should not be needed here
+! !! This should not be needed here
          LogTe = log10(TeSi)
 
          ! Here calc log base 10 of electron density, the -6 is to convert to CGS
          ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
-!!! Really, cTolerance is the minimum number density in CGS units???
+! !! Really, cTolerance is the minimum number density in CGS units???
          Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
          LogNe = log10(Ne)
 
@@ -978,7 +978,7 @@ contains
          ! calculate temperature cutoff to neglect widened transition region
          FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
 
-!!! There should be just one table, not three!!!
+! !! There should be just one table, not three!!!
          if (UseEuv) then
             ! now interpolate EUV response values from a lookup table
             if (iTableEUV <=0) &

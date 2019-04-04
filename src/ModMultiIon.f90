@@ -7,8 +7,8 @@ module ModMultiIon
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest
 
-!!! "resistive terms" = ion-electron collisions to be added
-!!! RZ geometry terms are missing
+  ! !! "resistive terms" = ion-electron collisions to be added
+  ! !! RZ geometry terms are missing
 
   ! Calculate source terms for multi-ion MHD.
   ! For sake of numerical stability this should be done with
@@ -708,7 +708,7 @@ contains
                         NameSub,' after collision, Force_D         =', Force_D
                 end if
 
-!!! No heating for now
+                ! !! No heating for now
 ! If heating is added as below, adjust update_states_MHD to make sure that
 ! the execution passes through here even if UseUniformIonVelocity is true
 ! (fluids can have different temperatures)

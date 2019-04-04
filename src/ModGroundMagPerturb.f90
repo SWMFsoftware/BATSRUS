@@ -637,7 +637,7 @@ contains
                 InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
-                !! Check
+                ! Check
                 ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume=Volume+dVol
 
                 do iMag = 1, nMag

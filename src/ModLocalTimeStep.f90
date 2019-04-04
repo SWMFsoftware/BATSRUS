@@ -271,34 +271,6 @@ contains
           ! if the block has reached the end of the time step
           if(Time_B(iBlock) >= TimeEnd - DtSiTiny) call calc_timestep(iBlock)
 
-          ! STABILITY !!!
-          !!! if(iStage == nStage)then
-          !!!   DtBlkOld = Dt_Blk(iBlock)
-          !!!   call calc_timestep(iBlock)
-          !!!   if(iBlock==127) then
-          !!!      write(*,*) &
-          !!!           '!!! iBlock, DtBlkOld, max(time), min(time), DtBlk/DtMin=', &
-          !!!           iBlock, DtBlkOld, maxval(time_BLK(:,:,:,iBlock)), &
-          !!!           minval(time_BLK(:,:,:,iBlock)), Dt_BLK(iBlock)/DtMin
-          !!!      write(*,*)'log2(Ratio)=', log(Dt_BLK(iBlock)/DtMin)/log(2.0)
-          !!!      write(*,*)'floor(log2(Ratio))=', &
-          !!!           floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
-          !!!      write(*,*)'2^floor(log2(Ratio))=', &
-          !!!           2.0**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
-          !!!   end if
-          !!!   Dt_BLK(iBlock) = &
-          !!!        DtMin*2.0**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
-          !!!   if(iBlock==127) write(*,*)'!!! DtMin, new DtBlk=', &
-          !!!        DtMin, Dt_BLK(iBlock)
-          !!!
-          !!!
-          !!!   if(DtBlkOld < Dt_Blk(iBlock)) Dt_BLK(iBlock) = DtBlkOld
-          !!!   time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
-          !!!
-          !!!   if(iBlock==127)write(*,*)'!!! iBlock, DtBlkOld, DtBlk=', &
-          !!!        iBlock, DtBlkOld, Dt_BLK(iBlock)
-          !!! end if
-
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)

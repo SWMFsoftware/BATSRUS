@@ -680,7 +680,7 @@ contains
          ! The 4*pi is part of the Biot-Savart formula
          LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
 
-!!$! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
+         ! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('rhopnt')
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
@@ -799,7 +799,7 @@ contains
          ! It is sufficient to calculate it on processor 0
          if(iProc == 0) &
               LogVar_I(iVarTot) = logvar_ionosphere(NameLogVar)
-!!$! Flux values integrated over the surface of a shpere
+         ! Flux values integrated over the surface of a sphere
       case('aflx')
          ! just to check that the area is being computed correctly
          iVarTot = iVarTot - 1
@@ -1131,7 +1131,7 @@ contains
 
        select case(NameLogVar)
 
-!!$! BASIC MHD variables
+          ! BASIC MHD variables
        case('rho','rhopnt')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitRho_)
        case('rhoux','rhouy','rhouz', 'rhouxpnt','rhouypnt','rhouzpnt')
@@ -1157,14 +1157,14 @@ contains
        case('t','temp','tpnt','temppnt')
           LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
 
-!!$! Ionosphere values
+          ! Ionosphere values
 
        case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
             'cpcps','cpcp_s','cpcp_south','cpcpsouth')
           ! User unit is kV = 1000 V
           LogVar_I(iVarTot) = LogVar_I(iVarTot) &
                *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0
-!!$! Flux values
+          ! Flux values
        case('aflx')
           LogVar_I(iVarTot:iVarTot+nLogR-1)=LogVar_I(iVarTot:iVarTot+nLogR-1)&
                *No2Io_V(UnitX_)**2

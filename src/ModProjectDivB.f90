@@ -217,22 +217,13 @@ contains
     if(info<0)GOTO 100
 
     ! Get the ghost cell values for the solution phi
-    call proj_boundphi(phi);
-
-    ! if(DoTest)write(*,*)'proj_divb,lapl(phi)=',&
-    !     proj_divb(iTest,jTest,kTest,iBlockTest),&
-    !     (phi(iTest+2,jTest,kTest,iBlockTest)+phi(iTest-2,jTest,kTest,iBlockTest) &
-    !     +phi(iTest,jTest+2,kTest,iBlockTest)+phi(iTest,jTest-2,kTest,iBlockTest) &
-    !     +phi(iTest,jTest,kTest-2,iBlockTest)+phi(iTest,jTest,kTest-2,iBlockTest) &
-    !     -6*phi(iTest,jTest,kTest,iBlockTest))/CellSize_DB(x_,iBlockTest)**2/4
+    call proj_boundphi(phi)
 
     ! Correct B field: B'=B-dB where dB=grad(phi)
     call proj_correction(phi)
 
     ! Recalculate boundary conditions
     call exchange_messages
-
-!!! StringTest=StringTest(1:50)
 
     ! Testing div B'=0
     if(DoTest)then
@@ -592,7 +583,7 @@ contains
 
     ! call show_BLK('dphi',dphi)
 
-!!! CORRECT dphi FOR MESH REFINEMENT EFFECTS
+    ! !! CORRECT dphi FOR MESH REFINEMENT EFFECTS
 
     call test_stop(NameSub, DoTest)
   end subroutine proj_gradient

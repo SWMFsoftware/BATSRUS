@@ -258,7 +258,7 @@ contains
 
              if(dLatSmoothIm > 0.0)then
                 ! Go from low to high lat and look for first unset field line
-!!! WHAT ABOUT ASCENDING VS DESCENDING ORDER FOR LAT???
+                ! !! WHAT ABOUT ASCENDING VS DESCENDING ORDER FOR LAT???
                 do n = iSize,1,-1
                    if(IM_p(n,iLon1) < 0.0) EXIT
                 enddo

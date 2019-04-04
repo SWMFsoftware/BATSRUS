@@ -695,7 +695,7 @@ contains
              do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.time_accurate .or. UseDtLimit) &
                      DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
-                Volume = CellVolume_GB(i,j,k,iBlock) !!! /DtLocal ???
+                Volume = CellVolume_GB(i,j,k,iBlock) ! !! /DtLocal ???
                 do iVar=1,nVarSemi
                    n = n + 1
                    pDotADotPPe = pDotADotPPe +  &
