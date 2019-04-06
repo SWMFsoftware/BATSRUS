@@ -28,7 +28,8 @@ module ModFaceFlux
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       HDFluxRhoU_VX, HDFluxRhoU_VY, HDFluxRhoU_VZ,& ! output: HD momentum flux
+       HDFlux_VX, HDFlux_VY, HDFlux_VZ, HDRhoUx_,  & ! output: HD momentum flux
+       HDRhoUy_, HDRhoUz_, HDEnergy_,              & ! output: HD momentum flux
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
@@ -121,9 +122,10 @@ module ModFaceFlux
   
   real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
   real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
-  real :: HDFluxRhoU_V(     RhoUx_:RhoUz_)     = 0.0
-  real :: HDFluxRhoULeft_V( RhoUx_:RhoUz_)     = 0.0 
-  real :: HDFluxRhoURight_V(RhoUx_:RhoUz_)     = 0.0 
+  real :: HDFlux_V(     HDRhoUx_:HDEnergy_)     = 0.0
+  real :: HDFluxLeft_V( HDRhoUx_:HDEnergy_)     = 0.0 
+  real :: HDFluxRight_V(HDRhoUx_:HDEnergy_)     = 0.0 
+  real :: HDEnergyDens, HDEnergyDensLeft, HDEnergyDensRight
   real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
   real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
@@ -133,7 +135,8 @@ module ModFaceFlux
   real :: Area2 = 0.0, AreaX, AreaY, AreaZ
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
   !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
-  !$omp threadprivate( HDFluxRhoU_V, HDFluxRhoULeft_V, HDFluxRhoURight_V)
+  !$omp threadprivate( HDFlux_V, HDFluxLeft_V, HDFluxRight_V)
+  !$omp threadprivate( HDEnergyDens, HDEnergyDensLeft, HDEnergyDensRight)
   !$omp threadprivate( DissipationFlux_V )
   !$omp threadprivate( B0x, B0y, B0z )
   !$omp threadprivate( DiffBb )
@@ -675,7 +678,7 @@ contains
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
          if(IsMhd)&
-            HDFluxRhoU_VX(:,iFace, jFace, kFace) = HDFluxRhoU_V            
+            HDFlux_VX(:,iFace, jFace, kFace) = HDFlux_V            
          
 
          if(UseArtificialVisco) then
@@ -776,7 +779,7 @@ contains
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
          if(IsMhd)&
-            HDFluxRhoU_VY(:,iFace, jFace, kFace) = HDFluxRhoU_V
+            HDFlux_VY(:,iFace, jFace, kFace) = HDFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace, jFace, kFace)
@@ -876,7 +879,7 @@ contains
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
          if(IsMhd)&
-              HDFluxRhoU_VZ(:,iFace, jFace, kFace) = HDFluxRhoU_V            
+              HDFlux_VZ(:,iFace, jFace, kFace) = HDFlux_V            
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace, jFace, kFace)
@@ -1466,12 +1469,12 @@ contains
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft, &
             PeDotAreaLeft_D)
-       HDFluxRhoULeft_V  = HDFluxRhoU_V
+       HDFluxLeft_V  = HDFlux_V; HDEnergyDensLeft = HDEnergyDens
        
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight, PeDotAreaRight_D)
-       HDFluxRhoURight_V = HDFluxRhoU_V
+       HDFluxRight_V = HDFlux_V; HDEnergyDensRight = HDEnergyDens
 
 
        if(UseRS7)then
@@ -1640,18 +1643,21 @@ contains
            FluxRight_V(iEnergyMin:iEnergyMax) &
            - Cmax*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -       StateLeftCons_V(iEnergyMin:iEnergyMax)))
-      if(IsMhd.and.iVarMin==Rho_)&
+      if(IsMhd.and.iVarMin==Rho_)then
          !\
          ! Calculate the hydrodynamic contribution to the MHD momentum 
          ! flux (may be used to calculate electric field). Include the 
          ! part of numerical diffusion related to the mass exchange
          !/
-         HDFluxRhoU_V = 0.5*(HDFluxRhoULeft_V + HDFluxRhoURight_V)    &
-              - cMax*0.50*                                            &
-              (StateRightCons_V(RhoUx_:RhoUz_)/StateRightCons_V(Rho_) &
-              +StateLeftCons_V( RhoUx_:RhoUz_)/StateLeftCons_V( Rho_))&
-              *(StateRightCons_V(Rho_) - StateLeftCons_V(Rho_)) 
-         
+         HDFlux_V(HDRhoUx_:HDRhoUz_) = 0.5*(HDFluxLeft_V(HDRhoUx_:HDRhoUz_) &
+              + HDFluxRight_V(HDRhoUx_:HDRhoUz_)                        &
+              - cMax*(StateRightCons_V(RhoUx_:RhoUz_) &
+              -       StateLeftCons_V( RhoUx_:RhoUz_) ) )
+         HDFlux_V(HDEnergy_) = 0.5*(HDFluxLeft_V(HDEnergy_)  &
+              + HDFluxRight_V(HDEnergy_)                     &
+              - cMax*(HDEnergyDensRight                      &
+              -       HDEnergyDensLeft))
+      end if
       Unormal_I(iFluidMin:iFluidMax) = 0.5* &
            (UnLeft_I(iFluidMin:iFluidMax) + UnRight_I(iFluidMin:iFluidMax))
 
@@ -1711,20 +1717,22 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(IsMhd.and.iVarMin==Rho_)&
-           !\
-           ! Calculate the hydrodynamic contribution to the MHD momentum 
-           ! flux (may be used to calculate electric field). Include the 
-           ! part of numerical diffusion related to the mass exchange
-           !/
-           HDFluxRhoU_V = &
-           WeightLeft*HDFluxRhoULeft_V +                           &
-           WeightRight*HDFluxRhoURight_V                           &
-           - Diffusion*                                            &
-           (StateRightCons_V(RhoUx_:RhoUz_)/StateRightCons_V(Rho_) &
-           +StateLeftCons_V( RhoUx_:RhoUz_)/StateLeftCons_V( Rho_))&
-           *(StateRightCons_V(Rho_) - StateLeftCons_V(Rho_)) 
-
+      if(IsMhd.and.iVarMin==Rho_)then
+         !\
+         ! Calculate the hydrodynamic contribution to the MHD momentum 
+         ! flux (may be used to calculate electric field). Include the 
+         ! part of numerical diffusion related to the mass exchange
+         !/
+         HDFlux_V(HDRhoUx_:HDRhoUz_) = &
+              WeightLeft*HDFluxLeft_V(HDRhoUx_:HDRhoUz_) +  &
+              WeightRight*HDFluxRight_V(HDRhoUx_:HDRhoUz_)  &
+              - Diffusion*(StateRightCons_V(RhoUx_:RhoUz_)  &
+              -            StateLeftCons_V( RhoUx_:RhoUz_))
+         HDFlux_V(HDEnergy_) = WeightLeft*HDFluxLeft_V(HDEnergy_)  &
+              + WeightRight*HDFluxRight_V(HDEnergy_)               &
+              - Diffusion*(HDEnergyDensRight                      &
+              -            HDEnergyDensLeft)
+      end if
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1865,19 +1873,22 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(IsMhd.and.iVarMin==Rho_)&
+      if(IsMhd.and.iVarMin==Rho_)then
            !\
            ! Calculate the hydrodynamic contribution to the MHD momentum 
            ! flux (may be used to calculate electric field). Include the 
            ! part of numerical diffusion related to the mass exchange
            !/
-           HDFluxRhoU_V = &
-           WeightLeft*HDFluxRhoULeft_V +                           &
-           WeightRight*HDFluxRhoURight_V                           &
-           - Diffusion*                                            &
-           (StateRightCons_V(RhoUx_:RhoUz_)/StateRightCons_V(Rho_) &
-           +StateLeftCons_V( RhoUx_:RhoUz_)/StateLeftCons_V( Rho_))&
-           *(StateRightCons_V(Rho_) - StateLeftCons_V(Rho_)) 
+         HDFlux_V(HDRhoUx_:HDRhoUz_) = &
+              WeightLeft*HDFluxLeft_V(HDRhoUx_:HDRhoUz_) +  &
+              WeightRight*HDFluxRight_V(HDRhoUx_:HDRhoUz_)  &
+              - Diffusion*(StateRightCons_V(RhoUx_:RhoUz_)  &
+              -            StateLeftCons_V( RhoUx_:RhoUz_)) 
+         HDFlux_V(HDEnergy_) = WeightLeft*HDFluxLeft_V(HDEnergy_)  &
+              + WeightRight*HDFluxRight_V(HDEnergy_)               &
+              - Diffusion*(HDEnergyDensRight                      &
+              -            HDEnergyDensLeft)
+      end if
       
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
@@ -1934,19 +1945,22 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(IsMhd.and.iVarMin==Rho_)&
-           !\
-           ! Calculate the hydrodynamic contribution to the MHD momentum 
-           ! flux (may be used to calculate electric field). Include the 
-           ! part of numerical diffusion related to the mass exchange
-           !/
-           HDFluxRhoU_V = &
-           WeightLeft*HDFluxRhoULeft_V +                           &
-           WeightRight*HDFluxRhoURight_V                           &
-           - Diffusion*                                            &
-           (StateRightCons_V(RhoUx_:RhoUz_)/StateRightCons_V(Rho_) &
-           +StateLeftCons_V( RhoUx_:RhoUz_)/StateLeftCons_V( Rho_))&
-           *(StateRightCons_V(Rho_) - StateLeftCons_V(Rho_)) 
+      if(IsMhd.and.iVarMin==Rho_)then
+         !\
+         ! Calculate the hydrodynamic contribution to the MHD momentum 
+         ! flux (may be used to calculate electric field). Include the 
+         ! part of numerical diffusion related to the mass exchange
+         !/
+         HDFlux_V(HDRhoUx_:HDRhoUz_) = &
+              WeightLeft*HDFluxLeft_V( HDRhoUx_:HDRhoUz_) +  &
+              WeightRight*HDFluxRight_V(HDRhoUx_:HDRhoUz_)   &
+              - Diffusion*(StateRightCons_V(RhoUx_:RhoUz_)   &
+              -            StateLeftCons_V( RhoUx_:RhoUz_)) 
+         HDFlux_V(HDEnergy_) = WeightLeft*HDFluxLeft_V(HDEnergy_)  &
+              + WeightRight*HDFluxRight_V(HDEnergy_)               &
+              - Diffusion*(HDEnergyDensRight                      &
+              -            HDEnergyDensLeft)
+      end if
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -2900,15 +2914,15 @@ contains
 
       ! f_i[rhou_k] = u_i*u_k*rho - b_k*b_i - B0_k*b_i - B0_i*b_k - E_i*E_k
       !          +n_i*[p + B0_j*b_j + 0.5*(b_j*b_j + E_j*E_j)]
-      HDFluxRhoU_V(RhoUx_) = Un*Rho*Ux + p*NormalX
-      HDFluxRhoU_V(RhoUy_) = Un*Rho*Uy + p*NormalY
-      HDFluxRhoU_V(RhoUz_) = Un*Rho*Uz + p*NormalZ
+      HDFlux_V(HDRhoUx_) = Un*Rho*Ux + p*NormalX
+      HDFlux_V(HDRhoUy_) = Un*Rho*Uy + p*NormalY
+      HDFlux_V(HDRhoUz_) = Un*Rho*Uz + p*NormalZ
 
-      Flux_V(RhoUx_) = HDFluxRhoU_V(RhoUx_) &
+      Flux_V(RhoUx_) = HDFlux_V(HDRhoUx_) &
            - Bn*FullBx - B0n*Bx - En*Ex + pTotal2*Normalx
-      Flux_V(RhoUy_) = HDFluxRhoU_V(RhoUy_) &
+      Flux_V(RhoUy_) = HDFlux_V(HDRhoUy_) &
            - Bn*FullBy - B0n*By - En*Ey + pTotal2*Normaly
-      Flux_V(RhoUz_) = HDFluxRhoU_V(RhoUz_) &
+      Flux_V(RhoUz_) = HDFlux_V(HDRhoUz_) &
            - Bn*FullBz - B0n*Bz - En*Ez + pTotal2*Normalz
       pTotal = p + pTotal
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
@@ -2947,20 +2961,19 @@ contains
 
     end subroutine get_boris_flux
     !==========================================================================
-
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, PeAdd
-      real :: HallUx, HallUy, HallUz, InvRho
+      real :: Rho, Ux, Uy, Uz, p, e
+      real :: pPerp    ! in anisptropic case is not the same as p
+      real :: pExtra   ! Electrons and waves act on ions via electr.field
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
 
-      real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
-      real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
+      real, dimension(nIonFluid) :: Ux_I, Uy_I, Uz_I, RhoUn_I
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
@@ -2968,78 +2981,34 @@ contains
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
-      p       = State_V(p_)
-      
-      ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
-      ! anisotropic Pe, Peperp contributes
-      if (UseElectronPressure .and. .not. UseAnisoPe) then
-         PeAdd = State_V(Pe_)
-      else if (UseAnisoPe) then
-         ! Peperp = (3*pe - Pepar)/2
-         PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
-      end if
-
-      B2      = Bx**2 + By**2 + Bz**2
-
-      ! Calculate energy
-      e = InvGammaMinus1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
-
-      ! Calculate some intermediate values for flux calculations
-      B0B1    = B0x*Bx + B0y*By + B0z*Bz
-      pTotal  = 0.5*B2 + B0B1
-
-      if(UseElectronPressure) pTotal = pTotal + PeAdd
-
-      if(UseWavePressure)then
-         if(UseWavePressureLtd)then
-            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
-         else
-            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
-         end if
-      end if
-
-      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
-      !        = p + bb/2 + (p - ppar)/2
-      if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
-
-      ! Calculate conservative state
-      StateCons_V(RhoUx_)  = Rho*Ux
-      StateCons_V(RhoUy_)  = Rho*Uy
-      StateCons_V(RhoUz_)  = Rho*Uz
-      StateCons_V(Energy_) = e
+      p       = State_V(p_)      
+      !\
+      ! Hydrodynamic part of fluxes
+      !/
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
       
+      ! f_n[rho] = Rho*U_i
+      Flux_V(Rho_) = Rho*Un
+
+      pPerp = p
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
+      !        = p + bb/2 + (p - ppar)/2
+      if(UseAnisoPressure) pPerp = p + 0.5*(p - State_V(Ppar_))
+
+      ! Calculate conservative state for momentum
+      StateCons_V(RhoUx_)  = Rho*Ux
+      StateCons_V(RhoUy_)  = Rho*Uy
+      StateCons_V(RhoUz_)  = Rho*Uz
+      !\
+      ! Calculate momentum flux, starting from hydro part
+      !/
       if(UseMultiIon)then
-         ! Calculate charge density averaged velocity U*Plus
-
-         ! calculate charge densities
-         ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
-         InvElectronDens = 1.0/sum(ChargeDens_I)
-
          Ux_I  = State_V(iUxIon_I)
          Uy_I  = State_V(iUyIon_I)
          Uz_I  = State_V(iUzIon_I)
 
-         ! calculate the average positive charge velocity
-         UxPlus = InvElectronDens*sum(ChargeDens_I*Ux_I)
-         UyPlus = InvElectronDens*sum(ChargeDens_I*Uy_I)
-         UzPlus = InvElectronDens*sum(ChargeDens_I*Uz_I)
-
-         UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
-      else
-         ! For single ion fluid the mass and charge average is the same
-         UxPlus = Ux
-         UyPlus = Uy
-         UzPlus = Uz
-         UnPlus = Un
-      end if
-
-      ! f_n[rho] = Rho*U_i
-      Flux_V(Rho_) = Rho*Un
-
-      if(UseMultiIon)then
          ! Add up the (rho u u) diads of the ion fluids:
          ! f_n[rhou_k] = sum_s(rho_s*u_n,s*u_k,s)
          !               - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
@@ -3047,51 +3016,33 @@ contains
          RhoUn_I = State_V(iRhoIon_I) &
               *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
 
-         HDFluxRhoU_V(RhoUx_)=sum(RhoUn_I*Ux_I) + p*NormalX
-         HDFluxRhoU_V(RhoUy_)=sum(RhoUn_I*Uy_I) + p*NormalY 
-         HDFluxRhoU_V(RhoUz_)=sum(RhoUn_I*Uz_I) + p*NormalZ
+         HDFlux_V(HDRhoUx_)=sum(RhoUn_I*Ux_I) + pPerp*NormalX
+         HDFlux_V(HDRhoUy_)=sum(RhoUn_I*Uy_I) + pPerp*NormalY 
+         HDFlux_V(HDRhoUz_)=sum(RhoUn_I*Uz_I) + pPerp*NormalZ
       else
          ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
-         HDFluxRhoU_V(RhoUx_) = Un*Rho*Ux + p*NormalX
-         HDFluxRhoU_V(RhoUy_) = Un*Rho*Uy + p*NormalY
-         HDFluxRhoU_V(RhoUz_) = Un*Rho*Uz + p*NormalZ
+         HDFlux_V(HDRhoUx_) = Un*Rho*Ux + pPerp*NormalX
+         HDFlux_V(HDRhoUy_) = Un*Rho*Uy + pPerp*NormalY
+         HDFlux_V(HDRhoUz_) = Un*Rho*Uz + pPerp*NormalZ
       end if
-      Flux_V(RhoUx_)=HDFluxRhoU_V(RhoUx_) - Bn*FullBx - B0n*Bx + pTotal*NormalX
-      Flux_V(RhoUy_)=HDFluxRhoU_V(RhoUy_) - Bn*FullBy - B0n*By + pTotal*NormalY
-      Flux_V(RhoUz_)=HDFluxRhoU_V(RhoUz_) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
-      pTotal = pTotal + p
-      ! f_n[b_k] = u_n*(b_k + B0_k) - u_k*(b_n + B0_n)
-      if(HallCoeff > 0.0)then
-         ! Note that the HallCoeff contains the ion mass/charge.
-         InvRho = 1.0/Rho
-         HallUx = UxPlus - HallJx*InvRho
-         HallUy = UyPlus - HallJy*InvRho
-         HallUz = UzPlus - HallJz*InvRho
-
-         HallUn = NormalX*HallUx + NormalY*HallUy + NormalZ*HallUz
-      else
-         HallUn = UnPlus
-      end if
-
-      if(HallCoeff > 0.0 .and. DoHallInduction)then
-         Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
-         Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
-         Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
-      else
-         Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
-         Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
-         Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
-      end if
+      !Pressure and energy fluxes
 
       ! f_n[p] = u_n*p
       Flux_V(p_) = Un*p
 
+      ! Calculate hydrodynamic energy density and flux
+      e = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      HDEnergyDens = e
+      HDFlux_V(HDEnergy_) = Un*(e + pPerp)
+      !\
+      ! Correct momentum and energy hydro fluxes for anisotroic pressure
+      !/
       if(UseAnisoPressure)then
          if (DoTestCell) then
             write(*,*) NameSub, ' before aniso flux:'
-            write(*,*) ' Flux_V(RhoUx_) =', Flux_V(RhoUx_)
-            write(*,*) ' Flux_V(RhoUy_) =', Flux_V(RhoUy_)
-            write(*,*) ' Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+            write(*,*) ' Flux_V(RhoUx_) =', HDFlux_V(HDRhoUx_)
+            write(*,*) ' Flux_V(RhoUy_) =', HDFlux_V(HDRhoUy_)
+            write(*,*) ' Flux_V(RhoUz_) =', HDFlux_V(HDRhoUz_)
          end if
 
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
@@ -3105,10 +3056,11 @@ contains
             DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
                  - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
          end if
-         Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
-         Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
-         Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
-
+         HDFlux_V(HDRhoUx_) = HDFlux_V(HDRhoUx_) + FullBx*DpPerB
+         HDFlux_V(HDRhoUy_) = HDFlux_V(HDRhoUy_) + FullBy*DpPerB
+         HDFlux_V(HDRhoUz_) = HDFlux_V(HDRhoUz_) + FullBz*DpPerB
+         HDFlux_V(HDEnergy_)= HDFlux_V(HDEnergy_) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) 
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
 
@@ -3119,9 +3071,9 @@ contains
                write(*,*) 'FullBx  =', FullBx
                write(*,*) 'FullBy  =', FullBy
                write(*,*) 'FullBz  =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+               write(*,*) 'Flux_V(RhoUx_) =', HDFlux_V(RhoUx_)
+               write(*,*) 'Flux_V(RhoUy_) =', HDFlux_V(RhoUy_)
+               write(*,*) 'Flux_V(RhoUz_) =', HDFlux_V(RhoUz_)
             else
                write(*,*) 'DpPerB(ion) =', &
                     1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
@@ -3131,43 +3083,56 @@ contains
                write(*,*) 'FullBx      =', FullBx
                write(*,*) 'FullBy      =', FullBy
                write(*,*) 'FullBz      =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+               write(*,*) 'Flux_V(RhoUx_) =', HDFlux_V(HDRhoUx_)
+               write(*,*) 'Flux_V(RhoUy_) =', HDFlux_V(HDRhoUy_)
+               write(*,*) 'Flux_V(RhoUz_) =', HDFlux_V(HDRhoUz_)
             end if
          end if
       end if
-
-      ! de/dt = -div(E x B) = -B.curl E + E.curl B = B.dB/dt + E.j
-      ! For semi-implicit MHD the energy gets updated at the same time
-      ! as the magnetic field, so de/dt = B.dB/dt = -B.curlE is taken
-      ! into account. The other term is E.j = 0, since the
-      ! Hall related electric field is j x B/ne so orthogonal to j.
-      if(HallCoeff > 0.0 .and. DoHallInduction) then
-         Flux_V(Energy_) = &
-              Un*(pTotal + e) &
-              - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
-              + (HallUn - Un)*(B2 + B0B1)
-      elseif(UseMultiIon)then
-         Flux_V(Energy_) = &
-              Un*(pTotal + e) &
-              - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
-              + (UnPlus - Un)*(B2 + B0B1)
-      elseif(UseAnisoPressure)then
-         ! 1. Can only work for single fluid without Hall
-         ! 2. This also works for anisotropic electron pressure because
-         !    pTotal and DpPerB are prepoerly calculated above with the 
-         !    flag UseAnisoPe.
-         Flux_V(Energy_) = &
-              Un*(pTotal + e) &
-              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) &
-              - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
-      else
-         ! f_i[e]=(u_i*(ptotal + e + (b_k*B0_k)) - (b_i+B0_i)*(b_k*u_k))
-         Flux_V(Energy_) = &
-              Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
+      !\
+      ! MHD part
+      !/
+      !\
+      ! Add contribution from magnetic stress, electron and wave pressure
+      !/
+      pExtra = 0.0
+      ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
+      ! anisotropic Pe, Peperp contributes
+      if (UseElectronPressure) then
+         if (UseAnisoPe) then
+            ! Peperp = (3*pe - Pepar)/2
+            pExtra = pExtra + (3*State_V(Pe_) - State_V(Pepar_))/2.0
+         else
+            pExtra = pExtra + State_V(Pe_)
+         end if
       end if
+      if(UseWavePressure)then
+         if(UseWavePressureLtd)then
+            pExtra = pExtra + (GammaWave-1)*State_V(Ew_)
+         else
+            pExtra = pExtra + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+         end if
+      end if
+      ! Calculate some intermediate values for flux calculations
+      B2      = Bx*Bx + By*By + Bz*Bz
+      B0B1    = B0x*Bx + B0y*By + B0z*Bz
+      pTotal  = 0.5*B2 + B0B1 + pExtra
+      !\
+      ! Add magnetic force and gradient of extra pressure to momentum flux
+      Flux_V(RhoUx_)=HDFlux_V(HDRhoUx_) - Bn*FullBx - B0n*Bx + pTotal*NormalX
+      Flux_V(RhoUy_)=HDFlux_V(HDRhoUy_) - Bn*FullBy - B0n*By + pTotal*NormalY
+      Flux_V(RhoUz_)=HDFlux_V(HDRhoUz_) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
 
+      call get_magnetic_flux
+
+      ! Add magnetic energy
+      StateCons_V(Energy_) = e + 0.5*B2
+
+      ! f_i[e]=(u_i*(ptotal + e + (b_k*B0_k)) - (b_i+B0_i)*(b_k*u_k))
+      Flux_V(Energy_) = HDFlux_V(HDEnergy_) &
+           + Un*pExtra                      & !Work of electrons and waves
+           + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz !Poynting
+      
       ! Correct energy flux, so that the electron contribution to the energy
       ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
       if(UseElectronPressure .and. nIonFluid == 1 .and. iFluid == 1)then
@@ -3179,18 +3144,6 @@ contains
          ! Correct the momentum using the (1+VA2/c^2)
          Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*InvClight2Face
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
-      end if
-
-      if(DoTestCell)then
-         ! This is used for multi-ion MHD check
-         if (UseMultiIon) &
-              write(*,*)'ChargeDens_I,InvRho         =', &
-              ChargeDens_I, InvRho
-         write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
-         if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
-         write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
-         write(*,*)'B0x,y,z   =',B0x,B0y,B0z
-         write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
       end if
 
     end subroutine get_mhd_flux
@@ -3205,15 +3158,21 @@ contains
       real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
-      
-      ! calculate number densities
-      ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
-      InvElectronDens = 1.0/sum(ChargeDens_I)
+      if(UseMultiIon)then
+         ! calculate number densities
+         ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
+         InvElectronDens = 1.0/sum(ChargeDens_I)
+         
+         ! calculate positive charge velocity
+         UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
+         UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
+         UzPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUzIon_I))
+      else
+         UxPlus = State_V(Ux_)
+         UyPlus = State_V(Uy_)
+         UzPlus = State_V(Uz_)
+      end if
 
-      ! calculate positive charge velocity
-      UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
-      UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
-      UzPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUzIon_I))
       UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
 
       if(HallCoeff > 0.0)then
@@ -3440,7 +3399,7 @@ contains
          FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
          FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
 
-    UseHallGradPe = .false. ! HallJx = 0; HallJy = 0; HallJz = 0
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)
@@ -3455,7 +3414,7 @@ contains
        do k = MinK, MaxK; kFace = k
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
-                ! call set_cell_values
+                !!! call set_cell_values
 
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
@@ -3551,7 +3510,7 @@ contains
     if(UseViscosity) call stop_mpi(NameSub// &
          ": Viscosity has not been implemented!")
 
-    UseHallGradPe = .false. ! HallJx = 0; HallJy = 0; HallJz = 0
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)
