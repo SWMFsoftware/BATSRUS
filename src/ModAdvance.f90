@@ -111,7 +111,8 @@ module ModAdvance
 
   ! Local cell-centered source terms and divB.
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
-  !$omp threadprivate( Source_VC )
+  real :: SourceMhd_VC(RhoUx_:RhoUz_, nI, nJ, nK)
+  !$omp threadprivate( Source_VC, SourceMhd_VC )
   
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -181,16 +182,19 @@ module ModAdvance
        bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
   !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
 
-  ! Hydro part of the momentum flux. May be subtracted for calculating
+  ! Mhd part of the momentum flux. May be subtracted for calculating
   ! electric field
   !\
-  ! Named Indexes:
+  ! Logical detetmining in which case the Mhd part of the momentum flux is
+  ! calculated. If calculated, the electric field \nabla x B x B - \nable P_e
+  ! may be calculated as  the divergence of momentum fluxes, resulting in
+  ! momentum-conserving schemes for hybrid and multifluids. Not calculated
+  ! if UseEfield, in which case the electric field is a part of state vector.
   !/
-  integer, parameter:: HDRhoUx_ = 1, HDRhoUy_ = 2,  HDRhoUz_ = 3, &
-       HDEnergy_ = 4
-  real, allocatable:: &
-       HDFlux_VX(:,:,:,:), HDFlux_VY(:,:,:,:), HDFlux_VZ(:,:,:,:)
-  !$omp threadprivate( HDFlux_VX, HDFlux_VY, HDFlux_VZ )
+  logical, parameter:: UseMhdMomentumFlux = UseB.and.(.not.UseEfield)
+  real, allocatable:: MhdSource_VC(:,:,:,:),  &
+       MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
+  !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
   
   !\
   ! Merge cells around the polar axis in spherical geometry
@@ -227,7 +231,14 @@ contains
        allocate(EyNum_CB(nI,nJ,nK,MaxBlock))
        allocate(EzNum_CB(nI,nJ,nK,MaxBlock))
     end if
-
+    !\
+    ! In case electric field is not a part of the state vector, it may
+    ! be expressed in ters of the MhdMomentum flux and stored into 
+    ! Efield_DGB array 
+    if(UseMhdMomentumFlux.and. .not.allocated(Efield_DGB))then
+       allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       Efield_DGB = 0.0
+    end if
     if(UseStableImplicit) then
        allocate(Source_VCB(nVar, nI, nJ, nK, MaxBlock))
        Source_VCB = 0
@@ -274,21 +285,21 @@ contains
     allocate(RightState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
     allocate(VdtFace_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
-    allocate(HDFlux_VX(HDEnergy_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(MhdFlux_VX(RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
 
     allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(VdtFace_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
-    allocate(HDFlux_VY(HDEnergy_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(MhdFlux_VY(RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
 
     allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
-    allocate(HDFlux_VZ(HDEnergy_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(MhdFlux_VZ(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
     allocate(FaceDivU_IX(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
