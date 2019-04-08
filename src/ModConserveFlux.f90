@@ -7,8 +7,8 @@ module ModConserveFlux
        test_start, test_stop, iTest, jTest, kTest
 
   use BATL_size, ONLY: nDim
-  use ModSize, ONLY: nI, nJ, nK, MaxBlock
-  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
+  use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
+  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
 
   use ModMain, ONLY:     UseB
   use ModAdvance, ONLY: &
@@ -16,7 +16,8 @@ module ModConserveFlux
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
        LeftState_VX, LeftState_VY, LeftState_VZ, &
        RightState_VX, RightState_VY, RightState_VZ, &
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI, UseMhdMomentumFlux, &
+       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
   use ModGeometry,  ONLY: true_cell
   use ModParallel, ONLY : &
@@ -52,7 +53,14 @@ module ModConserveFlux
   ! B_>U_ (UseB_ is true)
   integer,parameter :: BnL_ = Vdt_ + min(1, B_-U_)
   integer,parameter :: BnR_ = BnL_ + min(1, B_-U_)
-  integer,parameter :: nCorrectedFaceValues = BnR_
+  !\
+  ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
+  ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
+  ! UseEField (Ex_>1)
+  !/
+  integer,parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
+  integer,parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
+  integer,parameter :: nCorrectedFaceValues = MhdRhoUz_
 
   ! Face conservative or corrected flux.
   real, allocatable, dimension(:,:,:,:,:) :: &
@@ -177,8 +185,15 @@ contains
                  FaceNormal_DDFB(:,1,lFaceFrom,j,k,iBlock))
          end do; end do
       end if
-
+      if(UseMhdMomentumFlux)then
+         do k=1,nK; do j=1,nJ
+            CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_, j, k, lFaceTo, iBlock) = &
+                 MhdFlux_VX(:, lFaceFrom, j, k)
+         end do; end do
+      end if
+         
       if(DoTest)then
+         
 
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
          do i = 1, nFluid+1
@@ -227,7 +242,12 @@ contains
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
          end do; end do
       end if
-
+      if(UseMhdMomentumFlux)then
+         do k=1,nK; do i=1,nI
+            CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_, i, k, lFaceTo, iBlock) = &
+                 MhdFlux_VY(:, i, lFaceFrom, k)
+         end do; end do
+      end if
     end subroutine save_corrected_flux_y
     !==========================================================================
 
@@ -264,7 +284,12 @@ contains
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
          end do; end do
       end if
-
+      if(UseMhdMomentumFlux)then
+         do j=1,nJ; do i=1,nI
+            CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_, i, j, lFaceTo, iBlock) = &
+                 MhdFlux_VZ(:, i, j, lFaceFrom)
+         end do; end do
+      end if
     end subroutine save_corrected_flux_z
     !==========================================================================
 
@@ -366,7 +391,9 @@ contains
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-         
+         if(UseMhdMomentumFlux)&
+              MhdFlux_VX(:,lFaceTo,j,k) = CorrectedFlux_VXB(&
+              MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
          if(.not.(UseB .and. IsCartesianGrid))CYCLE
 
          if(IsCartesian)then
@@ -382,7 +409,7 @@ contains
                  CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock) &
                  / CellFace_DFB(1,lFaceTo,j,k,iBlock)
          end if
-
+         
       end do; end do
       if(UseB .and. .not.IsCartesianGrid) &
            call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)
@@ -402,6 +429,9 @@ contains
               CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
          VdtFace_y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
+         if(UseMhdMomentumFlux)&
+              MhdFlux_VY(:,i,lFaceTo,k) = CorrectedFlux_VYB(&
+              MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VY(By_,i,lFaceTo,k) = &
                  CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
@@ -428,6 +458,9 @@ contains
               CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
          VdtFace_z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
+         if(UseMhdMomentumFlux)&
+              MhdFlux_VZ(:,i,j,lFaceTo) = CorrectedFlux_VZB(&
+              MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VZ(Bz_,i,j,lFaceTo) = &
                  CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
