@@ -121,24 +121,25 @@ contains
   end subroutine get_electric_field
   !============================================================================
 
-  subroutine get_electric_field_block(iBlock, DoHallCurrentIn)
+  subroutine get_electric_field_block(iBlock, DoHallCurrentIn, NameAction)
 
     ! Fill in all cells of Efield_DGB with electric field for block iBlock
     ! Assumes that ghost cells are set
     ! This will NOT work for Hall MHD
 
-    use ModVarIndexes, ONLY: Bx_, Bz_, Ex_, Ez_
-    use ModAdvance,    ONLY: State_VGB, UseEfield
+    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, Ex_, Ez_
+    use ModAdvance,    ONLY: State_VGB, UseEfield, &
+         MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
     use ModB0,         ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
          iRhoIon_I, ChargePerMass_I
     use ModCurrent,        ONLY: get_current
-    use BATL_lib,          ONLY: x_, y_, z_
+    use BATL_lib,          ONLY: x_, y_, z_, CellVolume_GB
 
     integer, intent(in):: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn
-
+    character(LEN=*), optional, intent(in) :: NameAction
     integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     real    :: b_D(3), uPlus_D(3), uElec_D(3), Current_D(3), InvElectronDens
     logical :: DoHallCurrent
@@ -155,54 +156,71 @@ contains
        Efield_DGB(:,:,:,:,iBlock) = State_VGB(Ex_:Ez_,:,:,:,iBlock)
        RETURN
     end if
-
-    DoHallCurrent = .false.
-    if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
-
-    if (DoHallCurrent) then
-       ! get_current cannot be called in ghost cells
-       ! Only apply DoHallCurrent in write_plot_common at this moment, which
-       ! hopefully can give a better electric field for plotting.
-       iMin=1;    iMax=nI;   jMin=1;    jMax=nJ;   kMin=1;    kMax=nK
-    else
-       ! some functions may still need the electric field in ghost cells
-       iMin=MinI; iMax=MaxI; jMin=MinJ; jMax=MaxJ; kMin=MinK; kMax=MaxK
-
-       ! set the current_D = 0.0 if not considering the Hall current
-       Current_D = 0.0
-    end if
-
-    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       if(.not. true_cell(i,j,k,iBlock))then
-          Efield_DGB(:,i,j,k,iBlock) = 0.0
-          CYCLE
+    if(.not.present(NameAction))then
+       DoHallCurrent = .false.
+       if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
+       
+       if (DoHallCurrent) then
+          ! get_current cannot be called in ghost cells
+          ! Only apply DoHallCurrent in write_plot_common at this moment, which
+          ! hopefully can give a better electric field for plotting.
+          iMin=1;    iMax=nI;   jMin=1;    jMax=nJ;   kMin=1;    kMax=nK
+       else
+          ! some functions may still need the electric field in ghost cells
+          iMin=MinI; iMax=MaxI; jMin=MinJ; jMax=MaxJ; kMin=MinK; kMax=MaxK
+          
+          ! set the current_D = 0.0 if not considering the Hall current
+          Current_D = 0.0
        end if
 
-       ! Ideal MHD case
-       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          if(.not. true_cell(i,j,k,iBlock))then
+             Efield_DGB(:,i,j,k,iBlock) = 0.0
+             CYCLE
+          end if
 
-       ! inv of electron charge density = 1/(e*ne)
-       InvElectronDens = 1.0/ &
-            sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
+          ! Ideal MHD case
+          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+          
+          ! inv of electron charge density = 1/(e*ne)
+          InvElectronDens = 1.0/ &
+               sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
+          
+          ! charge average ion velocity
+          uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
+               *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+          uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I &
+               *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+          uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
+               *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
 
-       ! charge average ion velocity
-       uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
-            *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-       uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I &
-            *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-       uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
-            *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+          if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
+          
+          uElec_D = uPlus_D - Current_D*InvElectronDens
 
-       if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
+          ! E = - ue x B
+          Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
 
-       uElec_D = uPlus_D - Current_D*InvElectronDens
-
-       ! E = - ue x B
-       Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
-
-    end do; end do; end do
-
+       end do; end do; end do
+    else
+       select case(NameAction)
+       case("momentum_flux")
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not. true_cell(i,j,k,iBlock))then
+                Efield_DGB(:,i,j,k,iBlock) = 0.0
+                CYCLE
+             end if
+             Efield_DGB(:,i,j,k,iBlock) = &
+                  ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k) &
+                  + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)     &
+                  + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &
+                  /CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+       case("momentum_source")
+       case("ion_current")
+       end select
+    end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_electric_field_block
   !============================================================================

@@ -1482,8 +1482,8 @@ contains
 
 
        if(UseRS7)then
-          call modify_flux(FluxLeft_V, UnLeft_I(1))
-          call modify_flux(FluxRight_V, UnRight_I(1))
+          call modify_flux(FluxLeft_V,  UnLeft_I(1) , MhdFluxLeft_V)
+          call modify_flux(FluxRight_V, UnRight_I(1), MhdFluxRight_V)
        end if
     end if
 
@@ -1585,7 +1585,7 @@ contains
     iFluidMin = 1; iFluidMax = nFluid
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
-    Flux_V = Flux_V*Area
+    Flux_V = Flux_V*Area; MhdFlux_V = MhdFlux_V*Area
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
@@ -1597,13 +1597,14 @@ contains
     if(DoTestCell)call write_test_info
   contains
     !==========================================================================
-    subroutine modify_flux(Flux_V,Un)
+    subroutine modify_flux(Flux_V,Un,MhdFlux_V)
 
       real, intent(in)   :: Un
-      real, intent(inout):: Flux_V(nFlux)
+      real, intent(inout):: Flux_V(nFlux), MhdFlux_V(RhoUx_:RhoUz_)
 
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
+      MhdFlux_V(RhoUx_:RhoUz_) = MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
     end subroutine modify_flux
@@ -1647,18 +1648,18 @@ contains
            FluxRight_V(iEnergyMin:iEnergyMax) &
            - Cmax*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -       StateLeftCons_V(iEnergyMin:iEnergyMax)))
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)then
-         !\
-         ! Calculate the MHD momentum  flux (may be used to calculate 
-         ! electric field). 
-         !/
-         MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
-      end if
+
       Unormal_I(iFluidMin:iFluidMax) = 0.5* &
            (UnLeft_I(iFluidMin:iFluidMax) + UnRight_I(iFluidMin:iFluidMax))
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate the MHD momentum  flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
          Enormal   = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) &
               Unormal_I(eFluid_) = 0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
@@ -1713,14 +1714,6 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-         !\
-         ! Calculate MHD momentum flux (may be used to calculate 
-         ! electric field). 
-         !/
-         MhdFlux_V = &
-              WeightLeft *MhdFluxLeft_V +  &
-              WeightRight*MhdFluxRight_V
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1735,6 +1728,13 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate MHD momentum flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
+              +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -1861,15 +1861,6 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-           !\
-           ! Calculate the hydrodynamic contribution to the MHD momentum 
-           ! flux (may be used to calculate electric field). Include the 
-           ! part of numerical diffusion related to the mass exchange
-           !/
-         MhdFlux_V = &
-              WeightLeft *MhdFluxLeft_V +  &
-              WeightRight*MhdFluxRight_V  
       
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
@@ -1885,6 +1876,13 @@ contains
       
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate the MHD momentum flux (may be used to 
+              ! calculate electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
+              +           WeightRight*MhdFluxRight_V  
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -1925,14 +1923,7 @@ contains
            ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
-           -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-           !\
-           ! Calculate MHD momentum flux (may be used to calculate 
-           ! electric field). 
-           !/
-           MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
-           +           WeightRight*MhdFluxRight_V  
+           -            StateLeftCons_V(iVarMin:iVarMax)) )  
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1947,6 +1938,13 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate MHD momentum flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
+              +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -2025,14 +2023,14 @@ contains
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
       end if
 
       if(sR <= 0.) then
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
       end if
 
@@ -2252,7 +2250,7 @@ contains
       ! Set normal velocity for all fluids (HLLD is for 1 fluid only)
       Unormal_I = Un
 
-      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
 
       if(Eta > 0.0)then
          ! Add flux corresponding to -curl Eta.J to induction equation
