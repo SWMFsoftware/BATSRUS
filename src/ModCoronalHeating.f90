@@ -1126,7 +1126,7 @@ contains
     ! how the Alfven waves dissipate at length scales << Lperp
 
     use ModMain, ONLY: UseB0
-    use ModPhysics, ONLY: IonMassPerCharge, pMin_I
+    use ModPhysics, ONLY: IonMassPerCharge, pMin_I, TMin_I
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
          Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
@@ -1134,7 +1134,7 @@ contains
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
          nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
-         iPparIon_I,IonFirst_
+         iPparIon_I, IonFirst_
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1143,10 +1143,11 @@ contains
     real, intent(out) :: QPerQtotal_I(nIonFluid), &
          QparPerQtotal_I(nIonFluid), QePerQtotal
 
-    integer :: iIon, iPrev
+    integer :: iIon, iPrev, iFluid
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
+    real :: pMin, P_I(nIonFluid), Ppar_I(nIonFluid)
     real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
@@ -1179,6 +1180,29 @@ contains
 
        RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
 
+       do iIon = 1, nIonFluid
+          iFluid = IonFirst_ - 1 + iIon
+
+          pMin = 0.0
+          if(Tmin_I(iFluid) < 0.0)then
+             if(pMin_I(iFluid) >= 0.0) pMin = pMin_I(iFluid)
+          else
+             pMin = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
+                  /MassIon_I(iIon)*Tmin_I(iFluid)
+             if(pMin_I(iFluid) >= 0.0) pMin = min(pMin_I(iFluid), pMin)
+          end if
+          pMin = max(pMin, 1e-15)
+
+          P_I(iIon) = max(pMin, State_VGB(iPIon_I(iIon),i,j,k,iBlock))
+          if(UseAnisoPressure)then
+             Ppar_I(iIon) = min(max(pMin, &
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)), &
+                  (3*P_I(iIon)-2*pMin))
+          else
+             Ppar_I(iIon) = P_I(iIon)
+          end if
+       end do
+
        Wplus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        Wminus = State_VGB(WaveLast_,i,j,k,iBlock)
 
@@ -1203,20 +1227,13 @@ contains
        ! Linear Landau damping and transit-time damping of kinetic Alfven
        ! waves contributes to electron and parallel ion heating
        if(UseMultiIon)then
-          if(UseAnisoPressure)then
-             Ppar = max(State_VGB(iPparIon_I(IonFirst_),i,j,k,iBlock), &
-                  pMin_I(1))
-          else
-             Ppar = max(State_VGB(iPIon_I(IonFirst_),i,j,k,iBlock), pMin_I(1))
-          end if
-          BetaParProton = 2.0*Ppar/B2
-          Np = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+          BetaParProton = 2.0*Ppar_I(1)/B2
+          Np = RhoProton
           Na = State_VGB(iRhoIon_I(nIonFluid),i,j,k,iBlock) &
                /MassIon_I(nIonFluid)
           Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
-          Tp = max(State_VGB(iPIon_I(1),i,j,k,iBlock), pMin_I(1))/Np
-          Ta = max(State_VGB(iPIon_I(nIonFluid),i,j,k,iBlock), &
-               pMin_I(nIonFluid))/Na
+          Tp = P_I(1)/Np
+          Ta = P_I(nIonFluid)/Na
           Te = State_VGB(Pe_,i,j,k,iBlock)/Ne
 
           ! difference bulk speed between alphas and protons
@@ -1250,7 +1267,7 @@ contains
              DampingElectron = Value_I(2)
           end if
        else
-          Pp = max(State_VGB(iPIon_I(1),i,j,k,iBlock), pMin_I(1))
+          Pp = P_I(1)
           TeByTp = State_VGB(Pe_,i,j,k,iBlock)/Pp
 
           BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
@@ -1267,15 +1284,8 @@ contains
        ! Loop in reverse order for cascade power subtraction.
        do iIon = nIonFluid, 1, -1
 
-          if(UseAnisoPressure)then
-             Ppar  = State_VGB(iPparIon_I(IonFirst_-1+iIon),i,j,k,iBlock)
-             Pperp = 0.5*(3*State_VGB(iPIon_I(iIon),i,j,k,iBlock) - Ppar)
-          else
-             Ppar  = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
-             Pperp = Ppar
-          end if
-          Ppar  = max(Ppar, pMin_I(iIon))
-          Pperp = max(Pperp, pMin_I(iIon))
+          Ppar = Ppar_I(iIon)
+          Pperp = 0.5*(3*P_I(iIon) - Ppar)
 
           ! Perpendicular ion thermal speed
           Vperp = sqrt(2.0*Pperp/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock))
