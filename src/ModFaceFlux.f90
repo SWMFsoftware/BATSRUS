@@ -3030,14 +3030,7 @@ contains
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         if (.not. UseAnisoPe) then
-            ! In isotropic electron case, no electron contributions
-            DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
-         else
-            ! In anisotropic electron case, only (Pepar - Pperp) contributes
-            DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
-                 - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
-         end if
+         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
@@ -3048,27 +3041,13 @@ contains
 
          if(DoTestCell)then
             write(*,*) NameSub, ' after aniso flux:'
-            if (.not. UseAnisoPe) then
-               write(*,*) 'DpPerB  =', DpPerB
-               write(*,*) 'FullBx  =', FullBx
-               write(*,*) 'FullBy  =', FullBy
-               write(*,*) 'FullBz  =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
-            else
-               write(*,*) 'DpPerB(ion) =', &
-                    1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
-               write(*,*) 'DpPerB(pe)  =', &
-                    1.5*(State_V(Pepar_)-State_V(Pe_))*FullBn/max(1e-30,FullB2)
-               write(*,*) 'DpPerB      =', DpPerB
-               write(*,*) 'FullBx      =', FullBx
-               write(*,*) 'FullBy      =', FullBy
-               write(*,*) 'FullBz      =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
-            end if
+            write(*,*) 'DpPerB  =', DpPerB
+            write(*,*) 'FullBx  =', FullBx
+            write(*,*) 'FullBy  =', FullBy
+            write(*,*) 'FullBz  =', FullBz
+            write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
       end if
       !\
@@ -3104,6 +3083,42 @@ contains
       MhdFlux_V(RhoUx_) =  - Bn*FullBx - B0n*Bx + pTotal*NormalX
       MhdFlux_V(RhoUy_) =  - Bn*FullBy - B0n*By + pTotal*NormalY
       MhdFlux_V(RhoUz_) =  - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      !\
+      ! Correction for anusotropic electron pressure
+      !/
+      if(UseAnisoPe)then
+         if (DoTestCell) then
+            write(*,*) NameSub, ' before anisoPe flux:'
+            write(*,*) ' Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+            write(*,*) ' Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+            write(*,*) ' Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+         end if
+
+         ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
+         ! In anisotropic electron case, only (Pepar - Pperp) contributes
+         DpPerB = 1.5*(State_V(Pepar_) - State_V(Pe_))*FullBn&
+              /max(1e-30, FullB2)
+
+         MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
+         MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
+         MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
+         Flux_V(Energy_)= Flux_V(Energy_) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) 
+         !\
+         ! Don't we need Flux_V(PePar_)?
+         !/
+         if(DoTestCell)then
+            write(*,*) NameSub, ' after anisoPe flux:'
+            write(*,*) 'DpPerB(pe)  =', DpPerB 
+            write(*,*) 'FullBx      =', FullBx
+            write(*,*) 'FullBy      =', FullBy
+            write(*,*) 'FullBz      =', FullBz
+            write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+         end if
+      end if
 
       call get_magnetic_flux
       if(.not.IsMhd)RETURN
