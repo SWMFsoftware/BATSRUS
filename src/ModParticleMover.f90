@@ -64,7 +64,9 @@ module ModParticleMover
   ! Indexes in the array to collect particle VDF moments
   !/
   integer, parameter :: Rho_ = 1, RhoU_ = 1, RhoUx_ = RhoU_ + x_, &
-       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_
+       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_, P_ = 1, &
+       Px_ = P_ + x_, Py_ = P_ + y_, Pz_ = P_ + z_, &
+       P12_ = Pz_ + 1, P13_ = Pz_ + 2, P23_  = Pz_ + 3 
   !\
   ! Moments of the particle VDFs
   !/
@@ -466,6 +468,10 @@ contains
        !/
        Moments_V(Rho_) = Mass
        Moments_V(RhoUx_:RhoUz_) = Mass*U_D
+       Moments_V(Px_:Pz_) = Mass*U_D**2
+       Moments_V(P12_) = Mass*U_D(1)*U_D(2)
+       Moments_V(P13_) = Mass*U_D(1)*U_D(3)
+       Moments_V(P23_) = Mass*U_D(2)*U_D(3)
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
@@ -523,6 +529,12 @@ contains
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
     Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*&
          Coord_DI(Ux_:Uz_, iParticle)
+    Moments_V(Px_:Pz_) = Moments_V(Rho_)*&
+         Coord_DI(Ux_:Uz_, iParticle)**2
+    Moments_V(P12_:P13_) =  Moments_V(Rho_)*&
+         Coord_DI(Ux_, iParticle)*Coord_DI(Uy_:Uz_, iParticle)
+    Moments_V(P23_) = Moments_V(Rho_)*&
+         Coord_DI(Uy_, iParticle)*Coord_DI(Uz_, iParticle)
     !\
     ! Collect Contribution with updated weight coefficients
     !/
