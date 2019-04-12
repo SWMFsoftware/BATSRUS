@@ -454,6 +454,12 @@ contains
        !/
        U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
        !\
+       ! Synchronize velocity and displacement by calculating displacement
+       ! in mid-point: X(N)=0.5*(X(N-1/2)+X(N+1/2))
+       !/
+       Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
+            0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
+       !\
        ! Collect the contribution to moments of VDF, 
        ! from a given particle with coordinates at half time step
        ! before velocity
@@ -475,7 +481,7 @@ contains
        ! Update coordinates
        !/
        Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
-            Dt*Coord_DI(Ux_:U_+nDim,iParticle)
+            0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
        ! check location, schedule for message pass, if needed
        call check_particle_location(       &
             iKindParticle = iKind         ,&
