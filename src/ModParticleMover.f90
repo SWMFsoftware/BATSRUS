@@ -285,14 +285,10 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        !\
-       ! Average Plus (for x(N+1/2), U(N) ) 
-       ! and    Minus (for x(N-1/2), U(N) ) arrays to get
-       ! moments at X(N), U(N) - see Step 3 in Matthews 
-       ! algorithm on page 109. Store the results in Minus array
+       ! Moments Minus (for x(N+1), U(N+1) ) arrays to get
+       ! moments at mid point - see Step 3 in Matthews 
+       ! algorithm on page 109. 
        !/
-       MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) = 0.50*(&
-            MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) +  &
-            MomentsPlus_DGBI( :,1:nI,1:nJ,1:nK,iBlock,:)    )
        do iLoop = 1, nKindParticles
           iKind = iKindParticle_I(iLoop)
           !\
@@ -303,6 +299,7 @@ contains
                DensityMinus_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
                MomentsMinus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+          ! Moments Plus (for x(N+3/2), U(N+1) ) 
           DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) = &
                DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
@@ -340,15 +337,21 @@ contains
     ! known vector quantities are: x(N+1/2), u(N).
     ! At the end of the time-step trac_particles has:
     ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
+    !    The displacement advancement takes place in two Steps. 
+    !    a. First by a half time step to x(N+1) and then
+    !    b. by another half time step to x(N+3/2), 
+    !    following Holmstrom, arXiv:0911.4435, 2009. 
     ! 2. Uses the E, B-fields: E(N+1/2), B(N+1/2), interpolated to
     !    the particle location at x(N+1/2).
     !    This algorithm corresponds to Step 2(a) (p.109)of the CAM Algorithm
     !     in Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
     ! 3. Collected the current and charge densities at two different points:
-    !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1)) : MomentsMinus_DGBI
+    !     a. \rho_c(x(N+1),u(N+1)), J(x(N+1),u(N+1)) : MomentsMinus_DGBI
     !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
     ! This algorithm corresponds to Step 2(b) of the CAM Algorithm in
-    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
+    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116
+    ! with a modification to split the displacement into two parts, following
+    ! Holmstrom, arXiv:0911.4435, 2009. 
     ! They are collected for each species separately, as described on page
     ! 110, item 2(b)(i)
     !/
