@@ -251,6 +251,7 @@ contains
        allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(bCrossArea_DY(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
        allocate(bCrossArea_DZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+       bCrossArea_DX = 0.0; bCrossArea_DY = 0.0; bCrossArea_DZ = 0.0 
     end if
     !$omp end parallel
     

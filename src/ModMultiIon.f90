@@ -194,7 +194,7 @@ contains
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, &
+    use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, Efield_DGB, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
@@ -209,7 +209,7 @@ contains
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
     real :: State_V(nVar)
-    real, dimension(MaxDim)   :: Current_D, FullB_D, Force_D
+    real, dimension(MaxDim)   :: FullB_D
     real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
     real :: InvElectronDens
     real :: vInv
@@ -230,147 +230,11 @@ contains
        write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
             Source_VC(iVarTest,iTest,jTest,kTest)
     end if
-
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-       DoTestCell = DoTest .and. iTest==i .and. jTest==j .and. kTest==k
-
-       vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
-
        State_V = State_VGB(:,i,j,k,iBlock)
-
-       ChargeDens_I = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+       ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I) 
        InvElectronDens = 1.0/sum(ChargeDens_I)
-
-       if(InvElectronDens < 0.0) &
-            call stop_mpi('negative electron denisty')
-
-       ! Calculate Lorentz force = J x B
-       Current_D = (bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k))
-       if(nJ>1) Current_D = Current_D + &
-            (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
-       if(nK>1) Current_D = Current_D + &
-            (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
-       Current_D = vInv*Current_D
-
-       if(DoTestCell) then
-          write(*,'(2a,15es16.8)') NameSub, ': Current_D    = ', Current_D
-      end if
-
-       if(UseCurlB0) Current_D = Current_D + CurlB0_DC(:,i,j,k)
-
-       FullB_D = State_V(Bx_:Bz_)
-       if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
-
-       ! Lorentz force: J x B
-       Force_D = cross_product(Current_D, FullB_D)
-
-       if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
-            Force_D
-
-       ! Subtract electron pressure gradient force
-       if(UseMultiIon .and. &
-            (UseElectronPressure .or. ElectronTemperatureRatio > 0.0))then
-
-          if(IsCartesianGrid)then
-             ! Gradient of Pe in Cartesian/RZ case
-             if (.not. UseAnisoPe) then
-                Force_D(x_) = Force_D(x_) &
-                     - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
-                if(nJ>1)&
-                     Force_D(y_) = Force_D(y_) &
-                     - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
-                if(nK>1)&
-                     Force_D(z_) = Force_D(z_) &
-                     - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
-             else
-                if (nDim /= 3) call stop_mpi(NameSub// &
-                     ': UseAnisoPe muse be in 3-D.')
-
-                Force_D = Force_D  - vInv * &
-                     ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k)   &
-                     + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k)   &
-                     + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k) )
-
-                if (DoTestCell) then
-                   write(*,*) NameSub, ' getting ansio grad pe'
-                   write(*,*) 'vInv =', vInv
-                   write(*,*) 'PeDotArea_DX =', &
-                        PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
-                   write(*,*) 'PeDotArea_DY =', &
-                        PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
-                   write(*,*) 'PeDotArea_DZ =', &
-                        PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
-                end if
-             end if
-          else
-             ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
-             if (.not. UseAnisoPe) then
-                Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                     ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                     - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
-                     + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                     - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock))
-                if(nDim>2) then
-                   Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                        ( Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                        - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
-                endif
-             else
-                if (nDim /= 3) call stop_mpi(NameSub// &
-                     ': UseAnisoPe muse be in 3-D.')
-
-                Force_D = Force_D - vInv * &
-                     ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k) &
-                     + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k) &
-                     + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k))
-
-                if (DoTestCell) then
-                   write(*,*) NameSub, ' getting ansio grad pe'
-                   write(*,*) 'vInv =', vInv
-                   write(*,*) 'PeDotArea_DX =', &
-                        PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
-                   write(*,*) 'PeDotArea_DY =', &
-                        PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
-                   write(*,*) 'PeDotArea_DZ =', &
-                        PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
-                end if
-             end if
-          end if
-          if(DoTestCell)write(*,'(2a,15es16.8)') &
-               NameSub,': after grad Pe, Force_D =', Force_D
-       end if
-
-       ! Subtract wave pressure gradient force
-       if(UseMultiIon .and. UseWavePressure)then
-          if(IsCartesianGrid)then
-             ! Gradient of Pwave in Cartesian/RZ case
-             Force_D(x_) = Force_D(x_) &
-                  - (Pwave_X(i+1,j,k) - Pwave_X(i,j,k))/CellSize_DB(x_,iBlock)
-             if(nJ>1)&
-                  Force_D(y_) = Force_D(y_) &
-                  - (Pwave_Y(i,j+1,k) - Pwave_Y(i,j,k))/CellSize_DB(y_,iBlock)
-             if(nK>1)&
-                  Force_D(z_) = Force_D(z_) &
-                  - (Pwave_Z(i,j,k+1) - Pwave_Z(i,j,k))/CellSize_DB(z_,iBlock)
-          else
-             ! grad Pwave =
-             ! (1/Volume)*Integral Pwave dAreaVector over cell surface
-             Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                  ( Pwave_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                  - Pwave_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
-                  + Pwave_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                  - Pwave_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) )
-             if(nDim > 2) then
-                Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                     ( Pwave_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                     - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
-             endif
-          end if
-          if(DoTestCell)write(*,'(2a,15es16.8)') &
-               NameSub,': after grad Pwave, Force_D =', Force_D
-       end if
 
        if(UseBorisCorrection .or. UseBorisSimple)then
           ! Simplified Boris correction
@@ -381,15 +245,16 @@ contains
           !
           ! where we used V_s^2 = (q_s*M/M_s)*B^2/rho = B^2/(n*M_s/q_s)
           ! and q_s is the charge of species s in units of electron charge.
-
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
           Ga2 = sum(FullB_D**2)*InvClight2*InvElectronDens
-          ChargeDens_I = ChargeDens_I/(1 + Ga2*ChargeIon_I/MassIon_I)
+          ChargeDens_I = ChargeDens_I/(1 + Ga2*ChargePerMass_I)
        end if
 
        ! Multiply by n_s/n_e for all ion fluids
-       ForceX_I = ChargeDens_I*InvElectronDens*Force_D(x_)
-       ForceY_I = ChargeDens_I*InvElectronDens*Force_D(y_)
-       ForceZ_I = ChargeDens_I*InvElectronDens*Force_D(z_)
+       ForceX_I = ChargeDens_I*Efield_DGB(x_,i,j,k,iBlock)
+       ForceY_I = ChargeDens_I*Efield_DGB(y_,i,j,k,iBlock)
+       ForceZ_I = ChargeDens_I*Efield_DGB(z_,i,j,k,iBlock)
 
        if(DoTestCell)then
           do iIonFluid = 1,nIonFluid
