@@ -64,7 +64,9 @@ module ModParticleMover
   ! Indexes in the array to collect particle VDF moments
   !/
   integer, parameter :: Rho_ = 1, RhoU_ = 1, RhoUx_ = RhoU_ + x_, &
-       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_
+       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_, Ps_ = 1, &
+       Px_ = Ps_ + x_, Py_ = Ps_ + y_, Pz_ = Ps_ + z_, &
+       P12_ = Pz_ + 1, P13_ = Pz_ + 2, P23_  = Pz_ + 3 
   !\
   ! Moments of the particle VDFs
   !/
@@ -283,14 +285,10 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        !\
-       ! Average Plus (for x(N+1/2), U(N) ) 
-       ! and    Minus (for x(N-1/2), U(N) ) arrays to get
-       ! moments at X(N), U(N) - see Step 3 in Matthews 
-       ! algorithm on page 109. Store the results in Minus array
+       ! Moments Minus (for x(N+1), U(N+1) ) arrays to get
+       ! moments at mid point - see Step 3 in Matthews 
+       ! algorithm on page 109. 
        !/
-       MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) = 0.50*(&
-            MomentsMinus_DGBI(:,1:nI,1:nJ,1:nK,iBlock,:) +  &
-            MomentsPlus_DGBI( :,1:nI,1:nJ,1:nK,iBlock,:)    )
        do iLoop = 1, nKindParticles
           iKind = iKindParticle_I(iLoop)
           !\
@@ -301,6 +299,7 @@ contains
                DensityMinus_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
                MomentsMinus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
+          ! Moments Plus (for x(N+3/2), U(N+1) ) 
           DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) = &
                DensityPlus_VCB( RhoC_:Jz_,:,:,:,iBlock) + &
                Charge2Mass_I(iKind) * &
@@ -338,15 +337,21 @@ contains
     ! known vector quantities are: x(N+1/2), u(N).
     ! At the end of the time-step trac_particles has:
     ! 1. Advanced the velocity and location vectors: u(N+1), x(N+3/2)
+    !    The displacement advancement takes place in two Steps. 
+    !    a. First by a half time step to x(N+1) and then
+    !    b. by another half time step to x(N+3/2), 
+    !    following Holmstrom, arXiv:0911.4435, 2009. 
     ! 2. Uses the E, B-fields: E(N+1/2), B(N+1/2), interpolated to
     !    the particle location at x(N+1/2).
     !    This algorithm corresponds to Step 2(a) (p.109)of the CAM Algorithm
     !     in Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
     ! 3. Collected the current and charge densities at two different points:
-    !     a. \rho_c(x(N+1/2),u(N+1)), J(x(N+1/2),u(N+1)) : MomentsMinus_DGBI
+    !     a. \rho_c(x(N+1),u(N+1)), J(x(N+1),u(N+1)) : MomentsMinus_DGBI
     !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1)) : MomentsPlus_DGBI
     ! This algorithm corresponds to Step 2(b) of the CAM Algorithm in
-    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
+    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116
+    ! with a modification to split the displacement into two parts, following
+    ! Holmstrom, arXiv:0911.4435, 2009. 
     ! They are collected for each species separately, as described on page
     ! 110, item 2(b)(i)
     !/
@@ -384,7 +389,7 @@ contains
     !\
     ! Particle mass and momentum
     !/
-    real   :: Mass, Moments_V(Rho_:RhoUz_)
+    real   :: Mass, Moments_V(Rho_:P23_)
     !Misc
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
@@ -454,12 +459,22 @@ contains
        !/
        U_D = U_D + cross_product(U12_D,BForce_D) + Eforce_D
        !\
+       ! Synchronize velocity and displacement by calculating displacement
+       ! in mid-point: X(N)=0.5*(X(N-1/2)+X(N+1/2))
+       !/
+       Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
+            0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
+       !\
        ! Collect the contribution to moments of VDF, 
        ! from a given particle with coordinates at half time step
        ! before velocity
        !/
        Moments_V(Rho_) = Mass
        Moments_V(RhoUx_:RhoUz_) = Mass*U_D
+       Moments_V(Px_:Pz_) = Mass*U_D**2
+       Moments_V(P12_) = Mass*U_D(1)*U_D(2)
+       Moments_V(P13_) = Mass*U_D(1)*U_D(3)
+       Moments_V(P23_) = Mass*U_D(2)*U_D(3)
        do iCell = 1, nCell
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
@@ -475,7 +490,7 @@ contains
        ! Update coordinates
        !/
        Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
-            Dt*Coord_DI(Ux_:U_+nDim,iParticle)
+            0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
        ! check location, schedule for message pass, if needed
        call check_particle_location(       &
             iKindParticle = iKind         ,&
@@ -517,6 +532,12 @@ contains
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
     Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*&
          Coord_DI(Ux_:Uz_, iParticle)
+    Moments_V(Px_:Pz_) = Moments_V(Rho_)*&
+         Coord_DI(Ux_:Uz_, iParticle)**2
+    Moments_V(P12_:P13_) =  Moments_V(Rho_)*&
+         Coord_DI(Ux_, iParticle)*Coord_DI(Uy_:Uz_, iParticle)
+    Moments_V(P23_) = Moments_V(Rho_)*&
+         Coord_DI(Uy_, iParticle)*Coord_DI(Uz_, iParticle)
     !\
     ! Collect Contribution with updated weight coefficients
     !/
