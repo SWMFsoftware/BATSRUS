@@ -5,7 +5,7 @@
 module ModElectricField
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iTest, jTest, kTest
 
   ! Calculate electric field Efield_DGB from MHD quantities.
   !
@@ -27,22 +27,34 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step
+  use ModMain,         ONLY: n_step, UseB
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
-
+  use ModVarIndexes,   ONLY: IsMhd
+  use ModMultiFluid,   ONLY: UseMultiIon 
   implicit none
   SAVE
 
   private ! except
 
-  public:: get_electric_field       ! Calculate E
-  public:: get_electric_field_block ! Calculate E for 1 block
+  public:: get_electric_field           ! Calculate E
+  public:: get_electric_field_block     ! Calculate E for 1 block
+  public:: get_efield_in_comoving_frame ! Field in frame comoving with ions
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
   public:: get_num_electric_field   ! Calculate numerical E from fluxes
+  !\
+  ! Logical, which controls, if the electric field in the frame of reference
+  ! comoving with an average ions, is calculated via the momentum flux (in a 
+  ! conservative manner) or as J x B force.
+  !/
+  !\
+  ! At the time, the logical is parameter, set to use J x B force, and private
+  !/
+  logical, parameter :: UseJCrossBForce = UseB .and. &
+       (UseMultiIon .or. .not.IsMhd)
 
   ! Make Efield available through this module too
   public:: Efield_DGB
@@ -73,6 +85,28 @@ module ModElectricField
        200,         &! nKrylovVector
        .false.,     &! UseInitialGuess
        -1.0, -1, -1) ! Error, nMatvec, iError (return values)
+  
+  ! electron pressure on the faces for grad Pe
+  real, public:: &
+       Pe_X(0:nI+2,0:nJ+1,0:nK+1)=0.0, &
+       Pe_Y(0:nI+1,0:nJ+2,0:nK+1)=0.0, &
+       Pe_Z(0:nI+1,0:nJ+1,0:nK+2)=0.0
+  !$omp threadprivate( Pe_X, PE_Y, PE_Z )
+  
+  ! anisotropic pe dot area on the faces for grad Pe
+  real, public:: &
+       PeDotArea_DX(3,0:nI+2,0:nJ+1,0:nK+1)=0.0, &
+       PeDotArea_DY(3,0:nI+1,0:nJ+2,0:nK+1)=0.0, &
+       PeDotArea_DZ(3,0:nI+1,0:nJ+1,0:nK+2)=0.0
+  !$omp threadprivate( PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ )
+  
+  ! wave pressure on the faces for grad Pwave
+  real, public:: &
+       Pwave_X(0:nI+2,0:nJ+1,0:nK+1)=0.0, &
+       Pwave_Y(0:nI+1,0:nJ+2,0:nK+1)=0.0, &
+       Pwave_Z(0:nI+1,0:nJ+1,0:nK+2)=0.0
+  !$omp threadprivate( Pwave_X, Pwave_Y, Pwave_Z )
+
 
   ! number of blocks used
   integer:: nBlockUsed
@@ -121,15 +155,14 @@ contains
   end subroutine get_electric_field
   !============================================================================
 
-  subroutine get_electric_field_block(iBlock, DoHallCurrentIn, NameAction)
+  subroutine get_electric_field_block(iBlock, DoHallCurrentIn)
 
     ! Fill in all cells of Efield_DGB with electric field for block iBlock
     ! Assumes that ghost cells are set
     ! This will NOT work for Hall MHD
 
     use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, Ex_, Ez_
-    use ModAdvance,    ONLY: State_VGB, UseEfield, &
-         MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
+    use ModAdvance,    ONLY: State_VGB, UseEfield
     use ModB0,         ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
@@ -139,7 +172,7 @@ contains
 
     integer, intent(in):: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn
-    character(LEN=*), optional, intent(in) :: NameAction
+
     integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     real    :: b_D(3), uPlus_D(3), uElec_D(3), Current_D(3), InvElectronDens
     logical :: DoHallCurrent
@@ -156,75 +189,237 @@ contains
        Efield_DGB(:,:,:,:,iBlock) = State_VGB(Ex_:Ez_,:,:,:,iBlock)
        RETURN
     end if
-    if(.not.present(NameAction))then
-       DoHallCurrent = .false.
-       if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
+    DoHallCurrent = .false.
+    if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
+    
+    if (DoHallCurrent) then
+       ! get_current cannot be called in ghost cells
+       ! Only apply DoHallCurrent in write_plot_common at this moment, which
+       ! hopefully can give a better electric field for plotting.
+       iMin=1;    iMax=nI;   jMin=1;    jMax=nJ;   kMin=1;    kMax=nK
+    else
+       ! some functions may still need the electric field in ghost cells
+       iMin=MinI; iMax=MaxI; jMin=MinJ; jMax=MaxJ; kMin=MinK; kMax=MaxK
        
-       if (DoHallCurrent) then
-          ! get_current cannot be called in ghost cells
-          ! Only apply DoHallCurrent in write_plot_common at this moment, which
-          ! hopefully can give a better electric field for plotting.
-          iMin=1;    iMax=nI;   jMin=1;    jMax=nJ;   kMin=1;    kMax=nK
-       else
-          ! some functions may still need the electric field in ghost cells
-          iMin=MinI; iMax=MaxI; jMin=MinJ; jMax=MaxJ; kMin=MinK; kMax=MaxK
-          
-          ! set the current_D = 0.0 if not considering the Hall current
-          Current_D = 0.0
+       ! set the current_D = 0.0 if not considering the Hall current
+       Current_D = 0.0
+    end if
+
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       if(.not. true_cell(i,j,k,iBlock))then
+          Efield_DGB(:,i,j,k,iBlock) = 0.0
+          CYCLE
        end if
 
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          if(.not. true_cell(i,j,k,iBlock))then
-             Efield_DGB(:,i,j,k,iBlock) = 0.0
-             CYCLE
-          end if
+       ! Ideal MHD case
+       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+       
+       ! inv of electron charge density = 1/(e*ne)
+       InvElectronDens = 1.0/ &
+            sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
+       
+       ! charge average ion velocity
+       uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+       uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+       uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+       
+       if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
+       
+       uElec_D = uPlus_D - Current_D*InvElectronDens
 
-          ! Ideal MHD case
-          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-          
-          ! inv of electron charge density = 1/(e*ne)
-          InvElectronDens = 1.0/ &
-               sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
-          
-          ! charge average ion velocity
-          uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
-               *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-          uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I &
-               *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-          uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
-               *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+       ! E = - ue x B
+       Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
 
-          if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
-          
-          uElec_D = uPlus_D - Current_D*InvElectronDens
-
-          ! E = - ue x B
-          Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
-
-       end do; end do; end do
-    else
-       select case(NameAction)
-       case("momentum_flux")
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. true_cell(i,j,k,iBlock))then
-                Efield_DGB(:,i,j,k,iBlock) = 0.0
-                CYCLE
-             end if
-             Efield_DGB(:,i,j,k,iBlock) = &
-                  ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k) &
-                  + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)     &
-                  + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &
-                  /CellVolume_GB(i,j,k,iBlock)
-          end do; end do; end do
-       case("momentum_source")
-       case("ion_current")
-       end select
-    end if
+    end do; end do; end do
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_electric_field_block
-  !============================================================================
+  !==========================================================
+  subroutine get_efield_in_comoving_frame(iBlock)
+    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
+         State_VGB, Source_VC, UseAnisoPe, &
+         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
+    use ModMain,    ONLY: MaxDim,  x_, y_, z_, UseB0
+    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
+    use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
+    use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
+    use ModCoordTransform, ONLY: cross_product
+    use ModWaves,   ONLY: UseWavePressure
+    use ModMultiFluid,     ONLY: &!
+         iRhoIon_I, ChargePerMass_I, UseMultiIon, nIonFluid
+    use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
+         CellSize_DB, nDim
+    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, nVar
+    integer, intent(in):: iBlock
+    integer:: i, j, k
+    real :: State_V(nVar)
+    real :: ChargeDens_I(nIonFluid)
+    real, dimension(MaxDim) :: Force_D=0.0, FullB_D=0.0, Current_D=0.0
+    real :: FluxConvergence,  vInv, InvElectronDens
+    logical :: DoTest, DoTestCell
+    character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    Efield_DGB(:,:,:,:,iBlock) = 0.0
+    if(UseJCrossBForce)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          DoTestCell = DoTest .and. iTest==i .and. jTest==j .and. kTest==k
 
+          vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
+
+          State_V = State_VGB(:,i,j,k,iBlock)
+
+          ChargeDens_I = ChargePerMass_I * State_V(iRhoIon_I) 
+          if(sum(ChargeDens_I) <= 0.0) then
+             write(*,*)'ChargePerMass_I=', ChargePerMass_I
+             write(*,*)'State_V(iRhoIon_I)=', State_V(iRhoIon_I)
+             call stop_mpi('negative electron density')
+          end if
+          InvElectronDens = 1.0/sum(ChargeDens_I)
+
+          ! Calculate Lorentz force = J x B
+          Current_D = (bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k))
+          if(nJ>1) Current_D = Current_D + &
+               (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
+          if(nK>1) Current_D = Current_D + &
+               (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+          Current_D = vInv*Current_D
+
+          if(DoTestCell) then
+             write(*,'(2a,15es16.8)') NameSub, ': Current_D    = ', Current_D
+          end if
+
+          if(UseCurlB0) Current_D = Current_D + CurlB0_DC(:,i,j,k)
+
+          FullB_D = State_V(Bx_:Bz_)
+          if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
+
+          ! Lorentz force: J x B
+          Force_D = cross_product(Current_D, FullB_D)
+
+          if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
+               Force_D
+
+          ! Subtract electron pressure gradient force
+          if(UseMultiIon .and. &
+               (UseElectronPressure .or. ElectronTemperatureRatio > 0.0))then
+
+             if(IsCartesianGrid)then
+                ! Gradient of Pe in Cartesian/RZ case
+                if (.not. UseAnisoPe) then
+                   Force_D(x_) = Force_D(x_) &
+                        - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
+                   if(nJ>1)&
+                        Force_D(y_) = Force_D(y_) &
+                        - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
+                   if(nK>1)&
+                        Force_D(z_) = Force_D(z_) &
+                        - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
+                else
+                   if (nDim /= 3) call stop_mpi(NameSub// &
+                        ': UseAnisoPe muse be in 3-D.')
+
+                   Force_D = Force_D  - vInv * &
+                        ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k)   &
+                        + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k)   &
+                        + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k) )
+
+                   if (DoTestCell) then
+                      write(*,*) NameSub, ' getting ansio grad pe'
+                      write(*,*) 'vInv =', vInv
+                      write(*,*) 'PeDotArea_DX =', &
+                           PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
+                      write(*,*) 'PeDotArea_DY =', &
+                           PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
+                      write(*,*) 'PeDotArea_DZ =', &
+                           PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
+                   end if
+                end if
+             else
+                ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
+                if (.not. UseAnisoPe) then
+                   Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                        ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                        - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
+                        + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                        - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock))
+                   if(nDim>2) then
+                      Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                           ( Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                           - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+                   endif
+                else
+                   if (nDim /= 3) call stop_mpi(NameSub// &
+                        ': UseAnisoPe muse be in 3-D.')
+
+                   Force_D = Force_D - vInv * &
+                        ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k) &
+                        + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k) &
+                        + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k))
+
+                   if (DoTestCell) then
+                      write(*,*) NameSub, ' getting ansio grad pe'
+                      write(*,*) 'vInv =', vInv
+                      write(*,*) 'PeDotArea_DX =', &
+                           PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
+                      write(*,*) 'PeDotArea_DY =', &
+                           PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
+                      write(*,*) 'PeDotArea_DZ =', &
+                           PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
+                   end if
+                end if
+             end if
+             if(DoTestCell)write(*,'(2a,15es16.8)') &
+                  NameSub,': after grad Pe, Force_D =', Force_D
+          end if
+
+          ! Subtract wave pressure gradient force
+          if(UseMultiIon .and. UseWavePressure)then
+             if(IsCartesianGrid)then
+                ! Gradient of Pwave in Cartesian/RZ case
+                Force_D(x_) = Force_D(x_) &
+                     - (Pwave_X(i+1,j,k) - Pwave_X(i,j,k))/CellSize_DB(x_,iBlock)
+                if(nJ>1)&
+                     Force_D(y_) = Force_D(y_) &
+                     - (Pwave_Y(i,j+1,k) - Pwave_Y(i,j,k))/CellSize_DB(y_,iBlock)
+                if(nK>1)&
+                     Force_D(z_) = Force_D(z_) &
+                     - (Pwave_Z(i,j,k+1) - Pwave_Z(i,j,k))/CellSize_DB(z_,iBlock)
+             else
+                ! grad Pwave =
+                ! (1/Volume)*Integral Pwave dAreaVector over cell surface
+                Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                     ( Pwave_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                     - Pwave_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
+                     + Pwave_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                     - Pwave_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) )
+                if(nDim > 2) then
+                   Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                        ( Pwave_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                        - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+                endif
+             end if
+             if(DoTestCell)write(*,'(2a,15es16.8)') &
+                  NameSub,': after grad Pwave, Force_D =', Force_D
+          end if
+          Efield_DGB(:,i,j,k,iBlock) = InvElectronDens*Force_D
+       end do; end do; end do
+    else
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. true_cell(i,j,k,iBlock))CYCLE
+          Efield_DGB(:,i,j,k,iBlock) = &
+               ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)    &
+               + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)    &
+               + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &
+               /CellVolume_GB(i,j,k,iBlock)
+       end do; end do; end do
+    end if
+  end subroutine get_efield_in_comoving_frame
+  !=============================================================
   subroutine calc_inductive_e
 
     ! Calculate the inductive part of the electric field Eind

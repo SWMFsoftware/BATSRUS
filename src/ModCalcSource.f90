@@ -29,6 +29,7 @@ contains
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
     use ModCoordTransform
+    use ModElectricField, ONLY: get_efield_in_comoving_frame
     use ModImplicit,      ONLY: UseFullImplicit
     use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
     use ModMultiFluid
@@ -640,6 +641,7 @@ contains
     end if
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
+    if(.not.UseEfield)call get_efield_in_comoving_frame(iBlock)
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
        call select_fluid(iFluid)

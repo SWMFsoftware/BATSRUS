@@ -37,7 +37,7 @@ module ModFaceFlux
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
-  use ModMultiIon, ONLY: &
+  use ModElectricField, ONLY: &
        Pe_X, Pe_Y, Pe_Z,          & ! output: Pe for grad Pe in multi-ion MHD
        Pwave_X, Pwave_Y, Pwave_Z, & ! Pwave for grad Pwave in multi-ion MHD
        PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ ! Grad Pe stuff for aniso pe
