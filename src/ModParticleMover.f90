@@ -64,8 +64,8 @@ module ModParticleMover
   ! Indexes in the array to collect particle VDF moments
   !/
   integer, parameter :: Rho_ = 1, RhoU_ = 1, RhoUx_ = RhoU_ + x_, &
-       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_, P_ = 1, &
-       Px_ = P_ + x_, Py_ = P_ + y_, Pz_ = P_ + z_, &
+       RhoUy_ = RhoU_ + y_, RhoUz_ = RhoU_ + z_, Ps_ = 1, &
+       Px_ = Ps_ + x_, Py_ = Ps_ + y_, Pz_ = Ps_ + z_, &
        P12_ = Pz_ + 1, P13_ = Pz_ + 2, P23_  = Pz_ + 3 
   !\
   ! Moments of the particle VDFs
