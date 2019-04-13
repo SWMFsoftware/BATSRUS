@@ -389,7 +389,7 @@ contains
     !\
     ! Particle mass and momentum
     !/
-    real   :: Mass, Moments_V(Rho_:RhoUz_)
+    real   :: Mass, Moments_V(Rho_:P23_)
     !Misc
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
