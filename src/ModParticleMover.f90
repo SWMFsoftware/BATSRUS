@@ -4,7 +4,7 @@
 
 module ModParticleMover
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iTest, jTest, kTest
   use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm,&
        nI, nJ, nK, jDim_, kDim_, Unused_B
   use BATL_lib, ONLY: CellVolume_GB
@@ -12,14 +12,14 @@ module ModParticleMover
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
   use ModVarIndexes,   ONLY: Bx_, Bz_
-  use ModMultiFluid,   ONLY: nFluid, IonFirst_, IonLast_, &
-       iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
-       select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
+  use ModMultiFluid,   ONLY: IonFirst_, iRho, iUx, iUz, iUx_I, iUz_I, &
+          MassFluid_I, iRhoIon_I, iPIon_I, iUxIon_I, iUyIon_I, iUzIon_I 
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
   use BATL_particles,  ONLY: Particle_I, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
+  use ModGeometry, ONLY: true_cell
   use ModNumConst
   implicit none
   SAVE
@@ -291,11 +291,20 @@ contains
   end subroutine allocate_particles
   !===============================================!
   subroutine trace_particles(DtIn)
+    use ModMain,    ONLY: nI, nJ, nK 
     use BATL_particles, ONLY: &
          batl_trace_particles=>trace_particles
     use BATL_pass_face_field, ONLY: add_ghost_cell_field
     real, intent(in) :: DtIn
+
+    logical :: DoTest, DoTestCell
     integer :: iLoop, nParticle, iBlock
+    integer :: i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
+    real :: InvElectronDens
+    real :: State_V(nVar)
+    real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
+    real, dimension(nHybridParticleSort) :: &
+     NumDens_I, ChargeDens_I, Rho_I, InvRho_I
     !----------------------
     Dt = DtIn
     MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
@@ -303,6 +312,9 @@ contains
     DensityMinus_VCB  = 0.0 !Same for the charge and current densities 
     DensityPlus_VCB   = 0.0 !Same for the charge and current densities 
     CAMCoef_VCB       = 0.0 !Same for the \Lambda and \Gamma coefficients 
+
+    DoTestCell = .false.
+
     do iLoop = 1, nHybridParticleSort
        iKind = iKindHybridParticle_I(iLoop)
        call set_pointer_to_particles(&
@@ -355,14 +367,35 @@ contains
                Charge2Mass_I(iKind)**2 * &
                MomentsPlus_DGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
        end do
+       !\
+       ! Transform VDF moments to State Vector Variables
+       !/
+       do k=1,nK; do j=1,nJ; do i=1,nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
+
+       State_V = State_VGB(:,i,j,k,iBlock)
+       ChargeDens_I = Charge2Mass_I*State_V(iRhoIon_I)
+
+       Rho_I    = State_V(iRhoIon_I)
+       InvRho_I = 1.0/Rho_I
+
+          do iIon = 1, nHybridParticleSort 
+             State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
+                     MomentsMinus_DGBI(Rho_,i,j,k,iBlock,iIon)/&
+                  CellVolume_GB(i,j,k,iBlock)
+             State_VGB(iUxIon_I(iIon):iUzIon_I(iIon),i,j,k,iBlock) = &
+                     MomentsMinus_DGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iIon)/&
+                  CellVolume_GB(i,j,k,iBlock)*InvRho_I
+             State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
+                     (MomentsMinus_DGBI(Px_,i,j,k,iBlock,iIon)  &
+                   +  MomentsMinus_DGBI(Py_,i,j,k,iBlock,iIon)  &
+                   +  MomentsMinus_DGBI(Pz_,i,j,k,iBlock,iIon))/ &
+                  CellVolume_GB(i,j,k,iBlock)/3.0
+          end do
+       end do; end do; end do
     end do
-       do iLoop = 1, nHybridParticleSort
-          iKind = iKindHybridParticle_I(iLoop)
-          State_VGB(Rho_,:,:,:,:)   = &
-               State_VGB(Rho_,:,:,:,:)  + &
-               MomentsMinus_DGBI(Rho_,:,:,:,:,iKind)/&
-               CellVolume_GB(:,:,:,:) 
-       end do
   end subroutine trace_particles
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
