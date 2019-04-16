@@ -2355,7 +2355,7 @@ contains
     DoExtractCurvatureB = IsMinB
 
     ! Extract grid info from plot_range
-    ! See ModSetParameters for plot_type eqr and eqb
+    ! See MH_set_parameters for plot_type eqr and eqb
     nRadius = nint(plot_range(1,iFile))
     nLon    = nint(plot_range(2,iFile))
     rMin    = plot_range(3,iFile)
