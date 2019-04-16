@@ -135,7 +135,7 @@ contains
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1
 
-    character (len=17) :: NameSub='ModSetParameters'
+    character (len=17) :: NameSub='set_parameters'
 
     ! Arguments
 
