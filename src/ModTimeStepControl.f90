@@ -334,7 +334,7 @@ contains
     real :: DtDim
 
     ! time_BLK is already set in calc_timestep,
-    ! and Dt=DtLimit is set in MH_set_parameters
+    ! and Dt=DtLimit is set in ModSetParameters
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
