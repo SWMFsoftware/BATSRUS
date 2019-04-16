@@ -96,7 +96,7 @@ program BATSRUS
      ! call set_oktest('main',DoTest,DoTest)
 
      !\
-     ! Time execution (timing parameters were set by MH_set_parameters)
+     ! Time execution (timing parameters were set by ModSetParameters)
      !/
      if(iSession==1)then
         call timing_start('BATSRUS')
