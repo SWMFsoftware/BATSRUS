@@ -33,16 +33,10 @@ module ModParticleMover
   !\
   !Parameters
   !/
-  !\
-  ! number of test particles with different charge-to-mass ratios
-  !/
-  integer :: nTestParticles = 1 
-  !\
-  ! number of test particles with different charge-to-mass ratios
-  !/
   integer :: nHybridParticleSort = 0 
   !\
-  ! number of hybrid particles w/ different (predefined) charge-to-mass ratios
+  ! number of all charged particles including hybrid and test particles
+  ! nParticleSort = nHybridParticleSort + nTestParticles
   !/
   integer :: nParticleSort 
   !\
@@ -142,8 +136,9 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    logical:: DoTest
+    logical :: DoTest
     integer :: iLoop
+    integer :: nTestParticles = 1
     !\
     !Arrays to read A and Z for different ion particles
     !/
@@ -162,6 +157,9 @@ contains
     select case(NameCommand)
 
     case("#CHARGEDPARTICLES")
+       !\
+       ! Read the total number of hybrid particle sorts from PARAM.in
+       !/
        call read_var('nHybridParticleSort', nHybridParticleSort)
        if(nHybridParticleSort<= 0) then
           !\
@@ -185,10 +183,18 @@ contains
        allocate(MassHybrid_I(nHybridParticleSort))
        allocate(ChargeHybrid_I(nHybridParticleSort))
        do iLoop = 1, nHybridParticleSort 
+          !\
+          ! Read the pre-assigned number corresponding to a specific hybrid 
+          ! particle sort from PARAM.in. 
+          !/
           call read_var('iKindHybridParticle_I', iKindHybridParticle_I(iLoop))
           if(iKindHybridParticle_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid type of ion kind')
+          !\
+          ! Read the number of particles of the specific hybrid particle sort
+          ! to be allocated at the beginning of the simulation.
+          !/
           call read_var('nHybridParticleMax_I', nHybridParticleMax_I(iLoop))
           if(nHybridParticleMax_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
@@ -253,10 +259,6 @@ contains
     ! while the second part is populated by the test particles
     ! (nHybridParticleSort+1:nParticleSort).
     !/
-    iKindParticle_I(1:nHybridParticleSort) = &
-            iKindHybridParticle_I(1:nHybridParticleSort)
-    iKindParticle_I(nHybridParticleSort+1:nParticleSort) = &
-           iKindTestParticle_I(1:nTestParticles)
     !\
     !/
     Mass_I(1:nHybridParticleSort) = MassHybrid_I(1:nHybridParticleSort)
@@ -274,7 +276,12 @@ contains
             nTestMax_I(1:nTestParticles)
     !\
     ! Allocate all sort of particles with 
-    ! characteristics: Mass_I, Charge_I, nParticleMax_I
+    ! characteristics: Mass_I, Charge_I, nParticleMax_I.
+    ! All sort of particles, charged or otherwise, are allocated through the 
+    ! subroutine allocate_particles.
+    ! Each sort of particles has a characteristic number and in order to 
+    ! access a specific sort of particles this number NEEDS to be stored
+    ! in an array for all sort of particles.
     !/
     call allocate_particles(Mass_I, Charge_I, nParticleMax_I)
     !\
@@ -360,7 +367,7 @@ contains
     logical :: DoTest, DoTestCell
     integer :: iLoop, nParticle, iBlock
     integer :: i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
-    real :: InvElectronDens
+    real :: vInv
     real :: State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
     !----------------------
@@ -439,19 +446,18 @@ contains
        ! For the update we use the moments calculated at the  time-step 
        ! when velocity and displacement are synchronized (x(N+1), U(N+1)).
        !/
+       vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
           do iIon = 1, nHybridParticleSort 
           !\
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
              State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
-                     MomentsMinus_DGBI(Rho_,i,j,k,iBlock,iIon)/&
-                  CellVolume_GB(i,j,k,iBlock)
+                     MomentsMinus_DGBI(Rho_,i,j,k,iBlock,iIon)*vInv
           !\
           ! Momentum density of hybrid fluid iIon : Momentum / Control Volume
           !/
              State_VGB(iUxIon_I(iIon):iUzIon_I(iIon),i,j,k,iBlock) = &
-                     MomentsMinus_DGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iIon)/&
-                  CellVolume_GB(i,j,k,iBlock)
+                     MomentsMinus_DGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iIon)*vInv
           !\
           ! Pressure of hybrid fluid iIon : P = Trace(P_tensor) / 3 
           ! Mass * (Ux^2+Uy^2+Uz^2) / Control Volume / 3
@@ -459,8 +465,7 @@ contains
              State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
                      (MomentsMinus_DGBI(Px_,i,j,k,iBlock,iIon)  &
                    +  MomentsMinus_DGBI(Py_,i,j,k,iBlock,iIon)  &
-                   +  MomentsMinus_DGBI(Pz_,i,j,k,iBlock,iIon))/ &
-                  CellVolume_GB(i,j,k,iBlock)/3.0
+                   +  MomentsMinus_DGBI(Pz_,i,j,k,iBlock,iIon))*vInv/3.0
           end do
        end do; end do; end do
     end do
