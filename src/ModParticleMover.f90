@@ -12,8 +12,8 @@ module ModParticleMover
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
   use ModVarIndexes,   ONLY: Bx_, Bz_
-  use ModMultiFluid,   ONLY: IonFirst_, iRho, iUx, iUz, iUx_I, iUz_I, &
-          MassFluid_I, iRhoIon_I, iPIon_I, iUxIon_I, iUyIon_I, iUzIon_I 
+  use ModMultiFluid,   ONLY: iRho, iUx, iUz, iUx_I, iUz_I, &
+          iRhoIon_I, iPIon_I, iUxIon_I, iUyIon_I, iUzIon_I 
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
   use BATL_particles,  ONLY: Particle_I, &
@@ -26,20 +26,30 @@ module ModParticleMover
   !\
   ! If true, the particles are allocated and may be traced
   !/
-  logical :: UseParticles = .false.
+  logical :: UseParticles = .false. 
+  !\
+  ! Logical parameters for ion fluids 
+  !/
   !\
   !Parameters
   !/
   !\
-  ! number of hybrid particles w/ different (predefined) charge-to-mass ratios
-  integer :: nHybridParticleSort = 0 
+  ! number of test particles with different charge-to-mass ratios
+  !/
+  integer :: nTestParticles = 1 
   !\
   ! number of test particles with different charge-to-mass ratios
-  integer :: nTestParticles= 0 
+  !/
+  integer :: nHybridParticleSort = 0 
+  !\
+  ! number of hybrid particles w/ different (predefined) charge-to-mass ratios
+  !/
+  integer :: nParticleSort 
   !\
   ! The order number of this kind of particle in the whole 
   ! BATL_particle repository
   !/
+  integer, allocatable :: iKindParticle_I(:)
   integer, allocatable :: iKindHybridParticle_I(:)
   !\
   !Charge to mass ratio, same for all particles of a given 
@@ -111,11 +121,11 @@ contains
   !subroutine read the following paramaters from the PARAM.in file:
   ! #CHARGEDPARTICLES
   ! 3                      nHybridParticleSort
-  ! 2                      HybridFluid_I(1) 
+  ! 2                      iKindHybridParticle_I(1) 
   ! 1000000                nHybridParticleMax_I(1)
-  ! 3                      HybridFluid_I(2) 
+  ! 3                      iKindHybridParticle_I(2) 
   ! 50000                  nHybridParticleMax_I(2)
-  ! 4                      HybridFluid_I(3) 
+  ! 4                      iKindHybridParticle_I(3) 
   ! 150000                 nHybridParticleMax_I(3)
   ! 1                      nTestParticles
   ! 4.0                    Mass_I
@@ -133,18 +143,19 @@ contains
     character(len=*), intent(in) :: NameCommand
 
     logical:: DoTest
-    integer :: iLoop, nKindParticleSort
+    integer :: iLoop
     !\
     !Arrays to read A and Z for different ion particles
     !/
-    real, allocatable :: Mass_I(:), MassHybrid_I(:)
-    real, allocatable :: Charge_I(:), ChargeHybrid_I(:)
+    real, allocatable :: Mass_I(:), MassTest_I(:), MassHybrid_I(:)
+    real, allocatable :: Charge_I(:), ChargeTest_I(:), ChargeHybrid_I(:)
     !\
     ! array to read maximum number of particles for different
     ! sorts of ions
     !/
-    integer, allocatable :: HybridFluid_I(:)
-    integer, allocatable :: nParticleMax_I(:), nHybridParticleMax_I(:)
+    integer, allocatable :: nTestMax_I(:), &
+            nParticleMax_I(:), nHybridParticleMax_I(:)
+    integer, allocatable :: iKindTestParticle_I(:)
     character(len=*), parameter:: NameSub = NameMod//'read_param'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -169,21 +180,19 @@ contains
                ': To reset particle arrays first use '//&
                '#CHARGEDPARTICLES command with nHybridParticleSort=0')
        UseParticles = .true.
-       allocate(HybridFluid_I(nHybridParticleSort))
+       allocate(iKindHybridParticle_I(nHybridParticleSort))
        allocate(nHybridParticleMax_I(nHybridParticleSort))
        allocate(MassHybrid_I(nHybridParticleSort))
        allocate(ChargeHybrid_I(nHybridParticleSort))
        do iLoop = 1, nHybridParticleSort 
-          call read_var('HybridFluid_I', HybridFluid_I(iLoop))
-          if(HybridFluid_I(iLoop)<= 0) call stop_mpi(&
+          call read_var('iKindHybridParticle_I', iKindHybridParticle_I(iLoop))
+          if(iKindHybridParticle_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid type of ion kind')
           call read_var('nHybridParticleMax_I', nHybridParticleMax_I(iLoop))
           if(nHybridParticleMax_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid number of charged particles for ikind')
-          HybridFluid_I = HybridFluid_I + IonFirst_ - 1
-          Mass_I(1:nHybridParticleSort) = MassFluid_I(HybridFluid_I)
        end do
        !\
        ! The particle arrays can be reset, however,
@@ -201,27 +210,79 @@ contains
        end if
        !\
        ! The particle arrays can be reset, however,
-       allocate(nParticleMax_I(nTestParticles))
-       allocate(  Mass_I(nTestParticles))
-       allocate(Charge_I(nTestParticles))
+       allocate(nTestMax_I(nTestParticles))
+       allocate(iKindTestParticle_I(nTestParticles))
+       allocate(  MassTest_I(nTestParticles))
+       allocate(ChargeTest_I(nTestParticles))
        do iLoop = 1, nTestParticles
-          call read_var('Mass_I', Mass_I(iLoop))
-          if(Mass_I(iLoop)<= 0) call stop_mpi(&
+          iKindTestParticle_I(iLoop) = nHybridParticleSort + iLoop
+          call read_var('MassTest_I', MassTest_I(iLoop))
+          if(MassTest_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid mass of charged particle kind')
-          call read_var('Charge_I', Charge_I(iLoop))
-          call read_var('nParticleMax_I', nParticleMax_I(iLoop))
-          if(nParticleMax_I(iLoop)<= 0) call stop_mpi(&
+          call read_var('ChargeTest_I', ChargeTest_I(iLoop))
+          call read_var('nTestMax_I', nTestMax_I(iLoop))
+          if(nTestMax_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
-               ': invalid number of charged particles for ikind')
+               ': invalid number of test particles for ikind')
        end do
     case default
        call stop_mpi(&
             NameThisComp//':'//NameSub//&
             ': Unknown command '//NameCommand//' in PARAM.in')
     end select
-    call allocate_particles(MassHybrid_I, ChargeHybrid_I, nHybridParticleMax_I)
-    deallocate(MassHybrid_I, ChargeHybrid_I, nHybridParticleMax_I)
+
+    ! Define the total number of ion sort to be considered    
+    nParticleSort = nHybridParticleSort + nTestParticles
+    
+    ! Allocate arrays for all particles: test + hybrid
+    allocate(iKindParticle_I(nParticleSort))
+    allocate(Mass_I(nParticleSort))
+    allocate(Charge_I(nParticleSort))
+    allocate(nParticleMax_I(nParticleSort))
+    !\
+    ! Define Mass_I, Charge_I and nParticleMax_I from the hybrid and test
+    ! arrays. This allows for easier moving of particles since the same
+    ! processes apply to both hybrid and test particles, with the 
+    ! difference that test particles are not considered for current and 
+    ! charge densities and neither for updating the MHD vector variables. 
+    !/
+    !\
+    ! The first part of the particle arrays Mass_I, Charge_I and nParticleMax_I
+    ! are populated by the hybrid particles (1:nHybridParticleSort),
+    ! while the second part is populated by the test particles
+    ! (nHybridParticleSort+1:nParticleSort).
+    !/
+    iKindParticle_I(1:nHybridParticleSort) = &
+            iKindHybridParticle_I(1:nHybridParticleSort)
+    iKindParticle_I(nHybridParticleSort+1:nParticleSort) = &
+           iKindTestParticle_I(1:nTestParticles)
+    !\
+    !/
+    Mass_I(1:nHybridParticleSort) = MassHybrid_I(1:nHybridParticleSort)
+    Mass_I(nHybridParticleSort+1:nParticleSort) = MassTest_I(1:nTestParticles)
+    !\
+    !/
+    Charge_I(1:nHybridParticleSort) = ChargeHybrid_I(1:nHybridParticleSort)
+    Charge_I(nHybridParticleSort+1:nParticleSort) = &
+            ChargeTest_I(1:nTestParticles)
+    !\
+    !/
+    nParticleMax_I(1:nHybridParticleSort) = &
+            nHybridParticleMax_I(1:nHybridParticleSort)
+    nParticleMax_I(nHybridParticleSort+1:nParticleSort) = &
+            nTestMax_I(1:nTestParticles)
+    !\
+    ! Allocate all sort of particles with 
+    ! characteristics: Mass_I, Charge_I, nParticleMax_I
+    !/
+    call allocate_particles(Mass_I, Charge_I, nParticleMax_I)
+    !\
+    ! Deallocate all the allocated arays.
+    !/
+    deallocate(MassHybrid_I, ChargeHybrid_I, nHybridParticleMax_I, &
+              MassTest_I, ChargeTest_I, nTestMax_I, &
+              Mass_I, Charge_I, nParticleMax_I, iKindTestParticle_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_param
   !===================== DEALLOCATE====================
@@ -231,14 +292,14 @@ contains
     nullify(Coord_DI)
     nullify(Index_II)
     !\
-    ! Deallocate particle arrays
+    ! Deallocate hybrid particle arrays
     !/
-    do iLoop = 1, size(iKindHybridParticle_I)
-       call gen_deallocate_particles(iKindHybridParticle_I(iLoop))
+    do iLoop = 1, size(iKindParticle_I)
+       call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
     deallocate(iKindHybridParticle_I, Charge2Mass_I, MomentsMinus_DGBI, &
             MomentsPlus_DGBI, DensityMinus_VCB, DensityPlus_VCB, &
-            CAMCoef_VCB)
+            CAMCoef_VCB, iKindParticle_I)
   end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I) 
@@ -248,9 +309,9 @@ contains
     integer, parameter:: nG = 1, MinI = 1-nG, MaxI = nI+nG, &
          MinJ = 1-nG*jDim_, MaxJ = nJ+nG*jDim_,             &
          MinK = 1-nG*kDim_, MaxK = nK+nG*kDim_
-    real,    intent(in)    :: Mass_I(nHybridParticleSort) 
-    real,    intent(in)    :: Charge_I(nHybridParticleSort)
-    integer, intent(in)    :: nParticleMax_I(nHybridParticleSort)
+    real,    intent(in)    :: Mass_I(nParticleSort) 
+    real,    intent(in)    :: Charge_I(nParticleSort)
+    integer, intent(in)    :: nParticleMax_I(nParticleSort)
     integer :: iKind
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'allocate_charged_particles'
@@ -261,15 +322,14 @@ contains
     DoInit = .false.
 
     !Allocate enough arrays for all Charged Particle Types
-    allocate(iKindHybridParticle_I(nHybridParticleSort)) 
-    allocate(Charge2Mass_I(nHybridParticleSort))
+    allocate(Charge2Mass_I(nParticleSort))
 
     Charge2Mass_I = Charge_I/Mass_I
     
-    iKindHybridParticle_I = -1
-    do iKind = 1, nHybridParticleSort 
+    iKindParticle_I = -1
+    do iKind = 1, nParticleSort 
        call gen_allocate_particles(&
-            iKindParticle = iKindHybridParticle_I(iKind), &
+            iKindParticle = iKindParticle_I(iKind), &
             nVar          = nVar     , &
             nIndex        = Status_  , &
             nParticleMax  = nParticleMax_I(iKind)    )
@@ -303,8 +363,6 @@ contains
     real :: InvElectronDens
     real :: State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
-    real, dimension(nHybridParticleSort) :: &
-     NumDens_I, ChargeDens_I, Rho_I, InvRho_I
     !----------------------
     Dt = DtIn
     MomentsMinus_DGBI = 0.0 !Prepare storage for the VDF moments
@@ -315,8 +373,8 @@ contains
 
     DoTestCell = .false.
 
-    do iLoop = 1, nHybridParticleSort
-       iKind = iKindHybridParticle_I(iLoop)
+    do iLoop = 1, nParticleSort
+       iKind = iKindParticle_I(iLoop)
        call set_pointer_to_particles(&
             iKind, Coord_DI, Index_II, &
             nParticle=nParticle)
@@ -371,23 +429,33 @@ contains
        ! Transform VDF moments to State Vector Variables
        !/
        do k=1,nK; do j=1,nJ; do i=1,nI
+       ! Skip not tru cells 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
-       State_V = State_VGB(:,i,j,k,iBlock)
-       ChargeDens_I = Charge2Mass_I*State_V(iRhoIon_I)
-
-       Rho_I    = State_V(iRhoIon_I)
-       InvRho_I = 1.0/Rho_I
-
+       !\
+       ! From VDF moments update fluid components for each hybrid fluid
+       ! For the update we use the moments calculated at the  time-step 
+       ! when velocity and displacement are synchronized (x(N+1), U(N+1)).
+       !/
           do iIon = 1, nHybridParticleSort 
+          !\
+          ! Density of hybrid fluid iIon : Mass / Control Volume
+          !/
              State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
                      MomentsMinus_DGBI(Rho_,i,j,k,iBlock,iIon)/&
                   CellVolume_GB(i,j,k,iBlock)
+          !\
+          ! Momentum density of hybrid fluid iIon : Momentum / Control Volume
+          !/
              State_VGB(iUxIon_I(iIon):iUzIon_I(iIon),i,j,k,iBlock) = &
                      MomentsMinus_DGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iIon)/&
-                  CellVolume_GB(i,j,k,iBlock)*InvRho_I
+                  CellVolume_GB(i,j,k,iBlock)
+          !\
+          ! Pressure of hybrid fluid iIon : P = Trace(P_tensor) / 3 
+          ! Mass * (Ux^2+Uy^2+Uz^2) / Control Volume / 3
+          !/
              State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
                      (MomentsMinus_DGBI(Px_,i,j,k,iBlock,iIon)  &
                    +  MomentsMinus_DGBI(Py_,i,j,k,iBlock,iIon)  &
