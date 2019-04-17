@@ -653,8 +653,6 @@ contains
     character(len=*), parameter:: NameSub = &
          'get_state_from_particle'
     !--------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    
     !\
     ! Transform VDF moments to State Vector Variables
     !/
@@ -662,7 +660,7 @@ contains
        ! Skip not tru cells 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        
-       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
+       !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
        
        !\
        ! From VDF moments update fluid components for each hybrid fluid
@@ -691,6 +689,6 @@ contains
                +  Moments_VGBI(Pz_,i,j,k,iBlock,iIon))*vInv/3.0
        end do
     end do; end do; end do
-    call test_stop(NameSub, DoTest)
+    !call test_stop(NameSub, DoTest)
   end subroutine get_state_from_particle
 end module ModParticleMover
