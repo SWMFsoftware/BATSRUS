@@ -326,7 +326,7 @@ contains
     end do
     allocate(Moments_VGBI(Rho_:P23_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         nHybridParticleSort))
+         iKindHybridParticle_I(nHybridParticleSort)))
     allocate(DensityAndCurrent_VCB(RhoC_:Jz_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
@@ -367,8 +367,11 @@ contains
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       call add_ghost_cell_field(RhoUz_, 1, &
-            Moments_VGBI(:,:,:,:,:,iKind))
+       if(iKind.ge.iKindParticle_I(1) .and. &
+            iKind.le.iKindParticle_I(nHybridParticleSort))then
+           call add_ghost_cell_field(RhoUz_, 1, &
+                Moments_VGBI(:,:,:,:,:,iKind))
+       end if
     end do
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -608,14 +611,18 @@ contains
          U_D(y_)*U_D(z_)
     !\
     ! Collect Contribution with updated weight coefficients
+    ! ONLY for Hybrid sort of particles.
     !/
-    do iCell = 1, nCell
-       i_D = 1
-       i_D(1:nDim) = iCell_II(1:nDim, iCell)
-       Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-            Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-            Moments_V*Weight_I(iCell)
+    if(iKind.ge.iKindParticle_I(1) .and. &
+            iKind.le.iKindParticle_I(nHybridParticleSort))then
+        do iCell = 1, nCell
+           i_D = 1
+           i_D(1:nDim) = iCell_II(1:nDim, iCell)
+           Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+                Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+                Moments_V*Weight_I(iCell)
     end do
+    end if
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
   !==========================
@@ -630,7 +637,7 @@ contains
   subroutine get_state_from_particle(iBlock)
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestCell
-    integer :: i, j, k, iIon
+    integer :: i, j, k, iIon, iKind
     real :: vInv
     character(len=*), parameter:: NameSub = &
          'get_state_from_particle'
@@ -651,24 +658,25 @@ contains
        !/
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
        do iIon = 1, nHybridParticleSort 
+          iKind = iKindHybridParticle_I(iIon)
           !\
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
           State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
-               Moments_VGBI(Rho_,i,j,k,iBlock,iIon)*vInv
+               Moments_VGBI(Rho_,i,j,k,iBlock,iKind)*vInv
           !\
           ! Momentum density of hybrid fluid iIon : Momentum / Control Volume
           !/
           State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) = &
-               Moments_VGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iIon)*vInv
+               Moments_VGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iKind)*vInv
           !\
           ! Pressure of hybrid fluid iIon : P = Trace(P_tensor) / 3 
           ! Mass * (Ux^2+Uy^2+Uz^2) / Control Volume / 3
           !/
           State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
-               (  Moments_VGBI(Px_,i,j,k,iBlock,iIon)  &
-               +  Moments_VGBI(Py_,i,j,k,iBlock,iIon)  &
-               +  Moments_VGBI(Pz_,i,j,k,iBlock,iIon))*vInv/3.0
+               (  Moments_VGBI(Px_,i,j,k,iBlock,iKind)  &
+               +  Moments_VGBI(Py_,i,j,k,iBlock,iKind)  &
+               +  Moments_VGBI(Pz_,i,j,k,iBlock,iKind))*vInv/3.0
        end do
     end do; end do; end do
     !call test_stop(NameSub, DoTest)
