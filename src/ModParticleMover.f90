@@ -11,7 +11,7 @@ module ModParticleMover
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
   use ModVarIndexes,   ONLY: Bx_, Bz_
-  use ModMultiFluid,   ONLY: &
+  use ModMultiFluid,   ONLY: nTrueIon, &
           iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I 
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
@@ -25,7 +25,7 @@ module ModParticleMover
   !\
   ! If true, the particles are allocated and may be traced
   !/
-  logical, private :: UseParticles = .false. 
+  logical :: UseParticles = .false. 
   !\
   !Parameters
   !/
@@ -51,7 +51,7 @@ module ModParticleMover
   integer, allocatable :: iKindParticle_I(:)
 
 
-  integer, allocatable :: iKindHybridIon_I(:)
+  integer, allocatable :: iHybridIon_I(:)
   !\
   !Charge to mass ratio, same for all particles of a given sort.
   !Allocated with the  index range 1:nParticleSort
@@ -124,11 +124,11 @@ contains
   !subroutine read the following paramaters from the PARAM.in file:
   ! #CHARGEDPARTICLES
   ! 3                      nHybridParticleSort
-  ! 2                      iKindHybridIon_I(1) 
+  ! 2                      iHybridIon_I(1) 
   ! 1000000                nHybridParticleMax_I(1)
-  ! 3                      iKindHybridIon_I(2) 
+  ! 3                      iHybridIon_I(2) 
   ! 50000                  nHybridParticleMax_I(2)
-  ! 4                      iKindHybridIon_I(3) 
+  ! 4                      iHybridIon_I(3) 
   ! 150000                 nHybridParticleMax_I(3)
   ! 1                      nTestParticles
   ! 4.0                    Mass_I
@@ -186,17 +186,18 @@ contains
                ': To reset particle arrays first use '//&
                '#CHARGEDPARTICLES command with nHybridParticleSort=0')
        UseParticles = .true.
-       allocate(iKindHybridIon_I(nHybridParticleSort))
+       allocate(iHybridIon_I(nHybridParticleSort))
        allocate(nHybridParticleMax_I(nHybridParticleSort))
        do iLoop = 1, nHybridParticleSort 
           !\
-          ! Read the pre-assigned number corresponding to a specific hybrid 
-          ! particle sort from PARAM.in. 
+          ! Read which of the BATSRUS ion fluids (enumerated from 1 to
+          ! nTrueIon) will be treaded as hybrid fluids and sampled with the 
+          ! charged particles in this module. 
           !/
-          call read_var('iKindHybridIon_I', iKindHybridIon_I(iLoop))
-          if(iKindHybridIon_I(iLoop)<= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid type of ion kind')
+          call read_var('iHybridIon_I', iHybridIon_I(iLoop))
+          if(iHybridIon_I(iLoop)<= 0.or.iHybridIon_I(iLoop)>nTrueIon)&
+               call stop_mpi(NameThisComp//':'//NameSub//&
+               ': invalid type of hybrid ion fluid')
           !\
           ! Read the number of particles of the specific hybrid particle sort
           ! to be allocated at the beginning of the simulation.
@@ -272,6 +273,10 @@ contains
     deallocate(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_param
+  !===================== NORMALIZE ====================
+  subroutine normalize_param
+    !TBD
+  end subroutine normalize_param
   !===================== DEALLOCATE====================
   subroutine deallocate_particles
     integer :: iLoop
@@ -284,7 +289,7 @@ contains
     do iLoop = 1, size(iKindParticle_I)
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
-    deallocate(iKindHybridIon_I, Charge2Mass_I, &
+    deallocate(iHybridIon_I, Charge2Mass_I, &
             Moments_VGBI, DensityAndCurrent_VCB, &
             CAMCoef_VCB, iKindParticle_I)
   end subroutine deallocate_particles
@@ -326,7 +331,7 @@ contains
     end do
     allocate(Moments_VGBI(Rho_:P23_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         iKindParticle_I(1):iKindParticle_I(nHybridParticleSort)))
+         iKindParticle_I(1):iKindParticle_I(nParticleSort)))
     allocate(DensityAndCurrent_VCB(RhoC_:Jz_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
@@ -368,8 +373,7 @@ contains
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       if(iKind.ge.1 .and. &
-       iKind.le.iKindHybridIon_I(nHybridParticleSort))then
+       if(iLoop.le.nHybridParticleSort)then
            call add_ghost_cell_field(RhoUz_, 1, &
                 Moments_VGBI(:,:,:,:,:,iKind))
        end if
@@ -377,14 +381,15 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        do iLoop = 1, nHybridParticleSort
-          iKind = iKindHybridIon_I(iLoop)
+          iKind = iKindParticle_I(iLoop)
           !\
           ! Sum up contributions to charge and current densities from 
-          ! the moments
+          ! the moments of hybrid ions (first nHybridParticleSort of 
+          ! all charged particles
           !/
           DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) = &
                DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
-               Charge2Mass_I(iKind) * &
+               Charge2Mass_I(iLoop) * &
                Moments_VGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
           if(.not.DoBorisStep)&
                !\
@@ -399,7 +404,7 @@ contains
                !/
                CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
                CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
-               Charge2Mass_I(iKind)**2 * &
+               Charge2Mass_I(iLoop)**2 * &
                Moments_VGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
        end do
     end do
@@ -612,10 +617,11 @@ contains
          U_D(y_)*U_D(z_)
     !\
     ! Collect Contribution with updated weight coefficients
-    ! ONLY for Hybrid sort of particles.
+    ! Note, that the last index of array is not iLoop (since it
+    ! is not a global variable), but iKind
     !/
     if(iKind.ge.1 .and. &
-       iKind.le.iKindHybridIon_I(nHybridParticleSort))then
+       iKind.le.iHybridIon_I(nHybridParticleSort))then
         do iCell = 1, nCell
            i_D = 1
            i_D(1:nDim) = iCell_II(1:nDim, iCell)
@@ -659,7 +665,7 @@ contains
        !/
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
        do iLoop = 1, nHybridParticleSort
-          iKind = iKindParticle_I(iLoop); iIon = iKindHybridIon_I(iLoop)
+          iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop)
           !\
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
