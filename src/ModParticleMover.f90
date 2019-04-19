@@ -5,7 +5,7 @@ module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
   use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm,&
-       nI, nJ, nK, Unused_B
+       nI, nJ, nK, Unused_B, CoordMin_DB, CoordMax_DB
   use BATL_lib, ONLY: CellVolume_GB
 
   use ModMain,         ONLY: NameThisComp
@@ -51,7 +51,7 @@ module ModParticleMover
   integer, allocatable :: iKindParticle_I(:)
 
 
-  integer, allocatable :: iKindHybridParticle_I(:)
+  integer, allocatable :: iKindHybridIon_I(:)
   !\
   !Charge to mass ratio, same for all particles of a given sort.
   !Allocated with the  index range 1:nParticleSort
@@ -124,11 +124,11 @@ contains
   !subroutine read the following paramaters from the PARAM.in file:
   ! #CHARGEDPARTICLES
   ! 3                      nHybridParticleSort
-  ! 2                      iKindHybridParticle_I(1) 
+  ! 2                      iKindHybridIon_I(1) 
   ! 1000000                nHybridParticleMax_I(1)
-  ! 3                      iKindHybridParticle_I(2) 
+  ! 3                      iKindHybridIon_I(2) 
   ! 50000                  nHybridParticleMax_I(2)
-  ! 4                      iKindHybridParticle_I(3) 
+  ! 4                      iKindHybridIon_I(3) 
   ! 150000                 nHybridParticleMax_I(3)
   ! 1                      nTestParticles
   ! 4.0                    Mass_I
@@ -186,15 +186,15 @@ contains
                ': To reset particle arrays first use '//&
                '#CHARGEDPARTICLES command with nHybridParticleSort=0')
        UseParticles = .true.
-       allocate(iKindHybridParticle_I(nHybridParticleSort))
+       allocate(iKindHybridIon_I(nHybridParticleSort))
        allocate(nHybridParticleMax_I(nHybridParticleSort))
        do iLoop = 1, nHybridParticleSort 
           !\
           ! Read the pre-assigned number corresponding to a specific hybrid 
           ! particle sort from PARAM.in. 
           !/
-          call read_var('iKindHybridParticle_I', iKindHybridParticle_I(iLoop))
-          if(iKindHybridParticle_I(iLoop)<= 0) call stop_mpi(&
+          call read_var('iKindHybridIon_I', iKindHybridIon_I(iLoop))
+          if(iKindHybridIon_I(iLoop)<= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
                ': invalid type of ion kind')
           !\
@@ -284,7 +284,7 @@ contains
     do iLoop = 1, size(iKindParticle_I)
        call gen_deallocate_particles(iKindParticle_I(iLoop))
     end do
-    deallocate(iKindHybridParticle_I, Charge2Mass_I, &
+    deallocate(iKindHybridIon_I, Charge2Mass_I, &
             Moments_VGBI, DensityAndCurrent_VCB, &
             CAMCoef_VCB, iKindParticle_I)
   end subroutine deallocate_particles
@@ -326,7 +326,7 @@ contains
     end do
     allocate(Moments_VGBI(Rho_:P23_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
-         iKindHybridParticle_I(nHybridParticleSort)))
+         iKindParticle_I(1):iKindParticle_I(nHybridParticleSort)))
     allocate(DensityAndCurrent_VCB(RhoC_:Jz_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
@@ -363,12 +363,13 @@ contains
        !/
        QDtPerM = cHalf * Dt * Charge2Mass_I(iLoop)
        Index_II(Status_,1:nParticle) = DoAll_
+       call get_vdf_from_state(iKind)
        call batl_trace_particles(iKind, boris_scheme, check_done)
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       if(iKind.ge.iKindParticle_I(1) .and. &
-            iKind.le.iKindParticle_I(nHybridParticleSort))then
+       if(iKind.ge.1 .and. &
+       iKind.le.iKindHybridIon_I(nHybridParticleSort))then
            call add_ghost_cell_field(RhoUz_, 1, &
                 Moments_VGBI(:,:,:,:,:,iKind))
        end if
@@ -376,7 +377,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        do iLoop = 1, nHybridParticleSort
-          iKind = iKindHybridParticle_I(iLoop)
+          iKind = iKindHybridIon_I(iLoop)
           !\
           ! Sum up contributions to charge and current densities from 
           ! the moments
@@ -613,8 +614,8 @@ contains
     ! Collect Contribution with updated weight coefficients
     ! ONLY for Hybrid sort of particles.
     !/
-    if(iKind.ge.iKindParticle_I(1) .and. &
-            iKind.le.iKindParticle_I(nHybridParticleSort))then
+    if(iKind.ge.1 .and. &
+       iKind.le.iKindHybridIon_I(nHybridParticleSort))then
         do iCell = 1, nCell
            i_D = 1
            i_D(1:nDim) = iCell_II(1:nDim, iCell)
@@ -637,7 +638,7 @@ contains
   subroutine get_state_from_particle(iBlock)
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestCell
-    integer :: i, j, k, iIon, iKind
+    integer :: i, j, k, iIon, iKind, iLoop
     real :: vInv
     character(len=*), parameter:: NameSub = &
          'get_state_from_particle'
@@ -657,8 +658,8 @@ contains
        ! when velocity and displacement are synchronized (x(N+1), U(N+1)).
        !/
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
-       do iIon = 1, nHybridParticleSort 
-          iKind = iKindHybridParticle_I(iIon)
+       do iLoop = 1, nHybridParticleSort
+          iKind = iKindParticle_I(iLoop); iIon = iKindHybridIon_I(iLoop)
           !\
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
@@ -681,4 +682,102 @@ contains
     end do; end do; end do
     !call test_stop(NameSub, DoTest)
   end subroutine get_state_from_particle
+  !==========================
+  !\
+  ! In this subroutine we obtain the VDF for each particle species
+  ! starting from the state vector variables.
+  ! More specifically, we calculate the thermal velocity uThermal_I
+  ! 
+  !/
+  subroutine get_vdf_from_state(iKind)
+    use ModRandomNumber, ONLY: random_real
+    integer, intent(in) :: iKind
+    integer :: i, j, k, iBlock
+    integer :: nParticle
+    real :: uBulk_D(Ux_:Uz_)
+    real :: uThermal_I(iKindParticle_I(1):&
+            iKindParticle_I(nParticleSort))
+    real :: InvRho_I, RndUnif
+    ! seed for random number generator
+    integer, save:: iSeed=0
+    !-----------------------------------
+    !\
+    ! Transform State Vector Variables to VDFs
+    !/
+    do iBlock = 1, nBlock
+       do k=1,nK; do j=1,nJ; do i=1,nI
+       ! Skip not tru cells
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          ! Calculate 1.0 / Rho once to reduce computational time
+          InvRho_I = 1.0/State_VGB(iRhoIon_I(iKind),i,j,k,iBlock)
+          !\
+          ! The total velocity of each macroparticle will be
+          ! \vec{v_total} = \vec{uBulk} + uThermal_I * \vec{unit vector}
+          ! The bulk velocity can be calculated as the ratio of the 
+          ! momentum to density, i.e. ubulk = rho * u / rho
+          !/
+          uBulk_D(Ux_:Uz_) =  &
+            State_VGB(iRhoUxIon_I(iKind):iRhoUzIon_I(iKind),i,j,k,iBlock)*&
+            InvRho_I
+          !\
+          ! The thermal velocity in the normalization used here is:
+          ! uThermal_I = sqrt(P_I/Rho_I)
+          !/
+          uThermal_I(iKind) = sqrt(State_VGB(iPIon_I(iKind),i,j,k,iBlock)*&
+            InvRho_I) 
+          ! If the thermal velocity is zero then set velocity three vector 
+          ! to zero
+          if(uThermal_I(iKind)==0.0)Coord_DI(Ux_:Uz_,iKind) = 0.0
+          !\
+          ! Use random generator to assign coordinates for particles in 
+          ! each block.
+          !/
+          RndUnif = random_real(iSeed)
+          Coord_DI(x_:nDim,iKind) = (CoordMax_DB(x_:nDim,iKind) -&
+                  CoordMin_DB(x_:nDim,iKind))&
+                  * RndUnif + CoordMin_DB(x_:nDim,iKind)
+          !\
+          ! If the thermal velocity is a positive value, call thermalize
+          ! to generate a Gaussian distribution from the state vector
+          ! variable and obtain the VDFs and velocity coordinates.
+          !/
+          if(uThermal_I(iKind)>0.0)&
+          call thermalize_particle(iKind, uThermal_I, Coord_DI)
+          Coord_DI(Ux_:Uz_,iKind) = Coord_DI(Ux_:Uz_,iKind) + &
+                  uBulk_D(Ux_:Uz_)
+          !\
+          ! Finally calculate the Mass coordinate for each particle
+          !/
+          Coord_DI(Mass_,iKind) = State_VGB(iRhoIon_I(iKind),i,j,k,iBlock)* &
+                  CellVolume_GB(i,j,k,iBlock)/nParticle
+       end do; end do; end do
+    end do
+
+  end subroutine get_vdf_from_state
+  !==================
+  !\
+  !Generate Gaussian distribution using Box-Muller method
+  !/
+  subroutine thermalize_particle(iKind,uThermal_I,Coord_DI)
+    use ModRandomNumber, ONLY: random_real
+    integer, intent(in ) :: iKind
+    real,    intent(in ) :: uThermal_I(iKindParticle_I(1):&
+            iKindParticle_I(nParticleSort))
+    real   , intent(out) :: Coord_DI(Ux_:Uz_)
+    real                 :: Energy, MomentumAvr, RndUnif1, RndUnif2
+    integer              :: iW
+   ! seed for random number generator
+    integer, save:: iSeed=0
+    !-----------------------------------
+    do iW = Ux_, Uz_
+       RndUnif1  = random_real(iSeed)
+       RndUnif2  = random_real(iSeed)
+       ! The kinetic energy is calculated next for each particle
+       Energy      = -uThermal_I(iKind)**2 *log(RndUnif1)
+       ! The average momentum is calculated next for each particle
+       MomentumAvr = sqrt(2.0*Energy)
+       ! The velocity vector is calculated next are for each particle
+       Coord_DI(iW)     = MomentumAvr*cos(cTwoPi*RndUnif2)
+    end do
+  end subroutine thermalize_particle
 end module ModParticleMover
