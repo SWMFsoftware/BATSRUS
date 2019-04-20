@@ -25,7 +25,8 @@ module ModParticleMover
   !\
   ! If true, the particles are allocated and may be traced
   !/
-  logical :: UseParticles = .false. 
+  logical         :: UseParticles = .false. 
+  logical,private :: DoNormalize = .false. 
   !\
   !Parameters
   !/
@@ -161,6 +162,7 @@ contains
             nParticleMax_I(:), nHybridParticleMax_I(:)
     character(len=*), parameter:: NameSub = NameMod//'read_param'
     !--------------------------------------------------------------------
+    if(UseParticles) RETURN !Do not reset already set particle arrays
     call test_start(NameSub, DoTest)
     select case(NameCommand)
 
@@ -169,61 +171,36 @@ contains
        ! Read the total number of hybrid particle sorts from PARAM.in
        !/
        call read_var('nHybridParticleSort', nHybridParticleSort)
-       if(nHybridParticleSort<= 0) then
-          !\
-          ! Clean particle arrays
-          !/
-          if(UseParticles)call deallocate_particles
-          UseParticles = .false.
-          RETURN
+       if(nHybridParticleSort>0)then
+          UseParticles = .true.
+          allocate(iHybridIon_I(nHybridParticleSort))
+          allocate(nHybridParticleMax_I(nHybridParticleSort))
+          do iLoop = 1, nHybridParticleSort 
+             !\
+             ! Read which of the BATSRUS ion fluids (enumerated from 1 to
+             ! nTrueIon) will be treaded as hybrid fluids and sampled with  
+             ! the charged particles in this module. 
+             !/
+             call read_var('iHybridIon_I', iHybridIon_I(iLoop))
+             if(iHybridIon_I(iLoop)<= 0.or.iHybridIon_I(iLoop)>nTrueIon)&
+                  call stop_mpi(NameThisComp//':'//NameSub//&
+                  ': invalid type of hybrid ion fluid')
+             !\
+             ! Read the number of particles of the specific hybrid particle 
+             ! sort to be allocated at the beginning of the simulation.
+             !/
+             call read_var('nHybridParticleMax_I', nHybridParticleMax_I(iLoop))
+             if(nHybridParticleMax_I(iLoop)<= 0) call stop_mpi(&
+                  NameThisComp//':'//NameSub//&
+                  ': invalid number of charged particles for ikind')
+          end do
+       else
+          nHybridParticleSort = 0
        end if
-       !\
-       ! The particle arrays can be reset, however,
-       ! first nKindHybridParticle should be set to zero
-       ! to deallocate available arrays
-       !/
-       if(UseParticles)call stop_mpi(NameThisComp//':'//NameSub//&
-               ': To reset particle arrays first use '//&
-               '#CHARGEDPARTICLES command with nHybridParticleSort=0')
-       UseParticles = .true.
-       allocate(iHybridIon_I(nHybridParticleSort))
-       allocate(nHybridParticleMax_I(nHybridParticleSort))
-       do iLoop = 1, nHybridParticleSort 
-          !\
-          ! Read which of the BATSRUS ion fluids (enumerated from 1 to
-          ! nTrueIon) will be treaded as hybrid fluids and sampled with the 
-          ! charged particles in this module. 
-          !/
-          call read_var('iHybridIon_I', iHybridIon_I(iLoop))
-          if(iHybridIon_I(iLoop)<= 0.or.iHybridIon_I(iLoop)>nTrueIon)&
-               call stop_mpi(NameThisComp//':'//NameSub//&
-               ': invalid type of hybrid ion fluid')
-          !\
-          ! Read the number of particles of the specific hybrid particle sort
-          ! to be allocated at the beginning of the simulation.
-          !/
-          call read_var('nHybridParticleMax_I', nHybridParticleMax_I(iLoop))
-          if(nHybridParticleMax_I(iLoop)<= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid number of charged particles for ikind')
-       end do
-       !\
-       ! The particle arrays can be reset, however,
-       ! first nTestParticles should be set to zero
-       ! to deallocate available arrays
-       !/
        call read_var('nTestParticles', nTestParticles)
-       if(nTestParticles<= 0) then
-          !\
-          ! Clean particle arrays
-          !/
-          if(UseParticles)call deallocate_particles
-          UseParticles = .false.
-          RETURN
-       end if
        ! Define the total number of ion sort to be considered    
-       nParticleSort = nHybridParticleSort + nTestParticles
-       
+       nParticleSort = nHybridParticleSort + max(nTestParticles,0)
+       if(nParticleSort == 0) RETURN
        ! Allocate arrays for all particles: test + hybrid
        allocate(iKindParticle_I(nParticleSort))
        allocate(Mass_I(nParticleSort)); Mass_I = 1.0
@@ -232,8 +209,10 @@ contains
        !\
        ! Store nParticleMax for hybrid particles
        !/
-       nParticleMax_I(1:nHybridParticleSort) = nHybridParticleMax_I
-       deallocate(nHybridParticleMax_I)
+       if(nHybridParticleSort > 0)then
+          nParticleMax_I(1:nHybridParticleSort) = nHybridParticleMax_I
+          deallocate(nHybridParticleMax_I)
+       end if
        !\
        ! The first part of the particle arrays 
        ! Mass_I, Charge_I and nParticleMax_I
@@ -275,7 +254,27 @@ contains
   end subroutine read_param
   !===================== NORMALIZE ====================
   subroutine normalize_param
-    !TBD
+    use ModPhysics,    ONLY: ElectronCharge
+    use ModMultiFluid, ONLY: ChargePerMass_I
+    integer :: iLoop
+    if(.not.DoNormalize)RETURN
+    DoNormalize = .false.   !Do not repeat normalization
+    !\
+    ! For hybrid particle take charge to mass ratio from
+    ! parameters for BATSRUS ion fluids:
+    !/
+    if(nHybridParticleSort >0 )&
+         Charge2Mass_I(1:nHybridParticleSort) = &
+         ChargePerMass_I(iHybridIon_I)
+    !\
+    ! For test particles the Charge ans mass numbers, Z,A
+    ! as written from the PARAM.in file. Their ratio should
+    ! be normalized in multiplying by a proper factor.
+    !/ 
+    if(nParticleSort > nHybridParticleSort)&
+         Charge2Mass_I(1+nHybridParticleSort:nParticleSort) =&
+         Charge2Mass_I(1+nHybridParticleSort:nParticleSort)* &
+         ElectronCharge
   end subroutine normalize_param
   !===================== DEALLOCATE====================
   subroutine deallocate_particles
@@ -320,7 +319,12 @@ contains
     allocate(Charge2Mass_I(nParticleSort))
 
     Charge2Mass_I = Charge_I/Mass_I
-    
+    !\
+    ! The newly introduced charge-to-mass ratios for particles should be
+    !  normalized.
+    !/
+    DoNormalize = .true.
+
     iKindParticle_I = -1
     do iLoop = 1, nParticleSort 
        call gen_allocate_particles(&
@@ -336,27 +340,25 @@ contains
             1:nI,  1:nJ, 1:nK, MaxBlock))
     allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
             1:nI,  1:nJ, 1:nK, MaxBlock))
-
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
   !===============================================!
-  subroutine trace_particles(DtIn, DoBorisStepIn)
+  subroutine trace_particles(Dt, DoBorisStepIn)
     use ModMain,    ONLY: nI, nJ, nK 
     use BATL_particles, ONLY: &
          batl_trace_particles=>trace_particles
     use BATL_pass_face_field, ONLY: add_ghost_cell_field
-    real,    intent(in) :: DtIn          !Time step
-    logical, intent(in) :: DoBorisStepIn !If the velocity advanced or not
+    real,    intent(in) :: Dt            !Time step
+    logical, intent(in) :: DoBorisStepIn !If velocity is advanced or not
 
     integer :: iLoop, nParticle, iBlock
     real, dimension(3) :: FullB_D, u_D
     !----------------------
-    Dt = DtIn
     DoBorisStep = DoBorisStepIn
 
-    Moments_VGBI = 0.0 !Prepare storage for the VDF moments
-    DensityAndCurrent_VCB   = 0.0 !Same for the charge and current densities 
-    CAMCoef_VCB       = 0.0 !Same for the \Lambda and \Gamma coefficients 
+    Moments_VGBI = 0.0            !Prepare storage for the VDF moments
+    DensityAndCurrent_VCB   = 0.0 !Same for charge and current densities 
+    CAMCoef_VCB       = 0.0       !Same for \Lambda and \Gamma coeffs 
 
     do iLoop = 1, nParticleSort
        iKind = iKindParticle_I(iLoop)
@@ -366,7 +368,7 @@ contains
        !\
        ! (Dt/2)*Zq/(Am_p), to convert field to force
        !/
-       QDtPerM = cHalf * Dt * Charge2Mass_I(iLoop)
+       QDtPerM = cHalf*Dt*Charge2Mass_I(iLoop)
        Index_II(Status_,1:nParticle) = DoAll_
        call get_vdf_from_state(iKind)
        call batl_trace_particles(iKind, boris_scheme, check_done)
@@ -383,13 +385,13 @@ contains
        do iLoop = 1, nHybridParticleSort
           iKind = iKindParticle_I(iLoop)
           !\
-          ! Sum up contributions to charge and current densities from 
-          ! the moments of hybrid ions (first nHybridParticleSort of 
-          ! all charged particles
+          ! Sum up contributions to charge and current densities 
+          ! from  the moments of hybrid ions (first  
+          ! nHybridParticleSort of all charged particles)
           !/
           DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) = &
                DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
-               Charge2Mass_I(iLoop) * &
+               Charge2Mass_I(iLoop)* &
                Moments_VGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
           if(.not.DoBorisStep)&
                !\
@@ -412,16 +414,16 @@ contains
   !=====================================
   subroutine boris_scheme(iParticle, EndOfSegment)
     !\
-    ! In this routine we follow the formulation described in the Book: 
-    ! Plasma Physics via Computer Simulation, 
+    ! In this routine we follow the formulation described in the  
+    ! Book: Plasma Physics via Computer Simulation, 
     ! Editors: Birdsall, C. K.; Langdon, A. B., 
     ! The Adam Hilger Series on Plasma Physics, 1991.
     ! A time-centered difference method for solving the Newton-Lorentz 
     ! equations of motion is detailed in Subestion 4.3, Eq. (3). 
-    ! This method makes use of A) the Buneman 1967 method, through Eq. (4)-(6),
-    ! in order to simplify Eq. (3) by subtracting the drift velocity from v, and
-    ! B) the Boris Scheme, which separates the electric and magnetic fields , 
-    ! through Eq. (7) - (9).
+    ! This method makes use of A) the Buneman 1967 method, through 
+    ! Eq. (4)-(6), in order to simplify Eq. (3) by subtracting the 
+    ! drift velocity from v, and B) the Boris Scheme, which separates 
+    ! the electric and magnetic fields ,  through Eq. (7) - (9).
     !/
     !\
     ! WITHIN THE FRAMEWORK OF HYBRYD SCHEME:
@@ -433,25 +435,26 @@ contains
     !    a. First by a half time step to x(N+1) and then 
     ! 2. Uses the E, B-fields: E(N+1/2), B(N+1/2), interpolated to
     !    the particle location at x(N+1/2).
-    !    This algorithm corresponds to Step 2(a) (p.109)of the CAM Algorithm
-    !     in Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
+    !    This algorithm corresponds to Step 2(a) (p.109) of the CAM 
+    !    Algorithm in Matthews, 1993, J.Comput.Phys, v.112, pp.102-116.
     ! 3. Collected the current and charge densities:
     !     a. \rho_c(x(N+1),u(N+1)), J(x(N+1),u(N+1))
     ! To make the full Boris step the routine is called with 
     ! DoBorisStep = .true.
     !/
     !\
-    ! 4. At the beginning of the (next) time step only the particle coordinates
-    !    are advanced from x(N+1) to x(N+3/2). We then collect  
+    ! 4. At the beginning of the (next) time step only the particle
+    !     coordinates are advanced from x(N+1) to x(N+3/2). We then  
+    !     collect 
     !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1))
     ! To do this, the routine is called with DoBorisStep = .false.
     !/
     ! This algorithm corresponds to Step 2(b) of the CAM Algorithm in
     ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116
-    ! with a modification to split the displacement into two parts, following
-    ! Holmstrom, arXiv:0911.4435, 2009. 
-    ! They are collected for each species separately, as described on page
-    ! 110, item 2(b)(i)
+    ! with a modification to split the displacement into two parts, 
+    ! following Holmstrom, arXiv:0911.4435, 2009. 
+    ! They are collected for each species separately, as described 
+    ! on page 110, item 2(b)(i)
     !/
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
     use ModMain, ONLY: UseB0
@@ -521,19 +524,19 @@ contains
           ! Interpolate fields with obtained weight coefficients
           !/
           B_D = 0.0;   E_D = 0.0
-          ! get potential part of the magnetic field at current coordinates 
+          ! get potential part of the magnetic field at given location 
           if(UseB0)call get_b0(Xyz_D, B_D)
           !\
-          ! Interpolate electric field and the remaining non-potential part 
-          ! of the magnetic field
+          ! Interpolate electric field and the remaining non-potential 
+          ! part  of the magnetic field
           !/ 
           do iCell = 1, nCell
              i_D = 1
              i_D(1:nDim) = iCell_II(1:nDim, iCell)
-             B_D = B_D + &
-                  State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-             E_D = E_D + &
-                  Efield_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+             B_D = B_D + Weight_I(iCell)*&
+                  State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)
+             E_D = E_D + Weight_I(iCell)*&
+                  Efield_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)
           end do
           !\
           ! Calculate individual contributions from E, B field on  velocity 
@@ -604,32 +607,29 @@ contains
     ! Get the contribution to moments of VDF, 
     ! from a given particle with coordinates at half time step
     ! after velocity.
-     !/
-    U_D = Coord_DI(Ux_:Uz_,iParticle) 
+    !/
+    !Zero moment
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
-    Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*&
-         U_D(x_:z_)
-    Moments_V(Px_:Pz_) = Moments_V(Rho_)*&
-         U_D(x_:z_)**2
-    Moments_V(P12_:P13_) =  Moments_V(Rho_)*&
-         U_D(x_)*U_D(y_:z_)
-    Moments_V(P23_) = Moments_V(Rho_)*&
-         U_D(y_)*U_D(z_)
+    !First moments
+    U_D = Coord_DI(Ux_:Uz_,iParticle)
+    Moments_V(RhoUx_:RhoUz_) = Moments_V(Rho_)*U_D(x_:z_)
+    !Second moments: diagonal
+    Moments_V(Px_:Pz_)   =  Moments_V(Rho_)*U_D(x_:z_)**2
+    !Second moments: off-diagonal
+    Moments_V(P12_:P13_) =  Moments_V(Rho_)*U_D(x_)*U_D(y_:z_)
+    Moments_V(P23_)      =  Moments_V(Rho_)*U_D(y_)*U_D(z_)
     !\
     ! Collect Contribution with updated weight coefficients
     ! Note, that the last index of array is not iLoop (since it
     ! is not a global variable), but iKind
     !/
-    if(iKind.ge.1 .and. &
-       iKind.le.iHybridIon_I(nHybridParticleSort))then
-        do iCell = 1, nCell
-           i_D = 1
-           i_D(1:nDim) = iCell_II(1:nDim, iCell)
-           Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
-                Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
-                Moments_V*Weight_I(iCell)
+    do iCell = 1, nCell
+       i_D = 1
+       i_D(1:nDim) = iCell_II(1:nDim, iCell)
+       Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) = &
+            Moments_VGBI(:,i_D(1),i_D(2),i_D(3),iBlock,iKind) + &
+            Moments_V*Weight_I(iCell)
     end do
-    end if
     Index_II(Status_, iParticle) = Done_
   end subroutine boris_scheme
   !==========================
@@ -638,16 +638,17 @@ contains
     ! full time step
     logical, intent(out):: Done
     !--------------------------------------------------------------------------
-    Done = all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
+    Done = &
+         all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
   end subroutine check_done
   !==========================
-  subroutine get_state_from_particle(iBlock)
+  subroutine get_state_from_vdf(iBlock)
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestCell
     integer :: i, j, k, iIon, iKind, iLoop
     real :: vInv
     character(len=*), parameter:: NameSub = &
-         'get_state_from_particle'
+         'get_state_from_vdf'
     !--------------------------------------------------------------------
     !\
     ! Transform VDF moments to State Vector Variables
@@ -687,7 +688,7 @@ contains
        end do
     end do; end do; end do
     !call test_stop(NameSub, DoTest)
-  end subroutine get_state_from_particle
+  end subroutine get_state_from_vdf
   !==========================
   !\
   ! In this subroutine we obtain the VDF for each particle species
