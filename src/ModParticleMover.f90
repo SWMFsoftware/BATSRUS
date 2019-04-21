@@ -733,9 +733,9 @@ contains
     use ModRandomNumber, ONLY: random_real
     integer, intent(in) :: iKind, i, j, k, iBlock
     integer :: nParticlePerCell, iParticle
-    real :: uBulk_D(Ux_:Uz_)
+    real :: uBulk_D(Ux_:Uz_,i,j,k,iBlock)
     real :: uThermal_I(iKindParticle_I(1):&
-            iKindParticle_I(nParticleSort))
+            iKindParticle_I(nParticleSort),i,j,k,iBlock)
     real :: InvRho_I, RndUnif
     ! seed for random number generator
     integer, save:: iSeed=0
@@ -753,14 +753,15 @@ contains
     ! The bulk velocity can be calculated as the ratio of the 
     ! momentum to density, i.e. ubulk = rho * u / rho
     !/
-    uBulk_D(Ux_:Uz_) =  &
+    uBulk_D(Ux_:Uz_,i,j,k,iBlock) =  &
       State_VGB(iRhoUxIon_I(iKind):iRhoUzIon_I(iKind),i,j,k,iBlock)*&
       InvRho_I
     !\
     ! The thermal velocity in the normalization used here is:
     ! uThermal_I = sqrt(P_I/Rho_I)
     !/
-    uThermal_I(iKind) = sqrt(State_VGB(iPIon_I(iKind),i,j,k,iBlock)*&
+    uThermal_I(iKind,i,j,k,iBlock) = &
+            sqrt(State_VGB(iPIon_I(iKind),i,j,k,iBlock)*&
       InvRho_I) 
     ! Loop through particles of a specific sort in each cell
     do iParticle = 1, nParticlePerCell
@@ -771,7 +772,8 @@ contains
             nParticle=nParticlePerCell)
         ! If the thermal velocity is zero then set velocity three vector 
         ! to zero
-        if(uThermal_I(iKind)==0.0)Coord_DI(Ux_:Uz_,iParticle) = 0.0
+        if(uThermal_I(iKind,i,j,k,iBlock)==0.0)&
+                Coord_DI(Ux_:Uz_,iParticle) = 0.0
         !\
         ! Use random generator to assign coordinates for particles in 
         ! each block.
@@ -785,10 +787,11 @@ contains
         ! to generate a Gaussian distribution from the state vector
         ! variable and obtain the VDFs and velocity coordinates.
         !/
-        if(uThermal_I(iKind)>0.0)&
-        call thermalize_particle(iKind, uThermal_I, Coord_DI)
+        if(uThermal_I(iKind,i,j,k,iBlock)>0.0)&
+        call thermalize_particle(iKind,iParticle,i,j,k,iBlock, &
+                       uThermal_I, Coord_DI)
         Coord_DI(Ux_:Uz_,iParticle) = Coord_DI(Ux_:Uz_,iParticle) + &
-                uBulk_D(Ux_:Uz_)
+                uBulk_D(Ux_:Uz_,i,j,k,iBlock)
         !\
         ! Finally calculate the Mass coordinate for each particle
         !/
@@ -810,12 +813,13 @@ contains
   !\
   !Generate Gaussian distribution using Box-Muller method
   !/
-  subroutine thermalize_particle(iKind,uThermal_I,Coord_DI)
+  subroutine thermalize_particle(iKind,iParticle,i,j,k,iBlock,&
+                  uThermal_I,Coord_DI)
     use ModRandomNumber, ONLY: random_real
-    integer, intent(in ) :: iKind
+    integer, intent(in ) :: iKind, iParticle, i,j,k,iBlock
     real,    intent(in ) :: uThermal_I(iKindParticle_I(1):&
-            iKindParticle_I(nParticleSort))
-    real   , intent(out) :: Coord_DI(Ux_:Uz_)
+            iKindParticle_I(nParticleSort),i,j,k,iBlock)
+    real   , intent(out) :: Coord_DI(Ux_:Uz_,iParticle)
     real                 :: Energy, MomentumAvr, RndUnif1, RndUnif2
     integer              :: iW
    ! seed for random number generator
@@ -828,11 +832,11 @@ contains
        RndUnif1  = random_real(iSeed)
        RndUnif2  = random_real(iSeed)
        ! The kinetic energy is calculated next for each particle
-       Energy      = -uThermal_I(iKind)**2 *log(RndUnif1)
+       Energy      = -uThermal_I(iKind,i,j,k,iBlock)**2 *log(RndUnif1)
        ! The average momentum is calculated next for each particle
        MomentumAvr = sqrt(2.0*Energy)
        ! The velocity vector is calculated next are for each particle
-       Coord_DI(iW)     = MomentumAvr*cos(cTwoPi*RndUnif2)
+       Coord_DI(iW,iParticle)     = MomentumAvr*cos(cTwoPi*RndUnif2)
     end do
   end subroutine thermalize_particle
 end module ModParticleMover
