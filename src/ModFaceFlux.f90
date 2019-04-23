@@ -26,7 +26,7 @@ module ModFaceFlux
        RightState_VX, RightState_VY, RightState_VZ, &! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        &! output: flux*Area
        VdtFace_x, VdtFace_y, VdtFace_z,  &! output: cMax*Area for CFL
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI,&  output: U.Area for P source
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI,&!  output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! output: B x Area for J
        MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         &! output: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
