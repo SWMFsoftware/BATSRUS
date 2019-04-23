@@ -483,14 +483,14 @@ contains
 
        if(.not.UsePartImplicit2)then
           ! Select Unused_B = not explicit blocks
-          iNewDecomposition=mod(iNewDecomposition+1, 10000)
+          iNewDecomposition = mod(iNewDecomposition+1, 10000)
           Unused_BP(1:nBlockMax,:) = &
                iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
           Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
        end if
 
        ! advance explicit blocks, calc timestep
-       if(.not.UseDtFixed)cfl=ExplCfl
+       if(.not.UseDtFixed) cfl = ExplCfl
 
        ! Make sure that full whistler speed is used in the explicit update
        if(UseHallResist)then
@@ -538,7 +538,7 @@ contains
     UseCoarseAxisOrig  = UseCoarseAxis
     UseCoarseAxis      = .false.
     ! Use implicit time step
-    if(.not.UseDtFixed)Cfl = CflImpl
+    if(.not.UseDtFixed) Cfl = CflImpl
     
     if(UseDtFixed)then
        if(DoTest)write(*,*)NameSub,': call get_dt_courant'
@@ -550,7 +550,7 @@ contains
        DtCoeff = CflImpl/0.5
     endif
     
-    if (UseBDF2.and.n_step==n_prev+1) then
+    if(UseBDF2.and.n_step==n_prev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
     else
@@ -1996,7 +1996,7 @@ contains
           end do
        end if
     end do
-    !$omp end do
+    !$omp end do nowait
 
     !$omp do private( iBlock )
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
@@ -2012,7 +2012,7 @@ contains
           Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
        endif
     enddo; enddo; enddo; enddo
-    !$omp end do
+    !$omp end do nowait
     !$omp end parallel
     
     call timing_stop('expl2impl')
