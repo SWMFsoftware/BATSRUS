@@ -22,13 +22,13 @@ module ModFaceFlux
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
   use ModAdvance, ONLY:&
-       LeftState_VX,  LeftState_VY,  LeftState_VZ,  & ! input: left  face state
-       RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
-       Flux_VX, Flux_VY, Flux_VZ,        & ! output: flux*Area
-       VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         & ! output: MHD momentum flux
+       LeftState_VX,  LeftState_VY,  LeftState_VZ,  &! input: left  face state
+       RightState_VX, RightState_VY, RightState_VZ, &! input: right face state
+       Flux_VX, Flux_VY, Flux_VZ,        &! output: flux*Area
+       VdtFace_x, VdtFace_y, VdtFace_z,  &! output: cMax*Area for CFL
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI,&!  output: U.Area for P source
+       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! output: B x Area for J
+       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         &! output: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
@@ -37,7 +37,7 @@ module ModFaceFlux
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
-  use ModMultiIon, ONLY: &
+  use ModElectricField, ONLY: &
        Pe_X, Pe_Y, Pe_Z,          & ! output: Pe for grad Pe in multi-ion MHD
        Pwave_X, Pwave_Y, Pwave_Z, & ! Pwave for grad Pwave in multi-ion MHD
        PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ ! Grad Pe stuff for aniso pe
@@ -1482,8 +1482,8 @@ contains
 
 
        if(UseRS7)then
-          call modify_flux(FluxLeft_V, UnLeft_I(1))
-          call modify_flux(FluxRight_V, UnRight_I(1))
+          call modify_flux(FluxLeft_V,  UnLeft_I(1) , MhdFluxLeft_V)
+          call modify_flux(FluxRight_V, UnRight_I(1), MhdFluxRight_V)
        end if
     end if
 
@@ -1585,7 +1585,7 @@ contains
     iFluidMin = 1; iFluidMax = nFluid
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
-    Flux_V = Flux_V*Area
+    Flux_V = Flux_V*Area; MhdFlux_V = MhdFlux_V*Area
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
@@ -1597,13 +1597,14 @@ contains
     if(DoTestCell)call write_test_info
   contains
     !==========================================================================
-    subroutine modify_flux(Flux_V,Un)
+    subroutine modify_flux(Flux_V,Un,MhdFlux_V)
 
       real, intent(in)   :: Un
-      real, intent(inout):: Flux_V(nFlux)
+      real, intent(inout):: Flux_V(nFlux), MhdFlux_V(RhoUx_:RhoUz_)
 
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
+      MhdFlux_V(RhoUx_:RhoUz_) = MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
     end subroutine modify_flux
@@ -1647,18 +1648,18 @@ contains
            FluxRight_V(iEnergyMin:iEnergyMax) &
            - Cmax*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -       StateLeftCons_V(iEnergyMin:iEnergyMax)))
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)then
-         !\
-         ! Calculate the MHD momentum  flux (may be used to calculate 
-         ! electric field). 
-         !/
-         MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
-      end if
+
       Unormal_I(iFluidMin:iFluidMax) = 0.5* &
            (UnLeft_I(iFluidMin:iFluidMax) + UnRight_I(iFluidMin:iFluidMax))
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate the MHD momentum  flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
          Enormal   = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) &
               Unormal_I(eFluid_) = 0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
@@ -1713,14 +1714,6 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-         !\
-         ! Calculate MHD momentum flux (may be used to calculate 
-         ! electric field). 
-         !/
-         MhdFlux_V = &
-              WeightLeft *MhdFluxLeft_V +  &
-              WeightRight*MhdFluxRight_V
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1735,6 +1728,13 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate MHD momentum flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
+              +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -1861,15 +1861,6 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-           !\
-           ! Calculate the hydrodynamic contribution to the MHD momentum 
-           ! flux (may be used to calculate electric field). Include the 
-           ! part of numerical diffusion related to the mass exchange
-           !/
-         MhdFlux_V = &
-              WeightLeft *MhdFluxLeft_V +  &
-              WeightRight*MhdFluxRight_V  
       
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
@@ -1885,6 +1876,13 @@ contains
       
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate the MHD momentum flux (may be used to 
+              ! calculate electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
+              +           WeightRight*MhdFluxRight_V  
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -1925,14 +1923,7 @@ contains
            ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
-           -            StateLeftCons_V(iVarMin:iVarMax)) )
-      if(UseMhdMomentumFlux.and.iVarMin==Rho_)&
-           !\
-           ! Calculate MHD momentum flux (may be used to calculate 
-           ! electric field). 
-           !/
-           MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
-           +           WeightRight*MhdFluxRight_V  
+           -            StateLeftCons_V(iVarMin:iVarMax)) )  
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1947,6 +1938,13 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         if(UseMhdMomentumFlux)&
+              !\
+              ! Calculate MHD momentum flux (may be used to calculate 
+              ! electric field). 
+              !/
+              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
+              +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -2025,14 +2023,14 @@ contains
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
       end if
 
       if(sR <= 0.) then
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
          RETURN
       end if
 
@@ -2252,7 +2250,7 @@ contains
       ! Set normal velocity for all fluids (HLLD is for 1 fluid only)
       Unormal_I = Un
 
-      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
+      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
 
       if(Eta > 0.0)then
          ! Add flux corresponding to -curl Eta.J to induction equation
@@ -3032,14 +3030,7 @@ contains
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         if (.not. UseAnisoPe) then
-            ! In isotropic electron case, no electron contributions
-            DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
-         else
-            ! In anisotropic electron case, only (Pepar - Pperp) contributes
-            DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
-                 - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
-         end if
+         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
@@ -3050,27 +3041,13 @@ contains
 
          if(DoTestCell)then
             write(*,*) NameSub, ' after aniso flux:'
-            if (.not. UseAnisoPe) then
-               write(*,*) 'DpPerB  =', DpPerB
-               write(*,*) 'FullBx  =', FullBx
-               write(*,*) 'FullBy  =', FullBy
-               write(*,*) 'FullBz  =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
-            else
-               write(*,*) 'DpPerB(ion) =', &
-                    1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
-               write(*,*) 'DpPerB(pe)  =', &
-                    1.5*(State_V(Pepar_)-State_V(Pe_))*FullBn/max(1e-30,FullB2)
-               write(*,*) 'DpPerB      =', DpPerB
-               write(*,*) 'FullBx      =', FullBx
-               write(*,*) 'FullBy      =', FullBy
-               write(*,*) 'FullBz      =', FullBz
-               write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
-               write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
-               write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
-            end if
+            write(*,*) 'DpPerB  =', DpPerB
+            write(*,*) 'FullBx  =', FullBx
+            write(*,*) 'FullBy  =', FullBy
+            write(*,*) 'FullBz  =', FullBz
+            write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
          end if
       end if
       !\
@@ -3106,6 +3083,42 @@ contains
       MhdFlux_V(RhoUx_) =  - Bn*FullBx - B0n*Bx + pTotal*NormalX
       MhdFlux_V(RhoUy_) =  - Bn*FullBy - B0n*By + pTotal*NormalY
       MhdFlux_V(RhoUz_) =  - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+      !\
+      ! Correction for anusotropic electron pressure
+      !/
+      if(UseAnisoPe)then
+         if (DoTestCell) then
+            write(*,*) NameSub, ' before anisoPe flux:'
+            write(*,*) ' Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+            write(*,*) ' Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+            write(*,*) ' Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+         end if
+
+         ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
+         ! In anisotropic electron case, only (Pepar - Pperp) contributes
+         DpPerB = 1.5*(State_V(Pepar_) - State_V(Pe_))*FullBn&
+              /max(1e-30, FullB2)
+
+         MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
+         MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
+         MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
+         Flux_V(Energy_)= Flux_V(Energy_) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) 
+         !\
+         ! Don't we need Flux_V(PePar_)?
+         !/
+         if(DoTestCell)then
+            write(*,*) NameSub, ' after anisoPe flux:'
+            write(*,*) 'DpPerB(pe)  =', DpPerB 
+            write(*,*) 'FullBx      =', FullBx
+            write(*,*) 'FullBy      =', FullBy
+            write(*,*) 'FullBz      =', FullBz
+            write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+         end if
+      end if
 
       call get_magnetic_flux
       if(.not.IsMhd)RETURN

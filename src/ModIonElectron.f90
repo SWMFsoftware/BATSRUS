@@ -310,7 +310,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'correct_electronfluid_efield'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest, iBlock)
 
     ! only single electron fluid is supported at this moment
     if(nElectronFluid /= 1) &
@@ -397,7 +397,7 @@ contains
          ChargePerMass_I(1:nTrueIon)*State_V(iRhoIon_I(1:nTrueIon)) )
 
     ! electron number density
-    nElec = ElectronCharge/InvElectronDens
+    nElec = 1/(ElectronCharge*InvElectronDens)
 
     ! charge average ion velocity
     uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
@@ -428,6 +428,9 @@ contains
        write(*,*) NameSub, ' DoCorrectEfield =', DoCorrectEfield
        write(*,'(1x,2a,10es13.5)')  NameSub, ' MassIon_I   =', MassIon_I
        write(*,'(1x,2a,10es13.5)')  NameSub, ' ChargeIon_I =', ChargeIon_I
+       write(*,'(1x,2a,10es13.5)')  NameSub, ' nIon_I      =', &
+            State_V(iRhoIon_I(1:nTrueIon))/MassIon_I(1:nTrueIon)
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' nElec       =', nElec
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uPlus_D     =', uPlus_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' Current_D   =', Current_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uElec_D     =', uElec_D

@@ -29,6 +29,7 @@ contains
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
     use ModCoordTransform
+    use ModElectricField, ONLY: get_efield_in_comoving_frame
     use ModImplicit,      ONLY: UseFullImplicit
     use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
     use ModMultiFluid
@@ -98,7 +99,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    Source_VC = 0.0
+    Source_VC = 0.0; SourceMhd_VC  = 0.0
     
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
@@ -215,8 +216,8 @@ contains
 
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
 
-       end do
-    end if
+       end do !iFluid
+    end if !UseAnisoPressure.or.UseNonConservative
 
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -564,12 +565,14 @@ contains
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
                   -DivB1_GB(i,j,k,iBlock)*U_D
 
-             if(.not. IsMhd) CYCLE
+             if(.not. UseMhdMomentumFlux) CYCLE
 
              ! -B1 div(B1)       - usual div B source
-             Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k)  &
+             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)  &
                   -DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
+             if(.not. IsMhd) CYCLE
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                   -DivB1_GB(i,j,k,iBlock)*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *U_D)
@@ -580,7 +583,7 @@ contains
 
        if(DoTest)call write_source('After divb source')
 
-       if(UseB0Source .and. IsMhd)then
+       if(UseB0Source .and. UseMhdMomentumFlux)then
 
           !   -B1 div(B0)     - div(B0) source
           ! -curl(B0) x B1    - remove this term (in case curl B0 should be 0)
@@ -588,7 +591,8 @@ contains
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
-             Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                  SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
                   - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_C(i,j,k) &
                   - cross_product( &
                   CurlB0_DC(:,i,j,k), State_VGB(Bx_:Bz_,i,j,k,iBlock))
@@ -604,7 +608,7 @@ contains
        if(UseB)call calc_divb(iBlock)
     end if
 
-    if(UseB .and. UseCurlB0 .and. IsMhd)then
+    if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -614,7 +618,8 @@ contains
           ! +curl(B0) x B0    - add this since curl B0 is not 0
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
-          Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+          SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = &
+               SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
                + CurlB0CrossB_D
           ! Energy equation source term is u.(curl(B0)xB)
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
@@ -634,7 +639,9 @@ contains
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
             call write_source('After E div E')
     end if
-
+    if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
+         Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
+    if(.not.UseEfield)call get_efield_in_comoving_frame(iBlock)
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
        call select_fluid(iFluid)
@@ -969,7 +976,7 @@ contains
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-         if((IsMhd.and.UseB0) .or. (.not.DoCorrectFace)) then
+         if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
                  (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
@@ -1005,21 +1012,21 @@ contains
 
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
-            if(IsMhd.and.UseB0) then
-               Source_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+            if(UseMhdMomentumFlux.and.UseB0) then
+               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                     -B0_DX(:,i,j,k)*dB1nFace1    &
                     -B0_DX(:,i+1,j,k)*dB1nFace2
 
                if(nJ > 1) &
-                    Source_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                     -B0_DY(:,i,j,k)*dB1nFace3   &
                     -B0_DY(:,i,j+1,k)*dB1nFace4
 
                if(nK > 1) &
-                    Source_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                     -B0_DZ(:,i,j,k)*dB1nFace5     &
                     -B0_DZ(:,i,j,k+1)*dB1nFace6
             endif
@@ -1078,11 +1085,11 @@ contains
       end do; end do; end do
 
       ! Momentum source term from B0 only needed for true MHD equations
-      if(.not.(IsMhd .and. UseB0)) RETURN
+      if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+         SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
@@ -1119,9 +1126,9 @@ contains
 
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
-         if(.not.(IsMhd .and. UseB0)) CYCLE
+         if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-         Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
               - B0_DX(:,i,j,k)*B1nJumpL   &
               - B0_DX(:,i+1,j,k)*B1nJumpR
 
@@ -1153,9 +1160,9 @@ contains
          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
               + B1nJumpL + B1nJumpR
 
-         if(.not.(IsMhd .and. UseB0)) CYCLE
+         if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-         Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k)&
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
               -B0_DY(:,i,j,k)*B1nJumpL &
               -B0_DY(:,i,j+1,k)*B1nJumpR
 
@@ -1190,9 +1197,9 @@ contains
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
                  + B1nJumpL + B1nJumpR
 
-            if(.not.(IsMhd .and. UseB0)) CYCLE
+            if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-            Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)&
+            SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = SourceMhd_VC(rhoUx_:rhoUz_,i,j,k)&
                  -B0_DZ(:,i,j,k)*B1nJumpL &
                  -B0_DZ(:,i,j,k+1)*B1nJumpR
          end do; end do; end do
@@ -1210,11 +1217,11 @@ contains
       if(DoTest)write(*,*)NameSub,' final divb1=', &
            DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
-      if(.not.(IsMhd .and. UseB0)) RETURN
+      if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
