@@ -1932,20 +1932,20 @@ contains
     IsImplCell_CB = .false.
     
     !$omp parallel do 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-       IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
-            true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
-    enddo; enddo; enddo; enddo
+    do iBlockImpl=1,nBlockImpl
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
+               true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
+       enddo; enddo; enddo
+       
+       if(UseResistivePlanet)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
+                  IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
+          enddo; enddo; enddo
+       endif
+    enddo
     !$omp end parallel do
-
-    if(UseResistivePlanet)then
-       !$omp parallel do 
-       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-          if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
-               IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
-       enddo; enddo; enddo; enddo
-       !$omp end parallel do
-    endif
 
     ! The index of the test variable in the linear array
     nTest = &
@@ -1981,8 +1981,7 @@ contains
 
     call timing_start('expl2impl')
 
-    !$omp parallel
-    !$omp do private( iBlock )
+    !$omp parallel do private( iBlock )
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        Var_VGB(:,:,:,:,iBlockImpl) = &
@@ -1995,26 +1994,23 @@ contains
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
        end if
-    end do
-    !$omp end do nowait
-
-    !$omp do private( iBlock )
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+     
+       do k=1,nK; do j=1,nJ; do i=1,nI
        ! The max velocity at each face is calculated later in get_cmax_face(),
-       ! which is calculated block-by-block. If a cell is not a implicit cell
+       ! which is calculated block-by-block. If a cell is not an implicit cell
        ! and is not a 'ghost' cell of a implicit cell, then set the
        ! density to 1 and all the other variables to 0, so that the maximum
-       ! velocity at these faces is 0.
-       iBlock = iBlockFromImpl_B(iBlockImpl)
-       if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
-            max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
-          Var_VGB(:,i,j,k,iBlockImpl) = 0
-          Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
-       endif
-    enddo; enddo; enddo; enddo
-    !$omp end do nowait
-    !$omp end parallel
-    
+       ! velocities at these faces are 0.
+          iBlock = iBlockFromImpl_B(iBlockImpl)
+          if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
+               max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
+             Var_VGB(:,i,j,k,iBlockImpl) = 0
+             Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
+          endif
+       enddo; enddo; enddo
+    end do
+    !$omp end parallel do
+
     call timing_stop('expl2impl')
 
     if(DoTest .and. nBlockImpl > 0) &
