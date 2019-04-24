@@ -194,6 +194,8 @@ contains
             ! for physical refinement.
             if (UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
+               ! Fill in ghost cells in case needed by the user perturbation
+               call exchange_messages
                call user_initial_perturbation
                call timing_stop('amr_ics_perturb')
             end if
@@ -234,6 +236,9 @@ contains
 
       ! Allow the user to add a perturbation to the initial condition.
       if (UseUserPerturbation) then
+         ! Fill in ghost cells in case needed by the user perturbation
+         call exchange_messages
+
          call user_initial_perturbation
          UseUserPerturbation=.false.
       end if
