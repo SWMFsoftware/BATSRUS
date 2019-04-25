@@ -1931,17 +1931,17 @@ contains
 
     IsImplCell_CB = .false.
     
-    !$omp parallel do 
+    !$omp parallel do private(iBlock)
     do iBlockImpl=1,nBlockImpl
+       iBlock = iBlockFromImpl_B(iBlockImpl)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
-               true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
+          IsImplCell_CB(i,j,k,iBlock) = true_cell(i,j,k,iBlock)
        enddo; enddo; enddo
        
        if(UseResistivePlanet)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
-                  IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
+             if(r_BLK(i,j,k,iBlock) < 1.0) &
+                  IsImplCell_CB(i,j,k,iBlock) = .false.
           enddo; enddo; enddo
        endif
     enddo
@@ -2001,7 +2001,6 @@ contains
        ! and is not a 'ghost' cell of a implicit cell, then set the
        ! density to 1 and all the other variables to 0, so that the maximum
        ! velocities at these faces are 0.
-          iBlock = iBlockFromImpl_B(iBlockImpl)
           if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
                max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
              Var_VGB(:,i,j,k,iBlockImpl) = 0
