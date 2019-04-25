@@ -21,6 +21,9 @@ module ModAdvance
   implicit none
   save
 
+  public :: init_mod_advance
+  public :: clean_mod_advance
+
   ! Numerical flux type
   character (len=10) :: FluxType
 

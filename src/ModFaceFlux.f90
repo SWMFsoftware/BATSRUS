@@ -22,13 +22,13 @@ module ModFaceFlux
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
   use ModAdvance, ONLY:&
-       LeftState_VX,  LeftState_VY,  LeftState_VZ,  & ! input: left  face state
-       RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
-       Flux_VX, Flux_VY, Flux_VZ,        & ! output: flux*Area
-       VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         & ! output: MHD momentum flux
+       LeftState_VX,  LeftState_VY,  LeftState_VZ,  &! input: left  face state
+       RightState_VX, RightState_VY, RightState_VZ, &! input: right face state
+       Flux_VX, Flux_VY, Flux_VZ,        &! output: flux*Area
+       VdtFace_x, VdtFace_y, VdtFace_z,  &! output: cMax*Area for CFL
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI,&!  output: U.Area for P source
+       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! output: B x Area for J
+       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         &! output: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
