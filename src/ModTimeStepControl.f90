@@ -456,6 +456,7 @@ contains
        end if
     end if
 
+    !$omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
@@ -483,6 +484,7 @@ contains
        end if
 
     end do
+    !$omp end parallel do
 
     ! Collect time level information from all processors
     if(UseMaxTimeStep .and. nProc > 1) call MPI_allreduce(MPI_IN_PLACE, &

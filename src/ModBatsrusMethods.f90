@@ -194,6 +194,8 @@ contains
             ! for physical refinement.
             if (UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
+               ! Fill in ghost cells in case needed by the user perturbation
+               call exchange_messages
                call user_initial_perturbation
                call timing_stop('amr_ics_perturb')
             end if
@@ -234,6 +236,9 @@ contains
 
       ! Allow the user to add a perturbation to the initial condition.
       if (UseUserPerturbation) then
+         ! Fill in ghost cells in case needed by the user perturbation
+         call exchange_messages
+
          call user_initial_perturbation
          UseUserPerturbation=.false.
       end if
@@ -496,16 +501,16 @@ contains
 
     if(UseImplicit.and.nBlockImplALL>0)then
        call advance_part_impl
-    elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate) then
+    elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate)then
        call advance_localstep(TimeSimulationLimit)
     else
        call advance_explicit(DoCalcTimestep=.true.)
     endif
 
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
-    if(  time_accurate .and. &
-         Time_Simulation < TimeSimulationLimit .and. &
-         TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
+    if(time_accurate .and. &
+       Time_Simulation < TimeSimulationLimit .and. &
+       TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
 
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
@@ -555,7 +560,7 @@ contains
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
     end if
 
-    if(UsePartSteady) then
+    if(UsePartSteady)then
        ! Select steady and unsteady blocks
        if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
           call timing_start('part_steady')
@@ -569,45 +574,44 @@ contains
 
     call advect_all_points
 
-    if(UseParticles) &
-         call advect_particle_line
+    if(UseParticles) call advect_particle_line
 
     call timing_stop('advance')
 
     if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
          iProc,n_step,Time_Simulation
 
-    if (DoUpdateB0) then
+    if(DoUpdateB0)then
        ! dB0/dt term is added at the DtUpdateB0 frequency
 
-       if ( int(Time_Simulation/DtUpdateB0) >  &
-            int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
-            call update_b0
+       if(int(Time_Simulation/DtUpdateB0) >  &
+          int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
+          call update_b0
     end if
 
-    if (UseProjection) call project_divb
+    if(UseProjection) call project_divb
 
     ! AmrTime is the time to do AMR.
     if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
-    if ( DoAmr .and. ((DnAmr > 0 .and. mod(n_step, DnAmr) == 0) .or. &
-         ( DtAmr >0 .and. time_simulation  >AmrTime)))then
-       if(DtAmr >0) AmrTime = DtAmr + AmrTime
+    if(DoAmr .and. ((DnAmr > 0 .and. mod(n_step, DnAmr) == 0) .or. &
+         (DtAmr > 0 .and. time_simulation > AmrTime)))then
+       if(DtAmr > 0) AmrTime = DtAmr + AmrTime
        call timing_start(NameThisComp//'_amr')
-       if(iProc==0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr >0))then
+       if(iProc==0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr > 0))then
           call write_prefix; write(iUnitOut,*) &
                '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
-          if (time_accurate) call write_timeaccurate
+          if(time_accurate) call write_timeaccurate
        end if
 
        ! Increase refinement level if geometric refinement is done
-       if (.not. DoAutoRefine) nRefineLevel = nRefineLevel + 1
+       if(.not.DoAutoRefine) nRefineLevel = nRefineLevel + 1
 
        ! BDF2 scheme should not use previous step after AMR
        n_prev = -100
 
        ! Do AMR without full initial message passing
        call prepare_amr(DoFullMessagePass=.false., TypeAmr='all')
-       if (time_loop) call BATS_save_files('BEFOREAMR')
+       if(time_loop) call BATS_save_files('BEFOREAMR')
        call do_amr
 
        ! Output timing after AMR.
@@ -619,7 +623,7 @@ contains
                '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
        end if
 
-       if (UseProjection) call project_divb
+       if(UseProjection) call project_divb
 
        ! Write plotfiles after AMR if required
        if(save_plots_amr)call BATS_save_files('AMRPLOTS')
