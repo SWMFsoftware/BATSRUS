@@ -483,14 +483,14 @@ contains
 
        if(.not.UsePartImplicit2)then
           ! Select Unused_B = not explicit blocks
-          iNewDecomposition=mod(iNewDecomposition+1, 10000)
+          iNewDecomposition = mod(iNewDecomposition+1, 10000)
           Unused_BP(1:nBlockMax,:) = &
                iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
           Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
        end if
 
        ! advance explicit blocks, calc timestep
-       if(.not.UseDtFixed)cfl=ExplCfl
+       if(.not.UseDtFixed) cfl = ExplCfl
 
        ! Make sure that full whistler speed is used in the explicit update
        if(UseHallResist)then
@@ -538,7 +538,7 @@ contains
     UseCoarseAxisOrig  = UseCoarseAxis
     UseCoarseAxis      = .false.
     ! Use implicit time step
-    if(.not.UseDtFixed)Cfl = CflImpl
+    if(.not.UseDtFixed) Cfl = CflImpl
     
     if(UseDtFixed)then
        if(DoTest)write(*,*)NameSub,': call get_dt_courant'
@@ -550,7 +550,7 @@ contains
        DtCoeff = CflImpl/0.5
     endif
     
-    if (UseBDF2.and.n_step==n_prev+1) then
+    if(UseBDF2.and.n_step==n_prev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
     else
@@ -1931,21 +1931,21 @@ contains
 
     IsImplCell_CB = .false.
     
-    !$omp parallel do 
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-       IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
-            true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
-    enddo; enddo; enddo; enddo
+    !$omp parallel do private(iBlock)
+    do iBlockImpl=1,nBlockImpl
+       iBlock = iBlockFromImpl_B(iBlockImpl)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          IsImplCell_CB(i,j,k,iBlock) = true_cell(i,j,k,iBlock)
+       enddo; enddo; enddo
+       
+       if(UseResistivePlanet)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(r_BLK(i,j,k,iBlock) < 1.0) &
+                  IsImplCell_CB(i,j,k,iBlock) = .false.
+          enddo; enddo; enddo
+       endif
+    enddo
     !$omp end parallel do
-
-    if(UseResistivePlanet)then
-       !$omp parallel do 
-       do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
-          if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
-               IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
-       enddo; enddo; enddo; enddo
-       !$omp end parallel do
-    endif
 
     ! The index of the test variable in the linear array
     nTest = &
@@ -1981,8 +1981,7 @@ contains
 
     call timing_start('expl2impl')
 
-    !$omp parallel
-    !$omp do private( iBlock )
+    !$omp parallel do private( iBlock )
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        Var_VGB(:,:,:,:,iBlockImpl) = &
@@ -1995,26 +1994,22 @@ contains
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
        end if
-    end do
-    !$omp end do
-
-    !$omp do private( iBlock )
-    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+     
+       do k=1,nK; do j=1,nJ; do i=1,nI
        ! The max velocity at each face is calculated later in get_cmax_face(),
-       ! which is calculated block-by-block. If a cell is not a implicit cell
+       ! which is calculated block-by-block. If a cell is not an implicit cell
        ! and is not a 'ghost' cell of a implicit cell, then set the
        ! density to 1 and all the other variables to 0, so that the maximum
-       ! velocity at these faces is 0.
-       iBlock = iBlockFromImpl_B(iBlockImpl)
-       if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
-            max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
-          Var_VGB(:,i,j,k,iBlockImpl) = 0
-          Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
-       endif
-    enddo; enddo; enddo; enddo
-    !$omp end do
-    !$omp end parallel
-    
+       ! velocities at these faces are 0.
+          if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
+               max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
+             Var_VGB(:,i,j,k,iBlockImpl) = 0
+             Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
+          endif
+       enddo; enddo; enddo
+    end do
+    !$omp end parallel do
+
     call timing_stop('expl2impl')
 
     if(DoTest .and. nBlockImpl > 0) &

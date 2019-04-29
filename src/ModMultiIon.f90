@@ -231,6 +231,7 @@ contains
             Source_VC(iVarTest,iTest,jTest,kTest)
     end if
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_V = State_VGB(:,i,j,k,iBlock)
        ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I) 

@@ -1153,7 +1153,7 @@ contains
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Vpar2, Sigma, SignMajor
     real :: QratioProton, ExtensionCoef, Qmajor, Qminor
-    real, dimension(nIonFluid) :: HeatFractionMinor_I, HeatFractionMajor_I, &
+    real, dimension(nIonFluid) :: QminorFraction_I, QmajorFraction_I, &
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
          QperpPerQtotal_I, GyroRadiusTimesB_I
     real :: BetaParProton, Np, Na, Ne, Tp, Ta, Te, Pp
@@ -1191,7 +1191,7 @@ contains
                   /MassIon_I(iIon)*Tmin_I(iFluid)
              if(pMin_I(iFluid) >= 0.0) pMin = min(pMin_I(iFluid), pMin)
           end if
-          pMin = max(pMin, 1e-15)
+          pMin = max(pMin, 1e-30)
 
           P_I(iIon) = max(pMin, State_VGB(iPIon_I(iIon),i,j,k,iBlock))
           if(UseAnisoPressure)then
@@ -1243,7 +1243,7 @@ contains
                -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
                /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
           Upar = sum(Udiff_D*B_D)/B
-          Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+          Valfven = B/sqrt(RhoProton)
 
           ! The damping rates (divided by k_parallel V_Ap) in the lookup
           ! table are for both forward propagating Alfven modes (i.e. in
@@ -1307,20 +1307,20 @@ contains
              iPrev = iIon + 1
              ! Subtract what was used for stochastic heating of alphas
              Qmajor_I(iIon) = &
-                  Qmajor_I(iPrev)*(1.0 - HeatFractionMajor_I(iPrev))
+                  Qmajor_I(iPrev)*(1.0 - QmajorFraction_I(iPrev))
              Qminor_I(iIon) = &
-                  Qminor_I(iPrev)*(1.0 - HeatFractionMinor_I(iPrev))
+                  Qminor_I(iPrev)*(1.0 - QminorFraction_I(iPrev))
 
              ! Reduce similarly the cascade power and exploit non-alignment
              ! (Boldyrev, 2005) of small-scale fluctuations to arrive at
              ! Wmajor and Wminor at the proton gyro-radius
              WmajorGyro = WmajorGyro &
-                  *( (1.0 - HeatFractionMajor_I(iPrev))**2 &
-                  /(1.0 - HeatFractionMinor_I(iPrev)) )**(2.0/3.0) &
+                  *( (1.0 - QmajorFraction_I(iPrev))**2 &
+                  /(1.0 - QminorFraction_I(iPrev)) )**(2.0/3.0) &
                   *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
              WminorGyro = WminorGyro &
-                  *( (1.0 - HeatFractionMinor_I(iPrev))**2 &
-                  /(1.0 - HeatFractionMajor_I(iPrev)) )**(2.0/3.0) &
+                  *( (1.0 - QminorFraction_I(iPrev))**2 &
+                  /(1.0 - QmajorFraction_I(iPrev)) )**(2.0/3.0) &
                   *sqrt(GyroRadiusTimesB_I(iIon)/GyroRadiusTimesB_I(iPrev))
           end if
 
@@ -1357,10 +1357,10 @@ contains
                /Wgyro
 
           if(iIon > 1)then
-             HeatFractionMajor_I(iIon) = &
+             QmajorFraction_I(iIon) = &
                   DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon) &
                   /(1.0 + DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon))
-             HeatFractionMinor_I(iIon) = &
+             QminorFraction_I(iIon) = &
                   DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon) &
                   /(1.0 + DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon))
           end if
@@ -1374,21 +1374,21 @@ contains
        DampingProton = DampingElectron + sum(DampingPar_I) &
             + DampingPerp_I(1)
 
-       HeatFractionMajor_I(1) = DampingProton*CascadeTimeMajor_I(1) &
+       QmajorFraction_I(1) = DampingProton*CascadeTimeMajor_I(1) &
             /(1.0 + DampingProton*CascadeTimeMajor_I(1))
-       HeatFractionMinor_I(1) = DampingProton*CascadeTimeMinor_I(1) &
+       QminorFraction_I(1) = DampingProton*CascadeTimeMinor_I(1) &
             /(1.0 + DampingProton*CascadeTimeMinor_I(1))
 
-       QratioProton = (HeatFractionMajor_I(1)*Qmajor_I(1) &
-            + HeatFractionMinor_I(1)*Qminor_I(1))/Qtotal
+       QratioProton = (QmajorFraction_I(1)*Qmajor_I(1) &
+            + QminorFraction_I(1)*Qminor_I(1))/Qtotal
 
        QparPerQtotal_I = DampingPar_I/DampingProton*QratioProton
 
        QperpPerQtotal_I(1) = DampingPerp_I(1)/DampingProton*QratioProton
 
        if(nIonFluid > 1) QperpPerQtotal_I(2:) = &
-            (HeatFractionMajor_I(2:)*Qmajor_I(2:) &
-            + HeatFractionMinor_I(2:)*Qminor_I(2:))/Qtotal
+            (QmajorFraction_I(2:)*Qmajor_I(2:) &
+            + QminorFraction_I(2:)*Qminor_I(2:))/Qtotal
 
        QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
 
