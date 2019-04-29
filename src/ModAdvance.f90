@@ -21,6 +21,9 @@ module ModAdvance
   implicit none
   save
 
+  public :: init_mod_advance
+  public :: clean_mod_advance
+
   ! Numerical flux type
   character (len=10) :: FluxType
 
@@ -288,6 +291,7 @@ contains
     allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(MhdFlux_VX(RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
+    MhdFlux_VX = 0.0
 
     allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
@@ -295,6 +299,7 @@ contains
     allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(MhdFlux_VY(RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
     allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
+    MhdFlux_VY = 0.0
 
     allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
@@ -302,6 +307,7 @@ contains
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(MhdFlux_VZ(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
+    MhdFlux_VZ = 0.0
 
     allocate(FaceDivU_IX(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(FaceDivU_IY(nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace))
