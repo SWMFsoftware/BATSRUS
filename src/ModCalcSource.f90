@@ -641,7 +641,10 @@ contains
     end if
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
-    if(.not.UseEfield)call get_efield_in_comoving_frame(iBlock)
+
+!!! This should not be called unless truly needed
+!!! if(.not.UseEfield)call get_efield_in_comoving_frame(iBlock)
+
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
        call select_fluid(iFluid)
