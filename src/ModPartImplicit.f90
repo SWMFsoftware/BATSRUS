@@ -1096,8 +1096,8 @@ contains
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Rhs0_I(n)*Norm_V(iVar) &
                + ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl)
-       enddo
-    enddo; enddo; enddo; enddo
+       enddo; enddo; enddo; enddo
+    enddo
     !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
