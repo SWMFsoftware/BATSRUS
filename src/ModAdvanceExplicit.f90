@@ -62,7 +62,7 @@ contains
     !\
     ! Perform multi-stage update of solution for this time (iteration) step
     !/
-    if(UsePartImplicit)call timing_start(NameSub)
+    if(UsePartImplicit) call timing_start(NameSub)
 
     if(UseBody2Orbit) call update_secondbody
 
@@ -77,20 +77,20 @@ contains
 
        if(UseResistivity) call set_resistivity
 
-       if(iStage==1) then
+       if(iStage==1)then
           if(UseArtificialVisco .or. UseAdaptiveLowOrder) &
                call calc_cell_norm_velocity
           call set_low_order_face
        endif
 
-       if(DoConserveFlux) then
+       if(DoConserveFlux)then
           !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
              ! Calculate interface values for L/R states of each
              ! fine grid cell face at block edges with resolution changes
-             !   and apply BCs for interface states as needed.
+             ! and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
              call timing_start('calc_face_bfo')
              call calc_face_value(.true.,iBlock)
@@ -123,7 +123,7 @@ contains
        call timing_stop('send_cons_flux')
 
        if(DoTest)write(*,*)NameSub,' done message pass'
-       
+
        ! Multi-block solution update.
        !$omp parallel do
        do iBlock = 1, nBlock
@@ -131,7 +131,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Calculate interface values for L/R states of each face
-          !   and apply BCs for interface states as needed.
+          ! and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
           
           if(DoInterpolateFlux)then
@@ -168,7 +168,7 @@ contains
           ! for the block) used in multi-stage update
           ! for steady state calculations.
           ! Also calculate time step when UseDtLimit is true.
-          if ((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
+          if((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
                .and. DoCalcTimestep) call calc_timestep(iBlock)
 
           ! Update solution state in each cell.
@@ -191,7 +191,7 @@ contains
           ! for time accurate calculations.
           ! For time accurate with UseDtLimit, do not
           ! calculate time step.
-          if (time_accurate .and. .not.UseDtLimit .and. &
+          if(time_accurate .and. .not.UseDtLimit .and. &
                iStage == nStage .and. DoCalcTimestep) &
                call calc_timestep(iBlock)
 
@@ -202,13 +202,12 @@ contains
        end do ! Multi-block solution update loop.
        !$omp end parallel do
 
-       
        if(DoTest)write(*,*)NameSub,' done update blocks'
 
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')
 
        if(IsAnyAxis .and. DoFixAxis) call fix_axis_cells
-       if(UseCoarseAxis)call coarsen_axis_cells
+       if(UseCoarseAxis) call coarsen_axis_cells
 
        ! Check for allowable update percentage change.
        if(UseUpdateCheck)then
