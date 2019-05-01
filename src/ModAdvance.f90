@@ -190,7 +190,7 @@ module ModAdvance
   !\
   ! Logical detetmining in which case the Mhd part of the momentum flux is
   ! calculated. If calculated, the electric field \nabla x B x B - \nable P_e
-  ! may be calculated as  the divergence of momentum fluxes, resulting in
+  ! may be calculated as the divergence of momentum fluxes, resulting in
   ! momentum-conserving schemes for hybrid and multifluids. Not calculated
   ! if UseEfield, in which case the electric field is a part of state vector.
   !/
@@ -234,11 +234,11 @@ contains
        allocate(EyNum_CB(nI,nJ,nK,MaxBlock))
        allocate(EzNum_CB(nI,nJ,nK,MaxBlock))
     end if
-    !\
+    
     ! In case electric field is not a part of the state vector, it may
-    ! be expressed in ters of the MhdMomentum flux and stored into 
+    ! be expressed in terms of the MhdMomentum flux and stored into 
     ! Efield_DGB array 
-    if(UseMhdMomentumFlux.and. .not.allocated(Efield_DGB))then
+    if(UseMhdMomentumFlux .and. .not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
     end if
