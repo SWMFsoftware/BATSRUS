@@ -10,7 +10,7 @@ module ModConserveFlux
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
 
-  use ModMain, ONLY:     UseB
+  use ModMain, ONLY: UseB
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
@@ -19,7 +19,7 @@ module ModConserveFlux
        uDotArea_XI, uDotArea_YI, uDotArea_ZI, UseMhdMomentumFlux, &
        MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
-  use ModGeometry,  ONLY: true_cell
+  use ModGeometry, ONLY: true_cell
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -193,8 +193,6 @@ contains
       end if
          
       if(DoTest)then
-         
-
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
          do i = 1, nFluid+1
             write(*,*)NameSub,' iVar, uDotA=', &
