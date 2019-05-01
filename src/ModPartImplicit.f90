@@ -32,7 +32,8 @@ module ModPartImplicit
   integer :: nBlockImpl=0
 
   ! Actual number of implicit variables (unknowns) per processor, total
-  integer :: nImpl=0, nImplTotal=0
+  integer :: nImpl=0
+  real :: nImplTotal_r=0.0 ! define real to avoid overfloating
 
   ! Test variables
   integer :: iBlockImplTest=1, nTest=1
@@ -404,7 +405,7 @@ contains
     integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
     integer :: nIterNewton
     integer :: iError, iError1
-    real    :: NormX, NormLocal_V(nVar), JacSum
+    real    :: NormX, NormLocal_V(nVar)
 
     logical :: IsConverged
 
@@ -425,7 +426,6 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
-
     
     ! Initialize some variables in ModImplicit
     call implicit_init
@@ -437,7 +437,7 @@ contains
     if(DoTest.and.nBlockImpl>0)write(*,*)NameSub,': Impl_VGB=',&
          Impl_VGB(:,iTest,jTest,kTest,iBlockImplTest)
 
-    call MPI_allreduce(nImpl, nImplTotal, 1, MPI_INTEGER, MPI_SUM, &
+    call MPI_allreduce(real(nImpl), nImplTotal_r, 1, MPI_REAL, MPI_SUM, &
          iComm, iError)
     Norm_V = -1.0
     ! Global norm of current w_(k=0) = w_n
@@ -446,10 +446,11 @@ contains
     end do
     call MPI_allreduce(NormLocal_V, Norm_V, nVar, MPI_REAL, MPI_SUM, &
          iComm,iError)
-    Norm_V = sqrt(Norm_V/(nImplTotal/nVar))
+    
+    Norm_V = sqrt(Norm_V/(nImplTotal_r/nVar))
     where(Norm_V < SmallDouble) Norm_V =1.0
 
-    if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',nImplTotal,Norm_V
+    if(DoTest)write(*,*)NameSub,': nImpltot, Norm_V=',nImplTotal_r,Norm_V
 
     TimeSimulationOrig = Time_Simulation
     UseUpdateCheckOrig = UseUpdateCheck
@@ -639,13 +640,6 @@ contains
           end do
           !$omp end parallel do
           call timing_stop('impl_jacobian')
-
-          if(DoTest)then
-             call MPI_reduce(sum(JacImpl_VVCIB(:,:,:,:,:,:,1:nBlockImpl)**2),&
-                  JacSum, 1, MPI_REAL, MPI_SUM, iProcTest, iComm, iError)
-             if(DoTest)write(*,*)NameSub,': sum(MAT**2)=', JacSum
-          end if
-
        endif
 
        ! Update rhs and initial x_I if required
@@ -991,7 +985,7 @@ contains
        call MPI_allreduce(sum(Rhs_I(1:nImpl)**2),q1,1,MPI_REAL,MPI_SUM,&
             iComm,iError)
        if(DoTest)then
-          write(*,*)'norm of rhs:',sqrt(q1/nImplTotal)
+          write(*,*)'norm of rhs:',sqrt(q1/nImplTotal_r)
           if(nBlockImpl>0)write(*,*)'rhs,rhs0,ResImpl_VCB,Impl_VGB(test)=',&
                Rhs_I(nTest),Rhs0_I(nTest),               &
                ResImpl_VCB(kTest,iVarTest,iTest,jTest,iBlockImplTest),  &
@@ -1030,7 +1024,7 @@ contains
        NormXLocal = sum(x_I(1:nImpl)**2)
        call MPI_allreduce(NormXLocal, NormX, 1, MPI_REAL, MPI_SUM, &
             iComm, iError)
-       NormX = sqrt(NormX/nImplTotal)
+       NormX = sqrt(NormX/nImplTotal_r)
        IsConverged = NormX < NewtonErrorMax
        if(DoTest)write(*,*)'NormX:',NormX
     else
@@ -1201,7 +1195,7 @@ contains
     if(DoTest)write(*,*) NameSub,': initial n,sum(x**2),xNormTotal=', &
          nImpl, xNorm, xNormTotal
 
-    xNorm = sqrt(xNormTotal/nImplTotal)
+    xNorm = sqrt(xNormTotal/nImplTotal_r)
 
     if(xNorm < SmallDouble) xNorm = 1.0
 
@@ -1945,7 +1939,6 @@ contains
           enddo; enddo; enddo
        endif
     enddo
-    !$omp end parallel do
 
     ! The index of the test variable in the linear array
     nTest = &
@@ -1994,7 +1987,7 @@ contains
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
        end if
-     
+
        do k=1,nK; do j=1,nJ; do i=1,nI
        ! The max velocity at each face is calculated later in get_cmax_face(),
        ! which is calculated block-by-block. If a cell is not an implicit cell
