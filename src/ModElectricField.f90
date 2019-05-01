@@ -419,6 +419,8 @@ contains
                /CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end if
+
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_efield_in_comoving_frame
   !=============================================================
   subroutine calc_inductive_e
