@@ -253,11 +253,12 @@ contains
     use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
          CellSize_DB, nDim
     use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, nVar
+
     integer, intent(in):: iBlock
     integer:: i, j, k
     real :: State_V(nVar)
     real :: ChargeDens_I(nIonFluid)
-    real, dimension(MaxDim) :: Force_D=0.0, FullB_D=0.0, Current_D=0.0
+    real, dimension(MaxDim) :: Force_D, FullB_D, Current_D
     real :: FluxConvergence,  vInv, InvElectronDens
     logical :: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
