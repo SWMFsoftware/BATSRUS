@@ -6531,6 +6531,18 @@ These will automatically change to the 'all' option even if the user sets
 "opt", which is only recommended for advanced users.
 </command>
 
+<command name="OPTIMIZEMPI">
+	<parameter name="UseOptimizeMpi" type="logical" default="F"/>
+	</parameter>
+#OPTIMIZEMPI
+F			UseOptimizeMpi
+
+If UseOptimizeMpi is true, then the two explicit MPI barriers are switched
+off, which may help with MPI performance. This feature is not fully tested.
+The default is false.
+
+</command>
+
 <command name="RESOLUTIONCHANGE">
 	<parameter name="UseAccurateReschange"  type="logical" default="F" />
 	<parameter name="UseTvdReschange"       type="logical" default="T" />

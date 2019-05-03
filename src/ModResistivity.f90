@@ -208,6 +208,7 @@ contains
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
+    !$omp parallel do
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
@@ -232,6 +233,7 @@ contains
           Eta_GB(:,:,:,iBlock) = Eta_GB(:,:,:,iBlock)*ResistFactor_G
        end if
     end do
+    !$omp end parallel do
 
     if(allocated(iRegionResist_I)) deallocate(ResistFactor_G)
 
@@ -504,6 +506,8 @@ contains
 
     call set_resistivity
 
+    !$omp parallel do private(DoTestCell,DtLocal) &
+    !$omp private(HeatExchange,HeatExchangePeP,HeatExchangePePpar)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -523,7 +527,7 @@ contains
           HeatExchange = Eta_GB(i,j,k,iBlock) * &
                3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
-          if (DoTestCell) &
+          if(DoTestCell) &
                write(*,*) NameSub, ': explicit HeatExchange    =', HeatExchange
 
           ! Point-implicit correction for stability: H' = H/(1+4./3*dt*H)
@@ -532,7 +536,7 @@ contains
           HeatExchangePeP = HeatExchange &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
 
-          if (DoTestCell) then
+          if(DoTestCell)then
              write(*,*) NameSub, ': corrected HeatExchange  =', HeatExchange
              write(*,*) NameSub, ': heatExchangePeP         =', HeatExchangePeP
              write(*,*) NameSub, ': initial State_VGB(P_)   =', &
@@ -582,6 +586,7 @@ contains
 
        call calc_energy_cell(iBlock)
     end do
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_heat_exchange
@@ -595,7 +600,6 @@ contains
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
     use BATL_lib, ONLY: nBlock, Unused_B, iProc
-    use omp_lib
 
     real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlock)
 
@@ -632,7 +636,7 @@ contains
        ! Store index mapping
        iBlockFromSemi_B(nBlockSemi) = iBlock
     end do
-    
+
     !$omp parallel do
     do iBlockSemi=1,nBlockSemi
        ! Store the magnetic field in SemiAll_VCB
@@ -733,6 +737,7 @@ contains
     if(HallCmaxFactor > 0 .and. .not.allocated(WhistlerCoeff_FDB)) &
          allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
+    !$omp parallel do private(InvDxyz,FaceNormal_D,Rho,b_D)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -795,6 +800,7 @@ contains
           end do; end do; end do
        end do
     end do
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine init_impl_hall_resist
@@ -814,7 +820,6 @@ contains
     use ModHallResist,   ONLY: HallCmaxFactor
     use ModCellGradient, ONLY: calc_cell_curl_ghost
     use ModCoordTransform, ONLY: determinant
-    use omp_lib
     
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
