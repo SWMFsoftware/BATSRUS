@@ -57,10 +57,13 @@ TESTDIR = run_test
 # Reference solution is put into this directory when needed:
 REFDIR = run_test_ref
 
+OPENPM = -openmp
+
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
 	@echo "    test KEEP=y                (run tests and keep run directories)"
 	@echo "    test MPIRUN=               (run tests serially)"
+	@echo "    test OPENMP=               (run tests with no openmp)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
 	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
@@ -183,7 +186,7 @@ test_shocktube:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shocktube_compile:
-	./Config.pl -openmp -u=Default -e=MhdHyp -g=64,4,1,10,1
+	./Config.pl ${OPENMP} -u=Default -e=MhdHyp -g=64,4,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -216,7 +219,7 @@ test_shockramp:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shockramp_compile:
-	./Config.pl -openmp -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
+	./Config.pl ${OPENMP} -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -283,7 +286,7 @@ test_hallmhd:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hallmhd_compile:
-	./Config.pl -openmp -u=Waves -e=Mhd -f -g=4,2,2,100,100
+	./Config.pl ${OPENMP} -u=Waves -e=Mhd -f -g=4,2,2,100,100
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -314,7 +317,7 @@ test_viscosity:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_viscosity_compile:
-	./Config.pl -openmp -e=Hd -u=Waves -g=16,4,1,200,1 
+	./Config.pl ${OPENMP} -e=Hd -u=Waves -g=16,4,1,200,1 
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -346,7 +349,7 @@ test_twofluidmhd:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_twofluidmhd_compile:
-	./Config.pl -openmp -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
+	./Config.pl ${OPENMP} -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -377,7 +380,7 @@ test_multifluid:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multifluid_compile:
-	./Config.pl -openmp -u=Default -e=MhdHd -f -g=64,2,2,10,1
+	./Config.pl ${OPENMP} -u=Default -e=MhdHd -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -448,7 +451,7 @@ test_multiion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multiion_compile:
-	./Config.pl -openmp -u=Default -e=MultiIon -f -g=64,2,2,10,1
+	./Config.pl ${OPENMP} -u=Default -e=MultiIon -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -511,7 +514,7 @@ test_mhdnoncons:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdnoncons_compile:
-	./Config.pl -openmp -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
+	./Config.pl ${OPENMP} -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -545,7 +548,7 @@ test_eosgodunov:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_eosgodunov_compile:
-	./Config.pl -openmp -e=HdEos -u=Eos -g=10,1,1,100,1
+	./Config.pl ${OPENMP} -e=HdEos -u=Eos -g=10,1,1,100,1
 	$(MAKE) CRASH
 	make PIDL
 
@@ -611,7 +614,7 @@ test_graydiffusion:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -openmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
+	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -645,7 +648,7 @@ test_corona:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_corona_compile:
-	./Config.pl -openmp -u=Sc -e=MhdCorona -g=4,4,4,3000,1
+	./Config.pl ${OPENMP} -u=Sc -e=MhdCorona -g=4,4,4,3000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -747,7 +750,7 @@ test_chromo:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
-	./Config.pl -openmp -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
+	./Config.pl ${OPENMP} -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -783,7 +786,7 @@ test_outerhelio:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerhelio_compile:
-	./Config.pl -openmp -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
+	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -814,7 +817,7 @@ test_outerheliopui:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
-	./Config.pl -openmp -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
+	./Config.pl ${OPENMP} -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -877,7 +880,7 @@ test_titan_start:
 	$(MAKE) test_titan_check
 
 test_titan_compile:
-	./Config.pl -openmp -u=Titan -e=MhdTitan -g=6,6,6,1000,200
+	./Config.pl ${OPENMP} -u=Titan -e=MhdTitan -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -947,7 +950,7 @@ test_mars_start:
 	$(MAKE) test_mars_check
 
 test_mars_compile:
-	./Config.pl -openmp -u=Mars -e=MhdMars -g=6,6,6,1000,200
+	./Config.pl ${OPENMP} -u=Mars -e=MhdMars -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1018,7 +1021,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl -openmp -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
+	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1090,7 +1093,7 @@ test_venus_start:
 	$(MAKE) test_venus_check
 
 test_venus_compile:
-	./Config.pl -openmp -u=Venus -e=MhdMars -g=6,6,6,1000,200
+	./Config.pl ${OPENMP} -u=Venus -e=MhdMars -g=6,6,6,1000,200
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1158,7 +1161,7 @@ test_saturn_start:
 	$(MAKE) test_saturn_check
 
 test_saturn_compile:
-	./Config.pl -openmp -u=Saturn -e=MhdHyp -g=8,8,8,720,1
+	./Config.pl ${OPENMP} -u=Saturn -e=MhdHyp -g=8,8,8,720,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1239,7 +1242,7 @@ test_ganymede:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ganymede_compile:
-	./Config.pl -openmp -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
+	./Config.pl ${OPENMP} -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1387,7 +1390,7 @@ test_earthsph_start:
 	$(MAKE) test_earthsph_check
 
 test_earthsph_compile:
-	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,8,600,300
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,8,600,300
 	${MAKE} BATSRUS
 	make PIDL
 
@@ -1422,7 +1425,7 @@ test_amr:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
-	./Config.pl -openmp -e=Mhd -u=Default -g=4,4,4,4000,1
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1488,7 +1491,7 @@ test_2bodyplot:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_2bodyplot_compile:
-	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,8,700,300
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,8,700,300
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1536,7 +1539,7 @@ test_anisotropic:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_anisotropic_compile:
-	./Config.pl -openmp -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
+	./Config.pl ${OPENMP} -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1605,7 +1608,7 @@ test_cometCGfluids_start:
 	$(MAKE) test_cometCGfluids_check
 
 test_cometCGfluids_compile:
-	./Config.pl -openmp -u=CometCGfluids -e=MhdCometCG3FluidsPe -g=4,4,4,400,1
+	./Config.pl ${OPENMP} -u=CometCGfluids -e=MhdCometCG3FluidsPe -g=4,4,4,400,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1640,7 +1643,7 @@ test_region2d:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_region2d_compile:
-	./Config.pl -openmp -e=Mhd -u=Default -g=8,8,1,700,1
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,1,700,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1702,7 +1705,7 @@ test_fivemoment_alfven:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_alfven_compile:
-	./Config.pl -openmp -u=Waves -e=FiveMoment -g=100,1,1,20,1
+	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1733,7 +1736,7 @@ test_fivemoment_shock:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_shock_compile:
-	./Config.pl -openmp -u=Waves -e=FiveMoment -g=100,1,1,20,1
+	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1764,7 +1767,7 @@ test_fivemoment_langmuir:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_langmuir_compile:
-	./Config.pl -openmp -u=Waves -e=FiveMoment -g=50,50,1,10,1
+	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=50,50,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
