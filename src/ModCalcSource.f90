@@ -642,7 +642,7 @@ contains
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
 
-    if(.not.UseEfield) call get_efield_in_comoving_frame(iBlock)
+    if(UseMhdMomentumFlux) call get_efield_in_comoving_frame(iBlock)
 
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
