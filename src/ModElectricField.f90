@@ -242,7 +242,9 @@ contains
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
     Efield_DGB(:,:,:,:,iBlock) = 0.0
+
     if(UseJCrossBForce)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
