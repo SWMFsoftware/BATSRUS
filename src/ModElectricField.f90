@@ -289,7 +289,7 @@ contains
           !if(UseMultiIon .and. (.not. &
           !     UseElectronPressure) .and. ElectronTemperatureRatio > 0.0)then
           !if(UseMultiIon)then
-             Force_D(1:nDim) = Force_D(1:nDim) + vInv*&
+             Force_D = Force_D + vInv*&
                   ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)   &
                   + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
              if(nDim > 2)Force_D(1:nDim) = Force_D(1:nDim) + vInv*&
