@@ -290,9 +290,10 @@ contains
           !     UseElectronPressure) .and. ElectronTemperatureRatio > 0.0)then
           !if(UseMultiIon)then
              Force_D = Force_D + vInv*&
-                  ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)   &
-                  + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
-             if(nDim > 2)Force_D(1:nDim) = Force_D(1:nDim) + vInv*&
+                  (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
+             if(nDim > 1) Force_D = Force_D + vInv*&
+                  (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
+             if(nDim > 2) Force_D = Force_D + vInv*&
                   (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
           !end if
           if(DoTestCell)write(*,'(2a,15es16.8)') &
