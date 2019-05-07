@@ -215,7 +215,7 @@ contains
     end do; end do; end do
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_electric_field_block
-  !==========================================================
+  !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
     use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
          State_VGB, Source_VC, UseAnisoPe, &
@@ -302,7 +302,7 @@ contains
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock))CYCLE
-          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +    &
+          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +  &
                ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)    &
                + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)    &
                + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &
