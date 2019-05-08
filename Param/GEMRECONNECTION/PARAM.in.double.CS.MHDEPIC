@@ -67,11 +67,11 @@ T			UseNonConservative
 
 
 #UNIFORMSTATE
-0.2			Rho
+1.225			Rho
 0.0			Ux
 0.0			Uy
 0.0                     Uz
-1.0			Bx
+0.07			Bx
 0.0			By
 0.0			Bz
 0.0			Ex
