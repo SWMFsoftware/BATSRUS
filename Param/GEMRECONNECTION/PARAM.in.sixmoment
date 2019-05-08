@@ -1,0 +1,176 @@
+Parameters are described in Huang, Zhenguang, et al. 
+"A Six-moment Multi-fluid Plasma Model." 
+Journal of Computational Physics (2019).
+
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Six-moment GEM reconnection. 
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+PROGRESS
+1			DnShowProgressShort
+1			DnShowProgressLong
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#UPDATECHECK
+F                       UseUpdateCheck
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+CHECKGRIDSIZE
+8			nI
+8			nJ
+1			nK
+100			MinBlockALL
+
+#GRID
+64			nRootBlockX
+32			nRootBlockY
+1			nRootBlockZ
+-12.8  	                xMinCut
++12.8                   xMaxCut
+-6.4                    yMinCut
++6.4                    yMaxCut
+-0.05			zMin
+ 0.05			zMax
+
+#UNIFORMSTATE
+1.225			Rho
+0.0			Ux
+0.0			Uy
+0.0                     Uz
+0.07			Bx
+0.0			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.0			Hyp
+0.0			HypE
+2.45e-3			Ppar
+2.45e-3			P
+1.225/25	  	ElRho
+0.0			ElUx
+0.0			ElUy
+0.0			ElUz
+4.9e-4			ElPpar
+4.9e-4			ElP
+
+#PLASMA
+1.0                     IonMass
+1/25.0                 ElectronMass
+1.0                     IonCharge
+-1.0                    ElectronCharge
+0.2                     ElectronTemperatureRatio
+
+#LIGHTSPEED
+1.0                    cLightDim
+
+#USERINPUTBEGIN -----------------
+
+#GEM
+0.1                    Apert   amplitude of perturbation
+
+#STANDARDGEM
+T
+
+GEMREFLECTED
+T			UseDoubleCurrentSheet
+
+#GEMPARAM
+0.07                    B0      Background field
+2e-3                    Tp      plasma temperature
+0.5                     Lambda0 Width of current sheet
+
+#GEMPRESSURE
+F                       UseUniformPressure
+
+#GEMPERTURB
+25.6			GaussX  Width of Gaussian perturbation
+12.8			GaussY	Width of Gaussian perturbation
+25.6			WaveLengthX   wavelength of perturbation
+12.8			WaveLengthY   wavelength of perturbation
+
+#USERINPUTEND ---------------------
+
+#OUTERBOUNDARY
+periodic		xMinBc
+periodic		xMaxBc
+reflect			yMinBc
+reflect			yMaxBc
+float			zMinBc
+float			zMaxBc
+
+#ANISOTROPICPRESSURE
+T                       UseConstantTau_I
+1e-5                    TauInstabilitySi_I
+1e-5                    TauGlobalSi_I
+T                       UseConstantTau_I
+1e-5                    TauInstabilitySi_I
+1e-5                    TauGlobalSi_I
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+1.5			LimiterBeta
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+1.0			SpeedHypDim
+0.1			HypDecay
+
+#POINTIMPLICIT
+T
+1.0
+F
+T
+
+#TIMESTEPPING
+2                       nStage
+0.6                     CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+dt rho mx my mz bx by bz e Pmin Pmax byflux
+g
+
+#SAVEINITIAL
+T		        DoSaveInitial
+
+#SAVEPLOT
+1			nPlotfile
+z=0 VAR idl_real8       PlotString
+-1           	        DnSavePlot
+5.0             	DtSavePlot
+0.0	        	DxSavePlot
+{mhd} absdivb
+g
+
+#STOP
+-10
+700.0
+
+#END ############################################################
