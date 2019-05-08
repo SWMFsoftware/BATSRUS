@@ -1,0 +1,156 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Hall MHD reconnection with a local perturbation
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#PROGRESS
+1			DnShowProgressShort
+1			DnShowProgressLong
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#UPDATECHECK
+F                       UseUpdateCheck
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+1			nK
+100			MinBlockALL
+
+#GRID
+32			nRootBlockX
+16			nRootBlockY
+1			nRootBlockZ
+-30			xMin
+ 30			xMax
+-16			yMin
+ 16			yMax
+-0.05			zMin
+ 0.05			zMax
+
+
+
+#UNIFORMSTATE
+1.225			Rho
+0.0			Ux
+0.0			Uy
+0.0                     Uz
+0.07			Bx
+0.0			By
+0.0			Bz
+0.0			Hyp
+4.9e-4			Pe
+2.45e-3			P
+
+#PLASMA
+1.0                     IonMass
+1.0                     IonCharge
+0.2                     ElectronTemperatureRatio
+
+#USERINPUTBEGIN -----------------
+
+#GEM
+0.2                     Apert   amplitude of perturbation
+
+#STANDARDGEM
+F
+
+#GEMDOUBLE
+F			UseDoubleCurrentSheet
+
+#GEMPARAM
+0.07			B0      Background field
+2e-3                    Tp      plasma temperature
+0.5                     Lambda0 Width of current sheet
+
+#GEMPRESSURE
+F                       UseUniformPressure
+
+
+#GEMPERTURB
+2.0			GaussX  Width of Gaussian perturbation
+2.0			GaussY	Width of Gaussian perturbation
+25.6			WaveLengthX   wavelength of perturbation
+12.8			WaveLengthY   wavelength of perturbation
+
+#USERINPUTEND ---------------------
+
+#OUTERBOUNDARY
+periodic		xMinBc
+periodic		xMaxBc
+float			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+1.5			LimiterBeta
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+10.0			SpeedHypDim
+0.1			HypDecay
+
+#TIMESTEPPING
+2                       nStage
+0.6                     CflExpl
+
+#HALLRESISTIVITY
+T			UseHallResist (rest of parameters read only if true)
+1.0			HallFactor  (m/e = 1/sqrt(4*pi))
+1.0			HallCmaxFactor
+
+RESISTIVITY
+T			UseResistivity
+constant		TypeResistivity
+0.01			Eta0Si
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+dt rho mx my mz bx by bz e Pmin Pmax byflux
+g
+
+#SAVEINITIAL
+T		        DoSaveInitial
+
+#SAVEPLOT
+1			nPlotfile
+z=0 VAR idl_ascii       PlotString
+-1           	        DnSavePlot
+10            		DtSavePlot
+0.0	        	DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb
+g
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+-1
+700
