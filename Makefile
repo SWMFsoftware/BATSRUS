@@ -52,7 +52,7 @@ help:
 	@echo '    dist      (create source distribution tar file)'
 
 info:
-	@echo "Total lines of Fortran: `wc -l src*/*.f* | tail -1`"
+	@echo "Total lines of Fortran: `wc -l src*/*.f* share/Library/src/*.f* | tail -1`"
 
 INSTALLFILES =	src/Makefile.DEPEND \
 		src/Makefile.RULES \
