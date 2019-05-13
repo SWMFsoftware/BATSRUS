@@ -193,7 +193,8 @@ module ModAdvance
   ! may be calculated as the divergence of momentum fluxes, resulting in
   ! momentum-conserving schemes for hybrid and multifluids. Not calculated
   ! if UseEfield, in which case the electric field is part of the state vector.
-  logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
+  logical, parameter:: UseMhdMomentumFlux = UseMultiIon .and. &
+       UseB .and. .not.UseEfield
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
        MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
   !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
