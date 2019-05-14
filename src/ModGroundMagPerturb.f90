@@ -451,8 +451,11 @@ contains
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
+    use CON_axes,          ONLY: transform_matrix
     use ModMpi
 
+    !use ModPlotFile, ONLY: save_plot_file
+    
     character(len=*), intent(in):: NameGroup
     integer, intent(in) :: nMag
     real,    intent(in) :: Xyz_DI(3,nMag)
@@ -482,8 +485,14 @@ contains
     integer, parameter:: nGroup = 4   ! number of magnetometer groups
     integer:: iGroup = 1              ! group index
     integer:: iMag0                   ! magnetometer index shift
-    ! this logical becomes true once the first integration was done for the group
+
+    ! becomes true once the first integration was done for the group
     logical:: UseFastFacIntegral_I(nGroup) = .false. 
+
+    ! Coordinate system for the grid that collects the FAC
+    logical         :: DoConvertCoord
+    character(len=3):: TypeCoordFacGrid
+    real            :: SmToFacGrid_DD(3,3)
 
     ! real:: Volume, Height=2.0 !!! to test volume integration
 
@@ -493,6 +502,15 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start('ground_db_fac')
 
+    if(UseFastFacIntegral)then
+       DoConvertCoord   = .true.
+       TypeCoordFacGrid = 'MAG'
+       SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
+    else
+       DoConvertCoord   = .false.
+       TypeCoordFacGrid = 'SMG'
+    end if
+    
     MagPerturb_DI= 0.0
 
     dTheta = cPi    / (nTheta-1)
@@ -501,7 +519,7 @@ contains
 
     ! Get the current and B at the ionosphere boundary
     call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-         FacRcurrents_II, bRcurrents_DII, TypeCoordFacGrid='SMG')
+         FacRcurrents_II, bRcurrents_DII, TypeCoordFacGrid=TypeCoordFacGrid)
 
     if(nProc > 1)then
        call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
@@ -511,6 +529,10 @@ contains
     ! only need those currents that are significant
     where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4) &
          FacRcurrents_II = 0.0
+
+    !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
+    !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
+    !     VarIn_II=transpose(FacRcurrents_II))
 
     iLine = -1
 
@@ -601,6 +623,7 @@ contains
              ! Count local line index
              if(UseFastFacIntegral) iLineProc = iLineProc + 1
 
+
              call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
              ! the field aligned current and B field at r=rCurrents
@@ -620,11 +643,11 @@ contains
 
                 ! get next position along the field line
                 call map_planet_field(Time_Simulation, XyzRcurrents_D, &
-                     'SMG NORM', r, XyzMid_D, iHemisphere)
+                     TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
 
                 ! get the B field at this position
                 call get_planet_field(&
-                     Time_Simulation, XyzMid_D, 'SMG NORM', b_D)
+                     Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
                 b_D = b_D*Si2No_V(UnitB_)
 
                 ! The (x,y,z) components of the field aligned current here
@@ -637,11 +660,13 @@ contains
                 InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
-                ! Check
+                !! Check
                 ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume=Volume+dVol
 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
+
+                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
@@ -651,18 +676,26 @@ contains
                         FacRcurrents*Pert_D
 
                    ! Store contribution for fast method
-                   if(UseFastFacIntegral)LineContrib_DII(:,iMag+iMag0,iLineProc) &
+                   if(UseFastFacIntegral) &
+                        LineContrib_DII(:,iMag+iMag0,iLineProc) &
                         = LineContrib_DII(:,iMag+iMag0,iLineProc) + Pert_D
-
+                   
                 end do
-
+                
              end do
           end do
        end do
     end if
-    ! Volume of the two spherical caps above Height (should be filled
-    ! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
+    !! Volume of the two spherical caps above Height (should be filled
+    !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
     !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
+
+    ! Convert
+    if(DoConvertCoord)then
+       do iMag = 1, nMag
+          MagPerturb_DI(:,iMag) = matmul(MagPerturb_DI(:,iMag), SmToFacGrid_DD)
+       end do
+    end if
 
     call timing_stop('ground_db_fac')
 
