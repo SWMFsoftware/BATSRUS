@@ -642,7 +642,9 @@ contains
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
 
-    if(UseMhdMomentumFlux .and. UseMultiIon) call get_efield_in_comoving_frame(iBlock)
+    ! The comoving electric field is needed for multi-ion and LFM-style MHD
+    if(UseMhdMomentumFlux .and. (UseMultiIon .or. .not.IsMhd) ) &
+         call get_efield_in_comoving_frame(iBlock)
 
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
