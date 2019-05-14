@@ -107,8 +107,8 @@ module ModFaceFlux
   !$omp threadprivate( iDimFace )
   
   ! index of the face
-  integer, public:: iFace, jFace, kFace
-  !$omp threadprivate( iFace, jFace, kFace )
+  integer, public:: iFace,jFace,kFace
+  !$omp threadprivate( iFace,jFace,kFace )
   
   ! index of cell in the negative and positive directions from face
   integer :: iLeft,  jLeft, kLeft
@@ -117,12 +117,11 @@ module ModFaceFlux
   
   real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
   real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
-  !\
+
   ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated 
   ! in terms of divergence of the MHD part of momentum flux.
-  ! By this reason we calculate the MHD flux for the first ion fluid even 
+  ! For this reason we calculate the MHD flux for the first ion fluid even 
   ! in the case when only its hydrodynamic part matters.
-  !/
   real :: MhdFlux_V(     RhoUx_:RhoUz_)     = 0.0
   real :: MhdFluxLeft_V( RhoUx_:RhoUz_)     = 0.0 
   real :: MhdFluxRight_V(RhoUx_:RhoUz_)     = 0.0 
@@ -656,34 +655,31 @@ contains
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            RightState_VX(Bx_:Bz_, iFace, jFace, kFace) =&
-                 RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+            RightState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
+                 RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            LeftState_VX(Bx_:Bz_, iFace, jFace, kFace) =&
-                 LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+            LeftState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
+                 LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
-         StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
-         StateRight_V = RightState_VX(:, iFace, jFace, kFace)
+         StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
+         StateRight_V = RightState_VX(:,iFace,jFace,kFace)
                   
-         call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace))
 
-         if(UseMhdMomentumFlux)&
-            MhdFlux_VX(:,iFace, jFace, kFace) = MhdFlux_V            
-         
+         if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
-            call add_artificial_viscosity( &
-                 Flux_VX(:,iFace,jFace,kFace))
+            call add_artificial_viscosity(Flux_VX(:,iFace,jFace,kFace))
          endif
 
          VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
@@ -741,46 +737,44 @@ contains
          endif
 
          if(UseB0)then
-            B0x = B0_DY(x_,iFace, jFace, kFace)
-            B0y = B0_DY(y_,iFace, jFace, kFace)
-            B0z = B0_DY(z_,iFace, jFace, kFace)
+            B0x = B0_DY(x_,iFace,jFace,kFace)
+            B0y = B0_DY(y_,iFace,jFace,kFace)
+            B0z = B0_DY(z_,iFace,jFace,kFace)
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+            DeltaBnR = sum((RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
                  Normal_D)
-            RightState_VY(Bx_:Bz_, iFace, jFace, kFace) = &
-                 RightState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+            RightState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
+                 RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+            DeltaBnL = sum((LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
                  Normal_D)
-            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) = &
-                 LeftState_VY(Bx_:Bz_, iFace, jFace, kFace) - &
+            LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
+                 LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
-         StateRight_V = RightState_VY(:, iFace, jFace, kFace)
+         StateLeft_V  = LeftState_VY( :,iFace,jFace,kFace)
+         StateRight_V = RightState_VY(:,iFace,jFace,kFace)
 
-         call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VY(:,iFace,jFace,kFace))
 
-         if(UseMhdMomentumFlux)&
-            MhdFlux_VY(:,iFace, jFace, kFace) = MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VY(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
-            FaceDivU_I = FaceDivU_IY(:,iFace, jFace, kFace)
-            call add_artificial_viscosity( &
-                 Flux_VY(:,iFace, jFace, kFace))
+            FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
+            call add_artificial_viscosity(Flux_VY(:,iFace,jFace,kFace))
          endif
 
-         VdtFace_y(iFace, jFace, kFace) = CmaxDt*Area
+         VdtFace_y(iFace,jFace,kFace) = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(y_)
-         uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         uDotArea_YI(iFace,jFace,kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
@@ -833,45 +827,42 @@ contains
          endif
 
          if(UseB0)then
-            B0x = B0_DZ(x_,iFace, jFace, kFace)
-            B0y = B0_DZ(y_,iFace, jFace, kFace)
-            B0z = B0_DZ(z_,iFace, jFace, kFace)
+            B0x = B0_DZ(x_,iFace,jFace,kFace)
+            B0y = B0_DZ(y_,iFace,jFace,kFace)
+            B0z = B0_DZ(z_,iFace,jFace,kFace)
          end if
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnR = sum((RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) -&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            RightState_VZ(Bx_:Bz_, iFace, jFace, kFace) =&
-                 RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+            RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
+                 RightState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
-                 State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*&
-                 Normal_D)
-            LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace) =&
-                 LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+            DeltaBnL = sum((LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) -&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*Normal_D)
+            LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
+                 LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
-         StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
+         StateLeft_V  = LeftState_VZ( :,iFace,jFace,kFace)
+         StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
 
-         call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VZ(:,iFace,jFace,kFace))
 
-         if(UseMhdMomentumFlux)&
-              MhdFlux_VZ(:,iFace, jFace, kFace) = MhdFlux_V            
+         if(UseMhdMomentumFlux) MhdFlux_VZ(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
-            FaceDivU_I = FaceDivU_IZ(:,iFace, jFace, kFace)
-            call add_artificial_viscosity( &
-                 Flux_VZ(:,iFace, jFace, kFace))
+            FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
+            call add_artificial_viscosity(Flux_VZ(:,iFace,jFace,kFace))
          endif
 
-         VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
+         VdtFace_z(iFace,jFace,kFace)       = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(z_)
-         uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         uDotArea_ZI(iFace,jFace,kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
@@ -1029,14 +1020,14 @@ contains
           AreaY = 0.0
           AreaZ = 0.0
        else
-          AreaX = FaceNormal_DDFB(x_, 1, iFace, jFace, kFace, iBlockFace)
+          AreaX = FaceNormal_DDFB(x_, 1, iFace,jFace,kFace, iBlockFace)
           if(nJ > 1)then
-             AreaY = FaceNormal_DDFB(y_, 1, iFace, jFace, kFace, iBlockFace)
+             AreaY = FaceNormal_DDFB(y_, 1, iFace,jFace,kFace, iBlockFace)
           else
              AreaY = 0.0
           end if
           if(nK > 1)then
-             AreaZ = FaceNormal_DDFB(z_, 1, iFace, jFace, kFace, iBlockFace)
+             AreaZ = FaceNormal_DDFB(z_, 1, iFace,jFace,kFace, iBlockFace)
           else
              AreaZ = 0.0
           end if
@@ -1076,10 +1067,10 @@ contains
           AreaY = CellFace_DFB(2,iFace,jFace,kFace,iBlockFace)
           AreaZ = 0.0
        else
-          AreaX = FaceNormal_DDFB(x_, 2, iFace, jFace, kFace, iBlockFace)
-          AreaY = FaceNormal_DDFB(y_, 2, iFace, jFace, kFace, iBlockFace)
+          AreaX = FaceNormal_DDFB(x_, 2, iFace,jFace,kFace, iBlockFace)
+          AreaY = FaceNormal_DDFB(y_, 2, iFace,jFace,kFace, iBlockFace)
           if(nK > 1)then
-             AreaZ = FaceNormal_DDFB(z_, 2, iFace, jFace, kFace, iBlockFace)
+             AreaZ = FaceNormal_DDFB(z_, 2, iFace,jFace,kFace, iBlockFace)
           else
              AreaZ = 0.0
           end if
@@ -1116,9 +1107,9 @@ contains
 
     if(.not.IsCartesian)then
 
-       AreaX = FaceNormal_DDFB(x_, 3, iFace, jFace, kFace, iBlockFace)
-       AreaY = FaceNormal_DDFB(y_, 3, iFace, jFace, kFace, iBlockFace)
-       AreaZ = FaceNormal_DDFB(z_, 3, iFace, jFace, kFace, iBlockFace)
+       AreaX = FaceNormal_DDFB(x_, 3, iFace,jFace,kFace, iBlockFace)
+       AreaY = FaceNormal_DDFB(y_, 3, iFace,jFace,kFace, iBlockFace)
+       AreaZ = FaceNormal_DDFB(z_, 3, iFace,jFace,kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
 
@@ -1273,14 +1264,14 @@ contains
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) then
        if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
-       call get_face_curl(iDimFace, iFace, jFace, kFace, iBlockFace, &
+       call get_face_curl(iDimFace, iFace,jFace,kFace, iBlockFace, &
             IsNewBlockCurrent, b_DG, Current_D)
        Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
 
     ! Calculateing stress tensor for viscosity Visco_DDI
     if(ViscoCoeff > 0.0)then
-       call get_viscosity_tensor(iDimFace, iFace, jFace, kFace,&
+       call get_viscosity_tensor(iDimFace, iFace,jFace,kFace,&
             iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
     end if
 
@@ -1325,7 +1316,7 @@ contains
        end if
 
        ! Calculate face centered grad(Pe)
-       call get_face_gradient(iDimFace, iFace, jFace, kFace, iBlockFace, &
+       call get_face_gradient(iDimFace, iFace,jFace,kFace, iBlockFace, &
             IsNewBlockGradPe, Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
@@ -1346,21 +1337,21 @@ contains
     end if
 
     if(DoRadDiffusion)then
-       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+       call get_radiation_energy_flux(iDimFace, iFace,jFace,kFace, &
             iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
             RadDiffCoef, EradFlux)
        DiffCoef = DiffCoef + RadDiffCoef
     end if
 
     if(DoHeatConduction)then
-       call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+       call get_heat_flux(iDimFace, iFace,jFace,kFace, iBlockFace, &
             StateLeft_V, StateRight_V, Normal_D, &
             HeatCondCoefNormal, HeatFlux)
        DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
     if(DoIonHeatConduction)then
-       call get_ion_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+       call get_ion_heat_flux(iDimFace, iFace,jFace,kFace, iBlockFace, &
             StateLeft_V, StateRight_V, Normal_D, &
             HeatCondCoefNormal, IonHeatFlux)
        DiffCoef = DiffCoef + HeatCondCoefNormal
@@ -1444,7 +1435,6 @@ contains
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight)
        MhdFluxRight_V = MhdFlux_V
-
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V,  UnLeft_I(1) , MhdFluxLeft_V)
@@ -1570,7 +1560,7 @@ contains
 
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
-      if(.not.UseJCrossBForce)MhdFlux_V(RhoUx_:RhoUz_) = &
+      if(.not.UseJCrossBForce) MhdFlux_V(RhoUx_:RhoUz_) = &
            MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
@@ -1622,10 +1612,8 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              !\
               ! Calculate the MHD momentum  flux (may be used to calculate 
-              ! electric field). 
-              !/
+              ! electric field)
               MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
          Enormal   = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) &
@@ -1690,10 +1678,8 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              !\
               ! Calculate MHD momentum flux (may be used to calculate 
-              ! electric field). 
-              !/
+              ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
@@ -1830,10 +1816,8 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              !\
               ! Calculate the MHD momentum flux (may be used to 
-              ! calculate electric field). 
-              !/
+              ! calculate electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
               +           WeightRight*MhdFluxRight_V  
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
@@ -1884,10 +1868,8 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              !\
               ! Calculate MHD momentum flux (may be used to calculate 
-              ! electric field). 
-              !/
+              ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
@@ -2579,10 +2561,8 @@ contains
                 call select_fluid(1)
                 call get_hd_flux
              else
-                !\
                 ! Momentum and energy fluxes now include the electric field
                 ! They need to be reassigned to HDFlux_V accordingly
-                !/ 
                 call get_mhd_flux
              end if
           else
@@ -2620,9 +2600,9 @@ contains
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
     elseif(UseMhdMomentumFlux)then
-       MhdFlux_V(RhoUx_) =  MhdFlux_V(RhoUx_) + Pe*NormalX
-       MhdFlux_V(RhoUy_) =  MhdFlux_V(RhoUy_) + Pe*NormalY
-       MhdFlux_V(RhoUz_) =  MhdFlux_V(RhoUz_) + Pe*NormalZ
+       MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
+       MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
+       MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + Pe*NormalZ
     end if
 
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
@@ -2879,6 +2859,7 @@ contains
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
       p       = State_V(p_)      
+
       !\
       ! Hydrodynamic part of fluxes
       !/
@@ -2916,9 +2897,9 @@ contains
          RhoUn_I = State_V(iRhoIon_I) &
               *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
 
-         Flux_V(RhoUx_)=sum(RhoUn_I*Ux_I) + pPerp*NormalX
-         Flux_V(RhoUy_)=sum(RhoUn_I*Uy_I) + pPerp*NormalY 
-         Flux_V(RhoUz_)=sum(RhoUn_I*Uz_I) + pPerp*NormalZ
+         Flux_V(RhoUx_) = sum(RhoUn_I*Ux_I) + pPerp*NormalX
+         Flux_V(RhoUy_) = sum(RhoUn_I*Uy_I) + pPerp*NormalY 
+         Flux_V(RhoUz_) = sum(RhoUn_I*Uz_I) + pPerp*NormalZ
       else
          ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
          Flux_V(RhoUx_) = Un*Rho*Ux + pPerp*NormalX
@@ -4051,7 +4032,7 @@ contains
 
          write(*,*) NameSub, &
               ' iDim,i,j,k,BlockFace,iProc=', &
-              iDimFace, iFace, jFace, kFace, iBlockFace, iProc
+              iDimFace, iFace,jFace,kFace, iBlockFace, iProc
 
          call stop_mpi(NameSub//' negative fast speed squared')
       end if
@@ -4224,7 +4205,7 @@ contains
          write(*,*)NameSub,' State(right cell)=', &
               State_VGB(:,iRight,jRight,kRight,iBlockFace)
          write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
-              iDimFace, iFace, jFace, kFace, iBlockFace, iProc
+              iDimFace, iFace,jFace,kFace, iBlockFace, iProc
          write(*,*)NameSub,' xyz(right)=', &
               Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
          call stop_mpi(NameSub//' negative soundspeed squared')

@@ -187,27 +187,23 @@ module ModAdvance
 
   ! Mhd part of the momentum flux. May be subtracted for calculating
   ! electric field
-  !\
-  ! Logical detetmining in which case the Mhd part of the momentum flux is
+  !
+  ! Logical determining in which case the Mhd part of the momentum flux is
   ! calculated. If calculated, the electric field \nabla x B x B - \nable P_e
   ! may be calculated as the divergence of momentum fluxes, resulting in
   ! momentum-conserving schemes for hybrid and multifluids. Not calculated
-  ! if UseEfield, in which case the electric field is a part of state vector.
-  !/
-  logical, parameter:: UseMhdMomentumFlux = UseB.and.(.not.UseEfield)
+  ! if UseEfield, in which case the electric field is part of the state vector.
+  logical, parameter:: UseMhdMomentumFlux = UseMultiIon .and. &
+       UseB .and. .not.UseEfield
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
        MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
   !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
   
-  !\
   ! Merge cells around the polar axis in spherical geometry
-  !/
   logical :: DoFixAxis = .false.
   real ::    rFixAxis = 0.0, r2FixAxis = 0.0
 
-  !\
   ! Block type information
-  !/
   integer, allocatable :: iTypeAdvance_B(:)
   integer, allocatable :: iTypeAdvance_BP(:,:)
 

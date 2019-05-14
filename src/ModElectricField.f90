@@ -215,7 +215,7 @@ contains
     end do; end do; end do
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_electric_field_block
-  !==========================================================
+  !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
     use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
          State_VGB, Source_VC, UseAnisoPe, &
@@ -242,7 +242,9 @@ contains
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
     Efield_DGB(:,:,:,:,iBlock) = 0.0
+
     if(UseJCrossBForce)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -287,10 +289,11 @@ contains
           !if(UseMultiIon .and. (.not. &
           !     UseElectronPressure) .and. ElectronTemperatureRatio > 0.0)then
           !if(UseMultiIon)then
-             Force_D(1:nDim) = Force_D(1:nDim) + vInv*&
-                  ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)   &
-                  + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
-             if(nDim > 2)Force_D(1:nDim) = Force_D(1:nDim) + vInv*&
+             Force_D = Force_D + vInv*&
+                  (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
+             if(nDim > 1) Force_D = Force_D + vInv*&
+                  (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
+             if(nDim > 2) Force_D = Force_D + vInv*&
                   (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
           !end if
           if(DoTestCell)write(*,'(2a,15es16.8)') &
@@ -300,7 +303,7 @@ contains
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock))CYCLE
-          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +    &
+          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +  &
                ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)    &
                + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)    &
                + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &

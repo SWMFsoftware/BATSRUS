@@ -642,7 +642,7 @@ contains
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
 
-    if(.not.UseEfield) call get_efield_in_comoving_frame(iBlock)
+    if(UseMhdMomentumFlux) call get_efield_in_comoving_frame(iBlock)
 
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
@@ -1091,7 +1091,8 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+              SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
@@ -1130,7 +1131,7 @@ contains
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
               - B0_DX(:,i,j,k)*B1nJumpL   &
               - B0_DX(:,i+1,j,k)*B1nJumpR
 
@@ -1201,7 +1202,8 @@ contains
 
             if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-            SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = SourceMhd_VC(rhoUx_:rhoUz_,i,j,k)&
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
                  -B0_DZ(:,i,j,k)*B1nJumpL &
                  -B0_DZ(:,i,j,k+1)*B1nJumpR
          end do; end do; end do
@@ -1223,7 +1225,7 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
