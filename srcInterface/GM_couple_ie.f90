@@ -92,7 +92,7 @@ contains
 
     integer :: i, j
     real :: Radius, Phi, Theta, LatBoundary
-    real, allocatable:: FieldAlignedCurrent_II(:,:), bSm_DII(:,:,:)
+    real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IE_lat(:), IE_lon(:)
     real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
     logical :: DoTest, DoTestMe
@@ -107,11 +107,13 @@ contains
          Grid_C(IE_) % Coord2_I, &
          Grid_C(IE_) % Coord3_I(1))
 
-    allocate(FieldAlignedCurrent_II(iSize,jSize), bSm_DII(3,iSize,jSize))
+    allocate(FieldAlignedCurrent_II(iSize,jSize))
 
-    ! Put field aligned currents into the first variable of the buffer
+    ! Put the radial component of the field aligned currents 
+    ! into the first variable of the buffer
     call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
-         FieldAlignedCurrent_II, bSm_DII, LatBoundary, ThetaIono_I, PhiIono_I)
+         FieldAlignedCurrent_II, LatBoundary=LatBoundary, &
+         Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
 
     ! Take radial component of FAC and put it into the buffer sent to IE
     ! The resulting FAC_r will be positive for radially outgoing current
@@ -120,25 +122,12 @@ contains
        ! initialize all elements to zero on proc 0, others should not use it
        Buffer_IIV = 0.0
 
-       do j=1, nPhiIono
-          Phi = PhiIono_I(j)
-
-          do i=1, nThetaIono
-             Theta = ThetaIono_I(i)
-             call sph_to_xyz(rIonosphere, Theta, Phi, XyzIono_D)
-             FieldAlignedCurrent_II(i,j) = FieldAlignedCurrent_II(i,j) &
-                  * sum(bSm_DII(:,i,j)*XyzIono_D) &
-                  / (sqrt(sum((bSm_DII(:,i,j))**2)) * rIonosphere)
-          end do
-       end do
-
        ! Save the latitude boundary information to the equator 
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
        Buffer_IIV(nThetaIono/2:nThetaIono/2+1,1,1) = LatBoundary                          
-
     end if
 
-    deallocate(FieldAlignedCurrent_II, bSm_DII)
+    deallocate(FieldAlignedCurrent_II)
 
     if(DoTraceIE) then
        allocate(IE_lat(iSize), IE_lon(jSize))
