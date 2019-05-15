@@ -875,7 +875,7 @@ contains
              Rhs_I(n) = (Coef1*ResExpl_VCB(iVar,i,j,k,iBlockImpl) &
                   + Coef2*(Impl_VGB(iVar,i,j,k,iBlockImpl) &
                   -        ImplOld_VCB(iVar,i,j,k,iBlock)))/Norm_V(iVar)
-          end do; end do; enddo; enddo;
+          end do; end do; enddo; enddo
        enddo
        !$omp end parallel do
     else
@@ -978,7 +978,8 @@ contains
        Rhs_I(n) = Rhs0_I(n) &
             + (ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl) &
             - Impl_VGB(iVar,i,j,k,iBlockImpl))/Norm_V(iVar)
-    enddo; enddo; enddo; enddo; enddo
+       enddo; enddo; enddo; enddo
+    enddo
     !$omp end parallel do
 
     if(DoTest)then
@@ -1041,8 +1042,8 @@ contains
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Impl_VGB(iVar,i,j,k,iBlockImpl) &
                + x_I(n)*Norm_V(iVar)
-       enddo
-    enddo; enddo; enddo; enddo
+       enddo; enddo; enddo; enddo
+    enddo
     !$omp end parallel do
 
     if(UseConservativeImplicit .or. .not.IsConverged) then
@@ -1242,7 +1243,7 @@ contains
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlock))) then
              y_I(n) = Rhs_I(n)
           endif
-       enddo; enddo; enddo; enddo;
+       enddo; enddo; enddo; enddo
     enddo
     !$omp end parallel do
 
