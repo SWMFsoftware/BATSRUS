@@ -95,6 +95,7 @@ contains
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
+    use ModConserveFlux, ONLY: init_mod_cons_flux
     use ModLookupTable,     ONLY: read_lookup_table_param
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -338,6 +339,7 @@ contains
        if(UseSemiImplicit)  call init_mod_semi_impl
        call init_mod_point_impl
        call init_mod_face_flux
+       if(DoConserveFlux)   call init_mod_cons_flux
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
