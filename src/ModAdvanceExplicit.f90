@@ -111,18 +111,19 @@ contains
 
           end do
           !$omp end parallel do
+
+          if(DoTest)write(*,*)NameSub,' done res change only'
+
+          ! Message pass conservative flux corrections.
+          call timing_start('send_cons_flux')
+          call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
+               CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
+          
+          call timing_stop('send_cons_flux')
+          
+          if(DoTest)write(*,*)NameSub,' done message pass'
+          
        endif
-
-       if(DoTest)write(*,*)NameSub,' done res change only'
-
-       ! Message pass conservative flux corrections.
-       call timing_start('send_cons_flux')
-       call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
-            CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
-
-       call timing_stop('send_cons_flux')
-
-       if(DoTest)write(*,*)NameSub,' done message pass'
 
        ! Multi-block solution update.
        !$omp parallel do
