@@ -294,7 +294,6 @@ contains
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          dt_BLK, time_accurate, UseDtFixed, Dt
     use ModParallel, ONLY: neiLwest, NOBLK
-    use ModConserveFlux, ONLY: init_cons_flux
     use ModMultiFluid
 
     use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -306,8 +305,6 @@ contains
     character(len=*), parameter:: NameSub = 'calc_other_vars'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    ! Initialize variables for flux conservation
-    call init_cons_flux(iBlock)
 
     ! Set B0
     if(UseB0) call set_b0_cell(iBlock)
