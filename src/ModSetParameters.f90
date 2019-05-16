@@ -95,7 +95,6 @@ contains
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
-    use ModConserveFlux, ONLY: init_mod_cons_flux
     use ModLookupTable,     ONLY: read_lookup_table_param
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -131,7 +130,7 @@ contains
 
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
-    use ModConserveFlux, ONLY: DoConserveFlux
+    use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
