@@ -468,11 +468,9 @@ contains
     integer           :: iTheta,iPhi,iLine,iMag
     real              :: dR, r, Theta, Phi
     real              :: dTheta, dPhi, SinTheta, dVol, dVolCoeff
-    real              :: InvBr, BrRcurrents, FacRcurrents, bRcurrents
-    real, dimension(3):: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
-         XyzMid_D, j_D, Pert_D
+    real              :: InvBr, FacRcurrents
+    real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
     real              :: FacRcurrents_II(nTheta,nPhi)
-    real              :: bRcurrents_DII(3,nTheta,nPhi)
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
     ! The Biot-Savart integral for a given magnetometer indexed by iMag
@@ -517,18 +515,14 @@ contains
     dPhi   = cTwoPi / (nPhi-1)
     dR     = (rCurrents - rIonosphere) / nR
 
-    ! Get the current and B at the ionosphere boundary
+    ! Get the radial component of the field aligned current
+    ! at the ionosphere boundary
     call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-         FacRcurrents_II, bRcurrents_DII, TypeCoordFacGrid=TypeCoordFacGrid)
+         FacRcurrents_II, TypeCoordFacGrid=TypeCoordFacGrid, &
+         IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
 
-    if(nProc > 1)then
-       call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
-       call MPI_Bcast(bRcurrents_DII, 3*nTheta*nPhi,MPI_REAL,0,iComm,iError)
-    end if
-
-    ! only need those currents that are significant
-    where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4) &
-         FacRcurrents_II = 0.0
+    if(nProc > 1) &
+         call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
 
     !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
@@ -623,18 +617,13 @@ contains
              ! Count local line index
              if(UseFastFacIntegral) iLineProc = iLineProc + 1
 
-
              call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
              ! the field aligned current and B field at r=rCurrents
              FacRcurrents = FacRcurrents_II(iTheta,iPhi)
-             bRcurrents_D = bRcurrents_DII(:,iTheta,iPhi)
-             bRcurrents   = sqrt(sum(bRcurrents_D**2))
 
-             ! Calculate volume element multiplied by |Br|
-             ! dVolume = dS_sphere*dR = dS_tube*dL and dR/dL = Br/|B|
-             BrRcurrents = abs(sum(bRcurrents_D*XyzRcurrents_D))/rCurrents
-             dVolCoeff   = BrRcurrents*dR*rCurrents**2*SinTheta*dTheta*dPhi
+             ! Calculate volume element
+             dVolCoeff = dR*rCurrents**2*SinTheta*dTheta*dPhi
 
              do k = 1, nR
 
@@ -650,18 +639,17 @@ contains
                      Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
                 b_D = b_D*Si2No_V(UnitB_)
 
-                ! The (x,y,z) components of the field aligned current here
-                ! assuming FAC(rCurrents)=1 (we multiply with it at the end)
-                j_D = b_D/bRcurrents
-
-                ! length of the field line between two cuts: dL = dR*|B|/|Br|
-                ! the cross section area changes proportional to 1/|B|, 
-                ! so the volume element is proportional to 1/|Br|:
+                ! The volume element is proportional to 1/Br. The sign
+		! should be preserved (not yet!!!),
+                ! because the sign is also there in the radial
+		! component of the field aligned current: Br/B*FAC.
+		! In the end j_D = b_D/Br*[(Br/B)*(j.B)]_rcurr
                 InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
-                !! Check
-                ! if(abs(XyzMid_D(3)) > rCurrents - Height) Volume=Volume+dVol
+                !! Check correctness of integration
+                ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
+                !     Volume=Volume+abs(dVol)
 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
@@ -669,7 +657,8 @@ contains
                    if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
-                   Pert_D = dVol*cross_product(j_D, Xyz_D-XyzMid_D) &
+                   ! where the field aligned J is proportional to B
+                   Pert_D = dVol*cross_product(b_D, Xyz_D-XyzMid_D) &
                         /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
 
                    MagPerturb_DI(:,iMag) = MagPerturb_DI(:,iMag) + &
@@ -679,10 +668,23 @@ contains
                    if(UseFastFacIntegral) &
                         LineContrib_DII(:,iMag+iMag0,iLineProc) &
                         = LineContrib_DII(:,iMag+iMag0,iLineProc) + Pert_D
+
+                   !if(iGroup==1.and.iMag==1.and.iTheta==3.and.iPhi==104.and.k==1)then
+                   !   write(*,*)'Xyz_D   =', Xyz_D
+                   !   write(*,*)'XyzMid_D=', XyzMid_D
+                   !   write(*,*)'b_D, InvBr=', b_D, InvBr
+                   !   write(*,*)'dVol, dVolCoeff, FacRcurrents=', &
+                   !        dVol, dVolCoeff, FacRcurrents
+                   !   write(*,*)'Pert_D      =', Pert_D
+                   !   write(*,*)'MagPerturb_D=', MagPerturb_DI(:,iMag)
+                   !
+                   !   call stop_mpi('DEBUG')
+                   !end if
                    
                 end do
-                
              end do
+             !if(iGroup==1) write(*,*)'!!! iTheta,iPhi,MagPerturb_DI(:,1)=',&
+             !     iTheta,iPhi,MagPerturb_DI(:,1)
           end do
        end do
     end if
