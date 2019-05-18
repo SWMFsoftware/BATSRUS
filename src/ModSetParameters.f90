@@ -130,7 +130,7 @@ contains
 
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
-    use ModConserveFlux, ONLY: DoConserveFlux
+    use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
@@ -338,6 +338,7 @@ contains
        if(UseSemiImplicit)  call init_mod_semi_impl
        call init_mod_point_impl
        call init_mod_face_flux
+       if(DoConserveFlux)   call init_mod_cons_flux
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
