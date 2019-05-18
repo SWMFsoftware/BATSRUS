@@ -536,7 +536,8 @@ contains
   !============================================================================
 
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, Brin_DII, &
-       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial)
+       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
+       FacMin)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
@@ -573,9 +574,14 @@ contains
     ! Coordinate system of the Theta-Phi grid and Brin
     character(len=3), intent(in), optional:: TypeCoordFacGrid
 
-    ! If present then calculate the radial component of the FAC
-    logical, optional:: IsRadial
+    ! If present then calculate the radial component of the FAC with
+    ! or with out sign of Br
+    logical, intent(in), optional:: IsRadial
+    logical, intent(in), optional:: IsRadialAbs
 
+    ! If present, zero out Fac < FacMin (before taking radial part)
+    real, intent(in), optional:: FacMin
+    
     ! Local variables
     character(len=3):: TypeCoordFac
 
@@ -667,16 +673,16 @@ contains
                State_V(Bx_-1)*B0_D
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
-          if(.false. .and. i==6 .and. j==6)then
-             write(*,*)'iHemispher=',iHemisphere
-             write(*,*)'Phi,Theta=',Phi,Theta
-             write(*,*)'XyzIn_D  =', XyzIn_D
-             write(*,*)'Xyz_D    =',Xyz_D
-             write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
-             write(*,*)'B0_D     =',B0_D
-             write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
-             call stop_mpi('DEBUG')
-          end if
+          !if(.false.)then
+          !   write(*,*)'iHemispher=',iHemisphere
+          !   write(*,*)'Phi,Theta=',Phi,Theta
+          !   write(*,*)'XyzIn_D  =', XyzIn_D
+          !   write(*,*)'Xyz_D    =',Xyz_D
+          !   write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
+          !   write(*,*)'B0_D     =',B0_D
+          !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
+          !   call stop_mpi('DEBUG')
+          !end if
        end do
     end do
 
@@ -739,9 +745,17 @@ contains
                 bIn   = norm2(bIn_D)
              end if
 
+             ! Zero out small Fac if requested
+             if(present(FacMin))then
+                if(abs(Fac) < FacMin) Fac = 0.0
+             end if
+             
              ! Get radial component of FAC: FAC_r = FAC*Br/B
              if(present(IsRadial)) &
-                Fac = Fac * sum(bIn_D*XyzIn_D) / (bIn*rIn)
+                  Fac = Fac * sum(bIn_D*XyzIn_D) / (bIn*rIn)
+
+             if(present(IsRadialAbs)) &
+                  Fac = Fac * abs(sum(bIn_D*XyzIn_D)) / (bIn*rIn)
 
              ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
