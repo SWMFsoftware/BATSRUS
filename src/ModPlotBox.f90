@@ -5,7 +5,7 @@ module ModPlotBox
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iBlockTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I, plot_type, ObsPos_DI, IsObsBox_I
   use ModNumConst,       ONLY  : cDegToRad, cTwoPi
