@@ -86,7 +86,7 @@ contains
           EXIT FLUIDLOOP
        end if
 
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
              State_VGB(iP,i,j,k,iBlock) =                                 &
@@ -154,7 +154,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VGB(iP, i, j, k,iBlock) = &
                GammaMinus1_I(iFluid)*                           &
@@ -199,7 +199,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        ! Calculate thermal plus kinetic energy
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (StateOld_VGB(iRho,i,j,k,iBlock) <= 0.0)then
@@ -250,7 +250,7 @@ contains
     !--------------------------------------------------------------------------
 
     do iFluid = iFluidMin, iFluidMax
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = &
                GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
@@ -391,7 +391,7 @@ contains
     call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
 
     do iFluid = 1, nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
 
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy

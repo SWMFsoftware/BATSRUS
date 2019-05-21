@@ -912,7 +912,7 @@ contains
            RETURN
 
       do iFluid = 1, nFluid
-         call select_fluid(iFluid)
+         if(nFluid > 1) call select_fluid(iFluid)
 
          ! Calculate the 5th-order artificial viscosity. 
          ! See eq(36) of P. McCorquodale and P. Colella (2010), where
@@ -1516,7 +1516,7 @@ contains
     do iFluidMin = NeutralFirst_, nFluid
        iFluidMax = iFluidMin
        iFluid = iFluidMin
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        iVarMin = iRho; iVarMax = iP
        iEnergyMin = iEnergy; iEnergyMax = iEnergy
        if(DoLfNeutral)then
@@ -2622,7 +2622,7 @@ contains
 
     if(ViscoCoeff > 0.0)then
        do iFluid = 1, nFluid
-          call select_fluid(iFluid)
+          if(nFluid > 1) call select_fluid(iFluid)
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
           Flux_V(Energy_)= Flux_V(Energy_) - &
