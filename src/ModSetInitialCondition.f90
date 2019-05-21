@@ -80,7 +80,7 @@ contains
 
              ! fix the units for the velocities
              do iFluid = 1, nFluid
-                call select_fluid(iFluid)
+                if(nFluid > 1) call select_fluid(iFluid)
                 ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *Io2No_V(UnitU_)
                 ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*Io2No_V(UnitU_)
              end do
@@ -96,7 +96,7 @@ contains
 
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid(iFluid)
+                   if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx,i,j,k,iBlock) = &
                         FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUy,i,j,k,iBlock) = &
@@ -115,7 +115,7 @@ contains
 
                    ! Rotate vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid(iFluid)
+                      if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockLeft_V(iUx:iUy))
                    end do
@@ -126,7 +126,7 @@ contains
                    State_VGB(:,i,j,k,iBlock)   = ShockRight_V
                    ! Set vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid(iFluid)
+                      if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockRight_V(iUx:iUy))
                    end do
@@ -135,7 +135,7 @@ contains
                 end if
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid(iFluid)
+                   if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)
