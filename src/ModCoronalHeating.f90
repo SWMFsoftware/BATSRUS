@@ -7,7 +7,7 @@ module ModCoronalHeating
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
