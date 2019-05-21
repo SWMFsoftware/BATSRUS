@@ -208,7 +208,7 @@ contains
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-    !$omp parallel do
+    !$omp parallel do private(ResistFactor_G)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
@@ -226,7 +226,7 @@ contains
           call stop_mpi(NameSub//': invalid TypeResistivity='//TypeResistivity)
        end select
 
-       ! Modify resistivity of resistive regions are defined
+       ! Modify resistivity of resistive regions
        if(allocated(iRegionResist_I))then
           call block_inside_regions(iRegionResist_I, iBlock, &
                size(ResistFactor_G), 'ghosts', Value_I=ResistFactor_G)
