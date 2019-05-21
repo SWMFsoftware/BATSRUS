@@ -31,7 +31,6 @@ contains
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
     use ModEnergy, ONLY: calc_energy_ghost
-    use ModConserveFlux, ONLY: init_cons_flux
     use ModRestartFile, ONLY: UseRestartWithFullB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
     use BATL_lib, ONLY: Xyz_DGB
@@ -53,13 +52,14 @@ contains
     Flux_VY = 0.0
     Flux_VZ = 0.0
 
-    call init_cons_flux(iBlock)
-
     if(Unused_B(iBlock))then
        do iVar = 1, nVar
           State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
        end do
-    else ! If used, initialize solution variables and parameters.
+    else
+       !\
+       ! If used, initialize solution variables and parameters.
+       !/
        if(UseB0) call set_b0_cell(iBlock)
 
        ! Subtract B0 from Full B0+B1 from restart to obtain B1

@@ -6,18 +6,18 @@ module ModBoundaryGeometry
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
 
   implicit none
   SAVE
 
   private ! except
 
-  public:: init_mod_boundary_cells      ! initialize module
-  public:: read_boundary_geometry_param ! read parameters
-  public:: fix_geometry                 ! set geometry variables
-  public:: fix_block_geometry           ! set geometry variables for a block
-  public:: fix_boundary_ghost_cells     ! recalculate "true_cell" in ghost cells
+  public:: init_mod_boundary_cells     ! initialize module
+  public:: read_boundary_geometry_param! read parameters
+  public:: fix_geometry                ! set geometry variables
+  public:: fix_block_geometry          ! set geometry variables for a block
+  public:: fix_boundary_ghost_cells    ! recalculate "true_cell" in ghost cells
 
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
   integer, allocatable, public :: iBoundary_GB(:,:,:,:)

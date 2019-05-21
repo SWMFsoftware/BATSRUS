@@ -5,7 +5,7 @@ module ModB0
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
 
   ! The magnetic field can be split into an analytic and numeric part.
   ! The analytic part is B0. It should satisfy div(B0) = 0,
