@@ -1634,7 +1634,7 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           do iFluid = 1, nFluid
-             call select_fluid(iFluid)
+             if(nFluid > 1) call select_fluid(iFluid)
 
              UseConstantTau = UseConstantTau_I(iFluid)
              TauInstability = TauInstability_I(iFluid)
