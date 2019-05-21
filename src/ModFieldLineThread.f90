@@ -5,7 +5,7 @@ module ModFieldLineThread
 
   use BATL_lib, ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
 

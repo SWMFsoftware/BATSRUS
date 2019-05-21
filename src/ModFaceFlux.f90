@@ -5,7 +5,7 @@ module ModFaceFlux
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iDimTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModProcMH,     ONLY: iProc
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1429,12 +1429,12 @@ contains
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
-       MhdFluxLeft_V  = MhdFlux_V
+       if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
        
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight)
-       MhdFluxRight_V = MhdFlux_V
+       if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V,  UnLeft_I(1) , MhdFluxLeft_V)
@@ -1540,7 +1540,8 @@ contains
     iFluidMin = 1; iFluidMax = nFluid
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
-    Flux_V = Flux_V*Area; MhdFlux_V = MhdFlux_V*Area
+    Flux_V = Flux_V*Area
+    if(UseMhdMomentumFlux) MhdFlux_V = MhdFlux_V*Area
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
@@ -1560,8 +1561,8 @@ contains
 
       !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
-      if(.not.UseJCrossBForce) MhdFlux_V(RhoUx_:RhoUz_) = &
-           MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
+!      if(.not.UseJCrossBForce) MhdFlux_V(RhoUx_:RhoUz_) = &
+!           MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
     end subroutine modify_flux

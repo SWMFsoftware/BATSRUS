@@ -10,7 +10,7 @@ module ModConserveFlux
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
 
-  use ModMain, ONLY: UseB
+  use ModMain, ONLY:     UseB
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
@@ -19,7 +19,7 @@ module ModConserveFlux
        uDotArea_XI, uDotArea_YI, uDotArea_ZI, UseMhdMomentumFlux, &
        MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry,  ONLY: true_cell
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -33,7 +33,7 @@ module ModConserveFlux
   private ! except
 
   public:: &
-       init_cons_flux, &
+       init_mod_cons_flux, &
        save_cons_flux, &
        apply_cons_flux, &
        nCorrectedFaceValues, &
@@ -70,24 +70,25 @@ module ModConserveFlux
 contains
   !============================================================================
 
-  subroutine init_cons_flux(iBlock)
+  subroutine init_mod_cons_flux
 
-    integer,intent(in) :: iBlock
+    integer :: iBlock
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_cons_flux'
+    character(len=*), parameter:: NameSub = 'init_mod_cons_flux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
     if(.not.allocated(CorrectedFlux_VXB)) allocate( &
          CorrectedFlux_VXB(nCorrectedFaceValues,nJ,nK,2,MaxBlock), &
          CorrectedFlux_VYB(nCorrectedFaceValues,nI,nK,2,MaxBlock), &
          CorrectedFlux_VZB(nCorrectedFaceValues,nI,nJ,2,MaxBlock)  )
 
-    CorrectedFlux_VXB(:,:,:,:,iBlock) = 0.0
-    CorrectedFlux_VYB(:,:,:,:,iBlock) = 0.0
-    CorrectedFlux_VZB(:,:,:,:,iBlock) = 0.0
+    CorrectedFlux_VXB = 0.0
+    CorrectedFlux_VYB = 0.0
+    CorrectedFlux_VZB = 0.0
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine init_cons_flux
+  end subroutine init_mod_cons_flux
   !============================================================================
 
   subroutine save_cons_flux(iBlock)
@@ -144,13 +145,13 @@ contains
 
       !------------------------------------------------------------------------
       do k=1,nK; do j=1,nJ
-         CorrectedFlux_VXB(1:FluxLast_, j, k, lFaceTo, iBlock)  &
+         CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceTo,iBlock)  &
               = Flux_VX(1:nVar+nFluid, lFaceFrom,j,k)
 
          CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceTo,iBlock) &
               = uDotArea_XI(lFaceFrom,j,k,:)
 
-         CorrectedFlux_VXB(Vdt_,   j,k,lFaceTo,iBlock)          &
+         CorrectedFlux_VXB(Vdt_,j,k,lFaceTo,iBlock)          &
               = VdtFace_x(lFaceFrom,j,k)
       end do; end do
 
@@ -176,11 +177,11 @@ contains
       else
          ! Dot product with face normal
          do k=1,nK; do j=1,nJ
-            CorrectedFlux_VXB(BnL_, j, k, lFaceTo, iBlock) = &
-                 dot_product(LeftState_VX(Bx_:B_+nDim, lFaceFrom, j, k), &
+            CorrectedFlux_VXB(BnL_,j,k,lFaceTo,iBlock) = &
+                 dot_product(LeftState_VX(Bx_:B_+nDim,lFaceFrom,j,k), &
                  FaceNormal_DDFB(:,1,lFaceFrom, j, k, iBlock))
             CorrectedFlux_VXB(BnR_, j, k, lFaceTo, iBlock) = &
-                 dot_product(RightState_VX(Bx_:B_+nDim,lFaceFrom, j, k), &
+                 dot_product(RightState_VX(Bx_:B_+nDim,lFaceFrom,j,k), &
                  FaceNormal_DDFB(:,1,lFaceFrom,j,k,iBlock))
          end do; end do
       end if
@@ -210,32 +211,32 @@ contains
 
       !------------------------------------------------------------------------
       do k=1,nK;do i=1,nI
-         CorrectedFlux_VYB(1:FluxLast_,  i,k,lFaceTo,iBlock)    &
+         CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceTo,iBlock)    &
               = Flux_VY(1:FluxLast_,i,lFaceFrom,k)
 
          CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceTo,iBlock) &
               = uDotArea_YI(i,lFaceFrom,k,:)
 
-         CorrectedFlux_VYB(Vdt_, i, k, lFaceTo, iBlock)         &
-              = VdtFace_y(i, lFaceFrom, k)
+         CorrectedFlux_VYB(Vdt_,i,k,lFaceTo,iBlock)         &
+              = VdtFace_y(i,lFaceFrom,k)
       end do; end do
 
       if(.not.UseB)RETURN
 
       if(IsCartesianGrid)then
          do k=1,nK; do i=1,nI
-            CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock)= &
-                 LeftState_VY( By_, i, lFaceFrom, k)*FaceRatio
-            CorrectedFlux_VYB(BnR_, i, k, lFaceTo, iBlock)= &
-                 RightState_VY(By_, i, lFaceFrom, k)*FaceRatio
+            CorrectedFlux_VYB(BnL_,i,k,lFaceTo,iBlock)= &
+                 LeftState_VY( By_,i,lFaceFrom,k)*FaceRatio
+            CorrectedFlux_VYB(BnR_,i,k,lFaceTo,iBlock)= &
+                 RightState_VY(By_,i,lFaceFrom,k)*FaceRatio
          end do; end do
       else
          do k=1,nK; do i=1,nI
-            CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock) = &
-                 dot_product(LeftState_VY(Bx_:B_+nDim, i, lFaceFrom, k),&
+            CorrectedFlux_VYB(BnL_,i,k,lFaceTo,iBlock) = &
+                 dot_product(LeftState_VY(Bx_:B_+nDim,i,lFaceFrom,k),&
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
-            CorrectedFlux_VYB(BnR_, i, k, lFaceTo, iBlock) = &
-                 dot_product(RightState_VY(Bx_:B_+nDim,i,lFaceFrom, k),&
+            CorrectedFlux_VYB(BnR_,i,k,lFaceTo,iBlock) = &
+                 dot_product(RightState_VY(Bx_:B_+nDim,i,lFaceFrom,k),&
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
          end do; end do
       end if
@@ -266,9 +267,9 @@ contains
 
       if(IsCartesianGrid)then
          do j=1,nJ; do i=1,nI
-            CorrectedFlux_VZB(BnL_,i,j,lFaceTo, iBlock)= &
+            CorrectedFlux_VZB(BnL_,i,j,lFaceTo,iBlock)= &
                  LeftState_VZ( Bz_,i,j,lFaceFrom)*FaceRatio
-            CorrectedFlux_VZB(BnR_,i,j,lFaceTo, iBlock)= &
+            CorrectedFlux_VZB(BnR_,i,j,lFaceTo,iBlock)= &
                  RightState_VZ(Bz_,i,j,lFaceFrom)*FaceRatio
          end do; end do
       else
@@ -388,8 +389,9 @@ contains
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux) MhdFlux_VX(:,lFaceTo,j,k) = &
-         !     CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
+         !if(UseMhdMomentumFlux) &
+         !     MhdFlux_VX(:,lFaceTo,j,k) = CorrectedFlux_VXB(&
+         !     MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
          if(.not.(UseB .and. IsCartesianGrid))CYCLE
 
          if(IsCartesian)then
@@ -425,8 +427,9 @@ contains
               CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
          VdtFace_y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux) MhdFlux_VY(:,i,lFaceTo,k) = &
-         !     CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
+         !if(UseMhdMomentumFlux)&
+         !     MhdFlux_VY(:,i,lFaceTo,k) = CorrectedFlux_VYB(&
+         !     MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VY(By_,i,lFaceTo,k) = &
                  CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
@@ -453,8 +456,9 @@ contains
               CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
          VdtFace_z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux) MhdFlux_VZ(:,i,j,lFaceTo) = &
-         !   CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
+         !if(UseMhdMomentumFlux)&
+         !     MhdFlux_VZ(:,i,j,lFaceTo) = CorrectedFlux_VZB(&
+         !     MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VZ(Bz_,i,j,lFaceTo) = &
                  CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
