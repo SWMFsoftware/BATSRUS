@@ -80,7 +80,7 @@ contains
 
              ! fix the units for the velocities
              do iFluid = 1, nFluid
-                call select_fluid(iFluid)
+                if(nFluid > 1) call select_fluid(iFluid)
                 ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *&
                      Io2No_V(UnitU_)
                 ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*&
