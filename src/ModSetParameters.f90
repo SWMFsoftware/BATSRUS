@@ -2220,7 +2220,8 @@ contains
           call read_wsa_coeff
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX")
+            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
+            "#HIGHBETASTOCHASTIC")
           call read_corona_heating(NameCommand)
 
        case("#OPENCLOSEDHEAT")
