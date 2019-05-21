@@ -241,7 +241,7 @@ contains
     end if
     if(UseStableImplicit) then
        allocate(Source_VCB(nVar, nI, nJ, nK, MaxBlock))
-       Source_VCB = 0
+       Source_VCB = 0.0
     endif
 
     !$omp parallel
