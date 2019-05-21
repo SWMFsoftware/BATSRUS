@@ -6,7 +6,7 @@ module ModImCoupling
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   ! Routines related to the coupline with the Inner Magnetosphere component
   use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
 
