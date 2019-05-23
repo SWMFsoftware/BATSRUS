@@ -240,7 +240,7 @@ contains
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
        do iFluid = iFluidMin, iFluidMax
-          call select_fluid(iFluid)
+          if(nFluid>1) call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then
                 u_DGI(:,i,j,k,iFluid) = &
