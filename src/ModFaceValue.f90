@@ -2616,7 +2616,7 @@ contains
 
       FLUIDLOOP: do iFluid = 1, nFluid
 
-         call select_fluid(iFluid)
+         if(nFluid > 1) call select_fluid(iFluid)
 
          do k = 1-kDim_,nK+kDim_; do j = 1-jDim_,nJ+jDim_
             do i = -1, nI+2
@@ -2968,7 +2968,7 @@ contains
       pTotal_I = 0
       VelRatio = 0
       do iFluid=1,nFluid
-         call select_fluid(iFluid)
+         if(nFluid > 1) call select_fluid(iFluid)
 
          pTotal_I = pTotal_I + State_VI(iP,:)
 
