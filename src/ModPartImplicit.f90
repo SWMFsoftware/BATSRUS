@@ -886,8 +886,8 @@ contains
              n = n + 1
              ! RHS = dt*R/Norm_V for the first iteration
              Rhs_I(n) = ResExpl_VCB(iVar,i,j,k,iBlockImpl)*DtCoeff/Norm_V(iVar)
-          end do
-       end do; enddo; enddo; enddo
+          end do; enddo; enddo; enddo
+       end do
        !$omp end parallel do
     endif
 
@@ -899,8 +899,8 @@ contains
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
              Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
           endif
-       end do
-    end do; enddo; enddo; enddo
+       end do; enddo; enddo; enddo
+    end do
     !$omp end parallel do
 
     if(UseNewton .or. UseConservativeImplicit)then
