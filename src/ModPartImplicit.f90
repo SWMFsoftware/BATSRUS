@@ -474,7 +474,7 @@ contains
              if(.not. UseImplicitEnergy) CYCLE
              ! Overwrite pressure with energy
              do iFluid=1,nFluid
-                call select_fluid(iFluid)
+                if(nFluid > 1) call select_fluid(iFluid)
                 ImplOld_VCB(iP,:,:,:,iBlock) = &
                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
              end do
@@ -721,7 +721,7 @@ contains
 
        if(UseImplicitEnergy) then
           do iFluid=1,nFluid
-             call select_fluid(iFluid)
+             if(nFluid > 1) call select_fluid(iFluid)
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
           call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
@@ -875,7 +875,7 @@ contains
              Rhs_I(n) = (Coef1*ResExpl_VCB(iVar,i,j,k,iBlockImpl) &
                   + Coef2*(Impl_VGB(iVar,i,j,k,iBlockImpl) &
                   -        ImplOld_VCB(iVar,i,j,k,iBlock)))/Norm_V(iVar)
-          end do; end do; enddo; enddo;
+          end do; end do; enddo; enddo
        enddo
        !$omp end parallel do
     else
@@ -886,8 +886,8 @@ contains
              n = n + 1
              ! RHS = dt*R/Norm_V for the first iteration
              Rhs_I(n) = ResExpl_VCB(iVar,i,j,k,iBlockImpl)*DtCoeff/Norm_V(iVar)
-          end do
-       end do; enddo; enddo; enddo
+          end do; enddo; enddo; enddo
+       end do
        !$omp end parallel do
     endif
 
@@ -899,8 +899,8 @@ contains
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
              Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
           endif
-       end do
-    end do; enddo; enddo; enddo
+       end do; enddo; enddo; enddo
+    end do
     !$omp end parallel do
 
     if(UseNewton .or. UseConservativeImplicit)then
@@ -978,7 +978,8 @@ contains
        Rhs_I(n) = Rhs0_I(n) &
             + (ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl) &
             - Impl_VGB(iVar,i,j,k,iBlockImpl))/Norm_V(iVar)
-    enddo; enddo; enddo; enddo; enddo
+       enddo; enddo; enddo; enddo
+    enddo
     !$omp end parallel do
 
     if(DoTest)then
@@ -1041,8 +1042,8 @@ contains
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Impl_VGB(iVar,i,j,k,iBlockImpl) &
                + x_I(n)*Norm_V(iVar)
-       enddo
-    enddo; enddo; enddo; enddo
+       enddo; enddo; enddo; enddo
+    enddo
     !$omp end parallel do
 
     if(UseConservativeImplicit .or. .not.IsConverged) then
@@ -1242,7 +1243,7 @@ contains
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlock))) then
              y_I(n) = Rhs_I(n)
           endif
-       enddo; enddo; enddo; enddo;
+       enddo; enddo; enddo; enddo
     enddo
     !$omp end parallel do
 
@@ -1982,7 +1983,7 @@ contains
 
        if(UseImplicitEnergy)then
           do iFluid=1,nFluid
-             call select_fluid(iFluid)
+             if(nFluid > 1) call select_fluid(iFluid)
              Var_VGB(iP,:,:,:,iBlockImpl) = &
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
@@ -2383,7 +2384,7 @@ contains
     !--------------------------------------------------------------------------
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
-          call select_fluid(iFluid)
+          if(nFluid > 1) call select_fluid(iFluid)
 
           InvRho = 1.0/State_V(iRho)
 

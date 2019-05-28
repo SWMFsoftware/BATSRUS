@@ -665,7 +665,7 @@ contains
 
     ! Convert velocity to momentum for all fluids and boundaries
     do iFluid = 1, nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        CellState_VI(iRhoUx,:) = CellState_VI(iUx,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUy,:) = CellState_VI(iUy,:)*CellState_VI(iRho,:)
        CellState_VI(iRhoUz,:) = CellState_VI(iUz,:)*CellState_VI(iRho,:)
@@ -1059,7 +1059,7 @@ contains
     end if
 
     do iFluid = 1, nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        UnitUser_V(iRho)          = No2Io_V(UnitRho_)
        UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
        UnitUser_V(iP)            = No2Io_V(UnitP_)

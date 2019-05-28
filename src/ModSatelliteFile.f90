@@ -5,7 +5,7 @@ module ModSatelliteFile
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModUtilities, ONLY: open_file, close_file
 
   implicit none
