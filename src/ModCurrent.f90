@@ -5,7 +5,7 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 

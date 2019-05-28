@@ -474,7 +474,7 @@ contains
              if(.not. UseImplicitEnergy) CYCLE
              ! Overwrite pressure with energy
              do iFluid=1,nFluid
-                call select_fluid(iFluid)
+                if(nFluid > 1) call select_fluid(iFluid)
                 ImplOld_VCB(iP,:,:,:,iBlock) = &
                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
              end do
@@ -721,7 +721,7 @@ contains
 
        if(UseImplicitEnergy) then
           do iFluid=1,nFluid
-             call select_fluid(iFluid)
+             if(nFluid > 1) call select_fluid(iFluid)
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
           call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
@@ -1983,7 +1983,7 @@ contains
 
        if(UseImplicitEnergy)then
           do iFluid=1,nFluid
-             call select_fluid(iFluid)
+             if(nFluid > 1) call select_fluid(iFluid)
              Var_VGB(iP,:,:,:,iBlockImpl) = &
                   Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
           end do
@@ -2384,7 +2384,7 @@ contains
     !--------------------------------------------------------------------------
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
-          call select_fluid(iFluid)
+          if(nFluid > 1) call select_fluid(iFluid)
 
           InvRho = 1.0/State_V(iRho)
 

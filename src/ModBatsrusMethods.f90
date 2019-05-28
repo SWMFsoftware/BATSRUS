@@ -181,7 +181,7 @@ contains
            NameSub//'::set_initial_conditions'
 
       !------------------------------------------------------------------------
-      if(.not.restart .and. nRefineLevelIC>0)then
+      if(.not.restart .and. nRefineLevelIC > 0)then
          call timing_start('amr_ics')
          do iLevel=1, nRefineLevelIC
             call timing_start('amr_ics_set')
@@ -192,7 +192,7 @@ contains
 
             ! Allow the user to add a perturbation and use that
             ! for physical refinement.
-            if (UseUserPerturbation)then
+            if(UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
                ! Fill in ghost cells in case needed by the user perturbation
                call exchange_messages
@@ -227,15 +227,18 @@ contains
          call read_restart_files
       end if
 
+      ! Potentially useful for applying "First Touch" strategy
+      !!$omp parallel do 
       do iBlock = 1, nBlockMax
          ! Initialize solution blocks
          call set_initial_condition(iBlock)
       end do
+      !!$omp end parallel do
 
       call user_action('initial condition done')
 
       ! Allow the user to add a perturbation to the initial condition.
-      if (UseUserPerturbation) then
+      if(UseUserPerturbation)then
          ! Fill in ghost cells in case needed by the user perturbation
          call exchange_messages
 
@@ -243,7 +246,7 @@ contains
          UseUserPerturbation=.false.
       end if
 
-      if (restart) then
+      if(restart)then
          if(iProc==0)then
             call write_prefix; write(iUnitOut,*)&
                  NameSub,' restarts at n_step,Time_Simulation=',&

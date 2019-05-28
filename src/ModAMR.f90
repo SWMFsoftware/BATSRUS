@@ -136,7 +136,7 @@ contains
             nCritInOut=nAmrCriteria, NameCritOut_I=NameAmrCrit_I,&
             NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
 
-    case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
+    case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION","#AMRCRITERIACELLSIZE")
        DoCritAmr = .true.
        DoAutoAmr = .true.
        DoAutoRefine = DoAutoAmr ! for now
