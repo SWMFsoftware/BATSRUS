@@ -5,7 +5,7 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 
@@ -536,7 +536,8 @@ contains
   !============================================================================
 
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, Brin_DII, &
-       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid)
+       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
+       FacMin)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
@@ -548,8 +549,8 @@ contains
 
     ! Map the grid points from the rIn radius to rCurrents.
     ! Calculate the field aligned currents there, use the ratio of the
-    ! magnetic field strength.
-    ! The result is saved into Fac_II, Brin_DII.
+    ! magnetic field strength. Calculate radial component if requested.
+    ! The FAC is saved into Fac_II. The field into the optional Brin_DII.
 
     ! Size of spherical grid at rIn
     integer, intent(in) :: nTheta, nPhi
@@ -561,7 +562,7 @@ contains
     real, intent(out):: Fac_II(nTheta,nPhi)
 
     ! Magnetic field at rIn in FAC coordinates
-    real, intent(out):: Brin_DII(3,nTheta,nPhi)
+    real, intent(out), optional:: Brin_DII(3,nTheta,nPhi)
 
     ! Lowest latitude that maps up to rCurrents
     real, intent(out), optional :: LatBoundary
@@ -573,6 +574,14 @@ contains
     ! Coordinate system of the Theta-Phi grid and Brin
     character(len=3), intent(in), optional:: TypeCoordFacGrid
 
+    ! If present then calculate the radial component of the FAC with
+    ! or with out sign of Br
+    logical, intent(in), optional:: IsRadial
+    logical, intent(in), optional:: IsRadialAbs
+
+    ! If present, zero out Fac < FacMin (before taking radial part)
+    real, intent(in), optional:: FacMin
+    
     ! Local variables
     character(len=3):: TypeCoordFac
 
@@ -664,16 +673,16 @@ contains
                State_V(Bx_-1)*B0_D
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
-          if(.false. .and. i==6 .and. j==6)then
-             write(*,*)'iHemispher=',iHemisphere
-             write(*,*)'Phi,Theta=',Phi,Theta
-             write(*,*)'XyzIn_D  =', XyzIn_D
-             write(*,*)'Xyz_D    =',Xyz_D
-             write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
-             write(*,*)'B0_D     =',B0_D
-             write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
-             call stop_mpi('DEBUG')
-          end if
+          !if(.false.)then
+          !   write(*,*)'iHemispher=',iHemisphere
+          !   write(*,*)'Phi,Theta=',Phi,Theta
+          !   write(*,*)'XyzIn_D  =', XyzIn_D
+          !   write(*,*)'Xyz_D    =',Xyz_D
+          !   write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
+          !   write(*,*)'B0_D     =',B0_D
+          !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
+          !   call stop_mpi('DEBUG')
+          !end if
        end do
     end do
 
@@ -709,15 +718,18 @@ contains
 
              ! Convert b_D into a unit vector
              bUnit_D = b_D / bRcurrents
+
              ! get the field aligned current
              Fac = sum(bUnit_D*Jr_D)
 
+             ! Get Cartesian coordinates
+             call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
+
+             ! Convert to GM coordinates
+             XyzIn_D = matmul(GmFac_DD, XyzIn_D)
+
              if(DoMap)then
                 ! Calculate magnetic field strength at the rIn grid point
-                call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
-
-                ! Convert to GM coordinates
-                XyzIn_D = matmul(GmFac_DD, XyzIn_D)
 
                 call get_planet_field(Time_Simulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)
@@ -730,19 +742,34 @@ contains
                 Fac = bIn / bRcurrents * Fac
              else
                 bIn_D = b_D
+                bIn   = norm2(bIn_D)
              end if
-             ! store the field alinged current
+
+             ! Zero out small Fac if requested
+             if(present(FacMin))then
+                if(abs(Fac) < FacMin) Fac = 0.0
+             end if
+             
+             ! Get radial component of FAC: FAC_r = FAC*Br/B
+             if(present(IsRadial)) &
+                  Fac = Fac * sum(bIn_D*XyzIn_D) / (bIn*rIn)
+
+             if(present(IsRadialAbs)) &
+                  Fac = Fac * abs(sum(bIn_D*XyzIn_D)) / (bIn*rIn)
+
+             ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
 
              ! store the B field in the FAC coordinates
-             Brin_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
-
+             if(present(Brin_DII)) &
+                  Brin_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
           end do
        end do
     end if
     deallocate(bCurrent_VII)
 
     call test_stop(NameSub, DoTest)
+
   end subroutine calc_field_aligned_current
   !============================================================================
 

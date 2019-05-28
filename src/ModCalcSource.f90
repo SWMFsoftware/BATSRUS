@@ -6,7 +6,7 @@ module ModCalcSource
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
 
   implicit none
   SAVE
@@ -99,12 +99,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    Source_VC = 0.0; SourceMhd_VC  = 0.0
+    Source_VC = 0.0; SourceMhd_VC = 0.0
     
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid=1,nFluid
-          call select_fluid(iFluid)
+          if(nFluid > 1) call select_fluid(iFluid)
 
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
@@ -642,11 +642,13 @@ contains
     if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
          Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
 
-    if(UseMhdMomentumFlux) call get_efield_in_comoving_frame(iBlock)
+    ! The comoving electric field is needed for multi-ion and LFM-style MHD
+    if(UseMhdMomentumFlux .and. (UseMultiIon .or. .not.IsMhd) ) &
+         call get_efield_in_comoving_frame(iBlock)
 
     ! These source terms apply to all the fluids
     do iFluid=1,nFluid
-       call select_fluid(iFluid)
+       if(nFluid > 1) call select_fluid(iFluid)
        if(UseGravity)then
           ! Add gravitational force
           if(GravityDir == 0)then

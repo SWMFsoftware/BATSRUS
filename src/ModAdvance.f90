@@ -194,6 +194,7 @@ module ModAdvance
   ! momentum-conserving schemes for hybrid and multifluids. Not calculated
   ! if UseEfield, in which case the electric field is part of the state vector.
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
+
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
        MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
   !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
@@ -233,15 +234,15 @@ contains
     ! In case electric field is not a part of the state vector, it may
     ! be expressed in terms of the MhdMomentum flux and stored into 
     ! Efield_DGB array 
-    if(UseMhdMomentumFlux .and. .not.allocated(Efield_DGB))then
+    if(UseMhdMomentumFlux .and. (UseMultiIon .or. .not.IsMhd) &
+         .and. .not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
     end if
     if(UseStableImplicit) then
        allocate(Source_VCB(nVar, nI, nJ, nK, MaxBlock))
-       Source_VCB = 0
+       Source_VCB = 0.0
     endif
-
 
     !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &

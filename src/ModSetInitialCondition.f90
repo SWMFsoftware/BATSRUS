@@ -24,14 +24,13 @@ contains
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
     use ModGeometry, ONLY: true_cell
     use ModIO, ONLY : restart
-    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, UseShockTube,&
-       UnitUser_V, ShockLeftState_V, ShockRightState_V, ShockPosition, UnitU_, &
-       Io2No_V
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, ShockSlope, &
+         UseShockTube, UnitUser_V, ShockLeftState_V, ShockRightState_V, &
+         ShockPosition, UnitU_, Io2No_V
     use ModUserInterface ! user_set_ics
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
     use ModEnergy, ONLY: calc_energy_ghost
-    use ModConserveFlux, ONLY: init_cons_flux
     use ModRestartFile, ONLY: UseRestartWithFullB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
     use BATL_lib, ONLY: Xyz_DGB
@@ -47,27 +46,25 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    time_BLK(:,:,:,iBlock) = 0.00
+    time_BLK(:,:,:,iBlock) = 0.0
 
     Flux_VX = 0.0
     Flux_VY = 0.0
     Flux_VZ = 0.0
-
-    call init_cons_flux(iBlock)
 
     if(Unused_B(iBlock))then
        do iVar = 1, nVar
           State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
        end do
     else
-
        !\
        ! If used, initialize solution variables and parameters.
        !/
        if(UseB0) call set_b0_cell(iBlock)
 
        ! Subtract B0 from Full B0+B1 from restart to obtain B1
-       if(UseB0 .and. restart .and. UseRestartWithFullB) call subtract_b0(iBlock)
+       if(UseB0 .and. restart .and. UseRestartWithFullB) &
+            call subtract_b0(iBlock)
 
        if(.not.restart)then
 
@@ -76,17 +73,18 @@ contains
              SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
              CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
              ! Set rotational matrix
-             Rot_II = reshape( [CosSlope, SinSlope, -SinSlope, CosSlope], &
-                  [2,2] )
+             Rot_II = reshape([CosSlope, SinSlope, -SinSlope, CosSlope],[2,2])
              ! calculate normalized left and right states
              ShockLeft_V  = ShockLeftState_V /UnitUser_V(1:nVar)
              ShockRight_V = ShockRightState_V/UnitUser_V(1:nVar)
 
              ! fix the units for the velocities
              do iFluid = 1, nFluid
-                call select_fluid(iFluid)
-                ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *Io2No_V(UnitU_)
-                ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*Io2No_V(UnitU_)
+                if(nFluid > 1) call select_fluid(iFluid)
+                ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *&
+                     Io2No_V(UnitU_)
+                ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*&
+                     Io2No_V(UnitU_)
              end do
 
           end if
@@ -100,7 +98,7 @@ contains
 
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid(iFluid)
+                   if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx,i,j,k,iBlock) = &
                         FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
                    State_VGB(iRhoUy,i,j,k,iBlock) = &
@@ -110,16 +108,16 @@ contains
                 end do
 
              elseif(.not.UseShockTube)then
-                State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MaxBc_)
+                State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MaxBc_)
              else
                 if( (Xyz_DGB(x_,i,j,k,iBlock)-ShockPosition) &
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
                    ! Set all variables first
-                   State_VGB(:,i,j,k,iBlock)   = ShockLeft_V
+                   State_VGB(:,i,j,k,iBlock) = ShockLeft_V
 
                    ! Rotate vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid(iFluid)
+                      if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockLeft_V(iUx:iUy))
                    end do
@@ -127,10 +125,10 @@ contains
                         matmul(Rot_II,ShockLeft_V(Bx_:By_))
                 else
                    ! Set all variables first
-                   State_VGB(:,i,j,k,iBlock)   = ShockRight_V
+                   State_VGB(:,i,j,k,iBlock) = ShockRight_V
                    ! Set vector variables
                    do iFluid = 1, nFluid
-                      call select_fluid(iFluid)
+                      if(nFluid > 1) call select_fluid(iFluid)
                       State_VGB(iUx:iUy,i,j,k,iBlock) = &
                            matmul(Rot_II,ShockRight_V(iUx:iUy))
                    end do
@@ -139,7 +137,7 @@ contains
                 end if
                 ! Convert velocity to momentum
                 do iFluid = 1, nFluid
-                   call select_fluid(iFluid)
+                   if(nFluid > 1) call select_fluid(iFluid)
                    State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                         State_VGB(iRho,i,j,k,iBlock) * &
                         State_VGB(iUx:iUz,i,j,k,iBlock)
@@ -152,7 +150,7 @@ contains
 
           end do; end do; end do
 
-          if(UseConstrainB)call constrain_ics(iBlock)
+          if(UseConstrainB) call constrain_ics(iBlock)
 
           if(UseUserICs) call user_set_ics(iBlock)
 
@@ -163,9 +161,7 @@ contains
 
     end if ! Unused_B
 
-    !\
     ! Compute energy from set values above.
-    !/
     call calc_energy_ghost(iBlock)
 
     if(DoTest)write(*,*) &
