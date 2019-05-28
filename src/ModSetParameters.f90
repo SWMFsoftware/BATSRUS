@@ -1159,7 +1159,7 @@ contains
        case("#AMR", "#DOAMR", &
             "#AMRLEVELS", "#AMRRESOLUTION", "#AMRLIMIT", "#AMRTYPE", &
             "#AMRCRITERIA", "#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION", &
-            "#AMRPROFILE")
+            "#AMRCRITERIACELLSIZE", "#AMRPROFILE")
           call read_amr_param(NameCommand, iSession)
 
        case("#AMRINITPHYSICS")
@@ -2220,7 +2220,8 @@ contains
           call read_wsa_coeff
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX")
+            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
+            "#HIGHBETASTOCHASTIC")
           call read_corona_heating(NameCommand)
 
        case("#OPENCLOSEDHEAT")

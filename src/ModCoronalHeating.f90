@@ -7,7 +7,7 @@ module ModCoronalHeating
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use ModUtilities, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
@@ -87,8 +87,11 @@ module ModCoronalHeating
 
   ! Dimensionless parameters for stochastic heating
   logical :: UseStochasticHeating = .false.
-  real :: StochasticExponent = 0.34
-  real :: StochasticAmplitude = 0.18
+  real :: StochasticExponent   = 0.21
+  real :: StochasticAmplitude  = 0.18
+  real :: StochasticExponent2  = 0.21
+  real :: StochasticAmplitude2 = 0.0
+
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
 
@@ -498,12 +501,19 @@ contains
           QeRatio = 1.0 - sum(QionRatio_I)
        case('stochasticheating')
           UseStochasticHeating = .true.
+          ! Stochastic heating when Beta_proton is below 1
           call read_var('StochasticExponent', StochasticExponent)
           call read_var('StochasticAmplitude', StochasticAmplitude)
        case default
           call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
+
+    case("#HIGHBETASTOCHASTIC")
+       ! Correction for stochastic heating when Beta_proton is between 1 and 30
+       ! KAWs are non-propagating for Beta_proton > 30.
+       call read_var('StochasticExponent2', StochasticExponent2)
+       call read_var('StochasticAmplitude2', StochasticAmplitude2)
 
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
@@ -1145,13 +1155,13 @@ contains
 
     integer :: iIon, iPrev, iFluid
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
-    real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
+    real :: B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon, DeltaB, Delta
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: pMin, P_I(nIonFluid), Ppar_I(nIonFluid)
     real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
-    real :: RhoProton, Ppar, Vpar2, Sigma, SignMajor
+    real :: RhoProton, Ppar, Sigma, SignMajor
     real :: QratioProton, ExtensionCoef, Qmajor, Qminor
     real, dimension(nIonFluid) :: QminorFraction_I, QmajorFraction_I, &
          CascadeTimeMajor_I, CascadeTimeMinor_I, Qmajor_I, Qminor_I, &
@@ -1180,6 +1190,8 @@ contains
 
        RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
 
+       Valfven = B/sqrt(RhoProton)
+
        do iIon = 1, nIonFluid
           iFluid = IonFirst_ - 1 + iIon
 
@@ -1189,7 +1201,7 @@ contains
           else
              pMin = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
                   /MassIon_I(iIon)*Tmin_I(iFluid)
-             if(pMin_I(iFluid) >= 0.0) pMin = min(pMin_I(iFluid), pMin)
+             if(pMin_I(iFluid) >= 0.0) pMin = max(pMin_I(iFluid), pMin)
           end if
           pMin = max(pMin, 1e-30)
 
@@ -1202,6 +1214,8 @@ contains
              Ppar_I(iIon) = P_I(iIon)
           end if
        end do
+
+       BetaProton = 2.0*P_I(1)/B2
 
        Wplus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        Wminus = State_VGB(WaveLast_,i,j,k,iBlock)
@@ -1243,7 +1257,6 @@ contains
                -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
                /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
           Upar = sum(Udiff_D*B_D)/B
-          Valfven = B/sqrt(RhoProton)
 
           ! The damping rates (divided by k_parallel V_Ap) in the lookup
           ! table are for both forward propagating Alfven modes (i.e. in
@@ -1271,7 +1284,6 @@ contains
           TeByTp = State_VGB(Pe_,i,j,k,iBlock)/Pp
 
           BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
-          BetaProton = 2.0*Pp/B2
 
           DampingElectron = 0.01*sqrt(TeByTp/BetaProton) &
                *(1.0 + 0.17*BetaProton**1.3) &
@@ -1330,31 +1342,23 @@ contains
           CascadeTimeMajor_I(iIon) = WmajorGyro/max(Qmajor_I(iIon),1e-30)
           CascadeTimeMinor_I(iIon) = WminorGyro/max(Qminor_I(iIon),1e-30)
 
-          ! For protons the following would be DeltaU at ion gyro radius,
-          ! except that we assumed that the Alfven ratio is one.
+          ! For protons the following would be DeltaU and DeltaB at ion gyro
+          ! radius, except that we assumed that the Alfven ratio is one.
           DeltaU = sqrt(Wgyro/RhoProton)
-
-          ! For other ions, correct for velocity difference between alphas
-          ! and protons
-          if(iIon > 1)then
-             ! parallel ion thermal speed
-             Vpar2 = 2.0*Ppar/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)
-
-             ! The appearance of Vpar2 is due to averaging (using
-             ! distribution function) to avoid that there is no heating
-             ! when Upar = Valfven.
-             ! We further assumed gyroscale Alfven ratio to be one.
-             DeltaU = DeltaU*sqrt((1 - Sigma*Upar/Valfven)**2 &
-                  + 0.5*Vpar2/Valfven**2)
-          end if
+          DeltaB = sqrt(Wgyro)
 
           Epsilon = DeltaU/Vperp
+          Delta = DeltaB/B
 
-          ! Damping rate for stochastic heating
-          DampingPerp_I(iIon) = StochasticAmplitude &
+          ! Damping rate for stochastic heating.
+          ! It interpolates between the beta<1 and 1<beta<30 version.
+          ! This formula is at the moment only suitable for protons.
+          DampingPerp_I(iIon) = (StochasticAmplitude &
+               *exp(-StochasticExponent/max(Epsilon,1e-15)) &
+               + StochasticAmplitude2*sqrt(BetaProton) &
+               *exp(-StochasticExponent2/max(Delta,1e-15))) &
                *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
-               *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               /Wgyro
+               *InvGyroRadius/Wgyro
 
           if(iIon > 1)then
              QmajorFraction_I(iIon) = &
@@ -1367,8 +1371,8 @@ contains
        end do
 
        ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
-       DampingElectron = DampingElectron/CascadeTimeMinor_I(1)
-       DampingPar_I = DampingPar_I/CascadeTimeMinor_I(1)
+       DampingElectron = DampingElectron/max(CascadeTimeMinor_I(1), 1e-30)
+       DampingPar_I = DampingPar_I/max(CascadeTimeMinor_I(1), 1e-30)
 
        ! Total damping rate around proton gyroscale
        DampingProton = DampingElectron + sum(DampingPar_I) &
