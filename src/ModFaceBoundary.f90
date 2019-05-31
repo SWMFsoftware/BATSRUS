@@ -298,13 +298,29 @@ contains
           if (nIonDensity > 2) call stop_mpi(NameSub// &
                ': ONLY two species/fluids for Young BC.')
 
-          ! assuming the first species/fluid is H+
-          RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
+          if (UseCpcpBc) then
+             ! assuming the first species/fluid is H+ and is determined by
+             ! #CPCPBOUNDARY
+             RhoCpcp_I(1) = Io2No_V(UnitRho_)*(Rho0Cpcp_I(1)           &
+                  + RhoPerCpcp_I(1)*0.5*( logvar_ionosphere('cpcpn')   &
+                  + logvar_ionosphere('cpcps') )                       &
+                  * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
 
-          ! assuming the second species/fluid is O+, Mass is taken to be 16
-          ! use nIonDensity instead of 2 to avoid index out of range
-          RhoCpcp_I(nIonDensity) = &
-               Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
+             ! THe first species/fluid is H+, so the number density is the
+             ! same as mass density in NO units. assuming the second
+             ! species/fluid is O+, Mass is taken to be 16.
+             ! use nIonDensity instead of 2 to avoid index out of range.
+             RhoCpcp_I(nIonDensity) = RhoCpcp_I(1)*RatioOH*16
+          else
+             ! assuming the first species/fluid is H+ and determined by #BODY
+             RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
+
+
+             ! assuming the second species/fluid is O+, Mass is taken to be 16
+             ! use nIonDensity instead of 2 to avoid index out of range
+             RhoCpcp_I(nIonDensity) = &
+                  Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
+          end if
        else
           ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
           ! is both light and very minor.

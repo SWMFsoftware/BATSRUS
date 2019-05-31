@@ -103,6 +103,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    call timing_start(NameSub)
+
     if(DoDebug)write(*,*)'part_steady_select'
 
     ! Check the advanced blocks (ExplBlock_ and SteadyBoundBlock_) for change
@@ -154,7 +156,7 @@ contains
     end do
 
     call MPI_allreduce(IsChanged, IsNewSteadySelect, 1, MPI_LOGICAL, MPI_LOR, &
-          iComm, iError)
+         iComm, iError)
 
     if(DoDebug)write(*,*)'iProc, IsChanged, IsNewSteadySelect=',&
          iProc, IsChanged, IsNewSteadySelect
@@ -164,62 +166,65 @@ contains
     ! In steady state runs, the blocks become all steady state in the end..
     DoPreserveExpl = time_accurate
 
-    ! If no new evolving blocks were found, simply return
-    if(.not. IsNewSteadySelect) RETURN
+    ! If no new evolving blocks were found, simply skip the following part.
+    if(IsNewSteadySelect) then
+       ! Update the global information about evolving blocks
+       call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+            iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    ! Update the global information about evolving blocks
-    call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+       ! Find the blocks surrounding the evolving blocks
+       ! First set all non-explicit blocks to steady
+       where(iTypeAdvance_B == SteadyBoundBlock_) iTypeAdvance_B = SteadyBlock_
 
-    ! Find the blocks surrounding the evolving blocks
-    ! First set all non-explicit blocks to steady
-    where(iTypeAdvance_B == SteadyBoundBlock_) iTypeAdvance_B = SteadyBlock_
+       ! Check the steady blocks if they are now part of the steady boundary
+       BLOCKS: do iBlock = 1, nBlock
 
-    ! Check the steady blocks if they are now part of the steady boundary
-    BLOCKS: do iBlock = 1, nBlock
+          ! Skip all other blocks
+          if(iTypeAdvance_B(iBlock) /= SteadyBlock_) CYCLE
 
-       ! Skip all other blocks
-       if(iTypeAdvance_B(iBlock) /= SteadyBlock_) CYCLE
+          if(DoDebug)write(*,*)'part_steady checking iBlock=',iBlock
 
-       if(DoDebug)write(*,*)'part_steady checking iBlock=',iBlock
+          ! Check all faces and subfaces
+          FACES: do iFace = 1, 6
 
-       ! Check all faces and subfaces
-       FACES: do iFace = 1, 6
-
-          if(NeiLev(iFace,iBlock) == NOBLK) CYCLE FACES
-          if(NeiLev(iFace,iBlock) == -1)then
-             nSubFace = 4
-          else
-             nSubFace = 1
-          end if
-
-          SUBFACES: do iSubFace = 1, nSubFace
-             jProc  = NeiPE( iSubFace,iFace,iBlock)
-             jBlock = NeiBLK(iSubFace,iFace,iBlock)
-             if(iTypeAdvance_BP(jBlock, jProc) >= ExplBlock_) then
-                iTypeAdvance_B(iBlock) = SteadyBoundBlock_
-                CYCLE BLOCKS
+             if(NeiLev(iFace,iBlock) == NOBLK) CYCLE FACES
+             if(NeiLev(iFace,iBlock) == -1)then
+                nSubFace = 4
+             else
+                nSubFace = 1
              end if
-          end do SUBFACES
-       end do FACES
 
-    end do BLOCKS
+             SUBFACES: do iSubFace = 1, nSubFace
+                jProc  = NeiPE( iSubFace,iFace,iBlock)
+                jBlock = NeiBLK(iSubFace,iFace,iBlock)
+                if(iTypeAdvance_BP(jBlock, jProc) >= ExplBlock_) then
+                   iTypeAdvance_B(iBlock) = SteadyBoundBlock_
+                   CYCLE BLOCKS
+                end if
+             end do SUBFACES
+          end do FACES
 
-    ! Update the global information about block types
-    call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+       end do BLOCKS
 
-    ! Check for full steady state
-    if(.not.time_accurate) &
-         IsSteadyState = all(iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_)
+       ! Update the global information about block types
+       call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+            iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    if(iProc==0 .and. lVerbose>0) &
-         write(*,*)'part_steady finished:',&
-         ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
-         count(iTypeAdvance_BP == SkippedBlock_), &
-         count(iTypeAdvance_BP == SteadyBlock_), &
-         count(iTypeAdvance_BP == SteadyBoundBlock_), &
-         count(iTypeAdvance_BP == ExplBlock_)
+       ! Check for full steady state
+       if(.not.time_accurate) &
+            IsSteadyState = all(iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_)
+
+       if(iProc==0 .and. lVerbose>0) &
+            write(*,*)'part_steady finished:',&
+            ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
+            count(iTypeAdvance_BP == SkippedBlock_), &
+            count(iTypeAdvance_BP == SteadyBlock_), &
+            count(iTypeAdvance_BP == SteadyBoundBlock_), &
+            count(iTypeAdvance_BP == ExplBlock_)
+
+    endif
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine part_steady_select
