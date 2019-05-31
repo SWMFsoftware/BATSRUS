@@ -426,6 +426,8 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
+
+    call timing_start(NameSub)
     
     ! Initialize some variables in ModImplicit
     call implicit_init
@@ -808,6 +810,8 @@ contains
 
     ! Done with implicit update
     IsImplicitUpdate = .false.
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine advance_part_impl
