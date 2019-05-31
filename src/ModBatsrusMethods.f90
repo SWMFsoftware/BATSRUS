@@ -468,6 +468,8 @@ contains
        RETURN
     end if
 
+    call timing_start('advance')
+
     ! We are advancing in time. 
     time_loop = .true.
 
@@ -496,8 +498,6 @@ contains
 
     ! Switch off steady blocks to reduce calculation
     if(UsePartSteady) call part_steady_switch(.true.)
-
-    call timing_start('advance')
 
     if(UseNonConservative .and. nConservCrit > 0)&
          call select_conservative
@@ -565,11 +565,8 @@ contains
 
     if(UsePartSteady)then
        ! Select steady and unsteady blocks
-       if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
-          call timing_start('part_steady')
-          call part_steady_select
-          call timing_stop('part_steady')
-       end if
+       if(.not. (Time_Accurate .and. Time_Simulation == 0.0)) &
+            call part_steady_select
 
        ! Switch on steady blocks to be included in AMR, plotting, etc.
        call part_steady_switch(.false.)
@@ -578,8 +575,6 @@ contains
     call advect_all_points
 
     if(UseParticles) call advect_particle_line
-
-    call timing_stop('advance')
 
     if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
          iProc,n_step,Time_Simulation
@@ -637,6 +632,7 @@ contains
        call BATS_save_files('NORMAL')
     end if
 
+    call timing_stop('advance')
     call test_stop(NameSub, DoTest)
   end subroutine BATS_advance
   !============================================================================

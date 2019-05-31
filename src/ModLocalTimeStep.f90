@@ -109,6 +109,8 @@ contains
     if(DoTest)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
+    call timing_start(NameSub)
+
     if(UseMaxTimeStep)then
        ! DtMin and DtMax are set by ModTimeStepControl::set_global_timestep
        DtMinSi = DtMin*No2Si_V(UnitT_)*Cfl
@@ -306,6 +308,8 @@ contains
     Time_Simulation = Time_Simulation + DtMaxSi
 
     if(DoTest)write(*,*)NameSub,' finished'
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine advance_localstep
