@@ -289,6 +289,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call test_start('krylov', DoTestKrylov)
+    
+    call timing_start(NameSub)
+
     if(DoTest) write(*,*)NameSub,' starting with test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
@@ -431,6 +434,8 @@ contains
     if(DoTest) write(*,*)NameSub,' final test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
+
+    call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
