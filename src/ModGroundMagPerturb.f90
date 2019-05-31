@@ -41,7 +41,8 @@ module ModGroundMagPerturb
   integer            :: nMagnetometer=0
   real, allocatable  :: PosMagnetometer_II(:,:)
   character(len=100) :: MagInputFile
-  character(len=3)   :: TypeCoordMag='MAG', TypeCoordGrid='SMG'
+  character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
+  character(len=3)   :: TypeCoordGrid='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
 
   ! Variables for grid of magnetometers:
@@ -54,8 +55,9 @@ module ModGroundMagPerturb
 
   ! Fast algorithms: 
   real, allocatable:: LineContrib_DII(:,:,:)
-  logical:: UseFastFacIntegral = .false. ! true for fast FAC integral
-  logical:: UseSurfaceIntegral = .false. ! true for fast surface integral
+  logical:: UseSurfaceIntegral = .false.      ! true for fast surface integral
+  logical:: UseFastFacIntegral = .false.      ! true for fast FAC integral
+  character(len=3):: TypeCoordFacGrid = 'SMG' ! 'MAG' for fast integral
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
@@ -69,15 +71,16 @@ module ModGroundMagPerturb
   real, allocatable:: MagOut_VII(:,:,:)
 
   ! Private geomagnetic indices variables:
-  integer :: nIndexMag = 0  ! Total number of mags required by indices.
-  integer :: iUnitIndices   ! File IO unit for indices file.
-  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
-  real, parameter    :: AeLat = 70.0           ! Synthetic AE geomag. latitude.
-  real               :: k9 = 600.0             ! Scaling of standard K.
+  integer :: nIndexMag = 0  ! Total number of mags required by indices
+  integer :: iUnitIndices   ! File IO unit for indices file
+  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude
+  real, parameter    :: AeLat = 70.0           ! Synthetic AE geomag. latitude
+  real               :: k9 = 600.0             ! Scaling of standard K
   real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
-  real               :: XyzKp_DI(3, nKpMag)    ! Locations of Kp mags, SMG.
-  real               :: XyzAe_DI(3, nAeMag)    ! Locations of AE mags, SMG.
-  integer            :: kIndex_I(nKpMag)       ! Local k-index.
+  real               :: XyzKp_DI(3,nKpMag)     ! Locations of Kp stations
+  real               :: XyzAe_DI(3,nAeMag)     ! Locations of AE stations
+  character(len=3)   :: TypeCoordIndex = 'SMG' ! SMG or MAG system for stations
+  integer            :: kIndex_I(nKpMag)       ! Local k-index
 
   ! K-index is evaluated over a rolling time window, typically three hours.
   ! It may be desirable to reduce this window, changing the Kp index so
@@ -124,6 +127,19 @@ contains
     case("#MAGPERTURBINTEGRAL")
        call read_var('UseSurfaceIntegral', UseSurfaceIntegral)
        call read_var('UseFastFacIntegral', UseFastFacIntegral)
+       call read_var('TypeCoordIndex',     TypeCoordIndex)
+       if(TypeCoordIndex/='MAG' .and. TypeCoordIndex/='SMG') &
+            call stop_mpi(NameSub// &
+            ': incorrect TypeCoordIndex='//TypeCoordIndex)
+       if(UseFastFacIntegral)then
+          TypeCoordFacGrid = 'MAG'
+       else
+          ! Mostly for testing purposes allow setting MAG for slow algorithm
+          call read_var('TypeCoordFacGrid', TypeCoordFacGrid)
+          if(TypeCoordFacGrid/='MAG' .and. TypeCoordFacGrid/='SMG') &
+               call stop_mpi(NameSub// &
+               ': incorrect TypeCoordFacGrid='//TypeCoordFacGrid)
+       end if
 
     case("#MAGNETOMETER")
        DoSaveMags = .true.
@@ -305,30 +321,30 @@ contains
     if(.not. allocated(LatIndex_I)) &
        allocate(LatIndex_I(nIndexMag), LonIndex_I(nIndexMag))
 
-    ! Initialize Kp grid and arrays.  FaKe_p uses stations fixed in SMG coords.
-    XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
+    ! Initialize Kp grid in TypeCoordIndex='SMG' or 'MAG' system
+    XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! Z for all stations.
     RadXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nKpMag
        Phi = cTwoPi * (i-1)/24.0
-       XyzKp_DI(1,i) = RadXY * cos(phi)
-       XyzKp_DI(2,i) = RadXY * sin(phi)
+       XyzKp_DI(1,i) = RadXY * cos(Phi)
+       XyzKp_DI(2,i) = RadXY * sin(Phi)
        if(iProc==0 .and. DoTest) &
             write(*,'(a, 3(1x, e13.3))') 'Kp Coords = ', XyzKp_DI(:,i)
        LatIndex_I(i) = KpLat
-       LonIndex_I(i) = phi
+       LonIndex_I(i) = Phi
     end do
 
     ! Initialize Ae grid and arrays, similar to above.
-    XyzAe_DI(3,:) = sin(AeLat * cDegToRad) ! SMG Z for all stations.
+    XyzAe_DI(3,:) = sin(AeLat * cDegToRad) ! Z for all stations.
     RadXY         = cos(AeLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nAeMag
        Phi = cTwoPi * (i-1)/24.0
-       XyzAe_DI(1,i) = RadXY * cos(phi)
-       XyzAe_DI(2,i) = RadXY * sin(phi)
+       XyzAe_DI(1,i) = RadXY * cos(Phi)
+       XyzAe_DI(2,i) = RadXY * sin(Phi)
        if(iProc==0 .and. DoTest) &
             write(*,'(a, 3(1x, e13.3))') 'AE Coords = ', XyzAe_DI(:,i)
        LatIndex_I(i+nKpMag) = AeLat
-       LonIndex_I(i+nKpMag) = phi
+       LonIndex_I(i+nKpMag) = Phi
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
@@ -489,7 +505,6 @@ contains
 
     ! Coordinate system for the grid that collects the FAC
     logical         :: DoConvertCoord
-    character(len=3):: TypeCoordFacGrid
     real            :: SmToFacGrid_DD(3,3)
 
     ! real:: Volume, Height=2.0 !!! to test volume integration
@@ -500,14 +515,9 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start('ground_db_fac')
 
-    if(UseFastFacIntegral)then
-       DoConvertCoord   = .true.
-       TypeCoordFacGrid = 'MAG'
-       SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
-    else
-       DoConvertCoord   = .false.
-       TypeCoordFacGrid = 'SMG'
-    end if
+    DoConvertCoord = TypeCoordFacGrid == 'MAG'
+    if(DoConvertCoord) &
+         SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
     
     MagPerturb_DI= 0.0
 
@@ -586,7 +596,20 @@ contains
        if(UseFastFacIntegral)then
           iLineProc = 0
           ! Next time the integrals can be reused
-          UseFastFacIntegral_I(iGroup) = .true.
+          ! if the station group corotates with the dipole
+          select case(iGroup)
+          case(1)
+             ! Stations
+             UseFastFacIntegral_I(iGroup) = &
+                  TypeCoordMag == 'MAG' .or. TypeCoordMag == 'GEO'
+          case(2)
+             ! grid
+             UseFastFacIntegral_I(iGroup) = &
+                  TypeCoordGrid == 'MAG' .or. TypeCoordGrid == 'GEO'
+          case(3,4)
+             ! Kp and Ae indexes
+             UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
+          end select
        end if
 
        ! CHECK
@@ -704,7 +727,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine ground_mag_perturb_fac
   !============================================================================
-
   subroutine calc_kp
 
     use ModProcMH,     ONLY: iProc, nProc, iComm
@@ -715,9 +737,9 @@ contains
     use ModMpi
 
     integer :: i, iError
-    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, SmgNed_DD
+    real, dimension(3,3):: IndexToGm_DD, IndexToSm_DD, XyzSph_DD, SmgNed_DD
     real, dimension(3,nKpMag):: &
-         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
+         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, Xyz_DI
 
     real :: dB_I(2)
 
@@ -727,14 +749,24 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    ! Obtain locations in correct (GSM) coordinates.
-    SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    XyzGm_DI   = matmul(SmgToGm_DD, XyzKp_DI)
+    ! Coordinate transformations
+    IndexToGm_DD = transform_matrix(Time_simulation, &
+         TypeCoordIndex, TypeCoordSystem)
+    IndexToSm_DD = transform_matrix(Time_simulation, &
+         TypeCoordIndex, 'SMG')
 
-    ! Obtain geomagnetic pertubations in SMG coordinates
-    call ground_mag_perturb(    nKpMag, XyzGm_DI, dBmag_DI)
-    call ground_mag_perturb_fac('kp', nKpMag, XyzKp_DI, dBfac_DI)
-    call calc_ie_mag_perturb(   nKpMag, XyzKp_DI, dBHall_DI, dBPedersen_DI)
+    ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
+
+    ! Location for MHD contribution in GM coordinates
+    Xyz_DI = matmul(IndexToGm_DD, XyzKp_DI)
+    call ground_mag_perturb(nKpMag, Xyz_DI, dBmag_DI)
+
+    ! Location for IE contributions are in SMG coordinates
+    Xyz_DI = matmul(IndexToSm_DD, XyzKp_DI)
+    call calc_ie_mag_perturb(nKpMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
+
+    ! Location for gap region contribution in SMG (should be in MAG)
+    call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI)
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
@@ -744,7 +776,8 @@ contains
     do i=1, nKpMag
 
        ! Rotation matrix from Cartesian to spherical coordinates
-       XyzSph_DD = rot_xyz_sph(XyzKp_DI(:,i))
+       ! Xyz_DI is now in SM coordinates (see above)
+       XyzSph_DD = rot_xyz_sph(Xyz_DI(:,i))
 
        ! Rotation matrix from SMG to local North-East-Down components
        ! North = -Theta
@@ -758,11 +791,8 @@ contains
     end do
 
     ! MPI Reduce to head node.
-    if(nProc>1) then
-       dBmag_DI = dBsum_DI
-       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nKpMag, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-    end if
+    if(nProc>1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
+         MPI_SUM, 0, iComm, iError)
 
     ! Head node calculates K-values and shares them with all other nodes.
     if(iProc==0)then
@@ -812,24 +842,34 @@ contains
     use ModMpi
 
     integer :: i, iError
-    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, SmgNed_DD
+    real, dimension(3,3):: IndexToGm_DD, IndexToSm_DD, XyzSph_DD, SmgNed_DD
     real, dimension(3,nAeMag):: &
-         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
+         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, Xyz_DI
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ae'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
+    
+    ! Coordinate transformations
+    IndexToGm_DD = transform_matrix(Time_simulation, &
+         TypeCoordIndex, TypeCoordSystem)
+    IndexToSm_DD = transform_matrix(Time_simulation, &
+         TypeCoordIndex, 'SMG')
+    
+    ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
 
-       ! Obtain locations in correct (GSM) coordinates.
-    SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    XyzGm_DI   = matmul(SmgToGm_DD, XyzAe_DI)
+    ! Location for MHD contribution in GM coordinates
+    Xyz_DI = matmul(IndexToGm_DD, XyzAe_DI)
+    call ground_mag_perturb(nAeMag, Xyz_DI, dBmag_DI)
 
-    ! Obtain geomagnetic pertubations in SMG coordinates
-    call ground_mag_perturb(    nAeMag, XyzGm_DI, dBmag_DI)
-    call ground_mag_perturb_fac('ae', nAeMag, XyzAe_DI, dBfac_DI)
-    call calc_ie_mag_perturb(   nAeMag, XyzAe_DI, dBHall_DI, dBPedersen_DI)
+    ! Location for IE contributions are in SMG coordinates
+    Xyz_DI = matmul(IndexToSm_DD, XyzAe_DI)
+    call calc_ie_mag_perturb(nAeMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
+
+    ! Location for gap region contribution in SMG (should be in MAG)
+    call ground_mag_perturb_fac('ae', nAeMag, Xyz_DI, dBfac_DI)
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
@@ -839,7 +879,7 @@ contains
     do i=1, nAeMag
 
        ! Rotation matrix from Cartesian to spherical coordinates
-       XyzSph_DD = rot_xyz_sph(XyzAe_DI(:,i))
+       XyzSph_DD = rot_xyz_sph(Xyz_DI(:,i))
 
        ! Rotation matrix from SMG to local North-East-Down components
        ! North = -Theta
@@ -853,11 +893,8 @@ contains
     end do
 
     ! MPI Reduce to head node.
-    if(nProc>1) then
-       dBmag_DI = dBsum_DI
-       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nAeMag, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-    end if
+    if(nProc>1) call MPI_reduce_real_array(dBsum_DI, size(dBsum_DI), &
+         MPI_SUM, 0, iComm, iError)
 
     ! Now, calculate AE indices on head node only.
     if(iProc==0) then
@@ -1216,7 +1253,7 @@ contains
          TypeCoordSystem, 'SMG')
 
     ! Transform the Radius position into cartesian coordinates.
-    ! Transform the magnetometer position from MagInCorrd to GM/SM
+    ! Transform the magnetometer position from MagInCoord to GM/SM
 
     do iMag = 1, nMagNow
        ! (360,360) is for the station at the center of the planet
@@ -1241,23 +1278,18 @@ contains
 
     ! Collect the variables from all the PEs
     ! Use dBTotal as a temporary variable
-    dBTotal_DI = 0.0
     if(nProc > 1)then
-       call MPI_reduce(dBMhd_DI, dBTotal_DI, 3*nMagNow, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) dBMhd_DI = dBTotal_DI
+       call MPI_reduce_real_array(dBMhd_DI, size(dBMhd_DI), &
+            MPI_SUM, 0, iComm, iError)
 
-       call MPI_reduce(dBFac_DI, dBTotal_DI, 3*nMagNow, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) dBFac_DI = dBTotal_DI
+       call MPI_reduce_real_array(dBFac_DI, size(dBFac_DI), &
+            MPI_SUM, 0, iComm, iError)
 
-       call MPI_reduce(dBHall_DI, dBTotal_DI, 3*nMagNow, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) dBHall_DI = dBTotal_DI
+       call MPI_reduce_real_array(dBHall_DI, size(dBHall_DI), &
+            MPI_SUM, 0, iComm, iError)
 
-       call MPI_reduce(dBPedersen_DI, dBTotal_DI, 3*nMagNow, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) dBPedersen_DI = dBTotal_DI
+       call MPI_reduce_real_array(dBPedersen_DI, size(dBPedersen_DI), &
+            MPI_SUM, 0, iComm, iError)
     end if
 
     ! convert perturbation into output format and write them out
