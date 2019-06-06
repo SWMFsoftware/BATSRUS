@@ -327,8 +327,11 @@ contains
                            Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
                    end if
                 end do
-                if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                     State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+
+                if(iPoint_I(iPoint) .ne. -1) then
+                   if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                        State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+                endif
                 
                 do iVar = 1, nVar
                    ! Check for positivity
