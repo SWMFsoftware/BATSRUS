@@ -453,14 +453,28 @@ contains
   end subroutine ground_mag_perturb
   !============================================================================
 
-  subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, MagPerturb_DI)
+  subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
+       MagPerturbFac_DI, MagPerturbMhd_DI)
 
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
-    ! pertubation of the magnetic field (returned as MagPerturb_DI) due
+    ! pertubation of the magnetic field (returned as MagPerturbFac_DI) due
     ! to "gap region" field-aligned currents.  These are the FACs taken
     ! towards the inner boundary of BATS-R-US and mapped to ionospheric
     ! altitudes (sub-MHD locations, the so-called "gap region") along assumed
     ! dipole field lines.
+    !
+    ! If UseSurfaceIntegral is true, also calculate the MagPerturbMhd_DI based
+    ! on the relationship between the volumetric Biot-Savart integral and the 
+    ! following surface integral that gives B at the location x0 as
+    !
+    ! B(x0) = int_|x|=R [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
+    !
+    ! where n = x/|x| is the radial unit vector and the integral is taken
+    ! at the radius R (rCurrents). This was derived by Igor Sokolov. 
+    ! For x0=0 we get int n.B*r + n x B x r/(4pir^3) = int B/(4pi r^2) = <B>
+    ! i.e. the average of B over the surface.
+    !
+    ! NOTE: The surface integral includes the external (IMF) field as well. 
 
     use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation
@@ -475,7 +489,8 @@ contains
     character(len=*), intent(in):: NameGroup
     integer, intent(in) :: nMag
     real,    intent(in) :: Xyz_DI(3,nMag)
-    real,    intent(out):: MagPerturb_DI(3,nMag)
+    real,    intent(out):: MagPerturbFac_DI(3,nMag)
+    real,  intent(inout):: MagPerturbMhd_DI(3,nMag)
 
     real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
     integer, parameter:: nTheta =181, nPhi =181, nR = 30
@@ -483,10 +498,14 @@ contains
     integer           :: k, iHemisphere, iError
     integer           :: iTheta,iPhi,iLine,iMag
     real              :: dR, r, Theta, Phi
-    real              :: dTheta, dPhi, SinTheta, dVol, dVolCoeff
+    real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
-    real              :: FacRcurrents_II(nTheta,nPhi)
+    real              :: Fac_II(nTheta,nPhi)
+
+    ! Variables for surface integral
+    real:: b_DII(3,nTheta,nPhi)
+    real:: rDotB, rCrossB_D(3)
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
     ! The Biot-Savart integral for a given magnetometer indexed by iMag
@@ -519,7 +538,7 @@ contains
     if(DoConvertCoord) &
          SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
     
-    MagPerturb_DI= 0.0
+    MagPerturbFac_DI= 0.0
 
     dTheta = cPi    / (nTheta-1)
     dPhi   = cTwoPi / (nPhi-1)
@@ -527,16 +546,26 @@ contains
 
     ! Get the radial component of the field aligned current
     ! at the ionosphere boundary
-    call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-         FacRcurrents_II, TypeCoordFacGrid=TypeCoordFacGrid, &
-         IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+    if(UseSurfaceIntegral)then
+       MagPerturbMhd_DI = 0.0
+       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+            Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
+            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+
+       if(nProc > 1)&
+            call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+    else
+       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+            Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
+            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+    end if
 
     if(nProc > 1) &
-         call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
+         call MPI_Bcast(Fac_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
 
     !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
-    !     VarIn_II=transpose(FacRcurrents_II))
+    !     VarIn_II=transpose(Fac_II))
 
     iLine = -1
 
@@ -581,13 +610,13 @@ contains
 
              iLineProc = iLineProc + 1
 
-             FacRcurrents = FacRcurrents_II(iTheta,iPhi)
+             FacRcurrents = Fac_II(iTheta,iPhi)
              if(FacRcurrents == 0.0) CYCLE
 
              do iMag = 1, nMag
 
                 ! Add contribution from this line to this magnetometer
-                MagPerturb_DI(:,iMag) = MagPerturb_DI(:,iMag) + &
+                MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                      FacRcurrents * LineContrib_DII(:,iMag+iMag0,iLineProc)
              end do
           end do
@@ -629,7 +658,7 @@ contains
 
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
-             if (FacRcurrents_II(iTheta,iPhi) == 0.0 &
+             if (Fac_II(iTheta,iPhi) == 0.0 &
                   .and. .not. UseFastFacIntegral) CYCLE
 
              iLine = iLine + 1
@@ -643,10 +672,35 @@ contains
              call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
              ! the field aligned current and B field at r=rCurrents
-             FacRcurrents = FacRcurrents_II(iTheta,iPhi)
+             FacRcurrents = Fac_II(iTheta,iPhi)
 
              ! Calculate volume element
-             dVolCoeff = dR*rCurrents**2*SinTheta*dTheta*dPhi
+             dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
+             dVolCoeff = dR*dSurface
+
+             if(UseSurfaceIntegral)then
+                
+                ! B(x0) = int_|x|=R [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
+                ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
+
+                b_D       = b_DII(:,iTheta,iPhi)
+                rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
+                rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+
+                do iMag = 1, nMag
+                   Xyz_D = Xyz_DI(:,iMag)
+                   ! This should be done in advance !!!
+                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+
+                   ! x-x0
+                   Xyz_D = XyzRcurrents_D - Xyz_D
+
+                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+                        + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
+                        *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+                end do
+
+             end if
 
              do k = 1, nR
 
@@ -684,7 +738,7 @@ contains
                    Pert_D = dVol*cross_product(b_D, Xyz_D-XyzMid_D) &
                         /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
 
-                   MagPerturb_DI(:,iMag) = MagPerturb_DI(:,iMag) + &
+                   MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
 
                    ! Store contribution for fast method
@@ -692,22 +746,20 @@ contains
                         LineContrib_DII(:,iMag+iMag0,iLineProc) &
                         = LineContrib_DII(:,iMag+iMag0,iLineProc) + Pert_D
 
-                   !if(iGroup==1.and.iMag==1.and.iTheta==3.and.iPhi==104.and.k==1)then
+                   !if(...)then
                    !   write(*,*)'Xyz_D   =', Xyz_D
                    !   write(*,*)'XyzMid_D=', XyzMid_D
                    !   write(*,*)'b_D, InvBr=', b_D, InvBr
                    !   write(*,*)'dVol, dVolCoeff, FacRcurrents=', &
                    !        dVol, dVolCoeff, FacRcurrents
                    !   write(*,*)'Pert_D      =', Pert_D
-                   !   write(*,*)'MagPerturb_D=', MagPerturb_DI(:,iMag)
+                   !   write(*,*)'MagPerturb_D=', MagPerturbFac_DI(:,iMag)
                    !
                    !   call stop_mpi('DEBUG')
                    !end if
                    
                 end do
              end do
-             !if(iGroup==1) write(*,*)'!!! iTheta,iPhi,MagPerturb_DI(:,1)=',&
-             !     iTheta,iPhi,MagPerturb_DI(:,1)
           end do
        end do
     end if
@@ -718,7 +770,8 @@ contains
     ! Convert
     if(DoConvertCoord)then
        do iMag = 1, nMag
-          MagPerturb_DI(:,iMag) = matmul(MagPerturb_DI(:,iMag), SmToFacGrid_DD)
+          MagPerturbFac_DI(:,iMag) = &
+               matmul(MagPerturbFac_DI(:,iMag), SmToFacGrid_DD)
        end do
     end if
 
@@ -758,15 +811,17 @@ contains
     ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
 
     ! Location for MHD contribution in GM coordinates
-    Xyz_DI = matmul(IndexToGm_DD, XyzKp_DI)
-    call ground_mag_perturb(nKpMag, Xyz_DI, dBmag_DI)
+    if(.not.UseSurfaceIntegral)then
+       Xyz_DI = matmul(IndexToGm_DD, XyzKp_DI)
+       call ground_mag_perturb(nKpMag, Xyz_DI, dBmag_DI)
+    end if
 
     ! Location for IE contributions are in SMG coordinates
     Xyz_DI = matmul(IndexToSm_DD, XyzKp_DI)
     call calc_ie_mag_perturb(nKpMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Location for gap region contribution in SMG (should be in MAG)
-    call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI)
+    call ground_mag_perturb_fac('kp', nKpMag, Xyz_DI, dBfac_DI, dBmag_DI)
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
@@ -860,16 +915,18 @@ contains
     
     ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
 
-    ! Location for MHD contribution in GM coordinates
-    Xyz_DI = matmul(IndexToGm_DD, XyzAe_DI)
-    call ground_mag_perturb(nAeMag, Xyz_DI, dBmag_DI)
+    if(.not.UseSurfaceIntegral)then
+       ! Location for MHD contribution in GM coordinates
+       Xyz_DI = matmul(IndexToGm_DD, XyzAe_DI)
+       call ground_mag_perturb(nAeMag, Xyz_DI, dBmag_DI)
+    endif
 
     ! Location for IE contributions are in SMG coordinates
     Xyz_DI = matmul(IndexToSm_DD, XyzAe_DI)
     call calc_ie_mag_perturb(nAeMag, Xyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Location for gap region contribution in SMG (should be in MAG)
-    call ground_mag_perturb_fac('ae', nAeMag, Xyz_DI, dBfac_DI)
+    call ground_mag_perturb_fac('ae', nAeMag, Xyz_DI, dBfac_DI, dBmag_DI)
 
     ! Add up contributions and convert to IO units (nT)
     dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
@@ -1272,8 +1329,10 @@ contains
     end do
 
     ! Obtain geomagnetic pertubations in SMG coordinates
-    call ground_mag_perturb(    nMagNow, MagGmXyz_DI, dBMhd_DI)
-    call ground_mag_perturb_fac(NameGroup, nMagNow, MagSmXyz_DI, dBFac_DI)
+    if(.not.UseSurfaceIntegral) &
+         call ground_mag_perturb(nMagNow, MagGmXyz_DI, dBMhd_DI)
+    call ground_mag_perturb_fac(NameGroup, nMagNow, MagSmXyz_DI, &
+         dBFac_DI, dBMhd_DI)
     call calc_ie_mag_perturb(nMagNow, MagSmXyz_DI, dBHall_DI, dBPedersen_DI)
 
     ! Collect the variables from all the PEs
