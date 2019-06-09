@@ -426,6 +426,8 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
+
+    call timing_start(NameSub)
     
     ! Initialize some variables in ModImplicit
     call implicit_init
@@ -809,6 +811,8 @@ contains
     ! Done with implicit update
     IsImplicitUpdate = .false.
 
+    call timing_stop(NameSub)
+
     call test_stop(NameSub, DoTest)
   end subroutine advance_part_impl
   !============================================================================
@@ -886,8 +890,8 @@ contains
              n = n + 1
              ! RHS = dt*R/Norm_V for the first iteration
              Rhs_I(n) = ResExpl_VCB(iVar,i,j,k,iBlockImpl)*DtCoeff/Norm_V(iVar)
-          end do
-       end do; enddo; enddo; enddo
+          end do; enddo; enddo; enddo
+       end do
        !$omp end parallel do
     endif
 
@@ -899,8 +903,8 @@ contains
           if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
              Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
           endif
-       end do
-    end do; enddo; enddo; enddo
+       end do; enddo; enddo; enddo
+    end do
     !$omp end parallel do
 
     if(UseNewton .or. UseConservativeImplicit)then
