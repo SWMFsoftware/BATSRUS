@@ -5494,7 +5494,7 @@ By default there are no criteria, so all blocks are refined or coarsened
 together.
 </command>
 
-<command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION">
+<command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION,AMRCRITERIACELLSIZE">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
 	    <parameter name="StringRefine" type="string" length="200" case="lower"/>
@@ -5502,19 +5502,19 @@ together.
 	    	<parameter name="RefineTo"    type="integer" min="0" />
 	        <parameter name="CoarsenFrom" type="integer" min="$RefineTo" />
             </if>
-	    <if expr="$StringRefine=~/^dx/">
+	    <if expr="$StringRefine=~/^(dx|dr|dphi)/">
 	    	<parameter name="RefineTo"      type="real"  min="0" />
 	        <parameter name="CoarsenFrom"   type="real"  min="0"
 			   max="$RefineTo"/>
 	    </if>
-	    <if expr="$StringRefine!~/^level|dx/">
+	    <if expr="$StringRefine!~/^(level|dx|dr|dphi)/">
 	        <parameter name="CoarsenLimit" type="real" />
 	    	<parameter name="RefineLimit"  type="real"
 			   min="$CoarsenLimit" />
 	    	<parameter name="MaxLevel" type="integer" min="0"
 			   if="$_command=~/LEVEL/" />
 	    	<parameter name="MaxResolution" type="real" min="0"
-			   if="$_command=~/RESOLUTION/" />
+			   if="$_command=~/RESOLUTION|CELLSIZE/" />
 	    </if>
 	</for>
 
@@ -5546,6 +5546,19 @@ T                       UseSunEarth   ! Only if there are any 'transient' crit
 
 #AMRCRITERIARESOLUTION
 3                       nCriteria
+dphi                    TypeCriteria
+3.0                     RefineTo
+1.5                     CoarsenFrom
+dphi Innershell         TypeCriteria
+1.5                     RefineTo
+0.75                    CoarsenFrom
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+1.5                     MaxResolution
+
+#AMRCRITERIACELLSIZE
+3                       nCriteria
 J2 +tail -nearbody      TypeCriteria
 0.1                     CoarsenLimit
 0.75                    RefineLimit
@@ -5560,20 +5573,30 @@ error Bx -nearbody	TypeCriteria
 0.5			MaxResolution
 1.0e-2                  SmallError    ! Only if there are any 'error' crit
 
-The #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command defines the
-criteria to select blocks for refinement or coarsening when the #DOAMR
-command is used with DoAmr=T parameter. In one session you can only have one
-#AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command.
-#AMRCRITERIARESOLUTION is equvilent with #AMRCRITERIALEVEL but works with
-cell size (MaxResolution) instead of grid level (MaxLevel).
-For non-Cartesian grids "cell size" is defined as the maximum
-length of the cell edges inside a block) instead of grid levels.
-Note that this is different from the definition used in the #GRIDRESOLUTION
-command.
+The #AMRCRITERIALEVEL, #AMRCRITERIARESOLUTION or #AMRCRITERIACELLSIZE
+command defines the criteria to select blocks for refinement or
+coarsening when the #DOAMR command is used with DoAmr=T parameter. In
+one session you can only have one #AMRCRITERIALEVEL,
+#AMRCRITERIARESOLUTION or #AMRCRITERIACELLSIZE command.
+#AMRCRITERIARESOLUTION or #AMRCRITERIACELLSIZE is equvilent with
+#AMRCRITERIALEVEL but works with cell size (MaxResolution) instead of
+grid level (MaxLevel).
+
+The #AMRCRITERIARESOLUTION command defines the criteria to refine /
+coarsen based on the physical cell size in the first dimension (dx/dr)
+except for logarithmic or generalized radial coordinate when the size
+in the phi direction is used in degrees. Typecriteria ="dx/dr/dphi"
+can be used.
+
+The #AMRCRITERIACELLSIZE command defines the criteria to refine /
+coarsen based on the maximum length of the cell edges inside a block.
+For non-cartesian grid this results in varying AMR level but roughly
+uniform cell sizes for a given resolution.  Note that this is
+different from the definition used in the #GRIDRESOLUTION command.
 
 The number of criteria is given by the nCriteria parameter.
 For each criteria the first parameter TypeCriteria determines its type.
-TypeCriteria="level" and "dx" are geometric criteria,
+TypeCriteria="level" and "dx/dr/dphi" are geometric criteria,
 while any other values (that depend on the solution) are non-geometric.
 Up to 3 different types of non-geometric criteria can be used,
 but there can be multiple criteria (with different criteria levels
@@ -5582,7 +5605,7 @@ and/or geometric restrictions) for the same non-geometric TypeCriteria.
 For the geometric criteria there are two additional
 parameters read: RefineTo and CoarsenFrom.
 These are given either as grid level (for TypeCriteria="level") or as
-grid resolution (for TypeCriteria="dx"). In the above example the "level"
+grid resolution (for TypeCriteria="dx/dr/dphi"). In the above example the "level"
 criteria tries to refine the grid to level 2 (and coarsen from level 3 down
 to level 2) everywhere in the computational domain.
 The "dx" criteria above tries to refine to a grid resolution 0.5
@@ -5591,7 +5614,7 @@ named "nearbody" that has to be defined by the #REGION command.
 
 For non-geometric criteria there are three additional parameters read:
 CoarsenLimit, RefineLimit and MaxLevel (for #AMRCRITERIALEVEL)
-or MaxResolution (for #AMRCRITERIARESOLUTION).
+or MaxResolution (for #AMRCRITERIARESOLUTION, #AMRCRITERIACELLSIZE).
 The TypeCriteria determines how the criterion value (a positive real
 number in "I/O" units) is calculated. In the above example TypeCriteria="J2"
 is the largest value of the current density squared inside the grid block.
@@ -5600,7 +5623,7 @@ are compared to the criterion value, for every grid block.
 If the criterion value is above the RefineLimit then the block will be refined
 if it has not yet reached the grid level or grid resolution defined by
 the MaxLevel (for #AMRCRITERIALEVEL) or MaxResolution
-(for #AMRCRITERIARESOLUTION) parameter.
+(for #AMRCRITERIARESOLUTION, #AMRCRITERIACELLSIZE) parameter.
 If the criterion value is below the CoarsenLimit then the block is
 allowed to get coarsened according to this criterion.
 

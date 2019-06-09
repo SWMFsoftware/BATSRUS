@@ -590,7 +590,7 @@ contains
 
     integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3),B0_D(3)
-    real    :: b_D(3), bRcurrents,Fac, Jr_D(3),bUnit_D(3)
+    real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3)
     real    :: bIn_D(3), bIn
     real    :: GmFac_DD(3,3)
     real    :: State_V(Bx_-1:nVar+3)
@@ -710,8 +710,8 @@ contains
                   bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
 
              ! Extract magnetic field and current
-             b_D  = bCurrent_VII(1:3,i,j)
-             Jr_D = bCurrent_VII(4:6,i,j)
+             b_D = bCurrent_VII(1:3,i,j)
+             j_D = bCurrent_VII(4:6,i,j)
 
              ! The strength of the field
              bRcurrents = norm2(b_D)
@@ -720,7 +720,7 @@ contains
              bUnit_D = b_D / bRcurrents
 
              ! get the field aligned current
-             Fac = sum(bUnit_D*Jr_D)
+             Fac = sum(bUnit_D*j_D)
 
              ! Get Cartesian coordinates
              call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
