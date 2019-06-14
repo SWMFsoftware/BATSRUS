@@ -1041,7 +1041,7 @@ If TypeIoUnits="SI" the input and output values are taken in SI units
 (m, s, kg, etc).
 
 The PLANETARY units use the radius of the planet for distance,
-seconds for time, amu/cm$^3$ for mass density, cm$^-3$ for number denisty,
+seconds for time, amu/cm$^3$ for mass density, cm$^-3$ for number density,
 km/s for speed, nPa for pressure, nT for magnetic field, micro Amper/m$^2$
 for current density, mV/m for electric field, nT/planet radius for div B,
 and degrees for angles. For any other quantity SI units are used.
