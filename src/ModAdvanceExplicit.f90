@@ -62,7 +62,7 @@ contains
     !\
     ! Perform multi-stage update of solution for this time (iteration) step
     !/
-    if(UsePartImplicit) call timing_start(NameSub)
+    call timing_start(NameSub)
 
     if(UseBody2Orbit) call update_secondbody
 
@@ -254,7 +254,7 @@ contains
 
     end do STAGELOOP  ! Multi-stage solution update loop.
 
-    if(UsePartImplicit)call timing_stop(NameSub)
+    call timing_stop(NameSub)
 
     if(DoTest)write(*,*)NameSub,' finished'
 

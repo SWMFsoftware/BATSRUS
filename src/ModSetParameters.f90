@@ -1159,7 +1159,7 @@ contains
        case("#AMR", "#DOAMR", &
             "#AMRLEVELS", "#AMRRESOLUTION", "#AMRLIMIT", "#AMRTYPE", &
             "#AMRCRITERIA", "#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION", &
-            "#AMRPROFILE")
+            "#AMRCRITERIACELLSIZE", "#AMRPROFILE")
           call read_amr_param(NameCommand, iSession)
 
        case("#AMRINITPHYSICS")
