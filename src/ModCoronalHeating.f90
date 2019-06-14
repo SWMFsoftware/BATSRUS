@@ -1201,7 +1201,7 @@ contains
           else
              pMin = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
                   /MassIon_I(iIon)*Tmin_I(iFluid)
-             if(pMin_I(iFluid) >= 0.0) pMin = min(pMin_I(iFluid), pMin)
+             if(pMin_I(iFluid) >= 0.0) pMin = max(pMin_I(iFluid), pMin)
           end if
           pMin = max(pMin, 1e-30)
 
