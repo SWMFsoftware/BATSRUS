@@ -587,15 +587,15 @@ contains
     case(2)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="2D   '//textNandT//'"', &
-            ', NODES=', nPointAll, &
-            ', ELEMENTS=', nBrickAll, &
-            ', DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL'
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=QUADRILATERAL'
     case(3)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="3D   '//textNandT//'"', &
-            ', NODES=', nPointAll, &
-            ', ELEMENTS=', nBrickAll, &
-            ', DATAPACKING=POINT, ZONETYPE=FEBRICK'
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=BRICK'
     end select
     call write_tecplot_auxdata
     call close_file
@@ -1852,7 +1852,7 @@ contains
     use ModPhysics
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_dimensional, plot_type1
-    use ModVarIndexes, ONLY: IsMhd, NameVar_V
+    use ModVarIndexes, ONLY: IsMhd
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
     use BATL_lib,      ONLY: nDim
@@ -1936,23 +1936,23 @@ contains
           NameTecVar = 'B_z'
           NameUnit   = NameTecUnit_V(UnitB_)
           ! face centered magnetic field
-       case('bxl')
-          NameTecVar = 'B_xl'
+       case('bxl') ! east
+          NameTecVar = 'B_e'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bxr')
-          NameTecVar = 'B_xr'
+       case('bxr') ! west
+          NameTecVar = 'B_w'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byl')
-          NameTecVar = 'B_yl'
+       case('byl') ! south
+          NameTecVar = 'B_s'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byr')
-          NameTecVar = 'B_yr'
+       case('byr') ! north
+          NameTecVar = 'B_n'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzl')
-          NameTecVar = 'B_zl'
+       case('bzl') ! bottom
+          NameTecVar = 'B_b'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzr')
-          NameTecVar = 'B_zr'
+       case('bzr') ! top
+          NameTecVar = 'B_t'
           NameUnit   = NameTecUnit_V(UnitB_)
           !
        case('hyp')
@@ -2129,6 +2129,17 @@ contains
           NameTecVar = 'Block #'
        case('node')
           NameTecVar = 'Node #'
+       case('eta')
+          NameTecVar = 'eta'
+       case('cons')
+          NameTecVar = 'cons'
+       case('hall')
+          NameTecVar = 'hall'
+       case('pe')
+          NameTecVar = 'pe'
+          NameUnit   = NameTecUnit_V(UnitP_)
+       case('pic')
+          NameTecVar = 'pic'
        case('ew','erad')
           NameTecVar = String
           NameUnit   = NameTecUnit_V(UnitEnergydens_)
@@ -2140,7 +2151,6 @@ contains
           ! Try to find the plot variable among the basic variables
           do iVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
-             NameTecVar = NameVar_V(iVar)
              NameUnit = NameUnitUserTec_V(iVar)
              EXIT
           end do
