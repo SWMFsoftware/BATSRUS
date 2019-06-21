@@ -97,6 +97,7 @@ contains
   subroutine GM_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
+    use BATL_lib, ONLY: nThread
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use ModSetParameters, ONLY: set_parameters
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
@@ -126,12 +127,13 @@ contains
             NameVersion='BATSRUS (Univ. of Michigan)', &
             Version    =CodeVersion)
     case('MPI')
-       call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc,&
-            Name=NameThisComp)
+       call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc, &
+            nThread=nThread, Name=NameThisComp)
 
        NamePlotDir(1:2)       = NameThisComp
        NameRestartInDir(1:2)  = NameThisComp
        NameRestartOutDir(1:2) = NameThisComp
+       nThread                = nThread
     case('READ')
        call set_parameters('READ')
     case('CHECK')
