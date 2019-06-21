@@ -548,10 +548,11 @@ contains
     ! at the ionosphere boundary
     if(UseSurfaceIntegral)then
        MagPerturbMhd_DI = 0.0
+       call timing_start('ground_calc_fac')
        call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
             Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
             IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
-
+       call timing_stop('ground_calc_fac')
        if(nProc > 1)&
             call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
     else
@@ -602,6 +603,7 @@ contains
     end if
 
     if(UseFastFacIntegral_I(iGroup))then
+       call timing_start('ground_fast_int')
        iLineProc = 0
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
@@ -621,7 +623,9 @@ contains
              end do
           end do
        end do
+       call timing_stop('ground_fast_int')
     else
+       call timing_start('ground_slow_int')
        if(UseFastFacIntegral)then
           iLineProc = 0
           ! Next time the integrals can be reused
@@ -639,6 +643,9 @@ contains
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
           end select
+          if(iProc==0) write(*,*) NameSub,': ',NameGroup,' UseFastFacIntegral=',&
+               UseFastFacIntegral_I(iGroup)
+
        end if
 
        ! CHECK
@@ -762,6 +769,7 @@ contains
              end do
           end do
        end do
+       call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
