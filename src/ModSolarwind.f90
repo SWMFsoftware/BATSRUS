@@ -262,8 +262,10 @@ contains
        nData = nData + 1
     end do
 
-    if(.not.allocated(Solarwind_VI)) &
-         allocate(Solarwind_VI(nVar, nData), Time_I(nData))
+    ! For reading a new input file
+    if(allocated(Solarwind_VI)) deallocate(Solarwind_VI,Time_I)
+    allocate(Solarwind_VI(nVar, nData), Time_I(nData))
+
     ! Initialize array so all elements are set
     Solarwind_VI = 0.0
 
@@ -659,9 +661,6 @@ contains
        SolarWind_V = FaceState_VI(:,xMinBc_)
        RETURN
     end if
-
-    !hyzhou
-!    write(*,*) 'SolarWind_V = ',SolarWind_VI(:,1)
 
     if(nData == 1) then
        SolarWind_V = Solarwind_VI(:,1)
