@@ -133,7 +133,6 @@ contains
        NamePlotDir(1:2)       = NameThisComp
        NameRestartInDir(1:2)  = NameThisComp
        NameRestartOutDir(1:2) = NameThisComp
-       nThread                = nThread
     case('READ')
        call set_parameters('READ')
     case('CHECK')
