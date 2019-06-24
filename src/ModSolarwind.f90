@@ -26,7 +26,6 @@ module ModSolarwind
   character(len=500):: NameSolarwindFile
 
   integer, parameter :: nTimeVar = 7
-  integer, parameter :: MaxData  = 50000
 
   ! Number of data points in the input file
   integer :: nData = 0
@@ -136,9 +135,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(.not.allocated(Solarwind_VI)) &
-         allocate(Solarwind_VI(nVar, MaxData), Time_I(MaxData))
-
     ! Set defaults
     UseZeroBx = .false.
     TimeDelay = 0.0
@@ -152,7 +148,6 @@ contains
     ! Read solar wind file on all processors in parallel
     call open_file(FILE=NameSolarwindFile, STATUS="old")
 
-    nData = 0
     if(lVerbose>0 .and. iProc==0)then
        call write_prefix
        write(iUnitOut,*) NameSub,' reading ',trim(NameSolarwindFile)
@@ -259,24 +254,37 @@ contains
        IsInput_V(iVar) = any(iVarInput_V(1:nVarInput) == iVar)
     end do
 
+    ! Get the number of input lines
+    nData = 0
+    do
+       read(UnitTmp_, *, IOSTAT=iError) iTime_I, TmpData_V(1:nVarInput)
+       if(iError /= 0) EXIT
+       nData = nData + 1
+    end do
+
+    ! For reading a new input file
+    if(allocated(Solarwind_VI)) deallocate(Solarwind_VI,Time_I)
+    allocate(Solarwind_VI(nVar, nData), Time_I(nData))
+
     ! Initialize array so all elements are set
     Solarwind_VI = 0.0
 
+    ! Rewind to the end of #START line
+    Rewind UnitTmp_
+    do
+       read(UnitTmp_,'(a)', iostat = iError ) line
+       if(index(line,'#START')>0) EXIT
+    enddo
+
     ! Read the data
+    nData = 0
     do
        read(UnitTmp_, *, IOSTAT=iError) iTime_I, TmpData_V(1:nVarInput)
-       if (iError /= 0) EXIT
-
-       if (nData >= MaxData) then
-          write(*,*) "=> The solar file ",trim(NameSolarwindFile)
-          write(*,*) "   contains too many lines! (Max lines =", MaxData,")."
-          write(*,*) "   Try reading (overlapping) files multiple times."
-          EXIT
-       end if
+       if(iError /= 0) EXIT
 
        nData = nData + 1
 
-       do iVar =1, nVarInput
+       do iVar = 1, nVarInput
           jVar = iVarInput_V(iVar)
           Solarwind_VI(jVar, nData) = TmpData_V(iVar)
        end do
@@ -288,19 +296,19 @@ contains
 
        ! Fix 2 digit years
        iYear = iTime_I(1)
-       if (iYear >= 65 .and. iYear < 100) iYear = iYear + 1900
-       if (iYear < 65)                    iYear = iYear + 2000
+       if(iYear >= 65 .and. iYear < 100) iYear = iYear + 1900
+       if(iYear < 65)                    iYear = iYear + 2000
        iTime_I(1) = iYear
 
        ! Convert integer time into double precision real time and apply delay
        call time_int_to_real(iTime_I, Time)
        Time_I(nData) = Time + TimeDelay
 
-       if (UseZeroBx) Solarwind_VI(Bx_, nData) = 0.0
+       if(UseZeroBx) Solarwind_VI(Bx_, nData) = 0.0
 
-       if (NameInputCoord /= TypeCoordSystem) then
+       if(NameInputCoord /= TypeCoordSystem) then
 
-          if (TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then
+          if(TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then
 
              call geopack_recalc(iTime_I)
 
@@ -310,7 +318,7 @@ contains
                      matmul(GsmGse_DD, Solarwind_VI(iVar:iVar+2,nData))
              end do
 
-          elseif (TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then
+          elseif(TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then
 
              call geopack_recalc(iTime_I)
 
@@ -348,7 +356,7 @@ contains
     call close_file
 
     ! Check if the start time is within 1 day of the input data
-    if ( StartTime + Time_Simulation < Time_I(1) - cDay .or. &
+    if( StartTime + Time_Simulation < Time_I(1) - cDay .or. &
          StartTime > Time_I(nData)+cDay) then
        write(*,*) "**********************************************************"
        write(*,*) "*                                                        *"
@@ -377,9 +385,7 @@ contains
 
        if (nData == 1) then
           Solarwind_V = Solarwind_VI(:, 1)
-
        else
-
           ! Find the index with time before start time
           i = 1
 
@@ -390,11 +396,8 @@ contains
 
           if ((i == nData .and. &
                Time_I(i) <= StartTime).or.(i==1)) then
-
              Solarwind_V = Solarwind_VI(:, i)
-
           else
-
              DtData2 = (Time_I(i) - StartTime) / &
                   (Time_I(i) - Time_I(i-1) + 1.0e-6)
              DtData1 = 1.0 - DtData2
@@ -406,7 +409,7 @@ contains
        endif
 
        ! add up species densities
-       if (UseMultiSpecies) &
+       if(UseMultiSpecies) &
             Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
 
        ! These scalars should be removed eventually
@@ -568,6 +571,8 @@ contains
           else
              Solarwind_V(Pe_) = Solarwind_V(p_)
           end if
+       elseif(UseElectronPressure .and. IsInput_V(Pe_))then
+          Solarwind_V(Pe_) = Solarwind_V(Pe_)*Io2No_V(UnitP_)
        end if
 
        if(UseAnisoPe .and. .not. IsInput_V(Pepar_)) &
@@ -597,7 +602,7 @@ contains
     ! TimeSimulation and position Xyz_D.
     ! If there is no solar wind file specified, the values given
     ! in the #SOLARWIND command (stored in FaceState_VI) are returned.
-    ! If the solar wind file consists of a single line, return
+    ! If the solar wind file consists of a single line, return 
     ! the values in it.
     ! If the solar wind file consists of multiple lines, then first
     ! find the time preceeding TimeSimulation and get the
@@ -657,7 +662,7 @@ contains
        RETURN
     end if
 
-    if (nData == 1) then
+    if(nData == 1) then
        SolarWind_V = Solarwind_VI(:,1)
        RETURN
     end if

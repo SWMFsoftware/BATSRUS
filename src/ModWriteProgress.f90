@@ -24,7 +24,6 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModVarIndexes, ONLY: NameEquation
-    use omp_lib
     
     integer, intent(in) :: inopt
     logical:: DoTest
@@ -45,7 +44,6 @@ contains
             " University of Michigan, 1995-2017"
        write(iUnitOut,*)
        if(IsStandAlone)then
-          !$ nThread = omp_get_max_threads()
           call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a,i3,a)') &
                ' BATSRUS version ',CodeVersion, &
                ' is running as '//NameThisComp//' on ', nProc, &
