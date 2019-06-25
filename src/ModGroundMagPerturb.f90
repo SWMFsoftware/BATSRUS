@@ -493,7 +493,7 @@ contains
     real,  intent(inout):: MagPerturbMhd_DI(3,nMag)
 
     real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
-    integer, parameter:: nTheta =181, nPhi =181, nR = 30
+    integer, parameter:: nTheta =181, nPhi =180, nR = 30
 
     integer           :: k, iHemisphere, iError
     integer           :: iTheta,iPhi,iLine,iMag
@@ -526,8 +526,8 @@ contains
     logical         :: DoConvertCoord
     real            :: SmToFacGrid_DD(3,3)
 
-    ! real:: Volume, Height=2.0 !!! to test volume integration
-
+    !real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
     !--------------------------------------------------------------------------
@@ -541,7 +541,7 @@ contains
     MagPerturbFac_DI= 0.0
 
     dTheta = cPi    / (nTheta-1)
-    dPhi   = cTwoPi / (nPhi-1)
+    dPhi   = cTwoPi / nPhi
     dR     = (rCurrents - rIonosphere) / nR
 
     ! Get the radial component of the field aligned current
@@ -643,14 +643,14 @@ contains
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
           end select
-          if(iProc==0) write(*,*) NameSub,': ',NameGroup,' UseFastFacIntegral=',&
-               UseFastFacIntegral_I(iGroup)
+          if(iProc==0) write(*,*) NameSub,': ',NameGroup, &
+               ' UseFastFacIntegral=', UseFastFacIntegral_I(iGroup)
 
        end if
 
        ! CHECK
-       ! Volume = 0.
-
+       !Volume = 0.; Surface = 0.
+       
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle 
@@ -666,7 +666,7 @@ contains
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
              if (Fac_II(iTheta,iPhi) == 0.0 &
-                  .and. .not. UseFastFacIntegral) CYCLE
+                  .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
              iLine = iLine + 1
 
@@ -686,13 +686,19 @@ contains
              dVolCoeff = dR*dSurface
 
              if(UseSurfaceIntegral)then
-                
-                ! B(x0) = int_|x|=R [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
+
+                ! B(x0) = int_|x|=R
+                !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
                 b_D       = b_DII(:,iTheta,iPhi)
                 rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
                 rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+
+                ! CHECK
+                !Surface = Surface + dSurface
+                !if(iTheta==nTheta .and. iPhi==nPhi) &
+                !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
@@ -706,7 +712,7 @@ contains
                         + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
                         *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
                 end do
-
+                
              end if
 
              do k = 1, nR
@@ -731,10 +737,11 @@ contains
                 InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
-                !! Check correctness of integration
-                ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
-                !     Volume=Volume+abs(dVol)
-
+                !! Check correctness of integration. Needs Br at rCurrents.
+                !if(abs(XyzMid_D(3)) > rCurrents - Height) &
+                !     Volume = Volume + abs(dVol &
+                !     *sum(XyzRcurrents_D*b_DII(:,iTheta,iPhi))/rCurrents)
+                
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
@@ -765,10 +772,10 @@ contains
                    !   call stop_mpi('DEBUG')
                    !end if
                    
-                end do
-             end do
-          end do
-       end do
+                end do ! iMag
+             end do ! kr
+          end do ! iPhi
+       end do ! iTheta
        call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
