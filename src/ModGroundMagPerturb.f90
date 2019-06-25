@@ -4,7 +4,7 @@
 module ModGroundMagPerturb
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, nProc, iComm
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
@@ -184,7 +184,6 @@ contains
     ! file format is selected).
 
     use ModNumConst, ONLY: cRadToDeg
-    use ModProcMH,   ONLY: iProc
 
     integer :: iLat, iLon, iMag
     real    :: dLat, dLon
@@ -296,7 +295,6 @@ contains
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: n_step
-    use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: io_unit_new
     use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
@@ -476,7 +474,6 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well. 
 
-    use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi
@@ -790,7 +787,6 @@ contains
   !============================================================================
   subroutine calc_kp
 
-    use ModProcMH,     ONLY: iProc, nProc, iComm
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
     use ModMain,       ONLY: time_simulation,TypeCoordSystem
@@ -897,7 +893,6 @@ contains
 
   subroutine calc_ae
 
-    use ModProcMH,     ONLY: iProc, nProc, iComm
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
     use ModMain,       ONLY: time_simulation,TypeCoordSystem
@@ -978,11 +973,9 @@ contains
     ! Set number of magnetometers listed in the input file:
     ! set nMagnetometer
 
-    use ModProcMH, ONLY: iProc, iComm
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO,     ONLY: iUnitOut, Write_prefix
     use ModUtilities, ONLY: open_file, close_file
-
     use ModMpi
 
     integer :: iError
@@ -1066,7 +1059,6 @@ contains
     ! magnetometers to be used and their location and coordinate systems.
     ! Input values read from file are saved in module-level variables.
 
-    use ModProcMH, ONLY: iProc, iComm
     use ModIO, ONLY: iUnitOut, Write_prefix
     use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
@@ -1202,7 +1194,6 @@ contains
   subroutine write_geoindices
 
     use ModMain,  ONLY: n_step
-    use ModProcMH, ONLY: iProc
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1245,11 +1236,10 @@ contains
   !============================================================================
 
   subroutine write_magnetometers(NameGroup)
-    ! Write ground magnetometer field perturbations to file.  Values, IO units,
+    ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
 
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
-    use ModProcMH, ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
     use ModMain,  ONLY: n_step, time_simulation, TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
@@ -1568,7 +1558,6 @@ contains
     ! Close the magnetometer output files (flush buffer, release IO unit).
     ! Deallocate arrays.
 
-    use ModProcMH, ONLY: iProc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'finalize_magnetometer'
     !--------------------------------------------------------------------------

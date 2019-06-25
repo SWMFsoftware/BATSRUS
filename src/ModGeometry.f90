@@ -4,13 +4,12 @@
 module ModGeometry
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop,&
+       iProc, Xyz_DGB, CellSize_DB, true_cell => Used_GB
 
   use ModSize
   use ModMain,   ONLY: UseBody2, ExtraBc_, SolidBc_
   use ModIO,     ONLY: iUnitOut, write_prefix
-  use ModProcMH, ONLY: iProc
-  use BATL_lib,  ONLY: Xyz_DGB, CellSize_DB, true_cell => Used_GB
 
   implicit none
   SAVE

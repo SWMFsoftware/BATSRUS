@@ -4,7 +4,7 @@
 module ModSolarwind
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc
 
   use ModKind
   use ModVarIndexes
@@ -93,7 +93,6 @@ contains
   !============================================================================
   subroutine read_solar_wind_file
 
-    use ModProcMH
     use ModMain, ONLY: StartTime, Time_Simulation, &
          iStartTime_I, UseStrict, TypeCoordSystem, NameVarLower_V
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &

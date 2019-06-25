@@ -5,9 +5,8 @@
 module ModRestartFile
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest
-
-  use ModProcMH,     ONLY: iProc, nProc, iComm
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, &
+       iProc, nProc, iComm
   use ModIO,         ONLY: nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
   use ModMain,       ONLY: &

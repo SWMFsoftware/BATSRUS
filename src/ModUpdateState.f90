@@ -6,7 +6,7 @@ module ModUpdateState
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest
+       iProcTest, iVarTest, iProc, iComm
 
   implicit none
 
@@ -25,7 +25,6 @@ contains
 
   subroutine update_state(iBlock)
 
-    use ModProcMH
     use ModMain
     use ModAdvance
     use ModMultiFluid, ONLY:  nFluid

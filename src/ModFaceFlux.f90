@@ -4,9 +4,8 @@
 module ModFaceFlux
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iDimTest
+       test_start, test_stop, iTest, jTest, kTest, iDimTest, iProc
 !  use ModUtilities, ONLY: norm2
-  use ModProcMH,     ONLY: iProc
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: UseB, UseB0, cLimit

@@ -5,7 +5,8 @@
 module ModPointImplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
+       iProc
 
   !DESCRIPTION:
   ! This module implements a point implicit scheme for the implicit
@@ -146,7 +147,8 @@ contains
 
     ! the array allows the user to specify the blocks to
     ! use the point implicit scheme individually
-    if(.not.allocated(UsePointImplicit_B)) allocate(UsePointImplicit_B(MaxBlock))
+    if(.not.allocated(UsePointImplicit_B)) &
+         allocate(UsePointImplicit_B(MaxBlock))
     UsePointImplicit_B = UsePointImplicit
     if(UsePointImplicit) then
        call read_var('BetaPointImplicit', BetaPointImpl)
@@ -160,7 +162,6 @@ contains
   subroutine update_point_implicit(iBlock, &
        calc_point_impl_source, init_point_implicit)
 
-    use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate

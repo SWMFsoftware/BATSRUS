@@ -5,7 +5,7 @@
 module ModConstrainDivB
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, StringTest, iProc, iTest,jTest,kTest, iBlockTest
 
   ! A flux averaged constrained transport scheme for block AMR grid. See
   !
@@ -17,7 +17,6 @@ module ModConstrainDivB
 
   use ModSize
   use ModIO,     ONLY: iUnitOut, write_prefix
-  use ModProcMH, ONLY: iProc
 
   implicit none
   SAVE

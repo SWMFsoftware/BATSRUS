@@ -4,7 +4,8 @@
 module ModLocalTimeStep
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest,&
+       iComm
 
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
   use ModMain, ONLY: UseLocalTimeStep, UseLocalTimeStepNew, DtLimitDim
@@ -322,7 +323,6 @@ contains
     use ModAdvance,    ONLY: time_BLK
     use BATL_lib,      ONLY: CellSize_DB, Unused_B
     use ModPhysics,    ONLY: No2Si_V, UnitT_, Si2No_V
-    use ModProcMH,     ONLY: iComm
     use ModMpi
 
     real, intent(in) :: TimeSimulationLimit

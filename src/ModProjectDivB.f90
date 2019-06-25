@@ -6,8 +6,7 @@ module ModProjectDivB
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       minval_grid, maxval_grid
-
+       iProc, nProc, iComm, minval_grid, maxval_grid
 
   ! Parameters for projection scheme:
   !
@@ -35,8 +34,6 @@ module ModProjectDivB
 
   use ModSize, ONLY: nI, nJ, nK, nBlock, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
-
-  use ModProcMH, ONLY: iProc, nProc, iComm
   use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY: true_BLK, true_cell
   use ModMpi
@@ -103,7 +100,6 @@ contains
     !
     ! See G. Toth, 2000, Journal of Computational Physics, 161, 605-652
 
-    use ModProcMH
     use ModVarIndexes, ONLY: Bx_,Bz_,P_
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: true_cell
@@ -351,7 +347,6 @@ contains
   ! Solve grad div phi = rhs
   subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
        info,nmatvec,resid,phi)
-    use ModProcMH
     use ModMain, ONLY:MaxBlock
 
     ! Arguments
@@ -770,7 +765,6 @@ contains
   ! !! If the matrix is not symmetric positive definite, CG is likely to fail.
   !
   subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
-    use ModProcMH
     use ModMain, ONLY:MaxBlock
     use ModAdvance, ONLY: tmp1_BLK, tmp2_BLK
 
@@ -990,7 +984,6 @@ contains
   ! proj_cg algorithm!
   !
   subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
-    use ModProcMH
     use ModMain, ONLY:MaxBlock
     use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
 
