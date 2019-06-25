@@ -5,9 +5,8 @@
 module ModIeCoupling
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc
 !  use ModUtilities, ONLY: norm2
-  use ModProcMH
 
   implicit none
   save

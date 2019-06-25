@@ -19,7 +19,7 @@ contains
   !============================================================================
 
   subroutine write_progress(inopt)
-    use ModProcMH
+    use BATL_lib, ONLY: iProc, nProc, nThread
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModUser, ONLY: NameUserModule, VersionUserModule
@@ -47,7 +47,7 @@ contains
           call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a,i3,a)') &
                ' BATSRUS version ',CodeVersion, &
                ' is running as '//NameThisComp//' on ', nProc, &
-               ' PE(s) with up to', nThread, ' OpenMP threads/PE'
+               ' PE(s) with up to', nThread, ' threads/PE'
           write(iUnitOut,*)
        end if
        call write_prefix; write(iUnitOut,'(a)') &
@@ -58,7 +58,7 @@ contains
     case (1)
        call write_prefix; write(iUnitOut,*)
        call write_prefix
-       if (time_accurate) then
+       if(time_accurate) then
           write(iUnitOut,*) 'Restarted run from N = ',n_step,' steps ', &
                'and T = ',Time_Simulation, &
                ' (',Time_Simulation/60.00, &
@@ -78,7 +78,6 @@ contains
     use ModPhysics
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
-    use ModProcMH,    ONLY: iProc, nProc
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
     use ModAdvance,   ONLY: FluxType, UseEfield
     use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax, &
@@ -94,8 +93,8 @@ contains
          IonosphereHeight
     use ModIonElectron, ONLY: iVarUseCmax_I
     use ModMpi
-    use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, &
-         nLevelMin, nLevelMax, IsLogRadius, IsGenRadius
+    use BATL_lib, ONLY: iProc, nProc, nThread, nNodeUsed, nRoot_D, nIJK_D, &
+         nIJK, nLevelMin, nLevelMax, IsLogRadius, IsGenRadius
     use ModUserInterface ! user_action
 
     integer :: iFluid
@@ -240,13 +239,13 @@ contains
     case (1)
        write(iUnitOut,'(10X,a)') '1st-order scheme'
     case (2)
-       write(iUnitOut,'(10X,a)') '2nd-order scheme with '//trim(TypeLimiter)// &
+       write(iUnitOut,'(10X,a)') '2nd-order scheme with '//trim(TypeLimiter)//&
             ' limiter'
     case (4)
-       write(iUnitOut,'(10X,a)') '4th-order scheme with '//trim(TypeLimiter)// &
+       write(iUnitOut,'(10X,a)') '4th-order scheme with '//trim(TypeLimiter)//&
             ' limiter'
     case (5)
-       write(iUnitOut,'(10X,a)') '5th-order scheme with '//trim(TypeLimiter)// &
+       write(iUnitOut,'(10X,a)') '5th-order scheme with '//trim(TypeLimiter)//&
             ' limiter'
     end select
     if(nOrder > 1 .and. TypeLimiter /= 'minmod') then
@@ -275,7 +274,7 @@ contains
     if (UseImplicit) write(iUnitOut,'(10X,a)') 'Implicit time stepping'
     if (UseSemiImplicit)then
        if(UseSplitSemiImplicit)then
-          write(iUnitOut,'(10X,a)') 'Split semi-implicit time stepping for '// &
+          write(iUnitOut,'(10X,a)') 'Split semi-implicit time stepping for '//&
                trim(TypeSemiImplicit)
        else
           write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
@@ -304,10 +303,10 @@ contains
        write(iUnitOut,'(10X,a,f10.4)') &
             "   with simple Boris correction, factor =", ClightFactor
     end if
-    if(UseEfield) then
+    if(UseEfield)then
        call write_prefix
        write(iUnitOut,'(10x,100a)') &
-            "UseEfield, vars that diffuse with Cmax: ", NameVar_V(iVarUseCmax_I)
+            "UseEfield, vars that diffuse with Cmax: ",NameVar_V(iVarUseCmax_I)
     end if
 
     call write_prefix; write(iUnitOut,*)
@@ -315,6 +314,8 @@ contains
     call write_prefix; write(iUnitOut,*)'   ------------------------'
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)'Available processors: nProc = ',nProc
+    call write_prefix; write(iUnitOut,*)'Available threadss  : nThread = ', &
+         nThread
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)'After initial grid setup:'
     call write_prefix; write(iUnitOut,*)'  nBlockMax and MaxBlock      = ', &
@@ -328,15 +329,15 @@ contains
     call write_prefix; write(iUnitOut,*)'  Min and max AMR levels      = ', &
          nLevelMin, nLevelMax
     if(IsLogRadius .or. IsGenRadius)then
-       call write_prefix; write(iUnitOut,*)'  Min and max cell size in Phi= ', &
+       call write_prefix; write(iUnitOut,*)'  Min and max cell size in Phi= ',&
             CellSizeMin, CellSizeMax
     else
-       call write_prefix; write(iUnitOut,*)'  Min and max cell size in x/r= ', &
+       call write_prefix; write(iUnitOut,*)'  Min and max cell size in x/r= ',&
             CellSizeMin, CellSizeMax
     endif
 
     ! Constrained transport is not implemented for AMR grids anymore...
-    if(UseConstrainB .and.  nLevelMin /= nLevelMax) &
+    if(UseConstrainB .and. nLevelMin /= nLevelMax) &
          call stop_mpi('Constrained transport works on uniform grid only!')
 
     call write_prefix; write(iUnitOut,*)

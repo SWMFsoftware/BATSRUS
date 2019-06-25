@@ -219,7 +219,6 @@ contains
 
   subroutine do_amr
 
-    use ModProcMH
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
@@ -235,7 +234,7 @@ contains
     use ModMpi
 
     use BATL_lib,         ONLY: regrid_batl, &
-         nNode, iTree_IA, nLevelMin, nLevelMax, &
+         iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
          IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state

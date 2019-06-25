@@ -4,7 +4,7 @@
 module ModWritePlot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc, iComm
 
   implicit none
 
@@ -23,7 +23,6 @@ contains
     ! Loops over all blocks per processor and write the appropriate plot files
     ! for file iFile.
 
-    use ModProcMH
     use ModMain
     use ModGeometry, ONLY: &
          XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
@@ -787,7 +786,6 @@ contains
     ! For file iPlotFile set Param_I based on NameParam_I
     ! Extend array of scalar parameters with useful information
 
-    use ModProcMH
     use ModPhysics, ONLY: Gamma, Gamma_I, GammaElectron, &
          cLight, rBody, ThetaTilt, &
          No2Io_V, No2Si_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
@@ -960,7 +958,6 @@ contains
   subroutine set_plotvar(iBlock,iPlotFile,nplotvar,plotvarnames,plotvar,&
        plotvar_inBody,plotvar_useBody)
 
-    use ModProcMH
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY : time_BLK, &
@@ -1696,10 +1693,9 @@ contains
   end subroutine set_plotvar
   !============================================================================
 
-  subroutine dimensionalize_plotvar(iBlock, iPlotFile, nPlotVar, plotvarnames, &
+  subroutine dimensionalize_plotvar(iBlock, iPlotFile, nPlotVar, plotvarnames,&
        plotvar, plotvar_inBody)
 
-    use ModProcMH
     use ModPhysics, ONLY: nVar, UnitX_, UnitTemperature_, UnitN_, UnitRho_, &
        UnitP_, UnitU_, UnitB_, UnitT_, UnitMass_, UnitDivB_, UnitRhoU_, &
        UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &

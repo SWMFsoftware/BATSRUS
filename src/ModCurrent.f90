@@ -33,13 +33,12 @@ contains
     ! is based on trilinear interpolation, but it is generalized for
     ! trapezoidal hexahedrons.
 
-    use ModProcMH, ONLY: iProc
     use ModVarIndexes, ONLY: nVar
     use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
     use ModParallel, ONLY: NeiLev
     use ModGeometry, ONLY: XyzStart_BLK
-    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
+    use BATL_lib, ONLY: iProc, IsCartesianGrid, CellSize_DB, xyz_to_coord
 
     ! Weight of the old state in the interpolation
     real, intent(in)  :: WeightOldState
@@ -543,9 +542,9 @@ contains
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
-    use ModProcMH,         ONLY: iProc, iComm
     use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
     use ModMpi
+    use BATL_lib,          ONLY: iProc, iComm
 
     ! Map the grid points from the rIn radius to rCurrents.
     ! Calculate the field aligned currents there, use the ratio of the

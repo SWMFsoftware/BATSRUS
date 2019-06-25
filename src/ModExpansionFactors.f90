@@ -4,7 +4,7 @@
 module ModExpansionFactors
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new
@@ -15,8 +15,7 @@ module ModExpansionFactors
   use ModConst, ONLY: cGravitation, mSun, rSun, cProtonMass, cBoltzmann, &
        cRadToDeg, cDegToRad, cTiny
 
-  ! Dependecies to be removed
-  use ModProcMH,   ONLY: iProc, nProc, iComm
+  ! Dependencies to be removed
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModPhysics, ONLY: RadiusStar, MassStar
 

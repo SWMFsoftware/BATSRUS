@@ -4,7 +4,7 @@
 module ModHdf5
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, iComm
 
   use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use hdf5
@@ -69,7 +69,6 @@ contains
 
     ! Save all cells within plotting range, for each processor
 
-    use ModProcMH
     use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
@@ -998,7 +997,6 @@ contains
   subroutine write_real_plot_metadata(FileID,plot_dimensional, isXZero)
 
     use ModMain, only : Time_Simulation, CodeVersion
-    ! use ModProcMH, only : iProc
     use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_

@@ -4,7 +4,7 @@
 module ModPhysics
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &
@@ -277,7 +277,6 @@ contains
 
     ! set normalizations, physical constants, etc.
 
-    use ModProcMH
     use ModMain
     use CON_planet,  ONLY: get_planet, NamePlanet
     use ModVarIndexes
@@ -967,7 +966,6 @@ contains
   !============================================================================
 
   subroutine set_unit_conversion_array_indices
-    use ModProcMH,  ONLY: iProc
     use ModVarIndexes
     use ModMultiFluid
 

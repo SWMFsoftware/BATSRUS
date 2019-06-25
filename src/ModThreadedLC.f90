@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
 
-  use BATL_lib, ONLY: test_start, test_stop
+  use BATL_lib, ONLY: test_start, test_stop, iProc
 !  use ModUtilities, ONLY: norm2
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
@@ -228,7 +228,6 @@ contains
   !============================================================================
   subroutine read_threaded_bc
     use ModReadParam, ONLY: read_var
-    use ModProcMH,      ONLY: iProc
     character(LEN=7)::TypeBc = 'limited'
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_threaded_bc'

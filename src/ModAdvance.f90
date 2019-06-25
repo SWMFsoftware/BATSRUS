@@ -4,7 +4,7 @@
 module ModAdvance
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc
 
   use ModSize
   use ModVarIndexes
@@ -15,7 +15,6 @@ module ModAdvance
        iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
        nIFace, nJFace, nKFace
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc, nProc
   use omp_lib
   
   implicit none
