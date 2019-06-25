@@ -5,6 +5,8 @@
 
 module GM_couple_pc
 
+  use BATL_lib, ONLY: iProc
+
   implicit none
 
   private ! except
@@ -153,7 +155,6 @@ contains
     ! Interpolate Data_VI from GM at the list of positions Xyz_DI 
     ! required by PC
 
-    use ModProcMH,  ONLY: iProc
     use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
     use ModVarIndexes, ONLY: nVar
@@ -249,7 +250,6 @@ contains
     use ModMultiFluid,ONLY: nIonFluid
     use ModEnergy,    ONLY: calc_energy
     use ModVarIndexes,ONLY: DefaultState_V
-    !use ModProcMH,   ONLY: iProc
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -361,7 +361,6 @@ contains
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
     use BATL_lib,    ONLY: nDim
-    !use ModProcMH,   ONLY: iProc
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
