@@ -5,7 +5,7 @@
 module ModPIC
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, iComm
 
   ! Variables and methods for coupling BATSRUS with a PIC code
 
@@ -64,7 +64,6 @@ contains
   !============================================================================
   subroutine pic_read_param(NameCommand)
 
-    use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_var
     use BATL_lib,     ONLY: x_, y_, z_, nDim
     use ModNumConst,  ONLY: cDegToRad
@@ -218,7 +217,6 @@ contains
 
   subroutine pic_init_region
 
-    use ModProcMH,    ONLY: iProc, iComm
     use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, x_, y_, z_
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, HallFactor_C, set_hall_factor_cell

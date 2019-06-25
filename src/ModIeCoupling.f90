@@ -244,7 +244,6 @@ contains
 
     ! Calculate cross polar cap potentials for write_logvar
 
-    use ModProcMH,  ONLY: iProc
     use ModIO,      ONLY: write_myname
 
     character (len=*), intent(in) :: NameLogvar

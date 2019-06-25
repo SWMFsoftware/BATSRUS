@@ -113,7 +113,6 @@ contains
 
   subroutine update_state_normal(iBlock)
 
-    use ModProcMH
     use ModMain
     use ModAdvance
     use ModPhysics
@@ -718,7 +717,6 @@ contains
 
     ! Check updated values for allowed change in density or pressure
 
-    use ModProcMH
     use ModMain
     use ModBorisCorrection, ONLY: UseBorisCorrection
     use ModImplicit, ONLY: UsePartImplicit

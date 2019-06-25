@@ -14,7 +14,7 @@ module GM_wrapper
   use GM_couple_pw          !^CMP IF PW
   use GM_couple_pc          !^CMP IF PC
 
-  use ModProcMH, ONLY: iProc, nProc, iComm
+  use BATL_lib, ONLY: iProc, nProc, iComm
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
@@ -205,9 +205,9 @@ contains
          nVar      = nVar, &
          NameVar   = NameVarCouple, &
          TypeGeometry = TypeGeometry, &
-         Coord1_I     = (/ RadiusMin, RadiusMax /), &
-         Coord2_I     = (/ CoordMin_D(2), CoordMax_D(2) /), &
-         Coord3_I     = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+         Coord1_I     = [ RadiusMin, RadiusMax ], &
+         Coord2_I     = [ CoordMin_D(2), CoordMax_D(2) ], &
+         Coord3_I     = [ CoordMin_D(3), CoordMax_D(3) ]  )
 
     if(is_proc(GM_)) Grid_C(GM_)%State_VGB => State_VGB
 
@@ -269,7 +269,7 @@ contains
          GM_,MH_Domain,iProc0,iCommUnion)
 
   end subroutine GM_synchronize_refinement
-  !==============================================================================
+  !============================================================================
   subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use BATL_lib, ONLY: nDim
@@ -283,7 +283,7 @@ contains
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     nDimOut    = nDim
     iGridOut   = iNewGrid

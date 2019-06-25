@@ -6,10 +6,9 @@
 module GM_couple_rb
 
   ! Coupling with Radiation Belt component
-
+  use BATL_lib, ONLY: iProc
   use ModMpi
   use CON_coupler, ONLY: Grid_C, ncell_id
-  use ModProcMH, ONLY: iProc
   use ModMain, ONLY: n_step
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 
@@ -236,11 +235,7 @@ contains
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     use ModGeometry,ONLY: x2
-    use ModProcMH,  ONLY: iProc
-
     use ModMain, ONLY: Time_Simulation,TypeCoordSystem
-
-
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
          MassFluid_I, IonFirst_, nVar
 
@@ -397,8 +392,6 @@ contains
 
     ! Subroutine to update and collect satellite locations for RB tracing
 
-    !Modules
-    use ModProcMH,        ONLY: iProc
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
@@ -408,12 +401,12 @@ contains
     use ModCurrent,       ONLY: get_point_data
     use ModMPI
 
-    !Arguments
+    ! Arguments
     integer, intent(in)               :: nSats
     real, intent(out)                 :: Buffer_III(4,2,nSats)
     character (len=100), intent(out)  :: Buffer_I(nSats)
 
-    !Internal variables
+    ! Local variables
     character (len=*), parameter :: NameSub='GM_get_sat_for_rb'
 
     real ::SatRay_D(3)
