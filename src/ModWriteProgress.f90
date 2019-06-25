@@ -314,7 +314,7 @@ contains
     call write_prefix; write(iUnitOut,*)'   ------------------------'
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)'Available processors: nProc = ',nProc
-    call write_prefix; write(iUnitOut,*)'Available threadss  : nThread = ', &
+    call write_prefix; write(iUnitOut,*)'Available threads   : nThread = ', &
          nThread
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,*)'After initial grid setup:'
