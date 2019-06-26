@@ -3966,7 +3966,7 @@ contains
     integer :: iBlock, iRay
 
     ! Testing and timing
-    logical :: oktime
+    logical, parameter :: oktime = .false.
     integer :: loc(3)
 
     integer :: iError, iError1=-1
