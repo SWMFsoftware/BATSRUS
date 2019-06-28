@@ -410,7 +410,7 @@ contains
 
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,'(a)') NameSub,' allocated arrays'
+       write(iUnitOut,'(a)') NameSub//' allocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
