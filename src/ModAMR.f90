@@ -233,7 +233,7 @@ contains
     use ModIO, ONLY : write_prefix, iUnitOut
     use ModMpi
 
-    use BATL_lib,         ONLY: regrid_batl, IsNewTree, &
+    use BATL_lib,         ONLY: regrid_batl, &
          iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
          IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 
@@ -293,6 +293,11 @@ contains
        RETURN
     end if
 
+    ! write_log_file may use ray array before another ray tracing
+    ! only needs to zero ray() out if the grid changed
+    if(UseB .and. allocated(ray) .and. iNewGrid/=iLastGrid) &
+         ray(:,:,:,:,:,1:nBlock) = 0.0
+
     iLastGrid          = iNewGrid
     iLastDecomposition = iNewDecomposition
 
@@ -346,10 +351,6 @@ contains
     if(UseB)then
        if(DoProfileAmr) call timing_start('amr::set_divb')
        DivB1_GB(:,:,:,1:nBlock) = -7.70
-
-       ! write_log_file may use ray array before another ray tracing
-       if(IsNewTree .and. allocated(ray)) ray(:,:,:,:,:,1:nBlock) = 0.0
-
        if(DoProfileAmr) call timing_stop('amr::set_divb')
     end if
 
