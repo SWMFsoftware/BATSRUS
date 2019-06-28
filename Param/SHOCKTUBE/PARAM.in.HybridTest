@@ -11,8 +11,8 @@ MHD			NameEquation
 8      			nVar
 
 #USERMODULE
-Hybrid, Waves and GEM, Sofia Moschou
-1.50             	VersionUserModule
+Hybrid Code
+0.1             	VersionUserModule
 
 #CHECKGRIDSIZE
 4                       nI
@@ -122,10 +122,15 @@ Right slow Whistler
 -90.0			Phase
 
 #CHARGEDPARTICLES
-3                      nHybridParticleSort
-2                      iHybridIon_I(1) 
-1000000                nHybridParticleMax_I(1)
+1                      nHybridParticleSort
+1                      iHybridIon_I(1) 
+10000                   nHybridParticleMax_I(1)
 5                      nHybridParticlePerCell_I(1)
+1                      nTestParticles
+4.0                    Mass_I
+2.0                    Charge_I
+1000		       nTestMax_I
+
 3                      iHybridIon_I(2) 
 50000                  nHybridParticleMax_I(2)
 5                      nHybridParticlePerCell_I(2)
@@ -133,10 +138,10 @@ Right slow Whistler
 150000                 nHybridParticleMax_I(3)
 5                      nHybridParticlePerCell_I(3)
 2                      nTestParticles
-4.0                    Mass_I(1)
-2.0                    Charge_I(1)
-6.0                    Mass_I(2)
-4.0                    Charge_I(2)
+4.0                    Mass_I
+2.0                    Charge_I
+6.0                    Mass_I
+4.0                    Charge_I
 
 #USERINPUTEND   ----------------
 

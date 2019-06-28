@@ -398,6 +398,7 @@ test_twofluidmhd_check:
 	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff)
 	ls -l test_twofluidmhd.diff
 
+
 ### MULTI FLUID TEST ###
 
 test_multifluid:
