@@ -474,7 +474,7 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well. 
 
-    use ModMain,           ONLY: Time_Simulation
+    use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
@@ -498,11 +498,14 @@ contains
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
-    real              :: Fac_II(nTheta,nPhi)
+    real, save        :: Fac_II(nTheta,nPhi)
 
     ! Variables for surface integral
-    real:: b_DII(3,nTheta,nPhi)
+    real, save:: b_DII(3,nTheta,nPhi)
     real:: rDotB, rCrossB_D(3)
+
+    ! Avoid recalculating Fac_II and b_DII in the same time step
+    integer:: nStepLast = -100
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
     ! The Biot-Savart integral for a given magnetometer indexed by iMag
@@ -541,25 +544,28 @@ contains
     dPhi   = cTwoPi / nPhi
     dR     = (rCurrents - rIonosphere) / nR
 
-    ! Get the radial component of the field aligned current
-    ! at the ionosphere boundary
-    if(UseSurfaceIntegral)then
-       MagPerturbMhd_DI = 0.0
+    if(n_Step /= nStepLast)then
+       nStepLast = n_Step
+       ! Get the radial component of the field aligned current
+       ! and the magnetic field vector (for surface integral) at rCurrents
        call timing_start('ground_calc_fac')
-       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-            Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
-            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+       if(UseSurfaceIntegral)then
+          MagPerturbMhd_DI = 0.0
+          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+               Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
+               IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+          if(nProc > 1)&
+               call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+       else
+          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+               Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
+               IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+       end if
+       if(nProc > 1) &
+            call MPI_Bcast(Fac_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
        call timing_stop('ground_calc_fac')
-       if(nProc > 1)&
-            call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
-    else
-       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-            Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
-            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
     end if
 
-    if(nProc > 1) &
-         call MPI_Bcast(Fac_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
 
     !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
