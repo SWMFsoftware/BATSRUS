@@ -398,36 +398,6 @@ test_twofluidmhd_check:
 	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff)
 	ls -l test_twofluidmhd.diff
 
-### TWOFLUID MHD TEST ###
-
-test_hybrid:
-	@echo "test_hybrid_compile..." > test_hybrid.diff
-	$(MAKE) test_hybrid_compile
-	@echo "test_hybrid_rundir..." >> test_hybrid.diff
-	$(MAKE) test_hybrid_rundir
-	@echo "test_hybrid_run..." >> test_hybrid.diff
-	$(MAKE) test_hybrid_run
-	@echo "test_hybrid_check..." >> test_hybrid.diff
-	$(MAKE) test_hybrid_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_hybrid_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
-	$(MAKE) BATSRUS
-	make PIDL
-
-test_hybrid_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HybridTest PARAM.in
-
-test_hybrid_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULT
-
-test_hybrid_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
-	  Param/SHOCKTUBE/TestOutput/twofluid_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_hybrid.diff)
-	ls -l test_hybrid.diff
 
 ### MULTI FLUID TEST ###
 
