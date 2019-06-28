@@ -66,10 +66,10 @@ end module ModSemiImplVar
 module ModImplicit
 
   use ModSize
-  use BATL_size,     ONLY: nDim
+  use BATL_lib,      ONLY: iProc, iComm, nDim
   use ModVarIndexes, ONLY: nVar, P_
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc, iComm
+  
   use ModLinearSolver, ONLY: LinearSolverParamType
 
   ! for sake of fewer changes in the user modules

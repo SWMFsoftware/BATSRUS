@@ -5,7 +5,7 @@ module ModWritePlotRadiowave
   use ModRadioWaveImage, ONLY: ray_bunch_intensity, nRay,      &
        Intensity_I, check_allocate,  rIntegration2, StateIn_VI,&
        SlopeX_, SlopeZ_
-  use BATL_lib, ONLY: test_start, test_stop, x_, y_, z_
+  use BATL_lib, ONLY: test_start, test_stop, x_, y_, z_, iProc
   implicit none
   SAVE
 
@@ -23,7 +23,6 @@ contains
     ! Written by Leonid Benkevitch.
     !
     use ModCoordTransform, ONLY: cross_product
-    use ModProcMH, ONLY: iProc
     use ModMain, ONLY: time_accurate, n_Step, time_simulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
          plot_type, plot_form, plot_, ObsPos_DI, &
@@ -306,7 +305,7 @@ contains
   !============================================================================
 
   subroutine parse_freq_string(NameVarAll, Frequency_I, NameVar_I, nFreq)
-    use ModProcMH, ONLY: iProc
+
     use ModIO, ONLY: nPlotRfrFreqMax
 
     !\

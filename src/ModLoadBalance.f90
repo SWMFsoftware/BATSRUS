@@ -5,7 +5,8 @@
 module ModLoadBalance
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iBlockTest, iProcTest, lVerbose
+       test_start, test_stop, StringTest, iBlockTest, iProcTest, lVerbose, &
+       iProc, nProc, iComm
 
   use ModMain, ONLY: UseConstrainB, UseB0, UseIM
   use BATL_size, ONLY: nI, nJ, nK, nIJK, &
@@ -247,7 +248,6 @@ contains
 
   subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
-    use ModProcMH
     use ModMain
     use ModImplicit, ONLY: UsePartImplicit, UseSemiImplicit, &
          TypeSemiImplicit, iBlockFromSemi_B, nBlockSemi
@@ -603,7 +603,6 @@ contains
     ! and if DoPartSelect is true then select explicit and implicit blocks
     ! based on the stepping selection criteria.
 
-    use ModProcMH
     use ModMain
     use ModFaceFlux, ONLY : calc_face_flux
     use ModFaceValue, ONLY : calc_face_value
@@ -756,13 +755,12 @@ contains
   !============================================================================
   subroutine load_balance_blocks
 
-    use ModProcMH
     use ModMain, ONLY: iteration_number
     use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
 
-    !LOCAL VARIABLES:
+    ! Local variables
     logical:: DoBalanceSemiImpl = .true.
 
     logical:: DoTest

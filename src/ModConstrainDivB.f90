@@ -5,7 +5,7 @@
 module ModConstrainDivB
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, StringTest, iProc, iTest,jTest,kTest, iBlockTest
 
   ! A flux averaged constrained transport scheme for block AMR grid. See
   !
@@ -17,7 +17,6 @@ module ModConstrainDivB
 
   use ModSize
   use ModIO,     ONLY: iUnitOut, write_prefix
-  use ModProcMH, ONLY: iProc
 
   implicit none
   SAVE
@@ -948,7 +947,6 @@ contains
   ! end subroutine prolong_b_face
   ! !============================================================================
   ! subroutine assign_coarse_face_soln(sol_BLK,iVar)
-  !   use ModProcMH
   !   use ModSize
   !   use ModAMR, ONLY:local_cube,local_cubeBLK
   !   use ModMpi
@@ -1264,7 +1262,6 @@ contains
   !   !  |     |     |     |     |
   !   !  +---sub1---edge1-sub2---+ --> X
   !
-  !   use ModProcMH
   !   use ModMain
   !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
   !        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
@@ -1892,7 +1889,6 @@ contains
   ! subroutine b_face_fine_pass
   !
   !   ! Set B*FaceFine_*SB from finer face
-  !   use ModProcMH
   !   use ModMain, ONLY : nBLock,Unused_B,iBlockTest
   !   use ModAMR, ONLY : child2subface
   !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD

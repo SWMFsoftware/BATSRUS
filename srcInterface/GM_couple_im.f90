@@ -5,11 +5,11 @@
 
 module GM_couple_im
 
+  use BATL_lib, ONLY: iProc, iComm
   use ModMpi
   use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use CON_coupler, ONLY: Grid_C, ncell_id
 
-  use ModProcMH
   use ModMain, ONLY: n_step, &
        DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
@@ -122,7 +122,6 @@ contains
        nVarIn, BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     use ModGeometry,ONLY: x2
-    use ModProcMH,  ONLY: iProc
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain, ONLY: Time_Simulation, TypeCoordSystem
     use ModVarIndexes, ONLY: &
@@ -304,7 +303,6 @@ contains
     ! Subroutine to update and collect satellite locations for IM tracing
 
     !Modules
-    use ModProcMH,        ONLY: iProc
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
     use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
@@ -359,7 +357,6 @@ contains
     ! Provide total number of points along rays 
     ! and the number of variables to pass to IM
 
-    use ModProcMH,     ONLY: iProc
     use ModMain,       ONLY: Time_Simulation, TypeCoordSystem
     use ModVarIndexes, ONLY: Bx_, Bz_, nVar
     use ModIO,         ONLY: NamePrimitiveVarOrig
@@ -464,8 +461,6 @@ contains
 
     !call stop_mpi('RAYTRACE is OFF')
 
-
-    use ModProcMH,  ONLY: iProc
     use ModFieldTrace, ONLY: RayMap_DSII
 
     character (len=*), parameter :: NameSub='GM_get_for_im_line'
@@ -498,7 +493,6 @@ contains
 
   subroutine GM_get_for_im(Buffer_IIV,KpOut,iSizeIn,jSizeIn,nVar,NameVar)
 
-    use ModProcMH, ONLY: iProc
     use ModFieldTrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
          HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY, &
@@ -656,7 +650,6 @@ contains
     ! !!!DTW 2007
 
     !Modules
-    use ModProcMH, ONLY: iProc, iComm
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
          get_satellite_ray, set_satellite_flags
     use ModMPI
@@ -706,7 +699,6 @@ contains
     use ModImCoupling                              ! Storage for IM pressure
     use ModMain, ONLY : n_step,time_simulation
     use ModIoUnit, ONLY: UNITTMP_
-    use ModProcMH, ONLY: iProc
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
 
     character(len=80):: filename
@@ -781,7 +773,7 @@ contains
        IM_Opdens = Buffer_IIV(:,:,Odens_)
     endif
 
-    ! for anisotropic pressure                                                                                       
+    ! for anisotropic pressure                                      
     if(DoAnisoPressureIMCoupling)then
        IM_ppar = Buffer_IIV(:,:,parpres_)
        IM_bmin = Buffer_IIV(:,:,bmin_)
@@ -792,11 +784,11 @@ contains
 
   contains
 
-    !============================================================================
+    !==========================================================================
     subroutine write_IMvars_tec
       integer :: j2
       real :: lonShift
-      !-------------------------------------------------------------------------
+      !------------------------------------------------------------------------
       if(iProc /= 0)RETURN
 
       !write values to plot file
@@ -804,12 +796,12 @@ contains
       OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
       write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
       if(DoMultiFluidIMCoupling)then
-         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
-              &"IM pressure", "IM density", &                                   
-              &"IM Hp pressure", "IM Hp density", &                             
+         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&   
+              &"IM pressure", "IM density", &
+              &"IM Hp pressure", "IM Hp density", &
               &"IM Op pressure", "IM Op density"'
       else
-         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
               &"IM pressure", "IM density"'
       end if
       write(UNITTMP_,'(a,i4,a,i4,a)') &

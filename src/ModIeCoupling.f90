@@ -5,9 +5,8 @@
 module ModIeCoupling
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc
 !  use ModUtilities, ONLY: norm2
-  use ModProcMH
 
   implicit none
   save
@@ -245,7 +244,6 @@ contains
 
     ! Calculate cross polar cap potentials for write_logvar
 
-    use ModProcMH,  ONLY: iProc
     use ModIO,      ONLY: write_myname
 
     character (len=*), intent(in) :: NameLogvar

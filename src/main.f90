@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATSRUS
 
-  use BATL_lib, ONLY: lVerbose, init_mpi, clean_mpi
+  use BATL_lib, ONLY: iProc, iComm, lVerbose, init_mpi, clean_mpi
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, &
        BATS_setup, &
@@ -11,7 +11,6 @@ program BATSRUS
        BATS_save_files, &
        BATS_finalize
   use ModKind
-  use ModProcMH, ONLY: iComm, iProc
   use ModUtilities, ONLY: remove_file, touch_file
   use ModMain, ONLY: &
        IsStandAlone, &

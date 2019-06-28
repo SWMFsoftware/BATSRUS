@@ -34,7 +34,7 @@ contains
        nPlotVar, NotACut, nonCartesian, IsSphPlot, plot_dimensional, &
        xmin, xmax, ymin, ymax, zmin, zmax)
 
-    use ModProcMH, ONLY: iProc
+    use BATL_lib, ONLY: iProc
 
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: filename

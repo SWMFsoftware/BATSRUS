@@ -4,7 +4,7 @@
 module ModFieldLineThread
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, jTest, kTest, iBlockTest
+       test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
@@ -265,7 +265,6 @@ contains
          nJ, nK
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
-    use ModProcMH
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
     logical:: DoTest

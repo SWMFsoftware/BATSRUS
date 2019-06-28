@@ -4,7 +4,6 @@ module GM_couple_ps
   !use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use CON_coupler, ONLY: Grid_C, ncell_id
 
-  !use ModProcMH
   !use ModMain, ONLY: n_step
   !use ModPhysics, ONLY: No2Si_V, Si2No_V, &
   !     UnitP_, UnitRho_, UnitTemperature_, UnitB_, &

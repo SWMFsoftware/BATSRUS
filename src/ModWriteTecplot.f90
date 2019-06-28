@@ -5,7 +5,7 @@
 module ModWriteTecplot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, nProc, iComm
 
   ! Save cell centered data into Tecplot files
   !
@@ -191,7 +191,6 @@ contains
 
   subroutine write_tecplot_connect(iFile, NameFile)
 
-    use ModProcMH,    ONLY: iProc, nProc, iComm
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
     use ModIO,        ONLY: DoSaveOneTecFile, plot_type1, plot_range
     use ModIoUnit,    ONLY: UnitTmp_
@@ -557,7 +556,6 @@ contains
 
   subroutine write_tecplot_head(NameFile, StringUnit)
 
-    use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
 
@@ -754,7 +752,6 @@ contains
   !============================================================================
   subroutine write_tecplot_setinfo
 
-    use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step, time_accurate, iStartTime_I
     use ModIO, ONLY: StringDateOrTime
     use ModGeometry, ONLY: count_true_cells
@@ -882,7 +879,6 @@ contains
     ! block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
     ! etc.
 
-    use ModProcMH
     use ModMain, ONLY : nI,nJ,nK, nBlock, nBlockALL
     use ModPhysics, ONLY : No2Io_V, UnitX_, &
          ThetaTilt
@@ -1680,7 +1676,6 @@ contains
 
   subroutine assign_node_numbers
 
-    use ModProcMH
     use ModIO, ONLY: write_prefix, iUnitOut
     use ModMain, ONLY: nBlock, nBlockMax, nBlockALL
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_

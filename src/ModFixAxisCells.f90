@@ -18,7 +18,6 @@ contains
 
   subroutine fix_axis_cells
 
-    use ModProcMH, ONLY: iComm
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B,    &
           x_, y_
     use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
@@ -27,7 +26,7 @@ contains
     use ModEnergy, ONLY: calc_energy_point
     use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen, &
-         Xyz_DGB, CellVolume_GB
+         Xyz_DGB, CellVolume_GB, iComm
     use ModNumConst, ONLY: cHalfPi
     use ModMpi
 
@@ -211,13 +210,13 @@ contains
   !============================================================================
   subroutine fix_axis_cells_cyl
 
-    use ModProcMH, ONLY: iComm
     use ModMain, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_
     use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, CellSize1Min
     use ModEnergy, ONLY: calc_energy_point
     use ModMpi
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, r_
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, r_, &
+         iComm
 
     real, allocatable:: Buffer_VII(:,:,:)
 

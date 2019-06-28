@@ -238,8 +238,7 @@ contains
     use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
 
     use CON_axes,      ONLY: transform_matrix
-    use BATL_lib,      ONLY: Xyz_DGB
-    use ModProcMH,     ONLY: iProc
+    use BATL_lib,      ONLY: Xyz_DGB, iProc
     use ModGroundMagPerturb, ONLY: Kp
     
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
