@@ -542,13 +542,12 @@ contains
     ! Make pressure and energy consistent and maintain thermal energy ratio
     ! at a reasonable value (this also excludes negative pressure)
 
-    use ModProcMH
     use ModMain,       ONLY: nI,nJ,nK
     use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
     use ModAdvance,    ONLY: State_VGB, Energy_GBI
     use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, Pratio_hi, Pratio_lo
     use ModGeometry,   ONLY: true_cell
-    use BATL_lib,      ONLY: Xyz_DGB
+    use BATL_lib,      ONLY: Xyz_DGB, iProc
 
     integer, intent(in) :: iBlock
 

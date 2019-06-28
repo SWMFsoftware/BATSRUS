@@ -4,7 +4,7 @@
 module ModWritePlotLos
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
 
   implicit none
@@ -62,7 +62,6 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModProcMH
     use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
          time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
          Body1, StartTime, iStartTime_I
@@ -402,7 +401,7 @@ contains
        Image_VII = ImagePe_VII
     end if
 
-    if (iProc==0) then
+    if(iProc==0) then
 
        if(plot_dimensional(iFile)) call dimensionalize_plotvar_los
 

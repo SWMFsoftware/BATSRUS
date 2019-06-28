@@ -5,6 +5,7 @@ module GM_couple_pw
 
   ! Coupling with the Polar Wind component.
 
+  use BATL_lib, ONLY: nProc, iComm
   use ModNumConst,   ONLY: cDegToRad
   use ModMultiFluid, ONLY: nIonFluid
   
@@ -48,7 +49,6 @@ contains
 
     use ModVarIndexes, ONLY: p_
     use ModMain,       ONLY: nBlock
-    use ModProcMH,     ONLY: nProc, iComm
     use ModPhysics,    ONLY: No2Si_V, UnitP_
     use ModCurrent,    ONLY: get_point_data
     use ModMpi

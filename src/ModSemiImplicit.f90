@@ -6,10 +6,9 @@ module ModSemiImplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, &
-       iBlockTest, iProcTest, iVarTest
+       iBlockTest, iProcTest, iVarTest, iProc, iComm
 
   use ModSemiImplVar
-  use ModProcMH,   ONLY: iProc
   use ModImplicit, ONLY: nStencil
   use ModLinearSolver, ONLY: LinearSolverParamType
 
@@ -260,7 +259,6 @@ contains
 
     ! Advance semi-implicit terms
 
-    use ModProcMH, ONLY: iComm
     use ModMain, ONLY: time_accurate
     use ModAdvance, ONLY: DoFixAxis, State_VGB
     use ModB0, ONLY: B0_DGB

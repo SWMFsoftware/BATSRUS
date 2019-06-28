@@ -17,12 +17,12 @@ contains
 
     ! Get magnetic field data from GM to PT
 
-    use ModProcMH,  ONLY: iProc
     use ModPhysics, ONLY: Si2No_V, No2Si_V, iUnitCons_V, UnitX_
     use ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_
     use ModVarIndexes, ONLY: nVar
     use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
+    use BATL_lib,   ONLY: iProc, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         find_grid_block
     use ModInterpolate, ONLY: trilinear
 
     logical,          intent(in):: IsNew   ! true for new point array

@@ -6,7 +6,7 @@ module ModPartImplicit
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest
+       iProcTest, iVarTest, iProc, nProc, iComm
 
   use ModImplicit
 
@@ -377,7 +377,6 @@ contains
     ! We use get_residual(.false.,...) to calculate R_expl
     ! and    get_residual(.true.,....) to calculate R_impl
 
-    use ModProcMH, ONLY: iComm, nProc
     use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
          n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
          iNewDecomposition
@@ -820,7 +819,6 @@ contains
 
     ! Initialization for NR
 
-    use ModProcMH
     use ModMain, ONLY : n_step,dt,nOrder, &
          UseRadDiffusion
     use ModAdvance, ONLY : FluxType
@@ -960,7 +958,6 @@ contains
 
   subroutine impl_newton_loop
 
-    use ModProcMH
     use ModMpi
 
     integer :: i,j,k,iVar,iBlockImpl,n, iError
@@ -1009,7 +1006,6 @@ contains
 
     ! Update Impl_VGB(k+1) = Impl_VGB(k) + x_I
 
-    use ModProcMH
     use ModMpi
 
     real,    intent(out):: NormX
@@ -1172,7 +1168,6 @@ contains
     ! where w=Impl_VGB, w'=w+R_low, beta=ImplCoeff, eps=sqrt(JacobianEps)/||x||
     ! instead of eps=(JacobianEps)^(1/2)*(Impl_VGB.x)/(x.x) suggested by Keyes
 
-    use ModProcMH
     use ModMpi
 
     real, intent(in)   :: x_I(nImpl)
@@ -1311,7 +1306,6 @@ contains
     !  dF_iw/dW_jw = [F_iw(W + eps*W_jw) - F_iw(W)] / eps
     !  dS_iw/dW_jw = [S_iw(W + eps*W_jw) - S_iw(W)] / eps
 
-    use ModProcMH
     use ModMain
     use ModNumConst, ONLY: i_DD
     use ModvarIndexes
@@ -2413,7 +2407,6 @@ contains
 
   subroutine get_dt_courant(DtOut)
 
-    use ModProcMH
     use ModMain
     use ModB0,  ONLY: B0_DGB
     use ModGeometry, ONLY: true_BLK

@@ -1,8 +1,9 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModRadioWaveImage
+
   use ModConst, ONLY: cPi, cElectronMass, cElectronChargeSquaredJm
-  use BATL_lib, ONLY: iProc, MaxDim, nDim, x_, y_, z_
+  use BATL_lib, ONLY: iProc, nProc, iComm, MaxDim, nDim, x_, y_, z_
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
        put_particles, trace_particles, interpolate_grid_amr_gc
@@ -93,7 +94,6 @@ contains
   end subroutine check_allocate
   !=========================================================
   subroutine ray_bunch_intensity(RadioFrequency)
-    use ModProcMH, ONLY: nProc, iComm, iProc
     use ModMpi
     !
     !   The subroutine ray_bunch_intensity() is an interface to the radiowave

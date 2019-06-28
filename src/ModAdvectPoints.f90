@@ -165,11 +165,10 @@ contains
 
     ! Create a non-trivial flow field and advect a number of points
 
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
-    use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_
+    use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_,RhoUy_,RhoUz_
     use ModGeometry, ONLY: x2
-    use BATL_lib,    ONLY: Xyz_DGB, x_, z_
+    use BATL_lib,    ONLY: Xyz_DGB, x_, z_, iProc
     use ModNumConst, ONLY: cTwoPi
     use ModIoUnit,   ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file

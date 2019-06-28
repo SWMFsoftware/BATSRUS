@@ -5,7 +5,7 @@
 module ModMultiIon
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
 
   ! !! "resistive terms" = ion-electron collisions to be added
   ! !! RZ geometry terms are missing
@@ -16,7 +16,6 @@ module ModMultiIon
   ! Allow for extra point-implicit sources in ModUser
 
   use ModMultiFluid
-  use ModProcMH, ONLY: iProc
   use ModMain, ONLY: UseUserSource
   use ModSize, ONLY: nI, nJ, nK
   use ModGeometry, ONLY: true_cell

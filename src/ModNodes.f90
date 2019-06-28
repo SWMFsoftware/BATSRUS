@@ -4,11 +4,10 @@
 module ModNodes
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc
 
   use ModSize
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
 
   implicit none
   save

@@ -25,7 +25,6 @@ contains
 
   subroutine clean_divb
 
-    use ModProcMH
     use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: iNewGrid, iNewDecomposition
     use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
@@ -36,7 +35,8 @@ contains
     use ModMpi
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nBlock, MaxBlock, x_, y_, z_, k0_, j0_, nJp1_, nKp1_, &
-         Unused_B, CellFace_DB, CellVolume_GB, message_pass_cell
+         Unused_B, CellFace_DB, CellVolume_GB, message_pass_cell, &
+         iProc, nProc, iComm
 
     ! Loop variables
     integer::i,j,k,iBlock
