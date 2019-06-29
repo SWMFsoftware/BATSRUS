@@ -408,10 +408,10 @@ contains
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       if(iLoop.le.nHybridParticleSort)then
+       !if(iLoop.le.nHybridParticleSort)then
            call add_ghost_cell_field(RhoUz_, 1, &
                 Moments_VGBI(:,:,:,:,:,iKind))
-       end if
+       !end if
     end do
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
