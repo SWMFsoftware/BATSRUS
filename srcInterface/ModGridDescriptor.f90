@@ -49,7 +49,7 @@ contains
 
   !===========================================================================
   subroutine show_domain_decomp(Dd)
-    use ModProcMH, ONLY: iProc
+    use BATL_lib, ONLY: iProc
 
     type(DomainType),intent(in):: Dd
     integer:: iNode, iChild

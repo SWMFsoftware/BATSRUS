@@ -5,7 +5,7 @@
 module ModWriteTecplot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, nProc, iComm
 
   ! Save cell centered data into Tecplot files
   !
@@ -191,7 +191,6 @@ contains
 
   subroutine write_tecplot_connect(iFile, NameFile)
 
-    use ModProcMH,    ONLY: iProc, nProc, iComm
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
     use ModIO,        ONLY: DoSaveOneTecFile, plot_type1, plot_range
     use ModIoUnit,    ONLY: UnitTmp_
@@ -557,7 +556,6 @@ contains
 
   subroutine write_tecplot_head(NameFile, StringUnit)
 
-    use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
 
@@ -587,15 +585,15 @@ contains
     case(2)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="2D   '//textNandT//'"', &
-            ', NODES=', nPointAll, &
-            ', ELEMENTS=', nBrickAll, &
-            ', DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL'
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=QUADRILATERAL'
     case(3)
        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
             'ZONE T="3D   '//textNandT//'"', &
-            ', NODES=', nPointAll, &
-            ', ELEMENTS=', nBrickAll, &
-            ', DATAPACKING=POINT, ZONETYPE=FEBRICK'
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=BRICK'
     end select
     call write_tecplot_auxdata
     call close_file
@@ -754,7 +752,6 @@ contains
   !============================================================================
   subroutine write_tecplot_setinfo
 
-    use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step, time_accurate, iStartTime_I
     use ModIO, ONLY: StringDateOrTime
     use ModGeometry, ONLY: count_true_cells
@@ -882,7 +879,6 @@ contains
     ! block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
     ! etc.
 
-    use ModProcMH
     use ModMain, ONLY : nI,nJ,nK, nBlock, nBlockALL
     use ModPhysics, ONLY : No2Io_V, UnitX_, &
          ThetaTilt
@@ -1680,7 +1676,6 @@ contains
 
   subroutine assign_node_numbers
 
-    use ModProcMH
     use ModIO, ONLY: write_prefix, iUnitOut
     use ModMain, ONLY: nBlock, nBlockMax, nBlockALL
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
@@ -1852,7 +1847,7 @@ contains
     use ModPhysics
     use ModUtilities,  ONLY: lower_case
     use ModIO,         ONLY: plot_dimensional, plot_type1
-    use ModVarIndexes, ONLY: IsMhd, NameVar_V
+    use ModVarIndexes, ONLY: IsMhd
     use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
     use ModMultiFluid, ONLY: extract_fluid_name, NameFluid
     use BATL_lib,      ONLY: nDim
@@ -1936,23 +1931,23 @@ contains
           NameTecVar = 'B_z'
           NameUnit   = NameTecUnit_V(UnitB_)
           ! face centered magnetic field
-       case('bxl')
-          NameTecVar = 'B_xl'
+       case('bxl') ! east
+          NameTecVar = 'B_e'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bxr')
-          NameTecVar = 'B_xr'
+       case('bxr') ! west
+          NameTecVar = 'B_w'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byl')
-          NameTecVar = 'B_yl'
+       case('byl') ! south
+          NameTecVar = 'B_s'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('byr')
-          NameTecVar = 'B_yr'
+       case('byr') ! north
+          NameTecVar = 'B_n'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzl')
-          NameTecVar = 'B_zl'
+       case('bzl') ! bottom
+          NameTecVar = 'B_b'
           NameUnit   = NameTecUnit_V(UnitB_)
-       case('bzr')
-          NameTecVar = 'B_zr'
+       case('bzr') ! top
+          NameTecVar = 'B_t'
           NameUnit   = NameTecUnit_V(UnitB_)
           !
        case('hyp')
@@ -2129,6 +2124,17 @@ contains
           NameTecVar = 'Block #'
        case('node')
           NameTecVar = 'Node #'
+       case('eta')
+          NameTecVar = 'eta'
+       case('cons')
+          NameTecVar = 'cons'
+       case('hall')
+          NameTecVar = 'hall'
+       case('pe')
+          NameTecVar = 'pe'
+          NameUnit   = NameTecUnit_V(UnitP_)
+       case('pic')
+          NameTecVar = 'pic'
        case('ew','erad')
           NameTecVar = String
           NameUnit   = NameTecUnit_V(UnitEnergydens_)
@@ -2140,7 +2146,6 @@ contains
           ! Try to find the plot variable among the basic variables
           do iVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
-             NameTecVar = NameVar_V(iVar)
              NameUnit = NameUnitUserTec_V(iVar)
              EXIT
           end do

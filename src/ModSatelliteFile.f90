@@ -4,7 +4,7 @@
 module ModSatelliteFile
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, iComm
 !  use ModUtilities, ONLY: norm2
   use ModUtilities, ONLY: open_file, close_file
 
@@ -73,7 +73,6 @@ contains
   !============================================================================
   subroutine read_satellite_parameters(NameCommand)
 
-    use ModProcMH,    ONLY: iProc
     use ModIO,        ONLY: nFile, MaxFile, Satellite_, plot_dimensional, &
          Dn_Output, Dt_Output, plot_type, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
@@ -258,7 +257,6 @@ contains
 
   subroutine read_satellite_input_files
 
-    use ModProcMH,      ONLY: iProc, iComm
     use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
     use CON_axes,       ONLY: transform_matrix
     use ModTimeConvert, ONLY: time_int_to_real
@@ -454,7 +452,6 @@ contains
   !============================================================================
 
   subroutine set_satellite_positions(iSat)
-    use ModProcMH
     use ModMain, ONLY:time_simulation
     use ModNumConst
 
@@ -693,7 +690,6 @@ contains
 
   subroutine GM_trace_sat(SatXyz_D, SatRay_D)
 
-    use ModProcMH,    ONLY: iComm, iProc
     use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
          extract_field_lines, rIonosphere
     use ModVarIndexes, ONLY: nVar

@@ -5,7 +5,7 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc
 
   use ModVarIndexes, ONLY: IonFirst_, nFluid
   use ModMultiFluid, ONLY: nIonFluid
@@ -75,7 +75,6 @@ contains
   subroutine user_read_inputs
 
     use ModMain,       ONLY: UseUserInitSession, lVerbose
-    use ModProcMH,     ONLY: iProc
     use ModReadParam,  ONLY: read_line, read_command, read_var
     use ModIO,         ONLY: write_prefix, write_myname, iUnitOut
 
@@ -157,7 +156,6 @@ contains
 
   subroutine user_init_session
 
-    use ModProcMH,     ONLY: iProc
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
     use ModAdvance,    ONLY: UseElectronPressure

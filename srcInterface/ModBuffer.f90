@@ -224,7 +224,7 @@ subroutine plot_buffer(iFile)
   use ModMain, ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D, BuffR_
   use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitP_, UnitX_,&
        UnitEnergyDens_
-  use ModProcMH,     ONLY: iProc
+  use BATL_lib,     ONLY: iProc
 
   implicit none
 

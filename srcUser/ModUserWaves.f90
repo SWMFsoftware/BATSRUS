@@ -28,7 +28,7 @@ module ModUser
   !   Si units to be chosen.
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -116,7 +116,6 @@ contains
 
   subroutine user_read_inputs
     use ModMain
-    use ModProcMH,    ONLY: iProc
     use ModReadParam
     ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
     !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
@@ -328,7 +327,6 @@ contains
          UseElectronPressure, UseAnisoPressure, UseEfield, UseAnisoPe
     use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
-    use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
          rPlanetSi, rBody, UnitT_, Gamma_I, nVectorVar, iVectorVar_I
@@ -1104,7 +1102,6 @@ contains
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModVarIndexes
-    use ModProcMH,   ONLY: iProc
     use ModEnergy,   ONLY: calc_energy_ghost
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 

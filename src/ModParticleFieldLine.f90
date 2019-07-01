@@ -5,7 +5,7 @@
 module ModParticleFieldLine
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
   ! This module contains subroutine for extracting magnetic field lines
   ! for passing to other codes;
@@ -387,7 +387,6 @@ contains
       ! gather information from all processors on how many new field lines
       ! have been started
       use ModMpi
-      use BATL_mpi, ONLY: iComm, nProc
       integer:: iError
       !------------------------------------------------------------------------
       if(nProc>1)then
@@ -402,7 +401,6 @@ contains
       ! gather information from all processors on how many new field lines
       ! have been started
       use ModMpi
-      use BATL_mpi, ONLY: iComm, nProc
       integer:: iError
       !------------------------------------------------------------------------
       if(nProc>1)then
@@ -459,9 +457,8 @@ contains
       end do
     end subroutine get_alignment
     !==========================================================================
-    subroutine  offset_id(iLineStart,iLineEnd)
+    subroutine offset_id(iLineStart,iLineEnd)
       use ModMpi
-      use BATL_mpi, ONLY: iComm, nProc
       integer, intent(in) :: iLineStart, iLineEnd
       integer:: iParticle, nParticle, iLine, iError
       integer, allocatable:: iOffsetLocal_I(:), iOffset_I(:)
@@ -1170,7 +1167,6 @@ contains
 
     ! Save particle data
 
-    use ModProcMH,  ONLY: iProc, nProc
     use ModMain,    ONLY: n_step, time_accurate, time_simulation
     use ModIO,      ONLY: &
          StringDateOrTime, NamePlotDir, &

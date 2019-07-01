@@ -16,7 +16,6 @@ contains
 
     ! Set input parameters for BATS-R-US
 
-    use ModProcMH
     use ModMain
     use ModAdvance
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
@@ -38,7 +37,8 @@ contains
     use BATL_lib, ONLY: &
          read_region_param, read_test_param, NameVarTest, iVarTest, &
          BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
-         IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
+         IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
+         iProc, nProc, iComm 
     use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,&
          DoAmr
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&

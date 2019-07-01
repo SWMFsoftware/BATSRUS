@@ -4,7 +4,8 @@
 module ModTimeStepControl
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
+       iProc, nProc, iComm
 
   implicit none
 
@@ -311,7 +312,6 @@ contains
 
   subroutine set_global_timestep(TimeSimulationLimit)
 
-    use ModProcMH
     use ModMain
     use ModAdvance,  ONLY: time_BLK, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
@@ -534,7 +534,6 @@ contains
          State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
     use ModGeometry, ONLY: true_cell
-    use ModProcMH,   ONLY: nProc, iComm
     use ModMpi
 
     integer:: iBlock, i, j, k, iError

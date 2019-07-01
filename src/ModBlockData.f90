@@ -5,10 +5,9 @@
 module ModBlockData
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest, iProcTest
+       test_start, test_stop, iBlockTest, iProcTest, iProc
 
-  use ModSize,   ONLY: MaxBlock
-  use ModProcMH, ONLY: iProc
+  use ModSize,  ONLY: MaxBlock
 
   implicit none
 

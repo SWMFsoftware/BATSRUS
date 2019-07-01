@@ -219,7 +219,6 @@ contains
 
   subroutine do_amr
 
-    use ModProcMH
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
@@ -235,7 +234,7 @@ contains
     use ModMpi
 
     use BATL_lib,         ONLY: regrid_batl, &
-         nNode, iTree_IA, nLevelMin, nLevelMax, &
+         iProc, nNode, iTree_IA, nLevelMin, nLevelMax, &
          IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_
 
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
@@ -294,6 +293,11 @@ contains
        RETURN
     end if
 
+    ! write_log_file may use ray array before another ray tracing
+    ! only needs to zero ray() out if the grid changed
+    if(UseB .and. allocated(ray) .and. iNewGrid/=iLastGrid) &
+         ray(:,:,:,:,:,1:nBlock) = 0.0
+
     iLastGrid          = iNewGrid
     iLastDecomposition = iNewDecomposition
 
@@ -347,10 +351,6 @@ contains
     if(UseB)then
        if(DoProfileAmr) call timing_start('amr::set_divb')
        DivB1_GB(:,:,:,1:nBlock) = -7.70
-
-       ! write_log_file may use ray array before another ray tracing
-       if(allocated(ray)) ray(:,:,:,:,:,1:nBlock) = 0.0
-
        if(DoProfileAmr) call timing_stop('amr::set_divb')
     end if
 

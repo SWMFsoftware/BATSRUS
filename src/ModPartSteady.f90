@@ -4,7 +4,7 @@
 module ModPartSteady
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, iComm
 
   ! The Partially Steady State (PSS) scheme is based on the idea that
   ! one can evolve only the grid blocks that change in time, while
@@ -13,7 +13,6 @@ module ModPartSteady
   ! scheme, it is sufficient to switch on blocks which neighbor the
   ! already evolving blocks.
 
-  use ModProcMH
   use ModVarIndexes, ONLY: nVar
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK, x_
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &

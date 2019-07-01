@@ -6,12 +6,11 @@ module ModFieldTrace
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
-       iTest, jTest, kTest, iBlockTest, iProcTest
+       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm
 !  use ModUtilities, ONLY: norm2
   use ModSize
   use ModKind
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
 
   implicit none
   save
@@ -411,7 +410,7 @@ contains
 
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,'(a)') NameSub,' allocated arrays'
+       write(iUnitOut,'(a)') NameSub//' allocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
@@ -449,7 +448,6 @@ contains
 
     ! Trace field lines from cell centers to the outer or inner boundaries
 
-    use ModProcMH
     use CON_ray_trace,    ONLY: ray_init
     use ModMain
     use ModAdvance,       ONLY: State_VGB, Bx_, Bz_
@@ -618,7 +616,6 @@ contains
     use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
     use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
-    use ModProcMH
     use ModKind
     use BATL_lib, ONLY: find_grid_block
 
@@ -982,7 +979,6 @@ contains
     ! Return ray_open_    if the ray goes outside the computational box
     ! EOP
 
-    use ModProcMH
     use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
     use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
@@ -1925,7 +1921,6 @@ contains
     use ModPhysics, ONLY: rBody
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
     use ModB0,      ONLY: B0_DGB
-    use ModProcMH
     use ModMpi
     use BATL_lib,          ONLY: message_pass_cell, find_grid_block
     use ModNumConst,       ONLY: cDegToRad, cTiny
@@ -2143,7 +2138,6 @@ contains
     use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
     use ModB0,             ONLY: B0_DGB
-    use ModProcMH
     use ModMpi
     use ModMultiFluid
     use BATL_lib,          ONLY: find_grid_block
@@ -2292,7 +2286,6 @@ contains
     use ModIo, ONLY: &
          StringDateOrTime, NamePlotDir, plot_range, plot_type, TypeFile_I
     use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
-    use ModProcMH,         ONLY: iProc
     use ModIoUnit,         ONLY: UnitTmp_
     use ModPlotFile,       ONLY: save_plot_file
     use CON_line_extract,  ONLY: line_get, line_clean
@@ -2825,7 +2818,6 @@ contains
 
   subroutine test_ray_integral
 
-    use ModProcMH,   ONLY: iProc
     use ModIoUnit,   ONLY: UNITTMP_
     use ModUtilities, ONLY: open_file, close_file
     use ModNumConst, ONLY: cTiny
@@ -2915,7 +2907,6 @@ contains
     ! IsParallel_I(nLine), starting from positions Xyz_DI(3,nLine).
     ! The results are stored by CON_line_extract.
 
-    use ModProcMH,   ONLY: iProc, iComm
     use CON_ray_trace, ONLY: ray_init
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
     use ModB0,       ONLY: B0_DGB
@@ -3031,7 +3022,6 @@ contains
 
   subroutine write_plot_line(iFile)
 
-    use ModProcMH,   ONLY: iComm, iProc
     use ModVarIndexes, ONLY: nVar
     use ModIO,       ONLY: StringDateOrTime,            &
          NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
@@ -3336,7 +3326,6 @@ contains
     use ModAdvance,        ONLY: nVar
     use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
     use ModNumConst,       ONLY: cDegToRad
-    use ModProcMH,         ONLY: iProc, iComm
     use ModPhysics,        ONLY: &
          Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
     use ModIO,             ONLY: &
@@ -3611,7 +3600,6 @@ contains
     use ModMain,           ONLY: &
          Time_Simulation, TypeCoordSystem, time_accurate, n_step
     use ModNumConst,       ONLY: cDegToRad
-    use ModProcMH,         ONLY: iProc
     use ModPhysics,        ONLY: Si2No_V, UnitX_, rBody
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModIO,             ONLY: StringDateOrTime, NamePlotDir
@@ -3918,7 +3906,6 @@ contains
 
   subroutine ray_trace_fast
 
-    use ModProcMH
     use ModMain
     use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
     use ModB0,       ONLY: get_b0
@@ -3979,7 +3966,7 @@ contains
     integer :: iBlock, iRay
 
     ! Testing and timing
-    logical :: oktime
+    logical, parameter :: oktime = .false.
     integer :: loc(3)
 
     integer :: iError, iError1=-1
@@ -5184,7 +5171,6 @@ contains
     ! Return dS/B
     ! x_0, y_0, and z_0 sent in in real coordinates
 
-    use ModProcMH
     use ModAdvance, ONLY : rho_, Bx_, Bz_, P_, State_VGB
     use ModGeometry, ONLY : Rmin_BLK
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -5691,7 +5677,6 @@ contains
     !           _r restricted (to be sent to a coarser block)
     !           _s subface    (one quarter of a face)
 
-    use ModProcMH
     use ModMain, ONLY : nblockMax,okdebug,Unused_B,optimize_message_pass
     use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
     use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE

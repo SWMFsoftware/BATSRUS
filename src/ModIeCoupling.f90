@@ -5,9 +5,8 @@
 module ModIeCoupling
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc, nProc
 !  use ModUtilities, ONLY: norm2
-  use ModProcMH
 
   implicit none
   save
@@ -96,7 +95,7 @@ contains
     SinPhi_I   = sin(PhiIono_I)
     CosPhi_I   = cos(PhiIono_I)
 
-    ! This only works for the uniform ionoosphere grid
+    ! This only works for the uniform ionosphere grid
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)
 
@@ -245,7 +244,6 @@ contains
 
     ! Calculate cross polar cap potentials for write_logvar
 
-    use ModProcMH,  ONLY: iProc
     use ModIO,      ONLY: write_myname
 
     character (len=*), intent(in) :: NameLogvar
@@ -593,7 +591,8 @@ contains
     real:: XyzIono_D(3), dXyz_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
-
+    !real:: Surface ! CHECK integral
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
     !--------------------------------------------------------------------------
@@ -613,9 +612,13 @@ contains
     ! Calculate the height integrated Hall and Pedersen current densities
     call calc_ie_currents
 
+    !CHECK
+    !Surface = 0.0
+    
     ! Loop over the ionosphere grid, but skip the poles
+    ! and the ghost cell in the Phi direction (j=nPhi)
     iLine = 0
-    do j = 1, nPhiIono; do i = 2, nThetaIono-1
+    do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
        iLine = iLine + 1
        ! distribute the work among the BATSRUS processors
@@ -627,6 +630,9 @@ contains
        ! 1/4pi times the area of a surface element
        Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
 
+       !CHECK
+       !Surface = Surface + Coef0
+       
        do iMag = 1, nMag
           ! Distance vector between magnetometer position
           ! and ionosphere surface element
@@ -662,6 +668,9 @@ contains
 
        end do; end do
     end do
+    !CHECK
+    !write(*,*)'!!! ',NameSub,': Surface=', Surface, rIonosphere**2
+
     call timing_stop(NameSub)
 
     if(DoTest)write(*,*) NameSub,': dBHall(iMag=1), dBPede(iMag=1)=', &

@@ -4,7 +4,7 @@
 module ModGroundMagPerturb
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+       test_start, test_stop, lVerbose, iProc, nProc, iComm
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
@@ -184,7 +184,6 @@ contains
     ! file format is selected).
 
     use ModNumConst, ONLY: cRadToDeg
-    use ModProcMH,   ONLY: iProc
 
     integer :: iLat, iLon, iMag
     real    :: dLat, dLon
@@ -296,7 +295,6 @@ contains
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
     use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: n_step
-    use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: io_unit_new
     use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
@@ -476,8 +474,7 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well. 
 
-    use ModProcMH,         ONLY: iProc, nProc, iComm
-    use ModMain,           ONLY: Time_Simulation
+    use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
@@ -493,7 +490,7 @@ contains
     real,  intent(inout):: MagPerturbMhd_DI(3,nMag)
 
     real,    parameter:: rIonosphere = 1.01725 ! rEarth + iono_height
-    integer, parameter:: nTheta =181, nPhi =181, nR = 30
+    integer, parameter:: nTheta =181, nPhi =180, nR = 30
 
     integer           :: k, iHemisphere, iError
     integer           :: iTheta,iPhi,iLine,iMag
@@ -501,11 +498,14 @@ contains
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
-    real              :: Fac_II(nTheta,nPhi)
+    real, save        :: Fac_II(nTheta,nPhi)
 
     ! Variables for surface integral
-    real:: b_DII(3,nTheta,nPhi)
+    real, save:: b_DII(3,nTheta,nPhi)
     real:: rDotB, rCrossB_D(3)
+
+    ! Avoid recalculating Fac_II and b_DII in the same time step
+    integer:: nStepLast = -100
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
     ! The Biot-Savart integral for a given magnetometer indexed by iMag
@@ -526,8 +526,8 @@ contains
     logical         :: DoConvertCoord
     real            :: SmToFacGrid_DD(3,3)
 
-    ! real:: Volume, Height=2.0 !!! to test volume integration
-
+    !real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
     !--------------------------------------------------------------------------
@@ -541,27 +541,31 @@ contains
     MagPerturbFac_DI= 0.0
 
     dTheta = cPi    / (nTheta-1)
-    dPhi   = cTwoPi / (nPhi-1)
+    dPhi   = cTwoPi / nPhi
     dR     = (rCurrents - rIonosphere) / nR
 
-    ! Get the radial component of the field aligned current
-    ! at the ionosphere boundary
-    if(UseSurfaceIntegral)then
-       MagPerturbMhd_DI = 0.0
-       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-            Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
-            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
-
-       if(nProc > 1)&
-            call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
-    else
-       call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-            Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
-            IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+    if(n_Step /= nStepLast)then
+       nStepLast = n_Step
+       ! Get the radial component of the field aligned current
+       ! and the magnetic field vector (for surface integral) at rCurrents
+       call timing_start('ground_calc_fac')
+       if(UseSurfaceIntegral)then
+          MagPerturbMhd_DI = 0.0
+          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+               Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
+               IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+          if(nProc > 1)&
+               call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+       else
+          call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
+               Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
+               IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
+       end if
+       if(nProc > 1) &
+            call MPI_Bcast(Fac_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+       call timing_stop('ground_calc_fac')
     end if
 
-    if(nProc > 1) &
-         call MPI_Bcast(Fac_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
 
     !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
@@ -602,6 +606,7 @@ contains
     end if
 
     if(UseFastFacIntegral_I(iGroup))then
+       call timing_start('ground_fast_int')
        iLineProc = 0
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
@@ -621,7 +626,9 @@ contains
              end do
           end do
        end do
+       call timing_stop('ground_fast_int')
     else
+       call timing_start('ground_slow_int')
        if(UseFastFacIntegral)then
           iLineProc = 0
           ! Next time the integrals can be reused
@@ -639,11 +646,14 @@ contains
              ! Kp and Ae indexes
              UseFastFacIntegral_I(iGroup) = TypeCoordIndex == 'MAG'
           end select
+          if(iProc==0) write(*,*) NameSub,': ',NameGroup, &
+               ' UseFastFacIntegral=', UseFastFacIntegral_I(iGroup)
+
        end if
 
        ! CHECK
-       ! Volume = 0.
-
+       !Volume = 0.; Surface = 0.
+       
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle 
@@ -659,7 +669,7 @@ contains
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
              if (Fac_II(iTheta,iPhi) == 0.0 &
-                  .and. .not. UseFastFacIntegral) CYCLE
+                  .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
              iLine = iLine + 1
 
@@ -679,13 +689,19 @@ contains
              dVolCoeff = dR*dSurface
 
              if(UseSurfaceIntegral)then
-                
-                ! B(x0) = int_|x|=R [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
+
+                ! B(x0) = int_|x|=R
+                !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
                 b_D       = b_DII(:,iTheta,iPhi)
                 rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
                 rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+
+                ! CHECK
+                !Surface = Surface + dSurface
+                !if(iTheta==nTheta .and. iPhi==nPhi) &
+                !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
@@ -699,7 +715,7 @@ contains
                         + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
                         *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
                 end do
-
+                
              end if
 
              do k = 1, nR
@@ -724,10 +740,11 @@ contains
                 InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
-                !! Check correctness of integration
-                ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
-                !     Volume=Volume+abs(dVol)
-
+                !! Check correctness of integration. Needs Br at rCurrents.
+                !if(abs(XyzMid_D(3)) > rCurrents - Height) &
+                !     Volume = Volume + abs(dVol &
+                !     *sum(XyzRcurrents_D*b_DII(:,iTheta,iPhi))/rCurrents)
+                
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
@@ -758,10 +775,11 @@ contains
                    !   call stop_mpi('DEBUG')
                    !end if
                    
-                end do
-             end do
-          end do
-       end do
+                end do ! iMag
+             end do ! kr
+          end do ! iPhi
+       end do ! iTheta
+       call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
@@ -782,7 +800,6 @@ contains
   !============================================================================
   subroutine calc_kp
 
-    use ModProcMH,     ONLY: iProc, nProc, iComm
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
     use ModMain,       ONLY: time_simulation,TypeCoordSystem
@@ -889,7 +906,6 @@ contains
 
   subroutine calc_ae
 
-    use ModProcMH,     ONLY: iProc, nProc, iComm
     use CON_axes,      ONLY: transform_matrix
     use ModPhysics,    ONLY: No2Io_V, UnitB_
     use ModMain,       ONLY: time_simulation,TypeCoordSystem
@@ -970,11 +986,9 @@ contains
     ! Set number of magnetometers listed in the input file:
     ! set nMagnetometer
 
-    use ModProcMH, ONLY: iProc, iComm
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO,     ONLY: iUnitOut, Write_prefix
     use ModUtilities, ONLY: open_file, close_file
-
     use ModMpi
 
     integer :: iError
@@ -1058,7 +1072,6 @@ contains
     ! magnetometers to be used and their location and coordinate systems.
     ! Input values read from file are saved in module-level variables.
 
-    use ModProcMH, ONLY: iProc, iComm
     use ModIO, ONLY: iUnitOut, Write_prefix
     use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
@@ -1194,7 +1207,6 @@ contains
   subroutine write_geoindices
 
     use ModMain,  ONLY: n_step
-    use ModProcMH, ONLY: iProc
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
@@ -1237,11 +1249,10 @@ contains
   !============================================================================
 
   subroutine write_magnetometers(NameGroup)
-    ! Write ground magnetometer field perturbations to file.  Values, IO units,
+    ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
 
     use ModIeCoupling, ONLY: calc_ie_mag_perturb
-    use ModProcMH, ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
     use ModMain,  ONLY: n_step, time_simulation, TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
@@ -1560,7 +1571,6 @@ contains
     ! Close the magnetometer output files (flush buffer, release IO unit).
     ! Deallocate arrays.
 
-    use ModProcMH, ONLY: iProc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'finalize_magnetometer'
     !--------------------------------------------------------------------------
