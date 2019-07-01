@@ -387,31 +387,31 @@ contains
        !/
        QDtPerM = cHalf*Dt*Charge2Mass_I(iLoop)
        Index_II(Status_,1:nParticle) = DoAll_
-       if(iLoop.le.nHybridParticleSort)then
-         ! Loop over each Block
-         do iBlock = 1, nBlock
-            ! Loop over each Cell in each BLock
-            do k=1,nK; do j=1,nJ; do i=1,nI
-               ! Skip not tru cells
-               if(.not.true_cell(i,j,k,iBlock)) CYCLE
-               !\
-               ! For each Hybrid Sort
-               ! each Block and each Cell
-               ! Calculate the kinetic counterpart of the MHD solution
-               ! i.e. the particle positions and velocities
-               !/
-               call get_vdf_from_state(i,j,k,iBlock,iKind)
-            end do; end do; end do
-         end do
-       end if
+       !if(iLoop.le.nHybridParticleSort)then
+       !  ! Loop over each Block
+       !  do iBlock = 1, nBlock
+       !     ! Loop over each Cell in each BLock
+       !     do k=1,nK; do j=1,nJ; do i=1,nI
+       !        ! Skip not tru cells
+       !        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       !        !\
+       !        ! For each Hybrid Sort
+       !        ! each Block and each Cell
+       !        ! Calculate the kinetic counterpart of the MHD solution
+       !        ! i.e. the particle positions and velocities
+       !        !/
+       !        call get_vdf_from_state(i,j,k,iBlock,iKind)
+       !     end do; end do; end do
+       !  end do
+       !end if
        call batl_trace_particles(iKind, boris_scheme, check_done)
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       if(iLoop.le.nHybridParticleSort)then
+       !if(iLoop.le.nHybridParticleSort)then
            call add_ghost_cell_field(RhoUz_, 1, &
                 Moments_VGBI(:,:,:,:,:,iKind))
-       end if
+       !end if
     end do
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE

@@ -5,7 +5,7 @@
 module ModMessagePass
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iProc
 
   ! Message passing to fill in ghost cells.
   !
@@ -33,7 +33,6 @@ contains
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
-    use ModProcMH
     use ModMain, ONLY : nBlock, Unused_B, &
          time_loop, &
          UseConstrainB, UseProjection, &
@@ -267,7 +266,6 @@ contains
   !============================================================================
   subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
-    use ModProcMH,  ONLY: iProc
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
     integer,intent(in)::iBlock
 

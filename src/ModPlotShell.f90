@@ -4,7 +4,7 @@
 module ModPlotShell
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest
+       test_start, test_stop, iBlockTest, iProc, nProc, iComm
 
   use ModIO
   use ModNumConst, ONLY: cRadtoDeg, cDegToRad
@@ -178,7 +178,6 @@ contains
     ! Collect results from all blocks and write to single output file.
     use ModMpi
     use ModMain,     ONLY: time_simulation, n_step
-    use ModProcMH,   ONLY: iProc, nProc, iComm
     use ModPlotFile, ONLY: save_plot_file
 
     integer,          intent(in) :: iFile, nPlotvar

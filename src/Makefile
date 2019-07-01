@@ -81,7 +81,6 @@ OBJECTS = \
 	ModPlotBox.o \
 	ModPlotShell.o \
 	ModPointImplicit.o \
-	ModProcMH.o \
 	ModProjectDivB.o \
 	ModRadDiffusion.o \
 	ModRadiativeCooling.o \

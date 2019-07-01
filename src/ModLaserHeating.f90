@@ -4,15 +4,13 @@
 module ModLaserHeating
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, nDim ,iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
   ! Calculate heating due to irradiation by a laser. The laser is represented
   ! by a finite number of laser beams. The laser beams are traced through
   ! the plasa following the rules of geometrical optics. The laser energy is
   ! deposited near the critical density.
 
-  use BATL_lib,    ONLY: nDim
-  use ModProcMH,   ONLY: iProc, iComm
   use ModAdvance,  ONLY: State_VGB
   use ModVarIndexes
   use ModConst
@@ -182,7 +180,6 @@ contains
     ! Also, it provides appropriate step, DeltaSNew_I, conceivably dependent
     ! on the numeric grid size
 
-    use ModProcMH, ONLY: nProc, iComm
     use BATL_lib, ONLY: nDim, MaxDim, CellSize_DB, interpolate_grid
     use ModUserInterface ! user_material_properties
 

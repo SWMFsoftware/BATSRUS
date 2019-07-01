@@ -134,8 +134,7 @@ contains
     use ModNumConst,    ONLY: cHalfPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
-    use ModProcMH,      ONLY: nProc, iComm
-    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB
+    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB, nProc, iComm
 
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError

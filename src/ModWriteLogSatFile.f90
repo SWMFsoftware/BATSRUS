@@ -5,7 +5,8 @@ module ModWriteLogSatFile
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, XyzTestCell_D, &
-       iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
+       iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
+       iProc, nProc, iComm
 !  use ModUtilities, ONLY: norm2
 
   implicit none
@@ -22,7 +23,6 @@ contains
   !============================================================================
 
   subroutine write_logfile(iSatIn, iFile)
-    use ModProcMH
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY  : State_VGB, tmp1_BLK
@@ -311,7 +311,6 @@ contains
   subroutine set_logvar( &
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
-    use ModProcMH
     use ModNumConst, ONLY: cPi
     use ModMPI
     use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
@@ -1597,8 +1596,7 @@ contains
 
   subroutine collect_satellite_data(Xyz_D, StateCurrent_V)
 
-    use ModProcMH, ONLY: nProc, iProc, iComm
-    use ModVarIndexes, ONLY : nVar
+    use ModVarIndexes, ONLY: nVar
     use ModMpi
 
     !INPUT ARGUMENTS:

@@ -7,7 +7,7 @@
 
 module GM_couple_ie
 
-  use ModProcMH
+  use BATL_lib, ONLY: iProc
   use ModIeCoupling, ONLY: rIonosphere, &
        nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I,&
        IonoPotential_II, IonoJouleHeating_II, &
@@ -82,7 +82,6 @@ contains
          InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD,&
          integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
-    use ModProcMH,         ONLY: iProc
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
     use CON_coupler, ONLY: Grid_C, IE_

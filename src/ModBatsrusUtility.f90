@@ -7,7 +7,7 @@
 
 subroutine barrier_mpi
 
-  use ModProcMH
+  use BATL_lib, ONLY: iComm
   use ModMpi
   implicit none
 
@@ -23,7 +23,7 @@ end subroutine barrier_mpi
 
 subroutine barrier_mpi2(str)
 
-  use ModProcMH
+  use BATL_lib, ONLY: iComm
   use ModMpi
   implicit none
 
@@ -57,7 +57,7 @@ end subroutine stop_mpi
 !==============================================================================
 subroutine error_report(str,value,iErrorIn,show_first)
 
-  use ModProcMH
+  use BATL_lib, ONLY: iComm, iProc, nProc
   use ModMain, ONLY : iteration_number
   use ModIO, ONLY: write_myname
   use ModMpi
@@ -274,7 +274,7 @@ end subroutine error_report
 
 subroutine test_error_report
 
-  use ModProcMH
+  use BATL_lib, ONLY: iProc
   use ModMain, ONLY : iteration_number
   implicit none
 

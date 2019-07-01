@@ -25,7 +25,6 @@ contains
   subroutine BATS_setup
 
     use ModMpi
-    use ModProcMH
     use ModMain
     use ModConstrainDivB, ONLY: DoInitConstrainB
     use ModIO
@@ -33,7 +32,7 @@ contains
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
     use ModParallel, ONLY: init_mod_parallel
     use ModWriteProgress, ONLY: write_progress, write_runtime_values
-    use BATL_lib,    ONLY: find_test_cell
+    use BATL_lib,    ONLY: find_test_cell, iProc, iComm
 
     ! Local variables
 
@@ -320,10 +319,9 @@ contains
     use ModRestartFile, ONLY: UseRestartOutSeries
     use ModMessagePass, ONLY: exchange_messages
     use ModUserInterface ! user_initial_perturbation
-    use ModProcMH, ONLY: iProc
     use ModLoadBalance, ONLY: load_balance, select_stepping
     use ModPIC, ONLY: UsePic, pic_init_region
-    use BATL_lib, ONLY: init_amr_criteria, find_test_cell
+    use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
 
     ! Local variables
     logical:: DoTest
@@ -408,7 +406,6 @@ contains
     ! Advance solution with one time step
 
     use ModKind
-    use ModProcMH
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
     use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
@@ -446,6 +443,7 @@ contains
          fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
+    use BATL_lib, ONLY: iProc
 
     !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
@@ -638,13 +636,12 @@ contains
   !============================================================================
 
   subroutine BATS_init_constrain_b
-    use ModProcMH
     use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
     use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
     use ModIO, ONLY: write_prefix, iUnitOut
-    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, nBlock, message_pass_cell, &
+    use BATL_lib, ONLY: iProc, Xyz_DGB, x_,y_,z_, nBlock, message_pass_cell, &
          maxval_grid
 
     ! Local variables
@@ -655,7 +652,7 @@ contains
     character(len=*), parameter:: NameSub = 'BATS_init_constrain_b'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    DoInitConstrainB=.false.
+    DoInitConstrainB = .false.
 
     call message_pass_cell(3,State_VGB(Bx_:Bz_,:,:,:,:), nWidthIn=1, &
          nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
@@ -716,11 +713,11 @@ contains
 
   subroutine BATS_save_files(TypeSaveIn)
 
-    use ModProcMH
     use ModMain
     use ModIO
     use ModUtilities, ONLY : upper_case
     use ModMessagePass, ONLY: exchange_messages
+    use BATL_lib, ONLY: iProc
 
     character(len=*), intent(in) :: TypeSaveIn
 

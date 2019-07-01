@@ -4,7 +4,7 @@
 module ModParallel
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, nProc
   use ModSize, ONLY: MaxBlock
   use BATL_tree, ONLY: Unset_
   implicit none
@@ -63,7 +63,6 @@ contains
     ! MPI_allgather. The displacement is always MaxBlock, the maximum
     ! received data varies together with the value of nBlockMax.
 
-    use ModProcMH, ONLY: nProc
     use ModSize, ONLY: MaxBlock
 
     integer :: jProc
