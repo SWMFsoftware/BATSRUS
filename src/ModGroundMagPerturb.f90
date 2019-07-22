@@ -898,6 +898,9 @@ contains
        Kp = nint(3*Kp)/3.0
 
     end if
+
+    call MPI_Bcast(Kp, 1, MPI_REAL, 0, iComm, iError)
+    
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
