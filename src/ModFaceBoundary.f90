@@ -10,6 +10,8 @@ module ModFaceBoundary
   use ModMultiFluid, ONLY: nIonFluid
   use ModAdvance,    ONLY: nSpecies
   use ModNumConst,   ONLY: cDegToRad
+  use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I, &
+       nIonDensity
 
   implicit none
 
@@ -63,13 +65,6 @@ module ModFaceBoundary
 
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
-
-  ! Number of densities (ion fluids or ion species)
-  integer, parameter:: nIonDensity = max(nIonFluid, nSpecies)
-
-  ! CPCP dependent density function at the inner boundary
-  logical:: UseCpcpBc = .false.
-  real:: Rho0Cpcp_I(nIonDensity) = 18.0, RhoPerCpcp_I(nIonDensity) = 0.2
 
   ! Young et al dependent density function at the inner boundary
   logical :: UseYoungBc = .false. ! Use YoungBCs?
@@ -249,11 +244,8 @@ contains
     ! Variables used for polar wind boundary condition
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
-    ! External function for ionosphere
-    real:: RhoCpcp_I(nIonDensity)
-
     ! Variables for Young et al variable mass density:
-    real :: RatioOH, FracH, FracO, KpLocal, F107Local
+    real :: RatioOH, FracH, FracO
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -265,25 +257,15 @@ contains
        Cos2PolarTheta = cos(PolarTheta)**2
     end if
 
-    ! Calculate inner BC density from cross polar cap potential if required
-    ! Use KeV units for Cpcp and amu/cc for density.
-    if(UseCpcpBc .and. UseIe) &
-         RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
-         * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
-         * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
-
     ! Use Young et al. 1982 empirical relationship to set
     ! inner boundary density based on expected composition.
     if(UseYoungBc .and. UseIe)then
-       ! Limit Kp to be within [1.0,7.0]
-       KpLocal   = min(max(Kp, 1.0),7.0)
-       ! Limit F10.7 to be within [115.0,230.0]
-       F107Local = min(max(F107Young, 115.0), 230.0)
-
        ! Apply empirical formula from Young et al. to get the ratio
-       ! of minor species to H+:
-       RatioOH = 4.5E-2 * exp(0.17*KpLocal + 0.01*F107Local) ! Eq. 5, pg. 9088
-       !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
+       ! of minor species to H+
+       ! Limit Kp to be within [1.0,7.0]
+       ! Limit F10.7 to be within [115.0,230.0]
+       RatioOH = 4.5E-2 * exp(0.17*min(max(Kp, 1.0),7.0) &
+       	       + 0.01*min(max(F107Young, 115.0), 230.0)) ! Eq. 5, pg. 9088
 
        if (RatioOH > 1.0) then
           write(*,*) 'RatioOH too large, RatioOH =', RatioOH
