@@ -253,7 +253,7 @@ contains
     real:: RhoCpcp_I(nIonDensity)
 
     ! Variables for Young et al variable mass density:
-    real :: RatioOH, FracH, FracO
+    real :: RatioOH, FracH, FracO, KpLocal, F107Local
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -276,13 +276,13 @@ contains
     ! inner boundary density based on expected composition.
     if(UseYoungBc .and. UseIe)then
        ! Limit Kp to be within [1.0,7.0]
-       Kp        = min(max(Kp, 1.0),7.0)
+       KpLocal   = min(max(Kp, 1.0),7.0)
        ! Limit F10.7 to be within [115.0,230.0]
-       F107Young = min(max(F107Young, 115.0), 230.0)
+       F107Local = min(max(F107Young, 115.0), 230.0)
 
        ! Apply empirical formula from Young et al. to get the ratio
        ! of minor species to H+:
-       RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
+       RatioOH = 4.5E-2 * exp(0.17*KpLocal + 0.01*F107Local) ! Eq. 5, pg. 9088
        !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
 
        if (RatioOH > 1.0) then
