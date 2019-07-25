@@ -3508,7 +3508,7 @@ contains
 
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
-    integer, parameter :: iError = -1
+    integer :: iError = -1
     integer :: iFluid
     
     logical:: DoTest
