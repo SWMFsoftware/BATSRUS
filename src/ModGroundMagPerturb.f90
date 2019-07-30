@@ -544,13 +544,14 @@ contains
     dPhi   = cTwoPi / nPhi
     dR     = (rCurrents - rIonosphere) / nR
 
+    if(UseSurfaceIntegral) MagPerturbMhd_DI = 0.0
+    
     if(n_Step /= nStepLast)then
        nStepLast = n_Step
        ! Get the radial component of the field aligned current
        ! and the magnetic field vector (for surface integral) at rCurrents
        call timing_start('ground_calc_fac')
        if(UseSurfaceIntegral)then
-          MagPerturbMhd_DI = 0.0
           call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
                Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
