@@ -610,12 +610,38 @@ contains
        call timing_start('ground_fast_int')
        iLineProc = 0
        do iTheta = 1, nTheta
+          if(UseSurfaceIntegral)then
+             Theta = (iTheta-1) * dTheta
+             SinTheta = max(sin(Theta), dTheta/8)
+             dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
+          end if
+          
           do iPhi = 1, nPhi
              iLine = iLine + 1
              if(mod(iLine, nProc) /= iProc)CYCLE
 
              iLineProc = iLineProc + 1
 
+             if(UseSurfaceIntegral)then
+                Phi = (iPhi-1) * dPhi
+                call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
+                b_D       = b_DII(:,iTheta,iPhi)
+                rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
+                rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+                do iMag = 1, nMag
+                   Xyz_D = Xyz_DI(:,iMag)
+                   ! This should be done in advance !!!
+                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+
+                   ! x-x0
+                   Xyz_D = XyzRcurrents_D - Xyz_D
+
+                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+                        + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
+                        *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+                end do
+             end if
+             
              FacRcurrents = Fac_II(iTheta,iPhi)
              if(FacRcurrents == 0.0) CYCLE
 
@@ -662,7 +688,11 @@ contains
           ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
           ! replaced with dTheta/8.
           SinTheta = max(sin(Theta), dTheta/8)
-
+          
+          ! Calculate surface and volume elements
+          dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
+          dVolCoeff = dR*dSurface
+         
           do iPhi = 1, nPhi
 
              Phi = (iPhi-1) * dPhi
@@ -684,10 +714,6 @@ contains
 
              ! the field aligned current and B field at r=rCurrents
              FacRcurrents = Fac_II(iTheta,iPhi)
-
-             ! Calculate volume element
-             dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
-             dVolCoeff = dR*dSurface
 
              if(UseSurfaceIntegral)then
 
