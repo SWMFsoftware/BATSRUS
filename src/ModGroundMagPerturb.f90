@@ -40,7 +40,7 @@ module ModGroundMagPerturb
   real               :: AeIndex_I(4)
   integer            :: nMagnetometer=0
   real, allocatable  :: PosMagnetometer_II(:,:)
-  character(len=100) :: MagInputFile
+  character(len=100) :: NameMagInputFile
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
   character(len=3)   :: TypeCoordGrid='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
@@ -61,7 +61,7 @@ module ModGroundMagPerturb
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
-  character(len=3), allocatable :: MagName_I(:)
+  character(len=3), allocatable :: NameMag_I(:)
 
   ! Description of the magnetometer grid
   integer:: nGridLon = 0, nGridLat = 0
@@ -73,9 +73,9 @@ module ModGroundMagPerturb
   ! Private geomagnetic indices variables:
   integer :: nIndexMag = 0  ! Total number of mags required by indices
   integer :: iUnitIndices   ! File IO unit for indices file
-  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude
-  real, parameter    :: AeLat = 70.0           ! Synthetic AE geomag. latitude
-  real               :: k9 = 600.0             ! Scaling of standard K
+  real, parameter    :: KpLat   = 60.0         ! Synthetic Kp geomag. latitude
+  real, parameter    :: AeLat   = 70.0         ! Synthetic AE geomag. latitude
+  real               :: ScaleK9 = 600.0        ! Scaling of standard K
   real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
   real               :: XyzKp_DI(3,nKpMag)     ! Locations of Kp stations
   real               :: XyzAe_DI(3,nAeMag)     ! Locations of AE stations
@@ -93,12 +93,12 @@ module ModGroundMagPerturb
   ! kp is calculated -- using a floating time window that is hard to define
   ! when kp is calculated on a constant iteration cadence instead of a
   ! constant time cadence.
-  real :: dtWriteIndices
+  real :: DtWriteIndices
 
   ! K CONVERSION TABLES
   ! Conversion table for the standard station, Niemegk.
-  real, parameter :: &
-       Table50_I(9)=[5.,10.,20.,40.,70.,120.,200.,330.,500.]
+  real, parameter:: &
+       Table50_I(9) = [5.,10.,20.,40.,70.,120.,200.,330.,500.]
 
   ! Headers for Geoindices output file:
   character(len=*), parameter :: NameKpVars = &
@@ -143,7 +143,7 @@ contains
 
     case("#MAGNETOMETER")
        DoSaveMags = .true.
-       call read_var('MagInputFile', MagInputFile)
+       call read_var('NameMagInputFile', NameMagInputFile)
        call read_var('TypeMagFileOut', TypeMagFileOut)
        call read_var('DnOutput', dn_output(magfile_))
        call read_var('DtOutput', dt_output(magfile_))
@@ -167,8 +167,8 @@ contains
        DoCalcKp = .true.       ! Kp calculated (no others available.)
        DoCalcAe = .true.       ! Ae calculated (always on with Kp).
        call read_var('nKpWindow', nKpMins)
-       call read_var('DtOutput' , dtWriteIndices)
-       dt_output(indexfile_) = dtWriteIndices
+       call read_var('DtOutput' , DtWriteIndices)
+       dt_output(indexfile_) = DtWriteIndices
        dn_output(indexfile_) = -1  ! Indices are function of physical time.
 
     case default
@@ -222,7 +222,7 @@ contains
     if(nMagTotal == 0) RETURN
 
     ! Allocate/initialize arrays:
-    allocate(MagName_I(nMagTotal))
+    allocate(NameMag_I(nMagTotal))
     allocate(PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal) )
     IeMagPerturb_DII = 0.0
 
@@ -256,7 +256,7 @@ contains
              iMag = iMag + 1
              PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
              PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
-             write(MagName_I(iMag), '(i3.3)')  iMag
+             write(NameMag_I(iMag), '(i3.3)')  iMag
              if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
                   iMag, PosMagnetometer_II(:,iMag)
           end do
@@ -269,7 +269,7 @@ contains
        PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
        PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
        PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
-       MagName_I(iMag+1:iMag+nKpMag) = 'KP_'
+       NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
     end if
 
     if(DoTest)then
@@ -346,7 +346,7 @@ contains
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
-    iSizeKpWindow = int(nKpMins / (dtWriteIndices / 60.0))
+    iSizeKpWindow = int(nKpMins / (DtWriteIndices / 60.0))
 
     ! Allocate MagPerturb_DII, open index file, write header.
     if (iProc==0) then
@@ -786,12 +786,13 @@ contains
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
     !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
 
-    ! Convert
     if(DoConvertCoord)then
-       do iMag = 1, nMag
-          MagPerturbFac_DI(:,iMag) = &
-               matmul(MagPerturbFac_DI(:,iMag), SmToFacGrid_DD)
-       end do
+       ! Convert perturbations back to SM
+       SmToFacGrid_DD = transpose(SmToFacGrid_DD)
+       MagPerturbFac_DI = matmul(SmToFacGrid_DD, MagPerturbFac_DI)
+
+       if(UseSurfaceIntegral) &
+            MagPerturbMhd_DI = matmul(SmToFacGrid_DD, MagPerturbMhd_DI)
     end if
 
     call timing_stop('ground_db_fac')
@@ -998,7 +999,7 @@ contains
     integer :: iError
 
     ! One line of input
-    character (len=100) :: Line
+    character(len=100) :: StringLine
     character(len=3) :: NameMag
     real             :: LatMag, LonMag
 
@@ -1013,21 +1014,21 @@ contains
 
        if(lVerbose>0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               " reading: ",trim(MagInputFile)
+               " reading: ",trim(NameMagInputFile)
        end if
 
-       call open_file(file=MagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old")
 
        nMag = 0
 
        ! Read the file: read #COORD TypeCoord, #START
        READFILE: do
 
-          read(UnitTmp_,'(a)', iostat = iError ) Line
+          read(UnitTmp_,'(a)', iostat = iError ) StringLine
 
           if (iError /= 0) EXIT READFILE
 
-          if(index(Line,'#COORD')>0) then
+          if(index(StringLine,'#COORD')>0) then
              read(UnitTmp_,'(a)') TypeCoordMag
              select case(TypeCoordMag)
              case('MAG','GEO','SMG')
@@ -1038,7 +1039,7 @@ contains
              end select
           endif
 
-          if(index(Line,'#START')>0)then
+          if(index(StringLine,'#START')>0)then
              READPOINTS: do
                 read(UnitTmp_,*, iostat=iError) NameMag, LatMag, LonMag
                 if (iError /= 0) EXIT READFILE
@@ -1098,16 +1099,16 @@ contains
 
        if(lVerbose>0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               " reading: ",trim(MagInputFile)
+               " reading: ",trim(NameMagInputFile)
        end if
 
        ! Read in magnetometer positions and names
-       call open_file(file=MagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old")
        READFILE: do
           read(UnitTmp_,'(a)') StringLine
           if(index(StringLine, '#START') > 0)then
              do iMag = 1, nMagnetometer
-                read(UnitTmp_,*) MagName_I(iMag), PosMagnetometer_II(1:2,iMag)
+                read(UnitTmp_,*) NameMag_I(iMag), PosMagnetometer_II(1:2,iMag)
              end do
              EXIT READFILE
           end if
@@ -1116,7 +1117,7 @@ contains
     end if
 
     ! Tell the magnetometer name to the other processors
-    call MPI_Bcast(MagName_I, nMagnetometer*3, MPI_CHARACTER, 0, &
+    call MPI_Bcast(NameMag_I, nMagnetometer*3, MPI_CHARACTER, 0, &
          iComm, iError)
     ! Tell the other processors the coordinates
     call MPI_Bcast(PosMagnetometer_II, 2*nMagnetometer, MPI_REAL, 0, &
@@ -1187,9 +1188,9 @@ contains
     ! Write the header
     write(iUnitNow, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
     do iMag=1,nMagnow-1
-       write(iUnitNow, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
+       write(iUnitNow, '(1X,a)', ADVANCE='NO') NameMag_I(iMag+iStart)
     end do
-    write(iUnitNow, '(1X,a)') MagName_I(iEnd)
+    write(iUnitNow, '(1X,a)') NameMag_I(iEnd)
     write(iUnitNow, '(a)')  &
          'nstep year mo dy hr mn sc msc station X Y Z '// &
          'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
@@ -1407,7 +1408,7 @@ contains
        case('step')
           call write_mag_step
        case('ascii', 'real4', 'real8', 'tec')
-          call write_mag_2d
+          call write_mag_grid
        case('station')
           call stop_mpi(NameSub//': separate mag files not implemented yet.')
        end select
@@ -1421,7 +1422,7 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    subroutine write_mag_2d
+    subroutine write_mag_grid
 
       use ModPlotFile, ONLY: save_plot_file
       use ModIO, ONLY: NamePlotDir, IsLogName_e
@@ -1472,7 +1473,7 @@ contains
            CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
            VarIn_VII=MagOut_VII)
 
-    end subroutine write_mag_2d
+    end subroutine write_mag_grid
     !==========================================================================
     subroutine write_mag_single
       ! For TypeMagFileOut == 'single', write a single record to the file.
@@ -1539,9 +1540,9 @@ contains
       ! Write the header
       write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
       do iMag=1,nMagNow-1
-         write(UnitTmp_, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
+         write(UnitTmp_, '(1X,a)', ADVANCE='NO') NameMag_I(iMag+iStart)
       end do
-      write(UnitTmp_, '(1X,a)') MagName_I(iEnd)
+      write(UnitTmp_, '(1X,a)') NameMag_I(iEnd)
       write(UnitTmp_, '(a)')  &
            'nstep year mo dy hr mn sc msc station X Y Z '// &
            'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
@@ -1583,7 +1584,7 @@ contains
          close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
-    if (allocated(MagName_I)) deallocate(MagName_I)
+    if (allocated(NameMag_I)) deallocate(NameMag_I)
     if (allocated(MagHistory_DII)) deallocate(MagHistory_DII)
     if (allocated(LineContrib_DII)) deallocate(LineContrib_DII)
 
@@ -1605,7 +1606,7 @@ contains
 
     !--------------------------------------------------------------------------
     do i = 1, 9
-       if( DeltaB - Table50_I(i)*k9/Table50_I(9) < 0) then
+       if( DeltaB - Table50_I(i)*Scalek9/Table50_I(9) < 0) then
           k_index = i - 1
           RETURN
        end if
