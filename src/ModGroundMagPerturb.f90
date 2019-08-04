@@ -54,7 +54,7 @@ module ModGroundMagPerturb
   real, allocatable:: IeMagPerturb_DII(:,:,:)
 
   ! Fast algorithms: 
-  real, allocatable:: LineContrib_DII(:,:,:)
+  real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   logical:: UseSurfaceIntegral = .false.      ! true for fast surface integral
   logical:: UseFastFacIntegral = .false.      ! true for fast FAC integral
   character(len=3):: TypeCoordFacGrid = 'SMG' ! 'MAG' for fast integral
@@ -498,13 +498,13 @@ contains
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
-    real, save        :: Fac_II(nTheta,nPhi)
+    real, allocatable, save:: Fac_II(:,:)
 
     ! Variables for surface integral
-    real, save:: b_DII(3,nTheta,nPhi)
-    real:: rDotB, rCrossB_D(3)
+    real, allocatable, save:: Br_II(:,:), Bt_DII(:,:,:)
+    real:: Br, Bt_D(3), InvDist2_D(3)
 
-    ! Avoid recalculating Fac_II and b_DII in the same time step
+    ! Avoid recalculating Fac_II, Br_II and Bt_DII in the same time step
     integer:: nStepLast = -100
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
@@ -551,12 +551,21 @@ contains
        ! Get the radial component of the field aligned current
        ! and the magnetic field vector (for surface integral) at rCurrents
        call timing_start('ground_calc_fac')
+
+       if(.not.allocated(Fac_II)) allocate(Fac_II(nTheta,nPhi))
+
        if(UseSurfaceIntegral)then
+
+          if(.not.allocated(Br_II)) &
+               allocate(Br_II(nTheta,nPhi), Bt_DII(3,nTheta,nPhi))
+
           call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-               Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
+               Fac_II, Br_II, Bt_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
-          if(nProc > 1)&
-               call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+          if(nProc > 1)then
+             call MPI_Bcast(Br_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+             call MPI_Bcast(Bt_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+          end if
        else
           call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
                Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
@@ -585,6 +594,13 @@ contains
                ' allocated LineContrib_DII(3,',nMagTotal,',',nLineProc,')'
        end if
 
+       if(UseSurfaceIntegral .and. .not.allocated(InvDist2_DII))then
+          allocate(InvDist2_DII(3,nMagTotal,nLineProc))
+          InvDist2_DII = 0.0
+          if(iProc==0) write(*,*) NameSub, &
+               ' allocated InvDist2_DII(3,',nMagTotal,',',nLineProc,')'
+       end if
+
        ! Set group index iGroup and 
        ! starting magnetometer index iMag0 for LineContrib_DII
        select case(NameGroup)
@@ -610,12 +626,6 @@ contains
        call timing_start('ground_fast_int')
        iLineProc = 0
        do iTheta = 1, nTheta
-          if(UseSurfaceIntegral)then
-             Theta = (iTheta-1) * dTheta
-             SinTheta = max(sin(Theta), dTheta/8)
-             dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
-          end if
-          
           do iPhi = 1, nPhi
              iLine = iLine + 1
              if(mod(iLine, nProc) /= iProc)CYCLE
@@ -623,22 +633,15 @@ contains
              iLineProc = iLineProc + 1
 
              if(UseSurfaceIntegral)then
-                Phi = (iPhi-1) * dPhi
-                call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
-                b_D       = b_DII(:,iTheta,iPhi)
-                rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
-                rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
-                do iMag = 1, nMag
-                   Xyz_D = Xyz_DI(:,iMag)
-                   ! This should be done in advance !!!
-                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+                Br   = Br_II(iTheta,iPhi)
+                Bt_D = Bt_DII(:,iTheta,iPhi)
 
-                   ! x-x0
-                   Xyz_D = XyzRcurrents_D - Xyz_D
+                do iMag = 1, nMag
+                   ! dA*(x-x0)/(4pi*|x-x0|^3)
+                   InvDist2_D = InvDist2_DII(:,iMag+iMag0,iLineProc)
 
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
-                        *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
                 end do
              end if
              
@@ -721,9 +724,8 @@ contains
                 !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
-                b_D       = b_DII(:,iTheta,iPhi)
-                rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
-                rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+                Br   = Br_II(iTheta,iPhi)
+                Bt_D = Bt_DII(:,iTheta,iPhi)
 
                 ! CHECK
                 !Surface = Surface + dSurface
@@ -738,9 +740,16 @@ contains
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
 
+                   ! dA*(x-x0)/(4pi*|x-x0|^3)
+                   InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
-                        *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+
+                   ! Store it for fast calculation
+                   if(UseFastFacIntegral) &
+                        InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
+
                 end do
                 
              end if
@@ -769,8 +778,7 @@ contains
 
                 !! Check correctness of integration. Needs Br at rCurrents.
                 !if(abs(XyzMid_D(3)) > rCurrents - Height) &
-                !     Volume = Volume + abs(dVol &
-                !     *sum(XyzRcurrents_D*b_DII(:,iTheta,iPhi))/rCurrents)
+                !     Volume = Volume + abs(dVol*Br_II(iTheta,iPhi)
                 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
@@ -1610,9 +1618,10 @@ contains
          close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
-    if (allocated(NameMag_I)) deallocate(NameMag_I)
-    if (allocated(MagHistory_DII)) deallocate(MagHistory_DII)
-    if (allocated(LineContrib_DII)) deallocate(LineContrib_DII)
+    if (allocated(NameMag_I))        deallocate(NameMag_I)
+    if (allocated(MagHistory_DII))   deallocate(MagHistory_DII)
+    if (allocated(LineContrib_DII))  deallocate(LineContrib_DII)
+    if (allocated(InvDist2_DII))     deallocate(InvDist2_DII)
 
     call test_stop(NameSub, DoTest)
   end subroutine finalize_magnetometer
