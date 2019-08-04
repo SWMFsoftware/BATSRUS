@@ -6,7 +6,7 @@ module ModCurrent
   use BATL_lib, ONLY: &
        test_start, test_stop
 !  use ModUtilities, ONLY: norm2
-  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModCoordTransform, ONLY: sph_to_xyz, cross_product
   use CON_axes,          ONLY: transform_matrix
 
   implicit none
@@ -534,7 +534,8 @@ contains
   end subroutine get_current
   !============================================================================
 
-  subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, Brin_DII, &
+  subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
+       Br_II, Bt_DII, b_DII, &
        LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
        FacMin)
 
@@ -546,10 +547,15 @@ contains
     use ModMpi
     use BATL_lib,          ONLY: iProc, iComm
 
-    ! Map the grid points from the rIn radius to rCurrents.
+    ! Map the 2D spherical grid points from the rIn radius to rCurrents.
+    ! The grid is in the TypeCoordFacGrid system (default is SMG).
     ! Calculate the field aligned currents there, use the ratio of the
     ! magnetic field strength. Calculate radial component if requested.
-    ! The FAC is saved into Fac_II. The field into the optional Brin_DII.
+    ! The FAC is saved into Fac_II. 
+    ! The radial field into the optional Br_II.
+    ! The tangential field (r x B/r) into Bt_DII in the FAC coords.
+    ! Calculate the latitude boundary that still maps to rCurrents
+    ! if requested.
 
     ! Size of spherical grid at rIn
     integer, intent(in) :: nTheta, nPhi
@@ -560,8 +566,14 @@ contains
     ! Field aligned current at rIn
     real, intent(out):: Fac_II(nTheta,nPhi)
 
+    ! Radial component of magnetic field at rIn
+    real, intent(out), optional:: Br_II(nTheta,nPhi)
+
+    ! Tangential component (r x B/r) of field at rIn in FAC coordinates
+    real, intent(out), optional:: Bt_DII(3,nTheta,nPhi)
+
     ! Magnetic field at rIn in FAC coordinates
-    real, intent(out), optional:: Brin_DII(3,nTheta,nPhi)
+    real, intent(out), optional:: b_DII(3,nTheta,nPhi)
 
     ! Lowest latitude that maps up to rCurrents
     real, intent(out), optional :: LatBoundary
@@ -588,9 +600,9 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
 
     integer :: i, j, iHemisphere, iError
-    real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3),B0_D(3)
-    real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3)
-    real    :: bIn_D(3), bIn
+    real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
+    real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
+    real    :: bIn_D(3), bIn, Br
     real    :: GmFac_DD(3,3)
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
@@ -619,7 +631,7 @@ contains
        DoMap = .true.
     end if
 
-    dPhi = cTwoPi/(nPhi-1)
+    dPhi = cTwoPi/nPhi
     dTheta = cPi /(nTheta-1)
 
     do j = 1, nPhi
@@ -748,20 +760,28 @@ contains
              if(present(FacMin))then
                 if(abs(Fac) < FacMin) Fac = 0.0
              end if
-             
-             ! Get radial component of FAC: FAC_r = FAC*Br/B
-             if(present(IsRadial)) &
-                  Fac = Fac * sum(bIn_D*XyzIn_D) / (bIn*rIn)
 
-             if(present(IsRadialAbs)) &
-                  Fac = Fac * abs(sum(bIn_D*XyzIn_D)) / (bIn*rIn)
+             rUnit_D = XyzIn_D / rIn
+             Br      = sum(bIn_D*rUnit_D)
+
+             ! Get radial component of FAC: FAC_r = FAC*Br/B
+             if(present(IsRadial)) Fac = Fac * Br/bIn
+
+             if(present(IsRadialAbs)) Fac = Fac * abs(Br) / bIn
 
              ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
 
              ! store the B field in the FAC coordinates
-             if(present(Brin_DII)) &
-                  Brin_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
+             if(present(b_DII)) b_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
+
+             ! store radial component of B field
+             if(present(Br_II)) Br_II(i,j) = Br
+
+             ! store tangential B field vector in FAC coordinates
+             if(present(Bt_DII)) Bt_DII(:,i,j) = &
+                  matmul( cross_product(rUnit_D, bIn_D), GmFac_DD )
+
           end do
        end do
     end if
