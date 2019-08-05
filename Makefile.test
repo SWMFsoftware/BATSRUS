@@ -1855,4 +1855,5 @@ test_L1toBC_check:
 ### TEST FOR POST-PROCESSING SPECTRUM CODE#####################################
 
 test_spectrum:
+	cd ${SHAREDIR}; $(MAKE) LIB
 	cd srcPostProc; $(MAKE) test_spectrum
