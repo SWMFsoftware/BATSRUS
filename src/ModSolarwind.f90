@@ -683,6 +683,7 @@ contains
 
     ! Read the input file again if Time exceeds last time in the file
     if(DoReadAgain .and. Time > Time_I(nData))then
+       if(iProc==0)write(*,*) NameSub,' waiting for new solar wind data...'
        do
           call read_solar_wind_file
           call normalize_solar_wind_data
