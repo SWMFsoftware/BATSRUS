@@ -28,6 +28,11 @@ module ModGroundMagPerturb
 
   real,    public:: Kp=0.0   ! Resulting indices
 
+  ! Young boundary associated variables
+  logical, public:: UseYoungBc = .false.
+  real,    public:: ratioOH    = 0.25
+  real,    public:: F107Young  = 150.0
+  
   ! Public geomagnetic indices variables
   logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
@@ -936,6 +941,25 @@ contains
     end if
 
     call MPI_Bcast(Kp, 1, MPI_REAL, 0, iComm, iError)
+
+    if(UseYoungBc) then
+       ! Apply empirical formula from Young et al. to get the ratio
+       ! of minor species to H+
+       ! Limit Kp to be within [1.0,7.0]
+       ! Limit F10.7 to be within [115.0,230.0]
+       ! RatioOH = 4.5E-2 * exp(0.17*min(max(Kp, 1.0),7.0) &
+       !     + 0.01*min(max(F107Young, 115.0), 230.0)) ! Eq. 5, pg. 9088
+
+       ! Don't limit Kp and F10.7
+       RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
+       if (iProc == 0 .and. RatioOH > 1.0) then
+          write(*,*) NameSub, ': RatioOH > 1, Kp, F107Young, RatioOH =', &
+               Kp, F107Young,RatioOH
+       end if
+
+       ! O+ should not exceed H+
+       ! RatioOH = min(RatioOH, 1.0)
+    end if
     
     call timing_stop(NameSub)
 
