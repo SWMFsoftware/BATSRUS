@@ -137,7 +137,7 @@ TIME_CONV:
 # The default is the short name of the current machine with the trailing
 # 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
 # Initial "login\d*." is also removed.
-MACHINE = `hostname | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'
+MACHINE = `hostname | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'`
 
 # Default component
 COMPONENT = GM
