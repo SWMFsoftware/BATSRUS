@@ -1316,6 +1316,14 @@ contains
              WminorGyro = Wminor/sqrt(LperpInvGyroRad)
           else
              iPrev = iIon + 1
+
+             QmajorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev))
+             QminorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev))
+
              ! Subtract what was used for stochastic heating of alphas
              Qmajor_I(iIon) = &
                   Qmajor_I(iPrev)*(1.0 - QmajorFraction_I(iPrev))
@@ -1358,15 +1366,6 @@ contains
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
                *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
                *InvGyroRadius/Wgyro
-
-          if(iIon > 1)then
-             QmajorFraction_I(iIon) = &
-                  DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon) &
-                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon))
-             QminorFraction_I(iIon) = &
-                  DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon) &
-                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon))
-          end if
        end do
 
        ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
