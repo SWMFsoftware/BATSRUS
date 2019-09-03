@@ -5207,7 +5207,9 @@ to the root block, while level N is a refinement by 2 to the power N.
 Note that the #REGION commands in combination with the #AMRCRITERIALEVEL
 and #AMRCRITERIARESOLUTION commands allow even more flexibility in controlling
 the grid adaptation, but the initial resolution/level still has to be set
-by this command.
+by this command. However, if #AMRCRITERIALEVEL/AMRCRITERIARESOLUTION is 
+specified, the user should not use #GRIDLEVEL/#GRIDRESOLUTION to specify
+any NameShape except 'initial', otherwise the code will just crashed.
 
 If NameShape is set to 'initial', it determines the number of grid adaptations
 used to initialize the grid. The grid adaptations are done according to the
