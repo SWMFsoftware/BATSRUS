@@ -296,8 +296,16 @@ contains
        ! Open two files for connectivity and data
        filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
        filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
-       call open_file(UnitTmp_,  FILE=filename_n)
-       call open_file(UnitTmp2_, FILE=filename_s)
+
+       if(.not.save_tecbinary) then
+          call open_file(UnitTmp_,  FILE=filename_n)
+          call open_file(UnitTmp2_, FILE=filename_s)
+       else
+          call open_file(UnitTmp_,  FILE=filename_n, &
+               access='stream', form='unformatted')
+          call open_file(UnitTmp2_, FILE=filename_s, &
+               access='stream', form='unformatted')
+       end if
     elseif(plot_form(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
        ! in filename. ModHdf5 will handle opening the file.
