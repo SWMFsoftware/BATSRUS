@@ -2224,7 +2224,7 @@ contains
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
             "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
-            "#HIGHBETASTOCHASTIC")
+            "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE")
           call read_corona_heating(NameCommand)
 
        case("#OPENCLOSEDHEAT")
