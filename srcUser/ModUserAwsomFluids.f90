@@ -544,7 +544,7 @@ contains
          TeSi_C, get_tesi_c
     use ModCoronalHeating, ONLY: IsNewBlockAlfven, CoronalHeating_C, &
          apportion_coronal_heating, get_block_heating, get_wave_reflection, &
-         WaveDissipation_VC
+         WaveDissipation_VC, UseAlignmentAngle, Cdiss_C
     use ModFaceValue,      ONLY: calc_face_value
     use ModMultiFluid,     ONLY: IonLast_
     use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_
@@ -589,12 +589,39 @@ contains
        NameIdlUnit = '1/s'
        NameTecUnit = '1/s'
 
+    case('sintheta')
+       Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
+       call set_b0_face(iBlock)
+       call calc_face_value(.false., iBlock)
+       IsNewBlockAlfven = .true.
+       call get_wave_reflection(iBlock)
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = Cdiss_C(i,j,k)
+          Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
+       end do; end do; end do
+       NameIdlUnit = '-'
+       NameTecUnit = '-'
+
     case('qheat')
+       if(UseAlignmentAngle)then
+          Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
+          call set_b0_face(iBlock)
+          call calc_face_value(.false., iBlock)
+          IsNewBlockAlfven = .true.
+          call get_wave_reflection(iBlock)
+       end if
+
        call get_block_heating(iBlock)
+          
        if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
                CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+          if(UseAlignmentAngle)then
+             CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Cdiss_C(i,j,k)
+             Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
+          end if
           PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
@@ -606,11 +633,25 @@ contains
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
           call calc_face_value(.false., iBlock)
+
+          if(UseAlignmentAngle)then
+             Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
+             IsNewBlockAlfven = .true.
+             call get_wave_reflection(iBlock)
+          end if
+
           call get_block_heating(iBlock)
           if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
                   CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+             if(UseAlignmentAngle)then
+                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
+                     *Cdiss_C(i,j,k)
+                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                     *Cdiss_C(i,j,k)
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
+             end if
              call apportion_coronal_heating(i, j, k, iBlock, &
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
