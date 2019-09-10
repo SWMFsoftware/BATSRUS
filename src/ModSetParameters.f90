@@ -1154,7 +1154,7 @@ contains
           call read_var('DoSaveBinary',save_binary)
 
        case("#SAVETECBINARY")
-          call read_var('DoSaveBinary',save_tecbinary)
+          call read_var('DoSaveTecBinary',DoSaveTecBinary)
 
        case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
           call read_region_param(NameCommand, UseStrictIn=UseStrict)
