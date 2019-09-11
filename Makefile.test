@@ -1243,7 +1243,7 @@ test_mercurysph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
-SORT = sort -k1 -k2 -k3 -n
+SORT = sort -k1 -k2 -k3 -g
 
 test_mercurysph_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
@@ -1290,7 +1290,7 @@ test_ganymede_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
-SORT = sort -k1 -k2 -k3 -n
+SORT = sort -k1 -k2 -k3 -g
 
 test_ganymede_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
