@@ -28,6 +28,11 @@ module ModGroundMagPerturb
 
   real,    public:: Kp=0.0   ! Resulting indices
 
+  ! Young boundary associated variables
+  logical, public:: UseYoungBc = .false.
+  real,    public:: ratioOH    = 0.25
+  real,    public:: F107Young  = 150.0
+  
   ! Public geomagnetic indices variables
   logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
@@ -40,7 +45,7 @@ module ModGroundMagPerturb
   real               :: AeIndex_I(4)
   integer            :: nMagnetometer=0
   real, allocatable  :: PosMagnetometer_II(:,:)
-  character(len=100) :: MagInputFile
+  character(len=100) :: NameMagInputFile
   character(len=3)   :: TypeCoordMag='MAG' ! coords for magnetometer list
   character(len=3)   :: TypeCoordGrid='SMG'! coords for magnetometer grid
   character(len=7)   :: TypeMagFileOut='single '
@@ -54,14 +59,14 @@ module ModGroundMagPerturb
   real, allocatable:: IeMagPerturb_DII(:,:,:)
 
   ! Fast algorithms: 
-  real, allocatable:: LineContrib_DII(:,:,:)
+  real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   logical:: UseSurfaceIntegral = .false.      ! true for fast surface integral
   logical:: UseFastFacIntegral = .false.      ! true for fast FAC integral
   character(len=3):: TypeCoordFacGrid = 'SMG' ! 'MAG' for fast integral
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
-  character(len=3), allocatable :: MagName_I(:)
+  character(len=3), allocatable :: NameMag_I(:)
 
   ! Description of the magnetometer grid
   integer:: nGridLon = 0, nGridLat = 0
@@ -73,9 +78,9 @@ module ModGroundMagPerturb
   ! Private geomagnetic indices variables:
   integer :: nIndexMag = 0  ! Total number of mags required by indices
   integer :: iUnitIndices   ! File IO unit for indices file
-  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude
-  real, parameter    :: AeLat = 70.0           ! Synthetic AE geomag. latitude
-  real               :: k9 = 600.0             ! Scaling of standard K
+  real, parameter    :: KpLat   = 60.0         ! Synthetic Kp geomag. latitude
+  real, parameter    :: AeLat   = 70.0         ! Synthetic AE geomag. latitude
+  real               :: ScaleK9 = 600.0        ! Scaling of standard K
   real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
   real               :: XyzKp_DI(3,nKpMag)     ! Locations of Kp stations
   real               :: XyzAe_DI(3,nAeMag)     ! Locations of AE stations
@@ -93,12 +98,12 @@ module ModGroundMagPerturb
   ! kp is calculated -- using a floating time window that is hard to define
   ! when kp is calculated on a constant iteration cadence instead of a
   ! constant time cadence.
-  real :: dtWriteIndices
+  real :: DtWriteIndices
 
   ! K CONVERSION TABLES
   ! Conversion table for the standard station, Niemegk.
-  real, parameter :: &
-       Table50_I(9)=[5.,10.,20.,40.,70.,120.,200.,330.,500.]
+  real, parameter:: &
+       Table50_I(9) = [5.,10.,20.,40.,70.,120.,200.,330.,500.]
 
   ! Headers for Geoindices output file:
   character(len=*), parameter :: NameKpVars = &
@@ -143,7 +148,7 @@ contains
 
     case("#MAGNETOMETER")
        DoSaveMags = .true.
-       call read_var('MagInputFile', MagInputFile)
+       call read_var('NameMagInputFile', NameMagInputFile)
        call read_var('TypeMagFileOut', TypeMagFileOut)
        call read_var('DnOutput', dn_output(magfile_))
        call read_var('DtOutput', dt_output(magfile_))
@@ -167,8 +172,8 @@ contains
        DoCalcKp = .true.       ! Kp calculated (no others available.)
        DoCalcAe = .true.       ! Ae calculated (always on with Kp).
        call read_var('nKpWindow', nKpMins)
-       call read_var('DtOutput' , dtWriteIndices)
-       dt_output(indexfile_) = dtWriteIndices
+       call read_var('DtOutput' , DtWriteIndices)
+       dt_output(indexfile_) = DtWriteIndices
        dn_output(indexfile_) = -1  ! Indices are function of physical time.
 
     case default
@@ -222,7 +227,7 @@ contains
     if(nMagTotal == 0) RETURN
 
     ! Allocate/initialize arrays:
-    allocate(MagName_I(nMagTotal))
+    allocate(NameMag_I(nMagTotal))
     allocate(PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal) )
     IeMagPerturb_DII = 0.0
 
@@ -256,7 +261,7 @@ contains
              iMag = iMag + 1
              PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
              PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
-             write(MagName_I(iMag), '(i3.3)')  iMag
+             write(NameMag_I(iMag), '(i3.3)')  iMag
              if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
                   iMag, PosMagnetometer_II(:,iMag)
           end do
@@ -269,7 +274,7 @@ contains
        PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
        PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
        PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
-       MagName_I(iMag+1:iMag+nKpMag) = 'KP_'
+       NameMag_I(iMag+1:iMag+nKpMag) = 'KP_'
     end if
 
     if(DoTest)then
@@ -346,7 +351,7 @@ contains
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
-    iSizeKpWindow = int(nKpMins / (dtWriteIndices / 60.0))
+    iSizeKpWindow = int(nKpMins / (DtWriteIndices / 60.0))
 
     ! Allocate MagPerturb_DII, open index file, write header.
     if (iProc==0) then
@@ -498,13 +503,13 @@ contains
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
     real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
-    real, save        :: Fac_II(nTheta,nPhi)
+    real, allocatable, save:: Fac_II(:,:)
 
     ! Variables for surface integral
-    real, save:: b_DII(3,nTheta,nPhi)
-    real:: rDotB, rCrossB_D(3)
+    real, allocatable, save:: Br_II(:,:), Bt_DII(:,:,:)
+    real:: Br, Bt_D(3), InvDist2_D(3)
 
-    ! Avoid recalculating Fac_II and b_DII in the same time step
+    ! Avoid recalculating Fac_II, Br_II and Bt_DII in the same time step
     integer:: nStepLast = -100
 
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
@@ -544,18 +549,28 @@ contains
     dPhi   = cTwoPi / nPhi
     dR     = (rCurrents - rIonosphere) / nR
 
+    if(UseSurfaceIntegral) MagPerturbMhd_DI = 0.0
+    
     if(n_Step /= nStepLast)then
        nStepLast = n_Step
        ! Get the radial component of the field aligned current
        ! and the magnetic field vector (for surface integral) at rCurrents
        call timing_start('ground_calc_fac')
+
+       if(.not.allocated(Fac_II)) allocate(Fac_II(nTheta,nPhi))
+
        if(UseSurfaceIntegral)then
-          MagPerturbMhd_DI = 0.0
+
+          if(.not.allocated(Br_II)) &
+               allocate(Br_II(nTheta,nPhi), Bt_DII(3,nTheta,nPhi))
+
           call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
-               Fac_II, b_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
+               Fac_II, Br_II, Bt_DII, TypeCoordFacGrid=TypeCoordFacGrid, &
                IsRadialAbs=.true., FacMin=1e-4/No2Io_V(UnitJ_))
-          if(nProc > 1)&
-               call MPI_Bcast(b_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+          if(nProc > 1)then
+             call MPI_Bcast(Br_II, nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+             call MPI_Bcast(Bt_DII, 3*nTheta*nPhi, MPI_REAL, 0, iComm, iError)
+          end if
        else
           call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
                Fac_II, TypeCoordFacGrid=TypeCoordFacGrid, &
@@ -582,6 +597,13 @@ contains
           LineContrib_DII = 0.0
           if(iProc==0) write(*,*) NameSub, &
                ' allocated LineContrib_DII(3,',nMagTotal,',',nLineProc,')'
+       end if
+
+       if(UseSurfaceIntegral .and. .not.allocated(InvDist2_DII))then
+          allocate(InvDist2_DII(3,nMagTotal,nLineProc))
+          InvDist2_DII = 0.0
+          if(iProc==0) write(*,*) NameSub, &
+               ' allocated InvDist2_DII(3,',nMagTotal,',',nLineProc,')'
        end if
 
        ! Set group index iGroup and 
@@ -615,6 +637,19 @@ contains
 
              iLineProc = iLineProc + 1
 
+             if(UseSurfaceIntegral)then
+                Br   = Br_II(iTheta,iPhi)
+                Bt_D = Bt_DII(:,iTheta,iPhi)
+
+                do iMag = 1, nMag
+                   ! dA*(x-x0)/(4pi*|x-x0|^3)
+                   InvDist2_D = InvDist2_DII(:,iMag+iMag0,iLineProc)
+
+                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+                end do
+             end if
+             
              FacRcurrents = Fac_II(iTheta,iPhi)
              if(FacRcurrents == 0.0) CYCLE
 
@@ -661,7 +696,11 @@ contains
           ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
           ! replaced with dTheta/8.
           SinTheta = max(sin(Theta), dTheta/8)
-
+          
+          ! Calculate surface and volume elements
+          dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
+          dVolCoeff = dR*dSurface
+         
           do iPhi = 1, nPhi
 
              Phi = (iPhi-1) * dPhi
@@ -684,19 +723,14 @@ contains
              ! the field aligned current and B field at r=rCurrents
              FacRcurrents = Fac_II(iTheta,iPhi)
 
-             ! Calculate volume element
-             dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
-             dVolCoeff = dR*dSurface
-
              if(UseSurfaceIntegral)then
 
                 ! B(x0) = int_|x|=R
                 !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
-                b_D       = b_DII(:,iTheta,iPhi)
-                rDotB     = sum(XyzRcurrents_D*b_D)/rCurrents
-                rCrossB_D = cross_product(XyzRcurrents_D, b_D)/rCurrents
+                Br   = Br_II(iTheta,iPhi)
+                Bt_D = Bt_DII(:,iTheta,iPhi)
 
                 ! CHECK
                 !Surface = Surface + dSurface
@@ -711,9 +745,16 @@ contains
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
 
+                   ! dA*(x-x0)/(4pi*|x-x0|^3)
+                   InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + (rDotB*Xyz_D + cross_product(rCrossB_D, Xyz_D)) &
-                        *dSurface/(4*cPi*sqrt(sum(Xyz_D**2))**3)
+                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+
+                   ! Store it for fast calculation
+                   if(UseFastFacIntegral) &
+                        InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
+
                 end do
                 
              end if
@@ -742,8 +783,7 @@ contains
 
                 !! Check correctness of integration. Needs Br at rCurrents.
                 !if(abs(XyzMid_D(3)) > rCurrents - Height) &
-                !     Volume = Volume + abs(dVol &
-                !     *sum(XyzRcurrents_D*b_DII(:,iTheta,iPhi))/rCurrents)
+                !     Volume = Volume + abs(dVol*Br_II(iTheta,iPhi)
                 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
@@ -785,12 +825,13 @@ contains
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
     !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
 
-    ! Convert
     if(DoConvertCoord)then
-       do iMag = 1, nMag
-          MagPerturbFac_DI(:,iMag) = &
-               matmul(MagPerturbFac_DI(:,iMag), SmToFacGrid_DD)
-       end do
+       ! Convert perturbations back to SM
+       SmToFacGrid_DD = transpose(SmToFacGrid_DD)
+       MagPerturbFac_DI = matmul(SmToFacGrid_DD, MagPerturbFac_DI)
+
+       if(UseSurfaceIntegral) &
+            MagPerturbMhd_DI = matmul(SmToFacGrid_DD, MagPerturbMhd_DI)
     end if
 
     call timing_stop('ground_db_fac')
@@ -898,6 +939,28 @@ contains
        Kp = nint(3*Kp)/3.0
 
     end if
+
+    call MPI_Bcast(Kp, 1, MPI_REAL, 0, iComm, iError)
+
+    if(UseYoungBc) then
+       ! Apply empirical formula from Young et al. to get the ratio
+       ! of minor species to H+
+       ! Limit Kp to be within [1.0,7.0]
+       ! Limit F10.7 to be within [115.0,230.0]
+       ! RatioOH = 4.5E-2 * exp(0.17*min(max(Kp, 1.0),7.0) &
+       !     + 0.01*min(max(F107Young, 115.0), 230.0)) ! Eq. 5, pg. 9088
+
+       ! Don't limit Kp and F10.7
+       RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
+       if (iProc == 0 .and. RatioOH > 1.0) then
+          write(*,*) NameSub, ': RatioOH > 1, Kp, F107Young, RatioOH =', &
+               Kp, F107Young,RatioOH
+       end if
+
+       ! O+ should not exceed H+
+       ! RatioOH = min(RatioOH, 1.0)
+    end if
+    
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
@@ -994,7 +1057,7 @@ contains
     integer :: iError
 
     ! One line of input
-    character (len=100) :: Line
+    character(len=100) :: StringLine
     character(len=3) :: NameMag
     real             :: LatMag, LonMag
 
@@ -1009,21 +1072,21 @@ contains
 
        if(lVerbose>0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               " reading: ",trim(MagInputFile)
+               " reading: ",trim(NameMagInputFile)
        end if
 
-       call open_file(file=MagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old")
 
        nMag = 0
 
        ! Read the file: read #COORD TypeCoord, #START
        READFILE: do
 
-          read(UnitTmp_,'(a)', iostat = iError ) Line
+          read(UnitTmp_,'(a)', iostat = iError ) StringLine
 
           if (iError /= 0) EXIT READFILE
 
-          if(index(Line,'#COORD')>0) then
+          if(index(StringLine,'#COORD')>0) then
              read(UnitTmp_,'(a)') TypeCoordMag
              select case(TypeCoordMag)
              case('MAG','GEO','SMG')
@@ -1034,7 +1097,7 @@ contains
              end select
           endif
 
-          if(index(Line,'#START')>0)then
+          if(index(StringLine,'#START')>0)then
              READPOINTS: do
                 read(UnitTmp_,*, iostat=iError) NameMag, LatMag, LonMag
                 if (iError /= 0) EXIT READFILE
@@ -1094,16 +1157,16 @@ contains
 
        if(lVerbose>0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               " reading: ",trim(MagInputFile)
+               " reading: ",trim(NameMagInputFile)
        end if
 
        ! Read in magnetometer positions and names
-       call open_file(file=MagInputFile, status="old")
+       call open_file(file=NameMagInputFile, status="old")
        READFILE: do
           read(UnitTmp_,'(a)') StringLine
           if(index(StringLine, '#START') > 0)then
              do iMag = 1, nMagnetometer
-                read(UnitTmp_,*) MagName_I(iMag), PosMagnetometer_II(1:2,iMag)
+                read(UnitTmp_,*) NameMag_I(iMag), PosMagnetometer_II(1:2,iMag)
              end do
              EXIT READFILE
           end if
@@ -1112,7 +1175,7 @@ contains
     end if
 
     ! Tell the magnetometer name to the other processors
-    call MPI_Bcast(MagName_I, nMagnetometer*3, MPI_CHARACTER, 0, &
+    call MPI_Bcast(NameMag_I, nMagnetometer*3, MPI_CHARACTER, 0, &
          iComm, iError)
     ! Tell the other processors the coordinates
     call MPI_Bcast(PosMagnetometer_II, 2*nMagnetometer, MPI_REAL, 0, &
@@ -1183,9 +1246,9 @@ contains
     ! Write the header
     write(iUnitNow, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
     do iMag=1,nMagnow-1
-       write(iUnitNow, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
+       write(iUnitNow, '(1X,a)', ADVANCE='NO') NameMag_I(iMag+iStart)
     end do
-    write(iUnitNow, '(1X,a)') MagName_I(iEnd)
+    write(iUnitNow, '(1X,a)') NameMag_I(iEnd)
     write(iUnitNow, '(a)')  &
          'nstep year mo dy hr mn sc msc station X Y Z '// &
          'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
@@ -1403,7 +1466,7 @@ contains
        case('step')
           call write_mag_step
        case('ascii', 'real4', 'real8', 'tec')
-          call write_mag_2d
+          call write_mag_grid
        case('station')
           call stop_mpi(NameSub//': separate mag files not implemented yet.')
        end select
@@ -1417,7 +1480,7 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    subroutine write_mag_2d
+    subroutine write_mag_grid
 
       use ModPlotFile, ONLY: save_plot_file
       use ModIO, ONLY: NamePlotDir, IsLogName_e
@@ -1468,7 +1531,7 @@ contains
            CoordMaxIn_D = [ GridLonMax, GridLatMax ], &
            VarIn_VII=MagOut_VII)
 
-    end subroutine write_mag_2d
+    end subroutine write_mag_grid
     !==========================================================================
     subroutine write_mag_single
       ! For TypeMagFileOut == 'single', write a single record to the file.
@@ -1535,9 +1598,9 @@ contains
       ! Write the header
       write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
       do iMag=1,nMagNow-1
-         write(UnitTmp_, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
+         write(UnitTmp_, '(1X,a)', ADVANCE='NO') NameMag_I(iMag+iStart)
       end do
-      write(UnitTmp_, '(1X,a)') MagName_I(iEnd)
+      write(UnitTmp_, '(1X,a)') NameMag_I(iEnd)
       write(UnitTmp_, '(a)')  &
            'nstep year mo dy hr mn sc msc station X Y Z '// &
            'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
@@ -1579,9 +1642,10 @@ contains
          close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
-    if (allocated(MagName_I)) deallocate(MagName_I)
-    if (allocated(MagHistory_DII)) deallocate(MagHistory_DII)
-    if (allocated(LineContrib_DII)) deallocate(LineContrib_DII)
+    if (allocated(NameMag_I))        deallocate(NameMag_I)
+    if (allocated(MagHistory_DII))   deallocate(MagHistory_DII)
+    if (allocated(LineContrib_DII))  deallocate(LineContrib_DII)
+    if (allocated(InvDist2_DII))     deallocate(InvDist2_DII)
 
     call test_stop(NameSub, DoTest)
   end subroutine finalize_magnetometer
@@ -1601,7 +1665,7 @@ contains
 
     !--------------------------------------------------------------------------
     do i = 1, 9
-       if( DeltaB - Table50_I(i)*k9/Table50_I(9) < 0) then
+       if( DeltaB - Table50_I(i)*Scalek9/Table50_I(9) < 0) then
           k_index = i - 1
           RETURN
        end if

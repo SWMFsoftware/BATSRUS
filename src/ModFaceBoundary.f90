@@ -10,6 +10,8 @@ module ModFaceBoundary
   use ModMultiFluid, ONLY: nIonFluid
   use ModAdvance,    ONLY: nSpecies
   use ModNumConst,   ONLY: cDegToRad
+  use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I, &
+       nIonDensity
 
   implicit none
 
@@ -64,17 +66,6 @@ module ModFaceBoundary
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
-  ! Number of densities (ion fluids or ion species)
-  integer, parameter:: nIonDensity = max(nIonFluid, nSpecies)
-
-  ! CPCP dependent density function at the inner boundary
-  logical:: UseCpcpBc = .false.
-  real:: Rho0Cpcp_I(nIonDensity) = 18.0, RhoPerCpcp_I(nIonDensity) = 0.2
-
-  ! Young et al dependent density function at the inner boundary
-  logical :: UseYoungBc = .false. ! Use YoungBCs?
-  real    :: f107Young  = 150.0   ! F10.7 for Young et al.
-
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
 
@@ -90,7 +81,8 @@ contains
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
-
+    use ModGroundMagPerturb, ONLY: UseYoungBc, F107Young
+    
     character(len=*), intent(in):: NameCommand
 
     integer:: iDensity, iFluid
@@ -239,7 +231,7 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB, iProc
-    use ModGroundMagPerturb, ONLY: Kp
+    use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
     
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
@@ -249,11 +241,8 @@ contains
     ! Variables used for polar wind boundary condition
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
-    ! External function for ionosphere
-    real:: RhoCpcp_I(nIonDensity)
-
     ! Variables for Young et al variable mass density:
-    real :: RatioOH, FracH, FracO
+    real :: FracH, FracO
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -265,33 +254,9 @@ contains
        Cos2PolarTheta = cos(PolarTheta)**2
     end if
 
-    ! Calculate inner BC density from cross polar cap potential if required
-    ! Use KeV units for Cpcp and amu/cc for density.
-    if(UseCpcpBc .and. UseIe) &
-         RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
-         * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
-         * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
-
     ! Use Young et al. 1982 empirical relationship to set
     ! inner boundary density based on expected composition.
     if(UseYoungBc .and. UseIe)then
-       ! Limit Kp to be within [1.0,7.0]
-       Kp        = min(max(Kp, 1.0),7.0)
-       ! Limit F10.7 to be within [115.0,230.0]
-       F107Young = min(max(F107Young, 115.0), 230.0)
-
-       ! Apply empirical formula from Young et al. to get the ratio
-       ! of minor species to H+:
-       RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
-       !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
-
-       if (RatioOH > 1.0) then
-          write(*,*) 'RatioOH too large, RatioOH =', RatioOH
-       end if
-
-       ! O+ should not exceed H+
-       RatioOH = min(RatioOH, 1.0)
-
        ! Use species fractions to obtain the total mass density.
        if (UseMultiSpecies) then
           if (nIonDensity > 2) call stop_mpi(NameSub// &
@@ -325,7 +290,11 @@ contains
           ! is both light and very minor.
           FracH = 1.0 / (1.0 + RatioOH)
           FracO = RatioOH  * FracH
-          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+          ! fixed total number density
+          !RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+
+          ! fixed H+ density
+          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
        end if
 
     endif
