@@ -4580,6 +4580,20 @@ single precision to make IO2/*.out files smaller, while BATSRUS.exe is
 compiled in double precision to make results more accurate.
 </command>
 
+<command name="SAVETECBINARY">
+	<parameter name="DoSaveTecBinary" type="logical" default="T" />
+#SAVETECBINARY
+F			DoSaveTecBinary
+
+If true, save Tecplot data and connectivity information in binary format. 
+Currently this only works for 3D tec and tcp files. Note that the resulting
+files are not directly readable by Tecplot, but can be converted to other
+formats.
+
+Default is false. 
+
+</command>
+
 <command name="PLOTFILENAME" multiple="T">
 	<parameter name="NameMaxTimeUnit" type="string" input="select">
 		<option name="date"/>
