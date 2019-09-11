@@ -238,6 +238,9 @@ contains
 
       ! Allow the user to add a perturbation to the initial condition.
       if(UseUserPerturbation)then
+         ! Need to set threads before exchange_messages.
+         if(UseFieldLineThreads)call set_threads
+
          ! Fill in ghost cells in case needed by the user perturbation
          call exchange_messages
 

@@ -235,7 +235,7 @@ contains
     DoPlotShell = plot_type1(1:3) == 'shl'
     DoPlotBox   = plot_type1(1:3) == 'box'
 
-    if (DoSaveOneTecFile) then
+    if(DoSaveOneTecFile) then
        iUnit = io_unit_new()
     else
        iUnit = UnitTmp_
@@ -252,21 +252,27 @@ contains
             trim(NameSnapshot)//"_2"//trim(NameProc))
        ! Open one file for data
        filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
+
        if(DoSaveOneTecFile)then
           call open_file(&
-               FILE=filename_n, ACCESS='DIRECT', RECL = lRecData, iComm=iComm,&
+               FILE=filename_n, ACCESS='DIRECT', RECL=lRecData, iComm=iComm,&
                NameCaller=NameSub//'_tcp_direct_data')
        else
-          call open_file(FILE=filename_n, NameCaller=NameSub//'_tcp_data')
+          if(DoSaveTecBinary) then
+             call open_file(FILE=filename_n, NameCaller=NameSub//&
+                  '_tcp_data',access='stream', form='unformatted')
+          else
+             call open_file(FILE=filename_n, NameCaller=NameSub//'_tcp_data')
+          end if
        end if
-    elseif (DoSaveOneTecFile) then
+    elseif(DoSaveOneTecFile) then
        ! filename_h stores the header, filename_n stores the data and
        ! filename_s stores the connectivity
        filename_h = trim(NameSnapshot)//"_0.tec"
        filename_n = trim(NameSnapshot)//"_1.tec"
        filename_s = trim(NameSnapshot)//"_2.tec"
 
-       if (DoTest) then
+       if(DoTest) then
           write(*,*) 'filename_h =', filename_h
           write(*,*) 'filename_n =', filename_n
           write(*,*) 'filename_s =', filename_s
@@ -278,7 +284,7 @@ contains
 
        ! only iProc == 0 opens the header file
        ! we should do this at the end (?)
-       if (iProc == 0) call open_file(iUnit, FILE=filename_h, &
+       if(iProc == 0) call open_file(iUnit, FILE=filename_h, &
             NameCaller=NameSub//'_tec_head')
        call open_file(FILE=filename_n, &
             ACCESS='DIRECT', RECL=lRecData, iComm=iComm, &
@@ -296,8 +302,16 @@ contains
        ! Open two files for connectivity and data
        filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
        filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
-       call open_file(UnitTmp_,  FILE=filename_n)
-       call open_file(UnitTmp2_, FILE=filename_s)
+
+       if(.not.DoSaveTecBinary) then
+          call open_file(UnitTmp_,  FILE=filename_n)
+          call open_file(UnitTmp2_, FILE=filename_s)
+       else
+          call open_file(UnitTmp_,  FILE=filename_n, &
+               access='stream', form='unformatted')
+          call open_file(UnitTmp2_, FILE=filename_s, &
+               access='stream', form='unformatted')
+       end if
     elseif(plot_form(iFile)=='hdf') then
        ! Only one plotfile will be generated, so do not include PE number
        ! in filename. ModHdf5 will handle opening the file.
@@ -355,7 +369,7 @@ contains
     if(plot_type1(1:3)=='blk') &
          call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
 
-    if (plot_form(iFile) == 'hdf') then
+    if(plot_form(iFile) == 'hdf') then
        call init_hdf5_plot(iFile, plot_type1(1:3),  &
             nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
             dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)

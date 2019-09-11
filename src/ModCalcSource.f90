@@ -39,7 +39,8 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection
+         apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection, &
+         UseAlignmentAngle, Cdiss_C
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -290,6 +291,15 @@ contains
                 Coef = extension_factor(TeSi_C(i,j,k))
                 WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k)/Coef
                 CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
+             end do; end do; end do
+          end if
+
+          if(UseAlignmentAngle)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k) &
+                     *Cdiss_C(i,j,k)
+                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) &
+                     *Cdiss_C(i,j,k)
              end do; end do; end do
           end if
 

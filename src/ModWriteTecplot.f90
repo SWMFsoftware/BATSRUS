@@ -87,7 +87,7 @@ contains
          r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
-    use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile
+    use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
 
     integer, intent(in):: iBlock, nPlotVar
@@ -96,8 +96,9 @@ contains
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer:: iRecData
 
-    real:: Xyz_D(MaxDim)
-    real, allocatable:: PlotVar_V(:)
+    integer, parameter :: sp = selected_real_kind(6, 37)
+    real(sp):: Xyz_D(MaxDim)
+    real(sp), allocatable:: PlotVar_V(:)
 
     ! Interpolation
     integer:: Di, Dj, Dk
@@ -136,12 +137,21 @@ contains
                Xyz_D(1:nDim), PlotVar_V, CharNewLine
        end do; end do; end do
     else
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          ! Skip points outside the cut
-          if(CellIndex_GB(i,j,k,iBlock) == 0.0) CYCLE
-          call set_xyz_state
-          write(UnitTmp_,"(50(ES14.6))") Xyz_D(1:nDim), PlotVar_V
-       end do; end do; end do
+       if(DoSaveTecBinary)then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             ! Skip points outside the cut
+             if(CellIndex_GB(i,j,k,iBlock) == 0.0) CYCLE
+             call set_xyz_state
+             write(UnitTmp_) Xyz_D(1:nDim), PlotVar_V
+          end do; end do; end do
+       else
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             ! Skip points outside the cut
+             if(CellIndex_GB(i,j,k,iBlock) == 0.0) CYCLE
+             call set_xyz_state
+             write(UnitTmp_,"(50(ES14.6))") Xyz_D(1:nDim), PlotVar_V
+          end do; end do; end do
+       end if
     end if
 
     deallocate(PlotVar_V)
@@ -192,7 +202,8 @@ contains
   subroutine write_tecplot_connect(iFile, NameFile)
 
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
-    use ModIO,        ONLY: DoSaveOneTecFile, plot_type1, plot_range
+    use ModIO,        ONLY: DoSaveOneTecFile, DoSaveTecBinary, &
+         plot_type1, plot_range
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModMain,      ONLY: nBlockMax
@@ -375,7 +386,12 @@ contains
     else
        nStage = 1
        ! Open connectivity file
-       call open_file(File=NameFile,  NameCaller=NameSub//'_connect')
+       if(DoSaveTecBinary) then
+          call open_file(FILE=NameFile, NameCaller=NameSub//&
+               '_connect',access='stream', form='unformatted')
+       else
+          call open_file(File=NameFile, NameCaller=NameSub//'_connect')
+       end if
     end if
 
     nBrick = 0
@@ -437,86 +453,110 @@ contains
           if(nPlotDim == 3 .and. &
                DiLevelNei_IIIB(1,1,1,iBlock) < 0) iCell_G(nI+1,nJ+1,nK+1) = 0
 
-          ! Loop over the "lower-left" corner of the bricks
-          do k = k0, k1; do j = j0, j1; do i = i0, i1
-             ! Skip bricks that are not fully inside/usable
-             if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
-                  CYCLE
-             nBrick = nBrick + 1
-
-             ! In stage 1 only count bricks
-             if(iStage < nStage) CYCLE
-
-             if(nPlotDim == 3)then
-                if(DoSaveOneTecFile)then
-                   write(UnitTmp_,'(8i11,a)', REC=nBrick) &
-                        iCell_G(i  ,j  ,k  ), &
-                        iCell_G(i+1,j  ,k  ), &
-                        iCell_G(i+1,j+1,k  ), &
-                        iCell_G(i  ,j+1,k  ), &
-                        iCell_G(i  ,j  ,k+1), &
-                        iCell_G(i+1,j  ,k+1), &
-                        iCell_G(i+1,j+1,k+1), &
-                        iCell_G(i  ,j+1,k+1), &
-                        CharNewLine
-                else
-                   write(UnitTmp_,'(8i11)') &
-                        iCell_G(i  ,j  ,k  ), &
-                        iCell_G(i+1,j  ,k  ), &
-                        iCell_G(i+1,j+1,k  ), &
-                        iCell_G(i  ,j+1,k  ), &
-                        iCell_G(i  ,j  ,k+1), &
-                        iCell_G(i+1,j  ,k+1), &
-                        iCell_G(i+1,j+1,k+1), &
-                        iCell_G(i  ,j+1,k+1)
+          if(DoSaveTecBinary) then
+             ! Right now binary format only works for 3D.
+             ! Loop over the "lower-left" corner of the bricks
+             do k = k0, k1; do j = j0, j1; do i = i0, i1
+                ! Skip bricks that are not fully inside/usable
+                if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                     CYCLE
+                nBrick = nBrick + 1
+                
+                ! In stage 1 only count bricks
+                if(iStage < nStage) CYCLE
+                
+                write(UnitTmp_) &
+                     iCell_G(i  ,j  ,k  ), &
+                     iCell_G(i+1,j  ,k  ), &
+                     iCell_G(i+1,j+1,k  ), &
+                     iCell_G(i  ,j+1,k  ), &
+                     iCell_G(i  ,j  ,k+1), &
+                     iCell_G(i+1,j  ,k+1), &
+                     iCell_G(i+1,j+1,k+1), &
+                     iCell_G(i  ,j+1,k+1)
+             end do; end do; end do
+          else ! ASCII format
+             ! Loop over the "lower-left" corner of the bricks
+             do k = k0, k1; do j = j0, j1; do i = i0, i1
+                ! Skip bricks that are not fully inside/usable
+                if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
+                     CYCLE
+                nBrick = nBrick + 1
+                
+                ! In stage 1 only count bricks
+                if(iStage < nStage) CYCLE
+                
+                if(nPlotDim == 3)then
+                   if(DoSaveOneTecFile)then
+                      write(UnitTmp_,'(8i11,a)', REC=nBrick) &
+                           iCell_G(i  ,j  ,k  ), &
+                           iCell_G(i+1,j  ,k  ), &
+                           iCell_G(i+1,j+1,k  ), &
+                           iCell_G(i  ,j+1,k  ), &
+                           iCell_G(i  ,j  ,k+1), &
+                           iCell_G(i+1,j  ,k+1), &
+                           iCell_G(i+1,j+1,k+1), &
+                           iCell_G(i  ,j+1,k+1), &
+                           CharNewLine
+                   else
+                      write(UnitTmp_,'(8i11)') &
+                           iCell_G(i  ,j  ,k  ), &
+                           iCell_G(i+1,j  ,k  ), &
+                           iCell_G(i+1,j+1,k  ), &
+                           iCell_G(i  ,j+1,k  ), &
+                           iCell_G(i  ,j  ,k+1), &
+                           iCell_G(i+1,j  ,k+1), &
+                           iCell_G(i+1,j+1,k+1), &
+                           iCell_G(i  ,j+1,k+1)
+                   end if
+                elseif(.not.IsPlotDim3)then
+                   if(DoSaveOneTecFile)then
+                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                           iCell_G(i  ,j  ,k), &
+                           iCell_G(i+1,j  ,k), &
+                           iCell_G(i+1,j+1,k), &
+                           iCell_G(i  ,j+1,k), &
+                           CharNewLine
+                   else
+                      write(UnitTmp_,'(4i11)') &
+                           iCell_G(i  ,j  ,k), &
+                           iCell_G(i+1,j  ,k), &
+                           iCell_G(i+1,j+1,k), &
+                           iCell_G(i  ,j+1,k)
+                   end if
+                elseif(.not.IsPlotDim2)then
+                   if(DoSaveOneTecFile)then
+                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                           iCell_G(i  ,j,k  ), &
+                           iCell_G(i+1,j,k  ), &
+                           iCell_G(i+1,j,k+1), &
+                           iCell_G(i  ,j,k+1), &
+                           CharNewLine
+                   else
+                      write(UnitTmp_,'(4i11)') &
+                           iCell_G(i  ,j,k  ), &
+                           iCell_G(i+1,j,k  ), &
+                           iCell_G(i+1,j,k+1), &
+                           iCell_G(i  ,j,k+1)
+                   end if
+                elseif(.not.IsPlotDim1)then
+                   if(DoSaveOneTecFile)then
+                      write(UnitTmp_,'(4i11,a)', REC=nBrick) &
+                           iCell_G(i,j  ,k  ), &
+                           iCell_G(i,j+1,k  ), &
+                           iCell_G(i,j+1,k+1), &
+                           iCell_G(i,j  ,k+1), &
+                           CharNewLine
+                   else
+                      write(UnitTmp_,'(4i11)') &
+                           iCell_G(i,j  ,k  ), &
+                           iCell_G(i,j+1,k  ), &
+                           iCell_G(i,j+1,k+1), &
+                           iCell_G(i,j  ,k+1)
+                   end if
                 end if
-             elseif(.not.IsPlotDim3)then
-                if(DoSaveOneTecFile)then
-                   write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                        iCell_G(i  ,j  ,k), &
-                        iCell_G(i+1,j  ,k), &
-                        iCell_G(i+1,j+1,k), &
-                        iCell_G(i  ,j+1,k), &
-                        CharNewLine
-                else
-                   write(UnitTmp_,'(4i11)') &
-                        iCell_G(i  ,j  ,k), &
-                        iCell_G(i+1,j  ,k), &
-                        iCell_G(i+1,j+1,k), &
-                        iCell_G(i  ,j+1,k)
-                end if
-             elseif(.not.IsPlotDim2)then
-                if(DoSaveOneTecFile)then
-                   write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                        iCell_G(i  ,j,k  ), &
-                        iCell_G(i+1,j,k  ), &
-                        iCell_G(i+1,j,k+1), &
-                        iCell_G(i  ,j,k+1), &
-                        CharNewLine
-                else
-                   write(UnitTmp_,'(4i11)') &
-                        iCell_G(i  ,j,k  ), &
-                        iCell_G(i+1,j,k  ), &
-                        iCell_G(i+1,j,k+1), &
-                        iCell_G(i  ,j,k+1)
-                end if
-             elseif(.not.IsPlotDim1)then
-                if(DoSaveOneTecFile)then
-                   write(UnitTmp_,'(4i11,a)', REC=nBrick) &
-                        iCell_G(i,j  ,k  ), &
-                        iCell_G(i,j+1,k  ), &
-                        iCell_G(i,j+1,k+1), &
-                        iCell_G(i,j  ,k+1), &
-                        CharNewLine
-                else
-                   write(UnitTmp_,'(4i11)') &
-                        iCell_G(i,j  ,k  ), &
-                        iCell_G(i,j+1,k  ), &
-                        iCell_G(i,j+1,k+1), &
-                        iCell_G(i,j  ,k+1)
-                end if
-             end if
-          end do; end do; end do
+             end do; end do; end do
+          end if
        end do ! iBlock
        if(iStage < nStage)then
           ! Collect number of bricks from all processors
@@ -558,6 +598,7 @@ contains
 
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
+    use ModIO,        ONLY: DoSaveTecBinary
 
     ! Write out tecplot header file
 
@@ -573,31 +614,62 @@ contains
     call write_tecplot_setinfo
     if(iProc /= 0) RETURN
 
-    call open_file(File=NameFile)
-    if(DoCut)then
-       write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
+    if(DoSaveTecBinary)then
+      ! Actually only works for 3D right now.
+      ! hyzhou: This is supposed to be cell-centered data, but why is the node
+      ! number and element number different from expected?
+      call open_file(FILE=NameFile, access='stream', form='unformatted')
+      if(DoCut)then
+         write(UnitTmp_) 'TITLE="BATSRUS: cut Data, '//textDateTime//'"',&
+              NEW_LINE('a')
+      else
+         write(UnitTmp_) 'TITLE="BATSRUS: ', nDim,&
+              'D Data,'//textDateTime//'"',NEW_LINE('a')
+      end if
+      write(UnitTmp_) trim(StringUnit),NEW_LINE('a')
+      select case(nPlotDim) 
+      case(2) 
+         write(UnitTmp_) &
+              'ZONE T="2D   '//textNandT//'"', &
+              ', N=', nPointAll, &    
+              ', E=', nBrickAll, &
+              ', F=FEPOINT, ET=QUADRILATERAL', NEW_LINE('a')   
+      case(3)  
+         write(UnitTmp_) & 
+              'ZONE T="3D   '//textNandT//'"', &
+              ', N=', nPointAll, &  
+              ', E=', nBrickAll, & 
+              ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
+      end select
     else
-       write(UnitTmp_,'(a,i1,a)') &
-            'TITLE="BATSRUS: ', nDim,'D Data,'//textDateTime//'"'
+      call open_file(File=NameFile)
+      
+      if(DoCut)then
+         write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
+      else
+         write(UnitTmp_,'(a,i1,a)') &
+              'TITLE="BATSRUS: ', nDim,'D Data,'//textDateTime//'"'
+      end if
+      write(UnitTmp_,'(a)') trim(StringUnit)
+      select case(nPlotDim)
+      case(2)
+         write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+              'ZONE T="2D   '//textNandT//'"', &
+              ', N=', nPointAll, &
+              ', E=', nBrickAll, &
+              ', F=FEPOINT, ET=QUADRILATERAL'
+      case(3)
+         write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+              'ZONE T="3D   '//textNandT//'"', &
+              ', N=', nPointAll, &
+              ', E=', nBrickAll, &
+              ', F=FEPOINT, ET=BRICK'
+      end select
     end if
-    write(UnitTmp_,'(a)') trim(StringUnit)
-    select case(nPlotDim)
-    case(2)
-       write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-            'ZONE T="2D   '//textNandT//'"', &
-            ', N=', nPointAll, &
-            ', E=', nBrickAll, &
-            ', F=FEPOINT, ET=QUADRILATERAL'
-    case(3)
-       write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-            'ZONE T="3D   '//textNandT//'"', &
-            ', N=', nPointAll, &
-            ', E=', nBrickAll, &
-            ', F=FEPOINT, ET=BRICK'
-    end select
+   
     call write_tecplot_auxdata
     call close_file
-
+    
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_head
   !============================================================================
@@ -616,7 +688,7 @@ contains
     use ModAdvance, ONLY : FluxType
     use ModMultiFluid, ONLY: IonFirst_
     use ModIoUnit, ONLY: UnitTmp_
-    use ModIO, ONLY: StringDateOrTime
+    use ModIO, ONLY: StringDateOrTime, DoSaveTecBinary
     use ModNumConst, ONLY : cRadToDeg
     use BATL_lib, ONLY: nProc, nIJK
 
@@ -625,7 +697,7 @@ contains
     character(len=8)  :: real_date
     character(len=10) :: real_time
     integer :: iUnitHere
-    character(len=500) :: stmp
+    character(len=1), parameter :: Newline = NEW_LINE('a')
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_auxdata'
@@ -637,116 +709,209 @@ contains
        iUnitHere = UnitTmp_
     end if
 
-    ! BLOCKS
-    write(stmp,'(i12,3(a,i2))')nBlockALL,'  ',nI,' x',nJ,' x',nK
-    write(iUnitHere,'(a,a,a)') 'AUXDATA BLOCKS="',trim(adjustl(stmp)),'"'
+    if(DoSaveTecBinary) then
+       ! DATATYPE
+       write(iUnitHere) 'AUXDATA TYPE="SINGLE"',Newline
 
-    ! BODYDENSITY
-    write(stmp,'(f12.2)')BodyNDim_I(IonFirst_)
-    write(iUnitHere,'(a,a,a)') &
-         'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
+       ! BLOCKS
+       write(iUnitHere) &
+            'AUXDATA BLOCKS="',nBlockAll,'  ',nI,' x',nJ,' x',nK,'"',Newline
+       
+       ! BODYDENSITY
+       write(iUnitHere) &
+            'AUXDATA BODYNUMDENSITY="',BodyNDim_I(IonFirst_),'"',Newline
+       
+       ! BORIS
+       if(UseBorisCorrection .or. UseBorisSimple)then
+          write(iUnitHere) 'AUXDATA BORIS="T ',ClightFactor,'"',Newline
+       else
+          write(iUnitHere) 'AUXDATA BORIS="F"',Newline
+       end if
+       
+       ! BTHETATILT
+       write(iUnitHere) &
+            'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"',Newline
+       
+       ! CELLS
+       write(iUnitHere) 'AUXDATA CELLS="',nBlockALL*nIJK,'"',Newline
+       
+       ! CELLSUSED
+       write(iUnitHere) &
+            'AUXDATA CELLSUSED="',nTrueCells,'"',Newline
+       
+       ! CODEVERSION
+       write(iUnitHere) &
+            'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"',Newline
+       
+       ! COORDSYSTEM
+       write(iUnitHere) &
+            'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"',Newline
+       
+       ! COROTATION
+       if(UseRotatingBc)then
+          write(iUnitHere) 'AUXDATA COROTATION="T"',Newline
+       else
+          write(iUnitHere) 'AUXDATA COROTATION="F"',Newline
+       end if
 
-    ! BORIS
-    if(UseBorisCorrection .or. UseBorisSimple)then
-       write(stmp,'(a,f8.4)')'T ', ClightFactor
+       ! FLUXTYPE
+       write(iUnitHere) 'AUXDATA FLUXTYPE="',FluxType,'"',Newline
+       
+       ! GAMMA
+       write(iUnitHere) 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
+       
+       ! ITER
+       write(iUnitHere) 'AUXDATA ITER="',n_step,'"',Newline
+       
+       ! NPROC
+       write(iUnitHere) 'AUXDATA NPROC="',nProc,'"',Newline
+       
+       ! ORDER
+       if(nOrder > 1)then
+          write(iUnitHere) 'AUXDATA ORDER="',nOrder,' ',trim(TypeLimiter),&
+               ', beta=',BetaLimiter,'"',Newline
+       else
+          write(iUnitHere) 'AUXDATA ORDER="',nOrder,'"',Newline
+       end if
+       
+       ! RBODY
+       write(iUnitHere) 'AUXDATA RBODY="',rBody,'"',Newline
+       
+       ! SAVEDATE
+       call Date_and_time(real_date, real_time)
+       write(iUnitHere) &
+            'AUXDATA SAVEDATE="','Save Date: ', real_date(1:4),'/',&
+            real_date(5:6),'/', real_date(7:8), &
+            ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6),&
+            '"',Newline
+       
+       ! TIMEEVENT
+       write(iUnitHere) 'AUXDATA TIMEEVENT="',textDateTime,'"',Newline
+       
+       ! TIMEEVENTSTART
+       write(iUnitHere) 'AUXDATA TIMEEVENTSTART="',textDateTime0,'"',Newline
+       
+       ! TIMESIM
+       if(time_accurate)then
+          write(iUnitHere) 'AUXDATA TIMESIM="T=',&
+               StringDateOrTime(1:4)//":"// &
+               StringDateOrTime(5:6)//":"// &
+               StringDateOrTime(7:8),        &
+               '"',Newline
+       else
+          write(iUnitHere) 'AUXDATA TIMESIM="T= N/A"',Newline
+       end if
+       
+       ! TIMESIMSHORT
+       if(time_accurate)then
+          write(iUnitHere) 'AUXDATA TIMESIMSHORT="T=',&
+               StringDateOrTime(1:4)//":"// &
+               StringDateOrTime(5:6),'"',Newline
+       else
+          write(iUnitHere) 'AUXDATA TIMESIMSHORT="T= SS"',Newline
+       end if
     else
-       write(stmp,'(a)')'F'
-    end if
-    write(iUnitHere,'(a,a,a)') 'AUXDATA BORIS="',trim(adjustl(stmp)),'"'
+       ! BLOCKS
+       write(iUnitHere,'(a,i12,3(a,i2),a)') 'AUXDATA BLOCKS="',nBlockALL,'  ',&
+            nI,' x',nJ,' x',nK,'"'
+       
+       ! BODYDENSITY
+       write(iUnitHere,'(a,(f12.2),a)') &
+            'AUXDATA BODYNUMDENSITY="',BodyNDim_I(IonFirst_),'"'
+       
+       ! BORIS
+       if(UseBorisCorrection .or. UseBorisSimple)then
+          write(iUnitHere,'(a,f8.4,a)') 'AUXDATA BORIS="T ',ClightFactor,'"'
+       else
+          write(iUnitHere,'(a,a,a)') 'AUXDATA BORIS="F"'
+       end if
+       
+       ! BTHETATILT
+       write(iUnitHere,'(a,f12.4,a)') &
+            'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"'
+       
+       ! CELLS
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLS="',nBlockALL*nIJK,'"'
+       
+       ! CELLSUSED
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nTrueCells,'"'
+       
+       ! CODEVERSION
+       write(iUnitHere,'(a,f5.2,a)') &
+            'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"'
+       
+       ! COORDSYSTEM
+       write(iUnitHere,'(a,a,a)') &
+            'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"'
 
-    ! BTHETATILT
-    write(stmp,'(f12.4)')ThetaTilt*cRadToDeg
-    write(iUnitHere,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(adjustl(stmp)),'"'
+       ! COROTATION
+       if(UseRotatingBc)then
+          write(iUnitHere,'(a)') 'AUXDATA COROTATION="T"'
+       else
+          write(iUnitHere,'(a)') 'AUXDATA COROTATION="F"'
+       end if
 
-    ! CELLS
-    write(stmp,'(i12)')nBlockALL*nIJK
-    write(iUnitHere,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
 
-    ! CELLSUSED
-    write(stmp,'(i12)')nTrueCells
-    write(iUnitHere,'(a,a,a)') 'AUXDATA CELLSUSED="',trim(adjustl(stmp)),'"'
+       ! FLUXTYPE
+       write(iUnitHere,'(a,a,a)') 'AUXDATA FLUXTYPE="',FluxType,'"'
+       
+       ! GAMMA
+       write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="',Gamma_I(1),'"'
+       
+       ! ITER
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="',n_step,'"'
+       
+       ! NPROC
+       write(iUnitHere,'(a,i12,a)') 'AUXDATA NPROC="',nProc,'"'
+       
+       ! ORDER
+       if(nOrder > 1)then
+          write(iUnitHere,'(a,i12,a,f8.5,a)') 'AUXDATA ORDER="',nOrder,&
+               ' '//trim(TypeLimiter)//', beta=',BetaLimiter,'"'
+       else
+          write(iUnitHere,'(a,i12,a)') 'AUXDATA ORDER="',nOrder,'"'
+       end if
+       
+       ! RBODY
+       write(iUnitHere,'(a,f12.2,a)') 'AUXDATA RBODY="',rBody,'"'
+       
+       ! SAVEDATE
+       call Date_and_time(real_date, real_time)
+       write(iUnitHere,'(a,a11,a4,a1,a2,a1,a2,a4,a2,a1,a2,a1,a2,a)')&
+            'AUXDATA SAVEDATE="','Save Date: ', real_date(1:4),'/',&
+            real_date(5:6),'/', real_date(7:8), ' at ',  &
+            real_time(1:2),':',real_time(3:4),':',real_time(5:6),'"'
+       
+       ! TIMEEVENT
+       write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENT="',textDateTime,'"'
+       
+       ! TIMEEVENTSTART
+       write(iUnitHere,'(a,a,a)') &
+            'AUXDATA TIMEEVENTSTART="',textDateTime0,'"'
+       
+       ! TIMESIM
+       if(time_accurate)then
+          write(iUnitHere,'(a,a,a)') 'AUXDATA TIMESIM="',&
+               'T='// &
+               StringDateOrTime(1:4)//":"// &
+               StringDateOrTime(5:6)//":"// &
+               StringDateOrTime(7:8),'"'
+       else
+          write(iUnitHere,'(a)') 'AUXDATA TIMESIM="T= N/A"'
+       end if
 
-    ! CODEVERSION
-    write(stmp,'(a,f5.2)')'BATSRUS',CodeVersion
-    write(iUnitHere,'(a,a,a)') 'AUXDATA CODEVERSION="',trim(adjustl(stmp)),'"'
-
-    ! COORDSYSTEM
-    write(stmp,'(a)')TypeCoordSystem
-    write(iUnitHere,'(a,a,a)') 'AUXDATA COORDSYSTEM="',trim(adjustl(stmp)),'"'
-
-    ! COROTATION
-    if(UseRotatingBc)then
-       write(stmp,'(a)')'T'
-    else
-       write(stmp,'(a)')'F'
-    end if
-    write(iUnitHere,'(a,a,a)') 'AUXDATA COROTATION="',trim(adjustl(stmp)),'"'
-
-    ! FLUXTYPE
-    write(stmp,'(a)')FluxType
-    write(iUnitHere,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
-
-    ! GAMMA
-    write(stmp,'(100(f14.6))')Gamma_I(1)
-    write(iUnitHere,'(a,a,a)') 'AUXDATA GAMMA="',trim(adjustl(stmp)),'"'
-
-    ! ITER
-    write(stmp,'(i12)')n_step
-    write(iUnitHere,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(stmp)),'"'
-
-    ! NPROC
-    write(stmp,'(i12)')nProc
-    write(iUnitHere,'(a,a,a)') 'AUXDATA NPROC="',trim(adjustl(stmp)),'"'
-
-    ! ORDER
-    if(nOrder > 1)then
-       write(stmp,'(i12,a,f8.5)') &
-            nOrder,' '//trim(TypeLimiter)//', beta=',BetaLimiter
-    else
-       write(stmp,'(i12)') nOrder
-    end if
-    write(iUnitHere,'(a,a,a)') 'AUXDATA ORDER="',trim(adjustl(stmp)),'"'
-
-    ! RBODY
-    write(stmp,'(f12.2)')rBody
-    write(iUnitHere,'(a,a,a)') 'AUXDATA RBODY="',trim(adjustl(stmp)),'"'
-
-    ! SAVEDATE
-    call Date_and_time (real_date, real_time)
-    write(stmp,'(a11,a4,a1,a2,a1,a2, a4,a2,a1,a2,a1,a2)') &
-         'Save Date: ', real_date(1:4),'/',real_date(5:6),'/',real_date(7:8), &
-         ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6)
-    write(iUnitHere,'(a,a,a)') 'AUXDATA SAVEDATE="',trim(adjustl(stmp)),'"'
-
-    ! TIMEEVENT
-    write(stmp,'(a)')textDateTime
-    write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
-
-    ! TIMEEVENTSTART
-    write(stmp,'(a)')textDateTime0
-    write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(adjustl(stmp)),'"'
-
-    ! TIMESIM
-    if(time_accurate)then
-       write(stmp,'(a)')'T='// &
-            StringDateOrTime(1:4)//":"// &
-            StringDateOrTime(5:6)//":"// &
-            StringDateOrTime(7:8)
-    else
-       write(stmp,'(a)')'T= N/A'
-    end if
-    write(iUnitHere,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
-
-    ! TIMESIMSHORT
-    if(time_accurate)then
-       write(stmp,'(a)')'T='// &
-            StringDateOrTime(1:4)//":"// &
-            StringDateOrTime(5:6)
-    else
-       write(stmp,'(a)')'T= SS'
-    end if
-    write(iUnitHere,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
-
+       ! TIMESIMSHORT
+       if(time_accurate)then
+          write(iUnitHere,'(a,a,a)') &
+               'AUXDATA TIMESIMSHORT="',&
+               'T='// &          
+               StringDateOrTime(1:4)//":"// &
+               StringDateOrTime(5:6),'"'
+       else
+          write(iUnitHere,'(a)') 'AUXDATA TIMESIMSHORT=" SS"'
+       end if
+    endif
+    
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_auxdata
   !============================================================================
@@ -901,6 +1066,9 @@ contains
     real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
     integer, intent(in) :: iUnit
 
+    ! Note: the final output data is in single precision, so in fact it is a 
+    ! waste of memory to pass in double precision arrays.
+
     ! Local Variables
     integer :: i,j,k, cut1,cut2, iPE,iBlock, iBlockAll, iNode, nBlockCuts, iError
     real :: CutValue, factor1,factor2
@@ -913,7 +1081,8 @@ contains
 
     integer::ic1,ic2,jc1,jc2,kc1,kc2, nCuts, nCutsTotal
     real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
-    real, dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
+    integer, parameter :: sp = selected_real_kind(6, 37)
+    real(sp), dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
     logical :: okdebug
 
     logical:: DoTest
@@ -985,13 +1154,25 @@ contains
           ! For DoSaveOneTecFile = T, iUnit is assoicated with the header
           ! file. iUnit = UnitTMp_ for DoSaveOneTecFile = F
           ! Write file header
-          write(iUnit,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
-          write(iUnit,'(a)')trim(unitstr_TEC)
-          write(iUnit,'(a,a,i12,a,i12,a)') &
-               'ZONE T="3D   '//textNandT//'"', &
-               ', N=',nNodeALL, &
-               ', E=',nBlockALL*nIJK, &
-               ', F=FEPOINT, ET=BRICK'
+          if(.not.DoSaveTecBinary) then
+             write(iUnit,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+             write(iUnit,'(a)')trim(unitstr_TEC)
+             write(iUnit,'(a,a,i12,a,i12,a)') &
+                  'ZONE T="3D   '//textNandT//'"', &
+                  ', N=',nNodeALL, &
+                  ', E=',nBlockALL*nIJK, &
+                  ', F=FEPOINT, ET=BRICK'
+          else
+             write(iUnit)'TITLE="BATSRUS: 3D Data, '//textDateTime//'"', &
+                  NEW_LINE('a')
+             write(iUnit)trim(unitstr_TEC),NEW_LINE('a')
+             write(iUnit) &
+                  'ZONE T="3D   '//textNandT//'"', &
+                  ', N=',nNodeALL, &
+                  ', E=',nBlockALL*nIJK, &
+                  ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
+          end if
+
           call write_tecplot_auxdata(iUnit)
        end if
        !================================= 3d ============================
@@ -1031,30 +1212,57 @@ contains
              end do; end do; end do
           end do
        else
-          do iBlock = 1, nBlock
-             if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
-             ! Write point values
-             call fill_NodeXYZ
-             do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-                if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
-                   write(UnitTmp_,fmt="(50(ES14.6))") &
-                        NodeXYZ_DN(1:3,i,j,k),       &
-                        PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock)
-                end if
-             end do; end do; end do
-             ! Write point connectivity
-             do k=1,nK; do j=1,nJ; do i=1,nI
-                write(UnitTmp2_,'(8i11)') &
-                     NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
-                     NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
-             end do; end do; end do
-          end do
+          if(DoSaveTecBinary) then
+             do iBlock = 1, nBlock
+                if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
+                ! Write point values
+                call fill_NodeXYZ
+                do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                      write(UnitTmp_) &
+                           NodeXYZ_DN(1:3,i,j,k),       &
+                           PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock)
+                   end if
+                end do; end do; end do
+                ! Write point connectivity
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   write(UnitTmp2_) &
+                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                end do; end do; end do
+             end do
+          else
+             do iBlock = 1,nBlock
+                if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
+                ! Write point values
+                call fill_NodeXYZ
+                do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+                   if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
+                      write(UnitTmp_,fmt="(50(ES14.6))") &
+                           NodeXYZ_DN(1:3,i,j,k),       &
+                           PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock)
+                   end if
+                end do; end do; end do
+                ! Write point connectivity
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   write(UnitTmp2_,'(8i11)') &
+                        NodeNumberGlobal_NB(i  ,j  ,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j  ,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j+1,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j+1,k  ,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j  ,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j  ,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i+1,j+1,k+1,iBlock), &
+                        NodeNumberGlobal_NB(i  ,j+1,k+1,iBlock)
+                end do; end do; end do
+             end do
+          end if
        end if
     case('cut','x=0','y=0','z=0')
        !================================ cut ============================

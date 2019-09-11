@@ -4,8 +4,9 @@
 
 module ModIeCoupling
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, nProc
+  use BATL_lib,      ONLY: test_start, test_stop, iProc, nProc
+  use ModAdvance,    ONLY: nSpecies
+  use ModMultiFluid, ONLY: nIonFluid
 !  use ModUtilities, ONLY: norm2
 
   implicit none
@@ -19,6 +20,7 @@ module ModIeCoupling
   public:: get_ie_potential            ! interpolate potential to x,y,z
   public:: logvar_ionosphere           ! get cross polar cap potential
   public:: calc_grad_ie_potential      ! calculate gradient of iono. potential
+  public:: calc_ie_cpcp                ! calculate cross polar cap potentials
   public:: calc_inner_bc_velocity      ! get ExB/B^2 drift velocity at inner BC
   public:: apply_ie_velocity           ! nudge MHD velocity in a volume
   public:: map_jouleheating_to_inner_bc! map iono. Joule heating to inner BC
@@ -43,6 +45,17 @@ module ModIeCoupling
   ! Hall and Pedersen currents
   real, public, allocatable :: jHall_DII(:,:,:), jPedersen_DII(:,:,:)
 
+  ! Cross polar cap potentials
+  real, public:: CpcpNorth = 0.0, CpcpSouth = 0.0
+
+  ! Number of densities (ion fluids or ion species)
+  integer, parameter, public:: nIonDensity = max(nIonFluid, nSpecies)
+
+  ! CPCP dependent densities at the inner boundary
+  logical, public:: UseCpcpBc = .false.
+  real,    public:: Rho0Cpcp_I(nIonDensity)=18.0, RhoPerCpcp_I(nIonDensity)=0.2
+  real,    public:: RhoCpcp_I(nIonDensity) = -1000.0
+  
   ! Local variables
   real:: dThetaIono, dPhiIono
   real, allocatable:: SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
@@ -185,7 +198,29 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_ie_potential
   !============================================================================
+  subroutine calc_ie_cpcp
+    
+    use ModPhysics, ONLY: Io2No_V, No2Si_V, UnitX_, UnitElectric_, UnitRho_
+    !-------------------------------------------------------------------------
 
+    CpcpNorth = &
+         maxval(IonoPotential_II(1:(nThetaIono+1)/2,:)) - &
+         minval(IonoPotential_II(1:(nThetaIono+1)/2,:))
+
+    CpcpSouth = &
+         maxval(IonoPotential_II((nThetaIono+1)/2:nThetaIono,:)) - &
+         minval(IonoPotential_II((nThetaIono+1)/2:nThetaIono,:))
+
+    if(UseCpcpBc) then
+       ! Calculate inner BC density from cross polar cap potential if required
+       ! Use KeV units for Cpcp and amu/cc for density.
+       RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
+            * 0.5*(CpcpNorth + CpcpSouth) &
+            * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
+    end if
+    
+  end subroutine calc_ie_cpcp
+  !============================================================================    
   subroutine calc_grad_ie_potential
 
     ! Calculate gradient of ionosphere potential on the IE grid
@@ -236,6 +271,9 @@ contains
 
     dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
 
+    ! Calculate cross polar cap potentials and related boundary conditions
+    call calc_ie_cpcp
+    
     call test_stop(NameSub, DoTest)
   end subroutine calc_grad_ie_potential
   !============================================================================
@@ -256,13 +294,9 @@ contains
 
     select case(NameLogvar)
     case('cpcpn','cpcp_n','cpcp_north','cpcpnorth')
-       logvar_ionosphere = &
-            maxval(IonoPotential_II(1:(nThetaIono+1)/2,:)) - &
-            minval(IonoPotential_II(1:(nThetaIono+1)/2,:))
+       logvar_ionosphere = CpcpNorth
     case('cpcps','cpcp_s','cpcp_south','cpcpsouth')
-       logvar_ionosphere = &
-            maxval(IonoPotential_II((nThetaIono+1)/2:nThetaIono,:)) - &
-            minval(IonoPotential_II((nThetaIono+1)/2:nThetaIono,:))
+       logvar_ionosphere = CpcpSouth
     case default
        if(nWarn < 2 .and. iProc==0)then
           call write_myname;
