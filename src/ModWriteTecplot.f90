@@ -89,6 +89,7 @@ contains
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile, DoSaveTecBinary
     use ModIoUnit, ONLY: UnitTmp_
+    use ModKind, ONLY: Real4_
 
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
@@ -96,9 +97,8 @@ contains
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer:: iRecData
 
-    integer, parameter :: sp = selected_real_kind(6, 37)
-    real(sp):: Xyz_D(MaxDim)
-    real(sp), allocatable:: PlotVar_V(:)
+    real(Real4_):: Xyz_D(MaxDim)
+    real(Real4_), allocatable:: PlotVar_V(:)
 
     ! Interpolation
     integer:: Di, Dj, Dk
@@ -1056,6 +1056,7 @@ contains
          Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
          find_grid_block, iMortonNode_A, iNode_B
     use ModMpi
+    use ModKind, ONLY: Real4_
 
     ! Arguments
     integer, intent(in) :: ifile, nPlotVar
@@ -1081,8 +1082,7 @@ contains
 
     integer::ic1,ic2,jc1,jc2,kc1,kc2, nCuts, nCutsTotal
     real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
-    integer, parameter :: sp = selected_real_kind(6, 37)
-    real(sp), dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
+    real(Real4_), dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
     logical :: okdebug
 
     logical:: DoTest
