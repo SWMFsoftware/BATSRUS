@@ -440,6 +440,7 @@ contains
       use ModCoordTransform, ONLY: cross_product
       use CON_axes,     ONLY: transform_matrix
       use ModUserInterface ! user_get_log_var
+      use ModGroundMagPerturb, ONLY: ratioOH
 
       ! Local variables
       real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
@@ -798,6 +799,9 @@ contains
          ! It is sufficient to calculate it on processor 0
          if(iProc == 0) &
               LogVar_I(iVarTot) = logvar_ionosphere(NameLogVar)
+      case('ratioyoung')
+         if(iProc == 0) &
+              LogVar_I(iVarTot) = ratioOH
          ! Flux values integrated over the surface of a sphere
       case('aflx')
          ! just to check that the area is being computed correctly
