@@ -391,26 +391,29 @@ end
 ;===========================================================================
 function curve_distance,x1,y1,x2,y2
 
-;measure of the minimum distance between two curves
+; measure of the minimum distance between two curves measured as
+; the averaged minimum of the sum of distances in the X and Y directions.
 
   n1 = n_elements(x1)
   n2 = n_elements(x2)
-  d = 0d0
-  for i = 0, n1-1 do d += min( abs(x1(i) - x2) + abs(y1(i) - y2) )
-  for i = 0, n2-1 do d += min( abs(x2(i) - x1) + abs(y2(i) - y1) )
-  d /= n1 + n2
+  d1 = 0d0
+  d2 = 0d0
+  for i = 0, n1-1 do d1 += min( abs(x1(i) - x2) + abs(y1(i) - y2) )
+  for i = 0, n2-1 do d2 += min( abs(x2(i) - x1) + abs(y2(i) - y1) )
+  d = (d1/n1 + d2/n2)/2
   return, d
 end
 ;===========================================================================
 function curve_int_distance,x1,y1,x2,y2
 
-;Evaluates the distance between two curves (data & model results)
-;independent of the coordinate system so that errors in x and y
-;coordinates are treated equally.
-;(x1,y1) & (x2,y2) represent the x,y coordinates curves 1 and 2 respectively
-;d1 is the average of the minimum distance between the two curves 
-;integrated along curve 1 and d2 is integrated along curve 2
-;Function returns the error (distance) d, which is a symmetric function of the two curves.
+; Evaluates the distance between two curves (data & model results)
+; independent of the coordinate system so that errors in x and y
+; coordinates are treated equally.
+; (x1,y1) & (x2,y2) represent the x,y coordinates curves 1 and 2 respectively
+; d1 is the average of the minimum distance between the two curves 
+; integrated along curve 1 and d2 is integrated along curve 2
+; Function returns the error (distance) d, which is a symmetric
+; function of the two curves.
 
   n1 = n_elements(x1)
   n2 = n_elements(x2)
@@ -428,8 +431,10 @@ function curve_int_distance,x1,y1,x2,y2
   len1 = total(d1c)
   len2 = total(d2c)
 
-  for i = 0, n1-2 do d1 += d1c(i)*min( sqrt( (x1c(i) - x2c)^2 + (y1c(i) - y2c)^2 ) )
-  for i = 0, n2-2 do d2 += d2c(i)*min( sqrt( (x2c(i) - x1c)^2 + (y2c(i) - y1c)^2 ) )
+  for i = 0, n1-2 do $
+     d1 += d1c(i)*min( sqrt( (x1c(i) - x2c)^2 + (y1c(i) - y2c)^2 ) )
+  for i = 0, n2-2 do $
+     d2 += d2c(i)*min( sqrt( (x2c(i) - x1c)^2 + (y2c(i) - y1c)^2 ) )
   d = (d1/len1 + d2/len2)/2
   return, d
 end
