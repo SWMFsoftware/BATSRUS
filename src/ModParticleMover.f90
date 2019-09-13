@@ -5,7 +5,8 @@ module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
   use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm,&
-       nI, nJ, nK, Unused_B, CoordMin_DB, CoordMax_DB, put_particles
+       nI, nJ, nK, Unused_B, CoordMin_DB, CoordMax_DB, put_particles, &
+       nProc
   use BATL_lib, ONLY: CellVolume_GB
 
   use ModMain,         ONLY: NameThisComp
@@ -266,7 +267,7 @@ contains
     !\
     ! Deallocate all the allocated arays.
     !/
-    deallocate(Mass_I, Charge_I, nParticleMax_I, nHybridParticlePerCell_I)
+    deallocate(Mass_I, Charge_I, nParticleMax_I)
     call test_stop(NameSub, DoTest)
   end subroutine read_param
   !===================== NORMALIZE ====================
@@ -677,12 +678,15 @@ contains
   !==========================
   subroutine get_state_from_vdf(iBlock)
     integer, intent(in) :: iBlock
+
     logical :: DoTest, DoTestCell
     integer :: i, j, k, iIon, iKind, iLoop
     real :: vInv
     character(len=*), parameter:: NameSub = &
          'get_state_from_vdf'
     !--------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    vInv = 0.0
     !\
     ! Transform VDF moments to State Vector Variables
     !/
@@ -690,7 +694,7 @@ contains
        ! Skip not tru cells 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        
-       !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
        
        !\
        ! From VDF moments update fluid components for each hybrid fluid
@@ -704,23 +708,26 @@ contains
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
           State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
+                  State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) + &
                Moments_VGBI(Rho_,i,j,k,iBlock,iKind)*vInv
           !\
           ! Momentum density of hybrid fluid iIon : Momentum / Control Volume
           !/
           State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) = &
+                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) + &
                Moments_VGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iKind)*vInv
           !\
           ! Pressure of hybrid fluid iIon : P = Trace(P_tensor) / 3 
           ! Mass * (Ux^2+Uy^2+Uz^2) / Control Volume / 3
           !/
           State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
+                  State_VGB(iPIon_I(iIon),i,j,k,iBlock) + &
                (  Moments_VGBI(Px_,i,j,k,iBlock,iKind)  &
                +  Moments_VGBI(Py_,i,j,k,iBlock,iKind)  &
                +  Moments_VGBI(Pz_,i,j,k,iBlock,iKind))*vInv/3.0
        end do
     end do; end do; end do
-    !call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTest)
   end subroutine get_state_from_vdf
   !==========================
   !\
@@ -729,114 +736,193 @@ contains
   ! More specifically, we calculate the thermal velocity uThermal_I
   ! 
   !/
-  subroutine get_vdf_from_state(i,j,k,iBlock,iKind)
+  subroutine get_vdf_from_state(iBlock)
+    use ModMpi
     use ModRandomNumber, ONLY: random_real
-    integer, intent(in) :: iKind, i, j, k, iBlock
-    integer :: nParticlePerCell, iParticle
-    real :: uBulk_D(Ux_:Uz_)
-    real :: uThermal_I(iKindParticle_I(1):&
-            iKindParticle_I(nParticleSort))
+    use ModBatlInterface, ONLY: interpolate_grid_amr_gc
+!    use BATL_pass_face_field, ONLY: add_ghost_cell_field
+
+    integer, intent(in) :: iBlock
+
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    integer :: i, j, k, iIon, iKind, iLoop, iParticle
+    integer :: nPPerBlock, iPStart, iPEnd 
+    integer :: nParticle
+    integer:: iCell ! loop variable
+    integer:: i_D(MaxDim)
+    real :: Xyz_D(MaxDim)
+    real,dimension(x_:z_) :: RhoU_D
+    real :: P_D, Rho_D, V_D
+    real :: uBulk_D(Ux_:Uz_,MaxBlock), nCellInBlock
+    real :: uThermal_I(1:nHybridParticleSort,MaxBlock)
     real :: InvRho_I, RndUnif
+    real :: Energy, MomentumAvr, RndUnif1, RndUnif2
+    real :: Weight_I(2**nDim)
     ! seed for random number generator
     integer, save:: iSeed=0
-    !-----------------------------------
+    integer :: iError
+    integer :: n_P(1:max(nHybridParticleSort,1))
+    integer :: nTotal_P(1:max(nHybridParticleSort,1))
+    integer, pointer:: iIndexIn_II(:,:)
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = &
+     'get_vdf_from_state'
+    !\
+    ! For conveniently address to coordinates and 
+    ! indexes of a particular sort of particle
+    !/
+    real,    pointer :: Coord_DII(:,:)
+    integer, pointer :: Index_III(:,:)
+    !--------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     !\
     ! Transform State Vector Variables to VDFs
     !/
-    nParticlePerCell = nHybridParticlePerCell_I(iKind)
-    !\
-    ! Calculate 1.0 / Rho once to reduce computational time
-    InvRho_I = 1.0/State_VGB(iRhoIon_I(iKind),i,j,k,iBlock)
-    !\
-    ! The total velocity of each macroparticle will be
-    ! \vec{v_total} = \vec{uBulk} + uThermal_I * \vec{unit vector}
-    ! The bulk velocity can be calculated as the ratio of the 
-    ! momentum to density, i.e. ubulk = rho * u / rho
-    !/
-    uBulk_D(Ux_:Uz_) =  &
-      State_VGB(iRhoUxIon_I(iKind):iRhoUzIon_I(iKind),i,j,k,iBlock)*&
-      InvRho_I
-    !\
-    ! The thermal velocity in the normalization used here is:
-    ! uThermal_I = sqrt(P_I/Rho_I)
-    !/
-    uThermal_I(iKind) = &
-            sqrt(State_VGB(iPIon_I(iKind),i,j,k,iBlock)*&
-      InvRho_I) 
-    ! Loop through particles of a specific sort in each cell
-    do iParticle = 1, nParticlePerCell
-       if(Index_II(Status_, iParticle) == Done_ )RETURN
-       if(Index_II(Status_, iParticle) == DoAll_)then
-       call set_pointer_to_particles(&
-            iKind, Coord_DI, Index_II, &
-            nParticle=nParticlePerCell)
-        ! If the thermal velocity is zero then set velocity three vector 
-        ! to zero
-        if(uThermal_I(iKind)==0.0)&
-                Coord_DI(Ux_:Uz_,iParticle) = 0.0
-        !\
-        ! Use random generator to assign coordinates for particles in 
-        ! each block.
-        !/
-        RndUnif = random_real(iSeed)
-        Coord_DI(x_:nDim,iParticle) = (CoordMax_DB(x_:nDim,iBlock) -&
-                CoordMin_DB(x_:nDim,iBlock))&
-                * RndUnif + CoordMin_DB(x_:nDim,iBlock)
-        !\
-        ! If the thermal velocity is a positive value, call thermalize
-        ! to generate a Gaussian distribution from the state vector
-        ! variable and obtain the VDFs and velocity coordinates.
-        !/
-        if(uThermal_I(iKind)>0.0)&
-        call thermalize_particle(iKind,iParticle, &
-                       uThermal_I, Coord_DI)
-        Coord_DI(Ux_:Uz_,iParticle) = Coord_DI(Ux_:Uz_,iParticle) + &
-                uBulk_D(Ux_:Uz_)
-        !\
-        ! Finally calculate the Mass coordinate for each particle
-        !/
-        Coord_DI(Mass_,iParticle) = State_VGB(iRhoIon_I(iKind),i,j,k,iBlock)* &
-                CellVolume_GB(i,j,k,iBlock) / nParticlePerCell 
-        end if
-        Index_II(Status_, iParticle) = Done_
-     end do
-        !\
-        ! Put Particles 
-        !/
-        call put_particles(&
-        iKindParticle      = iKind,    &
-        StateIn_VI         = Coord_DI(:,1:nParticlePerCell),    &
-        iIndexIn_II        = Index_II)
+    
+    Energy = 0.0; MomentumAvr = 0.0 
 
+    uBulk_D = 0.0; uThermal_I = 0.0
+
+    SORTS:do iLoop = 1, nHybridParticleSort
+       iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop) 
+
+       call set_pointer_to_particles(&
+         iKind, Coord_DII, Index_III, &
+         nParticle=nParticleMax_I(iKind))
+       write(*,*) 'nParticleMax_I is DEFINED:', nParticleMax_I(iKind) 
+       !\
+       ! Number of particles per Block = nHybridParticlePerCell_I * CellPerBlock 
+       !/
+       nPPerBlock = nHybridParticlePerCell_I(iLoop) * nI * nJ * nK
+       !\
+       ! Loop over particles per Block
+       !/
+       iPStart = Particle_I(iLoop)%nParticle + 1
+       iPEnd   = Particle_I(iLoop)%nParticle + nPPerBlock
+       PARTICLES:do iParticle = iPStart, iPEnd 
+          if(Index_III(Status_, iParticle) == Done_ )RETURN
+          if(Index_III(Status_, iParticle) == DoAll_)then
+             !\
+             ! Use random generator to assign coordinates for particles in 
+             ! each block.
+             !/
+             RndUnif = random_real(iSeed)
+             Coord_DII(x_:nDim,iParticle) = (CoordMax_DB(x_:nDim,iBlock) -&
+                     CoordMin_DB(x_:nDim,iBlock))&
+                     * RndUnif + CoordMin_DB(x_:nDim,iBlock)
+             !\
+             ! If the thermal velocity is a positive value, "thermalize"
+             ! i.e. generate a Gaussian distribution from the state vector
+             ! variable and obtain the VDFs and velocity coordinates.
+             !/
+             call interpolate_grid_amr_gc(&
+               Coord_DII(x_:nDim,:), iBlock, nCell, iCell_II, Weight_I)
+
+             Rho_D = 0.0; P_D = 0.0; RhoU_D = 0.0; V_D = 0.0 
+
+             CELLS:do iCell = 1, nCell
+                i_D = 1
+                i_D(1:nDim) = iCell_II(1:nDim, iCell)
+                !\
+                ! Interpolate State_VGB with obtained weight coefficients
+                !/
+                Rho_D = Rho_D + Weight_I(iCell)*&
+                  State_VGB(iRhoIon_I(iIon),i_D(1),i_D(2),i_D(3),iBlock)
+                P_D = P_D + Weight_I(iCell)*&
+                  State_VGB(iPIon_I(iIon),i_D(1),i_D(2),i_D(3),iBlock)
+                RhoU_D(x_:z_) = RhoU_D(x_:z_) + Weight_I(iCell)*&
+                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),&
+                  i_D(1),i_D(2),i_D(3),iBlock) 
+                V_D = V_D + Weight_I(iCell)*&
+                  CellVolume_GB(i_D(1),i_D(2),i_D(3),iBlock)
+                !\
+                ! Finally calculate the Mass coordinate for each particle
+                !/
+                Coord_DII(Mass_,iParticle) = Rho_D * V_D / nPPerBlock
+
+             end do CELLS
+             !\
+             ! Calculate 1.0 / Rho once to reduce computational time
+             !/
+             InvRho_I = 1.0/Rho_D
+             !\
+             ! The total velocity of each macroparticle will be
+             ! \vec{v_total} = \vec{uBulk} + uThermal_I * \vec{unit vector}
+             ! The bulk velocity can be calculated as the ratio of the 
+             ! momentum to density, i.e. ubulk = rho * u / rho
+             !/
+             uBulk_D(Ux_:Uz_,iBlock) =  RhoU_D(x_:z_) * InvRho_I
+             !\
+             ! The thermal velocity in the normalization used here is:
+             ! uThermal_I = sqrt(P_I/Rho_I)
+             !/
+             uThermal_I(iLoop,iBlock) = sqrt(P_D * InvRho_I) 
+             !\
+             ! If the thermal velocity is zero then set velocity three vector 
+             ! to zero
+             !/
+             if(uThermal_I(iLoop,iBlock)==0.0)&
+                     Coord_DII(Ux_:Uz_,iParticle) = 0.0
+             !\
+             ! If the thermal velocity is a positive value, "thermalize"
+             ! i.e. generate a Gaussian distribution from the state vector
+             ! variable and obtain the VDFs and velocity coordinates.
+             !/
+             if(uThermal_I(iLoop,iBlock)>0.0)then
+                !\
+                !Generate Gaussian distribution using Box-Muller method
+                !/
+                ! Randomize each component of the three velocity vector for each
+                ! particle Coord_DII(Ux_:Uz_) using the thermal velocity
+                ! for each iIon sort uThermal_I(iIon).
+                RndUnif1  = random_real(iSeed)
+                RndUnif2  = random_real(iSeed)
+                ! The kinetic energy is calculated next for each particle
+                Energy    = -uThermal_I(iLoop,iBlock)**2 *log(RndUnif1)
+                ! The average momentum is calculated next for each particle
+                MomentumAvr = sqrt(2.0*Energy)
+                ! The velocity vector is calculated next are for each particle
+                Coord_DII(Ux_:Uz_,iParticle) = MomentumAvr*cos(cTwoPi*RndUnif2)
+
+                ! Add bulk velocity & thermal speed to the particle coordinates
+                Coord_DII(Ux_:Uz_,iParticle) = Coord_DII(Ux_:Uz_,iParticle) + &
+                        uBulk_D(Ux_:Uz_,iBlock)
+             end if
+          end if
+          
+!          !\
+!          ! Put particles with known coordinates
+!          !/
+!          call put_particles(&
+!                   iKindParticle      = iKind,          &
+!                   StateIn_VI         = Coord_DII(x_:nDim,:),            &
+!                   iIndexIn_II        = Index_III)
+
+       Index_III(Status_, :) = Done_
+
+       end do PARTICLES
+       !\
+       ! Collect particles of Sort per Block
+       !/
+       n_P(iLoop) = nPPerBlock 
+
+    end do SORTS
+
+    if(nProc==1)then
+       nTotal_P = n_P
+    else
+       call MPI_reduce(n_P, nTotal_P, nHybridParticleSort, MPI_REAL,&
+            MPI_SUM, 0, iComm, iError)
+    end if
+
+    if(iProc==0)then
+       write(*,*)'Particles are distributed'
+       do iLoop = 1, nHybridParticleSort 
+          write(*,*)'Totally ',nTotal_P(iLoop),' particles of sort ',iLoop
+       end do
+    end if
+
+    call test_stop(NameSub, DoTest)
   end subroutine get_vdf_from_state
-  !==================
-  !\
-  !Generate Gaussian distribution using Box-Muller method
-  !/
-  subroutine thermalize_particle(iKind,iParticle,&
-                  uThermal_I,Coord_DI)
-    use ModRandomNumber, ONLY: random_real
-    integer, intent(in ) :: iKind, iParticle
-    real,    intent(in ) :: uThermal_I(iKindParticle_I(1):&
-            iKindParticle_I(nParticleSort))
-    real   , intent(out) :: Coord_DI(Ux_:Uz_,iParticle)
-    real                 :: Energy, MomentumAvr, RndUnif1, RndUnif2
-    integer              :: iW
-   ! seed for random number generator
-    integer, save:: iSeed=0
-    !-----------------------------------
-    do iW = Ux_, Uz_
-    ! Randomize each component of the three velocity vector for each
-    ! particle Coord_DI(Ux_:Uz_) using the thermal velocity
-    ! for each particle sort uThermal_I(iKind).
-       RndUnif1  = random_real(iSeed)
-       RndUnif2  = random_real(iSeed)
-       ! The kinetic energy is calculated next for each particle
-       Energy      = -uThermal_I(iKind)**2 *log(RndUnif1)
-       ! The average momentum is calculated next for each particle
-       MomentumAvr = sqrt(2.0*Energy)
-       ! The velocity vector is calculated next are for each particle
-       Coord_DI(iW,iParticle)     = MomentumAvr*cos(cTwoPi*RndUnif2)
-    end do
-  end subroutine thermalize_particle
+!====================================
 end module ModParticleMover
