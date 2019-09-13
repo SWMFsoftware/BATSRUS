@@ -49,7 +49,8 @@ module ModIO
   logical :: DoSaveInitial = .false.
 
   logical :: save_restart_file=.true., &
-       save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
+       save_plots_amr=.false.,save_logfile=.false.,save_binary=.true., &
+       DoSaveTecBinary=.false.
 
   ! Unit numbers for the log file
   integer :: unit_log = -1

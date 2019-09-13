@@ -381,6 +381,12 @@ pro set_default_values
 ; The byte arrays in the colors common block are set by loadct
   common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
 
+  common start_date, start_year, start_month, start_day
+  
+  start_year  = 2000
+  start_month = 1
+  start_day   = 1
+
 end
 ;===========================================================================
 function curve_distance,x1,y1,x2,y2
@@ -1434,6 +1440,7 @@ function log_time,wlog,wlognames,timeunit
 ; This algorithm works only if the whole file is in the same month.
 
   common debug_param & on_error, onerror
+  common start_date
 
   nwlog = n_elements(wlognames)
   hours = 0.0*wlog(*,0)
@@ -1443,6 +1450,7 @@ function log_time,wlog,wlognames,timeunit
   itime = -1
   istep = -1
   iyear = -1
+  imon  = -1
   iday  = -1
   ihour = -1
   imin  = -1
@@ -1458,6 +1466,8 @@ function log_time,wlog,wlognames,timeunit
         'year'       : iyear = i
         'yr'         : iyear = i
         'yy'         : iyear = i
+        'month'      : imon  = i
+        'mo'         : imon  = i
         'day'        : iday  = i
         'dy'         : iday  = i
         'dd'         : iday  = i
@@ -1534,6 +1544,17 @@ function log_time,wlog,wlognames,timeunit
         'millisec': logtime = hours*3600e3
         'microsec': logtime = hours*3600e6
         'ns'    : logtime = hours*3600e9
+        'date'  : begin
+           if imon  gt -1 then start_month = wlog(0,imon)
+           if iday  gt -1 then start_day   = wlog(0,iday)
+           if iyear gt -1 then start_year  = wlog(0,iyear)
+           if imon eq -1 or iday eq -1 or iyear eq -1 then   $
+              print, ' Warning: check start time: ', $
+                     STRING(start_month, format='(i02)'),'/', $
+                     STRING(start_day,   format='(i2)'), '/', $
+                     STRING(start_year,  format='(i4)')
+           logtime = JULDAY(start_month, start_day, start_year, hours)
+        end
         else: 
      endcase
   endif
@@ -5916,6 +5937,11 @@ pro plot_log
   spacey = log_spacey*float(!d.y_ch_size)/float(!d.y_size)
   set_space, nlogfunc, spacex, spacey, sizes, ny = nlogfunc
 
+  if timeunit eq 'date' then begin
+     dummy = LABEL_DATE(DATE_FORMAT=['%H:%I!c%M %D %Y'])
+     xtitle0 = " "
+  endif
+
   if not keyword_set(noerase) then erase
 
 ; The first iteration is used to get the X and Y ranges from the
@@ -6005,10 +6031,12 @@ pro plot_log
               endif else begin
                  set_position, sizes, 0, ifunc, posm, /rect
                  posm(0) = posm(0) + 0.05
+                 if timeunit eq 'date' and !x.ticks gt 0 then posm(2) = posm(2) - 0.05
                  if nlogfunc lt 3 then posm(1) = posm(1) + 0.05/nlogfunc
                  title1  = ''
                  xtitle1 = ''
                  xtickname1 = strarr(60)+' '
+                 xtickformat1 = strarr(10)
                  xstyle=5
                  ystyle=5
                  if ilog eq 0 then begin
@@ -6018,6 +6046,7 @@ pro plot_log
                     if ifunc eq nlogfunc-1 then begin
                        xtitle1    = xtitle0
                        xtickname1 = !x.tickname
+                       if timeunit eq 'date' then xtickformat1 = ['LABEL_DATE']
                     endif
                  endif
                  plot, xcoord, field, pos = posm, $
@@ -6029,6 +6058,7 @@ pro plot_log
                        title  = title1, $
                        xtitle = xtitle1, $
                        xtickname = xtickname1, $
+                       xtickformat = xtickformat1, $
                        ytitle = ytitles0(ifunc), $
                        color = colors(ilog), $
                        psym  = symbols(ilog), $

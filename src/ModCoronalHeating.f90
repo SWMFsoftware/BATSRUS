@@ -95,6 +95,11 @@ module ModCoronalHeating
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
 
+  ! Switch whether or not to use Alignment angle between Zplus and Zminus
+  ! Elsasser variables in the cascade rate
+  logical, public :: UseAlignmentAngle = .false.
+  real, public :: Cdiss_C(nI,nJ,nK) = 1.0
+
   logical :: DoInit = .true.
 
   public :: get_coronal_heat_factor
@@ -514,6 +519,9 @@ contains
        call read_var('StochasticExponent2', StochasticExponent2)
        call read_var('StochasticAmplitude2', StochasticAmplitude2)
 
+    case("#ALIGNMENTANGLE")
+       call read_var('UseAlignmentAngle', UseAlignmentAngle)
+
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -883,6 +891,7 @@ contains
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
+    real :: AlfvenGradRefl, ReflectionRateImb
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_wave_reflection'
@@ -916,19 +925,21 @@ contains
        if(DoExtendTransitionRegion) DissipationRateMax = &
             DissipationRateMax/extension_factor(TeSi_C(i,j,k))
 
+       AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
+
        ! Reflection rate driven by Alfven speed gradient and
        ! vorticity along the field lines
        ! if(R_BLK(i,j,k,iBlock)<2.5)then
-       ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
-            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
+       ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
+
        ! else
-       !   ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
+       !   ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 &
        !        + min((sum(FullB_D(1:nDim)*GradLogAlfven_D))**2,&
        !        (sum(FullB_D(1:nDim)*Xyz_DGB(1:nDim,i,j,k,iBlock))/&
        !        R_BLK(i,j,k,iBlock)**2)**2)/Rho )
        ! end if
        ! Clip the reflection rate from above with maximum dissipation rate
-       ReflectionRate = min(ReflectionRate, DissipationRateMax)
+       ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
@@ -946,6 +957,11 @@ contains
             - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
        Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
             + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
+
+       ! Calculate sin(theta), where theta is the angle between Zplus
+       ! and Zminus at the outer Lperp scale
+       if(UseAlignmentAngle) Cdiss_C(i,j,k) = sqrt(1.0 - AlfvenGradRefl &
+            *(ReflectionRate/ReflectionRateImb**2)**2)
 
     end do; end do; end do
 
@@ -1316,6 +1332,14 @@ contains
              WminorGyro = Wminor/sqrt(LperpInvGyroRad)
           else
              iPrev = iIon + 1
+
+             QmajorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMajor_I(iPrev))
+             QminorFraction_I(iPrev) = &
+                  DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev) &
+                  /(1.0 + DampingPerp_I(iPrev)*CascadeTimeMinor_I(iPrev))
+
              ! Subtract what was used for stochastic heating of alphas
              Qmajor_I(iIon) = &
                   Qmajor_I(iPrev)*(1.0 - QmajorFraction_I(iPrev))
@@ -1358,15 +1382,6 @@ contains
                *exp(-StochasticExponent2/max(Delta,1e-15))) &
                *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
                *InvGyroRadius/Wgyro
-
-          if(iIon > 1)then
-             QmajorFraction_I(iIon) = &
-                  DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon) &
-                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMajor_I(iIon))
-             QminorFraction_I(iIon) = &
-                  DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon) &
-                  /(1.0 + DampingPerp_I(iIon)*CascadeTimeMinor_I(iIon))
-          end if
        end do
 
        ! Set k_parallel*V_Alfven = 1/t_minor (critical balance)
