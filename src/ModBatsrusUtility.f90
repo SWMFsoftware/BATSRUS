@@ -203,11 +203,11 @@ subroutine error_report(str,value,iErrorIn,show_first)
 
         ! Report errors
         if(nErrors==0)then
-           call write_myname; write(*,*)'error report: no errors...'
+           call write_myname; write(*,*)'Error report: no errors...'
         else
            do i=1,nErrors
               call write_myname
-              write(*,'(a,a)')'Error_report for ',trim(error_message(i))
+              write(*,'(a,a)')'Error report for ',trim(error_message(i))
               call write_myname
               write(*,*)'OCCURED first=',iter_first(i),&
                    ' last=',iter_last(i),&

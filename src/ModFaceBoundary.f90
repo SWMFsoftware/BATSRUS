@@ -66,10 +66,6 @@ module ModFaceBoundary
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
-  ! Young et al dependent density function at the inner boundary
-  logical :: UseYoungBc = .false. ! Use YoungBCs?
-  real    :: f107Young  = 150.0   ! F10.7 for Young et al.
-
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
 
@@ -85,7 +81,8 @@ contains
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
-
+    use ModGroundMagPerturb, ONLY: UseYoungBc, F107Young
+    
     character(len=*), intent(in):: NameCommand
 
     integer:: iDensity, iFluid
@@ -234,7 +231,7 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB, iProc
-    use ModGroundMagPerturb, ONLY: Kp
+    use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
     
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
@@ -245,7 +242,7 @@ contains
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
     ! Variables for Young et al variable mass density:
-    real :: RatioOH, FracH, FracO
+    real :: FracH, FracO
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -260,20 +257,6 @@ contains
     ! Use Young et al. 1982 empirical relationship to set
     ! inner boundary density based on expected composition.
     if(UseYoungBc .and. UseIe)then
-       ! Apply empirical formula from Young et al. to get the ratio
-       ! of minor species to H+
-       ! Limit Kp to be within [1.0,7.0]
-       ! Limit F10.7 to be within [115.0,230.0]
-       RatioOH = 4.5E-2 * exp(0.17*min(max(Kp, 1.0),7.0) &
-       	       + 0.01*min(max(F107Young, 115.0), 230.0)) ! Eq. 5, pg. 9088
-
-       if (RatioOH > 1.0) then
-          write(*,*) 'RatioOH too large, RatioOH =', RatioOH
-       end if
-
-       ! O+ should not exceed H+
-       RatioOH = min(RatioOH, 1.0)
-
        ! Use species fractions to obtain the total mass density.
        if (UseMultiSpecies) then
           if (nIonDensity > 2) call stop_mpi(NameSub// &
@@ -307,7 +290,11 @@ contains
           ! is both light and very minor.
           FracH = 1.0 / (1.0 + RatioOH)
           FracO = RatioOH  * FracH
-          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+          ! fixed total number density
+          !RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+
+          ! fixed H+ density
+          RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
        end if
 
     endif
