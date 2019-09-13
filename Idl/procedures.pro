@@ -383,6 +383,51 @@ pro set_default_values
 
 end
 ;===========================================================================
+function curve_distance,x1,y1,x2,y2
+
+;measure of the minimum distance between two curves
+
+  n1 = n_elements(x1)
+  n2 = n_elements(x2)
+  d = 0d0
+  for i = 0, n1-1 do d += min( abs(x1(i) - x2) + abs(y1(i) - y2) )
+  for i = 0, n2-1 do d += min( abs(x2(i) - x1) + abs(y2(i) - y1) )
+  d /= n1 + n2
+  return, d
+end
+;===========================================================================
+function curve_int_distance,x1,y1,x2,y2
+
+;Evaluates the distance between two curves (data & model results)
+;independent of the coordinate system so that errors in x and y
+;coordinates are treated equally.
+;(x1,y1) & (x2,y2) represent the x,y coordinates curves 1 and 2 respectively
+;d1 is the average of the minimum distance between the two curves 
+;integrated along curve 1 and d2 is integrated along curve 2
+;Function returns the error (distance) d, which is a symmetric function of the two curves.
+
+  n1 = n_elements(x1)
+  n2 = n_elements(x2)
+  d1=0d0
+  d2=0d0
+
+  x1c= (x1(1:n1-1) + x1(0:n1-2))/2
+  x2c= (x2(1:n2-1) + x2(0:n2-2))/2
+  y1c= (y1(1:n1-1) + y1(0:n1-2))/2
+  y2c= (y2(1:n2-1) + y2(0:n2-2))/2
+
+  d1c = sqrt( (x1(1:n1-1) - x1(0:n1-2))^2 + (y1(1:n1-1) - y1(0:n1-2))^2 )
+  d2c = sqrt( (x2(1:n2-1) - x2(0:n2-2))^2 + (y2(1:n2-1) - y2(0:n2-2))^2 )
+
+  len1 = total(d1c)
+  len2 = total(d2c)
+
+  for i = 0, n1-2 do d1 += d1c(i)*min( sqrt( (x1c(i) - x2c)^2 + (y1c(i) - y2c)^2 ) )
+  for i = 0, n2-2 do d2 += d2c(i)*min( sqrt( (x2c(i) - x1c)^2 + (y2c(i) - y1c)^2 ) )
+  d = (d1/len1 + d2/len2)/2
+  return, d
+end
+
 pro read_data
 ;
 ;    Read the npict-th snapshot from an ascii or binary data file into
