@@ -13,6 +13,13 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
+
+norm2_utilities:
+	perl -pi -e 's/^!(\s*use ModUtilities, ONLY: norm2)/$$1/' *.f90
+
+norm2_intrinsic:
+	perl -pi -e 's/^(\s*use ModUtilities, ONLY: norm2)/\!$$1/' *.f90
+
 # OBJECT FILES FOR LIBRARY / EXECUTABLE
 
 OBJECTS = \
