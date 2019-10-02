@@ -93,7 +93,7 @@ contains
              ! and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
              call timing_start('calc_face_bfo')
-             call calc_face_value(.true.,iBlock)
+             call calc_face_value(iBlock, DoResChangeOnly = .true. , DoMonotoneRestrict = .true.)
              call timing_stop('calc_face_bfo')
 
              if(body_BLK(iBlock)) &
@@ -142,7 +142,7 @@ contains
           end if
 
           call timing_start('calc_facevalues')
-          call calc_face_value(.false., iBlock)
+          call calc_face_value(iBlock, DoResChangeOnly= .false. , DoMonotoneRestrict = .true.)
           call timing_stop('calc_facevalues')
           
           if(body_BLK(iBlock)) &
