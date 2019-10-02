@@ -577,7 +577,7 @@ contains
     case('refl')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(.false., iBlock)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -592,7 +592,7 @@ contains
     case('sintheta')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(.false., iBlock)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock)
 
@@ -607,7 +607,7 @@ contains
        if(UseAlignmentAngle)then
           Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
           call set_b0_face(iBlock)
-          call calc_face_value(.false., iBlock)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
           IsNewBlockAlfven = .true.
           call get_wave_reflection(iBlock)
        end if
@@ -632,7 +632,7 @@ contains
        ! Not yet generalized to multi-fluid
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
-          call calc_face_value(.false., iBlock)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
 
           if(UseAlignmentAngle)then
              Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
