@@ -759,8 +759,6 @@ contains
     ! If DoResChangeOnly is true, only facevalues next to a coarser
     ! neighbor block are calculated.
 
-    ! DoMonotoneRestrict is true by default
-
     use ModMain,     ONLY: nOrder, nOrderProlong, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
