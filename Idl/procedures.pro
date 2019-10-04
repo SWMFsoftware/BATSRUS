@@ -8,7 +8,7 @@
 ; Main procedures to (re)set defaults and to read, plot, animate and slice data
 ;   set_default_values
 ;   read_data, plot_data, animate_data, slice_data
-;   read_log_data, plot_log_data
+;   read_log_data, plot_log_data, show_log_data
 ;
 ; Procedures for
 ;
@@ -1418,6 +1418,12 @@ pro plot_log_data
 
   plot_log
 
+end
+
+;=============================================================================
+pro show_log_data
+  read_log_data
+  plot_log_data
 end
 
 ;=============================================================================
