@@ -1,0 +1,342 @@
+#ECHO
+T                                                    DoEcho
+
+#DESCRIPTION
+Two-Ion-fluid Pe MHD for Europa                      StringDescription
+
+#EQUATION
+Two-Ion-fluid Pe MHD for Europa                      NameEquation
+14                            	                     nVar
+
+#USERMODULE
+Two-Ion-fluid Pe MHD for Europa, Harris & Jia
+1.00                   	      	                     VersionUserModule
+
+#PLANET
+EUROPA
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#ROTATION
+F                       UseRotation
+
+#STARTTIME
+2000                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+0.0			FracSecond
+
+#PROGRESS
+100                     dnProgress1 (frequency of short reports to STDOUT)
+1000                    dnProgress2 (frequency of summaries to STDOUT)
+
+#CPUTIMEMAX
+600
+
+!!! TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#TESTXYZ
+-1.0047		xTest
+0.00616		yTest
+0.00616		zTest
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! DIPOLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#DIPOLE
+0.0			[T]
+
+#MAGNETICAXIS
+T                       IsMagAxisPrimary (rest of parameters read if true)
+90.0                    MagAxisTheta [degree] entry in GSE, tilt from z-axis
+287.0                   MagAxisPhi   [degree] tilt from x-axis clockwise
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! ENVIRONMENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#COORDSYSTEM
+GSE                      TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
+
+#BOUNDARYSTATE
+coord1max		StringBoundary
+320.0			BoundaryStateDim_V OpRho  
+-100.0			BoundaryStateDim_V OpUx
+0.0			BoundaryStateDim_V OpUy
+0.0			BoundaryStateDim_V OpUz
+0.0			BoundaryStateDim_V Bx
+0.0			BoundaryStateDim_V By
+-412.0			BoundaryStateDim_V Bz
+0.248			BoundaryStateDim_V Pe
+0.414			BoundaryStateDim_V OpP
+0.064			BoundaryStateDim_V O2pRho  
+-100.0			BoundaryStateDim_V O2pUx
+0.0			BoundaryStateDim_V O2pUy
+0.0			BoundaryStateDim_V O2pUz
+0.414e-4		BoundaryStateDim_V O2pP
+
+#PLASMA
+16.0                     IonMass O [amu]
+32.0                     IonMass O2 [amu]
+1.0                      IonCharge O [e]
+1.0                      IonCharge O2 [e]
+0.6                      ElectronTemperatureRatio
+
+#BODY
+T                         body1
+1.0                       rBody
+0.0                       rCurrents
+10.0                      BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+10.0                      BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+
+#GRAVITY
+T                       UseGravity
+0                       iDirGravity
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! GRID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#GRIDGEOMETRY
+spherical_lnr           TypeGeometry
+
+#GRID
+2                        proc_dims(1)		nRootBlockX
+2                        proc_dims(2)		nRootBlockY
+1                        proc_dims(3),		nRootBlockZ
+-200                      x1		xMin
+ 200                      x2		xMax
+-200                      y1		yMin
+ 200                      y2		yMax
+-200                      z1		zMin
+ 200                      z2		zMax
+
+#LIMITRADIUS
+1.0	                rMin		RadiusMin
+128.0                   rMax > (sqrt(32^2+32^2+32^2))		RadiusMax
+
+#GRIDLEVEL
+2		nLevelArea
+initial		TypeRegion
+
+#GRIDLEVEL
+1		nLevelArea
+all		TypeRegion
+
+#GRIDLEVEL
+2		nLevelArea
+all		TypeRegion
+
+#FIXAXIS
+T                       DoFixAxis
+100.0                   rFixAxis
+1.2                     r2FixAxis
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! BOUNDARY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#BOXBOUNDARY
+none			TypeBcXmin
+none                    TypeBcXmax
+none                   	TypeBcYmin (only read in 2D and 3D)
+none                   	TypeBcYmax (only read in 2D and 3D)
+none                   	TypeBcZmin (only read in 3D)
+none                   	TypeBcZmax (only read in 3D)
+
+#OUTERBOUNDARY
+user                    TypeBc1
+fixed                   TypeBc2
+periodic                TypeBc3 (only read in 2D and 3D)
+periodic                TypeBc4 (only read in 2D and 3D)
+periodic                TypeBc5 (only read in 3D)
+periodic                TypeBc6 (only read in 3D)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! SCHEME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#SCHEME
+1                         nOrder
+Rusanov                   TypeFlux | only for nOrder=2
+
+#TIMESTEPPING
+1                        nSTAGE
+0.2                      cfl
+
+#POINTIMPLICIT
+T                       UsePointImplicit
+1.0                     BetaPointImpl
+F                       IsAsymetric
+T                       DoNormalizeCell 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! EQUATIONS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0
+
+#MULTIIONSTATE
+T                       UseSingleIonVelocity
+F                       UseSingleIonTemperature
+
+#RESISTIVITY
+T               UseResistivity (rest of parameters read only if set to true)
+user            TypeResistivity
+0.0             Eta0Si       [m2/s] (read except for Spitzer resistivity)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!! OUTPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#SAVERESTART
+F
+10000
+-1
+
+#RESTARTOUTFILE
+one			TypeRestartOutFile
+
+#SAVEINITIAL
+T
+
+#SAVELOGFILE
+T                       DoSaveLogfile, rest of parameters read if true
+VAR step date time      StringLog
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile [sec]
+mlop recop chxop mlo2p reco2p chxo2p OpRhopnt O2pRhopnt mloppnt recoppnt chxoppnt mlo2ppnt reco2ppnt chxo2ppnt Pepnt
+
+#SAVEPLOT
+1
+1d  MHD idl_ascii
+500
+-1
+-1
+
+SAVEPLOT
+8                       nplotfiles
+x=0 MHD tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+y=0 MHD tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+z=0 MHD tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+3d  MHD tec             plot_string
+2500                     DnSavePlot
+-1.                     DtSavePlot
+x=0 VAR tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
+g rBody
+y=0 VAR tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
+g rBody
+z=0 VAR tec             plot_string
+500                     DnSavePlot
+-1.                     DtSavePlot
+nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
+g rBody
+3d  VAR tec             plot_string
+2500                     DnSavePlot
+-1.                     DtSavePlot
+nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
+g rBody
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#USERFLAGS
+T                       UseUserInnerBcs
+T                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+T                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+T                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------
+
+#EUROPA
+2.5E7                   Neutral surface density for the exponential falling-off component [1/cm^3]
+150.0                   Neutral scale height for the exponential falling-off component  [km]
+5.0E4                   Neutral surface density for the power-law falling-off component [1/cm^3]
+500.0                   Neutral scale height of population 2 [km]; Kliore (1997)
+1.0                     Max fraction in cosine relative to uniform distr. [0..infinity]
+1.0			Power of cosine relative to uniform distr. [0..infinity]
+270.0			Atmospheric bulge longitude (E W Lon) [0..360] (from -Y EPO, left-handed)
+0.0			Atmospheric bulge latitude [-90..90]
+1.0E-7                  Ionization frequency (1/s) Op from O2 [1/s]
+1.0E-6                  Ionization frequency (1/s) O2p from O2 [1/s]
+F                       Use the above constant electron impact ionization rate
+50.0                    Minimum ion temperature (enforced in user_update_states)
+
+#NARROWPLUME
+F			AddPlumeSource
+5.0E8			Plume surface density for the exponential falling-off component [1/cm^3]
+150.0			Plume scale height for the exponential falling-off component  [km]
+20.0			Plume center polar angle measured from the XY plane [deg] ([0,90] for Z>0; [-90,0] for Z<0)
+345.0			Plume center azimuthal angle measured from the +X axis in GSM (or -X in EPHIO) counterclockwise [deg]
+15.0			Plume half angular width [deg]
+
+#BROADPLUME
+F                       AddPlumeSource
+1.0E7                   Plume surface density for the exponential falling-off component [1/cm^3]
+2.0                     Plume power-law fallingoff index
+0.0                     Plume center polar angle measured from the XY plane [deg] ([0,90] for Z>0; [-90,0] for Z<0)
+300.0                   Plume center azimuthal angle measured from the +X axis in GSM (or -X in EPHIO) counterclockwise [deg]
+45.0                    Plume half angular width [deg]
+
+#INNERBCS
+outflowfix
+
+#BODYPARAM
+0.1                     Op Upstream BodyNDim (1/ccm)
+600.0                   Op Upstream BodyTDim (K) temperature for fixed BC for P_BLK
+10000.0                 O2p Upstream BodyNDim (1/ccm)
+600.0                   O2p Upstream BodyTDim (K) temperature for fixed BC for P_BLK
+0.01                    Op Downstream BodyNDim (1/ccm)
+600.0                   Op Downstream BodyTDim (K) temperature for fixed BC for P_BLK
+10.0                    O2p Downstream BodyNDim (1/ccm)
+600.0                   O2p Downstream BodyTDim (K) temperature for fixed BC for P_BLK
+
+#USEFIXEDBOUNDARY
+F                       UseFixedBoundary
+20.0                    Op Upstream BodyNDim (1/ccm)
+600.0                   Op Upstream BodyTDim (K) temperature for fixed BC for P_BLK
+10000.0                 O2p Upstream BodyNDim (1/ccm)
+600.0                   O2p Upstream BodyTDim (K) temperature for fixed BC for P_BLK
+10.0                    Op Downstream BodyNDim (1/ccm)
+600.0                   Op Downstream BodyTDim (K) temperature for fixed BC for P_BLK
+100.0                   O2p Downstream BodyNDim (1/ccm)
+600.0                   O2p Downstream BodyTDim (K) temperature for fixed BC for P_BLK
+
+#USERINPUTEND ----------------------
+
+#STOP
+100                  MaxIteration
+-1                     tSimulationMax
+
+#END
