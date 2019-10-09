@@ -583,8 +583,8 @@ contains
     if(DoUpdateB0)then
        ! dB0/dt term is added at the DtUpdateB0 frequency
 
-       if((Time_Simulation/DtUpdateB0) >  &
-          ((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
+       if(int(Time_Simulation/DtUpdateB0) >  &
+          int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
           call update_b0
     end if
 
