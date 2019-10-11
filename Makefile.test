@@ -1695,9 +1695,9 @@ test_europa2fluidspe_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_europa2fluidspe_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-15 \
-		Param/EUROPA/europa2fluidspe_1d__mhd_1_n00000100.out \
-		${TESTDIR}/RESULTS/GM/1d__mhd_1_n00000100.out > test_europa2fluidspe.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+		Param/EUROPA/europa2fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
@@ -1729,9 +1729,9 @@ test_europa3fluidspe_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
 
 test_europa3fluidspe_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-15 \
-		Param/EUROPA/europa3fluidspe_1d__mhd_1_n00000100.out \
-		${TESTDIR}/RESULTS/GM/1d__mhd_1_n00000100.out > test_europa3fluidspe.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+		Param/EUROPA/europa3fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa3fluidspe.diff)
 	ls -l test_europa3fluidspe.diff
 
 

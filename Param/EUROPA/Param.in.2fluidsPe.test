@@ -220,10 +220,16 @@ mlop recop chxop mlo2p reco2p chxo2p OpRhopnt O2pRhopnt mloppnt recoppnt chxoppn
 
 #SAVEPLOT
 1
-1d  MHD idl_ascii
-500
+cut  MHD idl_ascii
+100
 -1
--1
+1.0
+100.0
+0.0
+0.0
+0.0
+0.0
+0
 
 SAVEPLOT
 8                       nplotfiles
