@@ -6572,7 +6572,7 @@ These will automatically change to the 'all' option even if the user sets
 
 <command name="OPTIMIZEMPI">
 	<parameter name="UseOptimizeMpi" type="logical" default="F"/>
-	</parameter>
+
 #OPTIMIZEMPI
 F			UseOptimizeMpi
 
