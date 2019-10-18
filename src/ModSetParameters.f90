@@ -1459,6 +1459,9 @@ contains
           call read_solar_wind_param(NameCommand)
           DoReadSolarwindFile = UseSolarwindFile
 
+       case("#MINIMUMSOLARWINDTEMP")
+          call read_var('SwTminDim', SwTminDim)
+
        case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
        case("#IECOUPLING")
