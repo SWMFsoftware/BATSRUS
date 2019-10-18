@@ -136,6 +136,8 @@ module ModPhysics
        SW_By=0.0 , SW_By_dim=0.0 , &
        SW_Bz=0.0 , SW_Bz_dim=0.0
 
+  real :: SwTminDim = -1.0
+  
   !\
   ! General Body parameters
   !/
@@ -423,7 +425,7 @@ contains
     !/
     SW_n   = SW_n_dim*Io2No_V(UnitN_)
     SW_rho = SW_n * MassIon_I(1)
-    SW_p   = SW_n * SW_T_dim*Io2No_V(UnitTemperature_)
+    SW_p   = SW_n * max(SW_T_dim, SwTminDim)*Io2No_V(UnitTemperature_)
     SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
     SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
     SW_Uz  = SW_Uz_dim*Io2No_V(UnitU_)

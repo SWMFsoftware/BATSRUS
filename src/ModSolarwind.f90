@@ -432,7 +432,7 @@ contains
          UseElectronPressure, UseAnisoPressure, UseMultiSpecies, UseAnisoPe
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
-         LowDensityRatio, ElectronPressureRatio
+         LowDensityRatio, ElectronPressureRatio, SwTMinDim
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUy, iUz, &
          iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
@@ -470,7 +470,7 @@ contains
           if(UseTemperature)then
              ! calculate normalized p = n*T
              Solarwind_V(p_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_)) &
-                  *Solarwind_V(T_)*Io2No_V(UnitTemperature_)
+                  *max(Solarwind_V(T_), SwTMinDim)*Io2No_V(UnitTemperature_)
           else
              ! normalize pressure
              Solarwind_V(p_) = Solarwind_V(p_)*Io2No_V(UnitP_)
@@ -489,8 +489,8 @@ contains
              Solarwind_V(Rho_) = Solarwind_V(Rho_)*Io2No_V(UnitRho_)
           end if
           if(UseTemperature) then
-             Solarwind_V(p_) = Solarwind_V(T_)*Io2No_V(UnitTemperature_)&
-                  *Solarwind_V(Rho_)/MassIon_I(1)
+             Solarwind_V(p_) = max(Solarwind_V(T_), SwTMinDim) &
+                  *Io2No_V(UnitTemperature_)*Solarwind_V(Rho_)/MassIon_I(1)
           else
              Solarwind_V(p_) = Solarwind_V(p_)*Io2No_V(UnitP_)
           end if
@@ -528,7 +528,8 @@ contains
                   *Solarwind_V(iRho)*MassIon_I(1)/MassFluid_I(iFluid)
           elseif(UseTemperature)then
              ! Calculate normalized fluid pressure from temperature
-             Solarwind_V(iP) = Solarwind_V(iP)*Io2No_V(UnitTemperature_) &
+             Solarwind_V(iP) = max(Solarwind_V(iP), SwTMinDim) &
+                  *Io2No_V(UnitTemperature_)                   &
                   *Solarwind_V(iRho)/MassFluid_I(iFluid)
           else
              ! Normalize fluid pressure
