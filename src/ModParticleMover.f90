@@ -740,6 +740,7 @@ contains
     use ModMpi
     use ModRandomNumber, ONLY: random_real
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
+    use BATL_lib, ONLY: iNode_B
 !    use BATL_pass_face_field, ONLY: add_ghost_cell_field
 
     integer, intent(in) :: iBlock
@@ -758,8 +759,10 @@ contains
     real :: InvRho_I, RndUnif
     real :: Energy, MomentumAvr, RndUnif1, RndUnif2
     real :: Weight_I(2**nDim)
+    !\
     ! seed for random number generator
     integer, save:: iSeed=0
+    !/
     integer :: iError
     integer :: n_P(1:max(nHybridParticleSort,1))
     integer :: nTotal_P(1:max(nHybridParticleSort,1))
@@ -774,11 +777,17 @@ contains
     real,    pointer :: Coord_DII(:,:)
     integer, pointer :: Index_III(:,:)
     !--------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest) 
     !\
     ! Transform State Vector Variables to VDFs
     !/
-    
+    !\
+    ! Initialize random number generator with the global block
+    ! number, so that initializetion does not depend on how the blocks
+    ! are distributed over processors
+    !/
+    iSeed = iNode_B(iBlock)
+
     Energy = 0.0; MomentumAvr = 0.0 
 
     uBulk_D = 0.0; uThermal_I = 0.0
