@@ -121,11 +121,14 @@ Right slow Whistler
 -1.0			LambdaZ
 -90.0			Phase
 
+#USERINPUTEND   ----------------
+
 #CHARGEDPARTICLES
 1                      nHybridParticleSort
 1                      iHybridIon_I(1) 
 30000                   nHybridParticleMax_I(1)
 16                      nHybridParticlePerCell_I(1)
+
 1                      nTestParticles
 4.0                    Mass_I
 2.0                    Charge_I
@@ -143,7 +146,6 @@ Right slow Whistler
 6.0                    Mass_I
 4.0                    Charge_I
 
-#USERINPUTEND   ----------------
 
 #TEST
 init_hall_resist krylov load_balance			TestString
