@@ -124,8 +124,8 @@ Right slow Whistler
 #CHARGEDPARTICLES
 1                      nHybridParticleSort
 1                      iHybridIon_I(1) 
-10000                   nHybridParticleMax_I(1)
-5                      nHybridParticlePerCell_I(1)
+30000                   nHybridParticleMax_I(1)
+16                      nHybridParticlePerCell_I(1)
 1                      nTestParticles
 4.0                    Mass_I
 2.0                    Charge_I
