@@ -27,10 +27,7 @@ module ModParticleMover
   ! If true, the particles are allocated and may be traced
   !/
   logical         :: UseParticles = .false. 
-  logical,private :: DoNormalize = .false.
-  !\
-  ! If true, one or more ion fluids are solved using hybrid scheme
-  logical         :: UseHybrid = .false.
+  logical,private :: DoNormalize = .false. 
   !\
   !Parameters
   !/
@@ -184,7 +181,6 @@ contains
        call read_var('nHybridParticleSort', nHybridParticleSort)
        if(nHybridParticleSort>0)then
           UseParticles = .true.
-          UseHybrid    = .true.
           allocate(iHybridIon_I(nHybridParticleSort))
           allocate(nHybridParticleMax_I(nHybridParticleSort))
           allocate(nHybridParticlePerCell_I(nHybridParticleSort))
@@ -218,13 +214,11 @@ contains
           end do
        else
           nHybridParticleSort = 0
-          UseHybrid  = .false.
        end if
        call read_var('nTestParticles', nTestParticles)
        ! Define the total number of ion sort to be considered    
        nParticleSort = nHybridParticleSort + max(nTestParticles,0)
        if(nParticleSort == 0) RETURN
-       UseParticles = .true.
        ! Allocate arrays for all particles: test + hybrid
        allocate(iKindParticle_I(nParticleSort))
        allocate(Mass_I(nParticleSort)); Mass_I = 1.0
@@ -725,7 +719,7 @@ contains
   ! More specifically, we calculate the thermal velocity uThermal_I
   ! 
   !/
-  subroutine get_vdf_from_state(iBlock, DoOnScratch)
+  subroutine get_vdf_from_state(iBlock)
     use ModMpi
     use ModRandomNumber, ONLY: random_real
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
@@ -733,20 +727,13 @@ contains
 !    use BATL_pass_face_field, ONLY: add_ghost_cell_field
 
     integer, intent(in) :: iBlock
-    !If the distribution function is initialized for the
-    !first time, one can miss the check, if there are already
-    !some particles in the block to generate the VDF.
-    logical, optional, intent(in):: DoOnScratch
-    !\
-    ! Logical to check existing particles
-    !/
-    logical:: DoCheckParticles = .true.
+
     !\
     ! seed for random number generator
     integer:: iSeed
     !/
     !Total number of particles of the current sort
-    integer :: nParticle 
+    integer :: nParticle, nParticleMax 
     integer :: nPPerCell !Number of particles per cell
     !Particle mass
     real :: Mass
@@ -776,11 +763,6 @@ contains
      'get_vdf_from_state'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest) 
-    if(present(DoOnScratch))then
-       DoCheckParticles = .not. DoOnScratch
-    else
-       DoCheckParticles = .true.
-    end if
     !\
     ! Transform State Vector Variables to VDFs
     !/
@@ -795,12 +777,12 @@ contains
        iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop) 
        call set_pointer_to_particles(&
          iKind, Coord_DI, Index_II, &
-         nParticle=nParticle)
+         nParticle=nParticle, nParticleMax=nParticleMax)
        !\
        ! Number of particles per Block = nHybridParticlePerCell_I
        !/
        nPPerCell = nHybridParticlePerCell_I(iLoop)
-       if(DoCheckParticles.and.nParticle > 0) then
+       if(nParticle > 0) then
           !\
           ! Remove the particles present in this block so far
           !/
@@ -823,13 +805,15 @@ contains
           !\
           ! Loop over particles to scatter w2ithin a given cell
           !/
+          if(nParticle + nPPerCell > nParticleMax)&
+               call stop_mpi('Insufficient number of particles is allocated')
           PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
              !\
              ! Assign indexes
              !/
              Index_II(0, iParticle)       = iBlock
-             Index_II(Status_, iParticle) = Done_
-             Coord_DI(Mass_,iParticle)    = Mass
+             Index_II(Status_, iParticle) = DoAll_
+             Coord_DI(Mass_,iParticle)   = Mass
              !\
              ! Use random generator to assign coordinates for particles in 
              ! each block.
@@ -897,13 +881,10 @@ contains
                 Energy    = -uThermal2 *log(RndUnif1)
                 ! The average momentum is calculated next for each particle
                 MomentumAvr = sqrt(2.0*Energy)
-                ! The random velocity  is added
-                Coord_DI(U_+iDim,iParticle) = Coord_DI(U_+iDim,iParticle) +&
+                ! The velocity vector is calculated
+                Coord_DI(Ux_:Uz_,iParticle) = Coord_DI(Ux_:Uz_,iParticle) +&
                      MomentumAvr*cos(cTwoPi*RndUnif2)
              end do
-             !\
-             ! The thing to do: add a parallel component of random velocity
-             !/
           end do PARTICLES
           nParticle = nParticle + nPPerCell
        end do; end do; end do
