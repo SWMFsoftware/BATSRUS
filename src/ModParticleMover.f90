@@ -27,7 +27,10 @@ module ModParticleMover
   ! If true, the particles are allocated and may be traced
   !/
   logical         :: UseParticles = .false. 
-  logical,private :: DoNormalize = .false. 
+  logical,private :: DoNormalize = .false.
+  !\
+  ! If true, one or more ion fluids are solved using hybrid scheme
+  logical         :: UseHybrid = .false.
   !\
   !Parameters
   !/
@@ -98,6 +101,9 @@ module ModParticleMover
   !/
   real,    allocatable :: Moments_VGBI(:,:,:,:,:,:)
   !\
+  ! May be redundant?
+  !/
+  !\
   ! Charge and current densities
   !/
   real,    allocatable :: DensityAndCurrent_VCB(:,:,:,:,:)
@@ -143,11 +149,6 @@ contains
   ! 1                      nTestParticles
   ! 4.0                    Mass_I
   ! 2.0                    Charge_I
-  ! and allocate particle arrays immediately.
-  ! To reallocate, first, use command
-  ! #CHARGEDPARTICLES
-  ! 0                      nHybridParticleSort
-  ! to deallocate arrays.
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
 
@@ -181,6 +182,7 @@ contains
        call read_var('nHybridParticleSort', nHybridParticleSort)
        if(nHybridParticleSort>0)then
           UseParticles = .true.
+          UseHybrid    = .true.
           allocate(iHybridIon_I(nHybridParticleSort))
           allocate(nHybridParticleMax_I(nHybridParticleSort))
           allocate(nHybridParticlePerCell_I(nHybridParticleSort))
@@ -214,11 +216,13 @@ contains
           end do
        else
           nHybridParticleSort = 0
+          UseHybrid  = .false.
        end if
        call read_var('nTestParticles', nTestParticles)
        ! Define the total number of ion sort to be considered    
        nParticleSort = nHybridParticleSort + max(nTestParticles,0)
        if(nParticleSort == 0) RETURN
+       UseParticles = .true.
        ! Allocate arrays for all particles: test + hybrid
        allocate(iKindParticle_I(nParticleSort))
        allocate(Mass_I(nParticleSort)); Mass_I = 1.0
@@ -295,6 +299,7 @@ contains
          ElectronCharge
   end subroutine normalize_param
   !===================== DEALLOCATE====================
+  !Not used and probably not usable
   subroutine deallocate_particles
     integer :: iLoop
     !----------------
@@ -392,10 +397,8 @@ contains
        !\
        ! For particles near the block boundary, contributions are
        ! may be assigned to ghost cells 
-       !if(iLoop.le.nHybridParticleSort)then
-           call add_ghost_cell_field(RhoUz_, 1, &
-                Moments_VGBI(:,:,:,:,:,iKind))
-       !end if
+       call add_ghost_cell_field(P23_, 1, &
+            Moments_VGBI(:,:,:,:,:,iKind))
     end do
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -612,8 +615,8 @@ contains
           !/
           Index_II(Status_,iParticle) = DoCollect_
           RETURN
-       end if
-    end if
+       end if !Particle stays at the same PE
+    end if    !All operations preceeding the current collection are done
     ! Coordinates and block #
     Xyz_D   = 0.0
     Xyz_D(1:nDim)   = Coord_DI(x_:nDim, iParticle)
@@ -719,7 +722,7 @@ contains
   ! More specifically, we calculate the thermal velocity uThermal_I
   ! 
   !/
-  subroutine get_vdf_from_state(iBlock)
+  subroutine get_vdf_from_state(iBlock, DoOnScratch)
     use ModMpi
     use ModRandomNumber, ONLY: random_real
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
@@ -727,13 +730,20 @@ contains
 !    use BATL_pass_face_field, ONLY: add_ghost_cell_field
 
     integer, intent(in) :: iBlock
-
+    !If the distribution function is initialized for the
+    !first time, one can miss the check, if there are already
+    !some particles in the block to generate the VDF.
+    logical, optional, intent(in):: DoOnScratch
+    !\
+    ! Logical to check existing particles
+    !/
+    logical:: DoCheckParticles = .true.
     !\
     ! seed for random number generator
     integer:: iSeed
     !/
     !Total number of particles of the current sort
-    integer :: nParticle, nParticleMax 
+    integer :: nParticle, nParticleMax
     integer :: nPPerCell !Number of particles per cell
     !Particle mass
     real :: Mass
@@ -763,6 +773,11 @@ contains
      'get_vdf_from_state'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest) 
+    if(present(DoOnScratch))then
+       DoCheckParticles = .not. DoOnScratch
+    else
+       DoCheckParticles = .true.
+    end if
     !\
     ! Transform State Vector Variables to VDFs
     !/
@@ -782,7 +797,7 @@ contains
        ! Number of particles per Block = nHybridParticlePerCell_I
        !/
        nPPerCell = nHybridParticlePerCell_I(iLoop)
-       if(nParticle > 0) then
+       if(DoCheckParticles.and.nParticle > 0) then
           !\
           ! Remove the particles present in this block so far
           !/
@@ -803,17 +818,18 @@ contains
                State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*&
                CellVolume_GB(i,j,k,iBlock)/nPPerCell
           !\
-          ! Loop over particles to scatter w2ithin a given cell
+          ! Loop over particles to scatter within a given cell
           !/
           if(nParticle + nPPerCell > nParticleMax)&
                call stop_mpi('Insufficient number of particles is allocated')
+
           PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
              !\
              ! Assign indexes
              !/
              Index_II(0, iParticle)       = iBlock
-             Index_II(Status_, iParticle) = DoAll_
-             Coord_DI(Mass_,iParticle)   = Mass
+             Index_II(Status_, iParticle) = Done_
+             Coord_DI(Mass_,iParticle)    = Mass
              !\
              ! Use random generator to assign coordinates for particles in 
              ! each block.
@@ -881,10 +897,13 @@ contains
                 Energy    = -uThermal2 *log(RndUnif1)
                 ! The average momentum is calculated next for each particle
                 MomentumAvr = sqrt(2.0*Energy)
-                ! The velocity vector is calculated
-                Coord_DI(Ux_:Uz_,iParticle) = Coord_DI(Ux_:Uz_,iParticle) +&
+                ! The random velocity  is added
+                Coord_DI(U_+iDim,iParticle) = Coord_DI(U_+iDim,iParticle) +&
                      MomentumAvr*cos(cTwoPi*RndUnif2)
              end do
+             !\
+             ! The thing to do: add a parallel component of random velocity
+             !/
           end do PARTICLES
           nParticle = nParticle + nPPerCell
        end do; end do; end do
