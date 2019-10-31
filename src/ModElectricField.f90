@@ -218,26 +218,21 @@ contains
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
     use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
-         State_VGB, Source_VC, UseAnisoPe, &
-         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
-    use ModMain,    ONLY: MaxDim,  x_, y_, z_, UseB0
-    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
+         State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+    use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
-    use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
-    use ModWaves,   ONLY: UseWavePressure
     use ModMultiFluid,     ONLY: &!
-         iRhoIon_I, ChargePerMass_I, UseMultiIon, nIonFluid
-    use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
-         CellSize_DB, nDim
+         iRhoIon_I, ChargePerMass_I, nIonFluid
+    use BATL_lib,   ONLY: CellVolume_GB
     use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, nVar
 
     integer, intent(in):: iBlock
     integer:: i, j, k
-    real :: State_V(nVar)
+    real :: State_V(nVar), vInv
     real :: ChargeDens_I(nIonFluid)
     real, dimension(MaxDim) :: Force_D, FullB_D, Current_D
-    real :: FluxConvergence,  vInv, InvElectronDens
+    real :: InvElectronDens
     logical :: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
@@ -250,13 +245,11 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           DoTestCell = DoTest .and. iTest==i .and. jTest==j .and. kTest==k
 
-          vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
-
+          vInv = 1/CellVolume_GB(i,j,k,iBlock)
           State_V = State_VGB(:,i,j,k,iBlock)
-
-          ChargeDens_I = ChargePerMass_I * State_V(iRhoIon_I) 
+          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I) 
           if(sum(ChargeDens_I) <= 0.0) then
-             write(*,*)'ChargePerMass_I=', ChargePerMass_I
+             write(*,*)'ChargePerMass_I='   , ChargePerMass_I
              write(*,*)'State_V(iRhoIon_I)=', State_V(iRhoIon_I)
              call stop_mpi('negative electron density')
           end if
@@ -268,7 +261,7 @@ contains
                (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
           if(nK>1) Current_D = Current_D + &
                (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
-          Current_D = vInv*Current_D
+          Current_D = Current_D*vInv
 
           if(DoTestCell) then
              write(*,'(2a,15es16.8)') NameSub, ': Current_D    = ', Current_D
@@ -284,18 +277,12 @@ contains
 
           if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
                Force_D
-
-          ! Subtract electron pressure gradient force
-          !if(UseMultiIon .and. (.not. &
-          !     UseElectronPressure) .and. ElectronTemperatureRatio > 0.0)then
-          !if(UseMultiIon)then
-             Force_D = Force_D + vInv*&
-                  (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
-             if(nDim > 1) Force_D = Force_D + vInv*&
-                  (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
-             if(nDim > 2) Force_D = Force_D + vInv*&
-                  (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
-          !end if
+          Force_D = Force_D + vInv*&
+               (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
+          if(nDim > 1) Force_D = Force_D + vInv*&
+               (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
+          if(nDim > 2) Force_D = Force_D + vInv*&
+               (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
           if(DoTestCell)write(*,'(2a,15es16.8)') &
                NameSub,': after grad Pwave, Force_D =', Force_D
           Efield_DGB(:,i,j,k,iBlock) = InvElectronDens*Force_D
@@ -314,6 +301,61 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_efield_in_comoving_frame
   !=============================================================
+  subroutine correct_efield_block(iBlock)
+    !\
+    ! Recalculates electric field, which has been obtained
+    ! with get_efield_in_comoving_frame, to a global frame
+    ! of reference. To achive this, -v x B is added, v being a 
+    ! the ion velocity (averaged charge velocity). 
+    !/
+
+    use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_
+    use ModAdvance,    ONLY: State_VGB
+    use ModB0,         ONLY: UseB0, B0_DGB
+    use ModCoordTransform, ONLY: cross_product
+    use ModMultiFluid,     ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+         iRhoIon_I, ChargePerMass_I
+    use BATL_lib,          ONLY: x_, y_, z_, CellVolume_GB
+
+    integer, intent(in):: iBlock
+
+    integer :: i, j, k
+    real    :: b_D(3), uPlus_D(3), InvElectronDens
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_efield_block'
+    !--------------------------------------------------------------------------
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nK
+       if(.not. true_cell(i,j,k,iBlock))CYCLE
+
+       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+       
+       ! inv of electron charge density = 1/(e*ne)
+       InvElectronDens = 1.0/ &
+            sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
+       
+       ! charge average ion velocity
+       uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+       uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+       uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
+            *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+       
+      
+       ! E = E(in comoving frame)- u x B
+       Efield_DGB(:,i,j,k,iBlock) = Efield_DGB(:,i,j,k,iBlock) &
+            -cross_product(uPlus_D, b_D)
+
+    end do; end do; end do
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine correct_efield_block
+  !=============================================================!
+  subroutine correct_efield
+    
+  end subroutine correct_efield
+  !=============================================================!
   subroutine calc_inductive_e
 
     ! Calculate the inductive part of the electric field Eind
