@@ -5463,7 +5463,7 @@ ERROR2:
 end
 
 ;==========================================
-pro compare,w0,w1,wnames
+pro compare,w0,w1,wnames,scalar=scalar
 
 ; Compare all variables in w0 and w1 by calculating
 ; relative difference in the 1st norm.
@@ -5479,13 +5479,17 @@ pro compare,w0,w1,wnames
      retall
   endif
 
-  ndim=sizew0(0)-1
-
-  if ndim eq 0 then begin
-     ndim=1
-     nw=1
-  endif else $
-     nw=sizew0(ndim+1)
+  if n_elements(wnames) eq 1 or keyword_set(scalar) then begin
+     ndim = sizew0(0)
+     nw = 1
+  endif else begin
+     ndim=sizew0(0)-1
+     if ndim eq 0 then begin
+        ndim=1
+        nw=1
+     endif else $
+        nw=sizew0(ndim+1)
+  endelse
 
   if max(abs(sizew0(1:ndim)-sizew1(1:ndim))) gt 0 then begin
      print,'w0 and w1 have different sizes:',sizew0(1:ndim),' /= ',sizew1(1:ndim)
