@@ -300,21 +300,21 @@ contains
   end subroutine normalize_param
   !===================== DEALLOCATE====================
   !Not used and probably not usable
-  subroutine deallocate_particles
-    integer :: iLoop
-    !----------------
-    nullify(Coord_DI)
-    nullify(Index_II)
-    !\
-    ! Deallocate hybrid particle arrays
-    !/
-    do iLoop = 1, size(iKindParticle_I)
-       call gen_deallocate_particles(iKindParticle_I(iLoop))
-    end do
-    deallocate(iHybridIon_I, Charge2Mass_I, &
-            Moments_VGBI, DensityAndCurrent_VCB, &
-            CAMCoef_VCB, iKindParticle_I)
-  end subroutine deallocate_particles
+  !subroutine deallocate_particles
+  !  integer :: iLoop
+  !  !----------------
+  !  nullify(Coord_DI)
+  !  nullify(Index_II)
+  !  !\
+  !  ! Deallocate hybrid particle arrays
+  !  !/
+  !  do iLoop = 1, size(iKindParticle_I)
+  !     call gen_deallocate_particles(iKindParticle_I(iLoop))
+  !  end do
+  !  deallocate(iHybridIon_I, Charge2Mass_I, &
+  !          Moments_VGBI, DensityAndCurrent_VCB, &
+  !          CAMCoef_VCB, iKindParticle_I)
+  !end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
     use BATL_lib, ONLY: jDim_, kDim_
@@ -735,10 +735,6 @@ contains
     !some particles in the block to generate the VDF.
     logical, optional, intent(in):: DoOnScratch
     !\
-    ! Logical to check existing particles
-    !/
-    logical:: DoCheckParticles = .true.
-    !\
     ! seed for random number generator
     integer:: iSeed
     !/
@@ -753,8 +749,14 @@ contains
     integer:: iLoop, iParticle, iCell, i, j, k, iDim 
     !Cartesian and generalized coordinates
     real :: Xyz_D(MaxDim), Coord_D(MaxDim)
-
-    integer:: i_D(MaxDim) ![i,j,k]
+    !\
+    !Loop indexes gathered to an array
+    !/
+    integer:: Ijk_D(MaxDim) ![i,j,k] 
+    !\
+    !The cell index for interpolation stencil point
+    !/`
+    integer:: i_D(MaxDim)   
     !\
     ! Parameters of the interpolation procedure
     !/
@@ -773,11 +775,6 @@ contains
      'get_vdf_from_state'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest) 
-    if(present(DoOnScratch))then
-       DoCheckParticles = .not. DoOnScratch
-    else
-       DoCheckParticles = .true.
-    end if
     !\
     ! Transform State Vector Variables to VDFs
     !/
@@ -797,9 +794,10 @@ contains
        ! Number of particles per Block = nHybridParticlePerCell_I
        !/
        nPPerCell = nHybridParticlePerCell_I(iLoop)
-       if(DoCheckParticles.and.nParticle > 0) then
+       if(.not.DoOnScratch.and.nParticle>0) then 
           !\
-          ! Remove the particles present in this block so far
+          !The particles already present in the block need to be 
+          !removed, not to contribute to the VDF moments
           !/
           where(Index_II(0,1:nParticle)==iBlock)&
                Index_II(0,1:nParticle) = -Index_II(0,1:nParticle)
@@ -810,25 +808,24 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! Skip not true cells 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          i_D = [i,j,k] 
+         !\
+          ! Loop over particles to scatter within a given cell
+          !/
+          if(nParticle + nPPerCell > nParticleMax)&
+               call stop_mpi('Insufficient number of particles is allocated')
+          Ijk_D = [i,j,k] 
           !\
           ! Mass of particles
           !/
           Mass = &
                State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*&
                CellVolume_GB(i,j,k,iBlock)/nPPerCell
-          !\
-          ! Loop over particles to scatter within a given cell
-          !/
-          if(nParticle + nPPerCell > nParticleMax)&
-               call stop_mpi('Insufficient number of particles is allocated')
 
           PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
              !\
              ! Assign indexes
              !/
-             Index_II(0, iParticle)       = iBlock
-             Index_II(Status_, iParticle) = Done_
+             Index_II(0:Status_, iParticle)   = [iBlock,Done_]
              Coord_DI(Mass_,iParticle)    = Mass
              !\
              ! Use random generator to assign coordinates for particles in 
@@ -837,7 +834,7 @@ contains
              do iDim = 1, nDim
                 RndUnif = random_real(iSeed)
                 Coord_D(iDim) = CellSize_DB(iDim,iBlock)*&
-                     (i_D(iDim) - 1 + RndUnif) + CoordMin_DB(iDim,iBlock)
+                     (Ijk_D(iDim) - 1 + RndUnif) + CoordMin_DB(iDim,iBlock)
              end do
              if(IsCartesianGrid)then
                 Xyz_D = Coord_D
@@ -911,7 +908,6 @@ contains
        ! Collect particles of Sort per Block
        !/
        Particle_I(iKind)%nParticle = nParticle
-
     end do SORTS
     call test_stop(NameSub, DoTest)
   end subroutine get_vdf_from_state

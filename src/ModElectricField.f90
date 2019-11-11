@@ -353,7 +353,19 @@ contains
   end subroutine correct_efield_block
   !=============================================================!
   subroutine correct_efield
-    
+    integer :: iBlock
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_efield'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       call correct_efield_block(iBlock)
+    end do
+    ! Fill in ghost cells
+    call message_pass_cell(3, Efield_DGB, nProlongOrderIn=1)
+    call test_stop(NameSub, DoTest)
   end subroutine correct_efield
   !=============================================================!
   subroutine calc_inductive_e
