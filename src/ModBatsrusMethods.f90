@@ -194,8 +194,11 @@ contains
             if(UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
                ! Fill in ghost cells in case needed by the user perturbation
-               call exchange_messages
+               ! However, cannot be used with the boundary conditions (such as
+               ! threaded field lines) wich cannot be stated that early.
+               if(.not.UseFieldLineThreads)call exchange_messages
                call user_initial_perturbation
+
                call timing_stop('amr_ics_perturb')
             end if
 
@@ -238,14 +241,14 @@ contains
 
       ! Allow the user to add a perturbation to the initial condition.
       if(UseUserPerturbation)then
-         ! Need to set threads before exchange_messages.
-         if(UseFieldLineThreads)call set_threads
-
          ! Fill in ghost cells in case needed by the user perturbation
-         call exchange_messages
+         ! However, cannot be used with the boundary conditions (such as
+         ! threaded field lines) wich cannot be stated that early.
+         if(.not.UseFieldLineThreads)call exchange_messages
 
          call user_initial_perturbation
          UseUserPerturbation=.false.
+         
       end if
 
       if(restart)then
