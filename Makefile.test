@@ -59,7 +59,7 @@ TESTDIR = run_test
 # Reference solution is put into this directory when needed:
 REFDIR = run_test_ref
 
-OPENPM = -openmp
+OPENMP = -openmp
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
