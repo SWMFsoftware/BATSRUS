@@ -75,7 +75,8 @@ contains
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
     use ModParticleMover, ONLY: read_charged_particle_param=>read_param, &
-         normalize_particle_param=>normalize_param
+         normalize_particle_param=>normalize_param, &
+         UseChargedParticles=>UseParticles
     use ModHeatConduction, ONLY: read_heatconduction_param
     use ModHeatFluxCollisionless, ONLY: read_heatflux_param
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -351,7 +352,8 @@ contains
        if (DoReadSolarwindFile) call read_solar_wind_file
 
        call set_physics_constants
-       if(IsFirstSession)call normalize_particle_param
+       if(IsFirstSession.and.UseChargedParticles)&
+            call normalize_particle_param
 
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
