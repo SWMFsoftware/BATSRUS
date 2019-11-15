@@ -233,7 +233,7 @@ contains
     ! In case electric field is not a part of the state vector, it may
     ! be expressed in terms of the MhdMomentum flux and stored into 
     ! Efield_DGB array 
-    if(UseMhdMomentumFlux .and. (UseMultiIon .or. .not.IsMhd) &
+    if(UseMhdMomentumFlux &
          .and. .not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
