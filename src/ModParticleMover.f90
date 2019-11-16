@@ -23,14 +23,23 @@ module ModParticleMover
   use ModNumConst
   implicit none
   SAVE
+  PRIVATE! Except
   !\
   ! If true, the particles are allocated and may be traced
   !/
-  logical         :: UseParticles = .false. 
-  logical,private :: DoNormalize = .false.
+  logical, public         :: UseParticles = .false. 
+  logical :: DoNormalize = .false.
   !\
   ! If true, one or more ion fluids are solved using hybrid scheme
-  logical         :: UseHybrid = .false.
+  logical, public         :: UseHybrid = .false.
+  !\
+  ! Public members
+  !/
+  public :: read_param         !Particle parameters
+  public :: normalize_param    !To use Batsrus unit for charge
+  public :: trace_particles    !Particle mover
+  public :: get_state_from_vdf !Uses the moments to get the MHD state
+  
   !\
   !Parameters
   !/
@@ -126,7 +135,7 @@ module ModParticleMover
   integer :: iKind       !Sort of particles
   !True if we make boris algorithm and then advance coordinate 
   !through a time halfstep. False, if we only advance coordinates 
-  logical, private :: DoBorisStep 
+  logical :: DoBorisStep 
   !\
   ! (Dt/2)*Zq/(Am_p), to convert field to force
   !/
@@ -395,7 +404,7 @@ contains
 
        call batl_trace_particles(iKind, boris_scheme, check_done)
        !\
-       ! For particles near the block boundary, contributions are
+       ! For particles near the block boundary, contributions 
        ! may be assigned to ghost cells 
        call add_ghost_cell_field(P23_, 1, &
             Moments_VGBI(:,:,:,:,:,iKind))
@@ -662,14 +671,14 @@ contains
          all(Index_II(Status_,1:Particle_I(iKind)%nParticle)==Done_)
   end subroutine check_done
   !==========================
-  subroutine get_state_from_vdf(iBlock)
+  subroutine get_state_from_vdf_block(iBlock)
     integer, intent(in) :: iBlock
 
     logical :: DoTest, DoTestCell
     integer :: i, j, k, iIon, iKind, iLoop
     real :: vInv
     character(len=*), parameter:: NameSub = &
-         'get_state_from_vdf'
+         'get_state_from_vdf_block'
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     vInv = 0.0
@@ -714,6 +723,21 @@ contains
        end do
     end do; end do; end do
     call test_stop(NameSub, DoTest)
+  end subroutine get_state_from_vdf_block
+  !==========================
+  subroutine get_state_from_vdf
+    integer :: iBlock
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = &
+         'get_state_from_vdf'
+    !--------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       call get_state_from_vdf_block(iBlock)
+    end do
+    call test_stop(NameSub, DoTest)
+    
   end subroutine get_state_from_vdf
   !==========================
   !\
