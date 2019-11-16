@@ -45,6 +45,7 @@ contains
     use ModFaceValue, ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
     use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
@@ -207,8 +208,14 @@ contains
        ! boundary condition have to be reapplied.
        if(.not.DoResChangeOnly &
             .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
-          if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
-               nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+          if (far_field_BCs_BLK(iBlock)) then
+             call set_cell_boundary( &
+                  nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+             !\
+             ! Fill in boundary cells with hybrid particles
+             !/ 
+             if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
+          end if
           if(time_loop.and.UseBufferGrid)&
                call fill_in_from_buffer(iBlock)
        end if
@@ -219,6 +226,7 @@ contains
             call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
 
     end do
+    if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
     !$omp end parallel do
     call timing_stop('exch_energy')
 
