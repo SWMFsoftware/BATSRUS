@@ -39,6 +39,12 @@ module ModMain
   !/
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
+  !\
+  ! FLux-In-Cell scheme, if true. (Dt/2, Dt/2, Dt) update with a special
+  ! procedure to get time-centered electromagnetic fields at half time-step
+  ! Maintains the Mhd environment (electromagnetic field) for hybrid.
+  !/
+  logical :: UseFlic     = .false.
 
   real :: dt
   real :: DtFixed
