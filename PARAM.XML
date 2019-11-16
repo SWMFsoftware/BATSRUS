@@ -2330,6 +2330,17 @@ If the #SCHEME command is not used, then the defaults are
 nStage=2 with the half-step predictor and CflExpl=0.8.
 </command>
 
+<command name="USEFLIC">
+	<parameter name="UseFlic" type="logical" default="F" />
+
+#USEFLIC
+T                       UseFlic
+
+MHD scheme which works similarly to the hybrid one and can work together
+with hybrid. Requires nStage=3.
+</command>
+
+
 <command name="TIMESTEPLIMIT">
 	<parameter name="UseDtLimit" type="logical" default="F" />
 	<parameter name="DtLimitDim" type="real" min="0" default="1.0"

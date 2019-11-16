@@ -366,9 +366,18 @@ contains
              if(iProc==0)write(*,*)'Single fluid MHD cant be hybrid'
              call stop_mpi('Correct parameter file or set IsMhd=.false.')
           end if
-             
+          if(UseHybrid.and..not.UseFlic)then
+             if(iProc==0) &
+                  write(*,*) NameSub,':UseHybrid=.true., set UseFlic=.true.'
+          end if
           call normalize_particle_param
        end if
+       if(UseFlic.and.nStage/=3)then
+          if(iProc==0) &
+               write(*,*) NameSub,':UseFlic=.true., set nStage to 3'
+          nStage = 3
+       end if
+
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
 
@@ -556,6 +565,9 @@ contains
           CflOrig = Cfl
           ExplCfl = Cfl
           UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
+
+       CASE('#USEFLIC')
+          call read_var('UseFlic', UseFlic)
 
        case("#LOCALTIMESTEP", "#SUBCYCLING")
           call read_localstep_param(NameCommand, iSession)
