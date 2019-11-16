@@ -4,11 +4,9 @@
 module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
-  use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, iProc, iComm, &
+  use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, &
        nI, nJ, nK, Unused_B, CoordMin_DB, CellSize_DB, put_particles,& 
-       coord_to_xyz, nProc
-  use BATL_lib, ONLY: CellVolume_GB
-
+       coord_to_xyz, CellVolume_GB, jDim_, kDim_
   use ModMain,         ONLY: NameThisComp
   use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
   use ModVarIndexes,   ONLY: Bx_, Bz_
@@ -31,7 +29,13 @@ module ModParticleMover
   logical :: DoNormalize = .false.
   !\
   ! If true, one or more ion fluids are solved using hybrid scheme
+  !/
   logical, public         :: UseHybrid = .false.
+  !\
+  ! If true, at the outer boundary the VDF is set in the 
+  ! ghost cells
+  !/ 
+  logical, public         :: UseBoundaryVdf
   !\
   ! Public members
   !/
@@ -39,6 +43,8 @@ module ModParticleMover
   public :: normalize_param    !To use Batsrus unit for charge
   public :: trace_particles    !Particle mover
   public :: get_state_from_vdf !Uses the moments to get the MHD state
+  public :: set_boundary_vdf   !set VDF in the  boundary cells
+
   
   !\
   !Parameters
@@ -98,6 +104,14 @@ module ModParticleMover
   !/
   real,    pointer :: Coord_DI(:,:)
   integer, pointer :: Index_II(:,:)
+  !\
+  ! Redefine MinI:...:MaxK for a single ghost cell layer
+  ! We need this to properly apply message pass routines to
+  ! the moments array
+  !/ 
+  integer, parameter:: nG = 1, MinI = 1-nG, MaxI = nI+nG, &
+       MinJ = 1-nG*jDim_, MaxJ = nJ+nG*jDim_,             &
+       MinK = 1-nG*kDim_, MaxK = nK+nG*kDim_
   !\
   ! Indexes in the array to collect particle VDF moments
   !/
@@ -326,15 +340,6 @@ contains
   !end subroutine deallocate_particles
   !====================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
-    use BATL_lib, ONLY: jDim_, kDim_
-    !\
-    ! Redefine MinI:...:MaxK for a single ghost cell layer
-    ! We need this to properly apply message pass routines to
-    ! the moments array
-    !/ 
-    integer, parameter:: nG = 1, MinI = 1-nG, MaxI = nI+nG, &
-         MinJ = 1-nG*jDim_, MaxJ = nJ+nG*jDim_,             &
-         MinK = 1-nG*kDim_, MaxK = nK+nG*kDim_
     real,    intent(in)    :: Mass_I(nParticleSort) 
     real,    intent(in)    :: Charge_I(nParticleSort)
     integer, intent(in)    :: nParticleMax_I(nParticleSort)
@@ -736,6 +741,7 @@ contains
        if(Unused_B(iBlock))CYCLE
        call get_state_from_vdf_block(iBlock)
     end do
+    UseBoundaryVdf = .true.
     call test_stop(NameSub, DoTest)
     
   end subroutine get_state_from_vdf
@@ -747,11 +753,9 @@ contains
   ! 
   !/
   subroutine get_vdf_from_state(iBlock, DoOnScratch)
-    use ModMpi
     use ModRandomNumber, ONLY: random_real
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
     use BATL_lib, ONLY: iNode_B, IsCartesianGrid
-!    use BATL_pass_face_field, ONLY: add_ghost_cell_field
 
     integer, intent(in) :: iBlock
     !If the distribution function is initialized for the
@@ -935,5 +939,170 @@ contains
     end do SORTS
     call test_stop(NameSub, DoTest)
   end subroutine get_vdf_from_state
+  !================================
+  subroutine set_boundary_vdf(iBlock)
+    use ModRandomNumber, ONLY: random_real
+    use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
+    use ModParallel, ONLY: NOBLK, NeiLev
+    integer, intent(in) :: iBlock
+
+    logical :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !\
+    ! seed for random number generator
+    integer:: iSeed
+    !/
+    !Total number of particles of the current sort
+    integer :: nParticle, nParticleMax
+    integer :: nPPerCell !Number of particles per cell
+    !Particle mass
+    real :: Mass
+    !Sorts of ions and particles
+    integer :: iIon, iKind 
+    ! loop variables
+    integer:: iLoop, iParticle, iSide, i, j, k, iDim 
+    !Cartesian and generalized coordinates
+    real :: Xyz_D(MaxDim), Coord_D(MaxDim)
+    !\
+    !Loop indexes gathered to an array
+    !/
+    integer:: Ijk_D(MaxDim) ![i,j,k] 
+    !\
+    ! Interpolated MHD parameters at the particle location
+    !/
+    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2
+    !Random numbers
+    real :: RndUnif, RndUnif1, RndUnif2
+    !Parameters of the Maxwellian distribution
+    real :: Energy, MomentumAvr
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = &
+         'set_boundary_vdf'
+    !---------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    !\
+    ! Transform State Vector Variables to VDFs
+    !/
+    !\
+    ! Initialize random number generator with the global block
+    ! number, so that initializetion does not depend on how the blocks
+    ! are distributed over processors
+    !/
+    iSeed = iNode_B(iBlock); Coord_D = 0.0; Xyz_D = 0.0
+    DoSkip_G = .false.
+    !\
+    ! Skip all physical cells
+    !/
+    DoSkip_G(1:nI,1:nJ,1:nK) = .true.
+    !\
+    ! Skip all cells from the side, where there is no boundary
+    if(neiLEV(1,iBlock) /= NOBLK)DoSkip_G(MinI,:,:) = .true.
+    if(neiLEV(2,iBlock) /= NOBLK)DoSkip_G(MaxI,:,:) = .true.
+    if(nDim>=2)then
+       if(neiLEV(3,iBlock) /= NOBLK)DoSkip_G(:,MinJ,:) = .true.
+       if(neiLEV(4,iBlock) /= NOBLK)DoSkip_G(:,MaxJ,:) = .true.
+    end if
+    if(nDim==3)then
+       if(neiLEV(5,iBlock) /= NOBLK)DoSkip_G(:,:,MinK) = .true.
+       if(neiLEV(6,iBlock) /= NOBLK)DoSkip_G(:,:,MaxK) = .true.
+    end if
+
+    SORTS:do iLoop = 1, nHybridParticleSort
+       iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop) 
+       call set_pointer_to_particles(&
+            iKind, Coord_DI, Index_II, &
+            nParticle=nParticle, nParticleMax=nParticleMax)
+       !\
+       ! Number of particles per Block = nHybridParticlePerCell_I
+       !/
+       nPPerCell = nHybridParticlePerCell_I(iLoop)
+       !\
+       ! Loop over physical cells:
+       !/
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Skip true cells 
+          if(DoSkip_G(i,j,k)) CYCLE
+          !\
+          ! Loop over particles to scatter within a given cell
+          !/
+          if(nParticle + nPPerCell > nParticleMax)&
+               call stop_mpi('Insufficient number of particles is allocated')
+          Ijk_D = [i,j,k] 
+          !\
+          ! Mass of particles
+          !/
+          Mass = &
+               State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*&
+               CellVolume_GB(i,j,k,iBlock)/nPPerCell
+
+          PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
+             !\
+             ! Assign indexes
+             !/
+             Index_II(0:Status_, iParticle)   = [iBlock,Done_]
+             Coord_DI(Mass_,iParticle)    = Mass
+             !\
+             ! Use random generator to assign coordinates for particles in 
+             ! each block.
+             !/
+             do iDim = 1, nDim
+                RndUnif = random_real(iSeed)
+                Coord_D(iDim) = CellSize_DB(iDim,iBlock)*&
+                     (Ijk_D(iDim) - 1 + RndUnif) + CoordMin_DB(iDim,iBlock)
+             end do
+             if(IsCartesianGrid)then
+                Xyz_D = Coord_D
+             else
+                call coord_to_xyz(Coord_D, Xyz_D)
+             end if
+             Coord_DI(x_:nDim,iParticle) = Xyz_D(x_:nDim)
+             Rho = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)
+             P = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
+             RhoU_D = State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),&
+                  i,j,k,iBlock) 
+             !\
+             ! Calculate 1.0 / Rho once to reduce computational time
+             !/
+             InvRho = 1.0/Rho
+             !\
+             ! The total velocity of each macroparticle will be
+             ! \vec{v_total} = \vec{uBulk} + uThermal * \vec{unit vector}
+             ! The bulk velocity can be calculated as the ratio of the 
+             ! momentum to density, i.e. ubulk = rho * u / rho
+             !/
+             Coord_DI(Ux_:Uz_,iParticle)=  RhoU_D*InvRho
+             !\
+             ! The thermal velocity in the normalization used here is:
+             ! uThermal = sqrt(P_I/Rho_I)
+             !/
+             uThermal2 = P*InvRho 
+             !\
+             ! If the thermal velocity is zero then set velocity three vector 
+             ! to zero
+             !/
+             if(uThermal2==0.0)CYCLE
+             do iDim = 1, MaxDim
+                RndUnif1  = random_real(iSeed)
+                RndUnif2  = random_real(iSeed)
+                ! The kinetic energy is calculated next for each particle
+                Energy    = -uThermal2 *log(RndUnif1)
+                ! The average momentum is calculated next for each particle
+                MomentumAvr = sqrt(2.0*Energy)
+                ! The random velocity  is added
+                Coord_DI(U_+iDim,iParticle) = Coord_DI(U_+iDim,iParticle) +&
+                     MomentumAvr*cos(cTwoPi*RndUnif2)
+             end do
+             !\
+             ! The thing to do: add a parallel component of random velocity
+             !/
+          end do PARTICLES
+          nParticle = nParticle + nPPerCell
+       end do; end do; end do
+       !\
+       ! Collect particles of Sort per Block
+       !/
+       Particle_I(iKind)%nParticle = nParticle
+    end do SORTS
+    call test_stop(NameSub, DoTest) 
+  end subroutine set_boundary_vdf
 !====================================
 end module ModParticleMover
