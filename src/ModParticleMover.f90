@@ -5,19 +5,21 @@ module ModParticleMover
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
   use BATL_lib, ONLY: nDim,  MaxDim, nBlock, MaxBlock, &
-       nI, nJ, nK, Unused_B, CoordMin_DB, CellSize_DB, put_particles,& 
+       nI, nJ, nK, Unused_B, CoordMin_DB, CellSize_DB, & 
        coord_to_xyz, CellVolume_GB, jDim_, kDim_
-  use ModMain,         ONLY: NameThisComp
-  use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB
+  use ModMain,         ONLY: NameThisComp, UseB0
+  use ModB0,           ONLY: get_b0, B0_DGB
+  use ModAdvance,      ONLY: UseEfield, Efield_DGB, State_VGB, &
+       UseAnisoPressure
   use ModVarIndexes,   ONLY: Bx_, Bz_
-  use ModMultiFluid,   ONLY: nTrueIon, &
-          iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I 
+  use ModMultiFluid,   ONLY: iPParIon_I, &
+          iRhoIon_I, iPIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I
   use ModParticles,    ONLY: gen_allocate_particles=>allocate_particles, &
        gen_deallocate_particles=>deallocate_particles
-  use BATL_particles,  ONLY: Particle_I, &
+  use BATL_particles,  ONLY: Particle_I, put_particles, &
        mark_undefined, check_particle_location, &
        set_pointer_to_particles
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry,     ONLY: true_cell
   use ModNumConst
   implicit none
   SAVE
@@ -43,8 +45,9 @@ module ModParticleMover
   public :: normalize_param    !To use Batsrus unit for charge
   public :: trace_particles    !Particle mover
   public :: get_state_from_vdf !Uses the moments to get the MHD state
-  public :: set_boundary_vdf   !set VDF in the  boundary cells
-
+  public :: get_vdf_from_state !Set VDF in physical cells
+  public :: set_boundary_vdf   !Set VDF in the  boundary cells
+  public :: advance_ion_current!Explicit or implicit version of CAM
   
   !\
   !Parameters
@@ -124,25 +127,6 @@ module ModParticleMover
   !/
   real,    allocatable :: Moments_VGBI(:,:,:,:,:,:)
   !\
-  ! May be redundant?
-  !/
-  !\
-  ! Charge and current densities
-  !/
-  real,    allocatable :: DensityAndCurrent_VCB(:,:,:,:,:)
-  !\
-  ! \Lambda and \Gamma coefficients used by the Current Advance Method (CAM)
-  ! as described in Matthews 1993 paper 
-  !/
-  real,    allocatable :: CAMCoef_VCB( :,:,:,:,:)
-  !\
-  ! Indexes in the array to collect current and charge densities 
-  !/
-  integer, parameter :: RhoC_ = 1, J_ = 1, Jx_ = J_ + x_, &
-       Jy_ = J_ + y_, Jz_ = J_ + z_, Lambda_ = 1, &
-       Gamma_ = Lambda_, GammaX_ = Gamma_ + x_, &
-       GammaY_ = Gamma_ + y_, GammaZ_ = Gamma_ + z_
-  !\
   ! Global variables to be shared by more than one routine
   !/
   real    :: Dt          !Time step
@@ -174,7 +158,7 @@ contains
   ! 2.0                    Charge_I
   !--------------------------------------------------------------------------
   subroutine read_param(NameCommand)
-
+    use ModMultiFluid,   ONLY: nTrueIon
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -321,24 +305,7 @@ contains
          Charge2Mass_I(1+nHybridParticleSort:nParticleSort)* &
          ElectronCharge
   end subroutine normalize_param
-  !===================== DEALLOCATE====================
-  !Not used and probably not usable
-  !subroutine deallocate_particles
-  !  integer :: iLoop
-  !  !----------------
-  !  nullify(Coord_DI)
-  !  nullify(Index_II)
-  !  !\
-  !  ! Deallocate hybrid particle arrays
-  !  !/
-  !  do iLoop = 1, size(iKindParticle_I)
-  !     call gen_deallocate_particles(iKindParticle_I(iLoop))
-  !  end do
-  !  deallocate(iHybridIon_I, Charge2Mass_I, &
-  !          Moments_VGBI, DensityAndCurrent_VCB, &
-  !          CAMCoef_VCB, iKindParticle_I)
-  !end subroutine deallocate_particles
-  !====================================================
+  !==============================================================
   subroutine allocate_particles(Mass_I, Charge_I, nParticleMax_I)
     real,    intent(in)    :: Mass_I(nParticleSort) 
     real,    intent(in)    :: Charge_I(nParticleSort)
@@ -373,10 +340,6 @@ contains
     allocate(Moments_VGBI(Rho_:P23_,&
          MinI:MaxI,  MinJ:MaxJ, MinK:MaxK, MaxBlock, &
          iKindParticle_I(1):iKindParticle_I(nParticleSort)))
-    allocate(DensityAndCurrent_VCB(RhoC_:Jz_,&
-            1:nI,  1:nJ, 1:nK, MaxBlock))
-    allocate(CAMCoef_VCB(Lambda_:GammaZ_,&
-            1:nI,  1:nJ, 1:nK, MaxBlock))
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
   !===============================================!
@@ -394,8 +357,7 @@ contains
     DoBorisStep = DoBorisStepIn
 
     Moments_VGBI = 0.0            !Prepare storage for the VDF moments
-    DensityAndCurrent_VCB   = 0.0 !Same for charge and current densities 
-    CAMCoef_VCB       = 0.0       !Same for \Lambda and \Gamma coeffs 
+
 
     do iLoop = 1, nParticleSort
        iKind = iKindParticle_I(iLoop)
@@ -414,38 +376,8 @@ contains
        call add_ghost_cell_field(P23_, 1, &
             Moments_VGBI(:,:,:,:,:,iKind))
     end do
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock))CYCLE
-       do iLoop = 1, nHybridParticleSort
-          iKind = iKindParticle_I(iLoop)
-          !\
-          ! Sum up contributions to charge and current densities 
-          ! from  the moments of hybrid ions (first  
-          ! nHybridParticleSort of all charged particles)
-          !/
-          DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) = &
-               DensityAndCurrent_VCB(RhoC_:Jz_,:,:,:,iBlock) + &
-               Charge2Mass_I(iLoop)* &
-               Moments_VGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
-          if(.not.DoBorisStep)&
-               !\
-               ! The mover with DoBorisStep =.false. is called in the
-               ! beginning of the time step. After this step, in addition
-               ! to the ion current and charge density, one needs to collect
-               ! \Lambda and \Gamma coefficients as described in 
-               ! Eq. (24a) and (24b) of the CAM algorithm in the paper
-               ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116.
-               ! These coefficients are used to advance the current 
-               ! using Eq. (23) 
-               !/
-               CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) = &
-               CAMcoef_VCB(Lambda_:GammaZ_,:,:,:,iBlock) + &
-               Charge2Mass_I(iLoop)**2 * &
-               Moments_VGBI(Rho_:RhoUz_,1:nI,1:nJ,1:nK,iBlock,iKind)
-       end do
-    end do
   end subroutine trace_particles
-  !=====================================
+  !===============================================================
   subroutine boris_scheme(iParticle, EndOfSegment)
     !\
     ! In this routine we follow the formulation described in the  
@@ -476,23 +408,7 @@ contains
     ! To make the full Boris step the routine is called with 
     ! DoBorisStep = .true.
     !/
-    !\
-    ! 4. At the beginning of the (next) time step only the particle
-    !     coordinates are advanced from x(N+1) to x(N+3/2). We then  
-    !     collect 
-    !     b. \rho_c(x(N+3/2),u(N+1)), J(x(N+3/2),u(N+1))
-    ! To do this, the routine is called with DoBorisStep = .false.
-    !/
-    ! This algorithm corresponds to Step 2(b) of the CAM Algorithm in
-    ! Matthews, 1993, J. Comput. Phys, v. 112, pp. 102-116
-    ! with a modification to split the displacement into two parts, 
-    ! following Holmstrom, arXiv:0911.4435, 2009. 
-    ! They are collected for each species separately, as described 
-    ! on page 110, item 2(b)(i)
-    !/
     use ModBatlInterface, ONLY: interpolate_grid_amr_gc
-    use ModMain, ONLY: UseB0
-    use ModB0, ONLY: get_b0
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in)  :: iParticle
@@ -681,7 +597,7 @@ contains
 
     logical :: DoTest, DoTestCell
     integer :: i, j, k, iIon, iKind, iLoop
-    real :: vInv
+    real :: vInv, FullB_D(MaxDim)
     character(len=*), parameter:: NameSub = &
          'get_state_from_vdf_block'
     !--------------------------------------------------------------------
@@ -702,30 +618,35 @@ contains
        ! when velocity and displacement are synchronized (x(N+1), U(N+1)).
        !/
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
-       do iLoop = 1, nHybridParticleSort
+       SORTS:do iLoop = 1, nHybridParticleSort
           iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop)
           !\
           ! Density of hybrid fluid iIon : Mass / Control Volume
           !/
           State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) + &
                Moments_VGBI(Rho_,i,j,k,iBlock,iKind)*vInv
           !\
-          ! Momentum density of hybrid fluid iIon : Momentum / Control Volume
+          ! Momentum density of hybrid fluid iIon : Momentum/Control Volume
           !/
           State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) = &
-                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) + &
                Moments_VGBI(RhoUx_:RhoUz_,i,j,k,iBlock,iKind)*vInv
           !\
           ! Pressure of hybrid fluid iIon : P = Trace(P_tensor) / 3 
           ! Mass * (Ux^2+Uy^2+Uz^2) / Control Volume / 3
           !/
           State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
-                  State_VGB(iPIon_I(iIon),i,j,k,iBlock) + &
                (  Moments_VGBI(Px_,i,j,k,iBlock,iKind)  &
                +  Moments_VGBI(Py_,i,j,k,iBlock,iKind)  &
                +  Moments_VGBI(Pz_,i,j,k,iBlock,iKind))*vInv/3.0
-       end do
+          if(.not.UseAnisoPressure)CYCLE
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0)FullB_D = FullB_D + B0_DGB (:,i,j,k,iBlock)
+          State_VGB(iPParIon_I(iIon),i,j,k,iBlock) = &
+               (sum(Moments_VGBI(Px_:Pz_,i,j,k,iBlock,iKind)*FullB_D**2) +&
+               2*(sum(Moments_VGBI(P12_:P13_,i,j,k,iBlock,iKind)*FullB_D(2:3))&
+               *FullB_D(1) + Moments_VGBI(P23_,i,j,k,iBlock,iKind)*&
+               FullB_D(2)*FullB_D(3)) )*vInv/max(1e-30,sum(FullB_D**2))
+       end do SORTS
     end do; end do; end do
     call test_stop(NameSub, DoTest)
   end subroutine get_state_from_vdf_block
@@ -743,211 +664,81 @@ contains
     end do
     UseBoundaryVdf = .true.
     call test_stop(NameSub, DoTest)
-    
   end subroutine get_state_from_vdf
   !==========================
-  !\
-  ! In this subroutine we obtain the VDF for each particle species
-  ! starting from the state vector variables.
-  ! More specifically, we calculate the thermal velocity uThermal_I
-  ! 
-  !/
   subroutine get_vdf_from_state(iBlock, DoOnScratch)
-    use ModRandomNumber, ONLY: random_real
-    use ModBatlInterface, ONLY: interpolate_grid_amr_gc
-    use BATL_lib, ONLY: iNode_B, IsCartesianGrid
-
     integer, intent(in) :: iBlock
     !If the distribution function is initialized for the
-    !first time, one can miss the check, if there are already
-    !some particles in the block to generate the VDF.
-    logical, optional, intent(in):: DoOnScratch
-    !\
-    ! seed for random number generator
-    integer:: iSeed
-    !/
-    !Total number of particles of the current sort
-    integer :: nParticle, nParticleMax
-    integer :: nPPerCell !Number of particles per cell
-    !Particle mass
-    real :: Mass
-    !Sorts of ions and particles
-    integer :: iIon, iKind 
-    ! loop variables
-    integer:: iLoop, iParticle, iCell, i, j, k, iDim 
-    !Cartesian and generalized coordinates
-    real :: Xyz_D(MaxDim), Coord_D(MaxDim)
-    !\
-    !Loop indexes gathered to an array
-    !/
-    integer:: Ijk_D(MaxDim) ![i,j,k] 
-    !\
-    !The cell index for interpolation stencil point
-    !/`
-    integer:: i_D(MaxDim)   
-    !\
-    ! Parameters of the interpolation procedure
-    !/
-    integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim)
-    !\
-    ! Interpolated MHD parameters at the particle location
-    !/
-    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2
-    !Random numbers
-    real :: RndUnif, RndUnif1, RndUnif2
-    !Parameters of the Maxwellian distribution
-    real :: Energy, MomentumAvr
-    logical :: DoTest
-    character(len=*), parameter:: NameSub = &
-     'get_vdf_from_state'
+    !first time, one can miss the check. If there are already
+    !some particles in the block, they need to be removed to before 
+    !the VDF generation.
+    logical, intent(in):: DoOnScratch
     !--------------------------------------------------------------------
-    call test_start(NameSub, DoTest) 
     !\
-    ! Transform State Vector Variables to VDFs
+    ! In this subroutine we obtain the VDF for each particle species
+    ! stemming from the state vector variables.
     !/
-    !\
-    ! Initialize random number generator with the global block
-    ! number, so that initializetion does not depend on how the blocks
-    ! are distributed over processors
-    !/
-    iSeed = iNode_B(iBlock); Coord_D = 0.0; Xyz_D = 0.0
-
-    SORTS:do iLoop = 1, nHybridParticleSort
-       iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop) 
-       call set_pointer_to_particles(&
-         iKind, Coord_DI, Index_II, &
-         nParticle=nParticle, nParticleMax=nParticleMax)
-       !\
-       ! Number of particles per Block = nHybridParticlePerCell_I
-       !/
-       nPPerCell = nHybridParticlePerCell_I(iLoop)
-       if(.not.DoOnScratch.and.nParticle>0) then 
-          !\
-          !The particles already present in the block need to be 
-          !removed, not to contribute to the VDF moments
-          !/
-          where(Index_II(0,1:nParticle)==iBlock)&
-               Index_II(0,1:nParticle) = -Index_II(0,1:nParticle)
-       end if
-       !\
-       ! Loop over physical cells:
-       !/
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! Skip not true cells 
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         !\
-          ! Loop over particles to scatter within a given cell
-          !/
-          if(nParticle + nPPerCell > nParticleMax)&
-               call stop_mpi('Insufficient number of particles is allocated')
-          Ijk_D = [i,j,k] 
-          !\
-          ! Mass of particles
-          !/
-          Mass = &
-               State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*&
-               CellVolume_GB(i,j,k,iBlock)/nPPerCell
-
-          PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
-             !\
-             ! Assign indexes
-             !/
-             Index_II(0:Status_, iParticle)   = [iBlock,Done_]
-             Coord_DI(Mass_,iParticle)    = Mass
-             !\
-             ! Use random generator to assign coordinates for particles in 
-             ! each block.
-             !/
-             do iDim = 1, nDim
-                RndUnif = random_real(iSeed)
-                Coord_D(iDim) = CellSize_DB(iDim,iBlock)*&
-                     (Ijk_D(iDim) - 1 + RndUnif) + CoordMin_DB(iDim,iBlock)
-             end do
-             if(IsCartesianGrid)then
-                Xyz_D = Coord_D
-             else
-                call coord_to_xyz(Coord_D, Xyz_D)
-             end if
-             Coord_DI(x_:nDim,iParticle) = Xyz_D(x_:nDim)
-             !\
-             ! If the thermal velocity is a positive value, "thermalize"
-             ! i.e. generate a Gaussian distribution from the state vector
-             ! variable and obtain the VDFs and velocity coordinates.
-             !/
-             call interpolate_grid_amr_gc(&
-               Xyz_D, iBlock, nCell, iCell_II, Weight_I)
-
-             Rho = 0.0; P = 0.0; RhoU_D = 0.0 
-
-             do iCell = 1, nCell
-                i_D = 1
-                i_D(1:nDim) = iCell_II(1:nDim, iCell)
-                !\
-                ! Interpolate State_VGB with obtained weight coefficients
-                !/
-                Rho = Rho + Weight_I(iCell)*&
-                  State_VGB(iRhoIon_I(iIon),i_D(1),i_D(2),i_D(3),iBlock)
-                P = P + Weight_I(iCell)*&
-                  State_VGB(iPIon_I(iIon),i_D(1),i_D(2),i_D(3),iBlock)
-                RhoU_D = RhoU_D + Weight_I(iCell)*&
-                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),&
-                  i_D(1),i_D(2),i_D(3),iBlock) 
-             end do
-             !\
-             ! Calculate 1.0 / Rho once to reduce computational time
-             !/
-             InvRho = 1.0/Rho
-             !\
-             ! The total velocity of each macroparticle will be
-             ! \vec{v_total} = \vec{uBulk} + uThermal * \vec{unit vector}
-             ! The bulk velocity can be calculated as the ratio of the 
-             ! momentum to density, i.e. ubulk = rho * u / rho
-             !/
-             Coord_DI(Ux_:Uz_,iParticle)=  RhoU_D*InvRho
-             !\
-             ! The thermal velocity in the normalization used here is:
-             ! uThermal = sqrt(P_I/Rho_I)
-             !/
-             uThermal2 = P*InvRho 
-             !\
-             ! If the thermal velocity is zero then set velocity three vector 
-             ! to zero
-             !/
-             if(uThermal2==0.0)CYCLE
-             do iDim = 1, MaxDim
-                RndUnif1  = random_real(iSeed)
-                RndUnif2  = random_real(iSeed)
-                ! The kinetic energy is calculated next for each particle
-                Energy    = -uThermal2 *log(RndUnif1)
-                ! The average momentum is calculated next for each particle
-                MomentumAvr = sqrt(2.0*Energy)
-                ! The random velocity  is added
-                Coord_DI(U_+iDim,iParticle) = Coord_DI(U_+iDim,iParticle) +&
-                     MomentumAvr*cos(cTwoPi*RndUnif2)
-             end do
-             !\
-             ! The thing to do: add a parallel component of random velocity
-             !/
-          end do PARTICLES
-          nParticle = nParticle + nPPerCell
-       end do; end do; end do
-       !\
-       ! Collect particles of Sort per Block
-       !/
-       Particle_I(iKind)%nParticle = nParticle
-    end do SORTS
-    call test_stop(NameSub, DoTest)
+    call get_cell_state_from_vdf(&
+         MinI=1                , &
+         MaxI=nI               , &
+         MinJ=1                , &
+         MaxJ=nJ               , &
+         MinK=1                , &
+         MaxK=nK               , &
+         iBlock=iBlock         , &
+         DoOnScratch=DoOnScratch,& 
+         DoSkip_G=.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) 
   end subroutine get_vdf_from_state
-  !================================
+  !===============================================================
   subroutine set_boundary_vdf(iBlock)
-    use ModRandomNumber, ONLY: random_real
     use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
     use ModParallel, ONLY: NOBLK, NeiLev
     integer, intent(in) :: iBlock
-
     logical :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !-----------------------------
+    DoSkip_G = .false.
     !\
+    ! Skip all physical cells
+    !/
+    DoSkip_G(1:nI,1:nJ,1:nK) = .true.
+    !\
+    ! Skip all cells from the side, where there is no boundary
+    !/
+    if(neiLEV(1,iBlock) /= NOBLK)DoSkip_G(MinI,:,:) = .true.
+    if(neiLEV(2,iBlock) /= NOBLK)DoSkip_G(MaxI,:,:) = .true.
+    if(nDim>=2)then
+       if(neiLEV(3,iBlock) /= NOBLK)DoSkip_G(:,MinJ,:) = .true.
+       if(neiLEV(4,iBlock) /= NOBLK)DoSkip_G(:,MaxJ,:) = .true.
+    end if
+    if(nDim==3)then
+       if(neiLEV(5,iBlock) /= NOBLK)DoSkip_G(:,:,MinK) = .true.
+       if(neiLEV(6,iBlock) /= NOBLK)DoSkip_G(:,:,MaxK) = .true.
+    end if
+    call get_cell_state_from_vdf(&
+         MinI=MinI    , &
+         MaxI=MaxI    , &
+         MinJ=MinJ    , &
+         MaxJ=MaxJ    , &
+         MinK=MinK    , &
+         MaxK=MaxK    , &
+         iBlock=iBlock, &
+         DoOnScratch=.true.,& !In the boundary cells the particles
+         DoSkip_G=DoSkip_G )  
+  end subroutine set_boundary_vdf
+  !====================================
+  subroutine get_cell_state_from_vdf(&
+       MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,DoOnScratch, DoSkip_G)   
+    use ModRandomNumber, ONLY: random_real
+    use BATL_lib,    ONLY: iNode_B, IsCartesianGrid
+    integer, intent(in) :: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock
+    !If the distribution function is initialized for the
+    !first time, one can miss the check. If there are already
+    !some particles in the block, they need to be removed to before 
+    !the VDF generation.
+    logical, intent(in):: DoOnScratch
+    !Cells at which the VDF should not be generated
+    logical, intent(in) :: DoSkip_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+     !\
     ! seed for random number generator
     integer:: iSeed
     !/
@@ -969,14 +760,15 @@ contains
     !\
     ! Interpolated MHD parameters at the particle location
     !/
-    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2
+    real :: P, Rho, RhoU_D(MaxDim), InvRho, uThermal2, PPar, PPerp, &
+         FullB_D(MaxDim), UPar2,  UPar, uThermal_D(MaxDim)
     !Random numbers
     real :: RndUnif, RndUnif1, RndUnif2
     !Parameters of the Maxwellian distribution
     real :: Energy, MomentumAvr
     logical :: DoTest
     character(len=*), parameter:: NameSub = &
-         'set_boundary_vdf'
+         'get__cell_state_from_vdf'
     !---------------------------------------------------------------
     call test_start(NameSub, DoTest)
     !\
@@ -988,24 +780,6 @@ contains
     ! are distributed over processors
     !/
     iSeed = iNode_B(iBlock); Coord_D = 0.0; Xyz_D = 0.0
-    DoSkip_G = .false.
-    !\
-    ! Skip all physical cells
-    !/
-    DoSkip_G(1:nI,1:nJ,1:nK) = .true.
-    !\
-    ! Skip all cells from the side, where there is no boundary
-    if(neiLEV(1,iBlock) /= NOBLK)DoSkip_G(MinI,:,:) = .true.
-    if(neiLEV(2,iBlock) /= NOBLK)DoSkip_G(MaxI,:,:) = .true.
-    if(nDim>=2)then
-       if(neiLEV(3,iBlock) /= NOBLK)DoSkip_G(:,MinJ,:) = .true.
-       if(neiLEV(4,iBlock) /= NOBLK)DoSkip_G(:,MaxJ,:) = .true.
-    end if
-    if(nDim==3)then
-       if(neiLEV(5,iBlock) /= NOBLK)DoSkip_G(:,:,MinK) = .true.
-       if(neiLEV(6,iBlock) /= NOBLK)DoSkip_G(:,:,MaxK) = .true.
-    end if
-
     SORTS:do iLoop = 1, nHybridParticleSort
        iKind = iKindParticle_I(iLoop); iIon = iHybridIon_I(iLoop) 
        call set_pointer_to_particles(&
@@ -1015,10 +789,18 @@ contains
        ! Number of particles per Block = nHybridParticlePerCell_I
        !/
        nPPerCell = nHybridParticlePerCell_I(iLoop)
+       if(.not.DoOnScratch.and.nParticle>0) then 
+          !\
+          !The particles already present in the block need to be 
+          !removed, not to contribute to the VDF moments
+          !/
+          where(Index_II(0,1:nParticle)==iBlock)&
+               Index_II(0,1:nParticle) = -Index_II(0,1:nParticle)
+       end if
        !\
        ! Loop over physical cells:
        !/
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           ! Skip true cells 
           if(DoSkip_G(i,j,k)) CYCLE
           !\
@@ -1033,7 +815,7 @@ contains
           Mass = &
                State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*&
                CellVolume_GB(i,j,k,iBlock)/nPPerCell
-
+          
           PARTICLES:do iParticle = nParticle + 1, nParticle + nPPerCell
              !\
              ! Assign indexes
@@ -1074,12 +856,27 @@ contains
              ! The thermal velocity in the normalization used here is:
              ! uThermal = sqrt(P_I/Rho_I)
              !/
-             uThermal2 = P*InvRho 
+             if(UseAnisoPressure)then
+                PPar = State_VGB(iPParIon_I(iIon), i,j,k,iBlock)
+                !Magnetic field vector, to assign parallel and perpendicular
+                !temperature
+                FullB_D = State_VGB(Bx_:Bz_, i,j,k,iBlock)
+                if(UseB0)FullB_D = FullB_D + B0_DGB(:,i,j,k,iBlock)
+                !Unit vector in the direction of field
+                FullB_D = FullB_D/sqrt(max(1e-30, sum(FullB_D**2)))
+                !\
+                !Trace of the stress tensor equals both 3P and 2PPerp+PPar
+                !Hence, PPerp = P + 0.5*(P - PPar)
+                uThermal2 = (P + 0.50*(P - PPar))*InvRho
+                UPar2     = PPar*InvRho
+             else
+                uThermal2 = P*InvRho 
+             end if
              !\
              ! If the thermal velocity is zero then set velocity three vector 
              ! to zero
              !/
-             if(uThermal2==0.0)CYCLE
+             if(uThermal2 + UPar2 == 0.0)CYCLE
              do iDim = 1, MaxDim
                 RndUnif1  = random_real(iSeed)
                 RndUnif2  = random_real(iSeed)
@@ -1088,9 +885,24 @@ contains
                 ! The average momentum is calculated next for each particle
                 MomentumAvr = sqrt(2.0*Energy)
                 ! The random velocity  is added
-                Coord_DI(U_+iDim,iParticle) = Coord_DI(U_+iDim,iParticle) +&
-                     MomentumAvr*cos(cTwoPi*RndUnif2)
+                uThermal_D(iDim) = MomentumAvr*cos(cTwoPi*RndUnif2)    
              end do
+             if(UseAnisoPressure)then
+                !Eliminate parallel component of thermal velocity
+                uThermal_D =  uThermal_D - sum(FullB_D*uThermal_D)*FullB_D
+                RndUnif1  = random_real(iSeed)
+                RndUnif2  = random_real(iSeed)
+                ! The kinetic energy is calculated next for each particle
+                Energy    = -uPar2 *log(RndUnif1)
+                ! The average momentum is calculated next for each particle
+                MomentumAvr = sqrt(2.0*Energy)
+                UPar = MomentumAvr*cos(cTwoPi*RndUnif2)
+                uThermal_D = uThermal_D + UPar*FullB_D
+             end if
+             
+             Coord_DI(Ux_:Uz_,iParticle) = Coord_DI(Ux_:Uz_,iParticle) + &
+                  uThermal_D
+             
              !\
              ! The thing to do: add a parallel component of random velocity
              !/
@@ -1103,6 +915,13 @@ contains
        Particle_I(iKind)%nParticle = nParticle
     end do SORTS
     call test_stop(NameSub, DoTest) 
-  end subroutine set_boundary_vdf
-!====================================
+  end subroutine get_cell_state_from_vdf
+  !====================================
+  subroutine advance_ion_current(iBlock)
+    use ModMain, ONLY: iStage
+    integer, intent(in) :: iBlock
+    !----------------------------
+    call stop_mpi('The subroutine is under development')
+  end subroutine advance_ion_current
+  !=================================
 end module ModParticleMover

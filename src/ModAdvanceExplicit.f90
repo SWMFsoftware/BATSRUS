@@ -23,7 +23,7 @@ contains
     use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
          set_low_order_face
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         DoInterpolateFlux, UseAdaptiveLowOrder
+         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
@@ -38,14 +38,16 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModMessagePass, ONLY: exchange_messages
     use ModTimeStepControl, ONLY: calc_timestep
-    use BATL_lib, ONLY: message_pass_face, IsAnyAxis
+    use BATL_lib, ONLY: message_pass_face, message_pass_cell, IsAnyAxis
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
-    use ModElectricField, ONLY: get_num_electric_field
+    use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
+    use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
+         UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
 
@@ -164,7 +166,24 @@ contains
           call timing_start('calc_sources')
           call calc_source(iBlock)
           call timing_stop('calc_sources')
-          
+          !\
+          ! With known magnetic field and electric field in the 
+          ! comoving frame update ion velocities at the half time-step
+          !/
+          if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
+          !\
+          ! Electric field in the comoving frame is calculated
+          ! and, probably used, in calc_sorces. Add -UxB, to get field
+          ! in the global coordinate frame
+          !/
+          if(UseChargedParticles.and.UseMhdMomentumFlux)&
+               call correct_efield_block(iBlock)
+          !\
+          !In the course of second stage in the FLIC scheme nothing
+          !is updated instead of the (multi)ion currents, which are
+          !updated by advance_ion_current.
+          !/ 
+          if(UseFlic.and.iStage==2)CYCLE
           ! Calculate time step (both local and global
           ! for the block) used in multi-stage update
           ! for steady state calculations.
@@ -240,11 +259,42 @@ contains
           ! update_check subroutine.
           if(UseUpdateCheck .and. iStage==1) &
                Time_SimulationOld = Time_Simulation
-          Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+          if(UseFlic)then
+             !Staging Dt/2; Dt/2; Dt
+             if(iStage/=2)Time_Simulation = Time_Simulation + &
+                  Dt*No2Si_V(UnitT_)/2
+          else
+             Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+          end if
           if(UseUpdateCheck .and. iStage==nStage) &
                Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
        endif
-
+       !\
+       ! If we have particle to move in the electromagnetic field,
+       ! test or hybrid ones
+       if(UseChargedParticles)then
+          if(iStage==1)then
+             !\
+             ! Ballistically (with no change in particle velocity)
+             ! propagate particles for a half time-step
+             !/
+             call trace_particles(Dt=Dt, DoBorisStepIn=.false.)
+             if(UseHybrid)call get_state_from_vdf
+          end if
+          !\
+          ! Calculate acceleration by the electromagnetic force. Then
+          ! ballistically (with no change in particle velocity)
+          ! propagate them for a half time-step
+          !/
+          if(UseFlic)then
+             if(iStage==2)call trace_particles(&
+                  Dt=Dt, DoBorisStepIn=.true.)
+             if(iStage==3.and.UseHybrid)call get_state_from_vdf
+          else
+             if(iStage==nStage)call trace_particles(&
+                  Dt=Dt, DoBorisStepIn=.true.)
+          end if
+       end if
        if(iStage < nStage)then
           if(UseFieldLineThreads) call advance_threads(Enthalpy_)
           call exchange_messages
