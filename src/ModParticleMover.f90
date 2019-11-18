@@ -47,7 +47,7 @@ module ModParticleMover
   public :: get_state_from_vdf !Uses the moments to get the MHD state
   public :: get_vdf_from_state !Set VDF in physical cells
   public :: set_boundary_vdf   !Set VDF in the  boundary cells
-
+  public :: advance_ion_current!Explicit or implicit version of CAM
   
   !\
   !Parameters
@@ -917,4 +917,11 @@ contains
     call test_stop(NameSub, DoTest) 
   end subroutine get_cell_state_from_vdf
   !====================================
+  subroutine advance_ion_current(iBlock)
+    use ModMain, ONLY: iStage
+    integer, intent(in) :: iBlock
+    !----------------------------
+    call stop_mpi('The subroutine is under development')
+  end subroutine advance_ion_current
+  !=================================
 end module ModParticleMover
