@@ -226,8 +226,9 @@ contains
             call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
 
     end do
-    if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
     !$omp end parallel do
+
+    if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
     call timing_stop('exch_energy')
 
     call timing_stop('exch_msgs')
