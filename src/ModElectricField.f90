@@ -42,6 +42,7 @@ module ModElectricField
   public:: get_electric_field           ! Calculate E
   public:: get_electric_field_block     ! Calculate E for 1 block
   public:: get_efield_in_comoving_frame ! Field in frame comoving with ions
+  public:: correct_efield_block         ! Transform to global frame (add -UxB)
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
   public:: get_num_electric_field   ! Calculate numerical E from fluxes
@@ -50,10 +51,7 @@ module ModElectricField
   ! comoving with an average ions, is calculated via the momentum flux (in a 
   ! conservative manner) or as J x B force.
   !/
-  !\
-  ! At the time, the logical is parameter, set to use J x B force, and private
-  !/
-  logical, public, parameter :: UseJCrossBForce = UseB .and. &
+  logical, public :: UseJCrossBForce = UseB .and. &
        (UseMultiIon .or. .not.IsMhd)
 
   ! Make Efield available through this module too
