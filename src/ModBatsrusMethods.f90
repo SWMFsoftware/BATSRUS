@@ -168,6 +168,8 @@ contains
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
       use ModLoadBalance,         ONLY: load_balance
+      use ModParticleMover,       ONLY: UseHybrid, get_vdf_from_state, &
+           get_state_from_vdf, trace_particles
 
       use ModUserInterface ! user_initial_perturbation, user_action
 
@@ -234,8 +236,23 @@ contains
       do iBlock = 1, nBlockMax
          ! Initialize solution blocks
          call set_initial_condition(iBlock)
+         ! Initialize the VDFs for the hybrid particles
+         if(UseHybrid.and.(.not.Unused_B(iBlock)))& 
+              call get_vdf_from_state(iBlock,DoOnScratch = .True.)
       end do
       !!$omp end parallel do
+
+      if(UseHybrid)then
+         !\
+         !Check particles and collect their moments
+         !/
+         call trace_particles(Dt=0.0,DoBorisStepIn=.false.)
+         !\
+         ! Due to finite number of particles per cell, the state vector
+         ! while randomized the particles has been modified somewhat
+         !/
+         call get_state_from_vdf
+      end if
 
       call user_action('initial condition done')
 
