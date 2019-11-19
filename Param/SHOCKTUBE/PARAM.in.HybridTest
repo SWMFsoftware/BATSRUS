@@ -128,27 +128,7 @@ Right slow Whistler
 1                      iHybridIon_I(1) 
 30000                   nHybridParticleMax_I(1)
 16                      nHybridParticlePerCell_I(1)
-<<<<<<< HEAD
-0                      nTestParticles
-
-4.0                    Mass_I
-2.0                    Charge_I
-1000		       nTestMax_I
-
-3                      iHybridIon_I(2) 
-50000                  nHybridParticleMax_I(2)
-5                      nHybridParticlePerCell_I(2)
-4                      iHybridIon_I(3) 
-150000                 nHybridParticleMax_I(3)
-5                      nHybridParticlePerCell_I(3)
-2                      nTestParticles
-4.0                    Mass_I
-2.0                    Charge_I
-6.0                    Mass_I
-4.0                    Charge_I
-=======
 0                       nTestParticles
->>>>>>> 6871c7380aff6f6bdf95400fb7ebb17489e0ea68
 
 
 #TEST
