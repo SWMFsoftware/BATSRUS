@@ -219,7 +219,7 @@ contains
           call calc_energy_ghost(iBlock)
 
           call timing_start('calc_facevalues')
-          call calc_face_value(.false., iBlock)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .true.)
           call timing_stop('calc_facevalues')
 
           ! Update face boundaries

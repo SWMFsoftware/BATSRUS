@@ -7,6 +7,7 @@ module ModFieldTrace
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm
+  use ModMain, ONLY: iNewDecomposition
 !  use ModUtilities, ONLY: norm2
   use ModSize
   use ModKind
@@ -133,6 +134,9 @@ module ModFieldTrace
 
   ! Stored weights for the 2 rays starting from a face of a block
   real, allocatable :: rayend_pos(:,:,:,:,:,:)
+
+  ! The neighboring processors information
+  logical, allocatable :: IsNeiProc_P(:)
 
   ! Radius where ray tracing with numerical B stops and
   ! radius and radius squared of ionosphere
@@ -435,6 +439,8 @@ contains
     deallocate(Extra_VGB)
     deallocate(RayIntegral_V)
 
+    if(allocated(IsNeiProc_P)) deallocate(IsNeiProc_P)
+
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_raytrace deallocated arrays'
@@ -617,7 +623,8 @@ contains
 
     use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
     use ModKind
-    use BATL_lib, ONLY: find_grid_block
+    use BATL_lib, ONLY: find_grid_block, iNodeNei_IIIB, iTree_IA, Proc_, nProc, Unused_B
+    use BATL_size, ONLY: MaxBlock, nBlock
 
     use ModMpi
 
@@ -658,10 +665,28 @@ contains
 
     real(Real8_) :: CpuTimeNow
 
+    integer :: i, j, k, iBlock, iNode
+    integer :: iLastDecomposition = -1
+    
     logical:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
     ! call test_start(NameSubm DoTest)
+    
+    ! find the adjacent processors for ray_exchange
+    if (iLastDecomposition /= iNewDecomposition) then
+       if(.not. allocated(IsNeiProc_P)) allocate(IsNeiProc_P(0:nProc-1))
+       IsNeiProc_P = .false.
+       do iBlock=1,nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k=0,3; do j=0,3; do i=0,3
+             iNode = iNodeNei_IIIB(i,j,k,iBlock)
+             if (iNode > 0) IsNeiProc_P(iTree_IA(Proc_,iNode)) = .true.
+          end do; end do; end do
+      end do
+      iLastDecomposition = iNewDecomposition
+    end if 
+
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -750,7 +775,7 @@ contains
              EXIT RAYS
           else
              ! Try to get more rays from others and check if everyone is done
-             call ray_exchange(.true.,DoneAll)
+             call ray_exchange(.true.,DoneAll, IsNeiProc_P)
              if(DoneAll)then
                 EXIT RAYS
              else
@@ -767,13 +792,13 @@ contains
 
           if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
              ! This PE is not done yet, so pass .false.
-             call ray_exchange(.false., DoneAll)
+             call ray_exchange(.false., DoneAll, IsNeiProc_P)
              CpuTimeStartRay = CpuTimeNow
           end if
        end if
 
     end do RAYS
-
+    
   contains
     !==========================================================================
 

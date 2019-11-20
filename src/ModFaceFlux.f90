@@ -522,10 +522,14 @@ contains
             call get_flux_x(1,1,1,nJ,1,nK)
        if(neiLwest(iBlock) == 1) &
             call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
+       if (DoTest) &
+            write(*,*) '------------------------------------------------------'
        if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
             call get_flux_y(1,nI,1,1,1,nK)
        if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
             call get_flux_y(1,nI,nJFace,nJFace,1,nK)
+       if (DoTest) &
+            write(*,*) '------------------------------------------------------'
        if(nK > 1 .and. neiLbot(iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,1,1)
        if(nK > 1 .and. neiLtop(iBlock)   == 1) &
@@ -537,13 +541,20 @@ contains
        if(nK > 1) &
             call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
     end if
-    
+
+    if (DoTest) then
+       write(*,*) '==========================================================='
+       write(*,*) NameSub, ' finished'
+    end if
+
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine print_values
       integer :: iVar
       !------------------------------------------------------------------------
+      write(*,*) '==========================================================='
+      write(*,*) NameSub, ' started'
       if(DoResChangeOnly)then
          write(*,*)'calc_facefluxes for DoResChangeOnly'
          RETURN
@@ -3143,15 +3154,15 @@ contains
       Flux_V(HypE_) = Clight*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
       if(DoTestCell)then
-         write(*,'(a,3es13.5)')'ChargeDens_I    =', &
+         write(*,'(a,99es13.5)')'ChargeDens_I    =', &
               ChargePerMass_I*State_V(iRhoIon_I)
-         write(*,'(a,3es13.5)')'Normal_D        =', Normal_D
-         write(*,'(a,3es13.5)')'Bx,By,Bz        =', Bx,By,Bz
-         write(*,'(a,3es13.5)')'Ex,Ey,Ez        =', Ex,Ey,Ez
-         write(*,'(a,3es13.5)')'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
-         write(*,'(a,3es13.5)')'Flux_V(Ex_:Ez_) =', Flux_V(Ex_:Ez_)
-         write(*,'(a,3es13.5)')'State_V(HypE_)  =', State_V(HypE_)
-         write(*,'(a,3es13.5)')'Flux_V(HypE_)   =', Flux_V(HypE_)
+         write(*,'(a,3es13.5)') 'Normal_D        =', Normal_D
+         write(*,'(a,3es13.5)') 'Bx,By,Bz        =', Bx,By,Bz
+         write(*,'(a,3es13.5)') 'Ex,Ey,Ez        =', Ex,Ey,Ez
+         write(*,'(a,3es13.5)') 'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
+         write(*,'(a,3es13.5)') 'Flux_V(Ex_:Ez_) =', Flux_V(Ex_:Ez_)
+         write(*,'(a, es13.5)') 'State_V(HypE_)  =', State_V(HypE_)
+         write(*,'(a, es13.5)') 'Flux_V(HypE_)   =', Flux_V(HypE_)
       end if
 
     end subroutine get_electro_magnetic_flux
@@ -3578,6 +3589,14 @@ contains
                   State_VGB(iRho_I,iFace,jFace,kFace,iBLockFace)
              write(*,'(a,10es15.6)')'P       =', &
                   State_VGB(iP_I,iFace,jFace,kFace,iBLockFace)
+             write(*,'(a,10es15.6)')'B       =', &
+                  State_VGB(Bx_,iFace,jFace,kFace,iBLockFace), &
+                  State_VGB(By_,iFace,jFace,kFace,iBLockFace), &
+                  State_VGB(Bz_,iFace,jFace,kFace,iBLockFace)
+             write(*,'(a,10es15.6)')'E       =', &
+                  State_VGB(Ex_,iFace,jFace,kFace,iBLockFace), &
+                  State_VGB(Ey_,iFace,jFace,kFace,iBLockFace), &
+                  State_VGB(Ez_,iFace,jFace,kFace,iBLockFace)
              write(*,*) 'neighbor point: '
              select case(iDimFace)
              case(x_)
@@ -3585,16 +3604,40 @@ contains
                      State_VGB(iRho_I,iFace+1,jFace,kFace,iBLockFace)
                 write(*,'(a,10es15.6)')'P       =', &
                      State_VGB(iP_I,iFace+1,jFace,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'B       =', &
+                     State_VGB(Bx_,iFace+1,jFace,kFace,iBLockFace), &
+                     State_VGB(By_,iFace+1,jFace,kFace,iBLockFace), &
+                     State_VGB(Bz_,iFace+1,jFace,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'E       =', &
+                     State_VGB(Ex_,iFace+1,jFace,kFace,iBLockFace), &
+                     State_VGB(Ey_,iFace+1,jFace,kFace,iBLockFace), &
+                     State_VGB(Ez_,iFace+1,jFace,kFace,iBLockFace)
              case(y_)
                 write(*,'(a,10es15.6)')'Rho     =', &
                      State_VGB(iRho_I,iFace,jFace+1,kFace,iBLockFace)
                 write(*,'(a,10es15.6)')'P       =', &
                      State_VGB(iP_I,iFace,jFace+1,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'B       =', &
+                     State_VGB(Bx_,iFace,jFace+1,kFace,iBLockFace), &
+                     State_VGB(By_,iFace,jFace+1,kFace,iBLockFace), &
+                     State_VGB(Bz_,iFace,jFace+1,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'E       =', &
+                     State_VGB(Ex_,iFace,jFace+1,kFace,iBLockFace), &
+                     State_VGB(Ey_,iFace,jFace+1,kFace,iBLockFace), &
+                     State_VGB(Ez_,iFace,jFace+1,kFace,iBLockFace)
              case(z_)
                 write(*,'(a,10es15.6)')'Rho     =', &
                      State_VGB(iRho_I,iFace,jFace,kFace+1,iBLockFace)
                 write(*,'(a,10es15.6)')'P       =', &
                      State_VGB(iP_I,iFace,jFace,kFace+1,iBLockFace)
+                write(*,'(a,10es15.6)')'B       =', &
+                     State_VGB(Bx_,iFace,jFace,kFace+1,iBLockFace), &
+                     State_VGB(By_,iFace,jFace,kFace+1,iBLockFace), &
+                     State_VGB(Bz_,iFace,jFace,kFace+1,iBLockFace)
+                write(*,'(a,10es15.6)')'E       =', &
+                     State_VGB(Ex_,iFace,jFace,kFace+1,iBLockFace), &
+                     State_VGB(Ey_,iFace,jFace,kFace+1,iBLockFace), &
+                     State_VGB(Ez_,iFace,jFace,kFace+1,iBLockFace)
              end select
              write(*,*)'cLight         =',cLight
              write(*,*)'maxval(Cmax_I) =',maxval(Cmax_I(iFluidMin:iFluidMax))
