@@ -2375,7 +2375,7 @@ T                       UseDtFixed
 
 The fixed time step is typically used with the implicit and partially
 implicit schemes in time accurate mode. The time step is set to DtFixedDim
-unless the time step control algorithm (see #TIMESTEPCONTROL or #UPDATECHEK)
+unless the time step control algorithm (see #TIMESTEPCONTROL or #UPDATECHECK)
 reduces the time step for the sake of robustness.
 
 The fixed time step can also be used with explicit time stepping in time
