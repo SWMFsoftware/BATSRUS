@@ -748,7 +748,7 @@ contains
 
   end subroutine accurate_reschange1d
   !============================================================================
-  subroutine calc_face_value(DoResChangeOnly, iBlock)
+  subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
 
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
@@ -791,6 +791,7 @@ contains
     use BATL_lib, ONLY: CellFace_DB
 
     logical, intent(in):: DoResChangeOnly
+    logical, intent(in):: DoMonotoneRestrict
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iSide, iFluid, iFlux
@@ -886,7 +887,8 @@ contains
 
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
-         .and. (UseAccurateResChange .or. UseTvdResChange)) &
+         .and. (UseAccurateResChange .or. UseTvdResChange) &
+         .and. DoMonotoneRestrict) &
          call correct_monotone_restrict(iBlock)
 
     ! first, calculate the CELL values for the variables to be limited
