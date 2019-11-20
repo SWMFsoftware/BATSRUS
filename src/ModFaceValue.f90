@@ -1020,7 +1020,7 @@ contains
 
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
 
-    ! Now the first or second order face values are calcuted
+    ! Now the first or second order face values are calculated
     select case(nOrder)
     case(1)
        ! First order reconstruction
