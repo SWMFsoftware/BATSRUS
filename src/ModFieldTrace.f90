@@ -775,7 +775,7 @@ contains
              EXIT RAYS
           else
              ! Try to get more rays from others and check if everyone is done
-             call ray_exchange(.true.,DoneAll, IsNeiProc_P)
+             call ray_exchange(.true., DoneAll) !!! , IsNeiProc_P)
              if(DoneAll)then
                 EXIT RAYS
              else
@@ -792,7 +792,7 @@ contains
 
           if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
              ! This PE is not done yet, so pass .false.
-             call ray_exchange(.false., DoneAll, IsNeiProc_P)
+             call ray_exchange(.false., DoneAll) !!! , IsNeiProc_P)
              CpuTimeStartRay = CpuTimeNow
           end if
        end if
