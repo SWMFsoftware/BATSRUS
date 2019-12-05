@@ -9087,7 +9087,7 @@ uniform			TypeHeatPartitioning
 #HEATPARTITIONING
 stochasticheating	TypeHeatPartitioning
 0.17			StochasticExponent
-0.18			StochasticAmplitude
+0.21			StochasticAmplitude
 
 If the #CORONALHEATING command is used in combination with more than one pressure
 state variable, then the heat partitioning is automatically called. The type
@@ -9106,7 +9106,8 @@ perpendicular turbulent cascade can disturb the proton gyro motion enough to
 give rise to perpendicular stochastic heating, assuming that the velocity
 perturbation at the proton gyro-radius scale is large enough.
 See van der Holst et al. (2014) for details of the StochasticExponent and
-StochasticAmplitude input parameters.
+StochasticAmplitude input parameters. The maximum possible StochasticExponent
+is 0.34 for randomly phased kinetic Alfven waves.
 
 </command>
 
