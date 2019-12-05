@@ -4,7 +4,7 @@
 module ModFaceBoundary
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
 !  use ModUtilities, ONLY: norm2
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid, ONLY: nIonFluid
@@ -127,7 +127,8 @@ contains
        if(UseYoungBc) then
           call read_var('YoungF107', F107young)
        end if
-       write(*,*) "Young et al IBC activated, F10.7=", F107Young
+       if (iProc == 0) &
+            write(*,*) "Young et al IBC activated, F10.7=", F107Young
        
     case("#MAGNETICINNERBOUNDARY")
        call read_var('DoReflectInnnerB1', DoReflectInnerB1)
