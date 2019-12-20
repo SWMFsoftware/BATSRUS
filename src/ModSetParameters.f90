@@ -224,11 +224,6 @@ contains
     ! restart in first session only
     if(.not.IsFirstSession) restart=.false.
 
-    if(DoReadSatelliteFiles)then
-       call read_satellite_input_files
-       DoReadSatelliteFiles = .false.
-    end if
-
     select case(TypeAction)
     case('CHECK')
        if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
@@ -282,6 +277,12 @@ contains
 
        ! Initialize axes (coordinate transformation matrices)
        call init_axes(StartTime)
+
+       if(DoReadSatelliteFiles)then
+          call read_satellite_input_files
+          DoReadSatelliteFiles = .false.
+       end if
+
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
           call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
@@ -1534,7 +1535,7 @@ contains
 
        case('#PSCOUPLING')
           call read_var('TauCouplePs',TauCoupleIm)
-                    if(TauCoupleIm < 1.0)then
+          if(TauCoupleIm < 1.0)then
              TauCoupleIM = 1.0/TauCoupleIM
              if(iProc==0)then
                 write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
