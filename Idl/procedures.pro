@@ -1461,6 +1461,7 @@ function log_time,wlog,wlognames,timeunit
   itime = -1
   istep = -1
   iyear = -1
+  idoy  = -1
   imon  = -1
   iday  = -1
   ihour = -1
@@ -1477,6 +1478,7 @@ function log_time,wlog,wlognames,timeunit
         'year'       : iyear = i
         'yr'         : iyear = i
         'yy'         : iyear = i
+        'doy'        : idoy  = i
         'month'      : imon  = i
         'mo'         : imon  = i
         'day'        : iday  = i
@@ -1505,7 +1507,14 @@ function log_time,wlog,wlognames,timeunit
   if itime gt -1 then begin
      hours = wlog(*,itime)/3600.0
   endif else begin
-     if iyear eq -1 or iday eq -1 then begin
+     if idoy gt -1 then begin
+        hours = wlog(*,idoy)*24.0
+        if ihour gt -1 then hours += wlog(*,ihour)
+        if imin  eq idoy + 2 then hours[i] += wlog(i,imin)/60.0
+        if isec  eq idoy + 3 then hours[i] += wlog(i,isec)/3600.0
+        if imsc  eq idoy + 4 then hours[i] += wlog(i,imsc)/3.6e6
+        if iyear gt -1 then hours += wlog(*,iyear)*365.25*24
+     endif else if iyear eq -1 or iday eq -1 then begin
         if ihour gt -1 then begin
            hours = wlog(*,ihour)
            for i=1L, n_elements(hours)-1 do $
@@ -1526,10 +1535,10 @@ function log_time,wlog,wlognames,timeunit
               nday = nday + dday
            endif
            hours[i] = nday*24.0
-           if ihour eq iday + 1 then hours[i] = hours[i] + wlog(i,ihour)
-           if imin  eq iday + 2 then hours[i] = hours[i] + wlog(i,imin)/60.0
-           if isec  eq iday + 3 then hours[i] = hours[i] + wlog(i,isec)/3600.0
-           if imsc  eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
+           if ihour eq iday + 1 then hours[i] += wlog(i,ihour)
+           if imin  eq iday + 2 then hours[i] += wlog(i,imin)/60.0
+           if isec  eq iday + 3 then hours[i] += wlog(i,isec)/3600.0
+           if imsc  eq iday + 4 then hours[i] += wlog(i,imsc)/3.6e6
         endfor
      endelse
   endelse
@@ -1548,6 +1557,7 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
+        'y': logtime = hours/(24*365.25)
         'd': logtime = hours/24
         '1': logtime = hours*3600
         's': logtime = hours*3600
