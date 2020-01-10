@@ -6,6 +6,9 @@
 # Allow in-place editing
 $^I = "";
 
+# Add local directory to search
+push @INC, ".";
+
 use strict;
 
 our $Component = "GM";
