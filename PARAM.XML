@@ -6193,12 +6193,9 @@ T		DoCheckTimeStep
 
 This command is only effective in time accurate mode.
 
-If DoCheckTimeStep is true, then check if time step is smaller than
-TimeStepMin for nCheckTimeStep consecutive time steps. If it is, save
-the output files (but not restart) and stop the code.
-
-The current implementation only looks at the time step set before
-update check or other time step control was applied.
+If DoCheckTimeStep is true, then check if average time step is smaller than
+TimeStepMin every nCheckTimeStep time steps (similar as DnSavePlot). 
+If it is, save the output files (but not restart) and stop the code.
 
 Default is DoCheckTimeStep false.
 </command>
