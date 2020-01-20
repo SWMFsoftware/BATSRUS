@@ -132,13 +132,6 @@ TIME_CONV:
 	@echo Program TIME_CONV has been brought up to date.
 	@echo ' '
 
-# The MACHINE variable holds the machine name for which scripts should
-# be copied from share/JobScripts to the run directory when it is created. 
-# The default is the short name of the current machine with the trailing
-# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
-# Initial "login\d*." is also removed.
-MACHINE = `hostname -f | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'`
-
 # Default component
 COMPONENT = GM
 
