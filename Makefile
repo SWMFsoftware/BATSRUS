@@ -54,15 +54,8 @@ help:
 info:
 	@echo "Total lines of Fortran: `wc -l src*/*.f* share/Library/src/*.f* | tail -1`"
 
-INSTALLFILES =	src/Makefile.DEPEND \
-		src/Makefile.RULES \
-		srcBATL/Makefile.DEPEND \
-		srcInterface/Makefile.DEPEND \
-		srcPostProc/Makefile.RULES
-
 install: src/ModSize.f90 src/ModHdf5.f90 src/ModImplHypre.f90 \
 	srcBATL/BATL_size.f90
-	touch ${INSTALLFILES}
 	./Config.pl -u=Default -e=Mhd
 
 src/ModSize.f90: src/ModSize_orig.f90
@@ -187,7 +180,6 @@ CLEAN1 = cleanpdf #				^CFG IF NOT MAKEPDF
 #
 
 clean:
-	@touch ${INSTALLFILES}
 	cd src; $(MAKE) clean
 	cd srcBATL; $(MAKE) clean
 	cd srcInterface; $(MAKE) clean
@@ -199,7 +191,6 @@ distclean:
 	./Config.pl -uninstall
 
 allclean:
-	@touch ${INSTALLFILES}
 	cd src; $(MAKE) distclean
 	cd srcBATL; $(MAKE) distclean
 	cd srcInterface; $(MAKE) distclean
