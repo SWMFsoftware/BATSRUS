@@ -10,8 +10,8 @@ SEARCHDIR = -I${SHAREDIR} \
 	-I${CRASHDIR}
 
 include ../Makefile.conf
-include Makefile.DEPEND
-include Makefile.RULES
+-include Makefile.DEPEND
+-include Makefile.RULES
 
 
 norm2_utilities:

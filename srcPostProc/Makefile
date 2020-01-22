@@ -6,7 +6,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 include ../Makefile.conf
-include Makefile.RULES
+-include Makefile.RULES
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
