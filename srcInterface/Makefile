@@ -50,6 +50,3 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND
-
-# keep this line
