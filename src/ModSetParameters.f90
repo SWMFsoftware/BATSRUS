@@ -2219,10 +2219,12 @@ contains
 
        case("#OHBOUNDARY")
           call read_var('DoOhNeutralBc',DoOhNeutralBc)
-          do iFluid = IonLast_+1, nFluid
-             call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
-             call read_var('uBcFactor'  , uBcFactor_I(iFluid))
-          end do
+          if(DoOhNeutralBc)then
+             do iFluid = IonLast_+1, nFluid
+                call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
+                call read_var('uBcFactor'  , uBcFactor_I(iFluid))
+             end do
+          end if
 
           ! CORONA SPECIFIC COMMANDS
 
