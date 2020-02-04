@@ -75,7 +75,8 @@ contains
          UseHallResist, read_hall_param
     use ModParticleFieldLine, ONLY: read_particle_line_param
     use ModParticleMover, ONLY: read_charged_particle_param=>read_param, &
-         normalize_particle_param=>normalize_param
+         normalize_particle_param=>normalize_param, &
+         UseChargedParticles=>UseParticles, UseHybrid
     use ModHeatConduction, ONLY: read_heatconduction_param
     use ModHeatFluxCollisionless, ONLY: read_heatflux_param
     use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -231,11 +232,6 @@ contains
     ! restart in first session only
     if(.not.IsFirstSession) restart=.false.
 
-    if(DoReadSatelliteFiles)then
-       call read_satellite_input_files
-       DoReadSatelliteFiles = .false.
-    end if
-
     select case(TypeAction)
     case('CHECK')
        if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
@@ -313,6 +309,12 @@ contains
 
        ! Initialize axes (coordinate transformation matrices)
        call init_axes(StartTime)
+
+       if(DoReadSatelliteFiles)then
+          call read_satellite_input_files
+          DoReadSatelliteFiles = .false.
+       end if
+
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
           call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
@@ -383,7 +385,31 @@ contains
        if (DoReadSolarwindFile) call read_solar_wind_file
 
        call set_physics_constants
-       if(IsFirstSession)call normalize_particle_param
+
+       if(UseChargedParticles)then
+          if(.not.time_accurate)then
+             if(iProc==0)write(*,*)'To trace particles, use time-accurate!'
+             call stop_mpi('Correct parameter file!!')
+          end if
+          if(.not.UseB)then
+             if(iProc==0)write(*,*)'To trace particles use MHD!'
+             call stop_mpi('Correct parameter file!!')
+          end if
+          if(IsMhd.and.UseHybrid)then
+             if(iProc==0)write(*,*)'Single fluid MHD cant be hybrid'
+             call stop_mpi('Correct parameter file or set IsMhd=.false.')
+          end if
+          if(UseHybrid.and..not.UseFlic)then
+             if(iProc==0) &
+                  write(*,*) NameSub,':UseHybrid=.true., set UseFlic=.true.'
+          end if
+          call normalize_particle_param
+       end if
+       if(UseFlic.and.nStage/=3)then
+          if(iProc==0) &
+               write(*,*) NameSub,':UseFlic=.true., set nStage to 3'
+          nStage = 3
+       end if
 
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
@@ -572,6 +598,9 @@ contains
           CflOrig = Cfl
           ExplCfl = Cfl
           UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
+
+       CASE('#USEFLIC')
+          call read_var('UseFlic', UseFlic)
 
        case("#LOCALTIMESTEP", "#SUBCYCLING")
           call read_localstep_param(NameCommand, iSession)
@@ -1490,6 +1519,9 @@ contains
        case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
           call read_solar_wind_param(NameCommand)
           DoReadSolarwindFile = UseSolarwindFile
+
+       case("#MINIMUMSOLARWINDTEMP")
+          call read_var('SwTminDim', SwTminDim)
 
        case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)

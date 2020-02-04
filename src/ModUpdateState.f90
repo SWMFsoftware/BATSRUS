@@ -169,7 +169,7 @@ contains
     end if
 
     ! Calculate partial step size compared to largest stable time step
-    if(nStage==4)then
+    if(nStage==4.or.UseFlic)then
        ! Classical 4th order Runge-Kutta scheme
        select case(iStage)
        case(1)

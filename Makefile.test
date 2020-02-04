@@ -41,6 +41,8 @@ test:
 	-@($(MAKE) test_cometfluids)
 	-@($(MAKE) test_cometCGhd)
 	-@($(MAKE) test_cometCGfluids)
+	-@($(MAKE) test_europa2fluidspe)
+	-@($(MAKE) test_europa3fluidspe)
 	-@($(MAKE) test_magnetometer)
 	-@($(MAKE) test_anisotropic)
 	-@($(MAKE) test_region2d)
@@ -57,7 +59,7 @@ TESTDIR = run_test
 # Reference solution is put into this directory when needed:
 REFDIR = run_test_ref
 
-OPENPM = -openmp
+OPENMP = -openmp
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
@@ -83,6 +85,8 @@ test_help:
 	@echo "    test_chromo                (run Chromo - Solar Corona test)"
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
+	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
+	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
 	@echo "    test_fivemoment            (run all 5-moment tests)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
@@ -1661,6 +1665,75 @@ test_cometCGfluids_check:
 		Param/ROSETTA/TestOutput/CGfluids_log_n000000.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGfluids.diff)
 	ls -l test_cometCGfluids.diff
+
+### TEST FOR EUROPA TWO ION FLUIDS + ELECTRON PRESSURE ###
+
+test_europa2fluidspe:
+	-@($(MAKE) test_europa2fluidspe_start)
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_europa2fluidspe_start:
+	@echo "test_europa2fluidspe_compile..." > test_europa2fluidspe.diff
+	$(MAKE) test_europa2fluidspe_compile
+	@echo "test_europa2fluidspe_rundir..." >> test_europa2fluidspe.diff
+	$(MAKE) test_europa2fluidspe_rundir
+	@echo "test_europa2fluidspe_run..." >> test_europa2fluidspe.diff
+	$(MAKE) test_europa2fluidspe_run
+	@echo "test_europa2fluidspe_check..." >> test_europa2fluidspe.diff
+	$(MAKE) test_europa2fluidspe_check
+
+test_europa2fluidspe_compile:
+	./Config.pl -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4,400,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_europa2fluidspe_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.2fluidsPe.test PARAM.in
+
+test_europa2fluidspe_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
+
+test_europa2fluidspe_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+		Param/EUROPA/europa2fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa2fluidspe.diff)
+	ls -l test_europa2fluidspe.diff
+
+### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
+
+test_europa3fluidspe:
+	-@($(MAKE) test_europa3fluidspe_start)
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_europa3fluidspe_start:
+	@echo "test_europa3fluidspe_compile..." > test_europa3fluidspe.diff
+	$(MAKE) test_europa3fluidspe_compile
+	@echo "test_europa3fluidspe_rundir..." >> test_europa3fluidspe.diff
+	$(MAKE) test_europa3fluidspe_rundir
+	@echo "test_europa3fluidspe_run..." >> test_europa3fluidspe.diff
+	$(MAKE) test_europa3fluidspe_run
+	@echo "test_europa3fluidspe_check..." >> test_europa3fluidspe.diff
+	$(MAKE) test_europa3fluidspe_check
+
+test_europa3fluidspe_compile:
+	./Config.pl -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4,400,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_europa3fluidspe_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.3fluidsPe.test PARAM.in
+
+test_europa3fluidspe_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
+
+test_europa3fluidspe_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+		Param/EUROPA/europa3fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa3fluidspe.diff)
+	ls -l test_europa3fluidspe.diff
+
 
 ### TEST FOR 2D REGIONS ######################################################
 

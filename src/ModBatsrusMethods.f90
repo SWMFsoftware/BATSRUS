@@ -168,6 +168,8 @@ contains
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
       use ModLoadBalance,         ONLY: load_balance
+      use ModParticleMover,       ONLY: UseHybrid, get_vdf_from_state, &
+           get_state_from_vdf, trace_particles
 
       use ModUserInterface ! user_initial_perturbation, user_action
 
@@ -194,8 +196,11 @@ contains
             if(UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
                ! Fill in ghost cells in case needed by the user perturbation
-               call exchange_messages
+               ! However, cannot be used with the boundary conditions (such as
+               ! threaded field lines) wich cannot be stated that early.
+               if(.not.UseFieldLineThreads)call exchange_messages
                call user_initial_perturbation
+
                call timing_stop('amr_ics_perturb')
             end if
 
@@ -227,25 +232,40 @@ contains
       end if
 
       ! Potentially useful for applying "First Touch" strategy
-      !!$omp parallel do 
+!!$omp parallel do 
       do iBlock = 1, nBlockMax
          ! Initialize solution blocks
          call set_initial_condition(iBlock)
+         ! Initialize the VDFs for the hybrid particles
+         if(UseHybrid.and.(.not.Unused_B(iBlock)))& 
+              call get_vdf_from_state(iBlock,DoOnScratch = .True.)
       end do
-      !!$omp end parallel do
+!!$omp end parallel do
+
+      if(UseHybrid)then
+         !\
+         !Check particles and collect their moments
+         !/
+         call trace_particles(Dt=0.0,DoBorisStepIn=.false.)
+         !\
+         ! Due to finite number of particles per cell, the state vector
+         ! while randomized the particles has been modified somewhat
+         !/
+         call get_state_from_vdf
+      end if
 
       call user_action('initial condition done')
 
       ! Allow the user to add a perturbation to the initial condition.
       if(UseUserPerturbation)then
-         ! Need to set threads before exchange_messages.
-         if(UseFieldLineThreads)call set_threads
-
          ! Fill in ghost cells in case needed by the user perturbation
-         call exchange_messages
+         ! However, cannot be used with the boundary conditions (such as
+         ! threaded field lines) wich cannot be stated that early.
+         if(.not.UseFieldLineThreads)call exchange_messages
 
          call user_initial_perturbation
          UseUserPerturbation=.false.
+
       end if
 
       if(restart)then
@@ -325,12 +345,15 @@ contains
     use ModLoadBalance, ONLY: load_balance, select_stepping
     use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
-
+    use ModTimeStepControl, ONLY: TimeSimulationOldCheck
+    
     ! Local variables
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_session'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    TimeSimulationOldCheck = -1e10
 
     if(UseLocalTimeStepNew)then
        if(iProc == 0)write(*,*) &
@@ -413,7 +436,7 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
     use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
          prepare_amr, do_amr
-    use ModPhysics, ONLY : No2Si_V, UnitT_
+    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
     use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
          UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit
@@ -424,12 +447,13 @@ contains
     use ModSemiImplicit, ONLY: advance_semi_impl
     use ModIeCoupling, ONLY: apply_ie_velocity
     use ModImCoupling, ONLY: apply_im_pressure
-    use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
+    use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step,     &
+         set_global_timestep, DoCheckTimeStep, DnCheckTimeStep, TimeStepMin, &
+         TimeSimulationOldCheck
     use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
-    use ModTimeStepControl, ONLY: set_global_timestep
     use ModB0, ONLY: DoUpdateB0, DtUpdateB0
     use ModResistivity, ONLY: &
          UseResistivity, UseHeatExchange, calc_heat_exchange
@@ -489,6 +513,17 @@ contains
 
        call set_global_timestep(TimeSimulationLimit)
 
+       if (DoCheckTimeStep .and. mod(n_step, DnCheckTimeStep) == 0)then
+          if (time_simulation - TimeSimulationOldCheck <             &
+               TimeStepMin*DnCheckTimeStep*Io2SI_V(UnitT_) ) then
+             if (iProc ==0) write(*,*) NameSub,                      &
+                  ': TimeSimulationOldCheck, time_simulation =',     &
+                  TimeSimulationOldCheck, time_simulation
+             call stop_mpi(NameSub//': advance too slow in time')
+          end if
+          TimeSimulationOldCheck = time_simulation
+       end if
+
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
     end if
 
@@ -513,8 +548,8 @@ contains
 
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
     if(time_accurate .and. &
-       Time_Simulation < TimeSimulationLimit .and. &
-       TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
+         Time_Simulation < TimeSimulationLimit .and. &
+         TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
 
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
@@ -584,8 +619,8 @@ contains
        ! dB0/dt term is added at the DtUpdateB0 frequency
 
        if(int(Time_Simulation/DtUpdateB0) >  &
-          int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
-          call update_b0
+            int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
+            call update_b0
     end if
 
     if(UseProjection) call project_divb

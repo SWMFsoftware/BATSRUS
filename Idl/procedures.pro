@@ -8,7 +8,7 @@
 ; Main procedures to (re)set defaults and to read, plot, animate and slice data
 ;   set_default_values
 ;   read_data, plot_data, animate_data, slice_data
-;   read_log_data, plot_log_data
+;   read_log_data, plot_log_data, show_log_data
 ;
 ; Procedures for
 ;
@@ -391,16 +391,14 @@ end
 ;===========================================================================
 function curve_distance,x1,y1,x2,y2
 
-; measure of the minimum distance between two curves measured as
-; the averaged minimum of the sum of distances in the X and Y directions.
+; measure of the minimum distance between two curves
 
   n1 = n_elements(x1)
   n2 = n_elements(x2)
-  d1 = 0d0
-  d2 = 0d0
-  for i = 0, n1-1 do d1 += min( abs(x1(i) - x2) + abs(y1(i) - y2) )
-  for i = 0, n2-1 do d2 += min( abs(x2(i) - x1) + abs(y2(i) - y1) )
-  d = (d1/n1 + d2/n2)/2
+  d = 0d0
+  for i = 0, n1-1 do d += min( abs(x1(i) - x2) + abs(y1(i) - y2) )
+  for i = 0, n2-1 do d += min( abs(x2(i) - x1) + abs(y2(i) - y1) )
+  d /= n1 + n2
   return, d
 end
 ;===========================================================================
@@ -431,10 +429,8 @@ function curve_int_distance,x1,y1,x2,y2
   len1 = total(d1c)
   len2 = total(d2c)
 
-  for i = 0, n1-2 do $
-     d1 += d1c(i)*min( sqrt( (x1c(i) - x2c)^2 + (y1c(i) - y2c)^2 ) )
-  for i = 0, n2-2 do $
-     d2 += d2c(i)*min( sqrt( (x2c(i) - x1c)^2 + (y2c(i) - y1c)^2 ) )
+  for i = 0, n1-2 do d1 += d1c(i)*min( sqrt( (x1c(i) - x2c)^2 + (y1c(i) - y2c)^2 ) )
+  for i = 0, n2-2 do d2 += d2c(i)*min( sqrt( (x2c(i) - x1c)^2 + (y2c(i) - y1c)^2 ) )
   d = (d1/len1 + d2/len2)/2
   return, d
 end
@@ -1421,6 +1417,12 @@ pro plot_log_data
 end
 
 ;=============================================================================
+pro show_log_data
+  read_log_data
+  plot_log_data
+end
+
+;=============================================================================
 function reform2,x
 
   common debug_param & on_error, onerror
@@ -1455,6 +1457,7 @@ function log_time,wlog,wlognames,timeunit
   itime = -1
   istep = -1
   iyear = -1
+  idoy  = -1
   imon  = -1
   iday  = -1
   ihour = -1
@@ -1471,6 +1474,7 @@ function log_time,wlog,wlognames,timeunit
         'year'       : iyear = i
         'yr'         : iyear = i
         'yy'         : iyear = i
+        'doy'        : idoy  = i
         'month'      : imon  = i
         'mo'         : imon  = i
         'day'        : iday  = i
@@ -1499,7 +1503,14 @@ function log_time,wlog,wlognames,timeunit
   if itime gt -1 then begin
      hours = wlog(*,itime)/3600.0
   endif else begin
-     if iyear eq -1 or iday eq -1 then begin
+     if idoy gt -1 then begin
+        hours = wlog(*,idoy)*24.0
+        if ihour gt -1 then hours += wlog(*,ihour)
+        if imin  eq idoy + 2 then hours[i] += wlog(i,imin)/60.0
+        if isec  eq idoy + 3 then hours[i] += wlog(i,isec)/3600.0
+        if imsc  eq idoy + 4 then hours[i] += wlog(i,imsc)/3.6e6
+        if iyear gt -1 then hours += wlog(*,iyear)*365.25*24
+     endif else if iyear eq -1 or iday eq -1 then begin
         if ihour gt -1 then begin
            hours = wlog(*,ihour)
            for i=1L, n_elements(hours)-1 do $
@@ -1520,10 +1531,10 @@ function log_time,wlog,wlognames,timeunit
               nday = nday + dday
            endif
            hours[i] = nday*24.0
-           if ihour eq iday + 1 then hours[i] = hours[i] + wlog(i,ihour)
-           if imin  eq iday + 2 then hours[i] = hours[i] + wlog(i,imin)/60.0
-           if isec  eq iday + 3 then hours[i] = hours[i] + wlog(i,isec)/3600.0
-           if imsc  eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
+           if ihour eq iday + 1 then hours[i] += wlog(i,ihour)
+           if imin  eq iday + 2 then hours[i] += wlog(i,imin)/60.0
+           if isec  eq iday + 3 then hours[i] += wlog(i,isec)/3600.0
+           if imsc  eq iday + 4 then hours[i] += wlog(i,imsc)/3.6e6
         endfor
      endelse
   endelse
@@ -1542,6 +1553,7 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
+        'y': logtime = hours/(24*365.25)
         'd': logtime = hours/24
         '1': logtime = hours*3600
         's': logtime = hours*3600
@@ -5457,7 +5469,7 @@ ERROR2:
 end
 
 ;==========================================
-pro compare,w0,w1,wnames
+pro compare,w0,w1,wnames,scalar=scalar
 
 ; Compare all variables in w0 and w1 by calculating
 ; relative difference in the 1st norm.
@@ -5473,13 +5485,17 @@ pro compare,w0,w1,wnames
      retall
   endif
 
-  ndim=sizew0(0)-1
-
-  if ndim eq 0 then begin
-     ndim=1
-     nw=1
-  endif else $
-     nw=sizew0(ndim+1)
+  if n_elements(wnames) eq 1 or keyword_set(scalar) then begin
+     ndim = sizew0(0)
+     nw = 1
+  endif else begin
+     ndim=sizew0(0)-1
+     if ndim eq 0 then begin
+        ndim=1
+        nw=1
+     endif else $
+        nw=sizew0(ndim+1)
+  endelse
 
   if max(abs(sizew0(1:ndim)-sizew1(1:ndim))) gt 0 then begin
      print,'w0 and w1 have different sizes:',sizew0(1:ndim),' /= ',sizew1(1:ndim)

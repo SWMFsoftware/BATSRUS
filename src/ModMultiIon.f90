@@ -309,7 +309,7 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK, UseB0
+    use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
@@ -465,41 +465,46 @@ contains
           uIon_D = [ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) ]
           u_D    = uIon_D - uPlus_D
           ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
-          Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
-
-          if(DoTestCell)then
-             write(*,'(2a,i2)') NameSub,' iIon            =', iIon
-             write(*,'(2a,15es16.8)') NameSub,' uIon_D          =', uIon_D
-             write(*,'(2a,15es16.8)') NameSub,' u_D             =', u_D
-             write(*,'(2a,15es16.8)') NameSub,' ForceCoeff      =', ForceCoeff
-             write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
-             write(*,'(2a,15es16.8)') NameSub,' Force_D         =', Force_D
-          end if
-
-          ! Set corresponding matrix element
-          if (IsAnalyticJacobian .and. UsePointImplicit) then
-             do kDim = 1, MaxDim
-                iUk = iUxIon_I(iIon) + kDim - 1
-                do iDim = 1, MaxDim
-                   if(kDim == iDim) CYCLE
-                   jDim = 6 - kDim - iDim
-                   SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
-
-                   ! This Jacobian term occurs with respect to the same fluid
-                   iUi = iUxIon_I(iIon) + iDim - 1
-                   DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) &
-                        + ForceCoeff*SignedB*InvRho_I(iIon)
-
-                   Coeff = ForceCoeff*SignedB*InvElectronDens
-                   ! This term is with respect to any fluid
-                   do jIon = 1, nIonFluid
-                      iUi = iUxIon_I(jIon) + iDim - 1
-                      DsDu_VVC(iUk,iUi,i,j,k) = &
-                           DsDu_VVC(iUk,iUi,i,j,k) - &
-                           Coeff*ChargeIon_I(jIon)/MassIon_I(jIon)
+          if(UseFlic)then
+             !UxB force is treated by advance_ion_current
+             Force_D = 0
+          else
+             Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
+             
+             if(DoTestCell)then
+                write(*,'(2a,i2)') NameSub,' iIon            =', iIon
+                write(*,'(2a,15es16.8)') NameSub,' uIon_D          =', uIon_D
+                write(*,'(2a,15es16.8)') NameSub,' u_D             =', u_D
+                write(*,'(2a,15es16.8)') NameSub,' ForceCoeff      =', ForceCoeff
+                write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
+                write(*,'(2a,15es16.8)') NameSub,' Force_D         =', Force_D
+             end if
+             
+             ! Set corresponding matrix element
+             if (IsAnalyticJacobian .and. UsePointImplicit) then
+                do kDim = 1, MaxDim
+                   iUk = iUxIon_I(iIon) + kDim - 1
+                   do iDim = 1, MaxDim
+                      if(kDim == iDim) CYCLE
+                      jDim = 6 - kDim - iDim
+                      SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
+                      
+                      ! This Jacobian term occurs with respect to the same fluid
+                      iUi = iUxIon_I(iIon) + iDim - 1
+                      DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) &
+                           + ForceCoeff*SignedB*InvRho_I(iIon)
+                      
+                      Coeff = ForceCoeff*SignedB*InvElectronDens
+                      ! This term is with respect to any fluid
+                      do jIon = 1, nIonFluid
+                         iUi = iUxIon_I(jIon) + iDim - 1
+                         DsDu_VVC(iUk,iUi,i,j,k) = &
+                              DsDu_VVC(iUk,iUi,i,j,k) - &
+                              Coeff*ChargeIon_I(jIon)/MassIon_I(jIon)
+                      end do
                    end do
                 end do
-             end do
+             end if
           end if
           Heating = 0.0
 
