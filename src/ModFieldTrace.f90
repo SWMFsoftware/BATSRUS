@@ -7,6 +7,8 @@ module ModFieldTrace
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm
+  use BATL_tree, ONLY: IsNeighbor_P
+  use ModMain, ONLY: iNewDecomposition
 !  use ModUtilities, ONLY: norm2
   use ModSize
   use ModKind
@@ -617,7 +619,8 @@ contains
 
     use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
     use ModKind
-    use BATL_lib, ONLY: find_grid_block
+    use BATL_lib, ONLY: find_grid_block, iNodeNei_IIIB, iTree_IA, Proc_, nProc, Unused_B
+    use BATL_size, ONLY: MaxBlock, nBlock
 
     use ModMpi
 
@@ -658,10 +661,14 @@ contains
 
     real(Real8_) :: CpuTimeNow
 
+    integer :: i, j, k, iBlock, iNode
+    
     logical:: DoTest = .false.
+    
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
     ! call test_start(NameSubm DoTest)
+
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -747,10 +754,10 @@ contains
           if(iRayIn>0)then
              ! Stop working on received rays if there are no more
              ! but there are still local rays
-             EXIT RAYS
+             RETURN
           else
              ! Try to get more rays from others and check if everyone is done
-             call ray_exchange(.true.,DoneAll)
+             call ray_exchange(.true., DoneAll, IsNeighbor_P)
              if(DoneAll)then
                 EXIT RAYS
              else
@@ -767,12 +774,45 @@ contains
 
           if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
              ! This PE is not done yet, so pass .false.
-             call ray_exchange(.false., DoneAll)
+             call ray_exchange(.false., DoneAll, IsNeighbor_P)
              CpuTimeStartRay = CpuTimeNow
           end if
        end if
-
+       
     end do RAYS
+
+    call ray_exchange(.true., DoneAll)
+
+    GETRAYFINAL: do
+       call ray_get(IsFound,iProcStart,iStart_D,XyzRay_D,RayLength,&
+                    IsParallel,DoneRay, IsEnd=.true.)
+
+       if(IsFound)then
+          if(IsParallel)then
+             iRay=1
+          else
+             iRay=2
+          end if
+
+          if(.not.DoTraceRay)then
+             write(*,*)NameSub,' WARNING ',&
+                       'received DoneRay=T for DoTraceRay = .false. !'
+             CYCLE GETRAYFINAL
+          end if
+
+          ! Store the result into the ModFieldTrace::ray
+          iStart      = iStart_D(1)
+          jStart      = iStart_D(2)
+          kStart      = iStart_D(3)
+          iBlockStart = iStart_D(4)
+
+          ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
+
+          ! Get another ray from the others
+          CYCLE GETRAYFINAL
+       end if
+       EXIT GETRAYFINAL
+    end do GETRAYFINAL
 
   contains
     !==========================================================================
