@@ -14,7 +14,7 @@ contains
 
   subroutine set_parameters(TypeAction)
 
-    ! Set input parameters for BATS-R-US
+    ! Set input parameters for BATS-R-US!
 
     use ModMain
     use ModAdvance
@@ -67,7 +67,7 @@ contains
          read_boundary_geometry_param
     use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit, &
          init_mod_point_impl
-    use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
+    use ModRestartFile, ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
          nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V
@@ -95,13 +95,14 @@ contains
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
-    use ModLookupTable,     ONLY: read_lookup_table_param
+    use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, i_lookup_table
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
     use ModLaserHeating,    ONLY: read_laser_heating_param
     use ModLocalTimeStep,   ONLY: read_localstep_param
     use ModIoUnit, ONLY: io_unit_new
     use ModNumConst, ONLY: cDegToRad, cTiny, cHalfPi
+    use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
     use ModSort, ONLY: sort_quick
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
@@ -204,6 +205,13 @@ contains
     real    :: BoundaryStateDim_V(1:nVar)
 
     character(len=30) :: NamePrimitiveNT_V(nVar)
+
+    ! variables for LookUpTable
+    integer:: nParam, iTableB0 = -1
+    real(Real8_):: CarringtonRotationNumber
+    character(len=500):: StringHeader
+    real:: Param_I(4)
+
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
@@ -236,6 +244,30 @@ contains
        if(iProc==0) call make_dir(NamePlotDir)
        if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
        if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
+
+       ! Check if StartTime from PARAM.in and Carrington Map Time match
+       iTableB0 = i_lookup_table('B0')
+       if(iTableB0 > 0)then
+          call get_lookup_table(1, StringDescription = StringHeader, &
+               nParam=nParam, Param_I=Param_I)
+          if(iProc==0)then
+             CarringtonRotationNumber = (StartTime + time_simulation &
+                  - tStartCarringtonRotation)/CarringtonSynodicPeriod
+             ! If the User provided StartTime is off by over half of the
+             ! Carrington Rotation, it stops
+             if((abs(CarringtonRotationNumber - Param_I(4))) > 0.5)then
+                write(*,*)NameSub,': Carrington Rotation number from '// &
+                     'PARAM.in  = ', CarringtonRotationNumber
+                write(*,*)NameSub,': Carrington Rotation number from '// &
+                     'input map = ',Param_I(4)
+                write(*,*)NameSub,': WARNING! #STARTTIME in PARAM.in '// &
+                     'differs from Carrington Rotation of Central Meridian '//&
+                     'of Input Map !!!'
+                if(UseStrict) call stop_mpi('Fix #STARTTIME or use CORRECT Magnetogram')
+             endif
+          endif
+       endif
+
 
        if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
           if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
@@ -1503,7 +1535,7 @@ contains
 
        case('#PSCOUPLING')
           call read_var('TauCouplePs',TauCoupleIm)
-                    if(TauCoupleIm < 1.0)then
+          if(TauCoupleIm < 1.0)then
              TauCoupleIM = 1.0/TauCoupleIM
              if(iProc==0)then
                 write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
