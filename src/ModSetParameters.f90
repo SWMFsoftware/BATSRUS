@@ -247,7 +247,7 @@ contains
           call get_lookup_table(1, StringDescription = StringHeader, &
                nParam=nParam, Param_I=Param_I)
           if(iProc==0)then
-             CarringtonRotationNumber = (StartTime + time_simulation &
+             CarringtonRotationNumber = (StartTime &
                   - tStartCarringtonRotation)/CarringtonSynodicPeriod
              ! If the User provided StartTime is off by over half of the
              ! Carrington Rotation, it stops
