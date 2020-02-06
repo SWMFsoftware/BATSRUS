@@ -9,6 +9,7 @@ module ModFieldTrace
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm
   use BATL_tree, ONLY: IsNeighbor_P
   use ModMain, ONLY: iNewDecomposition
+  use ModPhysics, ONLY: rBody
 !  use ModUtilities, ONLY: norm2
   use ModSize
   use ModKind
@@ -58,10 +59,10 @@ module ModFieldTrace
   ! map rays to the SM equatorial plane
   logical, public :: DoMapEquatorRay= .false.
 
-  real, public, parameter :: rIonosphere = 1.0
+  real, public :: rIonosphere = 0.
 
   ! Radius where the tracing stops
-  real, public :: R_raytrace=1.
+  real, public :: R_raytrace = 0.
 
   ! Named indexes
   integer, public, parameter :: &
@@ -72,13 +73,8 @@ module ModFieldTrace
   ! These indexes depend on multi-ion
   integer, public:: PeInvB_, xEnd_, yEnd_, zEnd_, Length_
 
-  real, public, parameter :: &
-       CLOSEDRAY= -(rIonosphere + 0.05), &
-       OPENRAY  = -(rIonosphere + 0.1), &
-       BODYRAY  = -(rIonosphere + 0.2), &
-       LOOPRAY  = -(rIonosphere + 0.3), &
-       NORAY    = -(rIonosphere + 100.0), &
-       OUTRAY   = -(rIonosphere + 200.0)
+  ! Various values indicating the end state of a ray
+  real, public :: CLOSEDRAY, OPENRAY, BODYRAY, LOOPRAY, NORAY, OUTRAY
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical, public:: UseAccurateTrace    = .false.
@@ -94,7 +90,10 @@ module ModFieldTrace
        0.,0.,1. ], [3,3] )
 
   ! Local variables --------------------------------
-  real:: R2_raytrace=1.
+
+  ! Square of radii to save computation
+  real :: R2_raytrace = 0.0
+  real :: rIonosphere2 = 0.0
 
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
@@ -156,9 +155,6 @@ module ModFieldTrace
   ! Testing
   logical :: oktest_ray=.false.
 
-  ! Constants to distinguish various ray types
-  real, parameter :: rIonosphere2 = rIonosphere**2
-
   ! Base time for timed exchanges between rays
   real(Real8_) :: CpuTimeStartRay
 
@@ -211,6 +207,9 @@ contains
           call read_var('DtExchangeRay',    DtExchangeRay)
           call read_var('DnRaytrace',       DnRaytrace)
        end if
+    case("#RAYTRACERADIUS")
+       call read_var('rRaytrace',   R_raytrace)
+       call read_var('rIonosphere', rIonosphere)
     case("#RAYTRACELIMIT")
        call read_var('RayLengthMax', RayLengthMax)
     case("#RAYTRACEEQUATOR")
@@ -224,7 +223,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_field_trace_param
   !============================================================================
-
   subroutine xyz_to_latlon(Pos_D)
 
     use ModNumConst, ONLY: cTiny, cRadToDeg
@@ -355,17 +353,69 @@ contains
 
   subroutine init_mod_field_trace
 
+    use ModPhysics, ONLY: DipoleStrengthSi
     use ModAdvance, ONLY: UseElectronPressure
     use ModMain,    ONLY: DoMultiFluidIMCoupling
 
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
 
+    real:: rInner
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    if(rIonosphere == 0.0)then
+       ! Set default ionosphere radius
+       ! Currently follow_iono only works for a dipole
+       ! This may be generalized in the future
+       if(DipoleStrengthSi /= 0.0)then
+          rIonosphere = 1.0
+       else
+          rIonosphere = -1.0
+       end if
+    end if
+
+    if(rIonosphere < 0.)then
+       rIonosphere2 = -1.0
+    else
+       rIonosphere2 = rIonosphere**2
+    end if
+    
+    if(R_raytrace == 0.0)then
+       if(rBody > 0.0)then
+          R_raytrace = max(rBody, rIonosphere)
+       else
+          R_raytrace = -1.0
+       end if
+    end if
+
+    if(R_raytrace < 0.)then
+       R2_raytrace = -1.0
+    else
+       R2_raytrace = R_raytrace**2
+    end if
+
+    if(rIonosphere < 0.0)then
+       rInner = R_raytrace
+    else
+       rInner = rIonosphere
+    end if
+    
+    CLOSEDRAY= -(abs(rInner) + 0.05)
+    OPENRAY  = -(abs(rInner) + 0.1)
+    BODYRAY  = -(abs(rInner) + 0.2)
+    LOOPRAY  = -(abs(rInner) + 0.3)
+    NORAY    = -(abs(rInner) + 100.0)
+    OUTRAY   = -(abs(rInner) + 200.0)
+
+    if(DoTest)then
+       write(*,*) 'R_raytrace, R2_raytrace=', R_raytrace, R2_raytrace
+       write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
+       write(*,*) 'CLOSEDRAY, OPENRAY,OUTRAY=', CLOSEDRAY, OPENRAY,OUTRAY
+    end if
     if(allocated(ray)) RETURN
 
     ! Determine number of flow variable integrals
@@ -1173,6 +1223,10 @@ contains
 
        ! Half step
        call interpolate_b(IjkIni_D, b_D, bNormIni_D)
+       if(sum(bNormIni_D**2) < 0.5)then
+          iFace = ray_loop_
+          EXIT FOLLOW
+       end if
        if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
           IjkMid_D = IjkIni_D + 0.5*dl*bNormIni_D
           XyzMid_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
@@ -1396,7 +1450,8 @@ contains
           if(r2Cur <= R2_raytrace)then
 
              ! If inside surface, then tracing is finished
-             if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2)then
+             if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2 &
+                  .or. rIonosphere < 0)then
                 XyzInOut_D = XyzCur_D
                 iFace=ray_iono_
                 EXIT FOLLOW
@@ -1585,14 +1640,14 @@ contains
       ! Interpolate the magnetic field at normalized location IjkIn_D
       ! and return the result in b_D.
       ! The direction of b_D (normalized to a unit vector) is returned
-      ! in bNorm_D if the magnitude of b_D is not (almost) zero.
+      ! in bNorm_D if the magnitude of b_D is not zero.
 
-      real, intent(in)   :: IjkIn_D(3)  ! location
-      real, intent(out)  :: b_D(3)      ! interpolated magnetic field
-      real, intent(inout):: bNorm_D(3)  ! unit magnetic field vector
+      real, intent(in) :: IjkIn_D(3)  ! location
+      real, intent(out):: b_D(3)      ! interpolated magnetic field
+      real, intent(out):: bNorm_D(3)  ! unit magnetic field vector
 
       !LOCAL VARIABLES:
-      real :: AbsB, Dir0_D(3)
+      real :: Dir0_D(3)
 
       !------------------------------------------------------------------------
 
@@ -1612,18 +1667,14 @@ contains
            +dx2*(dy1*(dz1*Bxyz_DGB(:,i1,j2,k2,iBlock)+dz2*Bxyz_DGB(:,i1,j2,k1,iBlock))  &
            +     dy2*(dz1*Bxyz_DGB(:,i1,j1,k2,iBlock)+dz2*Bxyz_DGB(:,i1,j1,k1,iBlock)))
 
-      ! Set bNorm_D only if the magnetic field is not very small.
-      ! Otherwise continue in the previous direction.
+      ! Set bNorm_D as a unit vector. It will be zero if b_D is zero.
       if(.not.(UseOldMethodOfRayTrace .and. IsCartesianGrid))then
-         AbsB = norm2(b_D)
-         if(AbsB > cTiny) bNorm_D = b_D/AbsB
-         RETURN
+         bNorm_D = b_D/max(1e-30, norm2(b_D))
+      else
+         ! Stretch according to normalized coordinates
+         Dir0_D = b_D/Dxyz_D
+         bNorm_D = Dir0_D/max(1e-30, norm2(Dir0_D))
       end if
-
-      ! Stretch according to normalized coordinates
-      Dir0_D = b_D/Dxyz_D
-      AbsB = norm2(Dir0_D)
-      if(AbsB > cTiny)bNorm_D = Dir0_D/AbsB
 
     end subroutine interpolate_b
     !==========================================================================
@@ -1958,7 +2009,6 @@ contains
     use CON_axes, ONLY: transform_matrix
     use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
          UseB0
-    use ModPhysics, ONLY: rBody
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
     use ModB0,      ONLY: B0_DGB
     use ModMpi
@@ -2008,9 +2058,6 @@ contains
     oktest_ray = .false.
 
     ! Initialize some basic variables
-    R_raytrace      = max(rBody, rIonosphere)
-    R2_raytrace     = R_raytrace**2
-
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
     DoExtractRay   = index(NameVar, '_I') > 0
     DoTraceRay     = .false.
@@ -2174,7 +2221,6 @@ contains
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
     use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
          UseB0, Unused_B
-    use ModPhysics,        ONLY: rBody
     use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
     use ModB0,             ONLY: B0_DGB
@@ -2215,9 +2261,6 @@ contains
     oktest_ray = .false.
 
     ! Initialize some basic variables
-    R_raytrace      = max(rBody, rIonosphere)
-    R2_raytrace     = R_raytrace**2
-
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
     DoExtractRay   = index(NameVar, '_I') > 0
     DoTraceRay     = .false.
@@ -2622,7 +2665,6 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use CON_axes,      ONLY: transform_matrix
     use ModMain,       ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
-    use ModPhysics,    ONLY: rBody
     use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,       ONLY: CellSize_DB
@@ -2678,9 +2720,6 @@ contains
     oktest_ray = .false.
 
     ! Initialize some basic variables
-    R_raytrace   = max(rBody, rIonosphere)
-    R2_raytrace  = R_raytrace**2
-
     DoIntegrateRay = .false.
     DoExtractRay   = .true.
     DoTraceRay     = .false.
@@ -2856,91 +2895,6 @@ contains
   end subroutine trace_field_equator
   !============================================================================
 
-  subroutine test_ray_integral
-
-    use ModIoUnit,   ONLY: UNITTMP_
-    use ModUtilities, ONLY: open_file, close_file
-    use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: DoMultiFluidIMCoupling
-
-    integer, parameter :: nLat=50, nLon=50
-    real :: Lat_I(nLat), Lon_I(nLon), Lat, Lon
-    integer :: iLat, iLon
-    integer :: iError
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'test_ray_integral'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    write(*,*)NameSub,' starting on iProc=',iProc
-
-    ! Initialize the spherical grid
-    do iLat = 1, nLat
-       Lat_I(iLat) = 50.0 + 40.0*(iLat-0.5)/nLat
-    end do
-    do iLon = 1, nLon
-       Lon_I(iLon) = 360.0*(iLon-0.5)/nLon
-    end do
-
-    ! Integrate all points on the spherical grid
-    call integrate_field_from_sphere(nLat, nLon, Lat_I, Lon_I, 1.0, &
-         'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
-
-    ! Write out results into a file
-    if(iProc==0)then
-
-       ! Take logarithm of field line volume for better plotting ?
-       RayResult_VII(InvB_,:,:) = alog10(RayResult_VII(InvB_,:,:)+cTiny)
-
-       call open_file(file='test_ray_integral.dat')
-       write(UNITTMP_,"(a79)")'test-ray-integral_var22'
-       write(UNITTMP_,"(i7,1pe13.5,3i3)")0, 0.0, 2, 1, nRayIntegral
-       write(UNITTMP_,"(3i4)")nLat, nLon
-       write(UNITTMP_,"(100(1pe13.5))")0.0
-       write(UNITTMP_,"(a79)")&
-            'Lon Lat Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length Param'
-
-       do iLat=1,nLat
-          Lat = Lat_I(iLat)
-          do iLon=1,nLon
-             Lon = Lon_I(iLon)
-
-             call xyz_to_latlon(RayResult_VII(xEnd_:zEnd_,iLat,iLon))
-
-             if(iLat == iLatTest .and. iLon == iLonTest)then
-                if(DoMultiFluidIMCoupling)then
-                   write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                        'Bvol Z0x Z0y Z0b HpRho OpRho HpP OpP LatEnd LonEnd Zend Length'
-                else
-                   write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                        'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'
-                endif
-                write(*,'(2i4,100(1es12.4))') iLon, iLat, Lon, Lat, &
-                     RayResult_VII(:,iLat,iLon)
-             end if
-
-             write(UNITTMP_,"(100(1pe18.10))")Lon,Lat,RayResult_VII(:,iLat,iLon)
-          end do
-       end do
-       call close_file
-    end if
-
-    ! Deallocate buffers ???
-    ! deallocate(RayIntegral_VII, RayResult_VII)
-
-    ! Clean up CON_ray_trace ???
-    ! call clean_ray
-
-    call timing_show('integrate_ray',1)
-
-    write(*,*)NameSub,' finished on iProc=',iProc
-    call mpi_finalize(iError)
-    stop
-
-    call test_stop(NameSub, DoTest)
-  end subroutine test_ray_integral
-  !============================================================================
-
   subroutine extract_field_lines(nLine, IsParallel_I, Xyz_DI)
 
     ! Extract nLine ray lines parallel or anti_parallel according to
@@ -2951,7 +2905,6 @@ contains
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
     use ModB0,       ONLY: B0_DGB
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0
-    use ModPhysics,  ONLY: rBody
     use ModGeometry, ONLY: CellSize_DB, x_, y_, z_
     use ModMpi,      ONLY: MPI_WTIME
     use BATL_lib,    ONLY: find_grid_block
@@ -2972,12 +2925,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    ! Initialize R_raytrace, R2_raytrace
-    oktest_ray = .false.
-    R_raytrace   = max(rBody,rIonosphere)
-    ! R_raytrace  = rBody
-    R2_raytrace  = R_raytrace**2
-
+    ! Initialize trace parameters
     DoTraceRay     = .false.
     DoMapRay       = .false.
     DoIntegrateRay = .false.
@@ -3367,7 +3315,7 @@ contains
     use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
     use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: &
-         Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
+         Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_
     use ModIO,             ONLY: &
          StringDateOrTime, NamePlotDir, plot_range, plot_type, IsPlotName_n
     use ModNumConst,       ONLY: i_DD
@@ -3640,7 +3588,7 @@ contains
     use ModMain,           ONLY: &
          Time_Simulation, TypeCoordSystem, time_accurate, n_step
     use ModNumConst,       ONLY: cDegToRad
-    use ModPhysics,        ONLY: Si2No_V, UnitX_, rBody
+    use ModPhysics,        ONLY: Si2No_V, UnitX_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModIO,             ONLY: StringDateOrTime, NamePlotDir
     use ModNumConst,       ONLY: i_DD
@@ -3897,7 +3845,6 @@ contains
     use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, &
          time_simulation, TypeCoordSystem
     use CON_axes,    ONLY: transform_matrix
-    use ModPhysics,  ONLY: rBody
 
     ! remember last call and the last grid number
     integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
@@ -3924,10 +3871,6 @@ contains
     call timing_start(NameSub)
 
     call init_mod_field_trace
-
-    ! Initialize R_raytrace, R2_raytrace to max(body radius, ionosphere radius)
-    R_raytrace  = max(rBody, rIonosphere)
-    R2_raytrace = R_raytrace**2
 
     ! Transformation matrix between the SM(G) and GM coordinates
     GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
@@ -4511,7 +4454,7 @@ contains
                     'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
                     iProc,iBlock,nsegment,x,xx
 
-               if(r2<=rIonosphere2)then
+               if(r2 <= rIonosphere2)then
                   if(nsegment==0)then
                      qface = ray_body_
                      if(oktest_ray)write(*,*)&
@@ -5177,366 +5120,6 @@ contains
     ! call test_stop(NameSub, DoTest)
   end subroutine rayface_interpolate
   !============================================================================
-
-  subroutine convFaces2LatLon(rayface_in)
-
-    real, intent(inout), dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_in
-
-    integer :: Di,i,j,k
-
-    character(len=*), parameter:: NameSub = 'convFaces2LatLon'
-    !--------------------------------------------------------------------------
-    do k=1,nK+1
-       do j=1,nJ+1
-          ! Exclude inside points
-          if(k>1.and.k<nK+1.and.j>1.and.j<nJ+1)then
-             ! j and k are inside, do endpoints only in i
-             Di=nI
-          else
-             Di=1
-          end if
-          do i=1,nI+1,Di
-             call xyz_to_latlonstatus(rayface_in(:,:,i,j,k))
-          end do
-       end do
-    end do
-
-  end subroutine convFaces2LatLon
-  !============================================================================
-
-  subroutine integrate_ray(dbg,iBlock,x_0,y_0,z_0,fvol,rvol,pvol)
-
-    ! Follow ray starting at initial position x_0,y_0,z_0 in direction 1
-    ! until we hit the wall of the control volume or the ionosphere.
-    ! Return dS/B
-    ! x_0, y_0, and z_0 sent in in real coordinates
-
-    use ModAdvance, ONLY : rho_, Bx_, Bz_, P_, State_VGB
-    use ModGeometry, ONLY : Rmin_BLK
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
-
-    ! Arguments
-
-    integer, intent(in) :: iBlock
-    real, intent(in)   :: x_0,y_0,z_0
-    real, intent(out) :: fvol,rvol,pvol
-    logical, intent(in) :: dbg
-
-    ! Local variables
-
-    logical :: end_inside
-
-    ! True if Rmin_BLK < R_raytrace
-    logical :: check_inside
-
-    ! Minimum value of B for which integration of field lines makes any sense
-    real, parameter :: smallB=1.e-8
-
-    ! Control volume limits in local coordinates
-    real, dimension(3), parameter :: &
-         xmin=[   0.5,   0.5,   0.5],&
-         xmax=[nI+0.5,nJ+0.5,nK+0.5]
-
-    ! Current position of ray in normalized and physical coordinates
-    real, dimension(3) :: x, xx
-
-    ! Radial distance and square of it: r2=sum(xx**2)
-    real :: r2
-
-    ! Initial and mid point coordinates and bb field
-    real, dimension(3) :: x_ini, x_mid, b_ini, b_mid
-
-    real :: bNORM,rNORM,pNORM
-    real :: local_fvol,local_rvol,local_pvol
-
-    ! dx is the difference between 1st and 2nd order RK to estimate accuracy
-    ! dx_opt is the required accuracy, dx_rel=dx/dx_opt
-    real :: dx_rel, dx_opt
-
-    ! Ray length, max, step size, limits, next step size for backup to surface
-    real :: l, lmax, dl, dl_max, dl_min, dl_next, dl_tiny, dl_back
-
-    ! Distance between x and i1,j1,k1, and i2,j2,k2
-    real :: dx1, dy1, dz1, dx2, dy2, dz2
-
-    ! Direction index
-    integer :: iray
-
-    ! Cell indices corresponding to current or final x position
-    integer :: i1,j1,k1,i2,j2,k2
-
-    ! counter for ray integration
-    integer :: nsegment
-
-    real :: amount2add
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'integrate_ray'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    fvol=0.; rvol=0.; pvol=0.
-
-    ! Set flag if checking on the ionosphere is necessary
-    check_inside = Rmin_BLK(iBlock)<R_raytrace
-
-    ! Step size limits
-    dl_max = 0.05
-    dl_min = 0.01
-    dl_tiny = 1.e-6
-
-    do iray=1,2
-       if(dbg)write(*,*)'Starting iray=',iray
-
-       ! Initial value
-       dl_next = sign(dl_max,1.5-iray)
-
-       ! Accuracy in terms of x in normalized coordinates
-       dx_opt = 0.01
-
-       ! Length and maximum length of ray within control volume
-       l = 0
-       lmax = 10*maxval(xmax-xmin)
-       nsegment = 0
-
-       ! Initial position
-       x = 1.+( [x_0, y_0, z_0] - Xyz_DGB(:,1,1,1,iBlock))/CellSize_DB(:,iBlock)
-
-       end_inside = .false.
-       local_fvol = 0.; local_rvol = 0.; local_pvol = 0.
-
-       if(dbg)write(*,*)'  initial values: dl_next=',dl_next,' dx_opt=',dx_opt, &
-            ' lmax=',lmax,' x=',x,' check_inside=',check_inside
-       if(iray == 1 .or. check_inside)then
-          call do_integration
-
-          if(iray == 1 .or. (iray == 2 .and. end_inside)) then
-             fvol = fvol + local_fvol
-             rvol = rvol + local_rvol
-             pvol = pvol + local_pvol
-          end if
-       end if
-
-    end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  contains
-    !==========================================================================
-
-    subroutine do_integration
-
-      ! Integration loop
-      !------------------------------------------------------------------------
-      do
-         if(dbg)write(*,*)'  loop iter',nsegment,x
-
-         ! Check if we are inside the ionosphere
-         if(check_inside)then
-            ! Convert x to real coordinates xx
-            xx = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x - 1.)
-
-            r2=sum(xx**2)
-
-            if(r2<R2_raytrace)then
-               if(dbg)write(*,*)'  inside raytrace limit, stopping.'
-
-               if(nsegment==0)then
-                  ! starting inside, leave
-                  EXIT
-               end if
-
-               end_inside=.true.
-
-               EXIT
-            end if
-         end if
-
-         ! Integrate with 2nd order scheme
-         dl=dl_next
-         x_ini=x
-
-         ! Half step
-         call interpolate_bbN(x_ini,b_ini,bNORM,rNORM,pNORM)
-
-         do
-            x_mid=x_ini+0.5*dl*b_ini
-
-            ! Full step
-            call interpolate_bbN(x_mid,b_mid,bNORM,rNORM,pNORM)
-
-            ! Calculate the difference between 1st and 2nd order integration
-            ! and take ratio relative to dx_opt
-            dx_rel=abs(dl)*maxval(abs(b_mid-b_ini))/dx_opt
-
-            ! Make sure that dl does not change more than a factor of 2 or 0.5
-            dx_rel=max(0.5,min(2.,dx_rel))
-
-            if(dx_rel>1.)then
-               ! Not accurate enough, decrease dl if possible
-
-               if(abs(dl)<=dl_min+dl_tiny)then
-                  ! Cannot reduce dl further
-                  dl_next=dl
-                  EXIT
-               end if
-
-               dl = sign(max(dl_min,abs(dl)/(dx_rel+0.001)),dl)
-
-            else
-               ! Too accurate, increase dl if possible
-               if(abs(dl)<dl_max-dl_tiny)then
-                  dl_next = sign(min(dl_max,abs(dl)/sqrt(dx_rel)),dl)
-               end if
-
-               EXIT
-            end if
-         end do
-
-         x=x_ini+b_mid*dl
-         ! dl/|B| for a cubic cell (dx=dy=dz)
-         ! amount2add = abs( dl * CellSize_DB(x_,iBlock))/bNORM
-
-         ! dl/|B| for a cell with arbitrary aspect ratio
-         amount2add = abs(dl) * norm2(b_mid*CellSize_DB(:,iBlock)) / bNORM
-         local_fvol = local_fvol + amount2add
-         local_rvol = local_rvol + amount2add*rNORM
-         local_pvol = local_pvol + amount2add*pNORM
-
-         if(dbg)then
-            write(*,*)'  take step:',CellSize_DB(:,iBlock), dl
-            write(*,*)'    b_mid=',b_mid,' bNORM=',bNORM,' b_ini=',b_ini
-            write(*,*)'  take step and add:',amount2add,rNORM,pNORM
-         end if
-
-         nsegment = nsegment + 1
-         l = l + abs(dl)
-
-         if(any(x<xmin) .or. any(x>xmax))then
-
-            if(dbg)write(*,*)'  stepped out of box'
-
-            ! Ray points outwards from surface
-            if(nsegment==1)then
-               if(dbg)write(*,*)'  zeroing volumes, only one segment completed.'
-
-               local_fvol=0.; local_rvol=0.; local_pvol=0.
-               RETURN
-            end if
-
-            ! Hit the wall, backup so that x is almost exactly on the wall
-            ! just a little bit outside
-            dl_back = dl*maxval(max(xmin-x,x-xmax)/(abs(x-x_ini)+dl_tiny))
-            x = x-dl_back*b_mid
-            ! dl/|B| for arbitrary aspect ratio
-            amount2add = abs(dl_back)*norm2(CellSize_DB(:,iBlock)*b_mid)/bNORM
-            local_fvol = local_fvol - amount2add
-            local_rvol = local_rvol - amount2add*rNORM
-            local_pvol = local_pvol - amount2add*pNORM
-
-            if(dbg)write(*,*)'  adjust step and subtract:',amount2add,rNORM,pNORM
-
-            EXIT
-         end if
-
-         ! Check if we have integrated for too long
-         if(l>lmax)then
-            if(dbg)write(*,*)'  too many segments, zero values and stop.'
-
-            ! Seems to be a closed loop within a block
-            local_fvol=0.; local_rvol=0.; local_pvol=0.
-            EXIT
-         end if
-
-      end do
-
-    end subroutine do_integration
-    !==========================================================================
-
-    subroutine interpolate_bbN(qx,qb,qbD,qrD,qpD)
-
-      ! Obtain normalized bb field at normalized location qx and put it into qb
-      use ModAdvance, ONLY: nVar
-      use ModB0,      ONLY: get_b0
-
-      real, intent(in) :: qx(3)
-      real, intent(out):: qb(3),qbD,qrD,qpD
-      real,dimension(nVar)::Aux_V
-
-      ! Get B0 values for location
-
-      !------------------------------------------------------------------------
-      xx = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(qx - 1.)
-
-      call get_b0(xx, qb)
-
-      ! Determine cell indices corresponding to location qx
-
-      i1=floor(qx(1)); i2=i1+1
-      j1=floor(qx(2)); j2=j1+1
-      k1=floor(qx(3)); k2=k1+1
-
-      if(i1<-1.or.i2>nI+2.or.j1<-1.or.j2>nJ+2.or.k1<-1.or.k2>nK+2)then
-         write(*,*)'interpolate_bbN: iProc, i1,j1,k1=',iProc,i1,j1,k1
-         write(*,*)'interpolate_bbN: iProc, iBlock, qx=',iProc,iBlock, qx
-         write(*,*)'interpolate_bbN: iProc, x,y,z(1,1,1),dx=',&
-              Xyz_DGB(:,1,1,1,iBlock), CellSize_DB(x_,iBlock)
-         write(*,*)'interpolate_bbN: iProc, x_0,y_0,z_0=',x_0,y_0,z_0
-         call stop_mpi('ERROR in interpolate_bbN: location out of bounds')
-      endif
-
-      ! Distance relative to the cell centers
-
-      dx1 = qx(1) - i1; dx2 = 1. - dx1
-      dy1 = qx(2) - j1; dy2 = 1. - dy1
-      dz1 = qx(3) - k1; dz2 = 1. - dz1
-
-      ! Add in interpolated B1 values
-      Aux_V = interpolate_bb_v(nVar,State_VGB)
-      qb = qb + Aux_V(Bx_:Bz_)
-
-      ! Get density and pressure
-
-      qrD = Aux_V(rho_)
-      qpD = Aux_V(P_)
-      qbD = norm2(qb)
-
-      ! Normalize
-      if(qbD > smallB)then
-         ! Take aspect ratio of cells into account
-         qb = qb/CellSize_DB(:,iBlock)
-         qb = qb/qbD
-      else
-         qb = 0.
-      end if
-
-    end subroutine interpolate_bbN
-    !==========================================================================
-    function interpolate_bb_v(nVar,qbb)
-      integer,intent(in)::nVar
-      !------------------------------------------------------------------------
-      real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-           intent(in):: qbb
-      real, dimension(nVar)::interpolate_bb_v
-
-      !-------------------------------------------------------------------------
-
-      ! Bilinear interpolation in 3D
-
-      interpolate_bb_v=&
-           dx1*(   dy1*(   dz1*qbb(:,i2,j2,k2,iBlock)+&
-           dz2*qbb(:,i2,j2,k1,iBlock))+&
-           dy2*(   dz1*qbb(:,i2,j1,k2,iBlock)+&
-           dz2*qbb(:,i2,j1,k1,iBlock)))+&
-           dx2*(   dy1*(   dz1*qbb(:,i1,j2,k2,iBlock)+&
-           dz2*qbb(:,i1,j2,k1,iBlock))+&
-           dy2*(   dz1*qbb(:,i1,j1,k2,iBlock)+&
-           dz2*qbb(:,i1,j1,k1,iBlock)))
-
-    end function interpolate_bb_v
-    !==========================================================================
-
-  end subroutine integrate_ray
-  !============================================================================
-
   subroutine ray_pass
 
     !  call ray_pass_new
