@@ -274,7 +274,7 @@ contains
                   ' differs from CON::StartTime+tSimulation=', &
                   StartTime + time_simulation,' !!!'
              if(UseStrict)then
-                call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
+                call stop_mpi('Fix #STARTTIME command in PARAM.in')
              else
                 ! Fix iStartTime_I array
                 call time_real_to_int(StartTime, iStartTime_I)
@@ -1523,7 +1523,8 @@ contains
        case("#MINIMUMSOLARWINDTEMP")
           call read_var('SwTminDim', SwTminDim)
 
-       case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
+       case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", &
+            "#RAYTRACERADIUS", "#IE")
           call read_field_trace_param(NameCommand)
        case("#IECOUPLING")
           call read_ie_velocity_param
