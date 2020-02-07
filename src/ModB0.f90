@@ -4,8 +4,8 @@
 module ModB0
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
-!  use ModUtilities, ONLY: norm2
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
+  !  use ModUtilities, ONLY: norm2
 
   ! The magnetic field can be split into an analytic and numeric part.
   ! The analytic part is B0. It should satisfy div(B0) = 0,
@@ -19,7 +19,9 @@ module ModB0
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain, ONLY: UseB, UseB0, UseConstrainB
   use omp_lib
-  
+  use CON_axes, ONLY: dLongitudeHgrDeg
+  use ModCoordTransform, ONLY: rot_matrix_z
+
   implicit none
   SAVE
 
@@ -58,12 +60,12 @@ module ModB0
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  
+
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
   !$omp threadprivate( CurlB0_DC, DivB0_C )
-  
+
   ! Local variables
 
   ! B0 field at the resolution change interfaces
@@ -73,8 +75,9 @@ module ModB0
 
   ! Lookup table related variables
   integer:: iTableB0 = -1
-  real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
-  
+  real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0, RotB0_DD(3,3)
+  real:: LonMinB0 = 0.0, LonMaxB0 = 0.0
+
 contains
   !============================================================================
   subroutine read_b0_param(NameCommand)
@@ -126,7 +129,7 @@ contains
     use ModNumConst, ONLY: cDegToRad
 
     integer:: nParam
-    real:: Param_I(4)
+    real:: Param_I(4), IndexMin_I(3), IndexMax_I(3)
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_b0'
     !--------------------------------------------------------------------------
@@ -171,13 +174,21 @@ contains
 
     !$omp end parallel
 
+    ! Read the FDIPS Lookup Table and get the Longitude 
+    ! shift. Create the rotation matrix based on the shift
     iTableB0 = i_lookup_table('B0')
     if(iTableB0 > 0)then
-       call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I)
+       call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I, &
+            IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
        rMinB0 = Param_I(1)
-       rMaxB0 = Param_I(2)
-       if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
-    end if
+       rMaxB0 = Param_I(2)    
+       if(nParam > 2) then
+          dLonB0 = (Param_I(3)-dLongitudeHgrDeg)*cDegToRad
+          RotB0_DD = rot_matrix_z(dLonB0)
+       end if
+       LonMinB0 = IndexMin_I(2)
+       LonMaxB0 = IndexMax_I(2)
+    endif
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
@@ -264,7 +275,7 @@ contains
 
        if(nDim >= 3) &
             B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
-               +         B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
+            +         B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
     end if
     ! Correct B0 at resolution changes
     if(NeiLev(1,iBlock) == -1) &
@@ -311,7 +322,7 @@ contains
     if(IsCartesian .and. nDim==2) Coef = 0.25
     if(IsCartesian .and. nDim==3) Coef = 0.125
 
-    
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        if(DiLevelNei_IIIB(-1,0,0,iBlock) == +1) then
@@ -584,8 +595,9 @@ contains
     use ModMain,          ONLY: UseUserB0, UseMagnetogram
     use ModMagnetogram,   ONLY: get_magnetogram_field
     use ModLookupTable,   ONLY: interpolate_lookup_table
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
+    use ModCoordTransform, ONLY: xyz_to_rlonlat, rot_matrix_z
     use ModNumConst,      ONLY: cTwoPi
+    use ModNumConst, ONLY: cDegToRad
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
@@ -595,13 +607,18 @@ contains
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
+       ! Converting BATSRUS grid to rlonlat
        call xyz_to_rlonlat(Xyz_D, rLonLat_D)
-       if(dLonB0 > 0.0) &
-            rLonLat_D(2) = modulo(rLonLat_D(2) - dLonB0, cTwoPi)
+       ! Include the shift in Phi coordinate and make sure that it is
+       ! in the range provided by the lookup table
+       if(dLonB0 /= 0.0 .or. LonMinB0 /= 0.0) rLonLat_D(2) = &
+            modulo(rLonLat_D(2) - dLonB0 - LonMinB0, cTwoPi) + LonMinB0
        r = rLonLat_D(1)
        ! Extrapolate for r < rMinB0
        call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
             DoExtrapolate=(r<rMinB0) )
+       ! Rotate Bx, By based on shifted coordinates
+       if(dLonB0 /= 0.0) B0_D = matmul(RotB0_DD, B0_D)
        ! Convert from Gauss to Tesla then to normalized units.
        ! Multiply with B0 factor
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
