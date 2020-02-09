@@ -6,14 +6,15 @@ module ModFieldTrace
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
-       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm
-  use BATL_tree, ONLY: IsNeighbor_P
+       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
+       IsNeighbor_P, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       MaxBlock, x_, y_, z_
   use ModMain, ONLY: iNewDecomposition
   use ModPhysics, ONLY: rBody
 !  use ModUtilities, ONLY: norm2
-  use ModSize
-  use ModKind
-  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModNumConst, ONLY: i_DD
+  use ModKind, ONLY: Real8_
+  use ModIO,   ONLY: iUnitOut, write_prefix
 
   implicit none
   save
@@ -62,7 +63,7 @@ module ModFieldTrace
   real, public :: rIonosphere = 0.
 
   ! Radius where the tracing stops
-  real, public :: R_raytrace = 0.
+  real, public :: rTrace = 0.
 
   ! Named indexes
   integer, public, parameter :: &
@@ -84,15 +85,12 @@ module ModFieldTrace
 
   ! Conversion matrix between SM and GM coordinates
   ! (to be safe initialized to unit matrix)
-  real, public :: GmSm_DD(3,3) = reshape( [ &
-       1.,0.,0., &
-       0.,1.,0., &
-       0.,0.,1. ], [3,3] )
+  real, public :: GmSm_DD(3,3) = i_DD
 
   ! Local variables --------------------------------
 
   ! Square of radii to save computation
-  real :: R2_raytrace = 0.0
+  real :: rTrace2 = 0.0
   real :: rIonosphere2 = 0.0
 
   ! Possible tasks
@@ -153,7 +151,7 @@ module ModFieldTrace
   real :: RayLengthMax = 200.
 
   ! Testing
-  logical :: oktest_ray=.false.
+  logical :: DoTestRay=.false.
 
   ! Base time for timed exchanges between rays
   real(Real8_) :: CpuTimeStartRay
@@ -208,7 +206,7 @@ contains
           call read_var('DnRaytrace',       DnRaytrace)
        end if
     case("#RAYTRACERADIUS")
-       call read_var('rRaytrace',   R_raytrace)
+       call read_var('rRaytrace',   rTrace)
        call read_var('rIonosphere', rIonosphere)
     case("#RAYTRACELIMIT")
        call read_var('RayLengthMax', RayLengthMax)
@@ -378,43 +376,36 @@ contains
        end if
     end if
 
-    if(rIonosphere < 0.)then
-       rIonosphere2 = -1.0
-    else
-       rIonosphere2 = rIonosphere**2
-    end if
     
-    if(R_raytrace == 0.0)then
+    if(rTrace == 0.0)then
        if(rBody > 0.0)then
-          R_raytrace = max(rBody, rIonosphere)
+          rTrace = max(rBody, rIonosphere)
        else
-          R_raytrace = -1.0
+          rTrace = -1.0
        end if
     end if
 
-    if(R_raytrace < 0.)then
-       R2_raytrace = -1.0
-    else
-       R2_raytrace = R_raytrace**2
-    end if
-
+    ! Radius square preserving sign
+    rIonosphere2 = rIonosphere*abs(rIonosphere)
+    rTrace2      = rTrace*abs(rTrace)
+    
     if(rIonosphere < 0.0)then
-       rInner = R_raytrace
+       rInner = abs(rTrace)
     else
        rInner = rIonosphere
     end if
     
-    CLOSEDRAY= -(abs(rInner) + 0.05)
-    OPENRAY  = -(abs(rInner) + 0.1)
-    BODYRAY  = -(abs(rInner) + 0.2)
-    LOOPRAY  = -(abs(rInner) + 0.3)
-    NORAY    = -(abs(rInner) + 100.0)
-    OUTRAY   = -(abs(rInner) + 200.0)
+    CLOSEDRAY= -(rInner + 0.05)
+    OPENRAY  = -(rInner + 0.1)
+    BODYRAY  = -(rInner + 0.2)
+    LOOPRAY  = -(rInner + 0.3)
+    NORAY    = -(rInner + 100.0)
+    OUTRAY   = -(rInner + 200.0)
 
     if(DoTest)then
-       write(*,*) 'R_raytrace, R2_raytrace=', R_raytrace, R2_raytrace
+       write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
        write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
-       write(*,*) 'CLOSEDRAY, OPENRAY,OUTRAY=', CLOSEDRAY, OPENRAY,OUTRAY
+       write(*,*) 'CLOSEDRAY,OPENRAY,OUTRAY =', CLOSEDRAY, OPENRAY, OUTRAY
     end if
     if(allocated(ray)) RETURN
 
@@ -563,7 +554,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
-          oktest_ray = DoTest .and. &
+          DoTestRay = DoTest .and. &
                all( [i,j,k,iBlock,iProc]== &
                [iTest,jTest,kTest,iBlockTest,iProcTest] )
 
@@ -572,11 +563,11 @@ contains
              if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
                   .not.true_cell(i,j,k,iBlock))then
                 ray(:,:,i,j,k,iBlock)=BODYRAY
-                if(oktest_ray)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
+                if(DoTestRay)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
                 CYCLE
              end if
 
-             if(oktest_ray)write(*,*)'calling follow_ray iProc,iRay=',iProc,iRay
+             if(DoTestRay)write(*,*)'calling follow_ray iProc,iRay=',iProc,iRay
 
              ! Follow ray in direction iRay
              call follow_ray(iRay, [i,j,k,iBlock], Xyz_DGB(:,i,j,k,iBlock))
@@ -727,14 +718,14 @@ contains
        iRay   = iRayIn
 
        iStart_D = i_D
-       if(DoTest)call set_oktest_ray
+       if(DoTest)call set_DoTestRay
 
        ! Current position and length
        iBlockRay = i_D(4)
        XyzRay_D  = XyzIn_D
        RayLength = 0.0
 
-       if(oktest_ray)write(*,'(a,6i4,3es12.4)')&
+       if(DoTestRay)write(*,'(a,6i4,3es12.4)')&
             'Local ray at iProc,i_D,iRay,XyzIn_D=',iProc,i_D,iRay,XyzIn_D
 
     end if
@@ -751,14 +742,14 @@ contains
                   IsParallel,DoneRay)
 
              if(IsFound)then
-                if(DoTest)call set_oktest_ray
+                if(DoTest)call set_DoTestRay
 
                 if(IsParallel)then
                    iRay=1
                 else
                    iRay=2
                 end if
-                if(oktest_ray)write(*,*)'Recv ray iProc,iRay,Done,XyzRay_D=',&
+                if(DoTestRay)write(*,*)'Recv ray iProc,iRay,Done,XyzRay_D=',&
                      iProc,iRay,DoneRay,XyzRay_D
 
                 if(DoneRay)then
@@ -776,7 +767,7 @@ contains
 
                    ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
 
-                   if(oktest_ray)write(*,*)&
+                   if(DoTestRay)write(*,*)&
                         'Storing recv ray iProc,iRay,i,j,k,iBlock,ray=',&
                         iProc,iRay,iStart,jStart,kStart,iBlockStart,XyzRay_D
 
@@ -789,7 +780,7 @@ contains
                    if(jProc /= iProc)call stop_mpi(&
                         'GM_ERROR in ray_trace: Recvd ray is not in this PE')
 
-                   if(oktest_ray)write(*,*)'Block for recv ray iProc,iBlock=',&
+                   if(DoTestRay)write(*,*)'Block for recv ray iProc,iBlock=',&
                         iProc,iBlockRay
                 end if
              end if
@@ -896,7 +887,7 @@ contains
 
             if(jProc /= iProc)then
                ! Send ray to the next processor and return from here
-               if(oktest_ray)write(*,*)'Sending ray iProc,jProc,iRay,Xyz=',&
+               if(DoTestRay)write(*,*)'Sending ray iProc,jProc,iRay,Xyz=',&
                     iProc,jProc,iRay,XyzRay_D
 
                ! Add partial results to the integrals.
@@ -909,7 +900,7 @@ contains
             elseif(jBlock /= iBlockRay)then
                ! Continue the same ray in the next block
                iBlockRay = jBlock
-               if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
+               if(DoTestRay)write(*,'(a,3i4,3es12.4)')&
                     'Continuing ray iProc,jBlock,iRay,Xyz=',&
                     iProc,jBlock,iRay,XyzRay_D
                CYCLE BLOCK
@@ -926,30 +917,30 @@ contains
          case(ray_open_)
             ! The ray reached the outer boundary (or expected to do so)
             XyzRay_D = OPENRAY
-            if(oktest_ray)write(*,*)&
+            if(DoTestRay)write(*,*)&
                  'follow_ray finished with OPENRAY, iProc,iRay=',iProc,iRay
 
          case(ray_loop_)
             ! The ray did not hit the wall of the block
             XyzRay_D = LOOPRAY
-            if(oktest_ray)write(*,*)&
+            if(DoTestRay)write(*,*)&
                  'follow_ray finished with LOOPRAY, iProc,iRay=',iProc,iRay
 
          case(ray_body_)
             ! The ray hit a body
             XyzRay_D = BODYRAY
-            if(oktest_ray)write(*,*)&
+            if(DoTestRay)write(*,*)&
                  'follow_ray finished with BODYRAY, iProc,iRay=',iProc,iRay
 
          case(ray_iono_)
             ! The ray hit the ionosphere
-            if(oktest_ray)write(*,'(a,2i4,3es12.4)')&
+            if(DoTestRay)write(*,'(a,2i4,3es12.4)')&
                  'follow_this_ray finished on the ionosphere '// &
                  'at iProc,iRay,Xyz=',iProc,iRay,XyzRay_D
 
          case(ray_equator_)
             ! The ray hit the SM equatorial plane
-            if(oktest_ray)write(*,'(a,2i4,3es12.4)')&
+            if(DoTestRay)write(*,'(a,2i4,3es12.4)')&
                  'follow_this_ray finished on the SM equator '// &
                  'at iProc,iRay,Xyz=',iProc,iRay,XyzRay_D
 
@@ -986,7 +977,7 @@ contains
 
             ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
 
-            if(oktest_ray)write(*,*) &
+            if(DoTestRay)write(*,*) &
                  'Storing into iProc,iBlock,i,j,k,iRay,Xyz=',&
                  iProc,iBlockStart,iStart,jStart,kStart,iRay,XyzRay_D
 
@@ -995,7 +986,7 @@ contains
             call ray_put(iProcStart,iStart_D,iProc,XyzRay_D,RayLength,&
                  iRay==1,.true.)
 
-            if(oktest_ray)write(*,*) &
+            if(DoTestRay)write(*,*) &
                  'Send result iProc,iProcStart,iRay,Xyz=',&
                  iProc,iProcStart,iRay,XyzRay_D
 
@@ -1029,22 +1020,22 @@ contains
     end subroutine store_integral
     !==========================================================================
 
-    subroutine set_oktest_ray
+    subroutine set_DoTestRay
 
       !------------------------------------------------------------------------
       if(DoIntegrateRay)then
          ! Test the ray starting from a given Lat-Lon grid point
-         oktest_ray = DoTest .and. all(iStart_D(1:2) == [iLatTest,iLonTest])
+         DoTestRay = DoTest .and. all(iStart_D(1:2) == [iLatTest,iLonTest])
       else if(DoTraceRay)then
          ! Test the ray starting from a given grid cell
-         oktest_ray = DoTest .and. iProcStart == iProcTest .and. &
+         DoTestRay = DoTest .and. iProcStart == iProcTest .and. &
               all(iStart_D == [iTest,jTest,kTest,iBlockTest])
       else
          ! Check the ray indexed in line plot files.
-         oktest_ray = DoTest .and. iStart_D(1) == iTest
+         DoTestRay = DoTest .and. iStart_D(1) == iTest
       end if
 
-    end subroutine set_oktest_ray
+    end subroutine set_DoTestRay
     !==========================================================================
 
   end subroutine follow_ray
@@ -1121,7 +1112,7 @@ contains
     integer :: nSegment
     integer :: nSegmentMax=10*(nI+nJ+nK)
 
-    ! True if Rmin_BLK < R_raytrace
+    ! True if Rmin_BLK < rTrace
     logical :: DoCheckInnerBc
 
     ! True if the block already containes open rays
@@ -1149,7 +1140,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'follow_ray_block'
     !--------------------------------------------------------------------------
-    if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
+    if(DoTestRay)write(*,'(a,3i4,3es12.4)')&
          'Starting follow_ray_block: me,iBlock,iRay,XyzInOut_D=',&
          iProc,iBlock,iRay,XyzInOut_D
 
@@ -1163,9 +1154,9 @@ contains
 
     ! Set flag if checking on the ionosphere is necessary
     if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
-       DoCheckInnerBc = Rmin_BLK(iBlock) < R_raytrace + sum(Dxyz_D)
+       DoCheckInnerBc = Rmin_BLK(iBlock) < rTrace + sum(Dxyz_D)
     else
-       DoCheckInnerBc = Rmin_BLK(iBlock) < 1.2*R_raytrace
+       DoCheckInnerBc = Rmin_BLK(iBlock) < 1.2*rTrace
     end if
 
     ! Set flag if checking for open rays is useful
@@ -1286,7 +1277,7 @@ contains
           ! and take ratio relative to dxOpt
           dxRel = abs(dl) * maxval(abs(bNormMid_D-bNormIni_D)) / dxOpt
 
-          if(oktest_ray.and.okdebug)&
+          if(DoTestRay.and.okdebug)&
                write(*,*)'me,iBlock,IjkMid_D,bNormMid_D,dxRel=', &
                iProc,iBlock,IjkMid_D,bNormMid_D,dxRel
 
@@ -1351,14 +1342,14 @@ contains
                 end do HALF2
              end if
 
-             if(oktest_ray.and.okdebug) write(*,*) &
+             if(DoTestRay.and.okdebug) write(*,*) &
                   'new decreased dl: me,iBlock,dl=',iProc,iBlock,dl
           else
              ! Too accurate, increase dl if possible
              if(abs(dl) < dlMax - dlTiny)then
                 dlNext = sign(min(dlMax, abs(dl)/sqrt(dxRel)), dl)
 
-                if(oktest_ray.and.okdebug) write(*,*) &
+                if(DoTestRay.and.okdebug) write(*,*) &
                      'new increased dlNext: me,iBlock,dlNext=', &
                      iProc, iBlock, dlNext
              end if
@@ -1431,7 +1422,7 @@ contains
 
        end if
 
-       if(oktest_ray.and.okdebug)&
+       if(DoTestRay.and.okdebug)&
             write(*,*)'me,iBlock,nSegment,IjkCur_D=', &
             iProc,iBlock,nSegment,IjkCur_D
 
@@ -1447,7 +1438,7 @@ contains
        if(DoCheckInnerBc)then
           r2Cur = sum(XyzCur_D**2)
 
-          if(r2Cur <= R2_raytrace)then
+          if(r2Cur <= rTrace2)then
 
              ! If inside surface, then tracing is finished
              if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2 &
@@ -1464,8 +1455,8 @@ contains
                    ! continue the integration
                    nIono=nIono+1
                 else
-                   if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
-                        'Inside R_raytrace at me,iBlock,nSegment,IjkCur_D,XyzCur_D=',&
+                   if(DoTestRay)write(*,'(a,3i4,6es12.4)')&
+                        'Inside rTrace at me,iBlock,nSegment,IjkCur_D,XyzCur_D=',&
                         iProc,iBlock,nSegment,IjkCur_D,XyzCur_D
 
                    rCur = sqrt(r2Cur)
@@ -1473,7 +1464,7 @@ contains
 
                    ! The fraction of the last step inside body is estimated from
                    ! the radii.
-                   Fraction = (R_raytrace - rCur) / (rIni - rCur)
+                   Fraction = (rTrace - rCur) / (rIni - rCur)
 
                    ! Reduce ray length
                    Length = Length - Fraction * dLength
@@ -1484,7 +1475,7 @@ contains
 
                    if(DoIntegrateRay)then
                       ! Reduce integrals with the fraction of the last step
-                      if(oktest_ray)write(*,'(a,4es12.4)')&
+                      if(DoTestRay)write(*,'(a,4es12.4)')&
                            'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
                            RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
 
@@ -1498,14 +1489,14 @@ contains
                       RayIntegral_V(RhoInvB_:nLocalIntegral) = &
                            RayIntegral_V(RhoInvB_:nLocalIntegral) - InvBDl*RhoP_V
 
-                      if(oktest_ray)then
+                      if(DoTestRay)then
                          write(*,'(a,4es12.4)')&
                               'After  reduction InvBdl, RayIntegral_V=',InvBdl, &
                               RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
 
                          write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
-                         write(*,*)'Reduction rIni,rCur,R_raytrace =',&
-                              rIni,rCur,R_raytrace
+                         write(*,*)'Reduction rIni,rCur,rTrace =',&
+                              rIni,rCur,rTrace
                       end if
 
                    end if
@@ -1547,7 +1538,7 @@ contains
        ! Check if we have integrated for too long
        if( nSegment > nSegmentMax .or. Length > RayLengthMax )then
           ! Seems to be a closed loop within a block
-          if(oktest_ray) write(*,*)'CLOSED LOOP at me,iBlock,IjkCur_D,XyzCur_D=', &
+          if(DoTestRay) write(*,*)'CLOSED LOOP at me,iBlock,IjkCur_D,XyzCur_D=', &
                iProc,iBlock,IjkCur_D,XyzCur_D
 
           iFace=ray_loop_
@@ -1560,7 +1551,7 @@ contains
     if(iFace /= ray_block_ .and. DoExtractRay) &
          call ray_extract(IjkCur_D,XyzCur_D)
 
-    if(oktest_ray) then
+    if(DoTestRay) then
        write(*,'(a,4i4)')&
             'Finished follow_ray_block at me,iBlock,nSegment,iFace=',&
             iProc,iBlock,nSegment,iFace
@@ -1616,7 +1607,7 @@ contains
 
          ! Assign Z0b_ as the middle point value of the magnetic field
          RayIntegral_V(Z0b_) = norm2(b_D)
-         if(oktest_ray)then
+         if(DoTestRay)then
             write(*,'(a,3es12.4)') &
                  'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
             write(*,'(a,3es12.4)') &
@@ -1726,7 +1717,7 @@ contains
       ! real coordinates and use analytic mapping.
       ! On return XyzInOut_D contains the final coordinates.
       ! Return true if it was successfully integrated down to rIonosphere,
-      ! return false if the ray exited R_raytrace or too many integration
+      ! return false if the ray exited rTrace or too many integration
       ! steps were done
 
       use CON_planet_field, ONLY: map_planet_field
@@ -2055,7 +2046,7 @@ contains
 
     call timing_start(NameSub)
 
-    oktest_ray = .false.
+    DoTestRay = .false.
 
     ! Initialize some basic variables
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
@@ -2258,7 +2249,7 @@ contains
 
     call timing_start('integrate_ray_1d')
 
-    oktest_ray = .false.
+    DoTestRay = .false.
 
     ! Initialize some basic variables
     DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
@@ -2717,7 +2708,7 @@ contains
     ! Fill in all ghost cells
     call message_pass_cell(nVar, State_VGB)
 
-    oktest_ray = .false.
+    DoTestRay = .false.
 
     ! Initialize some basic variables
     DoIntegrateRay = .false.
@@ -3910,7 +3901,7 @@ contains
     ! Minimum value of B for which integration of field lines makes any sense
     real, parameter :: smallB=1.e-8
 
-    ! True if Rmin_BLK < R_raytrace
+    ! True if Rmin_BLK < rTrace
     logical :: check_inside
 
     ! Face index for the final point of the ray
@@ -3960,7 +3951,7 @@ contains
     call test_start(NameSub, DoTest)
     if(oktime)call timing_reset('ray_pass',2)
 
-    oktest_ray = .false.
+    DoTestRay = .false.
 
     Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
     ! Fill in ghost cells
@@ -4038,7 +4029,7 @@ contains
           if(Unused_B(iBlock))CYCLE
 
           ! Flag cells inside the ionosphere if necessary
-          check_inside=Rmin_BLK(iBlock)<R_raytrace
+          check_inside=Rmin_BLK(iBlock)<rTrace
 
           do iz=1,nK+1
              ! Exclude outer boundaries
@@ -4063,7 +4054,7 @@ contains
                    if(neiLEV(1,iBlock)==NOBLK.and.ix==   1)CYCLE
                    if(neiLEV(2,iBlock)==NOBLK.and.ix==nI+1)CYCLE
 
-                   if(oktest_ray)write(*,*)'TESTING RAY: me,iBlock,ix,iy,iz,xx',&
+                   if(DoTestRay)write(*,*)'TESTING RAY: me,iBlock,ix,iy,iz,xx',&
                         iProc,iBlock,ix,iy,iz,&
                         Xyz_DGB(:,ix,iy,iz,iBlock)-0.5*CellSize_DB(:,iBlock)
 
@@ -4219,7 +4210,7 @@ contains
        if(Unused_B(iBlock))CYCLE
 
        ! Set flag if checking on the ionosphere is necessary
-       check_inside=Rmin_BLK(iBlock)<R_raytrace
+       check_inside=Rmin_BLK(iBlock)<rTrace
 
        do iray=1,2
           ! Some optimization for fully open blocks
@@ -4236,16 +4227,16 @@ contains
              if(R_BLK(ix,iy,iz,iBlock)<rIonosphere .or. &
                   .not.true_cell(ix,iy,iz,iBlock))then
                 ray(:,iray,ix,iy,iz,iBlock)=BODYRAY
-                if(oktest_ray)write(*,*)'BODYRAY'
+                if(DoTestRay)write(*,*)'BODYRAY'
                 CYCLE
              end if
 
-             if(oktest_ray)write(*,*)'calling follow_fast'
+             if(DoTestRay)write(*,*)'calling follow_fast'
 
              ! Follow ray in direction iray
              iface=follow_fast(.false.,real(ix),real(iy),real(iz))
 
-             if(oktest_ray)write(*,*)'calling assign_ray'
+             if(DoTestRay)write(*,*)'calling assign_ray'
 
              ! Assign value to ray
              call assign_ray(.false.,ray(:,iray,ix,iy,iz,iBlock))
@@ -4412,7 +4403,7 @@ contains
 
       !------------------------------------------------------------------------
 
-      if(oktest_ray)&
+      if(DoTestRay)&
            write(*,*)'follow_fast: me,iBlock,surface_point,x_0,y_0,z_0,iray=',&
            iProc,iBlock,surface_point,x_0,y_0,z_0,iray
 
@@ -4448,16 +4439,16 @@ contains
 
             r2 = sum(xx**2)
 
-            if(r2 <= R2_raytrace)then
+            if(r2 <= rTrace2)then
 
-               if(oktest_ray)write(*,*)&
-                    'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
+               if(DoTestRay)write(*,*)&
+                    'Inside rTrace at me,iBlock,nsegment,x,xx=',&
                     iProc,iBlock,nsegment,x,xx
 
                if(r2 <= rIonosphere2)then
                   if(nsegment==0)then
                      qface = ray_body_
-                     if(oktest_ray)write(*,*)&
+                     if(DoTestRay)write(*,*)&
                           'Initial point inside rIonosphere at me,iBlock,xx=',&
                           iProc,iBlock,xx
                   else
@@ -4502,12 +4493,12 @@ contains
 
          ! Check if the ray is pointing outwards
          if(nsegment==0.and.surface_point)then
-            if(oktest_ray)write(*,*)'me,iBlock,x_ini,b_ini=', &
+            if(DoTestRay)write(*,*)'me,iBlock,x_ini,b_ini=', &
                  iProc,iBlock,x_ini,b_ini
 
             if(any(x_mid<xmin) .or. any(x_mid>xmax))then
                qface=ray_out_
-               if(oktest_ray)then
+               if(DoTestRay)then
                   write(*,*)'me,iBlock,x_mid=',iProc,iBlock,x_mid
                   write(*,*)'ray points outwards: me,iBlock,dl,xx=', &
                        iProc,iBlock,dl,&
@@ -4525,7 +4516,7 @@ contains
             ! and take ratio relative to dx_opt
             dx_rel=abs(dl)*maxval(abs(b_mid-b_ini))/dx_opt
 
-            if(oktest_ray.and.okdebug)&
+            if(DoTestRay.and.okdebug)&
                  write(*,*)'me,iBlock,x_mid,b_mid,dx_rel=', &
                  iProc,iBlock,x_mid,b_mid,dx_rel
 
@@ -4546,7 +4537,7 @@ contains
                ! New mid point using the reduced dl
                x_mid=x_ini+0.5*dl*b_ini
 
-               if(oktest_ray.and.okdebug)&
+               if(DoTestRay.and.okdebug)&
                     write(*,*)'new decreased dl: me,iBlock,dl=', &
                     iProc,iBlock,dl
             else
@@ -4555,7 +4546,7 @@ contains
 
                   dl_next = sign(min(dl_max,abs(dl)/sqrt(dx_rel)),dl)
 
-                  if(oktest_ray.and.okdebug)&
+                  if(DoTestRay.and.okdebug)&
                        write(*,*)'new increased dl_next: me,iBlock,dl_next=', &
                        iProc,iBlock,dl_next
 
@@ -4570,7 +4561,7 @@ contains
          nsegment=nsegment+1
          l=l+abs(dl)
 
-         if(oktest_ray.and.okdebug)&
+         if(DoTestRay.and.okdebug)&
               write(*,*)'me,iBlock,nsegment,l,x=', &
               iProc,iBlock,nsegment,l,x
 
@@ -4608,7 +4599,7 @@ contains
          ! Check if we have integrated for too long
          if(l>lmax)then
             ! Seems to be a closed loop within a block
-            if(oktest_ray)then
+            if(DoTestRay)then
                write(*,*)'CLOSED LOOP at me,iBlock,ix,iy,iz,x,xx=',&
                     iProc,iBlock,ix,iy,iz,x,&
                     Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x - 1.)
@@ -4620,7 +4611,7 @@ contains
 
       end do
 
-      if(oktest_ray)write(*,*)'Finished follow_fast at me,iBlock,nsegment,qface,x,xx=',&
+      if(DoTestRay)write(*,*)'Finished follow_fast at me,iBlock,nsegment,qface,x,xx=',&
            iProc,iBlock,nsegment,qface,x,&
            Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x - 1.)
 
@@ -4794,7 +4785,7 @@ contains
       ! real coordinates and use analytic mapping.
       ! On return xx contains the final coordinates.
       ! Return true if it was successfully integrated down to rIonosphere,
-      ! return false if the ray exited R_raytrace or too many integration
+      ! return false if the ray exited rTrace or too many integration
       ! steps were done
 
       use ModMain,     ONLY: Time_Simulation
@@ -4873,7 +4864,7 @@ contains
 
       !------------------------------------------------------------------------
 
-      if(oktest_ray)write(*,*)&
+      if(DoTestRay)write(*,*)&
            'assign_ray starting with surface_point, iray, iface=',&
            surface_point,iray,iface
 
@@ -4881,22 +4872,22 @@ contains
       case(ray_out_)
          ! The ray points outward
          qray=OUTRAY
-         if(oktest_ray)write(*,*)'assign_ray finished with qray=OUTRAY'
+         if(DoTestRay)write(*,*)'assign_ray finished with qray=OUTRAY'
          RETURN
       case(ray_loop_)
          ! The ray did not hit the wall of the block
          qray=LOOPRAY
-         if(oktest_ray)write(*,*)'assign_ray finished with qray=LOOPRAY'
+         if(DoTestRay)write(*,*)'assign_ray finished with qray=LOOPRAY'
          RETURN
       case(ray_body_)
          ! The ray hit a body
          qray=BODYRAY
-         if(oktest_ray)write(*,*)'assign_ray finished with qray=BODYRAY'
+         if(DoTestRay)write(*,*)'assign_ray finished with qray=BODYRAY'
          RETURN
       case(ray_iono_)
          ! The ray hit the ionosphere
          qray=x
-         if(oktest_ray)write(*,*)&
+         if(DoTestRay)write(*,*)&
               'assign_ray finished with qray on ionosphere, qray=',qray
          RETURN
       case(1,2)
@@ -4949,7 +4940,7 @@ contains
       weight(3)=d2*e1
       weight(4)=d1*e1
 
-      if(oktest_ray)write(*,*)'weight=',weight
+      if(DoTestRay)write(*,*)'weight=',weight
 
       ! Exclude the starting point if its among the 4 interpolated cells
       if(surface_point)then
@@ -4964,12 +4955,12 @@ contains
             end select
             ! Normalize weights
             weight=weight/sum(weight)
-            if(oktest_ray)write(*,*)'Excluded point: me,iBlock,ix,iy,iz,weight=',&
+            if(DoTestRay)write(*,*)'Excluded point: me,iBlock,ix,iy,iz,weight=',&
                  iProc,iBlock,ix,iy,iz,weight
          end if
       end if
 
-      if(oktest_ray)&
+      if(DoTestRay)&
            write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=',i1,j1,k1,i2,j2,k2,d1,e1
 
       call rayface_interpolate(rayface(:,iray,i1:i2,j1:j2,k1:k2,iBlock),&
@@ -4977,7 +4968,7 @@ contains
 
       qray = qqray
 
-      if(oktest_ray)write(*,*)'assign_ray finished qray=',qray
+      if(DoTestRay)write(*,*)'assign_ray finished qray=',qray
 
     end subroutine assign_ray
     !==========================================================================
@@ -5032,7 +5023,7 @@ contains
        endwhere
     end if
 
-    if(oktest_ray)then
+    if(DoTestRay)then
        write(*,*)'rayface_interpolate'
        write(*,*)'qrayface(1,:)=',qrayface(1,:)
        write(*,*)'qrayface(2,:)=',qrayface(2,:)
@@ -5045,14 +5036,14 @@ contains
     if(all(qrayface(1,:)==OPENRAY))then
        ! all surrounding rays are open
        qray=OPENRAY
-       if(oktest_ray)write(*,*)'rayface_interpolate finished with fully OPENRAY'
+       if(DoTestRay)write(*,*)'rayface_interpolate finished with fully OPENRAY'
        RETURN
     end if
 
     if(all(qrayface(1,:)==NORAY))then
        ! all surrounding rays are unknown
        qray=NORAY
-       if(oktest_ray)write(*,*)'rayface_interpolate finished with fully NORAY'
+       if(DoTestRay)write(*,*)'rayface_interpolate finished with fully NORAY'
        RETURN
     end if
 
@@ -5112,7 +5103,7 @@ contains
        end if
     end if
 
-    if(oktest_ray)then
+    if(DoTestRay)then
        write(*,*)'rayface_interpolate: weight_sum=',weight_sum(1:n)
        write(*,*)'rayface_interpolate finished with qray=',qray
     end if
