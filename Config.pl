@@ -472,6 +472,10 @@ and number of ghost cells to 2:
 
     Config.pl -g=8,8,8,400,100 -ng=2
 
+Set number of blocks as a function of number of processors in Makefile.test
+
+    Config.pl -g=8,8,8,3000/\${NP},1
+
 Show settings for BATSRUS:
 
     Config.pl -s
