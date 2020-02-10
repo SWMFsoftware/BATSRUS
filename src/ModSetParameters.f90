@@ -1523,8 +1523,9 @@ contains
        case("#MINIMUMSOLARWINDTEMP")
           call read_var('SwTminDim', SwTminDim)
 
-       case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", &
-            "#RAYTRACERADIUS", "#IE")
+       case("#TRACE", "#TRACELIMIT", "#TRACERADIUS", "#TRACEEQUATOR", &
+            "#TRACEIE", &
+            "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
        case("#IECOUPLING")
           call read_ie_velocity_param
