@@ -113,8 +113,7 @@ contains
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: set_parameters_magnetogram, &
-         read_magnetogram_file, read_potential_field,     &
-         read_new_magnetogram_file, read_new_potential_field
+         read_magnetogram_file, read_new_magnetogram_file
     use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_corona_heating, &
@@ -426,15 +425,11 @@ contains
           if(UseNewMagnetogram)then
              if(i_line_command("#NEWMAGNETOGRAM") > 0)then
                 call read_new_magnetogram_file(NamePlotDir, iProc, nProc,iComm)
-             elseif(i_line_command("#READNEWPOTENTIALFIELD") > 0)then
-                call read_new_potential_field(NamePlotDir, iProc, nProc, iComm)
              end if
              tMagnetogram = Time_Simulation
           end if
           if(i_line_command("#MAGNETOGRAM") > 0)then
              call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
-          elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
-             call read_potential_field(NamePlotDir, iProc, nProc, iComm)
           end if
        end if
 
@@ -2262,17 +2257,17 @@ contains
 
           ! CORONA SPECIFIC COMMANDS
 
-       case("#MAGNETOGRAM", "#READPOTENTIALFIELD")
+       case("#MAGNETOGRAM")
           call read_var('UseMagnetogram', UseMagnetogram)
           if(UseMagnetogram)&
                call set_parameters_magnetogram(NameCommand)
 
-       case("#NEWMAGNETOGRAM", "#READNEWPOTENTIALFIELD")
+       case("#NEWMAGNETOGRAM")
           call read_var('UseNewMagnetogram', UseNewMagnetogram)
           if(UseNewMagnetogram)&
                call set_parameters_magnetogram(NameCommand)
 
-       case("#SAVEPOTENTIALFIELD", "#B0GRID")
+       case("#B0GRID")
           call set_parameters_magnetogram(NameCommand)
 
        case('#LDEM')
