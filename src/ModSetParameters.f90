@@ -3549,11 +3549,12 @@ contains
 
       ! stop the code if no stereo a/b, earth traj files are found when
       ! using 'sta'/'stb'/'earth' in TypeSatPos_I
-      if (.not.(any(TypeSatPos_I == 'sta') .and. any(NameSat_I == 'sta'))) &
+      write(*,*)'NameSat_I=', NameSat_I, any(NameSat_I == 'sta')
+      if (all(TypeSatPos_I /= 'sta') .and. any(NameSat_I == 'sta')) &
            call stop_mpi(NameSub//' missing stereo A traj file.')
-      if (.not.(any(TypeSatPos_I == 'stb') .and. any(NameSat_I == 'stb'))) &
+      if (all(TypeSatPos_I /= 'stb') .and. any(NameSat_I == 'stb')) &
            call stop_mpi(NameSub//' missing stereo B traj file.')
-      if (.not.(any(TypeSatPos_I == 'earth') .and. any(NameSat_I == 'earth')))&
+      if (all(TypeSatPos_I /= 'earth') .and. any(NameSat_I == 'earth'))&
            call stop_mpi(NameSub//' missing earth traj file.')
 
     end subroutine correct_parameters
