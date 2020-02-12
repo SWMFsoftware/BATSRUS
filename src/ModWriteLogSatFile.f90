@@ -30,7 +30,7 @@ contains
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
-    use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
+    use ModSatelliteFile, ONLY: FilenameSat_I, IsFirstWriteSat_I, &
          iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
     use CON_axes, ONLY: transform_matrix
     use BATL_lib, ONLY: Xyz_DGB, UseTestXyz, maxval_grid, minval_grid
@@ -225,7 +225,7 @@ contains
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
              write(iUnit,'(a)')  &
-                  'Satellite data for Satellite: '//trim(NameSat_I(isat))
+                  'Satellite data for Satellite: '//trim(FilenameSat_I(isat))
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.
           end if
