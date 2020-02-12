@@ -19,6 +19,8 @@ module ModSatelliteFile
   public:: get_satellite_ray ! map field line from satellite ^CFG IF RAYTRACE
   public:: gm_trace_sat      ! map field line from satellite ^CFG IF RAYTRACE
 
+  public:: set_satellite_positions
+
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
 
@@ -29,7 +31,8 @@ module ModSatelliteFile
 
   ! These variables are public for write_logfile only !!! Should be improved
   ! Names and unit numbers for satellite files
-  character(len=50), public:: NameSat_I(MaxSatellite)
+  character(len=50), public:: FilenameSat_I(MaxSatellite)
+  character(len=10), public:: NameSat_I(MaxSatellite)
   integer, public:: iUnitSat_I(MaxSatellite) = -1
   logical, public:: IsFirstWriteSat_I(MaxSatellite) = .true.
 
@@ -112,7 +115,7 @@ contains
 
           ! Satellite inputfile name or the satellite name
           call read_var('NameTrajectoryFile',&
-               NameSat_I(iSat))
+               FilenameSat_I(iSat))
           if(index(StringSatellite,'eqn')>0 &
                .or. index(StringSatellite,'Eqn')>0 .or. &
                index(StringSatellite,'EQN')>0 ) then
@@ -214,21 +217,21 @@ contains
 
     select case(TypeStatus)
     case('open')
-       l1 = index(NameSat_I(iSat), '/', back=.true.) + 1
-       l2 = index(NameSat_I(iSat), '.') - 1
+       l1 = index(FilenameSat_I(iSat), '/', back=.true.) + 1
+       l2 = index(FilenameSat_I(iSat), '.') - 1
        if (l1-1 <= 0) l1 = 1
-       if (l2+1 <= 0) l2 = len_trim(NameSat_I(iSat))
+       if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
 
        if(n_step < 1000000)then
           write(NameFile_I(iSat),'(a,i6.6,a)')trim(NamePlotDir)//&
-               'sat_'//NameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
+               'sat_'//FilenameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
        else
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-               'sat_'//NameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
+               'sat_'//FilenameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
        end if
        if(DoTest) then
           write(*,*) NameSub,': satellitename:', &
-               NameSat_I(iSat), 'status =', TypeStatus
+               FilenameSat_I(iSat), 'status =', TypeStatus
           write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
           write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
        end if
@@ -287,7 +290,7 @@ contains
     if(iProc == 0)then
        SATELLITES1: do iSat=1, nSatellite
           if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES1
-          NameFile = NameSat_I(iSat)
+          NameFile = FilenameSat_I(iSat)
           call open_file(file=NameFile, status="old")
           nPoint = 0
 
@@ -326,7 +329,7 @@ contains
        ! Read file on the root processor
        if (iProc == 0) then
 
-          NameFile = NameSat_I(iSat)
+          NameFile = FilenameSat_I(iSat)
 
           if(lVerbose>0)then
              call write_prefix; write(iUnitOut,*) NameSub, &
@@ -525,7 +528,7 @@ contains
     character(len=*), parameter:: NameSub = 'satellite_trajectory_formula'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    name_string = trim(NameSat_I(iSat))
+    name_string = trim(FilenameSat_I(iSat))
     Xvect(:) = XyzSat_DI(:,iSat)
 
     ! Case should be for a specific satellite.  The trajectories can depend
