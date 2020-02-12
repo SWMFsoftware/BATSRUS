@@ -3535,6 +3535,8 @@ contains
          if (index(FilenameSat_I(iSat), 'stb') > 0 .or.  &
               index(FilenameSat_I(iSat), 'stereob') > 0) &
               NameSat_I(iSat) = 'stb'
+         if (index(FilenameSat_I(iSat), 'earth') > 0)    &
+              NameSat_I(iSat) = 'earth'
       end do
 
       ! stop the code if there are two stereo a/b, earth traj files
