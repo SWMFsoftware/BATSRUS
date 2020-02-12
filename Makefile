@@ -75,7 +75,10 @@ LIB:
 	cd src; $(MAKE) LIB
 	cd srcInterface; $(MAKE) LIB
 
-BATSRUS:
+GITINFO:
+	${SCRIPTDIR}/gitall -r=f > src/show_git_info.h
+
+BATSRUS: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${TIMINGDIR}; $(MAKE) LIB
 	if [[ "${MPILIB}" == *lNOMPI*  ]]; then make NOMPI; fi
@@ -86,7 +89,7 @@ BATSRUS:
 	cd src; $(MAKE) LIB
 	cd src; make BATSRUS
 
-CRASH:
+CRASH: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${TIMINGDIR}; $(MAKE) LIB
 	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
