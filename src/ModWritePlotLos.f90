@@ -83,6 +83,8 @@ contains
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
          IsCartesianGrid, IsCartesian, IsRzGeometry
+    use ModSatelliteFile, ONLY: nSatellite, NameSat_I, XyzSat_DI,  &
+         set_satellite_positions
 
     ! Arguments
 
@@ -161,6 +163,8 @@ contains
     integer :: nTableVar
     real, allocatable :: InterpValues_I(:)
 
+    integer :: iSat, iSatLoop
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
@@ -193,6 +197,8 @@ contains
        FromHgi_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
     end if
 
+    iSat = 0
+
     ! Set file specific parameters
     nPix       = n_pix_r(iFile)
     aOffset    = xOffset(iFile)
@@ -202,6 +208,25 @@ contains
     rOccult    = radius_occult(iFile)
     rOccult2   = rOccult**2
     OffsetAngle= offset_angle(iFile)
+
+    select case(TypeSatPos_I(iFile))
+    case('sta', 'stb', 'earth')
+
+       ! determine the index of the sta/stb satellite file
+       do iSatLoop = 1, nSatellite
+          if ( NameSat_I(iSatLoop) /= TypeSatPos_I(iFile)) CYCLE
+          iSat = iSatLoop
+          exit
+       end do
+
+       ! obtain the current location based on the simulation time
+       call set_satellite_positions(iSat)
+       ObsPos_DI(:, iFile) = XyzSat_DI(:, iSat)
+    case('none')
+       ! do nothing
+    case default
+       call stop_mpi(NameSub//': unknown TypeSatPos: '//TypeSatPos_I(iFile))
+    end select
 
     ! Rotate observation point from HGI system to the current coordinate system
     ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,iFile))
@@ -450,43 +475,39 @@ contains
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
-          if (UseTableGen) then
+          FormatTime = &
+               '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+          call get_date_time(iTime_I)
+          write(TextDateTime0,FormatTime) iStartTime_I
+          write(TextDateTime ,FormatTime) iTime_I
 
-             FormatTime = &
-                  '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-             call get_date_time(iTime_I)
-             write(TextDateTime0,FormatTime) iStartTime_I
-             write(TextDateTime ,FormatTime) iTime_I
+          ! TIMEEVENT
+          write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
 
-             ! TIMEEVENT
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
+          ! TIMEEVENTSTART
+          write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
 
-             ! TIMEEVENTSTART
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
+          ! TIMESECONDSABSOLUTE
+          ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
-             ! TIMESECONDSABSOLUTE
-             ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-             write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
+          ! ITER
+          write(StringTmp,'(i12)')n_step
+          write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
-             ! ITER
-             write(StringTmp,'(i12)')n_step
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
+          ! NAMELOSTABLE
+          if (UseTableGen) write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
 
-             ! NAMELOSTABLE
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
-
-             ! HGIXYZ
-             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-             write(UnitTmp_,'(a,a,a)') &
-                  'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
-
-          endif
+          ! HGIXYZ
+          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+          write(UnitTmp_,'(a,a,a)') &
+               'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
 
           ! Write point values
           do iPix = 1, nPix
@@ -939,8 +960,8 @@ contains
 
       if(UseEuv .or. UseSxr .or. UseTableGen)then
 
-! !! All these log and 10** should be eliminated.
-! !! The general table should be log based, so it does the log internally
+         ! !! All these log and 10** should be eliminated.
+         ! !! The general table should be log based, so it does the log internally
 
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -955,16 +976,16 @@ contains
             Te = State_V(p_)*PePerPtotal/Ne
          end if
 
-! !! So minimum temperature is cTolerance in SI units???
+         ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
-! !! This should not be needed here
+         ! !! This should not be needed here
          LogTe = log10(TeSi)
 
          ! Here calc log base 10 of electron density, the -6 is to convert to CGS
          ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
-! !! Really, cTolerance is the minimum number density in CGS units???
+         ! !! Really, cTolerance is the minimum number density in CGS units???
          Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
          LogNe = log10(Ne)
 
@@ -977,7 +998,7 @@ contains
          ! calculate temperature cutoff to neglect widened transition region
          FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
 
-! !! There should be just one table, not three!!!
+         ! !! There should be just one table, not three!!!
          if (UseEuv) then
             ! now interpolate EUV response values from a lookup table
             if (iTableEUV <=0) &
