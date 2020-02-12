@@ -8,6 +8,7 @@
 *~
 *.speed
 *.protex
+src/show_git_info.h
 
 run*/
 Makefile.conf
