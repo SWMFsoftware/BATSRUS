@@ -946,8 +946,9 @@ contains
              elseif (index(plot_string,'los')>0) then
                 plot_area='los'
                 ! Line of sight vector
-                if(index(plot_string,'ins') < 0 .and.                         &
-                     index(plot_string,'INS') < 0) then
+
+                if(index(plot_string,'ins') == 0 .and.                      &
+                     index(plot_string,'INS') == 0) then
 
                    ! original code witout 'ins' or 'INS'
 
