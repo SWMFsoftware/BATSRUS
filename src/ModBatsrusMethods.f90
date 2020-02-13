@@ -868,7 +868,8 @@ contains
       use ModRestartFile, ONLY: write_restart_files
       use ModSatelliteFile, ONLY: &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
-           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
+           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
+           DoTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
@@ -1006,27 +1007,42 @@ contains
          iSat = iFile - Satellite_
          call timing_start('save_satellite')
          if(iProc==0)call set_satellite_file_status(iSat,'append')
-         !
-         ! Distinguish between time_accurate and .not. time_accurate:
-         !
 
-         if (time_accurate) then
-            call set_satellite_flags(iSat)
-            ! write one line for a single trajectory point
-            call write_logfile(iSat,ifile)
-         else
-            tSimulationBackup = Time_Simulation    ! Save ...
-            Time_Simulation = TimeSatStart_I(iSat)
-            do while (Time_Simulation <= TimeSatEnd_I(iSat))
+         if (DoTrajTimeRange_I(iSat)) then
+            tSimulationBackup = Time_Simulation
+            Time_Simulation = StartTimeTraj_I(iSat)
+            do while (Time_Simulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
                call write_logfile(iSat,ifile)
-               Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
+               Time_Simulation = Time_Simulation + DtTraj_I(iSat)
             end do
             Time_Simulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
             if(iProc==0)call set_satellite_file_status(iSat,'close')
+         else
+            !
+            ! Distinguish between time_accurate and .not. time_accurate:
+            !
+            if (time_accurate) then
+               call set_satellite_flags(iSat)
+               ! write one line for a single trajectory point
+               call write_logfile(iSat,ifile)
+            else
+               tSimulationBackup = Time_Simulation    ! Save ...
+               Time_Simulation = TimeSatStart_I(iSat)
+               do while (Time_Simulation <= TimeSatEnd_I(iSat))
+                  call set_satellite_flags(iSat)
+                  ! write for ALL the points of trajectory cut
+                  call write_logfile(iSat,ifile)
+                  Time_Simulation = Time_Simulation+dt_output(iSat+Satellite_)
+               end do
+               Time_Simulation = tSimulationBackup    ! ... Restore
+               icurrent_satellite_position(iSat) = 1
+               if(iProc==0)call set_satellite_file_status(iSat,'close')
+            end if
          end if
+
          call timing_stop('save_satellite')
 
       elseif(ifile == magfile_) then
