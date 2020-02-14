@@ -7,6 +7,8 @@ module ModSatelliteFile
        test_start, test_stop, lVerbose, iProc, iComm
 !  use ModUtilities, ONLY: norm2
   use ModUtilities, ONLY: open_file, close_file
+  use ModMain, ONLY: StartTime
+  use ModTimeConvert,   ONLY: time_int_to_real
 
   implicit none
   save
@@ -61,6 +63,13 @@ module ModSatelliteFile
 
   character(len=3)  :: TypeSatCoord_I(MaxSatellite)
 
+  real, public   :: StartTimeTraj_I(MaxSatellite), EndTimeTraj_I(MaxSatellite)
+  real, public   :: DtTraj_I(MaxSatellite)
+  logical,public :: DoTrajTimeRange_I(MaxSatellite) = .false.
+  character(len=50) :: StringStartTimeTraj, StringEndTimeTraj, StringDtTraj
+  integer :: iTmp, iReadError
+  integer :: iStartTimeTraj_I(7), iEndTimeTraj_I(7)
+
   ! Time limits (in seconds) for satellite trajectory cut
   ! for .not. time_accurate session.
   ! If a steady-state simulation is run for a specific moment of time
@@ -94,6 +103,11 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#SATELLITE")
+       ! reset values
+       StartTimeTraj_I  = 0.
+       EndTimeTraj_I    = 0.
+       DtTraj_I         = 0.
+
        call read_var('nSatellite', nSatellite)
        if(nSatellite <= 0) RETURN
        if(iProc==0) call check_dir(NamePlotDir)
@@ -122,6 +136,178 @@ contains
              UseSatFile_I(iSat) = .false.
           else
              UseSatFile_I(iSat) = .true.
+          end if
+
+          ! time range for the satellite
+          if(index(StringSatellite,'traj')>0 ) then
+             DoTrajTimeRange_I(iSat) = .true.
+
+             ! reset values
+             iStartTimeTraj_I = 0
+             iEndTimeTraj_I   = 0
+
+             call read_var('StringStartTimeTraj',StringStartTimeTraj)
+             call read_var('StringEndTimeTraj',  StringEndTimeTraj)
+             call read_var('StringDtTraj',       StringDtTraj)
+
+             ! for StartTimeTraj
+             if (index(StringStartTimeTraj,'T') > 0) then
+                ! UTC time format
+                read(StringStartTimeTraj, '(i4,1x,5(i2,1x),i3)',          &
+                     iostat=iReadError) iStartTimeTraj_I
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                ! convert the UTC time to a real number
+                call time_int_to_real(iStartTimeTraj_I, StartTimeTraj_I(iSat))
+
+                ! StartTimeTraj is with respect to StartTime
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat) - StartTime
+
+             else if (index(StringStartTimeTraj, 'd') > 0) then
+                iTmp = index(StringStartTimeTraj,'d')
+                read(StringStartTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     StartTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat)*3600*24
+             else if (index(StringStartTimeTraj, 'h') > 0) then
+                iTmp = index(StringStartTimeTraj,'h')
+                read(StringStartTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     StartTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat)*3600
+             else if (index(StringStartTimeTraj, 'm') > 0) then
+                iTmp = index(StringStartTimeTraj,'m')
+                read(StringStartTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     StartTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat)*60
+             else if (index(StringStartTimeTraj, 's') > 0) then
+                iTmp = index(StringStartTimeTraj,'s')
+                read(StringStartTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     StartTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat)
+             else
+                ! without any chars, in secs
+                read(StringStartTimeTraj, *, iostat=iReadError)           &
+                     StartTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringStartTimeTraj')
+
+                StartTimeTraj_I(iSat) = StartTimeTraj_I(iSat)
+             end if
+
+             ! for EndTimeTraj
+             if (index(StringEndTimeTraj,'T') > 0) then
+                read(StringEndTimeTraj, '(i4,1x,5(i2,1x),i3)',           &
+                     iostat=iReadError) iEndTimeTraj_I
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+
+                ! convert the UTC time to a real number
+                call time_int_to_real(iEndTimeTraj_I, EndTimeTraj_I(iSat))
+
+                ! EndTimeTraj_I is with respect to StartTime
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat) - StartTime
+
+             else if (index(StringEndTimeTraj, 'd') > 0) then
+                iTmp = index(StringEndTimeTraj,'d')
+                read(StringEndTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     EndTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+                
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat)*3600*24
+             else if (index(StringEndTimeTraj, 'h') > 0) then
+                iTmp = index(StringEndTimeTraj,'h')
+                read(StringEndTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     EndTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat)*3600
+             else if (index(StringEndTimeTraj, 'm') > 0) then
+                iTmp = index(StringEndTimeTraj,'m')
+                read(StringEndTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     EndTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat)*60
+             else if (index(StringEndTimeTraj, 's') > 0) then
+                iTmp = index(StringEndTimeTraj,'s')
+                read(StringEndTimeTraj(1:iTmp-1), *, iostat=iReadError) &
+                     EndTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat)
+             else
+                ! without any chars, in secs
+                read(StringEndTimeTraj, *, iostat=iReadError)          &
+                     EndTimeTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringEndTimeTraj')
+
+                EndTimeTraj_I(iSat) = EndTimeTraj_I(iSat)
+             end if
+
+             ! for DtTraj_I(iSat)
+             if (index(StringDtTraj,'d') > 0) then
+                iTmp = index(StringDtTraj,'d')
+                read(StringDtTraj(1:iTmp-1),*,iostat=iReadError) DtTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringDtTraj')
+
+                DtTraj_I(iSat) = DtTraj_I(iSat)*3600*24
+             else if (index(StringDtTraj, 'h') > 0) then
+                iTmp = index(StringDtTraj,'h')
+                read(StringDtTraj(1:iTmp-1),*,iostat=iReadError) DtTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringDtTraj')
+
+                DtTraj_I(iSat) = DtTraj_I(iSat)*3600
+             else if (index(StringDtTraj, 'm') > 0) then
+                iTmp = index(StringDtTraj,'m')
+                read(StringDtTraj(1:iTmp-1),*,iostat=iReadError) DtTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringDtTraj')
+
+                DtTraj_I(iSat) = DtTraj_I(iSat)*60
+             else if (index(StringDtTraj, 's') > 0) then
+                iTmp = index(StringDtTraj,'s')
+                read(StringDtTraj(1:iTmp-1),*,iostat=iReadError) DtTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringDtTraj')
+
+                DtTraj_I(iSat) = DtTraj_I(iSat)
+             else
+                ! witout any character in secs
+                read(StringDtTraj,*,iostat=iReadError) DtTraj_I(iSat)
+                if (iReadError /= 0) &
+                     call stop_mpi(NameSub// ': correct StringDtTraj')
+
+                DtTraj_I(iSat) = DtTraj_I(iSat)
+             end if
+
+             ! EndTimeTraj should not be smaller then StartTimeTraj
+             if (EndTimeTraj_I(iSat) < StartTimeTraj_I(iSat)) then
+                write(*,*) ' StartTimeTraj_I =', StartTimeTraj_I(iSat)
+                write(*,*) ' EndTimeTraj_I   =', EndTimeTraj_I(iSat)
+
+                call stop_mpi(NameSub //                             &
+                     ': StringEndTimeTraj < StringStartTimeTraj, '// &
+                     'correct #SATELLITE')
+             end if
           end if
 
           ! Satellite variables
@@ -186,8 +372,8 @@ contains
           if (index(StringSatellite,'HGR') > 0) TypeCoordPlot_I(iFile) = 'HGR'
           if (index(StringSatellite,'HGI') > 0) TypeCoordPlot_I(iFile) = 'HGI'
           if (index(StringSatellite,'HGC') > 0) TypeCoordPlot_I(iFile) = 'HGC'
-
        end do
+
     case('#STEADYSTATESATELLITE')
        do iSat = 1, nSatellite
           call read_var('SatelliteTimeStart', TimeSatStart_I(iSat))
