@@ -3454,11 +3454,19 @@ The default is DoSaveLogFile false.
 			if="$NameSatelliteVar =~ /\bvar\b/i" />
 	</for>
 #SATELLITE
-2                       nSatellite
+3                       nSatellite
 MHD ray                 StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
+VAR traj                StringSatellite
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite1.dat          NameTrajectoryFile
+2011-02-01T00:00:00	StringStartTimeTraj ! Read if StringSatellite contains 'traj'
+2011-02-10T00:00:00	StringEndTimeTraj   ! Read if StringSatellite contains 'traj'
+1h			StringDtTraj	    ! Read if StringSatellite contains 'traj'
+rho p ux uy uz
 VAR step date SMG       StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
@@ -3477,7 +3485,7 @@ The StringSatellite can contain the following parts in arbitrary order
 SatelliteVar   = 'mhd', 'ful' or 'var' (normalized units)
                  'MHD', 'FUL' or 'VAR' (I/O units)
 NameCoord      = 'GEO', 'GSE', 'GSM', 'MAG', 'SMG', 'HGR', 'HGI' or 'HGC'
-OptionalVar    = 'ray', 'none', 'step', 'time', and/or 'date'
+OptionalVar    = 'ray', 'none', 'step', 'time', 'traj', and/or 'date'
 \end{verbatim}
 The SatelliteVar part is required and determines the list
 of variables to be saved along the satellite trajectory.
@@ -3523,6 +3531,7 @@ time information. The value 'none' means that no time information is saved.
  date  - date-time as 7 integers:  year month day hour minute second millisecond,
  time  - simulation time
  ray   - fieldline tracing variables: theta1 phi1 theta2 phi2 status
+ traj  - extract the information (MHD/VAR) along the trajectory file for the seleced time range
 \end{verbatim}
 More than one OptionalVar strings can be listed. They can be put together in any
 combination. The default value for OptionalVar is 'step date'.\\
@@ -3570,6 +3579,25 @@ After the #START line the data lines contain
 the date-time information (year, month, day, hour, minute, second, millisecond)
 and the x, y and z coordinates in normalized units
 (typically planetary or solar radius, see the #NORMALIZATION command).
+
+If the StringSatellite contains 'traj', then StringStartTimeTraj, StringEndTimeTraj
+and StringDtTraj need to be provided followed by the NameTrajectoryFile. This alows
+writing the information along the trajectory file for a given time range, both in
+time accurate and steady state. 
+StringStartTimeTraj and StringEndTimeTraj determine the time range of the output 
+satellite file and accept the following forms of string:
+\begin{verbatim}
+ A fixed format of YYYY-MM-DDTHH:MM:SS:MSC (single digit need to fill 0 ahead)
+ Any number ending with 'd'/'h'/'m'/'s', in which case the time is with respect to
+            #STARTTIME. For example, 1h here means StartTime + 1h.
+ Any number (in which case it is assumed to be in seconds), in which case the time
+     	    is with respect to #STARTTIME.
+\end{verbatim}
+StringDtTraj can accept the following forms:
+\begin{verbatim}
+ Any number ending with 'd'/'h'/'m'/'s'
+ Any number (in which case it is assumed to be in seconds)
+\end{verbatim}
 
 The default is nSatellite=0, i.e. no satellite data is saved.
 </command>
