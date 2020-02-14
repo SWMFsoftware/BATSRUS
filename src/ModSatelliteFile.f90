@@ -374,15 +374,6 @@ contains
           if (index(StringSatellite,'HGC') > 0) TypeCoordPlot_I(iFile) = 'HGC'
        end do
 
-       do iSat = 1, nSatellite
-          if (DoTrajTimeRange_I(iSat)) then
-             write(*,*) ' dn_output =', dn_output(Satellite_ + iSat)
-             write(*,*) ' dt_output =', dt_output(Satellite_ + iSat)
-             write(*,*) ' StartTimeTraj_I =', StartTimeTraj_I(iSat)
-             write(*,*) ' EndTimeTraj_I   =', EndTimeTraj_I(iSat)
-             write(*,*) ' DtTraj_I        =', DtTraj_I(iSat)
-          end if
-       end do
     case('#STEADYSTATESATELLITE')
        do iSat = 1, nSatellite
           call read_var('SatelliteTimeStart', TimeSatStart_I(iSat))
