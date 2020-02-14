@@ -4434,7 +4434,7 @@ Stereo B:    stb:euvi, stb:cor1, stb:cor2
 SDO:   	     sdo:AIA
 Hinode:	     hinode:xrt
 SOHO:	     SOHO:c2, SOHO:c3
-\end{verbatim} \\
+\end{verbatim}
 
 \noindent
 The possible values for NameVars for other plot areas
