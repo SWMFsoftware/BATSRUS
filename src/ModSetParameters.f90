@@ -2006,10 +2006,14 @@ contains
           call read_var('zMin',z1)
           call read_var('zMax',z2)
 
-       case("#GRIDBLOCK")
+       case("#GRIDBLOCK", "#GRIDBLOCKALL")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('MaxBlock',     MaxBlock)
           call read_var('MaxBlockImpl', MaxImplblk)
+          if(NameCommand == "#GRIDBLOCKALL")then
+             MaxBlock   = 1 + (MaxBlock-1)/nProc
+             MaxImplblk = 1 + (MaxImplblk-1)/nProc
+          end if
 
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
