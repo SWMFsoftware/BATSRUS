@@ -142,15 +142,6 @@ contains
           if(index(StringSatellite,'traj')>0 ) then
              DoTrajTimeRange_I(iSat) = .true.
 
-             ! if DoTrajTimeRange, dt is determined by DtTraj
-             ! Set dt_output = -1 (which is used in ModBatsrusMethods) 
-             ! so that the frequency of saving traj files will only
-             ! be determined by dn_output.
-             dt_output(iFile) = -1.0
-
-             if (dn_output(iFile) <=0) call stop_mpi(NameSub// &
-                  ': dn_output should be > 0')
-
              ! reset values
              iStartTimeTraj_I = 0
              iEndTimeTraj_I   = 0
