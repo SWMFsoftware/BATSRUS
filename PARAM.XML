@@ -1795,7 +1795,7 @@ component.
 !!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="GRIDBLOCK" if="$_IsFirstSession">
+<command name="GRIDBLOCK" alias="GRIDBLOCKALL" if="$_IsFirstSession">
   <parameter name="MaxBlock" type="integer" min="1" default="400"/>
   <parameter name="MaxBlockImpl" type="integer"
 	     min="1" max="$MaxBlock" default="1"/>
@@ -1804,16 +1804,21 @@ component.
 400		MaxBlock
 100		MaxBlockImpl
 
+#GRIDBLOCKALL
+4000            MaxBlock on all processors
+1000            MaxBlockImpl on all processors
+
 This command can be used in the first session of BATSRUS only.
 
-Set the maximum number of grid blocks per processor and the maximum number
-of blocks advanced by the part-implicit method (see #IMPLICIT). It is a good
+Set the maximum number of grid blocks and the maximum number
+of blocks advanced by the part-implicit method (see #IMPLICIT)
+either per processor (#MAXBLOCK) or in total (#MAXBLOCKALL). It is a good
 idea to set these values to be larger but close to the actual number of blocks
 used during the run to minimize memory use and improve performance.
 Note that MaxBlockImpl cannot be more than MaxBlock.
 
-The default values are either the original values shown above or set by
-the Config.pl -g=.... configuration.
+The default values are either the original values shown above in the
+MAXBLOCK example or set by the Config.pl -g=.... configuration.
 </command>
 
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
