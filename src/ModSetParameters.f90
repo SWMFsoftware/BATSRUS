@@ -1016,7 +1016,7 @@ contains
                       dn_output(iFileInstrument) = dn_output(iFile)
                       dt_output(iFileInstrument) = dt_output(iFile)
                       plot_type(iFileInstrument) = plot_area//'_'//          &
-                           trim(StringInstrument_I(iInstrument))
+                           trim(NameSat)//'_'//trim(NameInstrument)
                       plot_dx(:,iFileInstrument) = -1
 
                       ! default values, which may be overwritten below
