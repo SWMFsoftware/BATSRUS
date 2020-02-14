@@ -222,6 +222,13 @@ contains
        ! obtain the current location based on the simulation time
        call set_satellite_positions(iSat)
        ObsPos_DI(:, iFile) = XyzSat_DI(:, iSat)
+
+       ! XyzSat_DI is in the current coordinate system, need to convert
+       ! back to HGI
+       ObsPos_DI(:, iFile) = matmul(                                   &
+            transform_matrix(Time_Simulation, TypeCoordSystem, 'HGI'), &
+            ObsPos_DI(:,iFile) )
+
     case('none')
        ! do nothing
     case default

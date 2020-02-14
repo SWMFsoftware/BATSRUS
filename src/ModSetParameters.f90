@@ -946,8 +946,9 @@ contains
              elseif (index(plot_string,'los')>0) then
                 plot_area='los'
                 ! Line of sight vector
-                if(index(plot_string,'ins') < 0 .and.                         &
-                     index(plot_string,'INS') < 0) then
+
+                if(index(plot_string,'ins') == 0 .and.                      &
+                     index(plot_string,'INS') == 0) then
 
                    ! original code witout 'ins' or 'INS'
 
@@ -1015,7 +1016,7 @@ contains
                       dn_output(iFileInstrument) = dn_output(iFile)
                       dt_output(iFileInstrument) = dt_output(iFile)
                       plot_type(iFileInstrument) = plot_area//'_'//          &
-                           trim(StringInstrument_I(iInstrument))
+                           trim(NameSat)//'_'//trim(NameInstrument)
                       plot_dx(:,iFileInstrument) = -1
 
                       ! default values, which may be overwritten below
@@ -1372,7 +1373,6 @@ contains
           end do
 
           ! write out the change if ins/INS is found
-          write(*,*) (index(plot_string,'INS')>0.or.index(plot_string,'ins')>0)
           if (nPlotFile > nPlotFileRead .and. iProc == 0) then 
              write(*,*) ''
              write(*,*) '----------------------------------------'
@@ -3553,12 +3553,11 @@ contains
 
       ! stop the code if no stereo a/b, earth traj files are found when
       ! using 'sta'/'stb'/'earth' in TypeSatPos_I
-      write(*,*)'NameSat_I=', NameSat_I, any(NameSat_I == 'sta')
-      if (all(TypeSatPos_I /= 'sta') .and. any(NameSat_I == 'sta')) &
+      if (.not.all(TypeSatPos_I /= 'sta') .and. all(NameSat_I /= 'sta')) &
            call stop_mpi(NameSub//' missing stereo A traj file.')
-      if (all(TypeSatPos_I /= 'stb') .and. any(NameSat_I == 'stb')) &
+      if (.not.all(TypeSatPos_I /= 'stb') .and. all(NameSat_I /= 'stb')) &
            call stop_mpi(NameSub//' missing stereo B traj file.')
-      if (all(TypeSatPos_I /= 'earth') .and. any(NameSat_I == 'earth'))&
+      if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
 
     end subroutine correct_parameters

@@ -3459,11 +3459,19 @@ The default is DoSaveLogFile false.
 			if="$NameSatelliteVar =~ /\bvar\b/i" />
 	</for>
 #SATELLITE
-2                       nSatellite
+3                       nSatellite
 MHD ray                 StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
+VAR traj                StringSatellite
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite1.dat          NameTrajectoryFile
+2011-02-01T00:00:00	StringStartTimeTraj ! Read if StringSatellite contains 'traj'
+2011-02-10T00:00:00	StringEndTimeTraj   ! Read if StringSatellite contains 'traj'
+1h			StringDtTraj	    ! Read if StringSatellite contains 'traj'
+rho p ux uy uz
 VAR step date SMG       StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
@@ -3482,7 +3490,7 @@ The StringSatellite can contain the following parts in arbitrary order
 SatelliteVar   = 'mhd', 'ful' or 'var' (normalized units)
                  'MHD', 'FUL' or 'VAR' (I/O units)
 NameCoord      = 'GEO', 'GSE', 'GSM', 'MAG', 'SMG', 'HGR', 'HGI' or 'HGC'
-OptionalVar    = 'ray', 'none', 'step', 'time', and/or 'date'
+OptionalVar    = 'ray', 'none', 'step', 'time', 'traj', and/or 'date'
 \end{verbatim}
 The SatelliteVar part is required and determines the list
 of variables to be saved along the satellite trajectory.
@@ -3528,6 +3536,7 @@ time information. The value 'none' means that no time information is saved.
  date  - date-time as 7 integers:  year month day hour minute second millisecond,
  time  - simulation time
  ray   - fieldline tracing variables: theta1 phi1 theta2 phi2 status
+ traj  - extract the information (MHD/VAR) along the trajectory file for the seleced time range
 \end{verbatim}
 More than one OptionalVar strings can be listed. They can be put together in any
 combination. The default value for OptionalVar is 'step date'.\\
@@ -3575,6 +3584,25 @@ After the #START line the data lines contain
 the date-time information (year, month, day, hour, minute, second, millisecond)
 and the x, y and z coordinates in normalized units
 (typically planetary or solar radius, see the #NORMALIZATION command).
+
+If the StringSatellite contains 'traj', then StringStartTimeTraj, StringEndTimeTraj
+and StringDtTraj need to be provided followed by the NameTrajectoryFile. This alows
+writing the information along the trajectory file for a given time range, both in
+time accurate and steady state. 
+StringStartTimeTraj and StringEndTimeTraj determine the time range of the output 
+satellite file and accept the following forms of string:
+\begin{verbatim}
+ A fixed format of YYYY-MM-DDTHH:MM:SS:MSC (single digit need to fill 0 ahead)
+ Any number ending with 'd'/'h'/'m'/'s', in which case the time is with respect to
+            #STARTTIME. For example, 1h here means StartTime + 1h.
+ Any number (in which case it is assumed to be in seconds), in which case the time
+     	    is with respect to #STARTTIME.
+\end{verbatim}
+StringDtTraj can accept the following forms:
+\begin{verbatim}
+ Any number ending with 'd'/'h'/'m'/'s'
+ Any number (in which case it is assumed to be in seconds)
+\end{verbatim}
 
 The default is nSatellite=0, i.e. no satellite data is saved.
 </command>
@@ -4006,7 +4034,7 @@ No magnetometer grid file is saved by default.
 		</if>
 	</for>
 #SAVEPLOT
-17			nPlotFile
+18			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -4161,6 +4189,10 @@ rfr tec rwi             StringPlot
 4.0			ySizeImage
 100			nPixX
 100			nPixY
+los ins idl_real4       StringPlot ! line of sight plot using table
+-1			DnSavePlot
+100.			DtSavePlot
+soho:c3 sta:euvi stb:cor2	StringsInstrument
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US.
@@ -4273,6 +4305,8 @@ values or as non-dimensional values:
          pars:
  'nul' - vars:                                                (PlotArea='lcb' only)
          pars:
+ 'ins' - vars: determined by the corresponding instrument, see line-of-sight below
+       - pars: determined by the corresponding instrument, see line-of-sight below
 \end{verbatim}
 Depending on StringPlot, the following parameters are also read
 from the parameter file in this order:
@@ -4409,7 +4443,31 @@ SC/Param/los_Sxt.dat    NameFile
 ascii                   TypeFile
 \end{verbatim}
 The possible values for NameVars with PlotArea 'los'
-are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
+are listed in subroutine set_plotvar_los in write_plot_los.f90.
+
+The line-of-site (PlotArea 'los') plots have an option to use 'ins'/'INS',
+which will fill the ObsPosX, ObsPosY, ObsPosZ, rSizeImage, xOffset, yOffset,
+rOccult, MuLimbDarkening, nPix for SOME supported instruemts. An example is:
+
+\begin{verbatim}
+los ins idl_real4       StringPlot ! line of sight plot using table
+-1			DnSavePlot
+100.			DtSavePlot
+soho:c3 sta:euvi stb:cor2	StringsInstrument
+\end{verbatim}
+
+which is treated as ONE plot file in #SAVEPLOT, and the code would count
+how many instruments and expand the number of plot files after reading 
+StringsInstrument. The StringsInstrument can contain multiple strings 
+(maximum 200 characters). The supported combinations are:
+
+\begin{verbatim}
+Stereo A:    sta:euvi, sta:cor1, sta:cor2
+Stereo B:    stb:euvi, stb:cor1, stb:cor2
+SDO:   	     sdo:AIA
+Hinode:	     hinode:xrt
+SOHO:	     SOHO:c2, SOHO:c3
+\end{verbatim}
 
 \noindent
 The possible values for NameVars for other plot areas
