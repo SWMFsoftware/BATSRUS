@@ -8,6 +8,15 @@
 *~
 *.speed
 *.protex
+*.aux
+*.dvi
+*.toc
+*.xmltex
+Doc/Tex/*.log
+Doc/USERMANUAL.pdf 
+Doc/DESIGN.pdf
+Doc/STANDARDS.pdf
+
 src/show_git_info.h
 
 run*/
