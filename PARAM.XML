@@ -4462,7 +4462,7 @@ StringsInstrument. The StringsInstrument can contain multiple strings
 \begin{verbatim}
 Stereo A:    sta:euvi, sta:cor1, sta:cor2
 Stereo B:    stb:euvi, stb:cor1, stb:cor2
-SDO:   	     sdo:AIA
+SDO:   	     sdo:aia
 Hinode:	     hinode:xrt
 SOHO:	     SOHO:c2, SOHO:c3
 \end{verbatim}
