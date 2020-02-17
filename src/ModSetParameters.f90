@@ -989,6 +989,10 @@ contains
                 else
                    ! if 'ins' or 'INS' exists
                    call read_var('StringsInstrument',  StringsInstrument)
+
+                   ! set to lower case so that it is case insensitive
+                   call lower_case(StringsInstrument)
+
                    call split_string(StringsInstrument, StringInstrument_I,   &
                         nInstrument)
 
