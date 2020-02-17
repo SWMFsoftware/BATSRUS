@@ -24,6 +24,9 @@ Param/TITAN/Grid
 3			nLevelArea
 initial			NameArea
 
+#GRIDBLOCKALL
+700			MaxBlock
+1			MaxBlockImpl
 
 ! These densities are overwritten by the Titan user module
 #BODY

@@ -1,6 +1,3 @@
-#ECHO
-T                       DoEcho
-
 #NORMALIZATION
 SOLARWIND
 
@@ -23,6 +20,10 @@ Param/TITAN/Grid
 #GRIDLEVEL
 3			nLevelArea
 initial			NameArea
+
+#GRIDBLOCKALL
+700			MaxBlock
+1			MaxBlockImpl
 
 #BODY
 T                       body1
