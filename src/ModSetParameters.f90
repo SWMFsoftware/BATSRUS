@@ -2015,6 +2015,19 @@ contains
              MaxImplblk = 1 + (MaxImplblk-1)/nProc
           end if
 
+       case("#CHECKGRIDSIZE")
+          if(.not.is_first_session())CYCLE READPARAM
+          call read_var('nI', nIJKRead_D(1))
+          call read_var('nJ', nIJKRead_D(2))
+          call read_var('nK', nIJKRead_D(3))
+          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
+             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
+             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
+          end if
+          call read_var('MinBlockAll', MinBlockAll)
+          ! Set MaxBlock large enough. Add 1 extra block for possible load balancing
+          MaxBlock = max(MaxBlock, 2 + (MinBlockAll-1)/nProc)
+
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('NameUserModule',NameUserModuleRead)
@@ -2026,22 +2039,6 @@ contains
                   ' WARNING: code is compiled with user module ', &
                   NameUserModule,' version',VersionUserModule
              if(UseStrict)call stop_mpi('Select the correct user module!')
-          end if
-
-       case("#CHECKGRIDSIZE")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nI',nIJKRead_D(1))
-          call read_var('nJ',nIJKRead_D(2))
-          call read_var('nK',nIJKRead_D(3))
-          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
-             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
-             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
-          end if
-          call read_var('MinBlockALL',MinBlockAll)
-          if(MinBlockAll > MaxBlock*nProc .and. iProc==0)then
-             write(*,*)'MaxBlock*nProc=', MaxBlock*nProc
-             call stop_mpi('Use more processors'//&
-                  ' or increase MaxBlock with Config.pl -g and recompile!')
           end if
 
        case("#GAMMA")
