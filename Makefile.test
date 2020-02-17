@@ -917,7 +917,7 @@ test_titan_start:
 	$(MAKE) test_titan_check
 
 test_titan_compile:
-	./Config.pl ${OPENMP} -u=Titan -e=MhdTitan -g=6,6,6,1000,200
+	./Config.pl ${OPENMP} -u=Titan -e=MhdTitan -g=6,6,6,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
