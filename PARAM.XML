@@ -12,10 +12,6 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
 <set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
 
-<!-- Set max for total number of blocks if both _nProc and MaxBlock are set -->
-<set name="MaxBlockALL" type="integer"
-        value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
-
 <set name="NameComp"          type="string" value="$_NameComp"/>
 <set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
 <set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
@@ -854,7 +850,7 @@ The #PRECISION command may also be used to enforce a certain precision.
 	<parameter name="nK" type="integer" default="8"
 		min="$_GridSize[2]" max="$_GridSize[2]" />
 	<parameter name="MinBlockALL" type="integer" default="4000"
-		min="1" max="$MaxBlockALL" />
+		min="1" />
 
 #CHECKGRIDSIZE
        4                        nI
@@ -862,10 +858,12 @@ The #PRECISION command may also be used to enforce a certain precision.
        4                        nK
      576                        MinBlockALL
 
-Checks block size and number of blocks. Stops with an error message,
-if nI, nJ, or nK differ from those set in ModSize.
-Also stops if number_of_blocks exceeds nBLK*numprocs, where nBLK
-is defined in ModSize and numprocs is the number of processors.
+Checks block size and sets the number of blocks if necessary. 
+Stops with an error message if nI, nJ, or nK differ from those set in ModSize.
+If MinBlockAll/nProc is larger than MaxBlock set by Config.pl -g, 
+then increase it such that the grid will fit into memory with one 
+extra block on each processor. This should be sufficient if no AMR is
+performed.
 This command is used in the restart headerfile to check consistency,
 and it is also useful to check if the executable is consistent with the
 requirements of the problem described in the PARAM.in file.
@@ -1798,7 +1796,7 @@ component.
 <command name="GRIDBLOCK" alias="GRIDBLOCKALL" if="$_IsFirstSession">
   <parameter name="MaxBlock" type="integer" min="1" default="400"/>
   <parameter name="MaxBlockImpl" type="integer"
-	     min="1" max="$MaxBlock" default="1"/>
+	     min="1" default="1"/>
 
 #GRIDBLOCK
 400		MaxBlock
