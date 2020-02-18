@@ -988,10 +988,8 @@ contains
                         call read_var('NameLosTable',NameLosTable(iFile))
                 else
                    ! if 'ins' or 'INS' exists
-                   call read_var('StringsInstrument',  StringsInstrument)
-
-                   ! set to lower case so that it is case insensitive
-                   call lower_case(StringsInstrument)
+                   call read_var('StringsInstrument',  StringsInstrument, &
+                        IsLowerCase=.true.)
 
                    call split_string(StringsInstrument, StringInstrument_I,   &
                         nInstrument)
