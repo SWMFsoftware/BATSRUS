@@ -6,48 +6,48 @@
 test: 
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum)
-	-@($(MAKE) test_fluxemergence)
-	-@($(MAKE) test_shocktube)
-	-@($(MAKE) test_shockramp)
+	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
+	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
+	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
 	./Config.pl -ng=2
-	-@($(MAKE) test_partsteady)
-	-@($(MAKE) test_hallmhd)
-	-@($(MAKE) test_twofluidmhd)
-	-@($(MAKE) test_multifluid)
-	-@($(MAKE) test_multiion)
-	-@($(MAKE) test_mhdions)
-	-@($(MAKE) test_mhdnoncons)
-	-@($(MAKE) test_eosgodunov)
+	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
+	-@($(MAKE) test_hallmhd TESTDIR=run_test_hallmhd)
+	-@($(MAKE) test_twofluidmhd TESTDIR=run_test_twofluidmhd)
+	-@($(MAKE) test_multifluid TESTDIR=run_test_multifluid)
+	-@($(MAKE) test_multiion TESTDIR=run_test_multiion)
+	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
+	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
+	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
 	./Config.pl -nohdf5
-	-@($(MAKE) test_laserpackage)
-	-@($(MAKE) test_graydiffusion)
-	-@($(MAKE) test_viscosity)
-	-@($(MAKE) test_corona)
-	-@($(MAKE) test_coronasph)
-	-@($(MAKE) test_awsomfluids)		
-	-@($(MAKE) test_chromo)
-	-@($(MAKE) test_outerhelio)
-	-@($(MAKE) test_outerheliopui)
-	-@($(MAKE) test_earthsph)
-	-@($(MAKE) test_2bodyplot)
-	-@($(MAKE) test_titan)
-	-@($(MAKE) test_mars)
-	-@($(MAKE) test_marsfluids)
-	-@($(MAKE) test_venus)
-	-@($(MAKE) test_mercurysph)
-	-@($(MAKE) test_ganymede)
-	-@($(MAKE) test_saturn)
-	-@($(MAKE) test_comet)
-	-@($(MAKE) test_cometfluids)
-	-@($(MAKE) test_cometCGhd)
-	-@($(MAKE) test_cometCGfluids)
-	-@($(MAKE) test_europa2fluidspe)
-	-@($(MAKE) test_europa3fluidspe)
-	-@($(MAKE) test_magnetometer)
-	-@($(MAKE) test_anisotropic)
-	-@($(MAKE) test_region2d)
-	-@($(MAKE) test_fivemoment)
-	-@($(MAKE) test_func)
+	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
+	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
+	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
+	-@($(MAKE) test_corona TESTDIR=run_test_corona)
+	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
+	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)		
+	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
+	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
+	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
+	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
+	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
+	-@($(MAKE) test_titan TESTDIR=run_test_titan)
+	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
+	-@($(MAKE) test_venus TESTDIR=run_test_venus)
+	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
+	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
+	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
+	-@($(MAKE) test_comet TESTDIR=run_test_comet)
+	-@($(MAKE) test_cometfluids TESTDIR=run_test_cometfluids)
+	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
+	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
+	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
+	-@($(MAKE) test_europa3fluidspe TESTDIR=run_test_europa3fluidspe)
+	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
+	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
+	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
+	-@($(MAKE) test_fivemoment TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_func TESTDIR=run_test_func)
 	./Config.pl -noopenmp
 	@ls -l *.diff
 
@@ -63,14 +63,13 @@ OPENMP = -openmp
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test KEEP=y                (run tests and keep run directories)"
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test OPENMP=               (run tests with no openmp)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
-	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
+	@echo "    test PARALLEL=mpiexec      (run tests with mpiexec)"
 	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
-	@echo "    test_amr                   (run AMR test)"
+	@echo "    test_amr TESTDIR=run_amr   (run AMR test in run_amr directory)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_2bodyplot             (run 2 Body Plot test)"
@@ -140,7 +139,6 @@ test_fluxemergence:
 	$(MAKE) test_fluxemergence_run
 	@echo "test_fluxemergence_check..." >> test_fluxemergence.diff
 	$(MAKE) test_fluxemergence_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fluxemergence_compile:
 	./Config.pl -e=MhdEosRad -u=Ee -g=10,10,10,500,1
@@ -187,7 +185,6 @@ test_shocktube:
 	$(MAKE) test_shocktube_run
 	@echo "test_shocktube_check..." >> test_shocktube.diff
 	$(MAKE) test_shocktube_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shocktube_compile:
 	./Config.pl ${OPENMP} -u=Default -e=MhdHyp -g=64,4,1,10,1
@@ -220,7 +217,6 @@ test_shockramp:
 	$(MAKE) test_shockramp_run
 	@echo "test_shockramp_check..." >> test_shockramp.diff
 	$(MAKE) test_shockramp_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shockramp_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
@@ -254,7 +250,6 @@ test_partsteady:
 	$(MAKE) test_partsteady_run
 	@echo "test_partsteady_check..." >> test_partsteady.diff
 	$(MAKE) test_partsteady_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_partsteady_compile:
 	./Config.pl -u=Default -e=MhdHyp -g=4,4,1,1000,1
@@ -287,7 +282,6 @@ test_hallmhd:
 	$(MAKE) test_hallmhd_run
 	@echo "test_hallmhd_check..." >> test_hallmhd.diff
 	$(MAKE) test_hallmhd_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hallmhd_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=Mhd -f -g=4,2,2,100,100
@@ -318,7 +312,6 @@ test_hybrid:
 	$(MAKE) test_hybrid_run
 	@echo "test_hybrid_check..." >> test_hybrid.diff
 	$(MAKE) test_hybrid_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hybrid_compile:
 	./Config.pl ${OPENMP} -u=Hybrid -e=Mhd -f -g=4,2,2,100,100
@@ -350,7 +343,6 @@ test_viscosity:
 	$(MAKE) test_viscosity_run
 	@echo "test_viscosity_check..." >> test_viscosity.diff
 	$(MAKE) test_viscosity_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_viscosity_compile:
 	./Config.pl ${OPENMP} -e=Hd -u=Waves -g=16,4,1,200,1 
@@ -382,7 +374,6 @@ test_twofluidmhd:
 	$(MAKE) test_twofluidmhd_run
 	@echo "test_twofluidmhd_check..." >> test_twofluidmhd.diff
 	$(MAKE) test_twofluidmhd_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_twofluidmhd_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
@@ -414,7 +405,6 @@ test_multifluid:
 	$(MAKE) test_multifluid_run
 	@echo "test_multifluid_check..." >> test_multifluid.diff
 	$(MAKE) test_multifluid_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multifluid_compile:
 	./Config.pl ${OPENMP} -u=Default -e=MhdHd -f -g=64,2,2,10,1
@@ -445,7 +435,6 @@ test_magnetometer:
 	$(MAKE) test_magnetometer_run
 	@echo "test_magnetometer_check..." >> test_magnetometer.diff
 	$(MAKE) test_magnetometer_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_magnetometer_compile:
 	./Config.pl -u=Default -e=Mhd -g=4,4,4,400,1
@@ -485,7 +474,6 @@ test_multiion:
 	$(MAKE) test_multiion_run
 	@echo "test_multiion_check..." >> test_multiion.diff
 	$(MAKE) test_multiion_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multiion_compile:
 	./Config.pl ${OPENMP} -u=Default -e=MultiIon -f -g=64,2,2,10,1
@@ -516,7 +504,6 @@ test_mhdions:
 	$(MAKE) test_mhdions_run
 	@echo "test_mhdions_check..." >> test_mhdions.diff
 	$(MAKE) test_mhdions_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdions_compile:
 	./Config.pl -u=Default -e=MhdIons -f -g=64,2,2,40,1
@@ -548,7 +535,6 @@ test_mhdnoncons:
 	$(MAKE) test_mhdnoncons_run
 	@echo "test_mhdnoncons_check..." >> test_mhdnoncons.diff
 	$(MAKE) test_mhdnoncons_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdnoncons_compile:
 	./Config.pl ${OPENMP} -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
@@ -582,7 +568,6 @@ test_eosgodunov:
 	$(MAKE) test_eosgodunov_run
 	@echo "test_eosgodunov_check..." >> test_eosgodunov.diff
 	$(MAKE) test_eosgodunov_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_eosgodunov_compile:
 	./Config.pl ${OPENMP} -e=HdEos -u=Eos -g=10,1,1,100,1
@@ -614,7 +599,6 @@ test_laserpackage:
 	$(MAKE) test_laserpackage_run
 	@echo "test_laserpackage_check..." >> test_laserpackage.diff
 	$(MAKE) test_laserpackage_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_laserpackage_compile:
 	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,1 -nMaterial=5 -nWave=30
@@ -648,7 +632,6 @@ test_graydiffusion:
 	$(MAKE) test_graydiffusion_run
 	@echo "test_graydiffusion_check..." >> test_graydiffusion.diff
 	$(MAKE) test_graydiffusion_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
 	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
@@ -682,7 +665,6 @@ test_corona:
 	$(MAKE) test_corona_run
 	@echo "test_corona_check..." >> test_corona.diff
 	$(MAKE) test_corona_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_corona_compile:
 	./Config.pl ${OPENMP} -u=Sc -e=MhdCorona -g=4,4,4,3000,1
@@ -716,7 +698,6 @@ test_coronasph:
 	$(MAKE) test_coronasph_run
 	@echo "test_coronasph_check..." >> test_coronasph.diff
 	$(MAKE) test_coronasph_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_coronasph_compile:
 	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4,3000,1
@@ -749,7 +730,6 @@ test_awsomfluids:
 	$(MAKE) test_awsomfluids_run
 	@echo "test_awsomfluids_check..." >> test_awsomfluids.diff
 	$(MAKE) test_awsomfluids_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_awsomfluids_compile:
 	./Config.pl -f -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2,32,1
@@ -784,7 +764,6 @@ test_chromo:
 	$(MAKE) test_chromo_run
 	@echo "test_chromo_check..." >> test_chromo.diff
 	$(MAKE) test_chromo_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
 	./Config.pl ${OPENMP} -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
@@ -820,7 +799,6 @@ test_outerhelio:
 	$(MAKE) test_outerhelio_run
 	@echo "test_outerhelio_check..." >> test_outerhelio.diff
 	$(MAKE) test_outerhelio_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerhelio_compile:
 	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelio -g=4,4,4,3500,1
@@ -851,7 +829,6 @@ test_outerheliopui:
 	$(MAKE) test_outerheliopui_run
 	@echo "test_outerheliopui_check..." >> test_outerheliopui.diff
 	$(MAKE) test_outerheliopui_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
 	./Config.pl ${OPENMP} -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
@@ -882,7 +859,6 @@ test_func:
 	$(MAKE) test_func_run
 	@echo "test_func_check..." >> test_func.diff
 	$(MAKE) test_func_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_func_compile:
 	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,70
@@ -904,7 +880,6 @@ test_func_check:
 test_titan:
 	-@($(MAKE) test_titan_start)
 	-@($(MAKE) test_titan_restart)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_titan_start:
 	@echo "test_titan_compile..." > test_titan.diff
@@ -974,7 +949,6 @@ test_titan_restart_check:
 test_mars:
 	-@($(MAKE) test_mars_start)
 	-@($(MAKE) test_mars_restart)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mars_start:
 	@echo "test_mars_compile..." > test_mars.diff
@@ -1045,7 +1019,6 @@ test_mars_restart_check:
 test_marsfluids:
 	-@($(MAKE) test_marsfluids_start)
 	-@($(MAKE) test_marsfluids_restart)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_marsfluids_start:
 	@echo "test_marsfluids_compile..." > test_marsfluids.diff
@@ -1117,7 +1090,6 @@ test_marsfluids_restart_check:
 test_venus:
 	-@($(MAKE) test_venus_start)
 	-@($(MAKE) test_venus_restart)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_venus_start:
 	@echo "test_venus_compile..." > test_venus.diff
@@ -1185,7 +1157,6 @@ test_venus_restart_check:
 
 test_saturn:
 	-@($(MAKE) test_saturn_start)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_saturn_start:
 	@echo "test_saturn_compile..." > test_saturn.diff
@@ -1229,7 +1200,6 @@ test_mercurysph:
 	$(MAKE) test_mercurysph_run
 	@echo "test_mercurysph_check..." >> test_mercurysph.diff
 	$(MAKE) test_mercurysph_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mercurysph_compile:
 	./Config.pl -u=Mercury -e=MhdPe -g=8,8,8,400,100
@@ -1276,7 +1246,6 @@ test_ganymede:
 	$(MAKE) test_ganymede_run
 	@echo "test_ganymede_check..." >> test_ganymede.diff
 	$(MAKE) test_ganymede_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ganymede_compile:
 	./Config.pl ${OPENMP} -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
@@ -1319,7 +1288,6 @@ test_comet:
 	$(MAKE) test_comet_run
 	@echo "test_comet_check..." >> test_comet.diff
 	$(MAKE) test_comet_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_comet_compile:
 	./Config.pl -u=Comet6Sp -e=MhdComet -g=8,8,8,600,100
@@ -1346,7 +1314,6 @@ test_comet_check:
 test_cometfluids:
 	-@($(MAKE) test_cometfluids_start)
 	-@($(MAKE) test_cometfluids_restart)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cometfluids_start:
 	@echo "test_cometfluids_compile..." > test_cometfluids.diff
@@ -1414,7 +1381,6 @@ test_cometfluids_restart_check:
 
 test_earthsph:
 	-@($(MAKE) test_earthsph_start)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_earthsph_start:
 	@echo "test_earthsph_compile..." > test_earthsph.diff
@@ -1459,7 +1425,6 @@ test_amr:
 	$(MAKE) test_amr_run
 	@echo "test_amr_check..." >> test_amr.diff
 	$(MAKE) test_amr_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
 	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=4,4,4,4000,1
@@ -1492,7 +1457,6 @@ test_amrsph:
 	$(MAKE) test_amrsph_run
 	@echo "test_amrsph_check..." >> test_amrsph.diff
 	$(MAKE) test_amrsph_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amrsph_compile:
 	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
@@ -1525,7 +1489,6 @@ test_2bodyplot:
 	$(MAKE) test_2bodyplot_run
 	@echo "test_2bodyplot_check..." >> test_2bodyplot.diff
 	$(MAKE) test_2bodyplot_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_2bodyplot_compile:
 	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,8,700,300
@@ -1573,7 +1536,6 @@ test_anisotropic:
 	$(MAKE) test_anisotropic_run
 	@echo "test_anisotropic_check..." >> test_anisotropic.diff
 	$(MAKE) test_anisotropic_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_anisotropic_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
@@ -1604,7 +1566,6 @@ test_cometCGhd:
 	$(MAKE) test_cometCGhd_run
 	@echo "test_cometCGhd_check..." >> test_cometCGhd.diff
 	$(MAKE) test_cometCGhd_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cometCGhd_compile:
 	./Config.pl -u=CometCG -e=Hd -g=8,8,8,400,1
@@ -1632,7 +1593,6 @@ test_cometCGhd_check:
 
 test_cometCGfluids:
 	-@($(MAKE) test_cometCGfluids_start)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cometCGfluids_start:
 	@echo "test_cometCGfluids_compile..." > test_cometCGfluids.diff
@@ -1670,7 +1630,6 @@ test_cometCGfluids_check:
 
 test_europa2fluidspe:
 	-@($(MAKE) test_europa2fluidspe_start)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_europa2fluidspe_start:
 	@echo "test_europa2fluidspe_compile..." > test_europa2fluidspe.diff
@@ -1704,7 +1663,6 @@ test_europa2fluidspe_check:
 
 test_europa3fluidspe:
 	-@($(MAKE) test_europa3fluidspe_start)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_europa3fluidspe_start:
 	@echo "test_europa3fluidspe_compile..." > test_europa3fluidspe.diff
@@ -1746,7 +1704,6 @@ test_region2d:
 	$(MAKE) test_region2d_run
 	@echo "test_region2d_check..." >> test_region2d.diff
 	$(MAKE) test_region2d_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_region2d_compile:
 	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,1,700,1
@@ -1797,7 +1754,6 @@ test_fivemoment:
 	-@($(MAKE) test_fivemoment_alfven)
 	-@($(MAKE) test_fivemoment_shock)
 	-@($(MAKE) test_fivemoment_langmuir)
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_alfven:
 	@echo "test_fivemoment_alfven_compile..." > test_fivemoment_alfven.diff
@@ -1808,7 +1764,6 @@ test_fivemoment_alfven:
 	$(MAKE) test_fivemoment_alfven_run
 	@echo "test_fivemoment_alfven_check..." >> test_fivemoment_alfven.diff
 	$(MAKE) test_fivemoment_alfven_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_alfven_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=100,1,1,20,1
@@ -1839,7 +1794,6 @@ test_fivemoment_shock:
 	$(MAKE) test_fivemoment_shock_run
 	@echo "test_fivemoment_shock_check..." >> test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_shock_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=100,1,1,20,1
@@ -1870,7 +1824,6 @@ test_fivemoment_langmuir:
 	$(MAKE) test_fivemoment_langmuir_run
 	@echo "test_fivemoment_langmuir_check..." >> test_fivemoment_langmuir.diff
 	$(MAKE) test_fivemoment_langmuir_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_langmuir_compile:
 	./Config.pl ${OPENMP} -u=Waves -e=FiveMoment -g=50,50,1,10,1
@@ -1903,7 +1856,6 @@ test_L1toBC:
 	$(MAKE) test_L1toBC_run
 	@echo "test_L1toBC_check..." >> test_L1toBC.diff
 	$(MAKE) test_L1toBC_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_L1toBC_compile:
 	./Config.pl -e=Mhd -u=Default -g=8,1,1,700,1 -ng=3
