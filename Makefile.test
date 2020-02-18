@@ -3,6 +3,8 @@
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 # !!! NOTE: In the list below "test_func" should be the last test
 
+.NOTPARALLEL: test
+
 test: 
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum)
