@@ -302,17 +302,20 @@ contains
     !==========================================================================
 
     subroutine initialize_files
-      use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
+      use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite, &
+           DoTrajTimeRange_I
 
       ! Local variables
       integer :: iSat
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-      if (iProc == 0) then
+      if (iProc == 0 .and. time_accurate) then
          do iSat = 1, nSatellite
-            call set_satellite_file_status(iSat,'open')
-            call set_satellite_file_status(iSat,'close')
+            if (.not. DoTrajTimeRange_I(iSat)) then
+               call set_satellite_file_status(iSat,'open')
+               call set_satellite_file_status(iSat,'close')
+            end if
          end do
       end if
 
@@ -866,7 +869,7 @@ contains
     subroutine save_file
 
       use ModRestartFile, ONLY: write_restart_files
-      use ModSatelliteFile, ONLY: &
+      use ModSatelliteFile, ONLY: IsFirstWriteSat_I,                   &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
            TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
            DoTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I
@@ -1006,9 +1009,13 @@ contains
          ! Case for satellite files
          iSat = iFile - Satellite_
          call timing_start('save_satellite')
-         if(iProc==0)call set_satellite_file_status(iSat,'append')
 
          if (DoTrajTimeRange_I(iSat)) then
+            if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+            ! need this to write the header
+            IsFirstWriteSat_I(iSat) = .true.
+
             tSimulationBackup = Time_Simulation
             Time_Simulation = StartTimeTraj_I(iSat)
             do while (Time_Simulation <= EndTimeTraj_I(iSat))
@@ -1019,16 +1026,24 @@ contains
             end do
             Time_Simulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
+
             if(iProc==0)call set_satellite_file_status(iSat,'close')
          else
             !
             ! Distinguish between time_accurate and .not. time_accurate:
             !
             if (time_accurate) then
+               if(iProc==0)call set_satellite_file_status(iSat,'append')
+
                call set_satellite_flags(iSat)
                ! write one line for a single trajectory point
                call write_logfile(iSat,ifile)
             else
+               if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+               ! need this to write the header
+               IsFirstWriteSat_I(iSat) = .true.
+
                tSimulationBackup = Time_Simulation    ! Save ...
                Time_Simulation = TimeSatStart_I(iSat)
                do while (Time_Simulation <= TimeSatEnd_I(iSat))
@@ -1039,6 +1054,7 @@ contains
                end do
                Time_Simulation = tSimulationBackup    ! ... Restore
                icurrent_satellite_position(iSat) = 1
+
                if(iProc==0)call set_satellite_file_status(iSat,'close')
             end if
          end if
