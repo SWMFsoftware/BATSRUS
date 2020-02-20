@@ -224,8 +224,16 @@ contains
        elseif (iSatIn >= 1) then
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
-             write(iUnit,'(a)')  &
-                  'Satellite data for Satellite: '//trim(FilenameSat_I(isat))
+             if (time_accurate) then
+                write(iUnit,'(a)')  &
+                     'Satellite data for Satellite: ' // &
+                     trim(FilenameSat_I(isat))        // &
+                     ' at simulation time =', time_simulation
+             else
+                write(iUnit,'(a)')  &
+                     'Satellite data for Satellite: '//  &
+                     trim(FilenameSat_I(isat))
+             end if
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.
           end if
