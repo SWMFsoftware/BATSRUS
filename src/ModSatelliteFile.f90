@@ -387,9 +387,9 @@ contains
   !============================================================================
   subroutine set_satellite_file_status(iSat,TypeStatus)
 
-    use ModMain,   ONLY: n_step
+    use ModMain,   ONLY: n_step, time_accurate
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO,     ONLY: NamePlotDir
+    use ModIO,     ONLY: NamePlotDir, StringDateOrTime
 
     integer, intent(in) :: iSat
     character(LEN=*),intent(in) :: TypeStatus
@@ -408,13 +408,17 @@ contains
        if (l1-1 <= 0) l1 = 1
        if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
 
-       if(n_step < 1000000)then
-          write(NameFile_I(iSat),'(a,i6.6,a)')trim(NamePlotDir)//&
-               'sat_'//FilenameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
+       if (time_accurate) then
+          call get_time_string
+          write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
+               'sat_'//FilenameSat_I(iSat)(l1:l2)               // &
+               '_t'//trim(StringDateOrTime)//'_n',n_step,'.sat'
+               
        else
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
                'sat_'//FilenameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
-       end if
+       endif
+
        if(DoTest) then
           write(*,*) NameSub,': satellitename:', &
                FilenameSat_I(iSat), 'status =', TypeStatus
