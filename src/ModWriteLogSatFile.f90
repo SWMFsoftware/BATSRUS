@@ -225,7 +225,7 @@ contains
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
              if (time_accurate) then
-                write(iUnit,'(a)')  &
+                write(iUnit,'(a, es13.5)')  &
                      'Satellite data for Satellite: ' // &
                      trim(FilenameSat_I(isat))        // &
                      ' at simulation time =', time_simulation
