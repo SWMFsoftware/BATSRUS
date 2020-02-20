@@ -3321,11 +3321,9 @@ pro make_unpolar_grid2
   common plot_data
   common vector_param
 
-  xreg=x
-;;;  phi=x(*,*,1)
-  phi=x(*,*,0)
-  rr =90 - x(*,*,1)
-
+  xreg = x
+  rr   = x(*,*,0)
+  phi  = x(*,*,1)
   phirange = max(phi) - min(phi)
 
   ; If phi is in local time or degrees, change it to radians
