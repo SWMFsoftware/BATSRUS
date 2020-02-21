@@ -1021,7 +1021,7 @@ contains
             do while (Time_Simulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile)
+               call write_logfile(iSat,ifile,TimeSatHeaderIn=tSimulationBackup)
                Time_Simulation = Time_Simulation + DtTraj_I(iSat)
             end do
             Time_Simulation = tSimulationBackup    ! ... Restore
