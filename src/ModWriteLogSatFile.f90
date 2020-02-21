@@ -22,7 +22,7 @@ module ModWriteLogSatFile
 contains
   !============================================================================
 
-  subroutine write_logfile(iSatIn, iFile)
+  subroutine write_logfile(iSatIn, iFile, TimeSatHeaderIn)
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY  : State_VGB, tmp1_BLK
@@ -43,6 +43,8 @@ contains
     ! iSatIn = 0 -> write logfile
     ! iSatIn >=1 -> write satellite output files (number = isat)
     integer, intent(in) :: iSatIn
+
+    real, optional, intent(in) :: TimeSatHeaderIn
 
     ! Logfile variables
     integer, parameter :: MaxLogVar=40
@@ -72,10 +74,19 @@ contains
     ! Event date for filename
     character(len=19) :: EventDateTime
 
+    ! Header for the sat file in time accurate
+    real ::  TimeSatHeader 
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    if(present(TimeSatHeaderIn)) then
+       TimeSatHeader = TimeSatHeaderIn
+    else
+       TimeSatHeader = time_simulation
+    end if
 
     DoWritePosition = .false.
 
@@ -228,7 +239,7 @@ contains
                 write(iUnit,'(a, es13.5)')  &
                      'Satellite data for Satellite: ' // &
                      trim(FilenameSat_I(isat))        // &
-                     ' at simulation time =', time_simulation
+                     ' at simulation time =', TimeSatHeader
              else
                 write(iUnit,'(a)')  &
                      'Satellite data for Satellite: '//  &
