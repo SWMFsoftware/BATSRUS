@@ -310,7 +310,7 @@ contains
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-      if (iProc == 0 .and. time_accurate) then
+      if (iProc == 0) then
          do iSat = 1, nSatellite
             if (.not. DoTrajTimeRange_I(iSat)) then
                call set_satellite_file_status(iSat,'open')
