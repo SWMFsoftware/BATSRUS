@@ -408,7 +408,7 @@ contains
        if (l1-1 <= 0) l1 = 1
        if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
 
-       if (time_accurate) then
+       if (time_accurate .and. DoTrajTimeRange_I(iSat)) then
           call get_time_string
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
                'sat_'//FilenameSat_I(iSat)(l1:l2)               // &
