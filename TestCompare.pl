@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #^CFG FILE TESTING
 
@@ -198,99 +199,100 @@ TEST: foreach $test (sort @test){
 
   LOGFILE: foreach $logfile (@logfile){
 
-	my $logfile1="$dir1/$test/$logfile";
-	my $logfile2="$dir2/$test/$logfile";
+      my $logfile1="$dir1/$test/$logfile";
+      my $logfile2="$dir2/$test/$logfile";
+      $logfile2 =~ s/_n(\d\d\d\d\d\d\.sat)/_n00$1/;
 
-	close(LOG1);
-	close(LOG2);
-	my $ok1=open(LOG1, $logfile1);
-	my $ok2=open(LOG2, $logfile2);
+      close(LOG1);
+      close(LOG2);
+      my $ok1=open(LOG1, $logfile1);
+      my $ok2=open(LOG2, $logfile2);
 
-        # This logfile is missing from both
-	next LOGFILE if not $ok1 and not $ok2; 
+      # This logfile is missing from both
+      next LOGFILE if not $ok1 and not $ok2; 
 
-	&report("$test: $logfile1 could not be opened !\n") unless $ok1;
-	&report("$test: $logfile2 could not be opened !\n") unless $ok2;
-	next LOGFILE unless $ok1 and $ok2;
+      &report("$test: $logfile1 could not be opened !\n") unless $ok1;
+      &report("$test: $logfile2 could not be opened !\n") unless $ok2;
+      next LOGFILE unless $ok1 and $ok2;
 
-	my $n1=`wc -l $logfile1`;
-	my $n2=`wc -l $logfile1`;
+      my $n1=`wc -l $logfile1`;
+      my $n2=`wc -l $logfile1`;
 
-	next LOGFILE if $n1 == 0 and $n2 == 0; # Empty logfiles
+      next LOGFILE if $n1 == 0 and $n2 == 0; # Empty logfiles
 
-	if($n1 != $n2){
-	    &report("$test: !!! $logfile number of lines $n1 /= $n2 !!!\n");
+      if($n1 != $n2){
+	  &report("$test: !!! $logfile number of lines $n1 /= $n2 !!!\n");
+	  next LOGFILE;
+      }
+
+      my $diffmax=0;
+      my $nheadline;
+      my @logvar;
+      my $linenum;
+      my $itemnum;
+      if ($logfile =~ /iono/){
+	  $nheadline=100;
+	  @logvar=("Theta","Psi","SigmaH","SigmaP","Jr","Phi");
+      }else{
+	  $nheadline=2;
+      }
+
+      my $line1;
+      my $line2;
+    LINE: while($line1=<LOG1> and $line2=<LOG2>){
+	if($.<=$nheadline){
+	    $line1 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
+	    $line2 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
+	    $line1 =~ s/\-(0\.0+)\b/ $1/;
+	    $line2 =~ s/\-(0\.0+)\b/ $1/;
+	    if($line1 ne $line2){
+		&report("$test $logfile, different head lines:\n",
+			"    $line1    $line2\n") unless $Quiet;
+		next LOGFILE if $Strict;
+	    }
+
+	    @logvar=split(' ',$line1) if $logfile !~ /iono/ and $.==2;
+	    $nheadline = $. if $line1 =~ /^BEGIN|ZONE/;
+	    next LINE;
+	}
+	my @item1=split(' ',$line1);
+	my @item2=split(' ',$line2);
+	if($#item1 != $#item2){
+	    &report("$test: at line $. number of columns differ:\n",
+		    "    $line1    $line2\n");
 	    next LOGFILE;
 	}
-
-	my $diffmax=0;
-	my $nheadline;
-	my @logvar;
-	my $linenum;
-	my $itemnum;
-	if ($logfile =~ /iono/){
-	    $nheadline=100;
-	    @logvar=("Theta","Psi","SigmaH","SigmaP","Jr","Phi");
-	}else{
-	    $nheadline=2;
-	}
-
-	my $line1;
-	my $line2;
-        LINE: while($line1=<LOG1> and $line2=<LOG2>){
-	    if($.<=$nheadline){
-		$line1 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
-		$line2 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
-		$line1 =~ s/\-(0\.0+)\b/ $1/;
-		$line2 =~ s/\-(0\.0+)\b/ $1/;
-		if($line1 ne $line2){
-		    &report("$test $logfile, different head lines:\n",
-			    "    $line1    $line2\n") unless $Quiet;
-		    next LOGFILE if $Strict;
-		}
-		
-		@logvar=split(' ',$line1) if $logfile !~ /iono/ and $.==2;
-		$nheadline = $. if $line1 =~ /^BEGIN|ZONE/;
-		next LINE;
-	    }
-	    my @item1=split(' ',$line1);
-	    my @item2=split(' ',$line2);
-	    if($#item1 != $#item2){
-		&report("$test: at line $. number of columns differ:\n",
-			"    $line1    $line2\n");
+	my $i;
+	for($i=0; $i<=$#item1; $i++){
+	    my $item1=$item1[$i];
+	    my $item2=$item2[$i];
+	    my $diff = abs($item1-$item2);
+	    if ($diff > $tol){
+		&report("$test $logfile: diff=$diff for ",$logvar[$i],
+			" at line $. !!!\n");
 		next LOGFILE;
 	    }
-	    my $i;
-	    for($i=0; $i<=$#item1; $i++){
-		my $item1=$item1[$i];
-		my $item2=$item2[$i];
-		my $diff = abs($item1-$item2);
-		if ($diff > $tol){
-		    &report("$test $logfile: diff=$diff for ",$logvar[$i],
-			    " at line $. !!!\n");
-		    next LOGFILE;
-		}
-		# Figure out the number of digits
-		$item1 =~ s/^[\-\d]+\.//; $item1 =~ s/E(.*)$//; my $exp=$1; 
-		if($diff > $diffmax and $diff > 1.5/10**(length($item1)-$exp)){
-		    $diffmax=$diff;
-		    $linenum=$.;
-		    $itemnum=$i;
-		}
-	    }
-	}
-	close(LOG1);
-	close(LOG2);
-
-	if($diffmax >= $Omit){
-	    if($diffmax>0){
-		&report("$test $logfile: diffmax=$diffmax for ",
-			$logvar[$itemnum]," at line $linenum\n");
-	    }else{
-		&report("$test $logfile: identical\n");
+	    # Figure out the number of digits
+	    $item1 =~ s/^[\-\d]+\.//; $item1 =~ s/E(.*)$//; my $exp=$1; 
+	    if($diff > $diffmax and $diff > 1.5/10**(length($item1)-$exp)){
+		$diffmax=$diff;
+		$linenum=$.;
+		$itemnum=$i;
 	    }
 	}
     }
+      close(LOG1);
+      close(LOG2);
+
+      if($diffmax >= $Omit){
+	  if($diffmax>0){
+	      &report("$test $logfile: diffmax=$diffmax for ",
+		      $logvar[$itemnum]," at line $linenum\n");
+	  }else{
+	      &report("$test $logfile: identical\n");
+	  }
+      }
+  }
 }
 
 exit;
