@@ -4,7 +4,8 @@
 module ModFieldLineThread
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm
+       test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm,&
+       nJ, nK, jDim_, kDim_
 !  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
@@ -13,6 +14,8 @@ module ModFieldLineThread
   save
 
   PRIVATE ! Except
+  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
+  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
   logical, public, allocatable:: IsAllocatedThread_B(:)
   ! Named indexes for local use only
 
@@ -261,8 +264,7 @@ contains
   end subroutine deallocate_thread_b
   !============================================================================
   subroutine set_threads
-    use BATL_lib,     ONLY: MaxBlock, Unused_B,&
-         nJ, nK
+    use BATL_lib,     ONLY: MaxBlock, Unused_B
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
@@ -296,30 +298,31 @@ contains
        !/
        if(.not.IsAllocatedThread_B(iBlock))then
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DsOverBSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
-          allocate(BoundaryThreads_B(iBlock) % TMax_II(1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % TMax_II(&
+               jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % Xi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % B_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TeSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TiSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
-               -nPointThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
-               1:nJ,1:nK))
+               jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
-               1:nJ,1:nK))
+               jMin_:jMax_, kMin_:kMax_))
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -328,7 +331,7 @@ contains
        !/
        call set_threads_b(iBlock)
        nBlockSet = nBlockSet + 1
-       do k = 1, nK; do j = 1,nJ
+       do k = kMin_, kMax_; do j = jMin_, jMax_
           nPointMin = min(nPointMin, BoundaryThreads_B(iBlock)%nPoint_II(j,k))
        end do; end do
     end do
@@ -356,7 +359,6 @@ contains
     use ModGeometry, ONLY: Xyz_DGB
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
                            UnitTemperature_, UnitX_, UnitB_
-    use ModMain,     ONLY: nJ, nK
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
@@ -430,7 +432,7 @@ contains
     CoefXi = PoyntingFluxPerB/LperpTimesSqrtB**2
 
     ! Loop over the thread starting points
-    do k = 1, nK; do j = 1, nJ
+    do k = kMin_, kMax_; do j = jMin_, jMax_
        !\
        ! First, take magnetic field in the ghost cell
        !/
@@ -970,7 +972,6 @@ contains
   !============================================================================
   subroutine read_thread_restart(iBlock)
     use ModMain,       ONLY: NameThisComp
-    use BATL_lib,      ONLY: nJ, nK
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
     integer, intent(in) :: iBlock
@@ -1014,7 +1015,7 @@ contains
   !============================================================================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
-    use BATL_lib, ONLY: nBlock, nK, nJ, Unused_B
+    use BATL_lib, ONLY: nBlock, Unused_B
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
     integer :: j, k, iBlock, nPoint
