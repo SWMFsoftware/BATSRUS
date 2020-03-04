@@ -91,7 +91,7 @@ T                       DoFixAxis
 !!! OUTER BOUNDARY CONDITIONS !!!!!!!!!!
 
 #OUTERBOUNDARY
-user                    TypeBc1
+none                    TypeBc1
 fixed                   TypeBc2
 periodic                TypeBc3 (only read in 2D and 3D)
 periodic                TypeBc4 (only read in 2D and 3D)
@@ -120,7 +120,16 @@ coord1max		StringBoundary
 !!! INNER BOUNDARY CONDITIONS !!!!!!!!!!
 
 #BODY
-F                         body1
+T                         body1
+1.0                       rBody
+0.0                       rCurrents
+10.0                      BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+10.0                      BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+
+#INNERBOUNDARY
+user
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -178,7 +187,7 @@ T                       UseSingleIonVelocity
 F                       UseSingleIonTemperature
 
 #RESISTIVITY
-F               UseResistivity (rest of parameters read only if set to true)
+T               UseResistivity (rest of parameters read only if set to true)
 user            TypeResistivity
 0.0             Eta0Si       [m2/s] (read except for Spitzer resistivity)
 
@@ -216,17 +225,6 @@ cut  MHD idl_ascii
 0.0
 0.0
 0
-
-SAVEPLOT
-2                       nplotfiles
-z=0 MHD tec             plot_string
-100                     DnSavePlot
--1.                     DtSavePlot
-z=0 VAR tec             plot_string
-100                     DnSavePlot
--1.                     DtSavePlot
-nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p
-g rBody
 
 SAVEPLOT
 8                       nplotfiles
@@ -268,7 +266,7 @@ g rBody
 !!! USER DEFINED !!!!!!!!!!!!!!!!!!!!!!!
 
 #USERFLAGS
-F                       UseUserInnerBcs
+T                       UseUserInnerBcs
 T                       UseUserSource
 F                       UseUserPerturbation
 F                       UseUserOuterBcs
@@ -299,11 +297,7 @@ F                       Use the above constant electron impact ionization rate
 50.0                    Minimum ion temperature (enforced in user_update_states)
 
 #INNERBCS
-custom                  Hard-coded BCs or customized BCs by variable. Reads next four lines if "custom".
-outflowfixed            innerbcs_rho
-outflowfixed            innerbcs_p
-outflowzero             innerbcs_u
-float                   innerbcs_b
+outflowfix
 
 #BODYUPSTREAM
 0.1                     Op Upstream BodyNDim (1/ccm)
