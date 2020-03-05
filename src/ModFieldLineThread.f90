@@ -97,6 +97,11 @@ module ModFieldLineThread
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
   integer, parameter :: NeSi_=1, TeSi_=2
+  !\
+  ! Get State_VIII arrays
+  !/
+  public :: save_threads_for_plot
+
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
   !
@@ -1064,6 +1069,67 @@ contains
     BoundaryThreads_B(iBlock) % iAction = Enthalpy_
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine read_thread_restart
+  !=================================
+  !\
+  ! For each block near the inner boundary save the density and temperature
+  ! in the ghost grid extended toward the photosphere level
+  !/
+  subroutine save_threads_for_plot
+    use BATL_lib, ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, r_
+    use ModInterpolate, ONLY: linear
+    use ModConst, ONLY: cBoltzmann 
+    integer :: i, j, k, iBlock, iMin, nPoint
+    real    :: State_VI(NeSi_:TeSi_, 1-nPointThreadMax:0), Coord1
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'save_threads_for_plot'
+    !---------------------------
+    call test_start(NameSub, DoTest)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       do k = kMin_, kMax_ 
+          do j = jMin_, jMax_
+             nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
+             !\
+             ! Fill in an array with NeSi and TeSi values
+             State_VI(TeSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
+             State_VI(NeSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)/&
+                  (BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)*&
+                  cBoltzmann)
+             !\
+             ! Values at the physical cell
+             !/
+             BoundaryThreads_B(iBlock) % State_VIII(:, 1, j, k) = &
+                  State_VI(:, 0)
+             do i = BoundaryThreads_B(iBlock) % iMin, 0
+                !\
+                ! Generalized radial coordinate in the cell center
+                !/
+                Coord1 = CoordMin_DB(r_, iBlock) + &
+                     (real(i) - 0.50)*CellSize_DB(r_, iBlock)
+                !\
+                ! interpolate Te and Ne to the ghost cell center:
+                !/ 
+                BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
+                     linear(&
+                     a_VI = State_VI(:, 1 - nPoint:0), &
+                     nVar = TeSi_,                     &
+                     iMin = 1 - nPoint,                &
+                     iMax = 0,                         &
+                     x = Coord1,                        &
+                     x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
+                     1 - nPoint:0, j, k),              &
+                     DoExtrapolate = .false.)
+             end do
+          end do
+       end do
+    end do
+    
+  end subroutine save_threads_for_plot
+    
   !============================================================================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
