@@ -303,7 +303,7 @@ contains
 
     subroutine initialize_files
       use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite, &
-           DoTrajTimeRange_I
+           TypeTrajTimeRange_I
 
       ! Local variables
       integer :: iSat
@@ -312,7 +312,7 @@ contains
       !------------------------------------------------------------------------
       if (iProc == 0) then
          do iSat = 1, nSatellite
-            if (.not. DoTrajTimeRange_I(iSat)) then
+            if (TypeTrajTimeRange_I(iSat) == 'orig') then
                call set_satellite_file_status(iSat,'open')
                call set_satellite_file_status(iSat,'close')
             end if
@@ -872,7 +872,8 @@ contains
       use ModSatelliteFile, ONLY: IsFirstWriteSat_I,                   &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
            TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
-           DoTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I
+           TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
+           nPointTraj_I, TimeSat_II
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
@@ -887,7 +888,7 @@ contains
 
       use ModMessagePass,       ONLY: exchange_messages
 
-      integer :: iSat
+      integer :: iSat, iPointSat
 
       ! Backup location for the Time_Simulation variable.
       ! Time_Simulation is used in steady-state runs as a loop parameter
@@ -1010,7 +1011,7 @@ contains
          iSat = iFile - Satellite_
          call timing_start('save_satellite')
 
-         if (DoTrajTimeRange_I(iSat)) then
+         if (TypeTrajTimeRange_I(iSat) == 'range') then
             if(iProc==0)call set_satellite_file_status(iSat,'open')
 
             ! need this to write the header
@@ -1018,17 +1019,41 @@ contains
 
             tSimulationBackup = Time_Simulation
             Time_Simulation = StartTimeTraj_I(iSat)
+
             do while (Time_Simulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile,TimeSatHeaderIn=tSimulationBackup)
+               call write_logfile(iSat,ifile, &
+                    TimeSatHeaderIn=tSimulationBackup)
                Time_Simulation = Time_Simulation + DtTraj_I(iSat)
             end do
+
             Time_Simulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
 
             if(iProc==0)call set_satellite_file_status(iSat,'close')
-         else
+         else if (TypeTrajTimeRange_I(iSat) == 'full') then
+            if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+            ! need this to write the header
+            IsFirstWriteSat_I(iSat) = .true.
+
+            tSimulationBackup = Time_Simulation
+            Time_Simulation = StartTimeTraj_I(iSat)
+
+            do iPointSat = 1, nPointTraj_I(iSat)
+               Time_Simulation = TimeSat_II(iSat, iPointSat)
+               call set_satellite_flags(iSat)
+               ! write for ALL the points of trajectory cut
+               call write_logfile(iSat,ifile, &
+                    TimeSatHeaderIn=tSimulationBackup)
+            end do
+
+            Time_Simulation = tSimulationBackup    ! ... Restore
+            icurrent_satellite_position(iSat) = 1
+
+            if(iProc==0)call set_satellite_file_status(iSat,'close')
+         else if (TypeTrajTimeRange_I(iSat) == 'orig') then
             !
             ! Distinguish between time_accurate and .not. time_accurate:
             !
@@ -1057,6 +1082,9 @@ contains
 
                if(iProc==0)call set_satellite_file_status(iSat,'close')
             end if
+         else
+            call stop_mpi(NameSub//' unknow TypeTrajTimeRange_I: '// &
+                 TypeTrajTimeRange_I(iSat))
          end if
 
          call timing_stop('save_satellite')
