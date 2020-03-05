@@ -60,10 +60,11 @@ module ModFieldLineThread
      !/
      real,pointer :: Xi_III(:,:,:)
      !\
-     ! Magnetic field intensity and the inverse of heliocentric distance
+     ! Magnetic field intensity, the inverse of heliocentric distance,
+     ! and the gen coord over the radial direction
      ! Dimensionless.
      !/
-     real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
+     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord1_III(:,:,:)
      !\
      ! The use:
      ! PeSi_I(iPoint) = PeSi_I(iPoint-1)*exp(-TGrav_III(iPoint)/TeSi_I(iPoint))
@@ -86,7 +87,16 @@ module ModFieldLineThread
      ! Distance between the true and ghost cell centers.
      !/
      real, pointer :: DeltaR_II(:,:)
+     !\
+     ! For visualization: 
+     !/
+     !\ Index of the last cell in radial direction
+     integer :: iMin
+     !/
+     !\ Ne and Te for iMin:1,0:nJ+1,0:nK+1 as the first step
+     real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
+  integer, parameter :: NeSi_=1, TeSi_=2
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
   !
@@ -230,12 +240,14 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
+    nullify(BoundaryThreads_B(iBlock) % Coord1_III)
     nullify(BoundaryThreads_B(iBlock) % TGrav_III)
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
+    nullify(BoundaryThreads_B(iBlock) % State_VIII)
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine nullify_thread_b
   !============================================================================
@@ -252,12 +264,14 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
+    deallocate(BoundaryThreads_B(iBlock) % Coord1_III)
     deallocate(BoundaryThreads_B(iBlock) % TGrav_III)
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
+    deallocate(BoundaryThreads_B(iBlock) % State_VIII)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -311,6 +325,8 @@ contains
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % Coord1_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TeSi_III(&
@@ -323,6 +339,10 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % State_VIII(&
+               NeSi_:TeSi_, BoundaryThreads_B(iBlock) % iMin:1,&
+               jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -349,6 +369,32 @@ contains
        write(*,*)'nPointMin = ',nPointMinAll
     end if
     call test_stop(NameSub, DoTest)
+  contains
+    integer function i_min(iBlock)
+      use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
+           CoordMin_DB, CellSize_DB, r_
+      integer, intent(in) :: iBlock
+      real :: Coord_D(MaxDim), Xyz_D(MaxDim)
+      !----------------
+      !\
+      ! Gen coords for the low block corner
+      !/
+      call coord_to_xyz(CoordMin_DB(:, iBlock), Xyz_D)
+      !\
+      ! Projection onto the photosphere level
+      !/
+      Xyz_D = Xyz_D/norm2(Xyz_D)
+      !\
+      ! Generalized coords of the latter.
+      !/
+      call xyz_to_coord(Xyz_D, Coord_D)
+      !\
+      ! Minimal index of the ghost cells, in radial direction
+      ! (equals 0 if there is only 1 ghost cell)
+      !/
+      i_min = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+           CellSize_DB(r_, iBlock) )
+    end function i_min
   end subroutine set_threads
   !============================================================================
   subroutine set_threads_b(iBlock)
@@ -362,6 +408,7 @@ contains
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
+    use BATL_lib,    ONLY: MaxDim, xyz_to_coord, r_
     integer, intent(in) :: iBlock
     !\
     ! Locals:
@@ -383,21 +430,21 @@ contains
     ! Length interval, !Heliocentric distance
     real :: Ds, R, RStart
     ! coordinates, field vector and modulus
-    real :: Xyz_D(3), B0_D(3), B0
+    real :: Xyz_D(MaxDim), Coord_D(MaxDim), B0_D(MaxDim), B0
     ! Same stored for the starting point
-    real :: XyzStart_D(3), B0Start_D(3),  B0Start
+    real :: XyzStart_D(MaxDim), B0Start_D(MaxDim),  B0Start
     ! 1 for ourward directed field, -1 otherwise
     real ::SignBr
     ! Coordinates and magnetic field in the midpoint
     ! within the framework of the Runge-Kutta scheme
-    real :: XyzAux_D(3), B0Aux_D(3)
+    real :: XyzAux_D(MaxDim), B0Aux_D(MaxDim)
     !\
     ! CME parameters, if needed
     !/
-    real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
     ! Aux
     real :: ROld, Aux, CoefXi
-    real :: DirB_D(3), DirR_D(3), XyzOld_D(3)
+    real :: DirB_D(MaxDim), DirR_D(MaxDim), XyzOld_D(MaxDim)
     real:: CosBRMin = 1.0
     integer, parameter::nCoarseMax = 2
 
@@ -417,6 +464,7 @@ contains
     BoundaryThreads_B(iBlock) % Xi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
+    BoundaryThreads_B(iBlock) % Coord1_III = 0.0
     BoundaryThreads_B(iBlock) % TGrav_III = 0.0
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
@@ -459,6 +507,8 @@ contains
 
        RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
+       call xyz_to_coord(XyzStart_D, Coord_D)
+       BoundaryThreads_B(iBlock) % Coord1_III(0, j, k) = Coord_D(r_)
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
@@ -514,6 +564,8 @@ contains
              !/
              XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
+             call xyz_to_coord(Xyz_D, Coord_D)
+             BoundaryThreads_B(iBlock) % Coord1_III(-iPoint, j, k) = Coord_D(r_)
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
