@@ -249,6 +249,8 @@ contains
     integer, intent(in) :: iSat
     character(LEN=*),intent(in) :: TypeStatus
 
+
+    character(LEN=50) :: FilenameOutSat
     integer :: l1, l2
 
     logical:: DoTest
@@ -263,18 +265,27 @@ contains
        if (l1-1 <= 0) l1 = 1
        if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
 
+       select case(TypeTrajTimeRange_I(iSat))
+       case('orig')
+          FilenameOutSat = 'sat_'
+       case('range', 'full')
+          FilenameOutSat = 'trj_'
+       case default
+          call stop_mpi(NameSub//': unknown TypeTraj= '// &
+               TypeTrajTimeRange_I(iSat))
+       end select
+
        if (time_accurate .and. ( TypeTrajTimeRange_I(iSat) == 'range' .or. &
             TypeTrajTimeRange_I(iSat) == 'full') ) then
           call get_time_string
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
-               'sat_'//trim(TypeTrajTimeRange_I(iSat))//'_'//      &
-               FilenameSat_I(iSat)(l1:l2)//                        &
+               trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2) // &
                '_t'//trim(StringDateOrTime)//'_n',n_step,'.sat'
                
        else
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-               'sat_'//trim(TypeTrajTimeRange_I(iSat))//'_'//    &
-               FilenameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
+               trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2)//&
+               '_n',n_step,'.sat'
        endif
 
        if(DoTest) then
