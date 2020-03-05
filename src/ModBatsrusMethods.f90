@@ -759,6 +759,7 @@ contains
     use ModUtilities, ONLY : upper_case
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: iProc
+    use ModFieldLineThread, ONLY: UseFieldLineThreads
 
     character(len=*), intent(in) :: TypeSaveIn
 
@@ -830,9 +831,11 @@ contains
   contains
     !==========================================================================
     subroutine save_files
-
+      use ModFieldLineThread, ONLY: save_threads_for_plot
+      logical :: SaveThreads4Plot
       !------------------------------------------------------------------------
-      do iFile=1,nFile
+      SaveThreads4Plot = UseFieldLineThreads    
+      do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
          if( (iFile == magfile_ .or. iFile == maggridfile_) &
@@ -840,13 +843,28 @@ contains
 
          if(dn_output(ifile) >= 0)then
             if(dn_output(ifile) == 0)then
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             else if(mod(n_step,dn_output(ifile)) == 0)then
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             end if
          else if(time_accurate .and. dt_output(ifile) > 0.)then
             if(int(time_simulation/dt_output(ifile))>t_output_last(ifile))then
                t_output_last(ifile) = int(time_simulation/dt_output(ifile))
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             end if
          end if
