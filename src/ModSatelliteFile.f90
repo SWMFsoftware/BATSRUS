@@ -369,7 +369,6 @@ contains
           call close_file
           MaxPoint = max(MaxPoint, nPoint)
        end do SATELLITES1
-
     end if
 
     ! Tell all processors the maximum number of points
@@ -518,7 +517,7 @@ contains
     use ModNumConst
 
     integer, intent(in) :: iSat
-    integer :: i
+    integer :: i, nPoint
     real    :: dtime
 
     logical:: DoTest
@@ -528,15 +527,15 @@ contains
 
     if (UseSatFile_I(iSat)) then
 
-       if (nPointTraj_I(iSat) > 0) then
+       nPoint = nPointTraj_I(iSat)
+       if (nPoint > 0) then
 
           i = icurrent_satellite_position(iSat)
 
           if(DoTest)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
-               nPointTraj_I(iSat), i, Time_Simulation, TimeSat_II(iSat,i)
+               nPoint, i, Time_Simulation, TimeSat_II(iSat,i)
 
-          do while ((i < nPointTraj_I(iSat)) .and.   &
-               (TimeSat_II(iSat,i) <= Time_Simulation))
+          do while (i < nPoint .and. TimeSat_II(iSat,i) <= Time_Simulation)
              i = i + 1
           enddo
 
@@ -544,34 +543,30 @@ contains
 
           if(DoTest)write(*,*) NameSub,' final iPoint=', i
 
-          if (i == nPointTraj_I(iSat) .and. &
-               TimeSat_II(iSat,i) <= Time_Simulation .or. i==1) then
+          if ( (i == nPoint .and. Time_Simulation > TimeSat_II(iSat,i)) .or. &
+               i == 1 ) then
 
              DoTrackSatellite_I(iSat) = .false.
              XyzSat_DI(:,iSat) = 0.0
 
-             if(DoTest)write(*,*) NameSub,' DoTrackSat=.false.'
-
           else
-
              DoTrackSatellite_I(iSat) = .true.
 
              dTime = 1.0 - (TimeSat_II(iSat,i) - Time_Simulation) / &
-                  (TimeSat_II(iSat,i) - TimeSat_II(iSat,i-1) + 1.0e-6)
+                  max((TimeSat_II(iSat,i) - TimeSat_II(iSat,i-1)), cTiny)
 
              XyzSat_DI(:,iSat) = dTime * XyzSat_DII(:,iSat,i) + &
                   (1.0 - dTime) * XyzSat_DII(:,iSat,i-1)
 
-             if(DoTest)write(*,*) NameSub,' XyzSat=', XyzSat_DI(:,iSat)
+          end if
 
-          endif
-
-       endif
-
+          if(DoTest) then
+             write(*,*) NameSub,' DoTrackSat =', DoTrackSatellite_I(iSat)
+             write(*,*) NameSub,' XyzSat     =', XyzSat_DI(:,iSat)
+          end if
+       end if
     else
-
        call satellite_trajectory_formula(iSat)
-
     end if
 
     call test_stop(NameSub, DoTest)
