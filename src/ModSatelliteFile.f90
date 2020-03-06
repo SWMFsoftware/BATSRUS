@@ -139,30 +139,30 @@ contains
 
           ! time range for the satellite
           if(index(StringSatellite,'traj') >0 ) then
-             TypeTrajTimeRange_I(iSat) = 'range'
+             if (index(StringSatellite,'range') >0) then
+                TypeTrajTimeRange_I(iSat) = 'range'
 
-             call read_var('StartTimeTraj',StartTimeTraj_I(iSat),StartTimeIn=StartTime)
-             call read_var('EndTimeTraj',  EndTimeTraj_I(iSat),  StartTimeIn=StartTime)
-             call read_var('DtTraj',       DtTraj_I(iSat))
+                call read_var('StartTimeTraj',StartTimeTraj_I(iSat),StartTimeIn=StartTime)
+                call read_var('EndTimeTraj',  EndTimeTraj_I(iSat),  StartTimeIn=StartTime)
+                call read_var('DtTraj',       DtTraj_I(iSat))
 
-             ! EndTimeTraj should not be smaller then StartTimeTraj
-             if (EndTimeTraj_I(iSat) < StartTimeTraj_I(iSat) .or. &
-                  (EndTimeTraj_I(iSat)-StartTimeTraj_I(iSat))/DtTraj_I(iSat) &
-                  > 1e6 .or. DtTraj_I(iSat) <= 0) then
-                write(*,*) ' StartTimeTraj_I =', StartTimeTraj_I(iSat)
-                write(*,*) ' EndTimeTraj_I   =', EndTimeTraj_I(iSat)
+                ! EndTimeTraj should not be smaller then StartTimeTraj
+                if (EndTimeTraj_I(iSat) < StartTimeTraj_I(iSat) .or. &
+                     (EndTimeTraj_I(iSat)-StartTimeTraj_I(iSat))/DtTraj_I(iSat) &
+                     > 1e6 .or. DtTraj_I(iSat) <= 0) then
+                   write(*,*) ' StartTimeTraj_I =', StartTimeTraj_I(iSat)
+                   write(*,*) ' EndTimeTraj_I   =', EndTimeTraj_I(iSat)
 
-                call stop_mpi(NameSub//' correct #SATELLITE: '//         &
-                     'EndTimeTraj < StartTimeTraj or too small dtTraj '//&
-                     'or dtTraj <= 0.')
-             endif
-          end if
-
-          if(index(StringSatellite,'full') >0) then
-             TypeTrajTimeRange_I(iSat) = 'full'
-             StartTimeTraj_I(iSat) = -1e30
-             EndTimeTraj_I(iSat)   = -1e30
-             DtTraj_I(iSat)        = -1e30
+                   call stop_mpi(NameSub//' correct #SATELLITE: '//         &
+                        'EndTimeTraj < StartTimeTraj or too small dtTraj '//&
+                        'or dtTraj <= 0.')
+                endif
+             else
+                TypeTrajTimeRange_I(iSat) = 'full'
+                StartTimeTraj_I(iSat) = -1e30
+                EndTimeTraj_I(iSat)   = -1e30
+                DtTraj_I(iSat)        = -1e30
+             end if
           end if
 
           ! Satellite variables
