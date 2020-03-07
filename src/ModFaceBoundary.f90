@@ -293,8 +293,9 @@ contains
           if (nIonFluid /= 2) call stop_mpi(NameSub// &
                ': MUST be two fluids for Young BC.')
 
-          RhoCpcp_I(1)         = BodyNDim_I(1)*Io2No_V(UnitRho_)
-          RhoCpcp_I(nIonFluid) = BodyNDim_I(1)*RatioOH*16*Io2No_V(UnitRho_)
+          RhoCpcp_I(1)         = BodyNDim_I(IonFirst_)*Io2No_V(UnitRho_)
+          RhoCpcp_I(nIonFluid) = BodyNDim_I(IonFirst_)*RatioOH*16        &
+               *Io2No_V(UnitRho_)
        else
           ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
           ! is both light and very minor.
