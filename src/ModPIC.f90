@@ -7,6 +7,8 @@ module ModPIC
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, iComm
 
+  use ModGridInfo, ONLY: iPicOn_, iPicOff_, get_point_status, set_point_status
+
   ! Variables and methods for coupling BATSRUS with a PIC code
 
   implicit none
@@ -19,9 +21,12 @@ module ModPIC
   public:: pic_init_region
   public:: pic_find_node
   public:: pic_find_region
+  public:: pic_set_cell_status
   public:: mhd_to_pic_vec
+  public:: is_inside_active_pic_region
 
   logical, public:: UsePic = .false.
+  logical, public:: UseAdaptivePic = .false. 
 
   logical, public:: DoBalancePicBlock=.true.
 
@@ -42,12 +47,20 @@ module ModPIC
   ! PIC regions
   integer, public :: nRegionPic = 0
 
-  ! 1) LenPic_D, XyzMinPic_DI and XyzMaxPic_DI include the ghost cell layers.
-  !    An 2D example: XyzMinPic_DI is the bottom left point, XyzMaxPic_DI
-  !      is the bottom right point. Note the PIC box can be rotated.
-  ! 2) R_DDI: mhd coordinates to pic coordinates.
+
+  ! R_DDI: mhd coordinates to pic coordinates.
   real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), &
        LenPic_DI(:,:), DxyzPic_DI(:,:), R_DDI(:,:,:)
+
+  ! The patch size of each region
+  integer, public, allocatable:: PatchSize_DI(:,:)
+
+  ! Each patch uses 1 bit to record its status, on or off. The second
+  ! index is the region number. 
+  integer, public, allocatable:: Status_I(:)
+  integer, public::  nSizeStatus
+
+  integer, public:: nCellPerPatch = 2
 
   ! The PIC regon can rotate around x, y and z axis. The rotation rule is the
   ! same as the rotation for #REGION command.
@@ -82,11 +95,13 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case ("#PICGHOST")
-      call read_var('nGhostPic',nGhostPic)
+       call read_var('nGhostPic',nGhostPic)
+    case ("#PICADAPTIVE")
+       call read_var('UseAdaptivePic', UseAdaptivePic)
+       call read_var('PatchSize', nCellPerPatch)
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-
     case("#PICREGIONUNIT")
        UseSamePicUnit = .false. 
        call read_var('nPicRegion', nRegionPicTmp)
@@ -104,13 +119,13 @@ contains
             uUnitPicSi_I(nRegionPic),       &
             mUnitPicSi_I(nRegionPic),       &
             ScalingFactor_I(nRegionPic)     )
-       
+
        do iRegion = 1, nRegionPic
           call read_var('xUnitPicSi', xUnitPicSi_I(iRegion))
           call read_var('uUnitPicSi', uUnitPicSi_I(iRegion))
           call read_var('ScalingFactor', ScalingFactor_I(iRegion))          
        enddo
-       
+
     case("#PICBALANCE")
        call read_var('DoBalancePicBlock', DoBalancePicBlock)
     case("#PICREGION")
@@ -123,14 +138,16 @@ contains
 
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
-            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI)
+            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI, PatchSize_DI)
        allocate( &
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
             XyzPic0_DI(nDim,nRegionPic), &
             LenPic_DI(nDim,nRegionPic), &
             R_DDI(3,3,nRegionPic),       &
-            DxyzPic_DI(nDim,nRegionPic))
+            DxyzPic_DI(nDim,nRegionPic), &
+            PatchSize_DI(3, nRegionPic))
+       PatchSize_DI = 1
        do iRegion = 1, nRegionPic
           call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
           call              read_var('xMaxPic', XyzMaxPic_DI(x_,iRegion))
@@ -231,11 +248,10 @@ contains
     ! MHD grid indexes
     integer:: i
 
+    integer:: nCell
+
     ! mass per charge SI
     real:: IonMassPerChargeSi
-
-    ! Region check
-    integer :: nCell
 
     integer :: iProcPic, iBlockPic, iCell_D(MaxDim), iError
     real:: PicMiddle_D(MaxDim)
@@ -308,15 +324,25 @@ contains
     if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     do iRegion = 1, nRegionPic      
-       ! extending the region sizes with 1 ghost cell
        do i=1, nDim
-          ! Number of nodes (not cells! )
+          ! Fix the PIC domain range.
           nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
-          ! 1 ghost cell layer at each side
-          LenPic_DI(i,iRegion) = (nCell+2)*DxyzPic_DI(i,iRegion)
+          LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
+          if(UseAdaptivePic) PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
        end do
 
-       XyzMinPic_DI(:,iRegion) = XyzPic0_DI(:,iRegion) - DxyzPic_DI(:,iRegion)
+       if(UseAdaptivePic) then
+          if(iRegion==1) then
+             ! Assume the first PIC region is the largest. A temporary solution.
+             nSizeStatus = ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
+                  /(sizeof(nSizeStatus) * 8) )
+             allocate(Status_I(nSizeStatus))
+             Status_I = 0
+          endif
+       endif
+
+
+       XyzMaxPic_DI(:,iRegion) = XyzMinPic_DI(:,iRegion) + LenPic_DI(:,iRegion)      
 
        if(UseHallResist) then
           ! If UseHallResist is true, find out the Hall factor in the middle
@@ -338,11 +364,11 @@ contains
           call MPI_Bcast(ScalingFactor_I(iRegion),1,MPI_REAL, &
                iProcPic,iComm,iError)          
        endif
-       
+
        mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
             (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
        mUnitPicSi_I(iRegion) = mUnitPicSi
-       
+
        if(iProc==0)then
           write(*,*) NameSub,': iRegion            = ', iRegion
           write(*,*) NameSub,': IonMassPerChargeSi = ', IonMassPerChargeSi
@@ -359,9 +385,9 @@ contains
        do iRegion = 1, nRegionPic
           write(*,*) "  Region : ", iRegion
           write(*,*) "     Min Cordinate : ", &
-               XyzMinPic_DI(1:nDim,iRegion) + DxyzPic_DI(1:nDim,iRegion)
+               XyzMinPic_DI(1:nDim,iRegion)
           write(*,*) "     Max Cordinate : ", &
-               XyzMaxPic_DI(1:nDim,iRegion) - DxyzPic_DI(1:nDim,iRegion)
+               XyzMaxPic_DI(1:nDim,iRegion)
        end do
     end if
     call test_stop(NameSub, DoTest)
@@ -388,7 +414,6 @@ contains
     nIJK_D = 1; PIC_D = 0; MHD_D=0
 
     do iRegion = 1, nRegionPic
-       ! nIJK_D includes two ghost cells.
        nIJK_D(1:nDim) = int(&
             LenPic_DI(1:nDim,iRegion)/DxyzPic_DI(1:nDim,iRegion) + 0.5)
 
@@ -411,6 +436,116 @@ contains
   end subroutine pic_find_node
   !============================================================================
 
+  subroutine pic_set_cell_status
+    use BATL_lib, ONLY: x_, y_, z_
+    use ModMain, ONLY: iteration_number
+
+    integer:: iStatus
+    integer::nx, ny, nz, i, j, k, iRegion
+    real:: r
+    !--------------------------------------------------------------------
+
+    ! Global MPI reduction is needed for real simulations. Needs to be implemented. 
+
+    Status_I = iPicOff_
+    do iRegion = 1, nRegionPic
+       nx = PatchSize_DI(x_, iRegion)
+       ny = PatchSize_DI(y_, iRegion)
+       nz = PatchSize_DI(z_, iRegion)
+       do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
+
+          !write(*,*)"iteration_number = ", iteration_number
+
+          ! if(j-ny/2 < ny/4.0 + 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 .and. &
+          !j-ny/2 > -ny/4.0 - 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 ) then
+
+          !    call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+          ! endif
+
+          !r = sqrt(real(j-ny/2 + 0.5)**2 + real(i-nx/2 + 0.5)**2)
+          !if(.true.) then
+          !if(r < nx/2) then
+          !if(i >nx/2 + nx/4*mod(iteration_number,10)/10.0 .and. j > ny/2) then
+          ! if((r < nx/4 + nx/4*mod(iteration_number,10)/10.0 .and. &
+          !       r > nx/8 + nx/10*mod(iteration_number,10)/10.0) .or. &
+          !       r < -nx/10) then
+          ! j-ny/2 < ny/4.0 + 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 .and. &
+          !   j-ny/2 > -ny/4.0 - 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 ) then
+
+          call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+          !endif
+
+
+          ! if(iteration_number <= 2  ) then
+          !    !.and. (j<ny/2 .or. i > nx/2)
+          !    call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+          !  else
+          !     if(i>nx/2) then
+          !        call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+          !     endif
+          !  endif
+
+
+       enddo; enddo; enddo
+    enddo
+
+    ! do iRegion = 1, nRegionPic
+    !    nx = PatchSize_DI(x_, iRegion)
+    !    ny = PatchSize_DI(y_, iRegion)
+    !    nz = PatchSize_DI(z_, iRegion)
+    !    do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
+    !       call get_point_status(Status_I,nx, ny, nz, i, j, k, iStatus)
+    !       write(*,*) "pic_set_cell_status: i, j, k, status = ", i,j,k,iStatus               
+    !    enddo; enddo; enddo
+    ! enddo
+
+  end subroutine pic_set_cell_status
+
+  !============================================================================
+  subroutine is_inside_active_pic_region(xyz_D, IsInside)
+    ! It should be a function instead of a subroutine. --Yuxi
+    use BATL_lib, ONLY: nDim, x_, y_, z_
+
+    real, intent(in) :: xyz_D(nDim)
+    logical, intent(out):: IsInside
+    real:: dshift_D(3)
+
+    integer:: iRegion, iStatus, nx, ny, nz
+    integer:: Index_D(3) = 0
+    integer:: di, dj, dk
+    !-----------------------------------------------
+    iRegion = 1
+
+    IsInside = .false. 
+
+    if(any(xyz_D < XyzMinPic_DI(1:nDim, iRegion) + (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return 
+    if(any(xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return
+
+    nx = PatchSize_DI(x_, iRegion)
+    ny = PatchSize_DI(y_, iRegion)
+    nz = PatchSize_DI(z_, iRegion)       
+
+    do di = -1, 1; do dj = -1, 1; do dk = -1, 1
+
+       dshift_D(x_) = di
+       dshift_D(y_) = dj
+       dshift_D(z_) = dk 
+
+
+       ! Patch cell index
+       Index_D(1:nDim) = floor((xyz_D + dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - XyzMinPic_DI(1:nDim,iRegion))/ &
+            (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
+
+       call get_point_status(Status_I,nx, ny, nz, Index_D(x_), Index_D(y_), &
+            Index_D(z_), iStatus)
+
+       if(iStatus==iPicOff_) return   
+
+    enddo; enddo; enddo
+    IsInside = .true.
+  end subroutine is_inside_active_pic_region
+  
+  !============================================================================
   integer function pic_find_region(iBlock,i,j,k)
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
