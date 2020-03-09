@@ -72,7 +72,8 @@ module GM_wrapper
   public:: GM_get_for_pc_dt
   public:: GM_get_for_pc_init
   public:: GM_get_for_pc
-  public:: GM_put_from_pc
+  public:: GM_get_for_pc_grid_info
+  public:: GM_put_from_pc  
   !^CMP END PC
 
   !^CMP IF PT BEGIN
