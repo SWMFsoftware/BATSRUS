@@ -334,8 +334,9 @@ contains
        if(UseAdaptivePic) then
           if(iRegion==1) then
              ! Assume the first PIC region is the largest. A temporary solution.
+             ! storage_size returns the size in bits. 
              nSizeStatus = ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
-                  /(sizeof(nSizeStatus) * 8) )
+                  /storage_size(nSizeStatus))
              allocate(Status_I(nSizeStatus))
              Status_I = 0
           endif
