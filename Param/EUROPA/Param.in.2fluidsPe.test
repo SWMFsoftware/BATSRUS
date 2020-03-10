@@ -213,6 +213,13 @@ VAR step date time      StringLog
 -1.                     DtSaveLogfile [sec]
 mlop recop chxop mlo2p reco2p chxo2p OpRhopnt O2pRhopnt mloppnt recoppnt chxoppnt mlo2ppnt reco2ppnt chxo2ppnt Pepnt
 
+#SATELLITE
+1                       nSatellite
+MHD traj                StringSatellite
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite_2fpe_e4.dat   NameTrajectoryFile
+
 #SAVEPLOT
 1
 cut  MHD idl_ascii
