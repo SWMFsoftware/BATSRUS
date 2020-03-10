@@ -1649,16 +1649,16 @@ test_europa2fluidspe_compile:
 	make PIDL
 
 test_europa2fluidspe_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/EUROPA/Param.in.2fluidsPe.test PARAM.in
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.2fluidsPe.test PARAM.in; cp Param/EUROPA/satellite-E4_flyby-from_pds.dat satellite_2fpe_e4.dat
 
 test_europa2fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_europa2fluidspe_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
-		Param/EUROPA/europa2fluidspe_cut_mhd_1_n00000100.out \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa2fluidspe.diff)
+        -@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+                Param/EUROPA/trj_satellite_2fpe_e4_n00000100.sat \
+                ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat > test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
