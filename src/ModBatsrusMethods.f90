@@ -232,7 +232,7 @@ contains
       end if
 
       ! Potentially useful for applying "First Touch" strategy
-      !!$omp parallel do 
+!!$omp parallel do 
       do iBlock = 1, nBlockMax
          ! Initialize solution blocks
          call set_initial_condition(iBlock)
@@ -240,7 +240,7 @@ contains
          if(UseHybrid.and.(.not.Unused_B(iBlock)))& 
               call get_vdf_from_state(iBlock,DoOnScratch = .True.)
       end do
-      !!$omp end parallel do
+!!$omp end parallel do
 
       if(UseHybrid)then
          !\
@@ -265,7 +265,7 @@ contains
 
          call user_initial_perturbation
          UseUserPerturbation=.false.
-         
+
       end if
 
       if(restart)then
@@ -302,7 +302,8 @@ contains
     !==========================================================================
 
     subroutine initialize_files
-      use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
+      use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite, &
+           TypeTrajTimeRange_I
 
       ! Local variables
       integer :: iSat
@@ -311,8 +312,10 @@ contains
       !------------------------------------------------------------------------
       if (iProc == 0) then
          do iSat = 1, nSatellite
-            call set_satellite_file_status(iSat,'open')
-            call set_satellite_file_status(iSat,'close')
+            if (TypeTrajTimeRange_I(iSat) == 'orig') then
+               call set_satellite_file_status(iSat,'open')
+               call set_satellite_file_status(iSat,'close')
+            end if
          end do
       end if
 
@@ -345,12 +348,15 @@ contains
     use ModLoadBalance, ONLY: load_balance, select_stepping
     use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
-
+    use ModTimeStepControl, ONLY: TimeSimulationOldCheck
+    
     ! Local variables
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_session'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    TimeSimulationOldCheck = -1e10
 
     if(UseLocalTimeStepNew)then
        if(iProc == 0)write(*,*) &
@@ -433,7 +439,7 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
     use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
          prepare_amr, do_amr
-    use ModPhysics, ONLY : No2Si_V, UnitT_
+    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
     use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
          UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit
@@ -444,12 +450,13 @@ contains
     use ModSemiImplicit, ONLY: advance_semi_impl
     use ModIeCoupling, ONLY: apply_ie_velocity
     use ModImCoupling, ONLY: apply_im_pressure
-    use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
+    use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step,     &
+         set_global_timestep, DoCheckTimeStep, DnCheckTimeStep, TimeStepMin, &
+         TimeSimulationOldCheck
     use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
     use ModMessagePass, ONLY: exchange_messages, DoExtraMessagePass
-    use ModTimeStepControl, ONLY: set_global_timestep
     use ModB0, ONLY: DoUpdateB0, DtUpdateB0
     use ModResistivity, ONLY: &
          UseResistivity, UseHeatExchange, calc_heat_exchange
@@ -509,6 +516,17 @@ contains
 
        call set_global_timestep(TimeSimulationLimit)
 
+       if (DoCheckTimeStep .and. mod(n_step, DnCheckTimeStep) == 0)then
+          if (time_simulation - TimeSimulationOldCheck <             &
+               TimeStepMin*DnCheckTimeStep*Io2SI_V(UnitT_) ) then
+             if (iProc ==0) write(*,*) NameSub,                      &
+                  ': TimeSimulationOldCheck, time_simulation =',     &
+                  TimeSimulationOldCheck, time_simulation
+             call stop_mpi(NameSub//': advance too slow in time')
+          end if
+          TimeSimulationOldCheck = time_simulation
+       end if
+
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
     end if
 
@@ -533,8 +551,8 @@ contains
 
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
     if(time_accurate .and. &
-       Time_Simulation < TimeSimulationLimit .and. &
-       TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
+         Time_Simulation < TimeSimulationLimit .and. &
+         TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
 
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
@@ -604,8 +622,8 @@ contains
        ! dB0/dt term is added at the DtUpdateB0 frequency
 
        if(int(Time_Simulation/DtUpdateB0) >  &
-          int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
-          call update_b0
+            int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
+            call update_b0
     end if
 
     if(UseProjection) call project_divb
@@ -741,6 +759,7 @@ contains
     use ModUtilities, ONLY : upper_case
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: iProc
+    use ModFieldLineThread, ONLY: UseFieldLineThreads
 
     character(len=*), intent(in) :: TypeSaveIn
 
@@ -812,9 +831,11 @@ contains
   contains
     !==========================================================================
     subroutine save_files
-
+      use ModFieldLineThread, ONLY: save_threads_for_plot
+      logical :: SaveThreads4Plot
       !------------------------------------------------------------------------
-      do iFile=1,nFile
+      SaveThreads4Plot = UseFieldLineThreads    
+      do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
          if( (iFile == magfile_ .or. iFile == maggridfile_) &
@@ -822,13 +843,28 @@ contains
 
          if(dn_output(ifile) >= 0)then
             if(dn_output(ifile) == 0)then
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             else if(mod(n_step,dn_output(ifile)) == 0)then
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             end if
          else if(time_accurate .and. dt_output(ifile) > 0.)then
             if(int(time_simulation/dt_output(ifile))>t_output_last(ifile))then
                t_output_last(ifile) = int(time_simulation/dt_output(ifile))
+               if(SaveThreads4Plot.and.iFile > plot_&
+                    .and.iFile<=plot_+nPlotFile)then
+                  call save_threads_for_plot
+                  SaveThreads4Plot = .false.
+               end if
                call save_file
             end if
          end if
@@ -851,9 +887,11 @@ contains
     subroutine save_file
 
       use ModRestartFile, ONLY: write_restart_files
-      use ModSatelliteFile, ONLY: &
+      use ModSatelliteFile, ONLY: IsFirstWriteSat_I,                   &
            nSatellite, set_satellite_file_status, set_satellite_flags, &
-           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
+           TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position,  &
+           TypeTrajTimeRange_I, StartTimeTraj_I, EndTimeTraj_I, DtTraj_I, &
+           nPointTraj_I, TimeSat_II
       use ModWriteLogSatFile,   ONLY: write_logfile
       use ModGroundMagPerturb, ONLY: &
            DoSaveMags, DoSaveGridmag, write_magnetometers, &
@@ -868,7 +906,7 @@ contains
 
       use ModMessagePass,       ONLY: exchange_messages
 
-      integer :: iSat
+      integer :: iSat, iPointSat
 
       ! Backup location for the Time_Simulation variable.
       ! Time_Simulation is used in steady-state runs as a loop parameter
@@ -990,28 +1028,83 @@ contains
          ! Case for satellite files
          iSat = iFile - Satellite_
          call timing_start('save_satellite')
-         if(iProc==0)call set_satellite_file_status(iSat,'append')
-         !
-         ! Distinguish between time_accurate and .not. time_accurate:
-         !
 
-         if (time_accurate) then
-            call set_satellite_flags(iSat)
-            ! write one line for a single trajectory point
-            call write_logfile(iSat,ifile)
-         else
-            tSimulationBackup = Time_Simulation    ! Save ...
-            Time_Simulation = TimeSatStart_I(iSat)
-            do while (Time_Simulation <= TimeSatEnd_I(iSat))
+         if (TypeTrajTimeRange_I(iSat) == 'range') then
+            if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+            ! need this to write the header
+            IsFirstWriteSat_I(iSat) = .true.
+
+            tSimulationBackup = Time_Simulation
+            Time_Simulation = StartTimeTraj_I(iSat)
+
+            do while (Time_Simulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile)
-               Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
+               call write_logfile(iSat,ifile, &
+                    TimeSatHeaderIn=tSimulationBackup)
+               Time_Simulation = Time_Simulation + DtTraj_I(iSat)
             end do
+
             Time_Simulation = tSimulationBackup    ! ... Restore
             icurrent_satellite_position(iSat) = 1
+
             if(iProc==0)call set_satellite_file_status(iSat,'close')
+         else if (TypeTrajTimeRange_I(iSat) == 'full') then
+            if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+            ! need this to write the header
+            IsFirstWriteSat_I(iSat) = .true.
+
+            tSimulationBackup = Time_Simulation
+            Time_Simulation = StartTimeTraj_I(iSat)
+
+            do iPointSat = 1, nPointTraj_I(iSat)
+               Time_Simulation = TimeSat_II(iSat, iPointSat)
+               call set_satellite_flags(iSat)
+               ! write for ALL the points of trajectory cut
+               call write_logfile(iSat,ifile, &
+                    TimeSatHeaderIn=tSimulationBackup)
+            end do
+
+            Time_Simulation = tSimulationBackup    ! ... Restore
+            icurrent_satellite_position(iSat) = 1
+
+            if(iProc==0)call set_satellite_file_status(iSat,'close')
+         else if (TypeTrajTimeRange_I(iSat) == 'orig') then
+            !
+            ! Distinguish between time_accurate and .not. time_accurate:
+            !
+            if (time_accurate) then
+               if(iProc==0)call set_satellite_file_status(iSat,'append')
+
+               call set_satellite_flags(iSat)
+               ! write one line for a single trajectory point
+               call write_logfile(iSat,ifile)
+            else
+               if(iProc==0)call set_satellite_file_status(iSat,'open')
+
+               ! need this to write the header
+               IsFirstWriteSat_I(iSat) = .true.
+
+               tSimulationBackup = Time_Simulation    ! Save ...
+               Time_Simulation = TimeSatStart_I(iSat)
+               do while (Time_Simulation <= TimeSatEnd_I(iSat))
+                  call set_satellite_flags(iSat)
+                  ! write for ALL the points of trajectory cut
+                  call write_logfile(iSat,ifile)
+                  Time_Simulation = Time_Simulation+dt_output(iSat+Satellite_)
+               end do
+               Time_Simulation = tSimulationBackup    ! ... Restore
+               icurrent_satellite_position(iSat) = 1
+
+               if(iProc==0)call set_satellite_file_status(iSat,'close')
+            end if
+         else
+            call stop_mpi(NameSub//' unknow TypeTrajTimeRange_I: '// &
+                 TypeTrajTimeRange_I(iSat))
          end if
+
          call timing_stop('save_satellite')
 
       elseif(ifile == magfile_) then

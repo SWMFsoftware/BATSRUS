@@ -1461,6 +1461,7 @@ function log_time,wlog,wlognames,timeunit
   itime = -1
   istep = -1
   iyear = -1
+  idoy  = -1
   imon  = -1
   iday  = -1
   ihour = -1
@@ -1477,6 +1478,7 @@ function log_time,wlog,wlognames,timeunit
         'year'       : iyear = i
         'yr'         : iyear = i
         'yy'         : iyear = i
+        'doy'        : idoy  = i
         'month'      : imon  = i
         'mo'         : imon  = i
         'day'        : iday  = i
@@ -1505,7 +1507,14 @@ function log_time,wlog,wlognames,timeunit
   if itime gt -1 then begin
      hours = wlog(*,itime)/3600.0
   endif else begin
-     if iyear eq -1 or iday eq -1 then begin
+     if idoy gt -1 then begin
+        hours = wlog(*,idoy)*24.0
+        if ihour gt -1 then hours += wlog(*,ihour)
+        if imin  eq idoy + 2 then hours[i] += wlog(i,imin)/60.0
+        if isec  eq idoy + 3 then hours[i] += wlog(i,isec)/3600.0
+        if imsc  eq idoy + 4 then hours[i] += wlog(i,imsc)/3.6e6
+        if iyear gt -1 then hours += wlog(*,iyear)*365.25*24
+     endif else if iyear eq -1 or iday eq -1 then begin
         if ihour gt -1 then begin
            hours = wlog(*,ihour)
            for i=1L, n_elements(hours)-1 do $
@@ -1526,10 +1535,10 @@ function log_time,wlog,wlognames,timeunit
               nday = nday + dday
            endif
            hours[i] = nday*24.0
-           if ihour eq iday + 1 then hours[i] = hours[i] + wlog(i,ihour)
-           if imin  eq iday + 2 then hours[i] = hours[i] + wlog(i,imin)/60.0
-           if isec  eq iday + 3 then hours[i] = hours[i] + wlog(i,isec)/3600.0
-           if imsc  eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
+           if ihour eq iday + 1 then hours[i] += wlog(i,ihour)
+           if imin  eq iday + 2 then hours[i] += wlog(i,imin)/60.0
+           if isec  eq iday + 3 then hours[i] += wlog(i,isec)/3600.0
+           if imsc  eq iday + 4 then hours[i] += wlog(i,imsc)/3.6e6
         endfor
      endelse
   endelse
@@ -1548,6 +1557,7 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
+        'y': logtime = hours/(24*365.25)
         'd': logtime = hours/24
         '1': logtime = hours*3600
         's': logtime = hours*3600
@@ -2540,7 +2550,8 @@ pro read_plot_param
      if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
   endif else begin
      if strmid(plotmode,0,4) eq 'plot' then plotmode='contbar'
-     print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
+     print,'2D plotmode: shade/surface/cont/tv/polar/lonlatn/lonlats/velovect/vector/stream'
+     print,'2D +options: degree/radian/hour'
      print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log,lgx,lgy'
      print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
      askstr,'plotmode(s)                ',plotmode,doask
@@ -3289,8 +3300,6 @@ pro make_unpolar_grid
 
   common file_head ; ndim
 
-  siz = size(x)
-  ndim = siz(0)-1
   case ndim of
       2: make_unpolar_grid2
       3: make_unpolar_grid3
@@ -3312,17 +3321,17 @@ pro make_unpolar_grid2
   common plot_data
   common vector_param
 
-  xreg=x
-  phi=x(*,*,1)
-
+  xreg = x
+  rr   = x(*,*,0)
+  phi  = x(*,*,1)
   phirange = max(phi) - min(phi)
 
   ; If phi is in local time or degrees, change it to radians
   if      abs(phirange - 24.0) lt 0.1 then phi=phi*!pi/12 $
   else if phirange gt 6.3             then phi=phi*!pi/180
 
-  xreg(*,*,0)=x(*,*,0)*cos(phi)
-  xreg(*,*,1)=x(*,*,0)*sin(phi)
+  xreg(*,*,0)=rr*cos(phi)
+  xreg(*,*,1)=rr*sin(phi)
 
   wreg=w
   for i=1,nvector do begin
@@ -3920,20 +3929,20 @@ pro plot_func
 
      ;; Check if the angular unit of phi is given
      angleunit = -1.0
-     i=strpos(plotmod,'polardeg')
+     i=strpos(plotmod,'degree')
      if i ge 0 then begin
         angleunit = !dtor
-        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+8)
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+6)
      endif
-     i=strpos(plotmod,'polarhour')
+     i=strpos(plotmod,'hour')
      if i ge 0 then begin
         angleunit = !pi/12
-        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+9)
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
      endif
-     i=strpos(plotmod,'polarrad')
+     i=strpos(plotmod,'radian')
      if i ge 0 then begin
         angleunit = 1.0
-        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+8)
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+6)
      endif
 
      ;; Calculate the next p.multi(0) explicitly
@@ -3968,7 +3977,7 @@ pro plot_func
 
         if keyword_set(fixaspect) and strmid(plotmod,0,4) ne 'plot' then begin
 
-           if plotmod eq 'polar' then $
+           if plotmod eq 'polar' or plotmod eq 'lonlatn' or plotmod eq 'lonlats' then $
               aspectx=1 $
            else if abs(fixaspect) ne 1 then $
               aspectx = abs(fixaspect) $
@@ -4086,7 +4095,8 @@ pro plot_func
         else                                lstyle=!p.linestyle
 
      ;; Skip minimum ad maximum levels
-     if plotmod eq 'cont' or plotmod eq 'polar' then begin
+     if plotmod eq 'cont' or plotmod eq 'polar' or $
+        plotmod eq 'lonlatn' or plotmod eq 'lonlats' then begin
         if fill then nlevel=colorlevel else nlevel=contourlevel
         levels=(findgen(nlevel+2)-1)/(nlevel-1)*(f_max-f_min)+f_min
      endif
@@ -4096,6 +4106,16 @@ pro plot_func
         if max(yy)-min(yy) gt 300 then $
            angleunit = !dtor $  ; degrees
         else if max(yy)-min(yy) gt 20 then $
+           angleunit = !pi/12 $ ; local time
+        else $
+           angleunit = 1.0      ; radians
+     endif
+
+     ;; figure out the units of angle in 1st coordinate if not already set
+     if (plotmod eq 'lonlatn' or plotmod eq 'lonlats') and angleunit lt 0 then begin
+        if max(xx)-min(xx) gt 300 then $
+           angleunit = !dtor $  ; degrees
+        else if max(xx)-min(xx) gt 20 then $
            angleunit = !pi/12 $ ; local time
         else $
            angleunit = 1.0      ; radians
@@ -4173,6 +4193,14 @@ pro plot_func
                       XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE, $
                       XLOG=lgx, YLOG=lgy
            'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
+                                     FOLLOW=label, FILL=fill, LEVELS=levels,$
+                                     XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
+                                     /NOERASE
+           'lonlatn' :polar_contour,f>f_min,xx*angleunit,max(yy)-yy,$
+                                     FOLLOW=label, FILL=fill, LEVELS=levels,$
+                                     XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
+                                     /NOERASE
+           'lonlats' :polar_contour,f>f_min,xx*angleunit,yy-min(yy),$
                                      FOLLOW=label, FILL=fill, LEVELS=levels,$
                                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
                                      /NOERASE

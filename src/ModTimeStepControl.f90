@@ -41,10 +41,11 @@ module ModTimeStepControl
        IncreaseStepFactor = 1.05
 
   ! Minimum time step checking
-  logical:: DoCheckTimeStep = .false.
-  integer:: nCheckTimeStep = 0, iCheckTimeStep = 0
-  real   :: TimeStepMin = 0.0
-
+  logical, public:: DoCheckTimeStep = .false.
+  integer, public:: DnCheckTimeStep = 0, iCheckTimeStep = 0
+  real,    public:: TimeStepMin = 0.0
+  real,    public:: TimeSimulationOldCheck
+  
 contains
   !============================================================================
 
@@ -98,7 +99,7 @@ contains
        end do
     case("#CHECKTIMESTEP")
        call read_var('DoCheckTimeStep', DoCheckTimeStep)
-       call read_var('nCheckTimeStep',  nCheckTimeStep)
+       call read_var('DnCheckTimeStep', DnCheckTimeStep)
        call read_var('TimeStepMin'   ,  TimeStepMin)
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -492,31 +493,6 @@ contains
 
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
-
-    ! Check if time step has been too small for nCheckTimeStep steps
-    if(DoTest)write(*,*) NameSub,' DoCheckTimeStep=', DoCheckTimeStep
-
-    if(DoCheckTimeStep)then
-       DtDim = Dt*No2Io_V(UnitT_)
-       if(DoTest)write(*,*) NameSub,' checking DtDim=', DtDim
-       if(DtDim < TimeStepMin)then
-          iCheckTimeStep = iCheckTimeStep + 1
-          if(DoTest)write(*,*) NameSub,' iCheckTimeStep=', iCheckTimeStep
-          if(iCheckTimeStep >= nCheckTimeStep)then
-             if(iProc==0)then
-                write(*,*) NameSub,' ERROR: time step=', &
-                     DtDim,' is smaller than TimeStepMin=', TimeStepMin, &
-                     ' for the last ',iCheckTimeStep, ' time steps'
-                write(*,*) NameSub,' saving output files before abort'
-             end if
-             ! call BATS_save_files('FINAL')
-             if(iProc==0) call stop_mpi(NameSub//' time steps are too small')
-          end if
-       else
-          ! Reset counter for small time steps
-          iCheckTimeStep = 0
-       end if
-    end if
 
     if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
          Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)

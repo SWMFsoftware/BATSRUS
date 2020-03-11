@@ -22,7 +22,7 @@ module ModWriteLogSatFile
 contains
   !============================================================================
 
-  subroutine write_logfile(iSatIn, iFile)
+  subroutine write_logfile(iSatIn, iFile, TimeSatHeaderIn)
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY  : State_VGB, tmp1_BLK
@@ -30,7 +30,7 @@ contains
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
-    use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
+    use ModSatelliteFile, ONLY: FilenameSat_I, IsFirstWriteSat_I, &
          iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
     use CON_axes, ONLY: transform_matrix
     use BATL_lib, ONLY: Xyz_DGB, UseTestXyz, maxval_grid, minval_grid
@@ -43,6 +43,8 @@ contains
     ! iSatIn = 0 -> write logfile
     ! iSatIn >=1 -> write satellite output files (number = isat)
     integer, intent(in) :: iSatIn
+
+    real, optional, intent(in) :: TimeSatHeaderIn
 
     ! Logfile variables
     integer, parameter :: MaxLogVar=40
@@ -72,10 +74,19 @@ contains
     ! Event date for filename
     character(len=19) :: EventDateTime
 
+    ! Header for the sat file in time accurate
+    real ::  TimeSatHeader 
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    if(present(TimeSatHeaderIn)) then
+       TimeSatHeader = TimeSatHeaderIn
+    else
+       TimeSatHeader = time_simulation
+    end if
 
     DoWritePosition = .false.
 
@@ -224,8 +235,16 @@ contains
        elseif (iSatIn >= 1) then
           iUnit = iUnitSat_I(iSat)
           if (IsFirstWriteSat_I(iSat)) then
-             write(iUnit,'(a)')  &
-                  'Satellite data for Satellite: '//trim(NameSat_I(isat))
+             if (time_accurate) then
+                write(iUnit,'(a, es13.5)')  &
+                     'Satellite data for Satellite: ' // &
+                     trim(FilenameSat_I(isat))        // &
+                     ' at simulation time =', TimeSatHeader
+             else
+                write(iUnit,'(a)')  &
+                     'Satellite data for Satellite: '//  &
+                     trim(FilenameSat_I(isat))
+             end if
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.
           end if
