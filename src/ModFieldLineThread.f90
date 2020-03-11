@@ -16,6 +16,14 @@ module ModFieldLineThread
   PRIVATE ! Except
   integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
+
+  !\
+  ! rBody here is set to one keeping a capability to set
+  ! the face-formulated boundary condition by modifying
+  ! rBody
+  !/
+  real, public, parameter :: rBody = 1.0
+
   logical, public, allocatable:: IsAllocatedThread_B(:)
   ! Named indexes for local use only
 
@@ -139,6 +147,11 @@ module ModFieldLineThread
   ! Logical from ModMain.
   !/
   public:: UseFieldLineThreads
+  !\
+  ! If .true., use threaded gap in plots
+  !/
+  logical, public :: DoPlotThreads = .false. 
+
 
   public:: BoundaryThreads
   public:: read_threads      ! Read parameters of threads
@@ -192,43 +205,50 @@ module ModFieldLineThread
   character(len=100) :: NameRestartFile
 contains
   !============================================================================
-  subroutine read_threads(iSession)
+  subroutine read_threads(NameCommand, iSession)
     use ModSize, ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
+    character(len=*), intent(in):: NameCommand
     integer, intent(in):: iSession
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_threads'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
-    call read_var('UseFieldLineThreads', UseFieldLineThreads)
-    if(UseFieldLineThreads)then
-       if(iSession/=1)call stop_mpi(&
-            'UseFieldLineThreads can only be set ON during the first session')
-       if(.not.allocated(DoThreads_B))then
-          allocate(        DoThreads_B(MaxBlock))
-          allocate(IsAllocatedThread_B(MaxBlock))
-          DoThreads_B = .false.
-          IsAllocatedThread_B = .false.
-          allocate(BoundaryThreads_B(1:MaxBlock))
-          do iBlock = 1, MaxBlock
-             call nullify_thread_b(iBlock)
-          end do
+    select case(NameCommand)
+    case("#FIELDLINETHREAD")
+       call read_var('UseFieldLineThreads', UseFieldLineThreads)
+       if(UseFieldLineThreads)then
+          if(iSession/=1)call stop_mpi(&
+               'UseFieldLineThreads can only be set ON during the first session')
+          if(.not.allocated(DoThreads_B))then
+             allocate(        DoThreads_B(MaxBlock))
+             allocate(IsAllocatedThread_B(MaxBlock))
+             DoThreads_B = .false.
+             IsAllocatedThread_B = .false.
+             allocate(BoundaryThreads_B(1:MaxBlock))
+             do iBlock = 1, MaxBlock
+                call nullify_thread_b(iBlock)
+             end do
+          end if
+          call read_var('nPointThreadMax', nPointThreadMax)
+          call read_var('DsThreadMin', DsThreadMin)
+       else
+          if(allocated(DoThreads_B))then
+             deallocate(DoThreads_B)
+             do iBlock = 1, MaxBlock
+                if(IsAllocatedThread_B(iBlock))&
+                     call deallocate_thread_b(iBlock)
+             end do
+             deallocate(IsAllocatedThread_B)
+             deallocate(  BoundaryThreads_B)
+          end if
        end if
-       call read_var('nPointThreadMax', nPointThreadMax)
-       call read_var('DsThreadMin', DsThreadMin)
-    else
-       if(allocated(DoThreads_B))then
-          deallocate(DoThreads_B)
-          do iBlock = 1, MaxBlock
-             if(IsAllocatedThread_B(iBlock))&
-                  call deallocate_thread_b(iBlock)
-          end do
-          deallocate(IsAllocatedThread_B)
-          deallocate(  BoundaryThreads_B)
-       end if
-    end if
+    case('#PLOTTHREADS')
+       call read_var('DoPlotThreads', DoPlotThreads)
+    case default
+       call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
+    end select
     call test_stop(NameSub, DoTest)
   end subroutine read_threads
   !============================================================================
@@ -424,13 +444,6 @@ contains
     ! value of this index is 0 for the thread point
     ! at the physical cell center.
     integer :: j, k, iPoint, nTrial, iInterval, nPoint
-
-    !\
-    ! rBody here is set to one keeping a capability to set
-    ! the face-formulated boundary condition by modifying
-    ! rBody
-    !/
-    real, parameter :: rBody = 1.0
 
     ! Length interval, !Heliocentric distance
     real :: Ds, R, RStart

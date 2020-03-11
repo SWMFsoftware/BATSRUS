@@ -2527,8 +2527,8 @@ contains
        case("#TRANSITIONREGION")
           call read_modified_cooling
 
-       case("#FIELDLINETHREAD")
-          call read_threads(iSession)
+       case("#FIELDLINETHREAD", '#PLOTTHREADS')
+          call read_threads(NameCommand, iSession)
 
        case("#THREADEDBC")
           call read_threaded_bc
