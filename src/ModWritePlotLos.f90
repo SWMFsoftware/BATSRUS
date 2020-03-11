@@ -623,9 +623,11 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-
+      use ModFieldLineThread, ONLY: UseFieldLineThreads, DoPlotThreads, &
+           rChromo=>rBody
       real:: Distance
-      real:: d=0.0, Discriminant=-1.0
+      real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
+           Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
       real:: XyzIntersect_D(3)
 
       !------------------------------------------------------------------------
@@ -672,16 +674,42 @@ contains
             ! XyzIntersect_D = XyzPix_D + d*LosPix_D
 
             ! The discriminant of the equation
-            Discriminant = (sum(LosPix_D*XyzPix_D))**2 &
-                 - sum(XyzPix_D**2) + (rInner+cTiny)**2
+            LosDotXyzPix = sum(LosPix_D*XyzPix_D) 
+            XyzPix2 = sum(XyzPix_D**2)
+            Discriminant = LosDotXyzPix**2 &
+                 - XyzPix2  + (rInner+cTiny)**2
 
             if (Discriminant > 0) then
                ! Only consider the intersection facing the observer
-               d = - sum(LosPix_D*XyzPix_D) + sqrt(Discriminant)
+               SqrtDiscr = sqrt(Discriminant)
+               d = - LosDotXyzPix + SqrtDiscr 
                XyzIntersect_D = XyzPix_D + d*LosPix_D
-
                ! Integrate from the intersection point to observer
-               call integrate_line(XyzIntersect_D, Distance)
+               call integrate_line(XyzIntersect_D, Distance - d)
+
+               if(UseFieldLineThreads)then
+                  ! The discriminant controlling intersection with
+                  ! the chromosphere 
+                  DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
+                  ! Integrate in the other direction too if no intesection
+                  LosPix_D = -LosPix_D
+                  if(DiscrChromo > 0)then
+                     ! Intersection with chromosphere
+                     ! facing the observer
+                     SqrtDiscr = sqrt(DiscrChromo)
+                     dChromo = - LosDotXyzPix + SqrtDiscr 
+                     call integrate_line(XyzIntersect_D, d - dChromo, &
+                          UseThreads = DoPlotThreads)
+                  else
+                     !Distance between two intersections with the low
+                     !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
+                     dMirror = 2*SqrtDiscr
+                     call integrate_line(XyzIntersect_D, dMirror, &
+                          UseThreads = .true.)
+                     XyzIntersect_D = XyzIntersect_D + dMirror*LosPix_D
+                     call integrate_line(XyzIntersect_D, 1e30)
+                  end if
+               end if
             else
                ! No intersection, integrate from pixel to observer
                call integrate_line(XyzPix_D, Distance)
@@ -696,7 +724,7 @@ contains
 
     end subroutine integrate_image
     !==========================================================================
-    subroutine integrate_line(XyzStartIn_D, LengthMax)
+    subroutine integrate_line(XyzStartIn_D, LengthMax, UseThreads)
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
@@ -706,6 +734,7 @@ contains
 
       real, intent(in):: XyzStartIn_D(3)
       real, intent(in):: LengthMax
+      logical, optional, intent(in) :: UseThreads
 
       integer:: iProcFound
 
@@ -713,7 +742,7 @@ contains
       real:: Ds              ! Length of line segment
 
       real:: XyzLos_D(3)    ! Coordinate of center of line segment
-      integer:: iNode
+      integer:: iNode, iDimMin = 1
       real, dimension(MaxDim):: XyzStart_D, &
            PositionMin_D, PositionMax_D, &
            CoordMaxBlock_D, CoordBlock_D, CoordSizeBlock_D, &
@@ -729,6 +758,13 @@ contains
       ! DoTest = iPix==200 .and. jPix==200
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
+      if(present(UseThreads))then
+         !The part of ray passing through the threaded gap does not
+         !contribute to the integral if UseThreads = .false.
+         if(.not.UseThreads)RETURN
+         iDimMin = 2 !The first coordinate can go beyond the block boundary
+      end if
+      iDimMin = 1
       if(DoTest .and. iProc == 0) &
            write(*,'(2a, 3f10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
 
@@ -761,20 +797,28 @@ contains
          ! Move to new position
          XyzLos_D   = XyzLosNew_D
          CoordLos_D = CoordLosNew_D
-
-         ! Stop integration if we reached the edge of the domain
-         if(  any(CoordLosNew_D > CoordMax_D) .or. &
-              any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
-
+         if(.not.present(UseThreads)) then
+            ! Stop integration if we reached the edge of the domain
+            if(  any(CoordLosNew_D > CoordMax_D) .or. &
+                 any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
+            !Else the reay cannot cross the boundaries 
+         end if
          if(DoTest)write(*,*) NameSub,' inside: Ds, Length=', Ds, Length
 
          ! Check if we are still in the same block or not
-         if(  any(CoordLos_D < CoordMinBlock_D) .or. &
-              any(CoordLos_D > CoordMaxBlock_D))then
-
-            ! Find new block/node
-            call find_grid_block(XyzLos_D, iProcFound, iBlock, iNodeOut=iNode)
-
+         if(  any(CoordLos_D(iDimMin:) < CoordMinBlock_D(iDimMin:)) .or. &
+              any(CoordLos_D(iDimMin:) > CoordMaxBlock_D(iDimMin:)))then
+            if(present(UseThreads))then
+               ! Find new block/node, increase the radial coordinate to 
+               ! put the point above the inner boundary
+               call find_grid_block((rInner + cTiny)*XyzLos_D/norm2(XyzLos_D),&
+                    iProcFound, iBlock, iNodeOut=iNode)
+            else
+               ! Find new block/node, increase the radial coordinate to 
+               ! put the point above the inner boundary
+               call find_grid_block(XyzLos_D,&
+                    iProcFound, iBlock, iNodeOut=iNode)
+            end if
             ! Set block coordinates and the cell size on all processors
             call get_tree_position(iNode, PositionMin_D, PositionMax_D)
             CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
@@ -799,7 +843,7 @@ contains
 
             ! Check if midpoint is inside block + 1 cell size
             dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
-            if(all(2*dCoord_D <= CoordSizeBlock_D)) EXIT
+            if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:))) EXIT
 
             ! Reduce Ds but make sure that 2*Ds is still outside.
             Ds = Ds*0.5
@@ -829,7 +873,7 @@ contains
 
                ! Check if midpoint is inside block
                dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
-               if(all(2*dCoord_D <= CoordSizeBlock_D)) EXIT
+               if(all(2*dCoord_D(iDimMin:) <= CoordSizeBlock_D(iDimMin:)))EXIT
 
                ! Reduce Ds and try again
                Ds = Ds*0.5
@@ -841,7 +885,7 @@ contains
 
          if(iProc == iProcFound)then
             ! Add contribution from this segment to the image
-            call add_segment(Ds, XyzLosNew_D)
+            call add_segment(Ds, XyzLosNew_D, UseThreads)
          end if
 
          ! Move XyzLosNew to the end of the segment
@@ -853,7 +897,7 @@ contains
     end subroutine integrate_line
     !==========================================================================
 
-    subroutine add_segment(Ds, XyzLos_D)
+    subroutine add_segment(Ds, XyzLos_D, UseThreads)
 
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
@@ -867,6 +911,7 @@ contains
 
       real, intent(in):: Ds          ! Length of line segment
       real, intent(in):: XyzLos_D(3) ! location of center of line segment
+      logical, optional, intent(in) :: UseThreads
 
       real :: x_q, y_q, z_q
       real :: a_los, b_los, c_los, d_los
