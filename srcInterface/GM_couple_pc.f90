@@ -14,6 +14,7 @@ module GM_couple_pc
   public:: GM_get_for_pc_init
   public:: GM_get_for_pc
   public:: GM_put_from_pc
+  public:: GM_get_for_pc_grid_info
 
 contains
 
@@ -35,7 +36,23 @@ contains
   end subroutine GM_get_for_pc_dt
 
   !============================================================================
+  subroutine GM_get_for_pc_grid_info(nInt, Int_I)
+    use ModPIC, ONLY: nSizeStatus, Status_I, &
+         UseAdaptivePic, pic_set_cell_status
+        
+    integer, intent(inout) :: nInt
+    integer, optional, intent(out):: Int_I(nInt)
+    !------------------------------------------
+    if(.not.present(Int_I)) then
+       nInt = nSizeStatus
+    else
+       if(UseAdaptivePic) call pic_set_cell_status
+       Int_I = Status_I
+    endif
+    
+  end subroutine GM_get_for_pc_grid_info
 
+  !============================================================================
   subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
     use ModVarIndexes, ONLY: MassSpecies_V, Pe_, Bx_, Ex_, &
@@ -45,7 +62,8 @@ contains
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, LenPic_DI, R_DDI
+         DxyzPic_DI, xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, LenPic_DI, &
+         R_DDI, nCellPerPatch
     use BATL_lib,      ONLY: x_, y_, z_, nDim
 
     integer, intent(inout) :: nParamInt, nParamReal
@@ -56,12 +74,13 @@ contains
     integer :: iFluid, iSpecies, iRegion 
     integer :: i, j, n
     !--------------------------------------------------------------------------
+    
     if(.not.present(iParam_I))then
        ! nDim, nRegion
-       ! nVar, nIonFluid, nSpecies
+       ! nVar, nIonFluid, nSpecies, nCellPerPatch
        ! iPe, iBx, iEx
        ! (iRho, iRhoUx, iPpar, iP) for each ion fluid
-       nParamInt = 8 + nIonFluid*4
+       nParamInt = 9 + nIonFluid*4
 
        ! Charge and mass per species/fluid
        ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units  = 21 variables 
@@ -73,8 +92,8 @@ contains
     end if
 
     ! Set the integer parameters
-    iParam_I(1:8) = (/nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_, Ex_/)
-    n = 9
+    iParam_I(1:9) = (/nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_, Ex_, nCellPerPatch/)
+    n = 10
     iParam_I(n:n+nIonFluid-1) = iRhoIon_I;   n = n + nIonFluid
     iParam_I(n:n+nIonFluid-1) = iRhoUxIon_I; n = n + nIonFluid
     iParam_I(n:n+nIonFluid-1) = iPparIon_I;  n = n + nIonFluid
@@ -242,7 +261,8 @@ contains
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
     use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, & 
-         nRegionPic, nGhostPic, mhd_to_pic_vec
+         nRegionPic, nGhostPic, mhd_to_pic_vec, UseAdaptivePic, &
+         is_inside_active_pic_region
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
@@ -266,7 +286,9 @@ contains
     real    :: State_V(nVar)
 
     real    :: CoordPic_D(nDim)
-    
+
+    logical :: IsInside
+
     character(len=*), parameter :: NameSub='GM_get_regions'
     !--------------------------------------------------------------------------
 
@@ -288,25 +310,30 @@ contains
     iPoint = 1
     do iRegion = 1, nRegionPic
 
-       ! (nGhostPic +1) where +1 is from the IPIC3D ghost layer
        ! XyzMaxRegion_D and XyzMinRegion_D are in the rotated PIC coordinates.
+       ! I do not think use nGhostPic is still necessary. --Yuxi
        XyzMaxRegion_D = LenPic_DI(1:nDim,iRegion) - &
-            (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
-
-       XyzMinRegion_D = (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
+            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
+       XyzMinRegion_D = (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)         
 
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          
+
           do k = 1,nK; do j = 1,nJ; do i=1,nI
 
              ! Intersection with body is not handled yet ???
 
-             ! Check if cell center is inside the PIC region
-             call mhd_to_pic_vec(iRegion, Xyz_DGB(1:nDim,i,j,k,iBlock), &
-                  CoordPic_D)             
-             if(any(CoordPic_D > XyzMaxRegion_D)) CYCLE             
-             if(any(CoordPic_D < XyzMinRegion_D)) CYCLE
+             if(UseAdaptivePic) then
+                call is_inside_active_pic_region(Xyz_DGB(1:nDim,i,j,k,iBlock), IsInside)
+                if(.not. IsInside) cycle 
+             else
+                ! Check if cell center is inside the PIC region
+                call mhd_to_pic_vec(iRegion, Xyz_DGB(1:nDim,i,j,k,iBlock), &
+                     CoordPic_D)                             
+                if(any(CoordPic_D > XyzMaxRegion_D)) CYCLE             
+                if(any(CoordPic_D < XyzMinRegion_D)) CYCLE
+             endif
+
 
              if(DoCountOnly)then
                 nPoint = nPoint + 1
@@ -340,8 +367,8 @@ contains
                       State_VGB(:,i,j,k,iBlock) = State_V
                       EXIT
                    endif
-                enddo                
-                
+                enddo
+
                 call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
              else
                 ! Provide position to PC

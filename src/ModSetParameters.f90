@@ -14,7 +14,7 @@ contains
 
   subroutine set_parameters(TypeAction)
 
-    ! Set input parameters for BATS-R-US
+    ! Set input parameters for BATS-R-US!
 
     use ModMain
     use ModAdvance
@@ -67,7 +67,7 @@ contains
          read_boundary_geometry_param
     use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit, &
          init_mod_point_impl
-    use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
+    use ModRestartFile, ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
          nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V
@@ -91,18 +91,20 @@ contains
     use ModMultiIon, ONLY: multi_ion_set_parameters
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
          read_solar_wind_file, normalize_solar_wind_data
-    use ModSatelliteFile, ONLY: nSatellite, &
+    use ModSatelliteFile, ONLY: nSatellite, FilenameSat_I, NameSat_I, &
          read_satellite_parameters, read_satellite_input_files
     use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
     use ModFaceFlux, ONLY: face_flux_set_parameters, init_mod_face_flux, &
          TypeFluxNeutral, UseClimit, DoBurgers
-    use ModLookupTable,     ONLY: read_lookup_table_param
+    use ModLookupTable,     ONLY: read_lookup_table_param, get_lookup_table, &
+         i_lookup_table
     use ModIeCoupling,      ONLY: read_ie_velocity_param
     use ModTimeStepControl, ONLY: read_time_step_control_param
     use ModLaserHeating,    ONLY: read_laser_heating_param
     use ModLocalTimeStep,   ONLY: read_localstep_param
     use ModIoUnit, ONLY: io_unit_new
     use ModNumConst, ONLY: cDegToRad, cTiny, cHalfPi
+    use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
     use ModSort, ONLY: sort_quick
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
@@ -112,8 +114,7 @@ contains
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: set_parameters_magnetogram, &
-         read_magnetogram_file, read_potential_field,     &
-         read_new_magnetogram_file, read_new_potential_field
+         read_magnetogram_file, read_new_magnetogram_file
     use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_corona_heating, &
@@ -147,6 +148,12 @@ contains
     ! Local variables
     integer :: iFile, i, iFluid
     logical :: IsUninitialized      = .true.
+
+    ! local variables for the plot type 'INS'
+    integer :: iTmp, iFileStart, iFileRead, iFileInstrument, nPlotFileRead
+    integer :: iInstrument, nInstrument, iSat
+    character(LEN=10)  :: NameSat, NameInstrument, StringInstrument_I(20) = ''
+    character(LEN=200) :: StringsInstrument
 
     !  logical :: HdfUninitialized      = .true.
     logical :: DoReadSolarwindFile  = .false.
@@ -205,6 +212,13 @@ contains
     real    :: BoundaryStateDim_V(1:nVar)
 
     character(len=30) :: NamePrimitiveNT_V(nVar)
+
+    ! variables for LookUpTable
+    integer:: nParam, iTableB0 = -1
+    real(Real8_):: CarringtonRotationNumber
+    character(len=500):: StringHeader
+    real:: Param_I(4)
+
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
@@ -224,11 +238,6 @@ contains
     ! restart in first session only
     if(.not.IsFirstSession) restart=.false.
 
-    if(DoReadSatelliteFiles)then
-       call read_satellite_input_files
-       DoReadSatelliteFiles = .false.
-    end if
-
     select case(TypeAction)
     case('CHECK')
        if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
@@ -237,6 +246,30 @@ contains
        if(iProc==0) call make_dir(NamePlotDir)
        if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
        if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
+
+       ! Check if StartTime from PARAM.in and Carrington Map Time match
+       iTableB0 = i_lookup_table('B0')
+       if(iTableB0 > 0)then
+          call get_lookup_table(1, StringDescription = StringHeader, &
+               nParam=nParam, Param_I=Param_I)
+          if(iProc==0)then
+             CarringtonRotationNumber = (StartTime &
+                  - tStartCarringtonRotation)/CarringtonSynodicPeriod
+             ! If the User provided StartTime is off by over half of the
+             ! Carrington Rotation, it stops
+             if((abs(CarringtonRotationNumber - Param_I(4))) > 0.5)then
+                write(*,*)NameSub,': Carrington Rotation number from '// &
+                     'PARAM.in  = ', CarringtonRotationNumber
+                write(*,*)NameSub,': Carrington Rotation number from '// &
+                     'input map = ',Param_I(4)
+                write(*,*)NameSub,': WARNING! #STARTTIME in PARAM.in '// &
+                     'differs from Carrington Rotation of Central Meridian '//&
+                     'of Input Map !!!'
+                if(UseStrict) call stop_mpi('Fix #STARTTIME or use CORRECT Magnetogram')
+             endif
+          endif
+       endif
+
 
        if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
           if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
@@ -247,7 +280,7 @@ contains
                   ' differs from CON::StartTime+tSimulation=', &
                   StartTime + time_simulation,' !!!'
              if(UseStrict)then
-                call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
+                call stop_mpi('Fix #STARTTIME command in PARAM.in')
              else
                 ! Fix iStartTime_I array
                 call time_real_to_int(StartTime, iStartTime_I)
@@ -282,6 +315,12 @@ contains
 
        ! Initialize axes (coordinate transformation matrices)
        call init_axes(StartTime)
+
+       if(DoReadSatelliteFiles)then
+          call read_satellite_input_files
+          DoReadSatelliteFiles = .false.
+       end if
+
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
           call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
@@ -393,15 +432,11 @@ contains
           if(UseNewMagnetogram)then
              if(i_line_command("#NEWMAGNETOGRAM") > 0)then
                 call read_new_magnetogram_file(NamePlotDir, iProc, nProc,iComm)
-             elseif(i_line_command("#READNEWPOTENTIALFIELD") > 0)then
-                call read_new_potential_field(NamePlotDir, iProc, nProc, iComm)
              end if
              tMagnetogram = Time_Simulation
           end if
           if(i_line_command("#MAGNETOGRAM") > 0)then
              call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
-          elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
-             call read_potential_field(NamePlotDir, iProc, nProc, iComm)
           end if
        end if
 
@@ -755,13 +790,23 @@ contains
           call read_var('DoSaveOneTecFile', DoSaveOneTecFileOrig)
 
        case("#SAVEPLOT")
-          call read_var('nPlotFile', nPlotFile)
-          nFile = max(nFile, plot_ + nPlotFile)
-          if (nFile > MaxFile .or. nPlotFile > MaxPlotFile) call stop_mpi(&
+          call read_var('nPlotFile', nPlotFileRead)
+          nFile = max(nFile, plot_ + nPlotFileRead)
+          if (nFile > MaxFile .or. nPlotFileRead > MaxPlotFile) call stop_mpi(&
                'The number of ouput files is too large in #SAVEPLOT:'&
                //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
 
-          do iFile = Plot_ + 1, Plot_ + nPlotFile
+          nPlotFile  = nPlotFileRead
+          iFileStart = Plot_
+
+          TypeSatPos_I       = 'none'
+
+          do iFileRead = 1, nPlotFileRead
+             ! reset nInstrument at the beginning
+             nInstrument = 0
+
+             iFile = iFileStart + iFileRead
+
              call read_var('StringPlot',plot_string)
 
              ! Plotting frequency
@@ -901,40 +946,211 @@ contains
              elseif (index(plot_string,'los')>0) then
                 plot_area='los'
                 ! Line of sight vector
-                ! Satellite position
-                if(NameThisComp == 'GM')then
-                   call read_var('ObsPosX',ObsPos_DI(1,iFile))
-                   call read_var('ObsPosY',ObsPos_DI(2,iFile))
-                   call read_var('ObsPosZ',ObsPos_DI(3,iFile))
+
+                if(index(plot_string,'ins') == 0 .and.                      &
+                     index(plot_string,'INS') == 0) then
+
+                   ! original code witout 'ins' or 'INS'
+
+                   ! Satellite position
+                   if(NameThisComp == 'GM')then
+                      call read_var('ObsPosX',ObsPos_DI(1,iFile))
+                      call read_var('ObsPosY',ObsPos_DI(2,iFile))
+                      call read_var('ObsPosZ',ObsPos_DI(3,iFile))
+                   else
+                      !\
+                      ! Coordinates of the observation point are in HGI
+                      ! system
+                      !/
+                      call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
+                      call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
+                      call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
+                   end if
+                   ! Offset angle
+                   call read_var('OffsetAngle',offset_angle(iFile))
+                   offset_angle(iFile) = offset_angle(iFile)*cDegToRad
+                   ! read max dimensions of the 2d image plane
+                   call read_var('rSizeImage',r_size_image(iFile))
+                   ! read the position of image origin relative to grid origin
+                   call read_var('xOffset',xoffset(iFile))
+                   call read_var('yOffset',yoffset(iFile))
+                   ! read the occulting radius
+                   call read_var('rOccult',radius_occult(iFile))
+                   ! read the limb darkening parameter
+                   call read_var('MuLimbDarkening',mu_los)
+                   ! read the number of pixels
+                   call read_var('nPix',n_pix_r(iFile))
+                   ! if it is an EUV plot using a long table then read in the
+                   ! name of the specific lookup table (will be matched to the
+                   ! name read in by the lookuptable command).
+                   if (index(plot_string,'TBL')>0&
+                        .or.index(plot_string,'tbl')>0) &
+                        call read_var('NameLosTable',NameLosTable(iFile))
                 else
-                   !\
-                   ! Coordinates of the observation point are in HGI
-                   ! system
-                   !/
-                   call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
-                   call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
-                   call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
-                end if
-                ! Offset angle
-                call read_var('OffsetAngle',offset_angle(iFile))
-                offset_angle(iFile) = offset_angle(iFile)*cDegToRad
-                ! read max dimensions of the 2d image plane
-                call read_var('rSizeImage',r_size_image(iFile))
-                ! read the position of image origin relative to grid origin
-                call read_var('xOffset',xoffset(iFile))
-                call read_var('yOffset',yoffset(iFile))
-                ! read the occulting radius
-                call read_var('rOccult',radius_occult(iFile))
-                ! read the limb darkening parameter
-                call read_var('MuLimbDarkening',mu_los)
-                ! read the number of pixels
-                call read_var('nPix',n_pix_r(iFile))
-                ! if it is an EUV plot using a long table then read in the name
-                ! of the specific lookup table (will be matched to the name read
-                ! in by the lookuptable command).
-                if (index(plot_string,'TBL')>0&
-                     .or.index(plot_string,'tbl')>0) &
-                     call read_var('NameLosTable',NameLosTable(iFile))
+                   ! if 'ins' or 'INS' exists
+                   call read_var('StringsInstrument',  StringsInstrument, &
+                        IsLowerCase=.true.)
+
+                   call split_string(StringsInstrument, StringInstrument_I,   &
+                        nInstrument)
+
+                   ! each instrument adds another plot file
+                   nPlotFile = nPlotFile + nInstrument - 1
+
+                   ! adjust nFile
+                   nFile = max(nFile, plot_ + nPlotFile)
+                   if (nFile > MaxFile .or. nPlotFile > MaxPlotFile)          &
+                        call stop_mpi(                                        &
+                        'The number of ouput files is too large in #SAVEPLOT:'&
+                        //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
+
+                   ! setting each instrument info
+                   do iInstrument = 1, nInstrument
+
+                      iFileInstrument = iFile + iInstrument - 1
+
+                      ! obtain the name of the satellite and instrument
+                      iTmp    = index(StringInstrument_I(iInstrument),':')
+                      NameSat = StringInstrument_I(iInstrument)(1:iTmp-1)
+                      NameInstrument = StringInstrument_I(iInstrument)(iTmp+1:)
+
+                      ! plotting frequency is the same as iFile
+                      dn_output(iFileInstrument) = dn_output(iFile)
+                      dt_output(iFileInstrument) = dt_output(iFile)
+                      plot_type(iFileInstrument) = plot_area//'_'//          &
+                           trim(NameSat)//'_'//trim(NameInstrument)
+                      plot_dx(:,iFileInstrument) = -1
+
+                      ! default values, which may be overwritten below
+                      ObsPos_DI(:,iFileInstrument)   = [200.0, 0.0, 0.0]
+                      offset_angle(iFileInstrument)  = 0.
+                      r_size_image(iFileInstrument)  = 1.98
+                      xoffset(iFileInstrument)       = 0.
+                      yoffset(iFileInstrument)       = 0.
+                      radius_occult(iFileInstrument) = 0.
+                      mu_los                         = 0.
+                      n_pix_r(iFileInstrument)       = 512
+                      NameLosTable(iFileInstrument)  = ''
+
+                      ! setting plot variables, which may be overwritten below
+                      plot_dimensional(iFileInstrument) =                    &
+                           index(plot_string,'INS')>0
+                      plot_vars(iFileInstrument) = 'wl pb'
+                      plot_pars(iFileInstrument) = 'mu'
+
+                      select case(trim(NameSat))
+                      case('sta')
+                         TypeSatPos_I(iFileInstrument) = 'sta'
+
+                         select case(trim(NameInstrument))
+                         case('euvi')
+                            NameLosTable(iFileInstrument)  = 'EuviA'
+                            plot_vars(iFileInstrument)     = 'tbl'
+                         case('cor1')
+                            r_size_image(iFileInstrument)  = 4.0
+                            radius_occult(iFileInstrument) = 1.3
+                            mu_los                         = 0.5
+                            n_pix_r(iFileInstrument)       = 300
+                         case('cor2')
+                            r_size_image(iFileInstrument)  = 15.0
+                            radius_occult(iFileInstrument) = 2.0
+                            mu_los                         = 0.5
+                            n_pix_r(iFileInstrument)       = 300
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '//       &
+                                 StringInstrument_I(iInstrument))
+                         end select
+                      case('stb')
+                         TypeSatPos_I(iFileInstrument) = 'stb'
+
+                         select case(trim(NameInstrument))
+                         case('euvi')
+                            NameLosTable(iFileInstrument)  = 'EuviB'
+                            plot_vars(iFileInstrument)     = 'tbl'
+                         case('cor1')
+                            r_size_image(iFileInstrument)  = 4.0
+                            radius_occult(iFileInstrument) = 1.3
+                            mu_los                         = 0.5
+                            n_pix_r(iFileInstrument)       = 300
+                         case('cor2')
+                            r_size_image(iFileInstrument)  = 15.0
+                            radius_occult(iFileInstrument) = 2.0
+                            mu_los                         = 0.5
+                            n_pix_r(iFileInstrument)       = 300
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '// &
+                                 StringInstrument_I(iInstrument))
+                         end select
+                      case('sdo')
+                         TypeSatPos_I(iFileInstrument) = 'earth'
+
+                         select case(trim(NameInstrument))
+                         case('aia')
+                            NameLosTable(iFileInstrument)  = 'AiaXrt'
+                            plot_vars(iFileInstrument)     = 'tbl'
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '// &
+                                 StringInstrument_I(iInstrument))
+                         end select
+                      case('hinode')
+                         TypeSatPos_I(iFileInstrument) = 'earth'
+
+                         select case(trim(NameInstrument))
+                         case('xrt')
+                            NameLosTable(iFileInstrument)  = 'AiaXrt'
+                            plot_vars(iFileInstrument)     = 'tbl'
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '// &
+                                 StringInstrument_I(iInstrument))
+                         end select
+                      case('soho')
+                         TypeSatPos_I(iFileInstrument) = 'earth'
+
+                         n_pix_r(iFileInstrument)       = 300
+                         mu_los                         = 0.5
+
+                         select case(trim(NameInstrument))
+                         case('c2')
+                            r_size_image(iFileInstrument)  = 6.0
+                            radius_occult(iFileInstrument) = 2.0
+                         case('c3')
+                            r_size_image(iFileInstrument)  = 32.0
+                            radius_occult(iFileInstrument) = 2.5
+                         case default
+                            call stop_mpi(NameSub//': unknown INS: '//    &
+                                 StringInstrument_I(iInstrument))
+                         end select
+                      case default
+                         call stop_mpi(NameSub//': unknown satellite: '// &
+                              StringInstrument_I(iInstrument))
+                      end select
+
+                      ! setting plot file format
+                      if(index(plot_string,'idl') > 0)then
+                         plot_form(iFileInstrument)='idl'
+
+                         TypeFile_I(iFileInstrument) = 'real4'
+                         if(index(plot_string,'idl_real8') > 0)      &
+                              TypeFile_I(iFileInstrument) = 'real8'
+                         if(index(plot_string,'idl_ascii') > 0)      &
+                              TypeFile_I(iFileInstrument) = 'ascii'
+                         if(index(plot_string,'idl_tec') > 0)        &
+                              TypeFile_I(iFileInstrument) = 'tec'
+                      elseif(index(plot_string,'tec')>0) then
+                         plot_form(iFileInstrument)  = 'tec'
+                         TypeFile_I(iFileInstrument) = 'tec'
+                      else
+                         call stop_mpi(NameSub//' for ins/INS type, only '// &
+                              'idl or tec is supported.'//plot_string)
+                      end if
+                   end do
+
+                   ! reset 
+                   StringInstrument_I = ''
+
+                   ! adjust iFileStart
+                   iFileStart = iFileStart + nInstrument - 1
+                endif
              elseif (index(plot_string,'rfr')>0) then
                 ! Refractive radiowave image
                 plot_area='rfr'
@@ -1142,6 +1358,8 @@ contains
                 plot_var='blk'
                 plot_dimensional(iFile) = index(plot_string,'BBK')>0
                 plot_vars(iFile)='dx pe blk blkall'
+             elseif(index(plot_string,'INS')>0.or.index(plot_string,'ins')>0)then
+                ! do nothing
              else
                 call stop_mpi('Variable definition missing from plot_string=' &
                      //plot_string)
@@ -1153,8 +1371,42 @@ contains
                   .and. plot_dx(1, iFile) < 0.0) &
                   plot_pars(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
 
-             plot_type(iFile) = plot_area//'_'//plot_var
+             if(nInstrument < 1) plot_type(iFile) = plot_area//'_'//plot_var
           end do
+
+          ! write out the change if ins/INS is found
+          if (nPlotFile > nPlotFileRead .and. iProc == 0) then 
+             write(*,*) ''
+             write(*,*) '----------------------------------------'
+             write(*,*) ' nPlotFile    =', nPlotFile
+             write(*,*) ' use sta   =', any(TypeSatPos_I == 'sta')
+             write(*,*) ' use stb   =', any(TypeSatPos_I == 'sta')
+             write(*,*) ' use earth =', any(TypeSatPos_I == 'earth')
+             do iFile = Plot_+ 1, Plot_+ nPlotFile
+                write(*,*) '----------------------------------------'
+                write(*,*) ' iFile        =', iFile
+                write(*,*) ' dn_output    =', dn_output(iFile)
+                write(*,*) ' dt_output    =', dt_output(iFile)
+                write(*,*) ' plot_type    =', plot_type(iFile)
+                write(*,*) ' plot_form    =', plot_form(iFile)
+                write(*,*) ' TypeFile     =', TypeFile_I(iFile)
+                write(*,*) ' dimensional  =', plot_dimensional(iFile)
+                write(*,*) ' plot_vars    =', trim(plot_vars(iFile))
+                write(*,*) ' plot_pars    =', trim(plot_pars(iFile))
+                if (index(plot_type(iFile), 'los') >0) then
+                   write(*,*) ' offset_angle =', offset_angle(iFile)
+                   write(*,*) ' r_size_image =', r_size_image(iFile)
+                   write(*,*) ' xoffset      =', xoffset(iFile)
+                   write(*,*) ' yoffset      =', yoffset(iFile)
+                   write(*,*) ' radius_occult=', radius_occult(iFile)
+                   write(*,*) ' mu_los       =', mu_los
+                   write(*,*) ' n_pix_r      =', n_pix_r(iFile)
+                   write(*,*) ' NameLosTable =', NameLosTable(iFile)
+                end if
+             end do
+             write(*,*) '----------------------------------------'
+          end if
+
        case("#NOREFRACTION")
           call read_var('UseNoRefraction', UseNoRefraction)
 
@@ -1490,7 +1742,9 @@ contains
        case("#MINIMUMSOLARWINDTEMP")
           call read_var('SwTminDim', SwTminDim)
 
-       case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
+       case("#TRACE", "#TRACELIMIT", "#TRACERADIUS", "#TRACEEQUATOR", &
+            "#TRACEIE", &
+            "#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
           call read_field_trace_param(NameCommand)
        case("#IECOUPLING")
           call read_ie_velocity_param
@@ -1534,7 +1788,7 @@ contains
 
        case('#PSCOUPLING')
           call read_var('TauCouplePs',TauCoupleIm)
-                    if(TauCoupleIm < 1.0)then
+          if(TauCoupleIm < 1.0)then
              TauCoupleIM = 1.0/TauCoupleIM
              if(iProc==0)then
                 write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
@@ -1754,10 +2008,27 @@ contains
           call read_var('zMin',z1)
           call read_var('zMax',z2)
 
-       case("#GRIDBLOCK")
+       case("#GRIDBLOCK", "#GRIDBLOCKALL")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('MaxBlock',     MaxBlock)
           call read_var('MaxBlockImpl', MaxImplblk)
+          if(NameCommand == "#GRIDBLOCKALL")then
+             MaxBlock   = 1 + (MaxBlock-1)/nProc
+             MaxImplblk = 1 + (MaxImplblk-1)/nProc
+          end if
+
+       case("#CHECKGRIDSIZE")
+          if(.not.is_first_session())CYCLE READPARAM
+          call read_var('nI', nIJKRead_D(1))
+          call read_var('nJ', nIJKRead_D(2))
+          call read_var('nK', nIJKRead_D(3))
+          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
+             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
+             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
+          end if
+          call read_var('MinBlockAll', MinBlockAll)
+          ! Set MaxBlock large enough. Add 1 extra block for possible load balancing
+          MaxBlock = max(MaxBlock, 2 + (MinBlockAll-1)/nProc)
 
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
@@ -1770,22 +2041,6 @@ contains
                   ' WARNING: code is compiled with user module ', &
                   NameUserModule,' version',VersionUserModule
              if(UseStrict)call stop_mpi('Select the correct user module!')
-          end if
-
-       case("#CHECKGRIDSIZE")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nI',nIJKRead_D(1))
-          call read_var('nJ',nIJKRead_D(2))
-          call read_var('nK',nIJKRead_D(3))
-          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
-             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
-             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
-          end if
-          call read_var('MinBlockALL',MinBlockAll)
-          if(MinBlockAll > MaxBlock*nProc .and. iProc==0)then
-             write(*,*)'MaxBlock*nProc=', MaxBlock*nProc
-             call stop_mpi('Use more processors'//&
-                  ' or increase MaxBlock with Config.pl -g and recompile!')
           end if
 
        case("#GAMMA")
@@ -2218,24 +2473,26 @@ contains
 
        case("#OHBOUNDARY")
           call read_var('DoOhNeutralBc',DoOhNeutralBc)
-          do iFluid = IonLast_+1, nFluid
-             call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
-             call read_var('uBcFactor'  , uBcFactor_I(iFluid))
-          end do
+          if(DoOhNeutralBc)then
+             do iFluid = IonLast_+1, nFluid
+                call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
+                call read_var('uBcFactor'  , uBcFactor_I(iFluid))
+             end do
+          end if
 
           ! CORONA SPECIFIC COMMANDS
 
-       case("#MAGNETOGRAM", "#READPOTENTIALFIELD")
+       case("#MAGNETOGRAM")
           call read_var('UseMagnetogram', UseMagnetogram)
           if(UseMagnetogram)&
                call set_parameters_magnetogram(NameCommand)
 
-       case("#NEWMAGNETOGRAM", "#READNEWPOTENTIALFIELD")
+       case("#NEWMAGNETOGRAM")
           call read_var('UseNewMagnetogram', UseNewMagnetogram)
           if(UseNewMagnetogram)&
                call set_parameters_magnetogram(NameCommand)
 
-       case("#SAVEPOTENTIALFIELD", "#B0GRID")
+       case("#B0GRID")
           call set_parameters_magnetogram(NameCommand)
 
        case('#LDEM')
@@ -3271,6 +3528,36 @@ contains
 
       if (UseAnisoPe .and. UseRadCooling) call stop_mpi(NameSub// &
            ' AnisoPe for radiative cooling is not implemented yet')
+
+      ! Fix NameSat_I if needed
+      NameSat_I = 'none'
+      do iSat = 1, nSatellite 
+         if (index(FilenameSat_I(iSat), 'sta') > 0 .or.  &
+              index(FilenameSat_I(iSat), 'stereoa') > 0) &
+              NameSat_I(iSat) = 'sta'
+         if (index(FilenameSat_I(iSat), 'stb') > 0 .or.  &
+              index(FilenameSat_I(iSat), 'stereob') > 0) &
+              NameSat_I(iSat) = 'stb'
+         if (index(FilenameSat_I(iSat), 'earth') > 0)    &
+              NameSat_I(iSat) = 'earth'
+      end do
+
+      ! stop the code if there are two stereo a/b, earth traj files
+      if (sum(index(NameSat_I, 'sta')) > 1) &
+           call stop_mpi(NameSub//' two stereo A traj files???')
+      if (sum(index(NameSat_I, 'stb')) > 1) &
+           call stop_mpi(NameSub//' two stereo B traj files???')
+      if (sum(index(NameSat_I, 'earth')) > 1) &
+           call stop_mpi(NameSub//' two earth traj files???')
+
+      ! stop the code if no stereo a/b, earth traj files are found when
+      ! using 'sta'/'stb'/'earth' in TypeSatPos_I
+      if (.not.all(TypeSatPos_I /= 'sta') .and. all(NameSat_I /= 'sta')) &
+           call stop_mpi(NameSub//' missing stereo A traj file.')
+      if (.not.all(TypeSatPos_I /= 'stb') .and. all(NameSat_I /= 'stb')) &
+           call stop_mpi(NameSub//' missing stereo B traj file.')
+      if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
+           call stop_mpi(NameSub//' missing earth traj file.')
 
     end subroutine correct_parameters
     !==========================================================================

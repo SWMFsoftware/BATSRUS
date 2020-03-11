@@ -803,7 +803,7 @@ contains
     use ModPhysics, ONLY: Gamma, Gamma_I, GammaElectron, &
          cLight, rBody, ThetaTilt, &
          No2Io_V, No2Si_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
-    use ModFieldTrace, ONLY: R_raytrace
+    use ModFieldTrace, ONLY: rTrace
     use ModNumConst, ONLY: cRadToDeg
     use ModResistivity, ONLY: Eta0Si
     use ModIO
@@ -886,8 +886,8 @@ contains
           Param_I(iPar) = Eta0Si
        case('mu')
           Param_I(iPar) = mu_los
-       case('R_ray')
-          Param_I(iPar) = R_raytrace
+       case('rTrace')
+          Param_I(iPar) = rTrace
        case('dt')
           if(plot_dimensional(iFile))then
              Param_I(iPar) = dt*No2Io_V(UnitT_)

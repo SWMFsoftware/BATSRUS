@@ -4,10 +4,10 @@
 module ModFaceBoundary
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
 !  use ModUtilities, ONLY: norm2
   use ModVarIndexes, ONLY: nVar
-  use ModMultiFluid, ONLY: nIonFluid
+  use ModMultiFluid
   use ModAdvance,    ONLY: nSpecies
   use ModNumConst,   ONLY: cDegToRad
   use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I, &
@@ -127,7 +127,8 @@ contains
        if(UseYoungBc) then
           call read_var('YoungF107', F107young)
        end if
-       write(*,*) "Young et al IBC activated, F10.7=", F107Young
+       if (iProc == 0) &
+            write(*,*) "Young et al IBC activated, F10.7=", F107Young
        
     case("#MAGNETICINNERBOUNDARY")
        call read_var('DoReflectInnnerB1', DoReflectInnerB1)
@@ -259,8 +260,8 @@ contains
     if(UseYoungBc .and. UseIe)then
        ! Use species fractions to obtain the total mass density.
        if (UseMultiSpecies) then
-          if (nIonDensity > 2) call stop_mpi(NameSub// &
-               ': ONLY two species/fluids for Young BC.')
+          if (nIonDensity /= 2) call stop_mpi(NameSub// &
+               ': MUST be two species for Young BC.')
 
           if (UseCpcpBc) then
              ! assuming the first species/fluid is H+ and is determined by
@@ -285,6 +286,16 @@ contains
              RhoCpcp_I(nIonDensity) = &
                   Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)*RatioOH*16
           end if
+       else if (UseMultiIon) then
+          if (IsMhd) call stop_mpi(NameSub//': no total fluid is supported!')
+          if (UseCpcpBc) call stop_mpi(NameSub//': CPCP should not be used '//&
+               'in combination with Young in multifluid ')
+          if (nIonFluid /= 2) call stop_mpi(NameSub// &
+               ': MUST be two fluids for Young BC.')
+
+          RhoCpcp_I(1)         = BodyNDim_I(IonFirst_)*Io2No_V(UnitRho_)
+          RhoCpcp_I(nIonFluid) = BodyNDim_I(IonFirst_)*RatioOH*16        &
+               *Io2No_V(UnitRho_)
        else
           ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
           ! is both light and very minor.

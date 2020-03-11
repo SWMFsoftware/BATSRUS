@@ -64,6 +64,9 @@ module ModIO
   real, dimension(3,MaxFile) :: ObsPos_DI
   character (LEN=20) :: NameLosTable(MaxFile)
   logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
+
+  ! variables for the line of sight plots using the instrument names
+  character(LEN=10)  :: TypeSatPos_I(MaxFile)
   
   ! Logical variable for OBS box type
   logical  :: IsObsBox_I(MaxFile) = .false. 
@@ -98,7 +101,7 @@ module ModIO
   ! Frequency of writing progress reports in terms of time steps
   integer :: dn_progress1=10, dn_progress2=100
 
-  character(LEN=10) :: plot_type(MaxFile), plot_type1
+  character(LEN=20) :: plot_type(MaxFile), plot_type1
   character(LEN=3)  :: plot_form(MaxFile)
   character(LEN=3)  :: log_form
   character(LEN=10) :: TypeFile_I(MaxFile)

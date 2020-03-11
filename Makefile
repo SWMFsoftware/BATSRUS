@@ -54,15 +54,8 @@ help:
 info:
 	@echo "Total lines of Fortran: `wc -l src*/*.f* share/Library/src/*.f* | tail -1`"
 
-INSTALLFILES =	src/Makefile.DEPEND \
-		src/Makefile.RULES \
-		srcBATL/Makefile.DEPEND \
-		srcInterface/Makefile.DEPEND \
-		srcPostProc/Makefile.RULES
-
 install: src/ModSize.f90 src/ModHdf5.f90 src/ModImplHypre.f90 \
 	srcBATL/BATL_size.f90
-	touch ${INSTALLFILES}
 	./Config.pl -u=Default -e=Mhd
 
 src/ModSize.f90: src/ModSize_orig.f90
@@ -82,7 +75,10 @@ LIB:
 	cd src; $(MAKE) LIB
 	cd srcInterface; $(MAKE) LIB
 
-BATSRUS:
+GITINFO:
+	${SCRIPTDIR}/gitall -r=f > src/show_git_info.h
+
+BATSRUS: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${TIMINGDIR}; $(MAKE) LIB
 	if [[ "${MPILIB}" == *lNOMPI*  ]]; then make NOMPI; fi
@@ -93,7 +89,7 @@ BATSRUS:
 	cd src; $(MAKE) LIB
 	cd src; make BATSRUS
 
-CRASH:
+CRASH: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${TIMINGDIR}; $(MAKE) LIB
 	cd ${MAGNETOGRAMDIR}; $(MAKE) LIB
@@ -131,13 +127,6 @@ TIME_CONV:
 	@echo ' '
 	@echo Program TIME_CONV has been brought up to date.
 	@echo ' '
-
-# The MACHINE variable holds the machine name for which scripts should
-# be copied from share/JobScripts to the run directory when it is created. 
-# The default is the short name of the current machine with the trailing
-# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
-# Initial "login\d*." is also removed.
-MACHINE = `hostname -f | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'`
 
 # Default component
 COMPONENT = GM
@@ -194,7 +183,6 @@ CLEAN1 = cleanpdf #				^CFG IF NOT MAKEPDF
 #
 
 clean:
-	@touch ${INSTALLFILES}
 	cd src; $(MAKE) clean
 	cd srcBATL; $(MAKE) clean
 	cd srcInterface; $(MAKE) clean
@@ -206,7 +194,6 @@ distclean:
 	./Config.pl -uninstall
 
 allclean:
-	@touch ${INSTALLFILES}
 	cd src; $(MAKE) distclean
 	cd srcBATL; $(MAKE) distclean
 	cd srcInterface; $(MAKE) distclean

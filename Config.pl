@@ -6,6 +6,9 @@
 # Allow in-place editing
 $^I = "";
 
+# Add local directory to search
+push @INC, ".";
+
 use strict;
 
 our $Component = "GM";
@@ -468,6 +471,10 @@ Set block size to 8x8x8, number of blocks to 400 and implicit blocks to 100
 and number of ghost cells to 2:
 
     Config.pl -g=8,8,8,400,100 -ng=2
+
+Set number of blocks as a function of number of processors in Makefile.test
+
+    Config.pl -g=8,8,8,3000/\${NP},1
 
 Show settings for BATSRUS:
 

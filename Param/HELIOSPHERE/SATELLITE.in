@@ -1,0 +1,15 @@
+#SATELLITE
+3                       nSatelliteFile
+MHD file                StringSatellite
+-1                      DnOutput      ! controls frequency with which the whole
+1800.0                  DtOutput      ! trajectory solution is provided
+IH/earthtraj.dat
+MHD file                StringSatellite
+-1                      DnOutput      ! controls frequency with which the whole
+1800.0                  DtOutput      ! trajectory solution is provided
+IH/Param/stereoa.dat
+MHD file                StringSatellite
+-1                      DnOutput      ! controls frequency with which the whole
+1800.0                  DtOutput      ! trajectory solution is provided
+IH/Param/stereob.dat
+

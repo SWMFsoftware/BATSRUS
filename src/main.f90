@@ -55,6 +55,11 @@ program BATSRUS
   !/
   time_loop = .false.
 
+  ! Show git information
+  if(iProc==0)then
+     include "show_git_info.h"
+  endif
+  
   !\
   ! Announce BATSRUS
   !/
