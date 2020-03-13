@@ -42,7 +42,7 @@ module ModTimeStepControl
 
   ! Minimum time step checking
   logical, public:: DoCheckTimeStep = .false.
-  integer, public:: DnCheckTimeStep = 0, iCheckTimeStep = 0
+  integer, public:: DnCheckTimeStep = 1, iCheckTimeStep = 0
   real,    public:: TimeStepMin = 0.0
   real,    public:: TimeSimulationOldCheck
   
