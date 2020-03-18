@@ -5,7 +5,7 @@ module ModSatelliteFile
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, iComm
-!  use ModUtilities, ONLY: norm2
+  !  use ModUtilities, ONLY: norm2
   use ModUtilities, ONLY: open_file, close_file
   use ModMain, ONLY: StartTime
   use ModTimeConvert,   ONLY: time_int_to_real
@@ -53,6 +53,7 @@ module ModSatelliteFile
 
   ! Local variables
   character(len=100) :: NameFile_I(MaxSatellite)
+  logical:: IsNameFileSet_I(MaxSatellite) = .false.
   logical:: IsOpen_I(MaxSatellite) = .false.
   logical:: UseSatFile_I(MaxSatellite)   = .true.
   integer, public :: nPointTraj_I(MaxSatellite)
@@ -241,65 +242,31 @@ contains
   end subroutine read_satellite_parameters
   !============================================================================
   subroutine set_satellite_file_status(iSat,TypeStatus)
-
-    use ModMain,   ONLY: n_step, time_accurate
     use ModIoUnit, ONLY: io_unit_new
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
 
     integer, intent(in) :: iSat
     character(LEN=*),intent(in) :: TypeStatus
 
-
-    character(LEN=50) :: FilenameOutSat
-    integer :: l1, l2
-
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_satellite_file_status'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     select case(TypeStatus)
     case('open')
-       l1 = index(FilenameSat_I(iSat), '/', back=.true.) + 1
-       l2 = index(FilenameSat_I(iSat), '.') - 1
-       if (l1-1 <= 0) l1 = 1
-       if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
 
-       select case(TypeTrajTimeRange_I(iSat))
-       case('orig')
-          FilenameOutSat = 'sat_'
-       case('range', 'full')
-          FilenameOutSat = 'trj_'
-       case default
-          call stop_mpi(NameSub//': unknown TypeTraj= '// &
-               TypeTrajTimeRange_I(iSat))
-       end select
-
-       if (time_accurate .and. ( TypeTrajTimeRange_I(iSat) == 'range' .or. &
-            TypeTrajTimeRange_I(iSat) == 'full') ) then
-          call get_time_string
-          write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
-               trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2) // &
-               '_t'//trim(StringDateOrTime)//'_n',n_step,'.sat'
-               
-       else
-          write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-               trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2)//&
-               '_n',n_step,'.sat'
-       endif
-
-       if(DoTest) then
-          write(*,*) NameSub,': satellitename:', &
-               FilenameSat_I(iSat), 'status =', TypeStatus
-          write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
-          write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
-       end if
+       call set_NameFile(iSat)
 
        iUnitSat_I(iSat) = io_unit_new()
        call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
 
        IsOpen_I(iSat) = .true.
     case('append')
+       if(.not.IsNameFileSet_I(iSat)) then
+          call set_NameFile(iSat)
+          iUnitSat_I(iSat) = io_unit_new()
+          call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
+          IsOpen_I(iSat) = .true.
+       end if
+
        if(.not.IsOpen_I(iSat))then
           iUnitSat_I(iSat) = io_unit_new()
           call open_file(iUnitSat_I(iSat), FILE=trim(NameFile_I(iSat)), &
@@ -312,11 +279,66 @@ contains
     case default
        call stop_mpi(NameSub//': unknown TypeStatus='//TypeStatus)
     end select
-
-    call test_stop(NameSub, DoTest)
   end subroutine set_satellite_file_status
   !============================================================================
 
+  subroutine set_NameFile(iSat)
+    use ModMain,   ONLY: n_step, time_accurate
+    use ModIO,     ONLY: NamePlotDir, StringDateOrTime
+
+    integer, intent(in) :: iSat
+
+    character(LEN=50) :: FilenameOutSat
+    integer :: l1, l2
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_satellite_file_status'
+    !--------------------------------------------------------------------------
+
+    call test_start(NameSub, DoTest)
+
+    l1 = index(FilenameSat_I(iSat), '/', back=.true.) + 1
+    l2 = index(FilenameSat_I(iSat), '.') - 1
+    if (l1-1 <= 0) l1 = 1
+    if (l2+1 <= 0) l2 = len_trim(FilenameSat_I(iSat))
+
+    select case(TypeTrajTimeRange_I(iSat))
+    case('orig')
+       FilenameOutSat = 'sat_'
+    case('range', 'full')
+       FilenameOutSat = 'trj_'
+    case default
+       call stop_mpi(NameSub//': unknown TypeTraj= '// &
+            TypeTrajTimeRange_I(iSat))
+    end select
+
+    if (time_accurate .and. ( TypeTrajTimeRange_I(iSat) == 'range' .or. &
+         TypeTrajTimeRange_I(iSat) == 'full') ) then
+       call get_time_string
+       write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir) // &
+            trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2) // &
+            '_t'//trim(StringDateOrTime)//'_n',n_step,'.sat'
+
+    else
+       write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
+            trim(FilenameOutSat)//FilenameSat_I(iSat)(l1:l2)//&
+            '_n',n_step,'.sat'
+    endif
+
+    IsNameFileSet_I(iSat) = .true.
+
+    if(DoTest) then
+       write(*,*) NameSub,': satellitename:', &
+            FilenameSat_I(iSat)
+       write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
+       write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
+    end if
+
+
+    call test_stop(NameSub, DoTest)
+  end subroutine set_NameFile
+
+  !============================================================================
   subroutine read_satellite_input_files
 
     use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
