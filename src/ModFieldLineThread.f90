@@ -364,10 +364,10 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
           allocate(BoundaryThreads_B(iBlock) % State_VIII(&
                NeSi_:TeSi_, BoundaryThreads_B(iBlock) % iMin:1,&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
