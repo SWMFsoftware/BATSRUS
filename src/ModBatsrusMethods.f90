@@ -310,14 +310,6 @@ contains
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-      if (iProc == 0) then
-         do iSat = 1, nSatellite
-            if (TypeTrajTimeRange_I(iSat) == 'orig') then
-               call set_satellite_file_status(iSat,'open')
-               call set_satellite_file_status(iSat,'close')
-            end if
-         end do
-      end if
 
       plot_type(restart_)='restart'
       plot_type(logfile_)='logfile'
