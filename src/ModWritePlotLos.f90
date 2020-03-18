@@ -705,7 +705,7 @@ contains
                      !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
                      dMirror = 2*SqrtDiscr
                      call integrate_line(XyzIntersect_D, dMirror, &
-                          UseThreads = .true.)
+                          UseThreads = DoPlotThreads)
                      XyzIntersect_D = XyzIntersect_D + dMirror*LosPix_D
                      call integrate_line(XyzIntersect_D, 1e30)
                   end if
