@@ -9,6 +9,7 @@ module ModFieldLineThread
 !  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
+  use ModPhysics,    ONLY: Z => AverageIonCharge
 
   implicit none
   save
@@ -105,10 +106,14 @@ module ModFieldLineThread
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
   integer, parameter :: NeSi_=1, TeSi_=2
+  
+  public :: save_threads_for_plot ! Get  State_VIII array
+  public :: Interpolate_state     ! Interpolate state from State_VIII
   !\
-  ! Get State_VIII arrays
+  ! To express Te in terms of P and rho.
   !/
-  public :: save_threads_for_plot
+  real, public    :: TeFraction, TiFraction, PeFraction
+  integer, public :: iP
 
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
@@ -1142,7 +1147,21 @@ contains
     end do
     
   end subroutine save_threads_for_plot
-    
+  !===================================
+  subroutine interpolate_state(Coord_D, iBlock, State_V)
+    use ModAdvance, ONLY: nVar
+    !\
+    !Coords of the point in which to interpolate
+    !/
+    real,    intent(in) :: Coord_D(3) 
+    ! Block at which the grid is allocated
+    integer, intent(in) :: iBlock
+    !Interpolated state vector
+    real, intent(out)   :: State_V(nVar)
+    character(len=*), parameter:: NameSub = 'interpolate_vector'
+    !---------------------
+    call stop_mpi('The program '//NameSub//' is under development')
+  end subroutine interpolate_state
   !============================================================================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp

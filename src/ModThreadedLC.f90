@@ -4,7 +4,6 @@
 module ModThreadedLC
 
   use BATL_lib, ONLY: test_start, test_stop, iProc
-!  use ModUtilities, ONLY: norm2
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
@@ -29,6 +28,11 @@ module ModThreadedLC
   !/
   use ModFieldLineThread, ONLY:  &
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
+  !\
+  ! To express Te in terms of P and rho.
+  !/
+  use ModFieldLineThread, ONLY:  &
+       TeFraction, TiFraction, PeFraction, iP
   implicit none
   !\
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
@@ -37,11 +41,7 @@ module ModThreadedLC
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   !/
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
-  !\
-  ! To express Te in terms of P and rho.
-  !/
-  real    :: TeFraction, TiFraction, PeFraction
-  integer :: iP
+
   !\
   ! Temperature 3D array
   !/
