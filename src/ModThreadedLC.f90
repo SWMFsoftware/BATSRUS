@@ -29,8 +29,14 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY:  &
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
   !\
-  ! To express Te in terms of P and rho.
+  ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   !/
+  !\
+  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iP)
+  ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+  !/
+
   use ModFieldLineThread, ONLY:  &
        TeFraction, TiFraction, PeFraction, iP
   implicit none
