@@ -902,6 +902,7 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
+      use ModFieldLineThread, ONLY: interpolate_state
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
@@ -1004,8 +1005,18 @@ contains
       ! Interpolate state if it is needed by any of the plot variables
       StateInterpolateDone = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
-         State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
-              nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+         !\
+         !`Interpolate state vector in the point with gen coords
+         ! equal to GenLos_D
+         !/
+         if(present(UseThreads))then
+            ! Interpolate within the threaded gap
+            call interpolate_state(GenLos_D, iBlock, State_V)
+         else
+            ! Interpolate in the physical domain
+            State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
+                 nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+         end if
          StateInterpolateDone = .true.
          Rho = State_V(Rho_)
       end if
