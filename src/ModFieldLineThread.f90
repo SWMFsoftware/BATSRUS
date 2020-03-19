@@ -6,7 +6,6 @@ module ModFieldLineThread
   use BATL_lib, ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm,&
        nJ, nK, jDim_, kDim_
-!  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
   use ModPhysics,    ONLY: Z => AverageIonCharge
@@ -110,7 +109,12 @@ module ModFieldLineThread
   public :: save_threads_for_plot ! Get  State_VIII array
   public :: Interpolate_state     ! Interpolate state from State_VIII
   !\
-  ! To express Te in terms of P and rho.
+  ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
+  !/
+  !\
+  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iP)
+  ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   !/
   real, public    :: TeFraction, TiFraction, PeFraction
   integer, public :: iP
