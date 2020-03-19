@@ -860,6 +860,7 @@ test_func:
 	@echo "test_func_run..." >> test_func.diff
 	$(MAKE) test_func_run
 	@echo "test_func_check..." >> test_func.diff
+	$(MAKE) test_func_ref
 	$(MAKE) test_func_check
 
 test_func_compile:
@@ -870,9 +871,11 @@ test_func_compile:
 test_func_run: test_rundir
 	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
 
-test_func_check:
+test_func_ref:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
 	cd ${REFDIR}; tar -xzf ../Param/TESTSUITE/TEST.tgz; 
+
+test_func_check:
 	./TestCompare.pl -q -v -o=1e-11 ${REFDIR} ${TESTDIR} > test_func.diff
 	./TestCompare.pl -speed ${REFDIR} ${TESTDIR} > test_func.speed
 	ls -l test_func.diff test_func.speed
