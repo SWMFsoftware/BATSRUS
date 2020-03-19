@@ -9,6 +9,7 @@ module ModFieldLineThread
 !  use ModUtilities, ONLY: norm2
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
+  use ModPhysics,    ONLY: Z => AverageIonCharge
 
   implicit none
   save
@@ -108,6 +109,11 @@ module ModFieldLineThread
   
   public :: save_threads_for_plot ! Get  State_VIII array
   public :: Interpolate_state     ! Interpolate state from State_VIII
+  !\
+  ! To express Te in terms of P and rho.
+  !/
+  real, public    :: TeFraction, TiFraction, PeFraction
+  integer, public :: iP
 
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
