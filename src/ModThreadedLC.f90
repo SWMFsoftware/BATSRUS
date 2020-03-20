@@ -7,11 +7,11 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       LambdaSi_, DLogLambdaOverDLogT_,                           &
+       LambdaSi_, DLogLambdaOverDLogT_,                          &
        DoInit_, Done_, Enthalpy_, Heat_
+  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
-  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,   ONLY: Xyz_DGB

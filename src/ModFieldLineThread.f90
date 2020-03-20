@@ -3,12 +3,14 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm,&
-       nJ, nK, jDim_, kDim_
-  use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
-  use ModB0,   ONLY: get_b0
+  use BATL_lib,      ONLY: &
+       test_start, test_stop, jTest, kTest, iBlockTest, &
+       iProc, nProc, iComm, nJ, nK, jDim_, kDim_
+  use ModAdvance,    ONLY: UseElectronPressure
+  use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
+  use ModB0,         ONLY: get_b0
   use ModPhysics,    ONLY: Z => AverageIonCharge
+  use ModVarIndexes, ONLY: Pe_, p_
 
   implicit none
   save
@@ -104,7 +106,7 @@ module ModFieldLineThread
      !\ Ne and Te for iMin:1,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
-  integer, parameter :: NeSi_=1, TeSi_=2
+  integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
   
   public :: save_threads_for_plot ! Get  State_VIII array
   public :: Interpolate_state     ! Interpolate state from State_VIII
@@ -375,7 +377,7 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
           allocate(BoundaryThreads_B(iBlock) % State_VIII(&
-               NeSi_:TeSi_, BoundaryThreads_B(iBlock) % iMin:1,&
+               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:1,&
                jMin_:jMax_, kMin_:kMax_))
           IsAllocatedThread_B(iBlock) = .true.
        end if
@@ -1102,7 +1104,7 @@ contains
     use ModInterpolate, ONLY: linear
     use ModConst, ONLY: cBoltzmann 
     integer :: i, j, k, iBlock, iMin, nPoint
-    real    :: State_VI(NeSi_:TeSi_, 1-nPointThreadMax:0), Coord1
+    real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !---------------------------
@@ -1115,12 +1117,14 @@ contains
              nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
              !\
              ! Fill in an array with NeSi and TeSi values
+             State_VI(PSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
              State_VI(TeSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
-             State_VI(NeSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)/&
-                  (BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)*&
-                  cBoltzmann)
+             if(UseElectronPressure)then
+                State_VI(TiSi_, 1 - nPoint:0) = &
+                     BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
+             end if
              !\
              ! Values at the physical cell
              !/
@@ -1138,7 +1142,7 @@ contains
                 BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
                      linear(&
                      a_VI = State_VI(:, 1 - nPoint:0), &
-                     nVar = TeSi_,                     &
+                     nVar = TiSi_,                     &
                      iMin = 1 - nPoint,                &
                      iMax = 0,                         &
                      x = Coord1,                        &
