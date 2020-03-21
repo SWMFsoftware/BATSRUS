@@ -9188,17 +9188,24 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 
 </command>
 
-<command name="FIELDLINETHREAD">
-	 <parameter name="UseFieldLineThreads" type="logical" default="F"/>
-	 <parameter name="nPointThreadMax" type="integer" default="45"/>
-	 <parameter name="DsThreadMin" type="real" default="0.002"/>
+<command name="PLOTTHREADS">
+	 <parameter name="DoPlotThreads" type="logical" default="F"/>
+	 <parameter name="nGUniform" type="integer" default=""/>
 
-#FIELDLINETHREAD
-T	UseFieldLineThreads
-45	nPointThreadMax
-0.002   DsThreadMin
+#PLOTTHREADS
+T	DoPlotThreads
+1       nGUniform
 
+Used for plotting images in the solar corona. The threaded gap 
+contributes to the line-of-site integrals determining the intensity of
+the image pixel, if DoPlotThreads=.true. If nUniform is greater or equal
+to 1, the threaded gap is split for nGUniform intervals, uniformly in the
+first generalized coordinate. Otherwise, the grid for plotting continues 
+the grid of the block near the inner boundary, as extra ghost cells.  
+ 	
 </command>
+
+
 
 <command name="THREADEDBC">
 	 <parameter name="UseAlignedVelocity" type="logical" default="T"/>
