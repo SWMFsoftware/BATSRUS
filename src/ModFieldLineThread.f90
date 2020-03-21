@@ -162,6 +162,10 @@ module ModFieldLineThread
   ! If .true., use threaded gap in plots
   !/
   logical, public :: DoPlotThreads = .false. 
+  !\
+  ! Number of GhostCells in a uniform grid covering a thraded gap
+  !/
+  integer :: nGUniform = 0
 
 
   public:: BoundaryThreads
@@ -257,6 +261,7 @@ contains
        end if
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
+       if(DoPlotThreads)call read_var('nGUniform', nGUniform)
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -419,7 +424,7 @@ contains
       !\
       ! Projection onto the photosphere level
       !/
-      Xyz_D = Xyz_D/norm2(Xyz_D)
+      Xyz_D = Xyz_D/norm2(Xyz_D)*rBody
       !\
       ! Generalized coords of the latter.
       !/
@@ -1102,7 +1107,6 @@ contains
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
-    use ModConst, ONLY: cBoltzmann 
     integer :: i, j, k, iBlock, iMin, nPoint
     real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
@@ -1141,13 +1145,13 @@ contains
                 !/ 
                 BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
                      linear(&
-                     a_VI = State_VI(:, 1 - nPoint:0), &
-                     nVar = TiSi_,                     &
-                     iMin = 1 - nPoint,                &
-                     iMax = 0,                         &
-                     x = Coord1,                        &
+                     a_VI = State_VI(:, 1 - nPoint:0),            &
+                     nVar = TiSi_,                                &
+                     iMin = 1 - nPoint,                           &
+                     iMax = 0,                                    &
+                     x = Coord1,                                  &
                      x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
-                     1 - nPoint:0, j, k),              &
+                     1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
              end do
           end do
@@ -1157,7 +1161,10 @@ contains
   end subroutine save_threads_for_plot
   !===================================
   subroutine interpolate_state(Coord_D, iBlock, State_V)
-    use ModAdvance, ONLY: nVar
+    use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
+         CoordMin_DB, CellSize_DB, r_
+    use ModAdvance,     ONLY: nVar
+    use ModInterpolate, ONLY: interpolate_vector
     !\
     !Coords of the point in which to interpolate
     !/
@@ -1166,8 +1173,18 @@ contains
     integer, intent(in) :: iBlock
     !Interpolated state vector
     real, intent(out)   :: State_V(nVar)
+    real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
     character(len=*), parameter:: NameSub = 'interpolate_vector'
     !---------------------
+    StateThread_V = interpolate_vector(                        &
+         a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
+         nVar=TiSi_,                                           &
+         nDim=3,                                               &
+         Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
+         Max_D=[1, jMax_, kMax_],                              &
+         x_D=(Coord_D - CoordMin_DB(:,iBlock))/&
+         CellSize_DB(:,iBlock),                                &
+         DoExtrapolate=.false.                                 )
     call stop_mpi('The program '//NameSub//' is under development')
   end subroutine interpolate_state
   !============================================================================
