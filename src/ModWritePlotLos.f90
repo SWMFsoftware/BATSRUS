@@ -728,8 +728,10 @@ contains
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-      use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
-      use BATL_lib,       ONLY: xyz_to_coord, find_grid_block, &
+      use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
+      use ModFieldLineThread, ONLY: &
+           IsUniformGrid, dCoord1Uniform
+      use BATL_lib,           ONLY: xyz_to_coord, find_grid_block, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
       real, intent(in):: XyzStartIn_D(3)
@@ -826,6 +828,9 @@ contains
             CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
+            if(present(UseThreads))then
+               if(IsUniformGrid)CellSize_D(r_) = dCoord1Uniform
+            end if
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
                write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D

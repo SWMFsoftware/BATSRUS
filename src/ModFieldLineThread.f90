@@ -102,8 +102,12 @@ module ModFieldLineThread
      !/
      !\ Index of the last cell in radial direction
      integer :: iMin
+     !\
+     ! Inverse mesh size for the grid covering threaded gap
      !/
-     !\ Ne and Te for iMin:1,0:nJ+1,0:nK+1 as the first step
+     real    :: dCoord1Inv   
+     !/
+     !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
   integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
@@ -163,10 +167,28 @@ module ModFieldLineThread
   !/
   logical, public :: DoPlotThreads = .false. 
   !\
-  ! Number of GhostCells in a uniform grid covering a thraded gap
+  ! Number of GhostCells in a uniform grid covering a threaded gap
   !/
   integer :: nGUniform = 0
-
+  !\
+  ! The following logical is .true., if nUniform >=1
+  !/
+  logical, public :: IsUniformGrid = .false.
+  !\
+  ! Resolution along radial direction, if the grid is uniform
+  !/
+  real,    public :: dCoord1Uniform = -1.0
+  !\
+  !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
+  !The uniform grid starts at i=0, if nUniform>=1.
+  !/
+  integer :: iMax = 1
+  !\
+  ! For the cell-centered grid,  the normalized radial gen coordinate 
+  ! equals -0.5 for i=0. 
+  ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
+  !/
+  real   :: Coord1Norm0 = -0.50
 
   public:: BoundaryThreads
   public:: read_threads      ! Read parameters of threads
@@ -262,6 +284,16 @@ contains
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
        if(DoPlotThreads)call read_var('nGUniform', nGUniform)
+       if(nGUniform > 0)then
+          !\
+          ! Use uniform grid
+          !/
+          iMax = 0
+          Coord1Norm0 = 0.0
+       else
+          iMax = 1
+          Coord1Norm0 = -0.50
+       end if
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -380,9 +412,10 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
+          call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
+               BoundaryThreads_B(iBlock) % dCoord1Inv)
           allocate(BoundaryThreads_B(iBlock) % State_VIII(&
-               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:1,&
+               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:iMax,&
                jMin_:jMax_, kMin_:kMax_))
           IsAllocatedThread_B(iBlock) = .true.
        end if
@@ -411,10 +444,12 @@ contains
     end if
     call test_stop(NameSub, DoTest)
   contains
-    integer function i_min(iBlock)
+    subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
            CoordMin_DB, CellSize_DB, r_
       integer, intent(in) :: iBlock
+      integer, intent(out):: iMin
+      real,    intent(out):: dCoord1Inv
       real :: Coord_D(MaxDim), Xyz_D(MaxDim)
       !----------------
       !\
@@ -433,9 +468,15 @@ contains
       ! Minimal index of the ghost cells, in radial direction
       ! (equals 0 if there is only 1 ghost cell)
       !/
-      i_min = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-           CellSize_DB(r_, iBlock) )
-    end function i_min
+      if(nGUniform > 0)then
+         iMin = -nGUniform
+         dCoord1Inv = nGUniform/(CoordMin_DB(r_, iBlock) - Coord_D(r_))
+      else
+         iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+              CellSize_DB(r_, iBlock) )
+         dCoord1Inv = 1.0/CellSize_DB(r_, iBlock)
+      end if
+    end subroutine set_gc_grid
   end subroutine set_threads
   !============================================================================
   subroutine set_threads_b(iBlock)
@@ -1107,7 +1148,7 @@ contains
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
-    integer :: i, j, k, iBlock, iMin, nPoint
+    integer :: i, j, k, iBlock, nPoint
     real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
@@ -1129,17 +1170,14 @@ contains
                 State_VI(TiSi_, 1 - nPoint:0) = &
                      BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
              end if
-             !\
-             ! Values at the physical cell
-             !/
-             BoundaryThreads_B(iBlock) % State_VIII(:, 1, j, k) = &
-                  State_VI(:, 0)
-             do i = BoundaryThreads_B(iBlock) % iMin, 0
+             
+             do i = BoundaryThreads_B(iBlock) % iMin, iMax
                 !\
-                ! Generalized radial coordinate in the cell center
+                ! Generalized radial coordinate of the grid point
                 !/
                 Coord1 = CoordMin_DB(r_, iBlock) + &
-                     (real(i) - 0.50)*CellSize_DB(r_, iBlock)
+                     (real(i) + Coord1Norm0)/&
+                     BoundaryThreads_B(iBlock) % dCoord1Inv
                 !\
                 ! interpolate Te and Ne to the ghost cell center:
                 !/ 
@@ -1174,7 +1212,7 @@ contains
     ! Block at which the grid is allocated
     integer, intent(in) :: iBlock
     !Interpolated state vector
-    real, intent(out)   :: State_V(nVar)
+    real,    intent(out):: State_V(nVar)
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
     !\
     ! Dimensionless plasma parameters
@@ -1182,14 +1220,22 @@ contains
     real :: pTotal, Te, Ti
     character(len=*), parameter:: NameSub = 'interpolate_vector'
     !---------------------
+    CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
+         CellSize_DB(r_+1:,iBlock) + 0.50
+    !\
+    !Along radial coordinate the resolution and location of the grid
+    !may be different:
+    !/
+    CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
+         BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
+    !Interpolate the state on threads to the given location
     StateThread_V = interpolate_vector(                        &
          a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
          nVar=TiSi_,                                           &
          nDim=3,                                               &
          Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
-         Max_D=[1, jMax_, kMax_],                              &
-         x_D=(Coord_D - CoordMin_DB(:,iBlock))/&
-         CellSize_DB(:,iBlock),                                &
+         Max_D=[iMax, jMax_, kMax_],                           &
+         x_D=CoordNorm_D,                                      &
          DoExtrapolate=.false.                                 )
     !Nullify momentum and field components of the state vector
     State_V = 0.0
