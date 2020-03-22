@@ -1163,8 +1163,10 @@ contains
   subroutine interpolate_state(Coord_D, iBlock, State_V)
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar
+    use ModAdvance,     ONLY: nVar, RHo_
     use ModInterpolate, ONLY: interpolate_vector
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
+                           UnitTemperature_, UnitEnergyDens_
     !\
     !Coords of the point in which to interpolate
     !/
@@ -1174,6 +1176,10 @@ contains
     !Interpolated state vector
     real, intent(out)   :: State_V(nVar)
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
+    !\
+    ! Dimensionless plasma parameters
+    !/
+    real :: pTotal, Te, Ti
     character(len=*), parameter:: NameSub = 'interpolate_vector'
     !---------------------
     StateThread_V = interpolate_vector(                        &
@@ -1185,7 +1191,28 @@ contains
          x_D=(Coord_D - CoordMin_DB(:,iBlock))/&
          CellSize_DB(:,iBlock),                                &
          DoExtrapolate=.false.                                 )
-    call stop_mpi('The program '//NameSub//' is under development')
+    !Nullify momentum and field components of the state vector
+    State_V = 0.0
+    !Transform Si parameters to diminsionless ones:
+    pTotal = StateThread_V(PSi_) *Si2No_V(UnitEnergyDens_ )
+    Te     = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
+    if(UseElectronPressure)then
+       Ti  = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
+       !\
+       ! Use the following equations
+       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+       ! and State_V(iP) + State_V(p_) = pTotal
+       !/
+       State_V(Rho_) = pTotal/(Te/TeFraction + Ti/TiFraction)
+       State_V(p_)   = Te/TeFraction*State_V(Rho_)
+       State_V(iP)   = Ti/TiFraction*State_V(Rho_)
+    else
+       State_V(p_)   = pTotal
+       ! Use equation
+       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       State_V(Rho_) = TeFraction*pTotal/Te
+    end if
   end subroutine interpolate_state
   !============================================================================
   subroutine save_thread_restart
