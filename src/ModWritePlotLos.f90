@@ -252,13 +252,12 @@ contains
     SizePix = 2*rSizeImage/(nPix - 1)
 
     if(DoTest .and. iProc==0) then
-       write(*,*) 'ObsPos         =',ObsPos_DI(:,ifile)
+       write(*,*) 'ObsPos         =', ObsPos_D
        write(*,*) 'Los_D          =', Los_D
-       write(*,*) 'rSizeImage     =',rSizeImage
+       write(*,*) 'rSizeImage     =', rSizeImage
        write(*,*) 'aOffset,bOffset=', aOffset, bOffset
-       write(*,*) 'ImageCenter_D  =',ImageCenter_D
-       write(*,*) 'SizePix        =',SizePix
-       write(*,*) 'nPix           =',nPix
+       write(*,*) 'SizePix        =', SizePix
+       write(*,*) 'nPix           =', nPix
     end if
 
     unitstr_TEC = ''

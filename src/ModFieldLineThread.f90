@@ -288,9 +288,11 @@ contains
           !\
           ! Use uniform grid
           !/
+          IsUniformGrid = .true.
           iMax = 0
           Coord1Norm0 = 0.0
        else
+          IsUniformGrid = .false.
           iMax = 1
           Coord1Norm0 = -0.50
        end if
@@ -356,6 +358,7 @@ contains
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
+    real   :: dCoord1UniformPe = -1.0
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_threads'
     !--------------------------------------------------------------------------
@@ -437,10 +440,18 @@ contains
             0, iComm, iError)
        call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
             0, iComm, iError)
+       if(IsUniformGrid)then
+          dCoord1UniformPe = dCoord1Uniform
+          call MPI_ALLREDUCE(dCoord1UniformPe, dCoord1Uniform, 1, MPI_REAL, &
+               MPI_MAX, iComm, iError)    
+       end if
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks'
        write(*,*)'nPointMin = ',nPointMinAll
+       if(IsUniformGrid)then
+          write(*,*)'dCoord1Uniform =', dCoord1Uniform
+       end if
     end if
     call test_stop(NameSub, DoTest)
   contains
@@ -470,7 +481,9 @@ contains
       !/
       if(nGUniform > 0)then
          iMin = -nGUniform
-         dCoord1Inv = nGUniform/(CoordMin_DB(r_, iBlock) - Coord_D(r_))
+         dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+              nGUniform  
+         dCoord1Inv = 1.0/dCoord1Uniform
       else
          iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
               CellSize_DB(r_, iBlock) )
@@ -1243,7 +1256,7 @@ contains
     pTotal = StateThread_V(PSi_) *Si2No_V(UnitEnergyDens_ )
     Te     = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
     if(UseElectronPressure)then
-       Ti  = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
+       Ti  = StateThread_V(TiSi_)*Si2No_V(UnitTemperature_)
        !\
        ! Use the following equations
        ! Te = TeFraction*State_V(iP)/State_V(Rho_)
