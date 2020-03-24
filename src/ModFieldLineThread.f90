@@ -3,12 +3,14 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, jTest, kTest, iBlockTest, iProc, nProc, iComm,&
-       nJ, nK, jDim_, kDim_
-!  use ModUtilities, ONLY: norm2
-  use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
-  use ModB0,   ONLY: get_b0
+  use BATL_lib,      ONLY: &
+       test_start, test_stop, jTest, kTest, iBlockTest, &
+       iProc, nProc, iComm, nJ, nK, jDim_, kDim_
+  use ModAdvance,    ONLY: UseElectronPressure
+  use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
+  use ModB0,         ONLY: get_b0
+  use ModPhysics,    ONLY: Z => AverageIonCharge
+  use ModVarIndexes, ONLY: Pe_, p_
 
   implicit none
   save
@@ -100,15 +102,28 @@ module ModFieldLineThread
      !/
      !\ Index of the last cell in radial direction
      integer :: iMin
+     !\
+     ! Inverse mesh size for the grid covering threaded gap
      !/
-     !\ Ne and Te for iMin:1,0:nJ+1,0:nK+1 as the first step
+     real    :: dCoord1Inv   
+     !/
+     !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
-  integer, parameter :: NeSi_=1, TeSi_=2
+  integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
+  
+  public :: save_threads_for_plot ! Get  State_VIII array
+  public :: Interpolate_state     ! Interpolate state from State_VIII
   !\
-  ! Get State_VIII arrays
+  ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   !/
-  public :: save_threads_for_plot
+  !\
+  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iP)
+  ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+  !/
+  real, public    :: TeFraction, TiFraction, PeFraction
+  integer, public :: iP
 
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
@@ -151,7 +166,29 @@ module ModFieldLineThread
   ! If .true., use threaded gap in plots
   !/
   logical, public :: DoPlotThreads = .false. 
-
+  !\
+  ! Number of GhostCells in a uniform grid covering a threaded gap
+  !/
+  integer :: nGUniform = 0
+  !\
+  ! The following logical is .true., if nUniform >=1
+  !/
+  logical, public :: IsUniformGrid = .false.
+  !\
+  ! Resolution along radial direction, if the grid is uniform
+  !/
+  real,    public :: dCoord1Uniform = -1.0
+  !\
+  !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
+  !The uniform grid starts at i=0, if nUniform>=1.
+  !/
+  integer :: iMax = 1
+  !\
+  ! For the cell-centered grid,  the normalized radial gen coordinate 
+  ! equals -0.5 for i=0. 
+  ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
+  !/
+  real   :: Coord1Norm0 = -0.50
 
   public:: BoundaryThreads
   public:: read_threads      ! Read parameters of threads
@@ -246,6 +283,19 @@ contains
        end if
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
+       if(DoPlotThreads)call read_var('nGUniform', nGUniform)
+       if(nGUniform > 0)then
+          !\
+          ! Use uniform grid
+          !/
+          IsUniformGrid = .true.
+          iMax = 0
+          Coord1Norm0 = 0.0
+       else
+          IsUniformGrid = .false.
+          iMax = 1
+          Coord1Norm0 = -0.50
+       end if
     case default
        call stop_mpi(NameSub//": unknown command="//trim(NameCommand))
     end select
@@ -308,6 +358,7 @@ contains
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
+    real   :: dCoord1UniformPe = -1.0
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_threads'
     !--------------------------------------------------------------------------
@@ -364,9 +415,10 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % iMin = i_min(iBlock)
+          call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
+               BoundaryThreads_B(iBlock) % dCoord1Inv)
           allocate(BoundaryThreads_B(iBlock) % State_VIII(&
-               NeSi_:TeSi_, BoundaryThreads_B(iBlock) % iMin:1,&
+               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:iMax,&
                jMin_:jMax_, kMin_:kMax_))
           IsAllocatedThread_B(iBlock) = .true.
        end if
@@ -388,17 +440,27 @@ contains
             0, iComm, iError)
        call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
             0, iComm, iError)
+       if(IsUniformGrid)then
+          dCoord1UniformPe = dCoord1Uniform
+          call MPI_ALLREDUCE(dCoord1UniformPe, dCoord1Uniform, 1, MPI_REAL, &
+               MPI_MAX, iComm, iError)    
+       end if
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks'
        write(*,*)'nPointMin = ',nPointMinAll
+       if(IsUniformGrid)then
+          write(*,*)'dCoord1Uniform =', dCoord1Uniform
+       end if
     end if
     call test_stop(NameSub, DoTest)
   contains
-    integer function i_min(iBlock)
+    subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
            CoordMin_DB, CellSize_DB, r_
       integer, intent(in) :: iBlock
+      integer, intent(out):: iMin
+      real,    intent(out):: dCoord1Inv
       real :: Coord_D(MaxDim), Xyz_D(MaxDim)
       !----------------
       !\
@@ -408,7 +470,7 @@ contains
       !\
       ! Projection onto the photosphere level
       !/
-      Xyz_D = Xyz_D/norm2(Xyz_D)
+      Xyz_D = Xyz_D/norm2(Xyz_D)*rBody
       !\
       ! Generalized coords of the latter.
       !/
@@ -417,9 +479,17 @@ contains
       ! Minimal index of the ghost cells, in radial direction
       ! (equals 0 if there is only 1 ghost cell)
       !/
-      i_min = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-           CellSize_DB(r_, iBlock) )
-    end function i_min
+      if(nGUniform > 0)then
+         iMin = -nGUniform
+         dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+              nGUniform  
+         dCoord1Inv = 1.0/dCoord1Uniform
+      else
+         iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+              CellSize_DB(r_, iBlock) )
+         dCoord1Inv = 1.0/CellSize_DB(r_, iBlock)
+      end if
+    end subroutine set_gc_grid
   end subroutine set_threads
   !============================================================================
   subroutine set_threads_b(iBlock)
@@ -1091,9 +1161,8 @@ contains
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
-    use ModConst, ONLY: cBoltzmann 
-    integer :: i, j, k, iBlock, iMin, nPoint
-    real    :: State_VI(NeSi_:TeSi_, 1-nPointThreadMax:0), Coord1
+    integer :: i, j, k, iBlock, nPoint
+    real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !---------------------------
@@ -1106,35 +1175,34 @@ contains
              nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
              !\
              ! Fill in an array with NeSi and TeSi values
+             State_VI(PSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
              State_VI(TeSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
-             State_VI(NeSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)/&
-                  (BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)*&
-                  cBoltzmann)
-             !\
-             ! Values at the physical cell
-             !/
-             BoundaryThreads_B(iBlock) % State_VIII(:, 1, j, k) = &
-                  State_VI(:, 0)
-             do i = BoundaryThreads_B(iBlock) % iMin, 0
+             if(UseElectronPressure)then
+                State_VI(TiSi_, 1 - nPoint:0) = &
+                     BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
+             end if
+             
+             do i = BoundaryThreads_B(iBlock) % iMin, iMax
                 !\
-                ! Generalized radial coordinate in the cell center
+                ! Generalized radial coordinate of the grid point
                 !/
                 Coord1 = CoordMin_DB(r_, iBlock) + &
-                     (real(i) - 0.50)*CellSize_DB(r_, iBlock)
+                     (real(i) + Coord1Norm0)/&
+                     BoundaryThreads_B(iBlock) % dCoord1Inv
                 !\
                 ! interpolate Te and Ne to the ghost cell center:
                 !/ 
                 BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
                      linear(&
-                     a_VI = State_VI(:, 1 - nPoint:0), &
-                     nVar = TeSi_,                     &
-                     iMin = 1 - nPoint,                &
-                     iMax = 0,                         &
-                     x = Coord1,                        &
+                     a_VI = State_VI(:, 1 - nPoint:0),            &
+                     nVar = TiSi_,                                &
+                     iMin = 1 - nPoint,                           &
+                     iMax = 0,                                    &
+                     x = Coord1,                                  &
                      x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
-                     1 - nPoint:0, j, k),              &
+                     1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
              end do
           end do
@@ -1142,7 +1210,69 @@ contains
     end do
     
   end subroutine save_threads_for_plot
-    
+  !===================================
+  subroutine interpolate_state(Coord_D, iBlock, State_V)
+    use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
+         CoordMin_DB, CellSize_DB, r_
+    use ModAdvance,     ONLY: nVar, RHo_
+    use ModInterpolate, ONLY: interpolate_vector
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
+                           UnitTemperature_, UnitEnergyDens_
+    !\
+    !Coords of the point in which to interpolate
+    !/
+    real,    intent(in) :: Coord_D(3) 
+    ! Block at which the grid is allocated
+    integer, intent(in) :: iBlock
+    !Interpolated state vector
+    real,    intent(out):: State_V(nVar)
+    real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
+    !\
+    ! Dimensionless plasma parameters
+    !/
+    real :: pTotal, Te, Ti
+    character(len=*), parameter:: NameSub = 'interpolate_vector'
+    !---------------------
+    CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
+         CellSize_DB(r_+1:,iBlock) + 0.50
+    !\
+    !Along radial coordinate the resolution and location of the grid
+    !may be different:
+    !/
+    CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
+         BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
+    !Interpolate the state on threads to the given location
+    StateThread_V = interpolate_vector(                        &
+         a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
+         nVar=TiSi_,                                           &
+         nDim=3,                                               &
+         Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
+         Max_D=[iMax, jMax_, kMax_],                           &
+         x_D=CoordNorm_D,                                      &
+         DoExtrapolate=.false.                                 )
+    !Nullify momentum and field components of the state vector
+    State_V = 0.0
+    !Transform Si parameters to diminsionless ones:
+    pTotal = StateThread_V(PSi_) *Si2No_V(UnitEnergyDens_ )
+    Te     = StateThread_V(TeSi_)*Si2No_V(UnitTemperature_)
+    if(UseElectronPressure)then
+       Ti  = StateThread_V(TiSi_)*Si2No_V(UnitTemperature_)
+       !\
+       ! Use the following equations
+       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+       ! and State_V(iP) + State_V(p_) = pTotal
+       !/
+       State_V(Rho_) = pTotal/(Te/TeFraction + Ti/TiFraction)
+       State_V(p_)   = Te/TeFraction*State_V(Rho_)
+       State_V(iP)   = Ti/TiFraction*State_V(Rho_)
+    else
+       State_V(p_)   = pTotal
+       ! Use equation
+       ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+       State_V(Rho_) = TeFraction*pTotal/Te
+    end if
+  end subroutine interpolate_state
   !============================================================================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
