@@ -252,13 +252,12 @@ contains
     SizePix = 2*rSizeImage/(nPix - 1)
 
     if(DoTest .and. iProc==0) then
-       write(*,*) 'ObsPos         =',ObsPos_DI(:,ifile)
+       write(*,*) 'ObsPos         =', ObsPos_D
        write(*,*) 'Los_D          =', Los_D
-       write(*,*) 'rSizeImage     =',rSizeImage
+       write(*,*) 'rSizeImage     =', rSizeImage
        write(*,*) 'aOffset,bOffset=', aOffset, bOffset
-       write(*,*) 'ImageCenter_D  =',ImageCenter_D
-       write(*,*) 'SizePix        =',SizePix
-       write(*,*) 'nPix           =',nPix
+       write(*,*) 'SizePix        =', SizePix
+       write(*,*) 'nPix           =', nPix
     end if
 
     unitstr_TEC = ''
@@ -705,7 +704,7 @@ contains
                      !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
                      dMirror = 2*SqrtDiscr
                      call integrate_line(XyzIntersect_D, dMirror, &
-                          UseThreads = .true.)
+                          UseThreads = DoPlotThreads)
                      XyzIntersect_D = XyzIntersect_D + dMirror*LosPix_D
                      call integrate_line(XyzIntersect_D, 1e30)
                   end if
@@ -728,8 +727,10 @@ contains
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-      use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
-      use BATL_lib,       ONLY: xyz_to_coord, find_grid_block, &
+      use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
+      use ModFieldLineThread, ONLY: &
+           IsUniformGrid, dCoord1Uniform
+      use BATL_lib,           ONLY: xyz_to_coord, find_grid_block, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
       real, intent(in):: XyzStartIn_D(3)
@@ -826,6 +827,9 @@ contains
             CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
             CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D    ! Block size
             CellSize_D      = CoordSizeBlock_D / nIjk_D            ! Cell size
+            if(present(UseThreads))then
+               if(IsUniformGrid)CellSize_D(r_) = dCoord1Uniform
+            end if
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
                write(*, '(A, 3E12.5)')NameSub//': CoordMin=', CoordMinBlock_D
@@ -902,6 +906,7 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
+      use ModFieldLineThread, ONLY: interpolate_state
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
@@ -1004,8 +1009,18 @@ contains
       ! Interpolate state if it is needed by any of the plot variables
       StateInterpolateDone = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
-         State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
-              nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+         !\
+         !`Interpolate state vector in the point with gen coords
+         ! equal to GenLos_D
+         !/
+         if(present(UseThreads))then
+            ! Interpolate within the threaded gap
+            call interpolate_state(GenLos_D, iBlock, State_V)
+         else
+            ! Interpolate in the physical domain
+            State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
+                 nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+         end if
          StateInterpolateDone = .true.
          Rho = State_V(Rho_)
       end if
