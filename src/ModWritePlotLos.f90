@@ -817,9 +817,11 @@ contains
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
             !Else the reay cannot cross the boundaries 
          end if
-         if(Ds < 0.1*DsTiny)then
+         if(Ds <= 0.0)then
+            !To prevent intinite looping
             write(*,*)'ds=', Ds
-            call stop_mpi(NameSub//': Algorithm failed')
+            call stop_mpi(NameSub//&
+                 ': Algorithm failed: zero integration step')
          end if
          if(DoTest)write(*,*) NameSub,' inside: Ds, Length=', Ds, Length
 
