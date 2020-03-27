@@ -5,7 +5,6 @@ module ModWritePlotLos
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
-!  use ModUtilities, ONLY: norm2
 
   implicit none
 
@@ -89,11 +88,11 @@ contains
     ! Arguments
 
     integer, intent(in) :: iFile
-
+    !Misc: for using MPI
     integer :: iError
 
     ! File specific parameters
-    integer :: nPix
+    integer :: nPix       ! Image has nPix*nPix pixels
     real    :: aOffset, bOffset, rSizeImage, rSizeImage2, rOccult, rOccult2,&
          OffsetAngle
 
@@ -107,7 +106,7 @@ contains
     character (len=20) :: NameVar
 
     integer :: nEqpar, nPlotVar
-    integer :: iPix, jPix             ! indexes of the pixel
+    integer :: iPix, jPix             ! indexes of the pixel 
     real    :: aPix, bPix             ! coordinates of pixel in the image frae
     real    :: ImageCenter_D(3)       ! 3D coordinates of the center of image
     real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
@@ -290,8 +289,8 @@ contains
        ! redefine plot_vars1 with correct table info
        call join_string(nPlotVar, PlotVarNames, plot_vars1)
 
-       if(DoTest) then
-          write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
+       if(DoTest .and. iProc==0) then
+          write(*,*) 'plot variables, UseRho=', trim(plot_vars1), UseRho
           write(*,*) 'nPlotVar, PlotVarNames_V=', &
                nPlotVar,plotvarnames(1:nPlotVar)
        end if
@@ -300,13 +299,13 @@ contains
        if(.not.allocated(InterpValues_I)) &
             allocate(InterpValues_I(nPlotVar))
 
-       if(DoTest) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
+       if(DoTest .and. iProc==0) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
     endif
 
     allnames='x y '//trim(plot_vars1)//' '//plot_pars(iFile)
-    if(DoTest) write(*,*) 'AllNames: ', AllNames
+    if(DoTest .and. iProc==0) write(*,*) 'AllNames: ', AllNames
 
-    if(DoTest) then
+    if(DoTest .and. iProc==0) then
        write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
        write(*,*) 'nPlotVar, PlotVarNames_V=', &
             nPlotVar,plotvarnames(1:nPlotVar)
@@ -653,9 +652,10 @@ contains
             ! Get the 3D location of the pixel
             XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
 
-            ! Unit vector pointing from pixel center to observer
+            ! Vector from pixel center to observer
             LosPix_D = - XyzPix_D + ObsPos_D
             Distance = norm2(LosPix_D)
+            ! Unit vector pointing from pixel center to observer
             LosPix_D = LosPix_D/Distance
 
             ! Calculate whether there are intersections with the rInner sphere
@@ -676,7 +676,7 @@ contains
             LosDotXyzPix = sum(LosPix_D*XyzPix_D) 
             XyzPix2 = sum(XyzPix_D**2)
             Discriminant = LosDotXyzPix**2 &
-                 - XyzPix2  + (rInner+cTiny)**2
+                 - XyzPix2  + (rInner + cTiny)**2
 
             if (Discriminant > 0) then
                ! Only consider the intersection facing the observer
@@ -689,7 +689,7 @@ contains
                if(UseFieldLineThreads)then
                   ! The discriminant controlling intersection with
                   ! the chromosphere 
-                  DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
+                  DiscrChromo = LosDotXyzPix**2 - XyzPix2 + (rChromo + cTiny)**2
                   ! Integrate in the other direction too if no intesection
                   LosPix_D = -LosPix_D
                   if(DiscrChromo > 0)then
@@ -759,15 +759,28 @@ contains
       ! DoTest = iPix==200 .and. jPix==200
       character(len=*), parameter:: NameSub = 'integrate_line'
       !------------------------------------------------------------------------
+      iDimMin = r_
       if(present(UseThreads))then
+         !\
+         !Integration through the threaded gap
+         !/
          !The part of ray passing through the threaded gap does not
          !contribute to the integral if UseThreads = .false.
          if(.not.UseThreads)RETURN
-         iDimMin = 2 !The first coordinate can go beyond the block boundary
+         !\
+         ! In the threaded gap, the radial coordinate is allowed to go beyond 
+         ! the block boundary and the domain boundary. The criterion for the 
+         ! ray pass to a new block should ignore this coordinate.
+         !/ 
+         iDimMin = r_ + 1 
       end if
-      iDimMin = 1
-      if(DoTest .and. iProc == 0) &
-           write(*,'(2a, 3f10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
+      if(DoTest .and. iProc == 0) then
+         write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' XyzStartIn_D=', &
+              XyzStartIn_D, ', Distance = ', norm2(XyzStartIn_D)
+         write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' End point coordinates=',&
+              XyzStartIn_D + LengthMax*LosPix_D, ', Distance = ', norm2(&
+              XyzStartIn_D + LengthMax*LosPix_D)
+      end if
 
       CoordSize_D = CoordMax_D - CoordMin_D
       DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - z1)
@@ -803,6 +816,12 @@ contains
             if(  any(CoordLosNew_D > CoordMax_D) .or. &
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
             !Else the reay cannot cross the boundaries 
+         end if
+         if(Ds <= 0.0)then
+            !To prevent intinite looping
+            write(*,*)'ds=', Ds
+            call stop_mpi(NameSub//&
+                 ': Algorithm failed: zero integration step')
          end if
          if(DoTest)write(*,*) NameSub,' inside: Ds, Length=', Ds, Length
 

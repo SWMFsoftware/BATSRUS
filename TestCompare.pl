@@ -201,7 +201,6 @@ TEST: foreach $test (sort @test){
 
       my $logfile1="$dir1/$test/$logfile";
       my $logfile2="$dir2/$test/$logfile";
-      $logfile2 =~ s/_n(\d\d\d\d\d\d\.sat)/_n00$1/;
 
       close(LOG1);
       close(LOG2);
