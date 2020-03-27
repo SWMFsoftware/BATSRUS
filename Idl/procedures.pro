@@ -1557,11 +1557,15 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
-        'y': logtime = hours/(24*365.25)
-        'd': logtime = hours/24
-        '1': logtime = hours*3600
-        's': logtime = hours*3600
-        'm': logtime = hours*60
+        'y'      : logtime = hours/(24*365.25)
+        'year'   : logtime = hours/(24*365.25)
+        'd'      : logtime = hours/24
+        'day'    : logtime = hours/24
+        '1'      : logtime = hours*3600
+        's'      : logtime = hours*3600
+        'second' : logtime = hours*3600
+        'm'      : logtime = hours*60
+        'minute' : logtime = hours*60
         'millisec': logtime = hours*3600e3
         'microsec': logtime = hours*3600e6
         'ns'    : logtime = hours*3600e9
@@ -1776,6 +1780,7 @@ pro get_file_head, unit, filename, filetype, pictsize=pictsize
   common debug_param & on_error, onerror
 
   common file_head
+  common log_data, timeunit
 
   ftype = strlowcase(filetype)
 
@@ -1806,7 +1811,7 @@ pro get_file_head, unit, filename, filetype, pictsize=pictsize
         readf,unit,headline
         readf,unit,varname
         nw=n_elements(strsplit(varname))-2
-        varname ='hour '+varname
+        varname = timeunit+' '+varname
                                 ; reset pointer
         point_lun,unit,pointer0
         it=0
@@ -2213,8 +2218,9 @@ pro get_pict_log, unit
 
   common plot_data
   common file_head
+  common log_data,timeunit
 
-  get_log, unit, w, wlognames, x, 's'
+  get_log, unit, w, wlognames, x, timeunit
 
   ndim = 1
   nx(0)= n_elements(x)
