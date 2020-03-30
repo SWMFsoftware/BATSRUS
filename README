@@ -109,10 +109,19 @@ ulimit -s unlimited
 # that LaTex (available through the command line) and ps2pdf
 # be installed on your system.
 
-# To create the PDF manuals type
+# To create the PDF manuals for BATSRUS and CRASH type
 make PDF
+cd util/CRASH/doc/Tex; make PDF
 
-# in the BATSRUS directory. The manuals will be in the Doc/ directory.
+# in the BATSRUS directory. The manuals will be in the Doc/ and
+# util/CRASH/doc/ directories, and can be accessed by opening
+Doc/index.html
+util/CRASH/doc/index.html
+
+# The input parameters of \BATSRUS/CRASH are described in the PARAM.XML
+# in the main directory. This is the best source of information when
+# constructing the input parameter file and it is used to generate the
+# "Input Parameters" section of the manual.
 
 # Cleaning the documentation
 cd doc/Tex
