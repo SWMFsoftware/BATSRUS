@@ -1,4 +1,6 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+\begin{verbatim}
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 This document outlines how to install the stand-alone BATSRUS code
 on your system and how to create and access the documentation.  
@@ -26,23 +28,23 @@ user manual please follow the instructions below.
 # are in the CRASH_data repository.
 # If needed, it has to be placed into the home directory.
 
-# !!! Getting BATSRUS from Git (requires access to herot) !!!
-# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf
-# about setting up the "herot" ssh alias, passwordless access to herot,
-# and defining the "gitclone" alias/function. 
+# !!! Getting BATSRUS from Git (requires access to UM GitLab) !!!
+# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf
+# about registering, passwordless access, mail notifications,
+# and defining the "gitlabclone" (or gitclone) alias/function. 
 
 # Check out the BATSRUS distribution
 cd {where_you_want_to_have_batsrus}
-gitclone BATSRUS
+gitlabclone BATSRUS
 
 # Check out the SWMF_data distribution into the home directory if needed
 cd
-gitclone SWMF_data
+gitlabclone SWMF_data
 cd SWMF_data; rm -rf IM PT PW RB SP UA    # if not needed
 
 # Check out the CRASH_data distribution into the home directory if needed
 cd
-gitclone CRASH_data
+gitlabclone CRASH_data
 
 # !!! Opening tar balls !!!
 
@@ -71,14 +73,14 @@ tar -xzf {path_to_file}/CRASH_data.tgz
 
 Config.pl -install
 
-# On other platforms the Fortan compiler should be explicitly given. 
+# On other platforms the Fortran (and C) compilers should be explicitly given. 
 # To see available choices, type 
 
 Config.pl -compiler
 
-# Then install the code with the selected Fortran compiler, e.g.
+# Then install the code with the selected Fortran (and default C) compiler, e.g.
 
-Config.pl -install -compiler=ifort
+Config.pl -install -compiler=gfortran
 
 # A non-default C compiler can be added after a comma, e.g.
 
@@ -104,7 +106,8 @@ ulimit -s unlimited
 ######################
 
 # Please note that creating the PDF manuals requires 
-# that LaTex and ps2pdf be installed on your system.
+# that LaTex (available through the command line) and ps2pdf
+# be installed on your system.
 
 # To create the PDF manuals type
 make PDF
@@ -158,3 +161,4 @@ make test_help
 # but multithreaded with 4 threads (using OpenMP):
 
 make -j test_shocktube MPIRUN= NTHREAD=4
+\end{verbatim}
