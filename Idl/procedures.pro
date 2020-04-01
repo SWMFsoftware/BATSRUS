@@ -62,7 +62,8 @@
 ;    reform2
 ; converting logfile time or date+time into hours, getting other functions
 ;    log_time, log_func
-
+; limiting changes in a time series
+;    limit_change, limit_growth
 
 ;===========================================================================
 pro set_default_values
@@ -387,6 +388,62 @@ pro set_default_values
   start_month = 1
   start_day   = 1
 
+end
+;===========================================================================
+function limit_change, a, change
+
+  ;; "a" must be a 1 dimensional array of a time series
+  ;; limit change from a(i) to a(i+1) to be within [-change,+change]
+  ;; where "change" is a positive value.
+  
+  n = n_elements(a)
+  if n lt 2 then begin
+     print, "Warning in limit_change: too few elements in array'
+     help, a
+     RETURN, a
+  endif
+
+  if size(a,/n_dim) ne 1 then begin
+     print, "Error in limit_change: array is not one dimensional'
+     help, a
+     RETALL
+  endif
+
+  b = a
+  for i = 1, n-1 do $
+     b(i) = b(i) < (b(i-1)+change) > (b(i-1)-change)
+
+  return, b
+end
+;===========================================================================
+function limit_growth, a, factor
+
+  ;; "a" must be a 1 dimensional array of a time series
+  ;; limit growth from a(i) to a(i+1) to be within [1/factor,factor]
+  ;; where factor is larger than 1 and a(i) and a(i+1) have the same signs.
+  
+  n = n_elements(a)
+  if n lt 2 then begin
+     print, "Warning in limit_growth: too few elements in array'
+     help, a
+     RETURN, a
+  endif
+
+  if size(a,/n_dim) ne 1 then begin
+     print, "Error in limit_growth: array is not one dimensional'
+     help, a
+     RETALL
+  endif
+
+  b = a
+
+  for i = 1, n-1 do $
+     if b(i-1) gt 0 and b(i) gt 0 then $
+        b(i) = b(i) < (b(i-1)*factor) > (b(i-1)/factor) $
+     else if b(i-1) lt 0 and b(i) lt 0 then $
+        b(i) = b(i) < (b(i-1)/factor) > (b(i-1)*factor)
+
+  return, b
 end
 ;===========================================================================
 function curve_distance,x1,y1,x2,y2
