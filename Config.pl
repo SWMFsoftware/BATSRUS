@@ -19,7 +19,7 @@ our @Arguments = @ARGV;
 my $config     = "share/Scripts/Config.pl";
 
 # Git clone missing directories as needed
-my $GITCLONE = "git clone"; my $GITDIR = "git\@gitlab.umich.edu:swmf_software/";
+my $GITCLONE = "git clone"; my $GITDIR = "git\@gitlab.umich.edu:swmf_software";
 if (not -f $config and not -f "../../$config"){
     `$GITCLONE $GITDIR/share; $GITCLONE $GITDIR/util`;
 }

@@ -1,8 +1,5 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Input file for creating a steady state solar corona
 
@@ -173,18 +170,29 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-1			nPlotFiles 1
+2			nPlotFiles 1
 x=0 VAR idl		StringPlot
 20			DnSavePlot 5000
--1.			DtSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti bx by bz I01 I02 p
-g rbody
+{default}
+z=0 VAR idl		StringPlot
+20			DnSavePlot 5000
+10.0			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p
+{default}
+
+
+
 x=0 VAR tec		StringPlot
 10000			DnSavePlot
 -1.			DtSavePlot
 rho ux uy uz ti bx by bz I01 I02 p
 g rbody
+
+
 3d VAR tec
 50000			DnSavePlot
 -1.			DtSavePlot
@@ -272,5 +280,19 @@ TD			TypeCme
 1.000E+13		Mass
 
 #STOP
-80			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+10.0			tSimulationMax
+
+#RUN ########################################################################
+
+#TIMESTEPLIMIT
+T                       UseDtLimit
+5.0			DtLimitDim [sec] (read if UseDtLimit is true)
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#STOP
+-1			MaxIteration
+600.0			tSimulationMax
+
