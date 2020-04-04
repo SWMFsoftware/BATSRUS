@@ -103,6 +103,7 @@ contains
     use ModNumConst, ONLY: cDegToRad, cHalfPi
     use ModConst, ONLY: cDay => cSecondPerDay
     use CON_geopack, ONLY: geopack_recalc, HgiGse_DD, GsmGse_DD
+    use CON_axes, ONLY: transform_matrix
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModUtilities, ONLY: upper_case, lower_case, split_string, &
@@ -125,9 +126,8 @@ contains
 
     real :: TimeDelay
     real(Real8_) :: Time, DtData1, DtData2
-    real, save:: HgiGsm_DD(3,3)
+    real    :: Transform_DD(3,3)
     real    :: Solarwind_V(nVar)
-    logical :: DoSetMatrix=.true.
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
@@ -306,49 +306,35 @@ contains
        if(UseZeroBx) Solarwind_VI(Bx_, nData) = 0.0
 
        if(NameInputCoord /= TypeCoordSystem) then
+          ! Transform vector variables from input to model coordinates
+
+          call geopack_recalc(iTime_I)
 
           if(TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then
-
-             call geopack_recalc(iTime_I)
-
-             do iVectorVar = 1, nVectorVar
-                iVar = iVectorVar_I(iVectorVar)
-                Solarwind_VI(iVar:iVar+2, nData)=&
-                     matmul(GsmGse_DD, Solarwind_VI(iVar:iVar+2,nData))
-             end do
-
+             ! GSE -> GSM
+             Transform_DD = GsmGse_DD
           elseif(TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then
-
-             call geopack_recalc(iTime_I)
-
-             do iVectorVar = 1, nVectorVar
-                iVar = iVectorVar_I(iVectorVar)
-                Solarwind_VI(iVar:iVar+2,nData)=&
-                     matmul(Solarwind_VI(iVar:iVar+2,nData), GsmGse_DD)
-             end do
-
+             ! GSM -> GSE
+             Transform_DD = transpose(GsmGse_DD)
           elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSM') then
-
-             if(DoSetMatrix)then
-                DoSetMatrix=.false.
-                call geopack_recalc(iStartTime_I)
-                HgiGsm_DD = matmul(HgiGse_DD, transpose(GsmGse_DD))
-             end if
-
-             ! Shouldn't we add the orbital velocity of the Earth here ?!!!
-             do iVectorVar = 1, nVectorVar
-                iVar = iVectorVar_I(iVectorVar)
-                Solarwind_VI(iVar:iVar+2, nData)=&
-                     matmul(HgiGsm_DD, Solarwind_VI(iVar:iVar+2,nData))
-             end do
-
+             ! GSM -> GSE -> HGI
+             Transform_DD = matmul(GsmGse_DD, HgiGse_DD)
+          elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSE')then
+             ! GSE -> HGI
+             Transform_DD = HgiGse_DD
           else
-             write(*,*) 'Transformation between input ',&
-                  ' coordinate system=',NameInputCoord,&
-                  ' and code system=',TypeCoordSystem,&
-                  ' is not implemented'
-             call stop_mpi('GM_ERROR')
-          endif
+             Transform_DD = &
+                  transform_matrix(Time_Simulation, TypeCoordSystem, NameInputCoord)
+          end if
+
+          do iVectorVar = 1, nVectorVar
+             iVar = iVectorVar_I(iVectorVar)
+             Solarwind_VI(iVar:iVar+2,nData)=&
+                  matmul(Transform_DD, Solarwind_VI(iVar:iVar+2,nData))
+          end do
+
+          ! Shouldn't we add the orbital velocity of the Earth for HGI?!?
+
        endif
     enddo
 
