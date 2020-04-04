@@ -16,8 +16,8 @@ module ModFieldLineThread
   save
 
   PRIVATE ! Except
-  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
+  integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
+  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
 
   !\
   ! rBody here is set to one keeping a capability to set
@@ -1130,7 +1130,7 @@ contains
     call get_restart_file_name(iBlock, NameThisComp//'/restartIN/')
     call open_file(file=NameRestartFile, status='old', &
          form='UNFORMATTED', NameCaller=NameSub)
-    do k = 1,nK; do j = 1, nJ
+    do k = kMin_,kMax_; do j = jMin_, jMax_
        read(UnitTmp_, iostat = iError)RealNPoint
        if(iError>0)then
           write(*,*)'Error in reading nPoint in Block=', iBlock
@@ -1290,7 +1290,7 @@ contains
        call get_restart_file_name(iBlock, NameThisComp//'/restartOUT/')
        call open_file(file=NameRestartFile, form='UNFORMATTED',&
             NameCaller=NameSub)
-       do k = 1,nK; do j = 1, nJ
+       do k = kMin_,kMax_; do j = jMin_, jMax_
           nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&
