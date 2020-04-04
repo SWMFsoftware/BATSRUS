@@ -8,7 +8,9 @@ module ModThreadedLC
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
        LambdaSi_, DLogLambdaOverDLogT_,                          &
-       DoInit_, Done_, Enthalpy_, Heat_
+       DoInit_, Done_, Enthalpy_, Heat_,                         &
+       jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
+       kThreadMin=>jMin_, kThreadMax=>jMax_
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
@@ -1211,14 +1213,14 @@ contains
     ! Fill in the temperature array
     !/
     if(UseIdealEos)then
-       do k = 1, nK; do j = 1, nJ
+       do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
           Te_G(0:1,j,k) = TeFraction*State_VGB(iP,1,j,k,iBlock) &
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
-    do k = 1, nK; do j = 1, nJ
+    do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
