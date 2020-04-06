@@ -2934,6 +2934,7 @@ contains
       use ModMultiFluid, ONLY: UseMultiIon
       use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
       use ModRestartFile, ONLY: NameVarRestart_V
+      use ModFieldLineThread, ONLY: DoPlotThreads
 
       ! option and module parameters
       character (len=40) :: Name
@@ -3558,6 +3559,11 @@ contains
            call stop_mpi(NameSub//' missing stereo B traj file.')
       if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
+
+      !Disable thread-related logicals, if UseFieldLineThreads=.false.
+      if(.not.UseFieldLineThreads)then
+         DoPlotThreads = .false.; DoThreadRestart = .false.
+      end if
 
     end subroutine correct_parameters
     !==========================================================================
