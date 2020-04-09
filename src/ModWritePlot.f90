@@ -673,10 +673,10 @@ contains
 
           write(UnitTmp_,'(a)') '#PLOTRANGE'
           do iDim = 1, nDim
-             write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                  PlotRange_I(2*iDim-1)*CoordUnit, 'Coord', iDim, 'Min'
-             write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                  PlotRange_I(2*iDim)*CoordUnit, 'Coord', iDim, 'Max'
+             write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                  PlotRange_I(2*iDim-1)*CoordUnit, 'CoordMin', iDim
+             write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                  PlotRange_I(2*iDim)*CoordUnit, 'CoordMax', iDim
           enddo
           write(UnitTmp_,*)
 
