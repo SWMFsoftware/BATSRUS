@@ -3355,8 +3355,8 @@ contains
 
       if(UseDtLimit .and. UseDtFixed)then
          if(iProc==0)then
-            write(*,'(a)')'Limited time step and fixed time step can not be'
-            write(*,'(a)')'use together'
+            write(*,'(a)') &
+                 'Limited and fixed time steps cannot be used together'
             call stop_mpi('Correct PARAM.in')
          end if
       end if
