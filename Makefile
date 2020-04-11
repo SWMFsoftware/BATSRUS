@@ -77,7 +77,7 @@ LIB:
 
 GITINFO:
 	@(if [ "${GITINFO}" != "NO" ]; then \
-		${SCRIPTDIR}/gitall -r=f > ${CONTROLDIR}/show_git_info.h; \
+		${SCRIPTDIR}/gitall -r=f > src/show_git_info.h; \
 	fi)
 
 BATSRUS: GITINFO

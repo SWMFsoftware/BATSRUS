@@ -8,7 +8,7 @@ module ModFieldTrace
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
        IsNeighbor_P, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       MaxBlock, x_, y_, z_
+       MaxBlock, x_, y_, z_, IsCartesianGrid
   use ModMain, ONLY: iNewDecomposition, TypeCoordSystem
   use ModPhysics, ONLY: rBody
 !  use ModUtilities, ONLY: norm2
@@ -67,7 +67,7 @@ module ModFieldTrace
 
   ! Radius where the tracing stops
   real, public :: rTrace = 0.
-
+  
   ! Named indexes
   integer, public, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, &
@@ -96,6 +96,9 @@ module ModFieldTrace
   real :: rTrace2 = 0.0
   real :: rIonosphere2 = 0.0
 
+  ! Inner radius to end tracing (either rTrace or rIonosphere)
+  real :: rInner = 0.0, rInner2 = 0.0
+  
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -361,8 +364,6 @@ contains
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
 
-    real:: rInner
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
     !--------------------------------------------------------------------------
@@ -397,6 +398,7 @@ contains
     else
        rInner = rIonosphere
     end if
+    rInner2 = rInner**2
     
     CLOSEDRAY= -(rInner + 0.05)
     OPENRAY  = -(rInner + 0.1)
@@ -408,6 +410,7 @@ contains
     if(DoTest)then
        write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
        write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
+       write(*,*) 'rInner, rInner2          =', rInner, rInner2
        write(*,*) 'CLOSEDRAY,OPENRAY,OUTRAY =', CLOSEDRAY, OPENRAY, OUTRAY
     end if
     if(allocated(ray)) RETURN
@@ -565,7 +568,7 @@ contains
 
           do iRay = 1,2
              ! Short cut for inner and false cells
-             if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
+             if(R_BLK(i,j,k,iBlock) < rInner .or. &
                   .not.true_cell(i,j,k,iBlock))then
                 ray(:,:,i,j,k,iBlock)=BODYRAY
                 if(DoTestRay)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
@@ -1071,7 +1074,7 @@ contains
          rMin_BLK, x1,x2,y1,y2,z1,z2
     use CON_planet, ONLY: DipoleStrength
     use ModMultiFLuid
-    use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord, Xyz_DGB, CellSize_DB
+    use BATL_lib, ONLY: xyz_to_coord, Xyz_DGB, CellSize_DB
 
     ! Arguments
 
@@ -1446,8 +1449,8 @@ contains
           if(r2Cur <= rTrace2)then
 
              ! If inside surface, then tracing is finished
-             if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2 &
-                  .or. rIonosphere < 0)then
+             
+             if(NameVectorField /= 'B' .or. r2Cur < rInner2)then
                 XyzInOut_D = XyzCur_D
                 iFace=ray_iono_
                 EXIT FOLLOW
@@ -3870,7 +3873,7 @@ contains
     if(UseSmg) &
          GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
 
-    if(UseAccurateTrace)then
+    if(UseAccurateTrace .or. .not.IsCartesianGrid)then
        call ray_trace_accurate
     else
        call ray_trace_fast
@@ -4228,7 +4231,7 @@ contains
           do iz=1,nK; do iy=1,nJ; do ix=1,nI
 
              ! Short cuts for inner and false cells
-             if(R_BLK(ix,iy,iz,iBlock)<rIonosphere .or. &
+             if(R_BLK(ix,iy,iz,iBlock) < rInner .or. &
                   .not.true_cell(ix,iy,iz,iBlock))then
                 ray(:,iray,ix,iy,iz,iBlock)=BODYRAY
                 if(DoTestRay)write(*,*)'BODYRAY'
@@ -4449,11 +4452,11 @@ contains
                     'Inside rTrace at me,iBlock,nsegment,x,xx=',&
                     iProc,iBlock,nsegment,x,xx
 
-               if(r2 <= rIonosphere2)then
+               if(NameVectorField /= 'B' .or. r2 <= rInner2)then
                   if(nsegment==0)then
                      qface = ray_body_
                      if(DoTestRay)write(*,*)&
-                          'Initial point inside rIonosphere at me,iBlock,xx=',&
+                          'Initial point inside rInner at me,iBlock,xx=',&
                           iProc,iBlock,xx
                   else
                      r = sqrt(r2)
@@ -4462,10 +4465,10 @@ contains
 
                      r_ini = norm2(xx_ini)
                      ! Interpolate to the surface linearly along last segment
-                     xx = (xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r)) &
+                     xx = (xx*(r_ini-rInner)+xx_ini*(rInner-r)) &
                           /(r_ini-r)
                      ! Normalize xx in radial direction
-                     xx = rIonosphere*xx/norm2(xx)
+                     xx = rInner*xx/norm2(xx)
                      x = xx
                      qface = ray_iono_
                   end if
