@@ -4,15 +4,16 @@
 module ModThreadedLC
 
   use BATL_lib, ONLY: test_start, test_stop, iProc
-!  use ModUtilities, ONLY: norm2
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       LambdaSi_, DLogLambdaOverDLogT_,                           &
-       DoInit_, Done_, Enthalpy_, Heat_
+       LambdaSi_, DLogLambdaOverDLogT_,                          &
+       DoInit_, Done_, Enthalpy_, Heat_,                         &
+       jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
+       kThreadMin=>jMin_, kThreadMax=>jMax_
+  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
-  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,   ONLY: Xyz_DGB
@@ -29,6 +30,17 @@ module ModThreadedLC
   !/
   use ModFieldLineThread, ONLY:  &
        GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
+  !\
+  ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
+  !/
+  !\
+  ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iP)
+  ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+  !/
+
+  use ModFieldLineThread, ONLY:  &
+       TeFraction, TiFraction, PeFraction, iP
   implicit none
   !\
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
@@ -37,11 +49,7 @@ module ModThreadedLC
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   !/
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
-  !\
-  ! To express Te in terms of P and rho.
-  !/
-  real    :: TeFraction, TiFraction, PeFraction
-  integer :: iP
+
   !\
   ! Temperature 3D array
   !/
@@ -1205,14 +1213,14 @@ contains
     ! Fill in the temperature array
     !/
     if(UseIdealEos)then
-       do k = 1, nK; do j = 1, nJ
+       do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
           Te_G(0:1,j,k) = TeFraction*State_VGB(iP,1,j,k,iBlock) &
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
-    do k = 1, nK; do j = 1, nJ
+    do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))

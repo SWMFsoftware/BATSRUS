@@ -76,7 +76,9 @@ LIB:
 	cd srcInterface; $(MAKE) LIB
 
 GITINFO:
-	${SCRIPTDIR}/gitall -r=f > src/show_git_info.h
+	@(if [ "${GITINFO}" != "NO" ]; then \
+		${SCRIPTDIR}/gitall -r=f > src/show_git_info.h; \
+	fi)
 
 BATSRUS: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
@@ -138,7 +140,8 @@ rundir:
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		cp    ${SCRIPTDIR}/pIDL .; \
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
-		ln -s ${GMDIR}/Param .
+		ln -s ${GMDIR}/Param .; \
+		ln -s ${GMDIR}/data/TRAJECTORY .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		touch ${DIR}/share/JobScripts/job._TMP_${MACHINE}; \
 		touch ${DIR}/share/JobScripts/_TMP_.${MACHINE}.pl; \
