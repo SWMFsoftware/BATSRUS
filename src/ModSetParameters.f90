@@ -653,7 +653,8 @@ contains
           call hypre_read_param
 
        case("#PIC", "#PICREGION", '#PICREGIONROTATE', "#PICUNIT", &
-            "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST")
+            "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST",&
+            "#PICADAPTIVE")
           call pic_read_param(NameCommand)
 
        case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
@@ -2934,6 +2935,7 @@ contains
       use ModMultiFluid, ONLY: UseMultiIon
       use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
       use ModRestartFile, ONLY: NameVarRestart_V
+      use ModFieldLineThread, ONLY: DoPlotThreads
 
       ! option and module parameters
       character (len=40) :: Name
@@ -3355,8 +3357,8 @@ contains
 
       if(UseDtLimit .and. UseDtFixed)then
          if(iProc==0)then
-            write(*,'(a)')'Limited time step and fixed time step can not be'
-            write(*,'(a)')'use together'
+            write(*,'(a)') &
+                 'Limited and fixed time steps cannot be used together'
             call stop_mpi('Correct PARAM.in')
          end if
       end if
@@ -3558,6 +3560,11 @@ contains
            call stop_mpi(NameSub//' missing stereo B traj file.')
       if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
+
+      !Disable thread-related logicals, if UseFieldLineThreads=.false.
+      if(.not.UseFieldLineThreads)then
+         DoPlotThreads = .false.; DoThreadRestart = .false.
+      end if
 
     end subroutine correct_parameters
     !==========================================================================
