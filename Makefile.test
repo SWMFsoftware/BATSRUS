@@ -26,7 +26,7 @@ test:
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_corona TESTDIR=run_test_corona)
 	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
-	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)		
+	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
 	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
@@ -48,7 +48,9 @@ test:
 	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
 	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
 	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
-	-@($(MAKE) test_fivemoment TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment)
 	-@($(MAKE) test_func TESTDIR=run_test_func)
 	./Config.pl -noopenmp
 	@ls -l *.diff
@@ -89,7 +91,6 @@ test_help:
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
 	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
-	@echo "    test_fivemoment            (run all 5-moment tests)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
 	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
 	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
@@ -860,6 +861,7 @@ test_func:
 	@echo "test_func_run..." >> test_func.diff
 	$(MAKE) test_func_run
 	@echo "test_func_check..." >> test_func.diff
+	$(MAKE) test_func_ref
 	$(MAKE) test_func_check
 
 test_func_compile:
@@ -870,9 +872,11 @@ test_func_compile:
 test_func_run: test_rundir
 	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
 
-test_func_check:
+test_func_ref:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
 	cd ${REFDIR}; tar -xzf ../Param/TESTSUITE/TEST.tgz; 
+
+test_func_check:
 	./TestCompare.pl -q -v -o=1e-11 ${REFDIR} ${TESTDIR} > test_func.diff
 	./TestCompare.pl -speed ${REFDIR} ${TESTDIR} > test_func.speed
 	ls -l test_func.diff test_func.speed
@@ -1649,7 +1653,7 @@ test_europa2fluidspe_compile:
 	make PIDL
 
 test_europa2fluidspe_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/EUROPA/Param.in.2fluidsPe.test PARAM.in
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.2fluidsPe.test PARAM.in; cp Param/EUROPA/satellite-E4_flyby-from_pds.dat satellite_2fpe_e4.dat
 
 test_europa2fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1657,8 +1661,8 @@ test_europa2fluidspe_run:
 
 test_europa2fluidspe_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
-		Param/EUROPA/europa2fluidspe_cut_mhd_1_n00000100.out \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa2fluidspe.diff)
+		Param/EUROPA/trj_satellite_2fpe_e4_n00000100.sat \
+		${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat > test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
@@ -1751,11 +1755,6 @@ test_region2d_check:
 	ls -l test_region2d.diff
 
 ### TEST FOR FIVEMOMENT ###
-
-test_fivemoment:
-	-@($(MAKE) test_fivemoment_alfven)
-	-@($(MAKE) test_fivemoment_shock)
-	-@($(MAKE) test_fivemoment_langmuir)
 
 test_fivemoment_alfven:
 	@echo "test_fivemoment_alfven_compile..." > test_fivemoment_alfven.diff

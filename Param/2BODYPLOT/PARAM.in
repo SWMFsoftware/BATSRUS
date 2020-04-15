@@ -160,6 +160,9 @@ F			UseOrbit
 ionosphere		TypeBcInner
 fixed			TypeBcBody2
 
+#MAGNETICINNERBOUNDARY
+F			DoReflectInnerB1
+
 #SAVELOGFILE
 T
 RAW			StringLogfile

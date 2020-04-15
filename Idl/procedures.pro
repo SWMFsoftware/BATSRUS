@@ -62,7 +62,8 @@
 ;    reform2
 ; converting logfile time or date+time into hours, getting other functions
 ;    log_time, log_func
-
+; limiting changes in a time series
+;    limit_change, limit_growth
 
 ;===========================================================================
 pro set_default_values
@@ -387,6 +388,100 @@ pro set_default_values
   start_month = 1
   start_day   = 1
 
+end
+;===========================================================================
+function limit_change, a, change, a2, change2
+
+  ;; "a" must be a 1 dimensional array of a time series.
+  ;; "change" is either a scalar or a 2-element array.
+  ;; A scalar value is the same as [-abs(change),abs(change)].
+  ;; Limit change so that a(i+1) is within [a(i)-change(0),a(i)+change(1)]
+  ;; If a2 and change2 are present then the change is limited by
+  ;; change2 if a2 is not increasing: sudden velocity jump is not possible
+  ;; if density is not increasing
+  
+  
+  n = n_elements(a)
+  if n lt 2 then begin
+     print, "Warning in limit_change: too few elements in array"
+     help, a
+     RETURN, a
+  endif
+  if size(a,/n_dim) ne 1 then begin
+     print, "Error in limit_change: array is not one dimensional"
+     help, a
+     RETALL
+  endif
+  if n_elements(change) eq 1 then           $
+     changes = [-abs(change), abs(change) ] $
+  else if n_elements(change) eq 2 then      $
+     changes = [min(change), max(change)]   $
+  else begin 
+     print, "Error in limit_change: change should be scalar or 2-element array"
+     help, change
+     RETALL
+  endelse
+  
+  n2 = n_elements(a2)
+  if n2 gt 0 then begin
+     if n2 ne n then begin
+        print, "Error in limit_change: arrays have different sizes"
+        help, a, a2
+        RETALL
+     endif
+     if n_elements(change2) eq 1 then             $
+        changes2 = [-abs(change2), abs(change2) ] $
+     else if n_elements(change2) eq 2 then        $
+        changes2 = [min(change2), max(change2)]   $
+     else begin
+        print, "Error in limit_change: change2 should be scalar or 2-element array" 
+        help, change2
+        RETALL
+     endelse
+  endif
+
+  ;; limit change relative to previous element
+  b = a
+  for i = 1, n-1 do $
+     b(i) = b(i) > (b(i-1)+changes(0)) < (b(i-1)+changes(1))
+
+  ;; if a2 is not growing then limit change further
+  if n2 eq n then $
+     for i = 1, n-1 do $
+        if a2(i) lt a2(i-1)*1.01 then $
+           b(i) = b(i) > (b(i-1)+changes2(0)) < (b(i-1)+changes2(1))
+
+  return, b
+end
+;===========================================================================
+function limit_growth, a, factor
+
+  ;; "a" must be a 1 dimensional array of a time series
+  ;; limit growth from a(i) to a(i+1) to be within [1/factor,factor]
+  ;; where factor is larger than 1 and a(i) and a(i+1) have the same signs.
+  
+  n = n_elements(a)
+  if n lt 2 then begin
+     print, "Warning in limit_growth: too few elements in array'
+     help, a
+     RETURN, a
+  endif
+
+  if size(a,/n_dim) ne 1 then begin
+     print, "Error in limit_growth: array is not one dimensional'
+     help, a
+     RETALL
+  endif
+
+  b = a
+
+  for i = 1, n-1 do $
+     if b(i-1) gt 0 and b(i) gt 0 then $
+        b(i) = b(i) < (b(i-1)*factor) > (b(i-1)/factor) $
+     else if b(i-1) lt 0 and b(i) lt 0 then $
+        b(i) = b(i) < (b(i-1)/factor) > (b(i-1)*factor)
+
+  return, b
 end
 ;===========================================================================
 function curve_distance,x1,y1,x2,y2
@@ -778,9 +873,8 @@ pro animate_data
         ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
         FORMAT='(a,i3,a,i3,a,i4,a,i2)'
   if keyword_set(multiplot) then begin
-     siz=size(multiplot)
      ;; scalar multiplot value is converted to a row (+) or a column (-)
-     if siz(0) eq 0 then begin
+     if size(multiplot,/n_dim) eq 0 then begin
         if multiplot gt 0 then multiplot=[multiplot,1,1] $
         else                   multiplot=[1,-multiplot,1]
      endif
@@ -1130,8 +1224,7 @@ pro slice_data
         ', velvector=',velvector, $
         FORMAT='(a,i3,a,i3,a,i4)'
   if keyword_set(multiplot) then begin
-     siz=size(multiplot)
-     if siz(0) eq 0 then begin
+     if size(multiplot,/n_dim) eq 0 then begin
         if multiplot gt 0 then multiplot=[multiplot,1,1] $
         else                   multiplot=[1,-multiplot,1]
      endif
@@ -1435,8 +1528,7 @@ function reform2,x
 
   if n_elements(x) lt 2 then return,x
 
-  siz = size(x)
-  siz = siz(1:siz(0))
+  siz = size(x,/dim)
   return, reform(x, siz(where(siz gt 1)))
 
 end
@@ -1557,11 +1649,15 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
-        'y': logtime = hours/(24*365.25)
-        'd': logtime = hours/24
-        '1': logtime = hours*3600
-        's': logtime = hours*3600
-        'm': logtime = hours*60
+        'y'      : logtime = hours/(24*365.25)
+        'year'   : logtime = hours/(24*365.25)
+        'd'      : logtime = hours/24
+        'day'    : logtime = hours/24
+        '1'      : logtime = hours*3600
+        's'      : logtime = hours*3600
+        'second' : logtime = hours*3600
+        'm'      : logtime = hours*60
+        'minute' : logtime = hours*60
         'millisec': logtime = hours*3600e3
         'microsec': logtime = hours*3600e6
         'ns'    : logtime = hours*3600e9
@@ -1589,22 +1685,22 @@ function log_func, wlog, varnames, varname, error
   common debug_param & on_error, onerror
 
   error = 0
-  ivar  = where(strlowcase(varnames) eq strlowcase(varname)) & ivar = ivar(0)
+  ivar  = min(where(strlowcase(varnames) eq strlowcase(varname)))
                                 ; Variable is found, return with array
   if ivar ge 0 then return, wlog(*,ivar)
 
                                 ; Try calculating temperature or pressure
   if varname eq 'T' then begin
                                 ; Convert p[nPa]/n[/cc] to T[eV]
-     ivar = where( varnames eq 'p')   & ivar = ivar(0)
-     jvar = where( varnames eq 'rho') & jvar = jvar(0)
+     ivar = min(where( varnames eq 'p'))
+     jvar = min(where( varnames eq 'rho'))
      if ivar ge 0 and jvar ge 0 then $
         return,6241.5*wlog(*,ivar)/wlog(*,jvar)
 
   endif else if varname eq 'p' then begin
                                 ; Convert T[eV]*n[/cc] to p[nPa] to T[eV]
-     ivar = where( varnames eq 'T')   & ivar = ivar(0)
-     jvar = where( varnames eq 'rho') & jvar = jvar(0)
+     ivar = min(where( varnames eq 'T'))
+     jvar = min(where( varnames eq 'rho'))
      if ivar ge 0 and jvar ge 0 then $
         return, wlog(*,ivar)*wlog(*,jvar)/6241.5
   endif
@@ -1776,6 +1872,7 @@ pro get_file_head, unit, filename, filetype, pictsize=pictsize
   common debug_param & on_error, onerror
 
   common file_head
+  common log_data, timeunit
 
   ftype = strlowcase(filetype)
 
@@ -1806,7 +1903,7 @@ pro get_file_head, unit, filename, filetype, pictsize=pictsize
         readf,unit,headline
         readf,unit,varname
         nw=n_elements(strsplit(varname))-2
-        varname ='hour '+varname
+        varname = timeunit+' '+varname
                                 ; reset pointer
         point_lun,unit,pointer0
         it=0
@@ -2213,8 +2310,9 @@ pro get_pict_log, unit
 
   common plot_data
   common file_head
+  common log_data,timeunit
 
-  get_log, unit, w, wlognames, x, 's'
+  get_log, unit, w, wlognames, x, timeunit
 
   ndim = 1
   nx(0)= n_elements(x)
@@ -4396,8 +4494,7 @@ function diff1,a,x
 ;===========================================================================
   common debug_param & on_error, onerror
 
-  siz=size(a)
-  ndim=siz(0)
+  ndim=size(a,/n_dim)
   if ndim ne 1 then begin
      print,'Function diff1 is intended for 1D arrays only'
      retall
@@ -4430,8 +4527,7 @@ function laplace,a,x,y,z
 ;===========================================================================
   common debug_param & on_error, onerror
 
-  siz=size(a)
-  ndim=siz(0)
+  ndim=size(a,/n_dim)
   if ndim eq 3 then return,laplace3(a,x,y,z)
   if ndim eq 2 then return,laplace2(a,x,y)
   if ndim ne 1 then begin
@@ -5284,19 +5380,18 @@ function coarsen,a,boxsize,fd=fd
      retall
   endif
 
-  siz=size(a)
-  ndim=siz(0)
+  ndim=size(a,/n_dim)
 
   if(ndim eq 0 or ndim gt 4)then begin
      print,'coarse requires a 1, 2, 3 or 4D array for the 1st argument'
      retall
   endif
-  nx=siz(1:ndim)
+  nx=size(a,/dim)
 
-  siz=size(box)
-  if(siz(0) eq 0)then begin
+  ndim_box=size(box,/n_dim)
+  if ndim_box eq 0 then begin
      n = intarr(ndim) + boxsize
-  endif else if siz(0) eq ndim then begin
+  endif else if ndim_box eq ndim then begin
      n = boxsize
   endif else begin
      print,'boxsize should either be a scalar, or an array '

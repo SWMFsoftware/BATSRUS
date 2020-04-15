@@ -8,8 +8,8 @@ module ModFieldTrace
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
        IsNeighbor_P, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       MaxBlock, x_, y_, z_
-  use ModMain, ONLY: iNewDecomposition
+       MaxBlock, x_, y_, z_, IsCartesianGrid
+  use ModMain, ONLY: iNewDecomposition, TypeCoordSystem
   use ModPhysics, ONLY: rBody
 !  use ModUtilities, ONLY: norm2
   use ModNumConst, ONLY: i_DD
@@ -38,6 +38,9 @@ module ModFieldTrace
   logical, public:: DoExtractBGradB1 = .false.
   logical, public:: DoExtractEfield  = .false.
 
+  ! Transfrom to SM coordinates?
+  logical:: UseSmg = .true.
+
   ! mapping to the ionosphere
   real, public, allocatable:: RayMapLocal_DSII(:,:,:,:), RayMap_DSII(:,:,:,:)
 
@@ -64,7 +67,7 @@ module ModFieldTrace
 
   ! Radius where the tracing stops
   real, public :: rTrace = 0.
-
+  
   ! Named indexes
   integer, public, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, &
@@ -93,6 +96,9 @@ module ModFieldTrace
   real :: rTrace2 = 0.0
   real :: rIonosphere2 = 0.0
 
+  ! Inner radius to end tracing (either rTrace or rIonosphere)
+  real :: rInner = 0.0, rInner2 = 0.0
+  
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -358,8 +364,6 @@ contains
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
 
-    real:: rInner
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_field_trace'
     !--------------------------------------------------------------------------
@@ -394,6 +398,7 @@ contains
     else
        rInner = rIonosphere
     end if
+    rInner2 = rInner**2
     
     CLOSEDRAY= -(rInner + 0.05)
     OPENRAY  = -(rInner + 0.1)
@@ -405,6 +410,7 @@ contains
     if(DoTest)then
        write(*,*) 'rTrace, rTrace2          =', rTrace, rTrace2
        write(*,*) 'rIonosphere, rIonosphere2=', rIonosphere, rIonosphere2
+       write(*,*) 'rInner, rInner2          =', rInner, rInner2
        write(*,*) 'CLOSEDRAY,OPENRAY,OUTRAY =', CLOSEDRAY, OPENRAY, OUTRAY
     end if
     if(allocated(ray)) RETURN
@@ -455,6 +461,8 @@ contains
        call write_prefix
        write(iUnitOut,'(a)') NameSub//' allocated arrays'
     end if
+
+    UseSmg = TypeCoordSystem == 'GSM' .or. TypeCoordSystem == 'GSE'
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_field_trace
@@ -560,7 +568,7 @@ contains
 
           do iRay = 1,2
              ! Short cut for inner and false cells
-             if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
+             if(R_BLK(i,j,k,iBlock) < rInner .or. &
                   .not.true_cell(i,j,k,iBlock))then
                 ray(:,:,i,j,k,iBlock)=BODYRAY
                 if(DoTestRay)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
@@ -1061,12 +1069,12 @@ contains
     ! EOP
 
     use ModNumConst, ONLY: cTiny
-    use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
+    use ModMain, ONLY: nI, nJ, nK
     use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
          rMin_BLK, x1,x2,y1,y2,z1,z2
     use CON_planet, ONLY: DipoleStrength
     use ModMultiFLuid
-    use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord, Xyz_DGB, CellSize_DB
+    use BATL_lib, ONLY: xyz_to_coord, Xyz_DGB, CellSize_DB
 
     ! Arguments
 
@@ -1441,8 +1449,8 @@ contains
           if(r2Cur <= rTrace2)then
 
              ! If inside surface, then tracing is finished
-             if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2 &
-                  .or. rIonosphere < 0)then
+             
+             if(NameVectorField /= 'B' .or. r2Cur < rInner2)then
                 XyzInOut_D = XyzCur_D
                 iFace=ray_iono_
                 EXIT FOLLOW
@@ -1998,8 +2006,7 @@ contains
     use CON_ray_trace, ONLY: ray_init
     use CON_planet_field, ONLY: map_planet_field
     use CON_axes, ONLY: transform_matrix
-    use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
-         UseB0
+    use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, UseB0
     use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
     use ModB0,      ONLY: B0_DGB
     use ModMpi
@@ -2157,7 +2164,7 @@ contains
           end if
 
           ! Convert SM position to GM (Note: these are identical for ideal axes)
-          Xyz_D = matmul(GmSm_DD,Xyz_D)
+          if(UseSmg) Xyz_D = matmul(GmSm_DD,Xyz_D)
 
           ! Find processor and block for the location
           call find_grid_block(Xyz_D,iProcFound,iBlockFound)
@@ -2210,8 +2217,7 @@ contains
     use CON_ray_trace,     ONLY: ray_init
     use CON_axes,          ONLY: transform_matrix
     use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-    use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
-         UseB0, Unused_B
+    use ModMain,           ONLY: nBlock, Time_Simulation, UseB0, Unused_B
     use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
          UseMultiSpecies, nSpecies
     use ModB0,             ONLY: B0_DGB
@@ -2319,7 +2325,7 @@ contains
     end if
 
     ! Transformation matrix between the SM and GM coordinates
-    GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+    if(UseSmg) GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
 
     ! Integrate rays
     CpuTimeStartRay = MPI_WTIME()
@@ -2355,8 +2361,7 @@ contains
 
   subroutine write_plot_equator(iFile)
 
-    use ModMain, ONLY: n_step, time_accurate, Time_Simulation, &
-         TypeCoordSystem, NamePrimitive_V
+    use ModMain, ONLY: n_step, time_accurate, Time_Simulation, NamePrimitive_V
     use ModIo, ONLY: &
          StringDateOrTime, NamePlotDir, plot_range, plot_type, TypeFile_I
     use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
@@ -2475,7 +2480,7 @@ contains
     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
     ! Convert vectors from BATSRUS coords to SM coords.
-    SmGm_DD = transform_matrix(time_simulation, TypeCoordSystem, 'SMG')
+    if(UseSmg) SmGm_DD = transform_matrix(time_simulation, TypeCoordSystem, 'SMG')
 
     if(.not.IsMinB)then
 
@@ -2488,9 +2493,11 @@ contains
        do iPoint = 1, nPoint
           ! Convert vectors to SM coordinates
           PlotVar_V = PlotVar_VI(:, iPoint)
-          PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
-          PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
-          PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
+          if(UseSmg)then
+             PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
+             PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
+             PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
+          end if
           ! Save into file
           write(UnitTmp_, *) PlotVar_V
        end do
@@ -2570,12 +2577,15 @@ contains
                 ! Next nVar+4 variables are at z=0 (which is the start point)
                 StateMinB_VII(nVar+5: ,iR,iLon) = State_VI(2:,nPointDn)
 
-                ! Convert magnetic fields into SM coordinate system
-                StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
-                     matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
 
-                StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
-                     matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
+                if(UseSmg)then
+                   ! Convert magnetic fields into SM coordinate system
+                   StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
+                        matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
+                   
+                   StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
+                        matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
+                end if
 
              end if
 
@@ -2655,7 +2665,7 @@ contains
     use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
     use CON_ray_trace, ONLY: ray_init
     use CON_axes,      ONLY: transform_matrix
-    use ModMain,       ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
+    use ModMain,       ONLY: nBlock, Time_Simulation, UseB0
     use ModAdvance,    ONLY: nVar, State_VGB, Bx_, Bz_
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,       ONLY: CellSize_DB
@@ -2684,7 +2694,7 @@ contains
 
     integer :: iR, iLon, iSide
     integer :: iProcFound, iBlockFound, iBlock, i, j, k, iError
-    real    :: r, Phi, XyzSm_D(3), Xyz_D(3), b_D(3), b2
+    real    :: r, Phi, Xyz_D(3), b_D(3), b2
 
     real, allocatable:: b_DG(:,:,:,:)
 
@@ -2805,7 +2815,7 @@ contains
     end do
 
     ! Transformation matrix between the SM and GM coordinates
-    GmSm_DD = transform_matrix(time_simulation, 'SMG', TypeCoordSystem)
+    if(UseSmg) GmSm_DD = transform_matrix(time_simulation, 'SMG', TypeCoordSystem)
 
     ! Integrate rays starting from the latitude-longitude pairs defined
     ! by the arrays Lat_I, Lon_I
@@ -2821,12 +2831,12 @@ contains
           Phi = Longitude_I(iLon)
 
           ! Convert polar coordinates to Cartesian coordinates in SM
-          XyzSm_D(x_) = r*cos(Phi)
-          XyzSm_D(y_) = r*sin(Phi)
-          XyzSm_D(z_) = 0.0
+          Xyz_D(x_) = r*cos(Phi)
+          Xyz_D(y_) = r*sin(Phi)
+          Xyz_D(z_) = 0.0
 
           ! Convert SM position to GM (Note: these are same for ideal axes)
-          Xyz_D = matmul(GmSm_DD, XyzSm_D)
+          if(UseSmg) Xyz_D = matmul(GmSm_DD, Xyz_D)
 
           ! Find processor and block for the location
           call find_grid_block(Xyz_D,iProcFound,iBlockFound)
@@ -2866,9 +2876,9 @@ contains
     if(iProc == 0)then
        do iLon = 1, nLon; do iR = 1, nRadius; do iSide = 1, 2
           if(RayMap_DSII(1,iSide,iR,iLon) < CLOSEDRAY) CYCLE
-          Xyz_D   = RayMap_DSII(:,iSide,iR,iLon)
-          XyzSm_D = matmul(Xyz_D,GmSm_DD)
-          call xyz_to_sph(XyzSm_D, RayMap_DSII(:,iSide,iR,iLon))
+          Xyz_D = RayMap_DSII(:,iSide,iR,iLon)
+          if(UseSmg) Xyz_D = matmul(Xyz_D,GmSm_DD)
+          call xyz_to_sph(Xyz_D, RayMap_DSII(:,iSide,iR,iLon))
        end do; end do; end do
     else
        deallocate(RayMap_DSII)
@@ -3350,7 +3360,7 @@ contains
     if(.not.allocated(XyzPt_DI)) allocate(XyzPt_DI(3,nPts), zPt_I(nPts))
 
     ! Transformation matrix from default (GM) to SM coordinates
-    Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
+    if(UseSmg) Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
 
     if(iProc == 0)then
        FileName=trim(NamePlotDir)//'LCB-GM'
@@ -3396,9 +3406,7 @@ contains
              zPt_I = XyzPt_DI(3,:)
 
              ! Convert to GM coords
-             do i=1,nPts
-                XyzPt_DI(:,i) = matmul(Smg2Gsm_DD,XyzPt_DI(:,i))
-             end do
+             if(UseSmg) XyzPt_DI = matmul(Smg2Gsm_DD,XyzPt_DI)
 
              if(SaveIntegrals)then
                 call integrate_field_from_points(&
@@ -3576,8 +3584,7 @@ contains
     use ModIoUnit,         ONLY: UnitTmp_
     use ModUtilities,      ONLY: open_file, close_file
     use ModAdvance,        ONLY: nVar
-    use ModMain,           ONLY: &
-         Time_Simulation, TypeCoordSystem, time_accurate, n_step
+    use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
     use ModNumConst,       ONLY: cDegToRad
     use ModPhysics,        ONLY: Si2No_V, UnitX_
     use ModCoordTransform, ONLY: sph_to_xyz
@@ -3833,8 +3840,7 @@ contains
     !
     ! Details of the algorithm are to be published later
 
-    use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, &
-         time_simulation, TypeCoordSystem
+    use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
     use CON_axes,    ONLY: transform_matrix
 
     ! remember last call and the last grid number
@@ -3864,9 +3870,10 @@ contains
     call init_mod_field_trace
 
     ! Transformation matrix between the SM(G) and GM coordinates
-    GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+    if(UseSmg) &
+         GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
 
-    if(UseAccurateTrace)then
+    if(UseAccurateTrace .or. .not.IsCartesianGrid)then
        call ray_trace_accurate
     else
        call ray_trace_fast
@@ -4224,7 +4231,7 @@ contains
           do iz=1,nK; do iy=1,nJ; do ix=1,nI
 
              ! Short cuts for inner and false cells
-             if(R_BLK(ix,iy,iz,iBlock)<rIonosphere .or. &
+             if(R_BLK(ix,iy,iz,iBlock) < rInner .or. &
                   .not.true_cell(ix,iy,iz,iBlock))then
                 ray(:,iray,ix,iy,iz,iBlock)=BODYRAY
                 if(DoTestRay)write(*,*)'BODYRAY'
@@ -4445,11 +4452,11 @@ contains
                     'Inside rTrace at me,iBlock,nsegment,x,xx=',&
                     iProc,iBlock,nsegment,x,xx
 
-               if(r2 <= rIonosphere2)then
+               if(NameVectorField /= 'B' .or. r2 <= rInner2)then
                   if(nsegment==0)then
                      qface = ray_body_
                      if(DoTestRay)write(*,*)&
-                          'Initial point inside rIonosphere at me,iBlock,xx=',&
+                          'Initial point inside rInner at me,iBlock,xx=',&
                           iProc,iBlock,xx
                   else
                      r = sqrt(r2)
@@ -4458,10 +4465,10 @@ contains
 
                      r_ini = norm2(xx_ini)
                      ! Interpolate to the surface linearly along last segment
-                     xx = (xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r)) &
+                     xx = (xx*(r_ini-rInner)+xx_ini*(rInner-r)) &
                           /(r_ini-r)
                      ! Normalize xx in radial direction
-                     xx = rIonosphere*xx/norm2(xx)
+                     xx = rInner*xx/norm2(xx)
                      x = xx
                      qface = ray_iono_
                   end if
