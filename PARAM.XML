@@ -8237,7 +8237,7 @@ the #HALLRESISTIVITY command.
 
 The StringHallRegion string can specify the region(s) where the Hall
 resistivity is used.  The regions must be described with the #REGION
-commands.  Note the 'tapered' option in the shape desciption that can
+commands. Note the 'tapered' option in the shape desciption that can
 be used to make the transition smoother.
 
 Each region has its own Hall factor, which is the 'Weight' associated
