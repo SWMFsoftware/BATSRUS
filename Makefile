@@ -76,7 +76,9 @@ LIB:
 	cd srcInterface; $(MAKE) LIB
 
 GITINFO:
-	${SCRIPTDIR}/gitall -r=f > src/show_git_info.h
+	@(if [ "${GITINFO}" != "NO" ]; then \
+		${SCRIPTDIR}/gitall -r=f > src/show_git_info.h; \
+	fi)
 
 BATSRUS: GITINFO
 	cd ${SHAREDIR}; $(MAKE) LIB
