@@ -234,11 +234,9 @@ test_shockramp_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shockramp_check:
-	gunzip -c Param/SHOCKTUBE/TestOutput/shockramp.out.gz \
-	        > ${TESTDIR}/RESULT/GM/shockramp.out
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
-		${TESTDIR}/RESULT/GM/shockramp.out \
+	   ${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
+	   Param/SHOCKTUBE/TestOutput/shockramp.out.gz \
 		> test_shockramp.diff)
 	ls -l test_shockramp.diff
 
@@ -1275,11 +1273,10 @@ test_ganymede_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		Param/GANYMEDE/TestOutput/REFlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_ganymede.diff)
-	gunzip -c Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
-	        ${TESTDIR}/RESULTS/GM/REFy=0.out
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/REFy=0.out \
-		${TESTDIR}/RESULTS/GM/y\=0_var_1_n00000005.out >> test_ganymede.diff)
+	   ${TESTDIR}/RESULTS/GM/y\=0_var_1_n00000005.out 
+	   Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
+	   	>> test_ganymede.diff)
 	ls -l test_ganymede.diff
 
 
@@ -1515,11 +1512,9 @@ test_2bodyplot_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz \
-		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
-		${TESTDIR}/RESULTS/GM/ref_y=0.out >> test_2bodyplot.diff)
+		Param/2BODYPLOT/TestOutput/REFy*.out.gz  >> test_2bodyplot.diff)
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
 	        | grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.dat
@@ -1731,26 +1726,17 @@ test_region2d_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
 
 test_region2d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b \
-		Param/REGION/TestOutput/ \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_region2d.diff)
-	gunzip -c Param/REGION/TestOutput/2d.out.gz \
-		> ${TESTDIR}/RESULTS/2d/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl.out.gz \
-		> ${TESTDIR}/RESULTS/cyl/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl_lnr.out.gz \
-		> ${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/2d/GM/z*.out \
-		${TESTDIR}/RESULTS/2d/GM/ref.out \
+		Param/REGION/TestOutput/2d.out.gz \
 		> test_region2d.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/cyl/GM/z*.out \
-		${TESTDIR}/RESULTS/cyl/GM/ref.out \
+		Param/REGION/TestOutput/cyl.out.gz \
 		>> test_region2d.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/cyl_lnr/GM/z*.out \
-		${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out \
+		Param/REGION/TestOutput/cyl_lnr.out.gz \
 		>> test_region2d.diff)
 	ls -l test_region2d.diff
 
