@@ -24,6 +24,7 @@ module ModPhysics
   public :: init_mhd_variables
   public :: init_vector_variables
   public :: calc_corotation_velocity
+  public :: set_dimensional_factor
 
   private :: set_units
   private :: set_unit_conversion_array_indices
@@ -1212,6 +1213,120 @@ contains
 
   end subroutine calc_corotation_velocity
   !============================================================================
+  subroutine set_dimensional_factor(nPlotVar, NameVar_V, &
+       DimFactor_V, DimFactorBody_V)
+    use ModVarIndexes, ONLY: DefaultState_V
+    use ModNumConst, ONLY: cTiny
+    use ModUtilities,  ONLY: lower_case
+    use ModMultiFluid, ONLY: extract_fluid_name
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
+    integer, intent(in) :: nPlotVar
+    character (LEN=10), intent(in) :: NameVar_V(nPlotVar)
+    real,              intent(out) :: DimFactor_V(nPlotVar)
+    real, optional,    intent(out) :: DimFactorBody_V(nPlotVar)
+
+    character (len=10)  :: String, NamePlotVar
+
+    integer :: iVar, jVar
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_dimensional_factor'
+    !--------------------
+    DimFactor_V = 1.0
+    if(present(DimFactorBody_V))DimFactorBody_V = 1.0
+    do iVar=1,nPlotVar
+       NamePlotVar = NameVar_V(iVar)
+       call lower_case(NamePlotVar)
+       String = NamePlotVar
+       call extract_fluid_name(String)
+
+       ! Set DimFactorBody_V to something reasonable for inside the body.
+       ! Load zeros for most values - load something better for rho, p, and T
+       ! We know that U,B,J are okay with zeroes, others should be changed if
+       ! necessary.
+       ! Note that all variables not set to 0 in set_plotvar should be
+       ! loaded below. Note that this is used for tecplot corner extrapolation
+       ! and for nothing else.
+
+       select case(String)
+
+          ! BASIC MHD variables
+
+       case('rho')
+          DimFactor_V(iVar) = No2Io_V(UnitRho_)
+          if(present(DimFactorBody_V))&
+               DimFactorBody_V(iVar) = No2Io_V(UnitRho_)
+       case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
+          DimFactor_V(iVar) = No2Io_V(UnitRhoU_)
+       case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
+            ,'bxl','bxr','byl','byr','bzl','bzr' &
+            )
+          DimFactor_V(iVar) = No2Io_V(UnitB_)
+       case('elaser')
+          DimFactor_V(iVar) =  &
+               No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
+       case('e','e1','ew','erad')
+          DimFactor_V(iVar) =  & 
+               No2Io_V(UnitEnergyDens_)
+       case('p','pth','pperp','peperp')
+          DimFactor_V(iVar) =  No2Io_V(UnitP_)
+          if(present(DimFactorBody_V))&
+               DimFactorBody_V(iVar) = No2Io_V(UnitP_)
+          ! EXTRA MHD variables
+       case('n', 'qtot')
+          ! Number and charge densities
+          DimFactor_V(iVar) = No2Io_V(UnitN_)
+       case('t','temp')
+          DimFactor_V(iVar) = &
+               No2Io_V(UnitTemperature_)
+       case('eta','visco')
+          DimFactor_V(iVar) = &
+               (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
+       case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
+          DimFactor_V(iVar) = No2Io_V(UnitU_)
+
+       case('gradpex','gradpey','gradpez','gradper')
+          DimFactor_V(iVar) = &
+               No2Io_V(UnitP_)/No2Si_V(UnitX_)
+       case('jx','jy','jz','jr',&
+            'jxe','jye','jze','jxw','jyw','jzw', &
+            'jxs','jys','jzs','jxn','jyn','jzn', &
+            'jxb','jyb','jzb','jxt','jyt','jzt')
+          DimFactor_V(iVar) = No2Io_V(UnitJ_)
+       case('ex','ey','ez','er','enumx','enumy','enumz', &
+            'expot','eypot','ezpot','exind','eyind','ezind')
+          DimFactor_V(iVar) = No2Io_V(UnitElectric_)
+       case('pote')
+          ! Electric potential has SI units of V
+          DimFactor_V(iVar) =  &
+               No2Si_V(UnitElectric_)*No2Si_V(UnitX_)
+       case('dive')
+          ! Divergence of electric field has SI units of V/m^2
+          DimFactor_V(iVar) =  &
+               No2Si_V(UnitElectric_)/No2Si_V(UnitX_)
+       case('pvecx','pvecy','pvecz','pvecr','b2ur')
+          DimFactor_V(iVar) = No2Io_V(UnitPoynting_)
+       case('divb','divb_cd','divb_ct','absdivb')
+          DimFactor_V(iVar) = No2Io_V(UnitDivB_)
+
+          ! GRID INFORMATION
+       case('dt','dtblk')
+          DimFactor_V(iVar) = No2Io_V(UnitT_)
+       case('x','y','z','r','dx','dy','dz','req1','req2')
+          DimFactor_V(iVar) = No2Io_V(UnitX_)
+
+          ! DEFAULT CASE
+       case default
+          do jVar = 1, nVar
+             if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
+             DimFactor_V(iVar) = UnitUser_V(jVar)
+             if(DefaultState_V(jVar)>cTiny.and.present(DimFactorBody_V))&
+                  DimFactorBody_V(iVar) = UnitUser_V(jVar)
+             EXIT
+          end do
+          ! no normalization
+       end select
+    end do ! iVar
+  end subroutine set_dimensional_factor
 end module ModPhysics
 !==============================================================================
