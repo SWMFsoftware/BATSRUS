@@ -138,6 +138,9 @@ module ModIO
   ! Plot variable names and units defined in the user module
   character(len=10), dimension(nPlotVarMax) :: &
        NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I
+  ! Dimensional factors for plots
+  real,              dimension(nPlotVarMax) :: &
+       DimFactor_V, DimFactorBody_V
 
   ! Plot file name string logicals.
   !  One of the three must be true
