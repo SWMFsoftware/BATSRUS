@@ -241,9 +241,14 @@ contains
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
     !/ 
-    if(DoPlotThreads.and.DoPlotShell)&
-         call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
-         DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar)) 
+    if(DoPlotThreads.and.DoPlotShell)then
+       if(plot_dimensional(iFile))then
+          call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
+               DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
+       else
+          DimFactor_V = 1.0;  DimFactorBody_V = 1.0
+       end if
+    end if
 
     if(DoSaveOneTecFile) then
        iUnit = io_unit_new()
