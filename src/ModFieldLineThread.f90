@@ -113,7 +113,8 @@ module ModFieldLineThread
   integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
   
   public :: save_threads_for_plot ! Get  State_VIII array
-  public :: Interpolate_state     ! Interpolate state from State_VIII
+  public :: interpolate_state     ! Interpolate state from State_VIII
+  public :: set_plotvar
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   !/
@@ -1214,7 +1215,7 @@ contains
   subroutine interpolate_state(Coord_D, iBlock, State_V)
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar, RHo_
+    use ModAdvance,     ONLY: nVar, Rho_
     use ModInterpolate, ONLY: interpolate_vector
     use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
                            UnitTemperature_, UnitEnergyDens_
@@ -1274,6 +1275,18 @@ contains
     end if
   end subroutine interpolate_state
   !============================================================================
+  subroutine set_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, B0_D, & 
+    State_V, PlotVar_V)
+    use ModAdvance,     ONLY: nVar, Rho_
+    integer, intent(in) :: iBlock, nPlotVar
+    character(LEN=20)   :: NamePlotVar_V(nPlotVar)
+    real,    intent(in) :: Xyz_D(3), B0_D(3), State_V(nVar)
+    real,    intent(out):: PlotVar_V(nPlotVar)
+    character(len=*), parameter:: NameSub = 'set_plotvar'
+    !-------------------
+    call stop_mpi(NameSub//': the routine is under development')
+  end subroutine set_plotvar
+    
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
