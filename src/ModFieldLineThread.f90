@@ -19,6 +19,10 @@ module ModFieldLineThread
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
 
+  public :: save_threads_for_plot     ! Get  State_VIII array
+  public :: interpolate_thread_state  ! Interpolate state from State_VIII
+  public :: set_thread_plotvar
+
   !\
   ! rBody here is set to one keeping a capability to set
   ! the face-formulated boundary condition by modifying
@@ -112,9 +116,6 @@ module ModFieldLineThread
   end type BoundaryThreads
   integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
   
-  public :: save_threads_for_plot ! Get  State_VIII array
-  public :: interpolate_state     ! Interpolate state from State_VIII
-  public :: set_plotvar
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   !/
@@ -456,6 +457,7 @@ contains
     end if
     call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
     subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
            CoordMin_DB, CellSize_DB, r_
@@ -463,7 +465,7 @@ contains
       integer, intent(out):: iMin
       real,    intent(out):: dCoord1Inv
       real :: Coord_D(MaxDim), Xyz_D(MaxDim)
-      !----------------
+      !-----------------------------------------------------------------------
       !\
       ! Gen coords for the low block corner
       !/
@@ -1075,8 +1077,8 @@ contains
        DLogLambdaOverDLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
             DeltaLogTe
        do iTe = 2,499
-          DLogLambdaOverDLogT_I(iTe) = log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/&
-            (2*DeltaLogTe)
+          DLogLambdaOverDLogT_I(iTe) = &
+               log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/(2*DeltaLogTe)
        end do
        DLogLambdaOverDLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
             DeltaLogTe
@@ -1152,13 +1154,14 @@ contains
     call close_file
     BoundaryThreads_B(iBlock) % iAction = Enthalpy_
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine read_thread_restart
-  !=================================
-  !\
-  ! For each block near the inner boundary save the density and temperature
-  ! in the ghost grid extended toward the photosphere level
-  !/
+  !============================================================================
   subroutine save_threads_for_plot
+
+    ! For each block near the inner boundary save the density and temperature
+    ! in the ghost grid extended toward the photosphere level
+
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
@@ -1166,7 +1169,7 @@ contains
     real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
-    !---------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -1211,8 +1214,9 @@ contains
     end do
     
   end subroutine save_threads_for_plot
-  !===================================
-  subroutine interpolate_state(Coord_D, iBlock, State_V)
+  !============================================================================
+  subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
+
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
     use ModAdvance,     ONLY: nVar, Rho_
@@ -1232,17 +1236,17 @@ contains
     ! Dimensionless plasma parameters
     !/
     real :: pTotal, Te, Ti
-    character(len=*), parameter:: NameSub = 'interpolate_vector'
-    !---------------------
+    character(len=*), parameter:: NameSub = 'interpolate_thread_state'
+    !-------------------------------------------------------------------------
     CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
          CellSize_DB(r_+1:,iBlock) + 0.50
-    !\
-    !Along radial coordinate the resolution and location of the grid
-    !may be different:
-    !/
+
+    ! Along radial coordinate the resolution and location of the grid
+    ! may be different:
     CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
          BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
-    !Interpolate the state on threads to the given location
+
+    ! Interpolate the state on threads to the given location
     StateThread_V = interpolate_vector(                        &
          a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
          nVar=TiSi_,                                           &
@@ -1273,10 +1277,11 @@ contains
        ! Te = TeFraction*State_V(iP)/State_V(Rho_)
        State_V(Rho_) = TeFraction*pTotal/Te
     end if
-  end subroutine interpolate_state
+
+  end subroutine interpolate_thread_state
   !============================================================================
-  subroutine set_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, B0_D, & 
-    State_V, PlotVar_V)
+  subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, &
+       Xyz_D, B0_D, State_V, PlotVar_V)
     use ModAdvance,     ONLY: nVar, Rho_
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
@@ -1285,9 +1290,9 @@ contains
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !-------------------
     call stop_mpi(NameSub//': the routine is under development')
-  end subroutine set_plotvar
-    
-  subroutine save_thread_restart
+  end subroutine set_thread_plotvar
+  !============================================================================
+   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
     use ModIoUnit,     ONLY: UnitTmp_
