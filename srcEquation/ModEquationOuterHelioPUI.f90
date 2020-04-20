@@ -14,14 +14,14 @@ module ModVarIndexes
   ! This equation module contains the standard MHD equations + PUI + 4 neutrals
   character (len=*), parameter :: NameEquation='MHD + PUI and four neutrals'
 
-  integer, parameter :: nVar = 38
+  integer, parameter :: nVar = 33
 
   ! 1 tot ion fluid, 2 single ion fluids and 4 neutral fluids
-  integer, parameter :: nFluid    = 7
-  integer, parameter :: IonFirst_ = 2
-  integer, parameter :: IonLast_  = 3
+  integer, parameter :: nFluid    = 6
+  integer, parameter :: IonFirst_ = 1
+  integer, parameter :: IonLast_  = 2
   logical, parameter :: IsMhd     = .true.
-  real               :: MassFluid_I(2:nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
+  real               :: MassFluid_I(1:nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
 
 
   ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
@@ -29,7 +29,7 @@ module ModVarIndexes
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
-       NameFluid_I(nFluid) = ['All', 'SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
+       NameFluid_I(nFluid) = ['Ion', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -44,56 +44,50 @@ module ModVarIndexes
        By_        =  6, &
        Bz_        =  7, &
        P_      =  8, &
-       SWHRho_       =  9,          &
-       SWHRhoUx_     =  10, SWHUx_ = 10, &
-       SWHRhoUy_     =  11, SWHUy_ = 11, &
-       SWHRhoUz_     =  12, SWHUz_ = 12, &
-       SWHP_         =  13, &
-       Pu3Rho_    = 14, &
-       Pu3RhoUx_  = 15, Pu3Ux_ = 15, &
-       Pu3RhoUy_  = 16, Pu3Uy_ = 16, &
-       Pu3RhoUz_  = 17, Pu3Uz_ = 17, &
-       Pu3P_      = 18
+       Pu3Rho_    = 9, &
+       Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
+       Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
+       Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
+       Pu3P_      = 13
 
   integer, parameter:: &
-       NeuRho_    = 19, &
-       NeuRhoUx_  = 20, NeuUx_ = 20, &
-       NeuRhoUy_  = 21, NeuUy_ = 21, &
-       NeuRhoUz_  = 22, NeuUz_ = 22, &
-       NeuP_      = 23, &
-       Ne2Rho_    = 24, &
-       Ne2RhoUx_  = 25, Ne2Ux_ = 25, &
-       Ne2RhoUy_  = 26, Ne2Uy_ = 26, &
-       Ne2RhoUz_  = 27, Ne2Uz_ = 27, &
-       Ne2P_      = 28, &
-       Ne3Rho_    = 29, &
-       Ne3RhoUx_  = 30, Ne3Ux_ = 30, &
-       Ne3RhoUy_  = 31, Ne3Uy_ = 31, &
-       Ne3RhoUz_  = 32, Ne3Uz_ = 32, &
-       Ne3P_      = 33, &
-       Ne4Rho_    = 34, &
-       Ne4RhoUx_  = 35, Ne4Ux_ = 35, &
-       Ne4RhoUy_  = 36, Ne4Uy_ = 36, &
-       Ne4RhoUz_  = 37, Ne4Uz_ = 37, &
-       Ne4P_      = 38, &   
+       NeuRho_    = 14, &
+       NeuRhoUx_  = 15, NeuUx_ = 15, &
+       NeuRhoUy_  = 16, NeuUy_ = 16, &
+       NeuRhoUz_  = 17, NeuUz_ = 17, &
+       NeuP_      = 18, &
+       Ne2Rho_    = 19, &
+       Ne2RhoUx_  = 20, Ne2Ux_ = 20, &
+       Ne2RhoUy_  = 21, Ne2Uy_ = 21, &
+       Ne2RhoUz_  = 22, Ne2Uz_ = 22, &
+       Ne2P_      = 23, &
+       Ne3Rho_    = 24, &
+       Ne3RhoUx_  = 25, Ne3Ux_ = 25, &
+       Ne3RhoUy_  = 26, Ne3Uy_ = 26, &
+       Ne3RhoUz_  = 27, Ne3Uz_ = 27, &
+       Ne3P_      = 28, &
+       Ne4Rho_    = 29, &
+       Ne4RhoUx_  = 30, Ne4Ux_ = 30, &
+       Ne4RhoUy_  = 31, Ne4Uy_ = 31, &
+       Ne4RhoUz_  = 32, Ne4Uz_ = 32, &
+       Ne4P_      = 33, &   
        Energy_    = nVar+1, &
-       SWHEnergy_ = nVar+2, &
-       Pu3Energy_ = nVar+3, &
-       NeuEnergy_ = nVar+4, &
-       Ne2Energy_ = nVar+5, &
-       Ne3Energy_ = nVar+6, &
-       Ne4Energy_ = nVar+7
+       Pu3Energy_ = nVar+2, &
+       NeuEnergy_ = nVar+3, &
+       Ne2Energy_ = nVar+4, &
+       Ne3Energy_ = nVar+5, &
+       Ne4Energy_ = nVar+6
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are needed for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)   = [ Rho_,   SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
-       iRhoUx_I(nFluid) = [ RhoUx_, SWHRhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
-       iRhoUy_I(nFluid) = [ RhoUy_, SWHRhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
-       iRhoUz_I(nFluid) = [ RhoUz_, SWHRhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
-       iP_I(nFluid)     = [ P_,     SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
+       iRho_I(nFluid)   = [ Rho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
+       iRhoUx_I(nFluid) = [ RhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
+       iRhoUy_I(nFluid) = [ RhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
+       iRhoUz_I(nFluid) = [ RhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
+       iP_I(nFluid)     = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
 
   integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
@@ -105,9 +99,6 @@ module ModVarIndexes
        0.0, 0.0, 0.0, & ! RhoUx_ .. RhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
        1.0,           & ! P_
-       1.0,           & ! SWHRho_
-       0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
-       1.0,           & ! SWHP_
        1.0,           & ! Pu3Rho_
        0.0, 0.0, 0.0, & ! Pu3RhoUx_ .. Pu3RhoUz_
        1.0,           & ! Pu3P_
@@ -124,7 +115,6 @@ module ModVarIndexes
        0.0, 0.0, 0.0, & ! Ne4RhoUx_ .. Ne4RhoUz_
        1.0,           & ! Ne4P_
        1.0,           & ! Energy_
-       1.0,           & ! SWHEnergy_
        1.0,           & ! Pu3Energy_
        1.0,           & ! NeuEnergy_
        1.0,           & ! Neu2Energy_
@@ -137,9 +127,6 @@ module ModVarIndexes
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_  RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
        'p     ', & ! p_
-       'SWHRho', & ! SWHRho_
-       'SWHMx ', 'SWHMy ', 'SWHMz ', & ! SWHRhoUx_ SWHRhoUz_
-       'SWHp  ', & ! SWHp_
        'Pu3Rho', & ! Pu3Rho_
        'Pu3Mx ', 'Pu3My ', 'Pu3Mz ', & ! Pu3RhoUx_ Pu3RhoUz_
        'Pu3P  ', & ! Pu3P_
@@ -156,7 +143,6 @@ module ModVarIndexes
        'Ne4Mx ', 'Ne4My ', 'Ne4Mz ', & ! Ne4RhoUx_ Ne4RhoUz_
        'Ne4P  ', & ! Ne4P_
        'E     ', & ! Energy_
-       'SWHE  ', & ! SWHEnergy_
        'Pu3E  ', & ! Pu3Energy_
        'NeuE  ', & ! NeuEnergy_
        'Ne2E  ', & ! Ne2Energy_
