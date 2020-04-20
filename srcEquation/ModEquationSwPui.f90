@@ -45,6 +45,30 @@ module ModVarIndexes
        Energy_    = nVar+1, &
        Pu3Energy_ = nVar+2
 
+  ! Neutral indexes are also declared for sake of compilation with ModUser
+  ! written for multi-fluid neutrals
+  integer, parameter :: &
+       NeuRho_    = nVar  , &
+       NeuRhoUx_  = nVar-2, NeuUx_ = NeuRhoUx_, &
+       NeuRhoUy_  = nVar-1, NeuUy_ = NeuRhoUy_, &
+       NeuRhoUz_  = nVar  , NeuUz_ = NeuRhoUz_, &
+       NeuP_      = nVar  , &
+       Ne2Rho_    = nVar  , &
+       Ne2RhoUx_  = nVar-2, Ne2Ux_ = Ne2RhoUx_, &
+       Ne2RhoUy_  = nVar-1, Ne2Uy_ = Ne2RhoUy_, &
+       Ne2RhoUz_  = nVar  , Ne2Uz_ = Ne2RhoUz_, &
+       Ne2P_      = nVar  , &
+       Ne3Rho_    = nVar  , &
+       Ne3RhoUx_  = nVar-2, Ne3Ux_ = Ne3RhoUx_, &
+       Ne3RhoUy_  = nVar-1, Ne3Uy_ = Ne3RhoUy_, &
+       Ne3RhoUz_  = nVar  , Ne3Uz_ = Ne3RhoUz_, &
+       Ne3P_      = nVar  , &
+       Ne4Rho_    = nVar  , &
+       Ne4RhoUx_  = nVar-2, Ne4Ux_ = Ne4RhoUx_, &
+       Ne4RhoUy_  = nVar-1, Ne4Uy_ = Ne4RhoUy_, &
+       Ne4RhoUz_  = nVar  , Ne4Uz_ = Ne4RhoUz_, &
+       Ne4P_      = nVar  
+  
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
