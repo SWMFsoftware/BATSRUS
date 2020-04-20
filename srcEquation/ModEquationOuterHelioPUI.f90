@@ -11,25 +11,23 @@ module ModVarIndexes
 
   save
 
-  ! This equation module contains the standard MHD equations + PUI + 4 neutrals
-  character (len=*), parameter :: NameEquation='MHD + PUI and four neutrals'
+  ! This equation module contains 2 ion fluids + 4 neutrals
+  character (len=*), parameter :: NameEquation='SWH + PUI and four neutrals'
 
   integer, parameter :: nVar = 33
 
-  ! 1 tot ion fluid, 2 single ion fluids and 4 neutral fluids
   integer, parameter :: nFluid    = 6
   integer, parameter :: IonFirst_ = 1
   integer, parameter :: IonLast_  = 2
-  logical, parameter :: IsMhd     = .true.
-  real               :: MassFluid_I(1:nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
-
+  logical, parameter :: IsMhd     = .false.
+  real               :: MassFluid_I(nFluid) = 1.0
 
   ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
   ! are pick up ions produced in region 3 (see mod user), 
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
-       NameFluid_I(nFluid) = ['Ion', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
+       NameFluid_I(nFluid) = ['SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -43,8 +41,8 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       P_      =  8, &
-       Pu3Rho_    = 9, &
+       P_         =  8, &
+       Pu3Rho_    =  9, &
        Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
        Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
        Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
@@ -87,7 +85,7 @@ module ModVarIndexes
        iRhoUx_I(nFluid) = [ RhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
        iRhoUy_I(nFluid) = [ RhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
        iRhoUz_I(nFluid) = [ RhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
-       iP_I(nFluid)     = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
+       iP_I(nFluid)     = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_     ]
 
   integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
@@ -119,35 +117,35 @@ module ModVarIndexes
        1.0,           & ! NeuEnergy_
        1.0,           & ! Neu2Energy_
        1.0,           & ! Neu3Energy_
-       1.0 ]           ! Neu4Energy_
+       1.0            ] ! Neu4Energy_
 
   ! The names of the variables used in i/o
   character(len=6):: NameVar_V(nVar+nFluid) = [ &
        'Rho   ', & ! Rho_
        'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_  RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
-       'p     ', & ! p_
-       'Pu3Rho', & ! Pu3Rho_
+       'p     ',                     & ! p_
+       'Pu3Rho',                     & ! Pu3Rho_
        'Pu3Mx ', 'Pu3My ', 'Pu3Mz ', & ! Pu3RhoUx_ Pu3RhoUz_
-       'Pu3P  ', & ! Pu3P_
-       'NeuRho', & ! NeuRho_
+       'Pu3P  ',                     & ! Pu3P_
+       'NeuRho',                     & ! NeuRho_
        'NeuMx ', 'NeuMy ', 'NeuMz ', & ! NeuRhoUx_ NeuRhoUz_
-       'NeuP  ', & ! NeuP_
-       'Ne2Rho', & ! Ne2Rho_
+       'NeuP  ',                     & ! NeuP_
+       'Ne2Rho',                     & ! Ne2Rho_
        'Ne2Mx ', 'Ne2My ', 'Ne2Mz ', & ! Ne2RhoUx_ Ne2RhoUz_
-       'Ne2P  ', & ! Ne2P_
-       'Ne3Rho', & ! Ne3Rho_
+       'Ne2P  ',                     & ! Ne2P_
+       'Ne3Rho',                     & ! Ne3Rho_
        'Ne3Mx ', 'Ne3My ', 'Ne3Mz ', & ! Ne3RhoUx_ Ne3RhoUz_
-       'Ne3P  ', & ! Ne3P_
-       'Ne4Rho', & ! Ne4Rho_
+       'Ne3P  ',                     & ! Ne3P_
+       'Ne4Rho',                     & ! Ne4Rho_
        'Ne4Mx ', 'Ne4My ', 'Ne4Mz ', & ! Ne4RhoUx_ Ne4RhoUz_
-       'Ne4P  ', & ! Ne4P_
-       'E     ', & ! Energy_
-       'Pu3E  ', & ! Pu3Energy_
-       'NeuE  ', & ! NeuEnergy_
-       'Ne2E  ', & ! Ne2Energy_
-       'Ne3E  ', & ! Ne3Energy_
-       'Ne4E  ' ] ! Ne4Energy_
+       'Ne4P  ',                     & ! Ne4P_
+       'E     ',                     & ! Energy_
+       'Pu3E  ',                     & ! Pu3Energy_
+       'NeuE  ',                     & ! NeuEnergy_
+       'Ne2E  ',                     & ! Ne2Energy_
+       'Ne3E  ',                     & ! Ne3Energy_
+       'Ne4E  '                      ] ! Ne4Energy_
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
