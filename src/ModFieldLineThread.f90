@@ -1275,18 +1275,258 @@ contains
     end if
   end subroutine interpolate_state
   !============================================================================
-  subroutine set_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, B0_D, & 
+  subroutine set_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
     State_V, PlotVar_V)
-    use ModAdvance,     ONLY: nVar, Rho_
+      use ModMain
+    use ModVarIndexes
+    use ModAdvance, ONLY : time_BLK, UseElectronPressure, &
+         UseMultiSpecies
+    use ModGeometry
+    use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
+         ElectronPressureRatio, InvGammaMinus1_I
+    use ModUtilities,     ONLY: lower_case
+    use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
+         NameUnitUserIdl_I
+    use ModNumConst,      ONLY: cTiny
+    use ModMultiFluid,    ONLY: extract_fluid_name,      &
+         UseMultiIon, nIonFluid, MassIon_I, iPpar, iP,   &
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
+         ChargeIon_I
+    use ModCoordTransform, ONLY: cross_product
+    use BATL_lib,          ONLY: iNode_B, CellSize_DB
+    use ModB0,             ONLY: get_b0
+    use ModWaves,          ONLY: UseWavePressure
+
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
-    real,    intent(in) :: Xyz_D(3), B0_D(3), State_V(nVar)
+    real,    intent(in) :: Xyz_D(3), State_V(nVar)
     real,    intent(out):: PlotVar_V(nPlotVar)
+
+    !\
+    ! To calculate B0 and BFull, if needed
+    !/
+    real :: B0_D(3) = 0.0, FullB_D(3)
+    character (len=10)  :: String, NamePlotVar
+
+    real:: tmp1Var, tmp2Var
+   
+
+    integer :: iVar, jVar, iIon, iFluid
+   
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !-------------------
-    call stop_mpi(NameSub//': the routine is under development')
-  end subroutine set_plotvar
+    call test_start(NameSub, DoTest, iBlock)
+    !\
+    ! To calculate B0 and BFull, if needed
+    !/
+    if(UseB0)call get_b0(Xyz_D, B0_D)
+    FullB_D = State_V(Bx_:Bz_) + B0_D
     
+    PlotVar_V = 0.0
+    do iVar = 1, nPlotVar
+       NamePlotVar = NamePlotVar_V(iVar)
+
+       ! Default values for TecPlot variable name and TecPlot and IDL unit names
+       NameVarUserTec_I(iVar)  = NamePlotVar
+       NameUnitUserTec_I(iVar) = ' '
+       NameUnitUserIdl_I(iVar) = '?'
+
+       call lower_case(NamePlotVar)
+       String = NamePlotVar
+       call extract_fluid_name(String,iFluid)
+       select case(String)
+
+          ! Cartesian coordinates for non-Cartesian plots
+       case('x')
+          PlotVar_V(iVar) = Xyz_D(1)
+       case('y')
+          PlotVar_V(iVar) = Xyz_D(2)
+       case('z')
+          PlotVar_V(iVar) = Xyz_D(3)
+       case('r')
+          PlotVar_V(iVar) = norm2(Xyz_D)
+
+          ! BASIC MHD variables
+       case('rho')
+          PlotVar_V(iVar) = State_V(iRho)
+       case('rhoux','mx')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx) &
+                  -State_V(iRho)*OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)
+          end if
+       case('rhouy','my')
+          if (UseRotatingFrame) then
+                PlotVar_V(iVar) = State_V(iRhoUy) &
+                     +State_V(iRho)*OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy)
+          end if
+       case('rhouz','mz')
+          PlotVar_V(iVar) = State_V(iRhoUz)
+       case('bx')
+          PlotVar_V(iVar) = FullB_D(x_)
+       case('by')
+          PlotVar_V(iVar) = FullB_D(y_)
+       case('bz')
+          PlotVar_V(iVar) = FullB_D(z_)
+       case('e')
+          !Internal plus kinetic energy
+          PlotVar_V(iVar) = InvGammaMinus1_I(iFluid)*State_V(iP) + &
+               0.50*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
+          ! Add (B0+B1)^2  
+          if(iFluid == 1 .and. IsMhd.and.UseB0) &
+               PlotVar_V(iVar) = PlotVar_V(iVar) + 0.5*sum(FullB_D**2)
+       case('p','pth')
+          PlotVar_V(iVar) = State_V(iP)
+       case('n','t','temp')
+          ! Calculate the number density
+          if(UseMultiSpecies)then
+             do jVar = SpeciesFirst_, SpeciesLast_
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(jVar)/MassSpecies_V(jVar)
+             end do
+          else if(iFluid == 1 .and. UseMultiIon)then
+             ! Add up ion number densities
+             do iIon = 1, nIonFluid
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(iRhoIon_I(iIon))/MassIon_I(iIon)
+             end do
+          else
+             PlotVar_V(iVar) = State_V(iRho)/MassFluid_I(iFluid)
+          end if
+
+          ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+          if(String /= 'n')then
+             ! t = p/n
+             PlotVar_V(iVar) = State_V(iP) / PlotVar_V(iVar)
+
+             !
+             if(nFluid==1 .and. .not.UseElectronPressure &
+                  .and. ElectronPressureRatio > 0.0) &
+                  PlotVar_V(iVar) = PlotVar_V(iVar)&
+                  /(1 + ElectronPressureRatio)
+          end if
+       case('ux')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho) &
+                     - OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho)
+          end if
+       case('uy')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUy)/State_V(iRho) &
+                     + OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy) / State_V(iRho)
+          end if
+       case('uxrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUx)/State_V(iRho)
+
+       case('uyrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUy) / State_V(iRho)
+       case('uz','uzrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUz) / State_V(iRho)
+       case('b1x')
+          PlotVar_V(iVar) = State_V(Bx_)
+       case('b1y')
+          PlotVar_V(iVar) = State_V(By_)
+       case('b1z')
+          PlotVar_V(iVar) = State_V(Bz_)
+       case('pperp')
+          PlotVar_V(iVar) = (3*State_V(iP) &
+               -State_V(iPpar))/2.0
+       case('peperp')
+          PlotVar_V(iVar) = (3*State_V(Pe_) &
+               -State_V(Pepar_))/2.0
+
+       case('pvecx')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUx) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(x_) ) /State_V(iRho)
+       case('pvecy')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUy) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(y_) ) /State_V(iRho)
+       case('pvecz')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUz) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(z_) ) /State_V(iRho)
+
+          ! Radial component variables
+
+       case('ur')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / (State_V(iRho)*norm2(Xyz_D))
+       case('rhour','mr')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / norm2(Xyz_D)
+       case('br')
+          PlotVar_V(iVar) = sum(FullB_D*Xyz_D) /norm2(Xyz_D)
+       case('b1r')
+          PlotVar_V(iVar) = sum(State_V(Bx_:Bz_)*Xyz_D)/norm2(Xyz_D)
+       case('er')
+          PlotVar_V(iVar) =  sum( &
+               Xyz_D*cross_product(FullB_D, State_V(iRhoUx:iRhoUz))) &
+               / (State_V(iRho)*norm2(Xyz_D))
+       case('pvecr')
+          tmp1Var = sum(FullB_D**2)
+          tmp2Var = sum(FullB_D*State_V(iRhoUx:iRhoUz))
+          PlotVar_V(iVar) = sum ( &
+               Xyz_D*( tmp1Var*State_V(iRhoUx:iRhoUz) &
+               -  tmp2Var*FullB_D ) &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('b2ur')
+          PlotVar_V(iVar) = 0.5*sum(FullB_D(:)**2) &
+               *sum( State_V(iRhoUx:iRhoUz)*Xyz_D &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('dx')
+          PlotVar_V(iVar) = CellSize_DB(x_,iBlock)
+       case('dy')
+          PlotVar_V(iVar) = CellSize_DB(y_,iBlock)
+       case('dz')
+          PlotVar_V(iVar) = CellSize_DB(z_,iBlock)
+       case('dtblk')
+          PlotVar_V(iVar) = dt_BLK(iBlock)
+       case('proc')
+          PlotVar_V(iVar) = iProc
+       case('blk','block')
+          PlotVar_V(iVar) = iBlock
+       case('node')
+          PlotVar_V(iVar) = iNode_B(iBlock)
+
+       case('ew','erad')
+          if(Ew_ == 1)then
+             if(UseWavePressure)PlotVar_V(iVar) = &
+                  sum(State_V(WaveFirst_:WaveLast_))
+          else
+             PlotVar_V(iVar) = State_V(Ew_)
+          end if
+
+       case default
+          ! Check if the name is one of the state variable names
+          do jVar = 1, nVar
+             if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
+             PlotVar_V(iVar) = State_V(jVar)
+             EXIT
+          end do
+       end select
+    end do ! iVar
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine set_plotvar
+  !=========================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
