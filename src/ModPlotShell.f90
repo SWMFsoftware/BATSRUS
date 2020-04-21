@@ -120,7 +120,8 @@ contains
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
-    use ModFieldLineThread, ONLY: interpolate_state, set_plotvar
+    use ModMain,            ONLY: UseB0
+    use ModFieldLineThread, ONLY: interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_BLK
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
@@ -134,19 +135,17 @@ contains
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
 
     ! Local variables
-    integer :: i, j, k, iVar, iDirMin = 1
+    integer :: i, j, k, iVar, iDirMin
 
     real :: r, Lon, Lat
     real :: XyzPlot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
-    !State at the grid point in the threaded gap
+    ! State at the grid point in the threaded gap
     real :: State_V(nVar)
 
-    !\
     ! If .true., this block includes grid points in the threaded gap
-    !/
-    logical :: IsThreadedBlock = .false.
+    logical :: IsThreadedBlock
 
     ! Check testing for block
     logical:: DoTest
@@ -154,13 +153,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    !\
-    ! If .true., this block includes grid points in the threaded gap
-    !/
+    ! Does this block include grid points in the threaded gap?
     IsThreadedBlock = UseThreadedGap .and. NeiLev(1, iBlock)==NOBLK
     if(IsThreadedBlock)then
-       !Skip the radial coordinate in determining if the grid point 
-       !is out of block
+       ! Don't check radial coordinate to see if the point is outside the block
        iDirMin = r_ + 1
     else
        iDirMin = 1
@@ -204,7 +200,7 @@ contains
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
              if(IsThreadedBlock.and. r <= RadiusMin)then
-                call interpolate_state(Coord_D, iBlock, State_V)
+                call interpolate_thread_state(Coord_D, iBlock, State_V)
                 call set_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
                      XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
@@ -212,7 +208,8 @@ contains
              else
                 do iVar=1, nPlotVar
                    ! Interpolate up to ghost cells.
-                   PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
+                   PlotVar_VIII(iVar,i,j,k) = &
+                        trilinear(PlotVar_GV(:,:,:,iVar),&
                         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
                 end do
              end if
