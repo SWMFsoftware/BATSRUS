@@ -29,20 +29,20 @@ module ModVarIndexes
   ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       =  1,          &
-       RhoUx_     =  2, Ux_ = 2, &
-       RhoUy_     =  3, Uy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, &
+       Rho_       =  1,          SWHRho_   = 1, &
+       RhoUx_     =  2, Ux_ = 2, SWHRhoUx_ = 2, SWHUx_ = 2, &
+       RhoUy_     =  3, Uy_ = 3, SWHRhoUy_ = 3, SWHUy_ = 3, &
+       RhoUz_     =  4, Uz_ = 4, SWHRhoUx_ = 4, SWHUz_ = 4, &
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       p_         =  8, &
+       p_         =  8,          SWHP_ = 8, &
        Pu3Rho_    =  9, &
        Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
        Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
        Pu3RhoUz_  = 12, Pu3Uz_ = 12, &
        Pu3P_      = 13, &
-       Energy_    = nVar+1, &
+       Energy_    = nVar+1,      SWHEnergy_ = nVar+1, &
        Pu3Energy_ = nVar+2
 
   ! Neutral indexes are also declared for sake of compilation with ModUser
@@ -85,14 +85,14 @@ module ModVarIndexes
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
   real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
-       1.0, & ! Rho_
-       0.0, & ! RhoUx_
-       0.0, & ! RhoUy_
-       0.0, & ! RhoUz_
-       0.0, & ! Bx_
-       0.0, & ! By_
-       0.0, & ! Bz_
-       1.0, & ! p_
+       1.0, & ! SWHRho_
+       0.0, & ! SWHRhoUx_
+       0.0, & ! SWHRhoUy_
+       0.0, & ! SWHRhoUz_
+       0.0, & ! SWHBx_
+       0.0, & ! SWHBy_
+       0.0, & ! SWHBz_
+       1.0, & ! SWHp_
        1.0, & ! Pu3Rho_
        0.0, & ! Pu3RhoUx_
        0.0, & ! Pu3RhoUy_
@@ -103,14 +103,14 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=6) :: NameVar_V(nVar+nFluid) = [ &
-       'Rho   ', & ! Rho_
-       'Mx    ', & ! RhoUx_
-       'My    ', & ! RhoUy_
-       'Mz    ', & ! RhoUz_
-       'Bx    ', & ! Bx_
-       'By    ', & ! By_
-       'Bz    ', & ! Bz_
-       'P     ', & ! p_
+       'SWHRho', & ! SWHRho_
+       'SWHMx ', & ! SWHRhoUx_
+       'SWHMy ', & ! SWHRhoUy_
+       'SWHMz ', & ! SWHRhoUz_
+       'SWHBx ', & ! SWHBx_
+       'SWHBy ', & ! SWHBy_
+       'SWHBz ', & ! SWHBz_
+       'SWHP  ', & ! SWHp_
        'Pu3Rho', & ! Pu3Rho_
        'Pu3Mx ', & ! Pu3RhoUx_
        'Pu3My ', & ! Pu3RhoUy_
