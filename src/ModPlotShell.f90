@@ -201,7 +201,7 @@ contains
              PlotVar_VIII(0,i,j,k) = 1.0
              if(IsThreadedBlock.and. r <= RadiusMin)then
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
-                call set_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
+                call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
                      XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)

@@ -1280,7 +1280,7 @@ contains
 
   end subroutine interpolate_thread_state
   !============================================================================
-  subroutine set_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
+  subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
     State_V, PlotVar_V)
       use ModMain
     use ModVarIndexes
@@ -1530,7 +1530,7 @@ contains
        end select
     end do ! iVar
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine set_plotvar
+  end subroutine set_thread_plotvar
   !=========================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
