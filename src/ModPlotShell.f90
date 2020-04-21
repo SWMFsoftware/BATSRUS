@@ -120,7 +120,6 @@ contains
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
-    use ModMain,            ONLY: UseB0
     use ModFieldLineThread, ONLY: interpolate_state, set_plotvar
     use ModGeometry,    ONLY: rMin_BLK
     use ModInterpolate, ONLY: trilinear
@@ -128,7 +127,6 @@ contains
          xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModParallel,       ONLY: NeiLev, NOBLK
-    use ModB0,             ONLY: get_b0
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -139,7 +137,7 @@ contains
     integer :: i, j, k, iVar, iDirMin = 1
 
     real :: r, Lon, Lat
-    real :: XyzPlot_D(3), XyzGm_D(3), B0_D(3) = 0.0
+    real :: XyzPlot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
     !State at the grid point in the threaded gap
@@ -207,9 +205,8 @@ contains
              PlotVar_VIII(0,i,j,k) = 1.0
              if(IsThreadedBlock.and. r <= RadiusMin)then
                 call interpolate_state(Coord_D, iBlock, State_V)
-                if(UseB0)call get_b0(XyzGm_D, B0_D)
                 call set_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
-                     XyzGm_D, B0_D, State_V, PlotVar_V(1:nPlotVar))
+                     XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
              else
