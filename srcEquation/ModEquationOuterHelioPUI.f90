@@ -83,11 +83,11 @@ module ModVarIndexes
 
   ! These arrays are needed for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)   = [ SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
-       iRhoUx_I(nFluid) = [ SWHRhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
-       iRhoUy_I(nFluid) = [ SWHRhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
-       iRhoUz_I(nFluid) = [ SWHRhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
-       iP_I(nFluid)     = [ SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
+       iRho_I(nFluid)   = [ Rho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   ], &
+       iRhoUx_I(nFluid) = [ RhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ ], &
+       iRhoUy_I(nFluid) = [ RhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ ], &
+       iRhoUz_I(nFluid) = [ RhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ ], &
+       iP_I(nFluid)     = [ P_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ ]
 
   integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
@@ -123,10 +123,10 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=6):: NameVar_V(nVar+nFluid) = [ &
-       'SWHRho', & ! SWHRho_
-       'SWHMx ', 'SWHMy ', 'SWHMz ', & ! SWHRhoUx_  SWHRhoUz_
+       'Rho   ', & ! SWHRho_
+       'Mx    ', 'My    ', 'Mz    ', & ! SWHRhoUx_  SWHRhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
-       'SWHp  ', & ! SWHp_
+       'p     ', & ! SWHp_
        'Pu3Rho', & ! Pu3Rho_
        'Pu3Mx ', 'Pu3My ', 'Pu3Mz ', & ! Pu3RhoUx_ Pu3RhoUz_
        'Pu3P  ', & ! Pu3P_
@@ -142,7 +142,7 @@ module ModVarIndexes
        'Ne4Rho', & ! Ne4Rho_
        'Ne4Mx ', 'Ne4My ', 'Ne4Mz ', & ! Ne4RhoUx_ Ne4RhoUz_
        'Ne4P  ', & ! Ne4P_
-       'SWHE  ', & ! SWHEnergy_
+       'E     ', & ! SWHEnergy_
        'Pu3E  ', & ! Pu3Energy_
        'NeuE  ', & ! NeuEnergy_
        'Ne2E  ', & ! Ne2Energy_
