@@ -1536,14 +1536,14 @@ test_2bodyplot_run:
 # Sort the files by numerical values of the first three columns (coordinates)
 test_2bodyplot_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log 
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		> test_2bodyplot.diff)
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
 		Param/2BODYPLOT/TestOutput/REFy*.out.gz \
-		 >> test_2bodyplot.diff)
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
+		>> test_2bodyplot.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p='sort -k1 -k2 -k3 -g | grep -v AUXDATA' \
 		${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz \
 		Param/2BODYPLOT/TestOutput/REFy*.dat.gz \
 		>> test_2bodyplot.diff)
