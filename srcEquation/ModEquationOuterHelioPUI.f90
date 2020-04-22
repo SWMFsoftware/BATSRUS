@@ -20,7 +20,7 @@ module ModVarIndexes
   integer, parameter :: nFluid    = 6
   integer, parameter :: IonFirst_ = 1
   integer, parameter :: IonLast_  = 2
-  logical, parameter :: IsMhd     = .true.
+  logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(1:nFluid) = [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
 
 
