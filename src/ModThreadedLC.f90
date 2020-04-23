@@ -10,7 +10,7 @@ module ModThreadedLC
        LambdaSi_, DLogLambdaOverDLogT_,                          &
        DoInit_, Done_, Enthalpy_, Heat_,                         &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
-       kThreadMin=>jMin_, kThreadMax=>jMax_
+       kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
