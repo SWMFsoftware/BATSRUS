@@ -1294,7 +1294,7 @@ contains
          NameUnitUserIdl_I
     use ModNumConst,      ONLY: cTiny
     use ModMultiFluid,    ONLY: extract_fluid_name,      &
-         UseMultiIon, nIonFluid, MassIon_I, iPpar, iP,   &
+         UseMultiIon, nIonFluid, MassIon_I, iPpar, iPFluid=>iP,   &
          IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
          ChargeIon_I
     use ModCoordTransform, ONLY: cross_product
@@ -1379,13 +1379,13 @@ contains
           PlotVar_V(iVar) = FullB_D(z_)
        case('e')
           !Internal plus kinetic energy
-          PlotVar_V(iVar) = InvGammaMinus1_I(iFluid)*State_V(iP) + &
+          PlotVar_V(iVar) = InvGammaMinus1_I(iFluid)*State_V(iPFluid) + &
                0.50*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
           ! Add (B0+B1)^2  
           if(iFluid == 1 .and. IsMhd.and.UseB0) &
                PlotVar_V(iVar) = PlotVar_V(iVar) + 0.5*sum(FullB_D**2)
        case('p','pth')
-          PlotVar_V(iVar) = State_V(iP)
+          PlotVar_V(iVar) = State_V(iPFluid)
        case('n','t','temp')
           ! Calculate the number density
           if(UseMultiSpecies)then
@@ -1406,7 +1406,7 @@ contains
           ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
           if(String /= 'n')then
              ! t = p/n
-             PlotVar_V(iVar) = State_V(iP) / PlotVar_V(iVar)
+             PlotVar_V(iVar) = State_V(iPFluid) / PlotVar_V(iVar)
 
              !
              if(nFluid==1 .and. .not.UseElectronPressure &
@@ -1414,6 +1414,18 @@ contains
                   PlotVar_V(iVar) = PlotVar_V(iVar)&
                   /(1 + ElectronPressureRatio)
           end if
+       case('te')
+          !\
+          ! Use the following equation
+          ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TeFraction*State_V(iP)/State_V(Rho_)
+       case('ti')
+          !\
+          ! Use the following equation
+          ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TiFraction*State_V(p_)/State_V(Rho_)
        case('ux')
           if (UseRotatingFrame) then
              PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho) &
@@ -1445,7 +1457,7 @@ contains
        case('b1z')
           PlotVar_V(iVar) = State_V(Bz_)
        case('pperp')
-          PlotVar_V(iVar) = (3*State_V(iP) &
+          PlotVar_V(iVar) = (3*State_V(iPFluid) &
                -State_V(iPpar))/2.0
        case('peperp')
           PlotVar_V(iVar) = (3*State_V(Pe_) &
