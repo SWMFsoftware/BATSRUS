@@ -17,7 +17,7 @@ module ModFieldLineThread
 
   PRIVATE ! Except
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
+  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
 
   public :: save_threads_for_plot     ! Get  State_VIII array
   public :: interpolate_thread_state  ! Interpolate state from State_VIII
