@@ -562,7 +562,7 @@ contains
     !==========================================================================
     subroutine advance_thread(IsTimeAccurate)
       use ModMain,     ONLY: cfl, Dt, time_accurate
-      use ModAdvance,  ONLY: time_BLK
+      use ModAdvance,  ONLY: time_BLK, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
       !\
       ! Advances the thread solution
@@ -593,7 +593,8 @@ contains
          if(time_accurate)then
             DtLocal = Dt*No2Si_V(UnitT_)
          else
-            DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
+            DtLocal = cfl*No2Si_V(UnitT_)*&
+                 time_BLK(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
          end if
          if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
          DtInv = 1/DtLocal
