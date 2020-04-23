@@ -32,7 +32,7 @@ module ModVarIndexes
        Rho_       =  1,          SWHRho_   = 1, &
        RhoUx_     =  2, Ux_ = 2, SWHRhoUx_ = 2, SWHUx_ = 2, &
        RhoUy_     =  3, Uy_ = 3, SWHRhoUy_ = 3, SWHUy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, SWHRhoUx_ = 4, SWHUz_ = 4, &
+       RhoUz_     =  4, Uz_ = 4, SWHRhoUz_ = 4, SWHUz_ = 4, &
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
