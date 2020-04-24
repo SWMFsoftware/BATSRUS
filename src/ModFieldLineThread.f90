@@ -92,7 +92,12 @@ module ModFieldLineThread
      !\
      !  Thread solution: temperature and pressure SI
      !/
-     real,pointer :: TeSi_III(:,:,:),TiSi_III(:,:,:),PSi_III(:,:,:)
+     real, pointer :: TeSi_III(:,:,:), TiSi_III(:,:,:), PSi_III(:,:,:)
+     !\
+     ! amplitudes of waves
+     !/
+     real, pointer :: AMajor_III(:,:,:), AMinor_III(:,:,:)
+
      !\
      ! number of points
      !/
@@ -114,7 +119,8 @@ module ModFieldLineThread
      !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
-  integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
+  integer, parameter :: PSi_=1, A2Major_ = 2, A2Minor_ = 3 , &
+       TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
   
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
@@ -322,6 +328,8 @@ contains
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
+    nullify(BoundaryThreads_B(iBlock) % AMajor_III)
+    nullify(BoundaryThreads_B(iBlock) % AMinor_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
     nullify(BoundaryThreads_B(iBlock) % State_VIII)
@@ -346,6 +354,8 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMajor_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMinor_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
     deallocate(BoundaryThreads_B(iBlock) % State_VIII)
@@ -412,6 +422,10 @@ contains
           allocate(BoundaryThreads_B(iBlock) % TiSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMajor_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMinor_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
@@ -560,6 +574,8 @@ contains
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
+    BoundaryThreads_B(iBlock) % AMajor_III = 0.0
+    BoundaryThreads_B(iBlock) % AMinor_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
     !\
@@ -1181,6 +1197,16 @@ contains
              ! Fill in an array with NeSi and TeSi values
              State_VI(PSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+             !\
+             !  Use geometric average of the face value for 
+             !  the wave amplitude to get the cell-centered aplitude squared
+             !/
+             State_VI(A2Major_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMajor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMajor_III(-nPoint:-1,j,k)
+             State_VI(A2Minor_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMinor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMinor_III(-nPoint:-1,j,k)
              State_VI(TeSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
              if(UseElectronPressure)then
@@ -1219,7 +1245,7 @@ contains
 
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar, Rho_
+    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModInterpolate, ONLY: interpolate_vector
     use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
                            UnitTemperature_, UnitEnergyDens_
@@ -1277,18 +1303,21 @@ contains
        ! Te = TeFraction*State_V(iP)/State_V(Rho_)
        State_V(Rho_) = TeFraction*pTotal/Te
     end if
-
+    State_V(WaveFirst_) = StateThread_V(A2Major_)
+    State_V(WaveLast_ ) = StateThread_V(A2Minor_)
   end subroutine interpolate_thread_state
   !============================================================================
   subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
     State_V, PlotVar_V)
-      use ModMain
+    use ModMain
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModVarIndexes
     use ModAdvance, ONLY : time_BLK, UseElectronPressure, &
          UseMultiSpecies
     use ModGeometry
     use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
-         ElectronPressureRatio, InvGammaMinus1_I
+         ElectronPressureRatio, InvGammaMinus1_I, Si2No_V, UnitB_
     use ModUtilities,     ONLY: lower_case
     use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
          NameUnitUserIdl_I
@@ -1301,11 +1330,13 @@ contains
     use BATL_lib,          ONLY: iNode_B, CellSize_DB
     use ModB0,             ONLY: get_b0
     use ModWaves,          ONLY: UseWavePressure
+    use ModCoronalHeating, ONLY: PoyntingFluxPerB
 
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
-    real,    intent(in) :: Xyz_D(3), State_V(nVar)
-    real,    intent(out):: PlotVar_V(nPlotVar)
+    real,    intent(in) :: Xyz_D(3)
+    real, intent(inout) ::State_V(nVar)
+    real,   intent(out) :: PlotVar_V(nPlotVar)
 
     !\
     ! To calculate B0 and BFull, if needed
@@ -1317,17 +1348,51 @@ contains
    
 
     integer :: iVar, jVar, iIon, iFluid
-   
+    !\
+    ! CME parameters, if needed
+    !/
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
+    !\
+    ! Conversion coefficients from the squared Alfven wave amplitude to
+    ! energy densities
+    !/
+    real :: SignBr, I0, I1
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !-------------------
     call test_start(NameSub, DoTest, iBlock)
     !\
-    ! To calculate B0 and BFull, if needed
+    ! Calculate B0 and BFull
     !/
+    B0_D = 0.0
     if(UseB0)call get_b0(Xyz_D, B0_D)
+    if(UseCME)then
+       call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+            time_simulation, n_step, iteration_number)
+       Bcme_D = Bcme_D*Si2No_V(UnitB_)
+       B0_D = B0_D + Bcme_D
+    end if
     FullB_D = State_V(Bx_:Bz_) + B0_D
     
+    !\
+    ! Convert the squared Alfven wave amplitudes to
+    ! energy densities
+    !/
+    signBr = sign(1.0, sum(FullB_D*Xyz_D))
+    if(signBr < 0.0)then
+       !In this case WaveLast dominates over WaveFirst
+       !Currently, in the state vector WaveFirst is dominant
+       !Reorder this array
+       I0 = State_V(WaveLast_); I1 = State_V(WaveFirst_)
+       State_V(WaveFirst_) = I0; State_V(WaveLast_) = I1
+    end if
+    !Convert to the energy density
+    State_V(WaveFirst_:WaveLast_) = State_V(WaveFirst_:WaveLast_)*&
+         PoyntingFluxPerB*sqrt(State_V(Rho_))
+
+
+
     PlotVar_V = 0.0
     do iVar = 1, nPlotVar
        NamePlotVar = NamePlotVar_V(iVar)
