@@ -10,7 +10,7 @@ module ModThreadedLC
        LambdaSi_, DLogLambdaOverDLogT_,                          &
        DoInit_, Done_, Enthalpy_, Heat_,                         &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
-       kThreadMin=>jMin_, kThreadMax=>jMax_
+       kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
@@ -396,6 +396,8 @@ contains
        BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
     case(Enthalpy_)
        call get_res_heating(nIterIn=nIter)
     case(Impl_)
@@ -417,6 +419,8 @@ contains
        BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
