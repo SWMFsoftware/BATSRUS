@@ -103,14 +103,14 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=6) :: NameVar_V(nVar+nFluid) = [ &
-       'SWHRho', & ! SWHRho_
-       'SWHMx ', & ! SWHRhoUx_
-       'SWHMy ', & ! SWHRhoUy_
-       'SWHMz ', & ! SWHRhoUz_
-       'SWHBx ', & ! SWHBx_
-       'SWHBy ', & ! SWHBy_
-       'SWHBz ', & ! SWHBz_
-       'SWHP  ', & ! SWHp_
+       'Rho   ', & ! SWHRho_
+       'Mx    ', & ! SWHRhoUx_
+       'My    ', & ! SWHRhoUy_
+       'Mz    ', & ! SWHRhoUz_
+       'Bx    ', & ! SWHBx_
+       'By    ', & ! SWHBy_
+       'Bz    ', & ! SWHBz_
+       'P     ', & ! SWHp_
        'Pu3Rho', & ! Pu3Rho_
        'Pu3Mx ', & ! Pu3RhoUx_
        'Pu3My ', & ! Pu3RhoUy_
