@@ -7,8 +7,9 @@ module ModPlotShell
        test_start, test_stop, iBlockTest, iProc, nProc, iComm
 
   use ModIO
-  use ModNumConst, ONLY: cRadtoDeg, cDegToRad
-
+  use ModNumConst,        ONLY: cRadtoDeg, cDegToRad, cTiny
+  use ModFieldLineThread, ONLY: DoPlotThreads, rChromo=>rBody
+  use ModGeometry,        ONLY: RadiusMin
   implicit none
 
   SAVE
@@ -28,29 +29,43 @@ module ModPlotShell
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
+  !Same, but for a single grid point
+  real :: PlotVar_V(nPlotVarMax)
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
 
+  !\
+  ! If  .true., the part of the grid is in the threaded gap
+  !/
+  logical :: UseThreadedGap = .false.
+  ! 
+
+  character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
+
 contains
   !============================================================================
-  subroutine init_plot_shell(iFile, nPlotVar)
+  subroutine init_plot_shell(iFile, nPlotVarIn)
 
     ! set up the shell grid for this plot file
 
     use ModMain,           ONLY: time_simulation, TypeCoordSystem
     use CON_axes,          ONLY: transform_matrix
     use ModCoordTransform, ONLY: show_rot_matrix
-
-    integer, intent(in):: iFile, nPlotVar
-
-    logical:: DoTest
+    use ModUtilities,      ONLY: split_string
+    integer, intent(in):: iFile, nPlotVarIn
+    integer :: nPlotVar
+    logical :: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_shell'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Allocate results array and set up all the spherical shell
     if(allocated(PlotVar_VIII)) RETURN
+
+    plot_vars1 = plot_vars(iFile)
+    call split_string(plot_vars1, nPlotVarMax, NamePlotVar_V, nPlotVar, &
+         UseArraySyntaxIn=.true.)
 
     ! Get plot area info from ModIO arrays:
     dR     = abs(plot_dx(1, iFile))
@@ -72,6 +87,9 @@ contains
     dR   = (rMax - rMin)/max(1, nR - 1)
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
     dLat = (LatMax - LatMin)/max(1, nLat - 1)
+
+    !In the ASWoM-R the grid points within the threaded gap are allowed
+    UseThreadedGap = DoPlotThreads .and. rMin < RadiusMin 
 
     ! The 0 element is to count the number of blocks that
     ! contribute to a plot variable.
@@ -100,14 +118,16 @@ contains
   !============================================================================
 
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
-
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
-
+    use ModMain,            ONLY: UseB0
+    use ModFieldLineThread, ONLY: interpolate_thread_state, set_thread_plotvar
     use ModGeometry,    ONLY: rMin_BLK
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord
+    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, &
+         xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModParallel,       ONLY: NeiLev, NOBLK
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -115,11 +135,17 @@ contains
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
 
     ! Local variables
-    integer :: i, j, k, iVar
+    integer :: i, j, k, iVar, iDirMin
 
     real :: r, Lon, Lat
     real :: XyzPlot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
+
+    ! State at the grid point in the threaded gap
+    real :: State_V(nVar)
+
+    ! If .true., this block includes grid points in the threaded gap
+    logical :: IsThreadedBlock
 
     ! Check testing for block
     logical:: DoTest
@@ -127,11 +153,26 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    ! Does this block include grid points in the threaded gap?
+    IsThreadedBlock = UseThreadedGap .and. NeiLev(1, iBlock)==NOBLK
+    if(IsThreadedBlock)then
+       ! Don't check radial coordinate to see if the point is outside the block
+       iDirMin = r_ + 1
+    else
+       iDirMin = 1
+    end if
+
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
        r = rMin + (i-1)*dR
-
-       if(r < rMin_BLK(iBlock)) CYCLE
+       
+       if(IsThreadedBlock)then
+          ! The point should be skipped, if below the chromosphere
+          if(r < rChromo) CYCLE
+       else
+          ! The point should be skipped, if outside the block
+          if(r < rMin_BLK(iBlock)) CYCLE
+       end if
        ! if(r > rMax_B(iBlock)) CYCLE
 
        do j = 1, nLon
@@ -153,16 +194,25 @@ contains
                   (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
 
              ! Check if point is inside block
-             if(any(CoordNorm_D < 0.5)) CYCLE
+             if(any(CoordNorm_D(iDirMin:) < 0.5)) CYCLE
              if(any(CoordNorm_D > nIjk_D + 0.5)) CYCLE
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             do iVar=1, nPlotVar
-                ! Interpolate up to ghost cells.
-                PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
-                     MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
-             end do
+             if(IsThreadedBlock.and. r <= RadiusMin)then
+                call interpolate_thread_state(Coord_D, iBlock, State_V)
+                call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
+                     XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
+                PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
+                     DimFactor_V(1:nPlotVar)
+             else
+                do iVar=1, nPlotVar
+                   ! Interpolate up to ghost cells.
+                   PlotVar_VIII(iVar,i,j,k) = &
+                        trilinear(PlotVar_GV(:,:,:,iVar),&
+                        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
+                end do
+             end if
 
           end do ! lon loop
        end do    ! lat loop
@@ -202,7 +252,15 @@ contains
     ! Save results to disk
     if(iProc==0) then
        ! Build a single-line list of variable names.
-       NameVar = 'r lon lat'
+       if(nR==1)then
+          NameVar = 'lon lat'
+       elseif(nLon==1)then
+          NameVar = 'r lat'
+       elseif(nLat==1)then
+          NameVar = 'r lon'
+       else
+          NameVar = 'r lon lat'
+       end if
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
@@ -215,15 +273,47 @@ contains
        end do; end do; end do
 
        ! Call save_plot_file to write data to disk.
-       call save_plot_file(NameFile, &
-            TypeFileIn=TypeFile_I(iFile), &
-            StringHeaderIn=NameUnit, &
-            nStepIn=n_step, &
-            TimeIn=time_simulation, &
-            NameVarIn = NameVar, &
-            CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
-            CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
-            VarIn_VIII = PlotVar_VIII(1:,:,:,:))
+       if(nR==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
+               VarIn_VII = PlotVar_VIII(1:,1,:,:))
+       elseif(nLon==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LatMax], &
+               VarIn_VII = PlotVar_VIII(1:,:,1,:))
+       elseif(nLat==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LonMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LonMax], &
+               VarIn_VII = PlotVar_VIII(1:,:,:,1))
+       else
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
+               VarIn_VIII = PlotVar_VIII(1:,:,:,:))
+       end if
     end if
 
     ! Deallocate results arrays:.

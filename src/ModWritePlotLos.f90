@@ -925,7 +925,7 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-      use ModFieldLineThread, ONLY: interpolate_state
+      use ModFieldLineThread, ONLY: interpolate_thread_state
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
@@ -1034,7 +1034,7 @@ contains
          !/
          if(present(UseThreads))then
             ! Interpolate within the threaded gap
-            call interpolate_state(GenLos_D, iBlock, State_V)
+            call interpolate_thread_state(GenLos_D, iBlock, State_V)
          else
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &

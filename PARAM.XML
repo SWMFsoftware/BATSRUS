@@ -1562,7 +1562,7 @@ the inner boundary is at least RatioRe2P. The default value of RatioPe2P is 0.
 </command>
 
 <command name="MAGNETICINNERBOUNDARY">
-	 <parameter name="DoReflectInnerB1" type="logical" default="F"/>
+	 <parameter name="DoReflectInnerB1" type="logical" default="T"/>
 
 #MAGNETICINNERBOUNDARY
 T		DoReflectInnerB1
@@ -1570,9 +1570,10 @@ T		DoReflectInnerB1
 If DoReflectInnerB1 is true, the B1 part of the magnetic field is reflected
 for the ionosphere type inner boundary conditions, i.e. the radial
 component of the total magnetic field is forced to coincide with the B0
-value.
+value. This helps to recover the magnetic field after a very strong event.
+The false value allows B1 to float, which relies on numerical diffusion to work.
 
-The default value is DoReflectInnerB1 false, which makes B1 float.
+The default and recommended value is DoReflectInnerB1 true as shown.
 </command>
 
 <command name="BUFFERGRID">
@@ -8237,7 +8238,7 @@ the #HALLRESISTIVITY command.
 
 The StringHallRegion string can specify the region(s) where the Hall
 resistivity is used.  The regions must be described with the #REGION
-commands.  Note the 'tapered' option in the shape desciption that can
+commands. Note the 'tapered' option in the shape desciption that can
 be used to make the transition smoother.
 
 Each region has its own Hall factor, which is the 'Weight' associated

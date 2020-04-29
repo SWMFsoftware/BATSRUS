@@ -67,7 +67,7 @@ module ModFaceBoundary
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
   ! Shall we make B1_radial = 0 at the inner boundary?
-  logical:: DoReflectInnerB1 = .false.
+  logical:: DoReflectInnerB1 = .true.
 
   ! The lower bound of pe/p at inner boundary when the electron 
   ! pressure equation is used. 
