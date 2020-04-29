@@ -1708,7 +1708,7 @@ test_europa3fluidspe_compile:
 	make PIDL
 
 test_europa3fluidspe_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/EUROPA/Param.in.3fluidsPe.test PARAM.in
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.3fluidsPe.test PARAM.in; cp Param/EUROPA/satellite-E4_flyby-from_pds.dat satellite_3fpe_e4.dat
 
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1716,11 +1716,10 @@ test_europa3fluidspe_run:
 
 test_europa3fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out \
-		Param/EUROPA/europa3fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/trj_satellite_3fpe_e4_n00000100.sat \
+		Param/EUROPA/trj_satellite_3fpe_e4_n00000100.sat \
 		> test_europa3fluidspe.diff)
 	ls -l test_europa3fluidspe.diff
-
 
 ### TEST FOR 2D REGIONS ######################################################
 
