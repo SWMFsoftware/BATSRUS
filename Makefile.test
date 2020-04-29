@@ -3,6 +3,11 @@
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 # !!! NOTE: In the list below "test_func" should be the last test
 
+# Setting BLESS=YES or Y will copy the solution into the reference solution
+BLESS=NO
+
+DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
+
 .NOTPARALLEL: test
 
 test: 
@@ -26,7 +31,7 @@ test:
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_corona TESTDIR=run_test_corona)
 	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
-	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)		
+	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
 	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
@@ -48,7 +53,9 @@ test:
 	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
 	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
 	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
-	-@($(MAKE) test_fivemoment TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment_alfven)
+	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment_shock)
+	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment_langmuir)
 	-@($(MAKE) test_func TESTDIR=run_test_func)
 	./Config.pl -noopenmp
 	@ls -l *.diff
@@ -70,10 +77,16 @@ test_help:
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL=mpiexec      (run tests with mpiexec)"
 	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
-	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
+	@echo "    test_amr_compile           (compile test_amr)"
+	@echo "    test_amr_rundir            (create run directory for test_amr)"
+	@echo "    test_amr_run NP=4          (run test_amr on 4 cores)"
+	@echo "    test_amr_check             (check test_amr results against reference)"
+	@echo "    test_amr_check BLESS=YES   (update test_amr reference solutions)"
+	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr TESTDIR=run_amr   (run AMR test in run_amr directory)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
+	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_2bodyplot             (run 2 Body Plot test)"
 	@echo "    test_comet                 (run comet test)"
 	@echo "    test_cometfluids           (run 3-fluid+Pe comet test)"
@@ -89,7 +102,6 @@ test_help:
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
 	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
-	@echo "    test_fivemoment            (run all 5-moment tests)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
 	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
 	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
@@ -170,9 +182,9 @@ test_fluxemergence_run:
 				mv runlog_restart RESULTS/run_restart
 
 test_fluxemergence_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t \
-		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
+	-@(${DIFFNUM} -t \
 		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
+		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
 		> test_fluxemergence.diff)
 	ls -l test_fluxemergence.diff
 
@@ -201,7 +213,7 @@ test_shocktube_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/1d_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
@@ -233,11 +245,9 @@ test_shockramp_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shockramp_check:
-	gunzip -c Param/SHOCKTUBE/TestOutput/shockramp.out.gz \
-	        > ${TESTDIR}/RESULT/GM/shockramp.out
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
-		${TESTDIR}/RESULT/GM/shockramp.out \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+	   ${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
+	   Param/SHOCKTUBE/TestOutput/shockramp.out.gz \
 		> test_shockramp.diff)
 	ls -l test_shockramp.diff
 
@@ -266,7 +276,7 @@ test_partsteady_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_partsteady_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/partsteady_ref.out \
 		> test_partsteady.diff)
@@ -298,9 +308,10 @@ test_hallmhd_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hallmhd_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
+	  ${TESTDIR}/RESULT/GM/1d_*20.out \
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
-	  ${TESTDIR}/RESULT/GM/1d_*20.out > test_hallmhd.diff)
+	  > test_hallmhd.diff)
 	ls -l test_hallmhd.diff
 
 ### HYBRID TEST ###
@@ -328,9 +339,10 @@ test_hybrid_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hybrid_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=2e-7 \
+          ${TESTDIR}/RESULT/GM/1d_*20.out \
           Param/SHOCKTUBE/TestOutput/hall_ref.out \
-          ${TESTDIR}/RESULT/GM/1d_*20.out > test_hybrid.diff)
+	  > test_hybrid.diff)
 	ls -l test_hybrid.diff
 
 
@@ -359,7 +371,7 @@ test_viscosity_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_viscosity_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULTS/GM/z=0*.outs \
 		Param/VISCOSITY/TestOutput/z=0_ref.outs \
 		> test_viscosity.diff)
@@ -390,9 +402,10 @@ test_twofluidmhd_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_twofluidmhd_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
-	  Param/SHOCKTUBE/TestOutput/twofluid_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
+		${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out \
+		Param/SHOCKTUBE/TestOutput/twofluid_ref.out \
+	  > test_twofluidmhd.diff)
 	ls -l test_twofluidmhd.diff
 
 
@@ -421,9 +434,10 @@ test_multifluid_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_multifluid_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-	  Param/MULTIFLUID/TestOutput/cut_t25.out \
-	  ${TESTDIR}/RESULT/GM/cut_*025_n*.out > test_multifluid.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
+		${TESTDIR}/RESULT/GM/cut_*025_n*.out \
+		Param/MULTIFLUID/TestOutput/cut_t25.out \
+		> test_multifluid.diff)
 	ls -l test_multifluid.diff
 
 ### MAGNETOMETER TEST ###
@@ -451,15 +465,15 @@ test_magnetometer_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 
 test_magnetometer_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
 		${TESTDIR}/IO2/magnetometers_n00000000.mag \
 		Param/MAGNETOMETER/TestOutput/magnetometers_n00000000.mag \
 		> test_magnetometer.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-10 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=2e-10 \
 		${TESTDIR}/IO2/eqb_t00000100_n*.out \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100.out \
 		>> test_magnetometer.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-11 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=2e-11 \
 		${TESTDIR}/IO2/eqb_t00000100_n*.dat \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100.dat \
 		>> test_magnetometer.diff)
@@ -490,9 +504,10 @@ test_multiion_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_multiion_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
+		${TESTDIR}/RESULTS/GM/cut_*t02.*.out \
 		Param/MULTIION/TestOutput/cut_t2.out \
-		${TESTDIR}/RESULTS/GM/cut_*t02.*.out > test_multiion.diff)
+		> test_multiion.diff)
 	ls -l test_multiion.diff
 
 ### MHD WITH MULTIPLE IONS TEST ###
@@ -520,9 +535,9 @@ test_mhdions_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdions_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		Param/MHDIONS/TestOutput/cut_mhd_t10m.out \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
+		Param/MHDIONS/TestOutput/cut_mhd_t10m.out \
 		> test_mhdions.diff)
 	ls -l test_mhdions.diff
 
@@ -551,9 +566,9 @@ test_mhdnoncons_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdnoncons_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		Param/MHDNONCONS/TestOutput/cut_mhd_t10m.out \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
+		Param/MHDNONCONS/TestOutput/cut_mhd_t10m.out \
 		> test_mhdnoncons.diff)
 	ls -l test_mhdnoncons.diff
 
@@ -585,9 +600,10 @@ test_eosgodunov_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
-	  Param/CRASH/TestOutput/eosgodunov.out \
-	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=3e-7 \
+		${TESTDIR}/RESULT/GM/cut_*500.0*.out \
+		Param/CRASH/TestOutput/eosgodunov.out \
+		> test_eosgodunov.diff)
 	ls -l test_eosgodunov.diff
 
 ### LASER PACKAGE TEST ###
@@ -617,9 +633,10 @@ test_laserpackage_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=2e-5 \
+	-@(${DIFFNUM} -t -r=2e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/CRASH/TestOutput/log_laserpackage.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_laserpackage.diff)
+		> test_laserpackage.diff)
 	ls -l test_laserpackage.diff
 
 
@@ -649,9 +666,10 @@ test_graydiffusion_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-4 \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/CRASH/TestOutput/log_graydiffusion.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff)
+		> test_graydiffusion.diff)
 	ls -l test_graydiffusion.diff
 
 ### END OF CRASH RELATED TESTS #############################################
@@ -684,9 +702,10 @@ test_corona_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_corona_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${DIFFNUM} -t -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/SC/log_n000001.log > test_corona.diff)
+		> test_corona.diff)
 	ls -l test_corona.diff
 
 # TEST SPHERICAL GRID FOR CORONA
@@ -716,9 +735,10 @@ test_coronasph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_coronasph_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${DIFFNUM} -t -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		Param/CORONA/TestOutput/log_n000001.sph \
-		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff)
+		> test_coronasph.diff)
 	ls -l test_coronasph.diff
 
 # TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
@@ -750,9 +770,10 @@ test_awsomfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-7 -t \
+	-@(${DIFFNUM} -a=1e-6 -r=1e-7 -t \
+		${TESTDIR}/RESULTS/SC/1d__mhd_1_n00000100.out \
 		Param/CORONA/TestOutput/1d__mhd_awsomfluids.out \
-		${TESTDIR}/RESULTS/SC/1d__mhd_1_n00000100.out > test_awsomfluids.diff)
+		> test_awsomfluids.diff)
 	ls -l test_awsomfluids.diff
 
 ### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
@@ -784,9 +805,10 @@ test_chromo_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_chromo_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -a=1e-27 -r=2e-5 \
+	-@(${DIFFNUM} -t -a=1e-27 -r=2e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff)
+		> test_chromo.diff)
 	ls -l test_chromo.diff
 
 
@@ -817,9 +839,10 @@ test_outerhelio_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerhelio_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${DIFFNUM} -t -r=1e-5 \
 		${TESTDIR}/RESULTS/OH/log_n000010.log \
-		Param/OUTERHELIO/TestOutput/log_n000010.log > test_outerhelio.diff)
+		Param/OUTERHELIO/TestOutput/log_n000010.log \
+		> test_outerhelio.diff)
 	ls -l test_outerhelio.diff
 
 test_outerheliopui:
@@ -847,9 +870,10 @@ test_outerheliopui_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerheliopui_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${DIFFNUM} -t -r=1e-5 \
 		${TESTDIR}/RESULTS/OH/log_n000010.log \
-		Param/OUTERHELIO/TestOutput/log_n000010_pui.log > test_outerheliopui.diff)
+		Param/OUTERHELIO/TestOutput/log_n000010_pui.log \
+		> test_outerheliopui.diff)
 	ls -l test_outerheliopui.diff
 
 ### FUNCTIONALITY TEST SUITE ###
@@ -912,9 +936,10 @@ test_titan_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_titan_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_titan.diff)
+		> test_titan.diff)
 	ls -l test_titan.diff
 
 test_titan_restart:
@@ -944,9 +969,10 @@ test_titan_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
+		${TESTDIR}/RESULTS/log_all.log \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/log_all.log > test_titan_restart.diff)
+		> test_titan_restart.diff)
 	ls -l test_titan*.diff
 
 ### TESTS FOR MODELING MARS ###
@@ -981,9 +1007,10 @@ test_mars_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_mars_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/MARS/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_mars.diff)
+		> test_mars.diff)
 	ls -l test_mars.diff
 
 test_mars_restart:
@@ -1013,9 +1040,9 @@ test_mars_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-		Param/MARS/TestOutput/log_n000001.log \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
 		${TESTDIR}/RESULTS/log_all.log \
+		Param/MARS/TestOutput/log_n000001.log \
 		> test_mars_restart.diff)
 	ls -l test_mars*.diff
 
@@ -1050,9 +1077,10 @@ test_marsfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_marsfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/MARSFLUIDS/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_marsfluids.diff)
+		> test_marsfluids.diff)
 	ls -l test_marsfluids.diff
 
 test_marsfluids_restart:
@@ -1083,9 +1111,9 @@ test_marsfluids_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -10 RestartRead/GM/log_n000011.log >> log_all.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-		Param/MARSFLUIDS/TestOutput/log_n000001.log \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
 		${TESTDIR}/RESULTS/log_all.log \
+		Param/MARSFLUIDS/TestOutput/log_n000001.log \
 		> test_marsfluids_restart.diff)
 	ls -l test_marsfluids*.diff
 
@@ -1121,9 +1149,10 @@ test_venus_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_venus_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_venus.diff)
+		> test_venus.diff)
 	ls -l test_venus.diff
 
 test_venus_restart:
@@ -1153,9 +1182,10 @@ test_venus_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-15 \
+		${TESTDIR}/RESULTS/log_all.log \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/log_all.log > test_venus_restart.diff)
+		> test_venus_restart.diff)
 	ls -l test_venus*.diff
 
 ### TESTS FOR MODELING SATURN ###
@@ -1188,9 +1218,10 @@ test_saturn_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_saturn_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/SATURN/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff)
+		> test_saturn.diff)
 	ls -l test_saturn.diff
 
 
@@ -1222,23 +1253,16 @@ test_mercurysph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
 # Sort the files by numerical values of the first three columns (coordinates)
-SORT = sort -k1 -k2 -k3 -g
-
 test_mercurysph_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/MERCURY/TestOutput/REFlog_n000000.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_mercurysph.diff)
-	-gunzip -c Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz | ${SORT} \
-	        | grep -v AUXDATA \
-		> ${TESTDIR}/RESULTS/GM/ref_3d.dat
-	-gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz | ${SORT} \
-		| grep -v AUXDATA \
-		> ${TESTDIR}/RESULTS/GM/3d.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/ref_3d.dat \
-		${TESTDIR}/RESULTS/GM/3d.dat >> test_mercurysph.diff)
+		> test_mercurysph.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
+		${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz \
+		Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz \
+		>> test_mercurysph.diff)
 	ls -l test_mercurysph.diff
-
 
 ### TESTS FOR MODELING GANYMEDE ###
 
@@ -1267,20 +1291,16 @@ test_ganymede_run:
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
-# Sort the files by numerical values of the first three columns (coordinates)
-SORT = sort -k1 -k2 -k3 -g
-
 test_ganymede_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
-		Param/GANYMEDE/TestOutput/REFlog_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_ganymede.diff)
-	gunzip -c Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
-	        ${TESTDIR}/RESULTS/GM/REFy=0.out
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/REFy=0.out \
-		${TESTDIR}/RESULTS/GM/y\=0_var_1_n00000005.out >> test_ganymede.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
+	   ${TESTDIR}/RESULTS/GM/log_n000001.log \
+	   Param/GANYMEDE/TestOutput/REFlog_n000001.log \
+		> test_ganymede.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6\
+	   ${TESTDIR}/RESULTS/GM/y=0_var_1_n00000005.out \
+	   Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
+	   	>> test_ganymede.diff)
 	ls -l test_ganymede.diff
-
 
 ### TESTS FOR MODELING COMET6SP ###
 
@@ -1309,9 +1329,10 @@ test_comet_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_comet_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-10 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-10 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/COMET/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_comet.diff)
+		> test_comet.diff)
 	ls -l test_comet.diff
 
 ### TEST FOR COMET3FLUIDSPE ###
@@ -1345,9 +1366,10 @@ test_cometfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+	-@(${DIFFNUM} -t -r=8e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000060.log \
 		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
-		${TESTDIR}/RESULTS/GM/log_n000060.log > test_cometfluids.diff)
+		> test_cometfluids.diff)
 	ls -l test_cometfluids.diff
 
 test_cometfluids_restart:
@@ -1376,9 +1398,9 @@ test_cometfluids_restart_read:
 test_cometfluids_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartRead/GM/log_n000060.log log_test.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
-		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
+	-@(${DIFFNUM} -t -r=8e-5 \
 		${TESTDIR}/RESULTS/log_test.log \
+		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
 		> test_cometfluids_restart.diff)
 	ls -l test_cometfluids*.diff
 
@@ -1414,9 +1436,10 @@ test_earthsph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_earthsph_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/EARTH/TestOutput/SPHlog_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_earthsph.diff)
+		> test_earthsph.diff)
 	ls -l test_earthsph.diff
 
 ### TESTS FOR AMR GRID ###
@@ -1445,9 +1468,9 @@ test_amr_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amr_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 -r=1e-12 \
-		Param/AMR/TestOutput/log.log \
+	-@(${DIFFNUM} -b -a=1e-8 -r=1e-12 \
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
+		Param/AMR/TestOutput/log.log \
 		> test_amr.diff)
 	ls -l test_amr.diff
 
@@ -1477,9 +1500,9 @@ test_amrsph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_amrsph_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 -r=1e-12\
-		Param/AMR/TestOutput/log_sph.log \
+	-@(${DIFFNUM} -b -a=1e-8 -r=1e-12\
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
+		Param/AMR/TestOutput/log_sph.log \
 		> test_amrsph.diff)
 	ls -l test_amrsph.diff
 
@@ -1510,24 +1533,20 @@ test_2bodyplot_run:
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
+# Sort the files by numerical values of the first three columns (coordinates)
 test_2bodyplot_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz \
-		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
+		> test_2bodyplot.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
-		${TESTDIR}/RESULTS/GM/ref_y=0.out >> test_2bodyplot.diff)
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
-	        | grep -v AUXDATA \
-		> ${TESTDIR}/RESULTS/GM/ref_y=0.dat
-	gunzip -c ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz | ${SORT} \
-		| grep -v AUXDATA \
-		> ${TESTDIR}/RESULTS/GM/y=0.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/ref_y=0.dat \
-		${TESTDIR}/RESULTS/GM/y=0.dat >> test_2bodyplot.diff)
+		Param/2BODYPLOT/TestOutput/REFy*.out.gz \
+		>> test_2bodyplot.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p='sort -k1 -k2 -k3 -g | grep -v AUXDATA' \
+		${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz \
+		Param/2BODYPLOT/TestOutput/REFy*.dat.gz \
+		>> test_2bodyplot.diff)
 	ls -l test_2bodyplot.diff
 
 ### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
@@ -1555,9 +1574,10 @@ test_anisotropic_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_anisotropic_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
+	    ${TESTDIR}/RESULT/GM/1d_*t00.50*.out \
 	    Param/ANISOPRESSURE/TestOutput/fast_anisope.out \
-	    ${TESTDIR}/RESULT/GM/1d_*t00.50*.out > test_anisotropic.diff)
+	    > test_anisotropic.diff)
 	ls -l test_anisotropic.diff
 
 ### TEST FOR COMET CG HD RUN ###
@@ -1588,9 +1608,10 @@ test_cometCGhd_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGhd_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+	-@(${DIFFNUM} -t -r=8e-5 \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/ROSETTA/TestOutput/hd_log_n000000.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGhd.diff)
+		> test_cometCGhd.diff)
 	ls -l test_cometCGhd.diff
 
 
@@ -1626,9 +1647,10 @@ test_cometCGfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-12 \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-12 \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/ROSETTA/TestOutput/CGfluids_log_n000000.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGfluids.diff)
+		> test_cometCGfluids.diff)
 	ls -l test_cometCGfluids.diff
 
 ### TEST FOR EUROPA TWO ION FLUIDS + ELECTRON PRESSURE ###
@@ -1659,9 +1681,10 @@ test_europa2fluidspe_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_europa2fluidspe_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
+		${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat \
 		Param/EUROPA/trj_satellite_2fpe_e4_n00000100.sat \
-		${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat > test_europa2fluidspe.diff)
+		> test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
@@ -1692,9 +1715,10 @@ test_europa3fluidspe_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
 
 test_europa3fluidspe_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=8e-07 \
+	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out \
 		Param/EUROPA/europa3fluidspe_cut_mhd_1_n00000100.out \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out > test_europa3fluidspe.diff)
+		> test_europa3fluidspe.diff)
 	ls -l test_europa3fluidspe.diff
 
 
@@ -1730,35 +1754,21 @@ test_region2d_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
 
 test_region2d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b \
-		Param/REGION/TestOutput/ \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_region2d.diff)
-	gunzip -c Param/REGION/TestOutput/2d.out.gz \
-		> ${TESTDIR}/RESULTS/2d/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl.out.gz \
-		> ${TESTDIR}/RESULTS/cyl/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl_lnr.out.gz \
-		> ${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/2d/GM/z*.out \
-		${TESTDIR}/RESULTS/2d/GM/ref.out \
+		Param/REGION/TestOutput/2d.out.gz \
 		> test_region2d.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/cyl/GM/z*.out \
-		${TESTDIR}/RESULTS/cyl/GM/ref.out \
+		Param/REGION/TestOutput/cyl.out.gz \
 		>> test_region2d.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/cyl_lnr/GM/z*.out \
-		${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out \
+		Param/REGION/TestOutput/cyl_lnr.out.gz \
 		>> test_region2d.diff)
 	ls -l test_region2d.diff
 
 ### TEST FOR FIVEMOMENT ###
-
-test_fivemoment:
-	-@($(MAKE) test_fivemoment_alfven)
-	-@($(MAKE) test_fivemoment_shock)
-	-@($(MAKE) test_fivemoment_langmuir)
 
 test_fivemoment_alfven:
 	@echo "test_fivemoment_alfven_compile..." > test_fivemoment_alfven.diff
@@ -1784,9 +1794,9 @@ test_fivemoment_alfven_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_alfven_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10         \
-		Param/FIVEMOMENT/TestOutput/alfven_ref.out     \
-		${TESTDIR}/RESULTS/GM/1d*t00024640_*out        \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
+		${TESTDIR}/RESULTS/GM/1d*t00024640_*out \
+		Param/FIVEMOMENT/TestOutput/alfven_ref.out \
 		> test_fivemoment_alfven.diff)
 	ls -l test_fivemoment_alfven.diff
 
@@ -1814,10 +1824,10 @@ test_fivemoment_shock_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10    \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
+		${TESTDIR}/RESULTS/GM/1d*t00000002*out \
 		Param/FIVEMOMENT/TestOutput/shock_ref.out \
-		${TESTDIR}/RESULTS/GM/1d*t00000002*out >  \
-		test_fivemoment_shock.diff)
+		> test_fivemoment_shock.diff)
 	ls -l test_fivemoment_shock.diff
 
 test_fivemoment_langmuir:
@@ -1844,9 +1854,9 @@ test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_langmuir_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10       \
-		Param/FIVEMOMENT/TestOutput/langmuir_ref.out \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10       \
 		${TESTDIR}/RESULTS/GM/1d*t00000001*out       \
+		Param/FIVEMOMENT/TestOutput/langmuir_ref.out \
 		> test_fivemoment_langmuir.diff)
 	ls -l test_fivemoment_langmuir.diff
 
@@ -1877,9 +1887,11 @@ test_L1toBC_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_L1toBC_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b \
+	-@(${DIFFNUM} -b \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		Param/EARTH/TestOutput/L1toBC.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_L1toBC.diff)
+		> test_L1toBC.diff)
+
 	ls -l test_L1toBC.diff
 
 ### TEST FOR POST-PROCESSING SPECTRUM CODE#####################################

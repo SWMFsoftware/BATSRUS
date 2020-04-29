@@ -26,7 +26,9 @@ contains
     use ModMain
     use ModGeometry, ONLY: &
          XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
-    use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
+    use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, &
+         set_dimensional_factor
+    use ModFieldLineThread, ONLY: DoPlotThreads
     use ModIO
     use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, init_hdf5_plot
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
@@ -140,7 +142,7 @@ contains
          (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
          .or. plot_form(iFile)=='tcp')
 
-    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
+    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar,    &
          UseArraySyntaxIn=.true.)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
@@ -234,6 +236,19 @@ contains
     ! Spherical slices are special cases:
     DoPlotShell = plot_type1(1:3) == 'shl'
     DoPlotBox   = plot_type1(1:3) == 'box'
+
+    !\
+    ! If threaded gap is used, the dimensional factors should be calculated,
+    ! which are needed to convert a point state vector to a dimensional form
+    !/ 
+    if(DoPlotThreads.and.DoPlotShell)then
+       if(plot_dimensional(iFile))then
+          call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
+               DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
+       else
+          DimFactor_V = 1.0;  DimFactorBody_V = 1.0
+       end if
+    end if
 
     if(DoSaveOneTecFile) then
        iUnit = io_unit_new()
@@ -673,10 +688,10 @@ contains
 
           write(UnitTmp_,'(a)') '#PLOTRANGE'
           do iDim = 1, nDim
-             write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                  PlotRange_I(2*iDim-1)*CoordUnit, 'Coord', iDim, 'Min'
-             write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                  PlotRange_I(2*iDim)*CoordUnit, 'Coord', iDim, 'Max'
+             write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                  PlotRange_I(2*iDim-1)*CoordUnit, 'CoordMin', iDim
+             write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                  PlotRange_I(2*iDim)*CoordUnit, 'CoordMax', iDim
           enddo
           write(UnitTmp_,*)
 

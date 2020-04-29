@@ -16,16 +16,17 @@ our $Code = "BATSRUS";
 our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments = @ARGV;
 
-my $config     = "share/Scripts/Config.pl";
+my $GITDIR   = "git\@gitlab.umich.edu:swmf_software";
+my $config   = "share/Scripts/Config.pl";
+my $gitclone = "share/Scripts/gitclone -s";
 
-# Git clone missing directories as needed
-my $GITCLONE = "git clone"; my $GITDIR = "git\@gitlab.umich.edu:swmf_software/";
+# Git clone missing directories as needed. Start with share/ to get $gitclone.
 if (not -f $config and not -f "../../$config"){
-    `$GITCLONE $GITDIR/share; $GITCLONE $GITDIR/util`;
+    `git clone $GITDIR/share; $gitclone util`;
 }
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M" and not -d "srcBATL"){
-    `$GITCLONE $GITDIR/srcBATL`;
+    `$gitclone srcBATL`;
 }
 
 if(-f $config){

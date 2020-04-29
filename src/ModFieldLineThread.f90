@@ -16,8 +16,12 @@ module ModFieldLineThread
   save
 
   PRIVATE ! Except
-  integer, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
+  integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
+  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
+
+  public :: save_threads_for_plot     ! Get  State_VIII array
+  public :: interpolate_thread_state  ! Interpolate state from State_VIII
+  public :: set_thread_plotvar
 
   !\
   ! rBody here is set to one keeping a capability to set
@@ -88,7 +92,12 @@ module ModFieldLineThread
      !\
      !  Thread solution: temperature and pressure SI
      !/
-     real,pointer :: TeSi_III(:,:,:),TiSi_III(:,:,:),PSi_III(:,:,:)
+     real, pointer :: TeSi_III(:,:,:), TiSi_III(:,:,:), PSi_III(:,:,:)
+     !\
+     ! amplitudes of waves
+     !/
+     real, pointer :: AMajor_III(:,:,:), AMinor_III(:,:,:)
+
      !\
      ! number of points
      !/
@@ -110,10 +119,9 @@ module ModFieldLineThread
      !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
-  integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
+  integer, parameter :: PSi_=1, A2Major_ = 2, A2Minor_ = 3 , &
+       TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
   
-  public :: save_threads_for_plot ! Get  State_VIII array
-  public :: Interpolate_state     ! Interpolate state from State_VIII
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
   !/
@@ -320,6 +328,8 @@ contains
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
+    nullify(BoundaryThreads_B(iBlock) % AMajor_III)
+    nullify(BoundaryThreads_B(iBlock) % AMinor_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
     nullify(BoundaryThreads_B(iBlock) % State_VIII)
@@ -344,6 +354,8 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMajor_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMinor_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
     deallocate(BoundaryThreads_B(iBlock) % State_VIII)
@@ -411,6 +423,10 @@ contains
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMajor_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMinor_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
@@ -455,6 +471,7 @@ contains
     end if
     call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
     subroutine set_gc_grid(iBlock, iMin, dCoord1Inv)
       use BATL_lib, ONLY: MaxDim, xyz_to_coord, coord_to_xyz, &
            CoordMin_DB, CellSize_DB, r_
@@ -462,7 +479,7 @@ contains
       integer, intent(out):: iMin
       real,    intent(out):: dCoord1Inv
       real :: Coord_D(MaxDim), Xyz_D(MaxDim)
-      !----------------
+      !-----------------------------------------------------------------------
       !\
       ! Gen coords for the low block corner
       !/
@@ -557,6 +574,8 @@ contains
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
+    BoundaryThreads_B(iBlock) % AMajor_III = 0.0
+    BoundaryThreads_B(iBlock) % AMinor_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
     !\
@@ -1074,8 +1093,8 @@ contains
        DLogLambdaOverDLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
             DeltaLogTe
        do iTe = 2,499
-          DLogLambdaOverDLogT_I(iTe) = log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/&
-            (2*DeltaLogTe)
+          DLogLambdaOverDLogT_I(iTe) = &
+               log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/(2*DeltaLogTe)
        end do
        DLogLambdaOverDLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
             DeltaLogTe
@@ -1130,7 +1149,7 @@ contains
     call get_restart_file_name(iBlock, NameThisComp//'/restartIN/')
     call open_file(file=NameRestartFile, status='old', &
          form='UNFORMATTED', NameCaller=NameSub)
-    do k = 1,nK; do j = 1, nJ
+    do k = kMin_,kMax_; do j = jMin_, jMax_
        read(UnitTmp_, iostat = iError)RealNPoint
        if(iError>0)then
           write(*,*)'Error in reading nPoint in Block=', iBlock
@@ -1151,13 +1170,14 @@ contains
     call close_file
     BoundaryThreads_B(iBlock) % iAction = Enthalpy_
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine read_thread_restart
-  !=================================
-  !\
-  ! For each block near the inner boundary save the density and temperature
-  ! in the ghost grid extended toward the photosphere level
-  !/
+  !============================================================================
   subroutine save_threads_for_plot
+
+    ! For each block near the inner boundary save the density and temperature
+    ! in the ghost grid extended toward the photosphere level
+
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
@@ -1165,7 +1185,7 @@ contains
     real    :: State_VI(PSi_:TiSi_, 1-nPointThreadMax:0), Coord1
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
-    !---------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -1177,6 +1197,16 @@ contains
              ! Fill in an array with NeSi and TeSi values
              State_VI(PSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+             !\
+             !  Use geometric average of the face value for 
+             !  the wave amplitude to get the cell-centered aplitude squared
+             !/
+             State_VI(A2Major_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMajor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMajor_III(-nPoint:-1,j,k)
+             State_VI(A2Minor_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMinor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMinor_III(-nPoint:-1,j,k)
              State_VI(TeSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
              if(UseElectronPressure)then
@@ -1210,11 +1240,12 @@ contains
     end do
     
   end subroutine save_threads_for_plot
-  !===================================
-  subroutine interpolate_state(Coord_D, iBlock, State_V)
+  !============================================================================
+  subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
+
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar, RHo_
+    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModInterpolate, ONLY: interpolate_vector
     use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
                            UnitTemperature_, UnitEnergyDens_
@@ -1231,17 +1262,17 @@ contains
     ! Dimensionless plasma parameters
     !/
     real :: pTotal, Te, Ti
-    character(len=*), parameter:: NameSub = 'interpolate_vector'
-    !---------------------
+    character(len=*), parameter:: NameSub = 'interpolate_thread_state'
+    !-------------------------------------------------------------------------
     CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
          CellSize_DB(r_+1:,iBlock) + 0.50
-    !\
-    !Along radial coordinate the resolution and location of the grid
-    !may be different:
-    !/
+
+    ! Along radial coordinate the resolution and location of the grid
+    ! may be different:
     CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
          BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
-    !Interpolate the state on threads to the given location
+
+    ! Interpolate the state on threads to the given location
     StateThread_V = interpolate_vector(                        &
          a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
          nVar=TiSi_,                                           &
@@ -1272,8 +1303,312 @@ contains
        ! Te = TeFraction*State_V(iP)/State_V(Rho_)
        State_V(Rho_) = TeFraction*pTotal/Te
     end if
-  end subroutine interpolate_state
+    State_V(WaveFirst_) = StateThread_V(A2Major_)
+    State_V(WaveLast_ ) = StateThread_V(A2Minor_)
+  end subroutine interpolate_thread_state
   !============================================================================
+  subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
+    State_V, PlotVar_V)
+    use ModMain
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use ModVarIndexes
+    use ModAdvance, ONLY : time_BLK, UseElectronPressure, &
+         UseMultiSpecies
+    use ModGeometry
+    use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
+         ElectronPressureRatio, InvGammaMinus1_I, Si2No_V, UnitB_
+    use ModUtilities,     ONLY: lower_case
+    use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
+         NameUnitUserIdl_I
+    use ModNumConst,      ONLY: cTiny
+    use ModMultiFluid,    ONLY: extract_fluid_name,      &
+         UseMultiIon, nIonFluid, MassIon_I, iPpar, iPFluid=>iP,   &
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
+         ChargeIon_I
+    use ModCoordTransform, ONLY: cross_product
+    use BATL_lib,          ONLY: iNode_B, CellSize_DB
+    use ModB0,             ONLY: get_b0
+    use ModWaves,          ONLY: UseWavePressure
+    use ModCoronalHeating, ONLY: PoyntingFluxPerB
+
+    integer, intent(in) :: iBlock, nPlotVar
+    character(LEN=20)   :: NamePlotVar_V(nPlotVar)
+    real,    intent(in) :: Xyz_D(3)
+    real, intent(inout) ::State_V(nVar)
+    real,   intent(out) :: PlotVar_V(nPlotVar)
+
+    !\
+    ! To calculate B0 and BFull, if needed
+    !/
+    real :: B0_D(3) = 0.0, FullB_D(3)
+    character (len=10)  :: String, NamePlotVar
+
+    real:: tmp1Var, tmp2Var
+   
+
+    integer :: iVar, jVar, iIon, iFluid
+    !\
+    ! CME parameters, if needed
+    !/
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
+    !\
+    ! Conversion coefficients from the squared Alfven wave amplitude to
+    ! energy densities
+    !/
+    real :: SignBr, I0, I1
+    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_plotvar'
+    !-------------------
+    call test_start(NameSub, DoTest, iBlock)
+    !\
+    ! Calculate B0 and BFull
+    !/
+    B0_D = 0.0
+    if(UseB0)call get_b0(Xyz_D, B0_D)
+    if(UseCME)then
+       call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+            time_simulation, n_step, iteration_number)
+       Bcme_D = Bcme_D*Si2No_V(UnitB_)
+       B0_D = B0_D + Bcme_D
+    end if
+    FullB_D = State_V(Bx_:Bz_) + B0_D
+    
+    !\
+    ! Convert the squared Alfven wave amplitudes to
+    ! energy densities
+    !/
+    signBr = sign(1.0, sum(FullB_D*Xyz_D))
+    if(signBr < 0.0)then
+       !In this case WaveLast dominates over WaveFirst
+       !Currently, in the state vector WaveFirst is dominant
+       !Reorder this array
+       I0 = State_V(WaveLast_); I1 = State_V(WaveFirst_)
+       State_V(WaveFirst_) = I0; State_V(WaveLast_) = I1
+    end if
+    !Convert to the energy density
+    State_V(WaveFirst_:WaveLast_) = State_V(WaveFirst_:WaveLast_)*&
+         PoyntingFluxPerB*sqrt(State_V(Rho_))
+
+
+
+    PlotVar_V = 0.0
+    do iVar = 1, nPlotVar
+       NamePlotVar = NamePlotVar_V(iVar)
+
+       ! Default values for TecPlot variable name and TecPlot and IDL unit names
+       NameVarUserTec_I(iVar)  = NamePlotVar
+       NameUnitUserTec_I(iVar) = ' '
+       NameUnitUserIdl_I(iVar) = '?'
+
+       call lower_case(NamePlotVar)
+       String = NamePlotVar
+       call extract_fluid_name(String,iFluid)
+       select case(String)
+
+          ! Cartesian coordinates for non-Cartesian plots
+       case('x')
+          PlotVar_V(iVar) = Xyz_D(1)
+       case('y')
+          PlotVar_V(iVar) = Xyz_D(2)
+       case('z')
+          PlotVar_V(iVar) = Xyz_D(3)
+       case('r')
+          PlotVar_V(iVar) = norm2(Xyz_D)
+
+          ! BASIC MHD variables
+       case('rho')
+          PlotVar_V(iVar) = State_V(iRho)
+       case('rhoux','mx')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx) &
+                  -State_V(iRho)*OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)
+          end if
+       case('rhouy','my')
+          if (UseRotatingFrame) then
+                PlotVar_V(iVar) = State_V(iRhoUy) &
+                     +State_V(iRho)*OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy)
+          end if
+       case('rhouz','mz')
+          PlotVar_V(iVar) = State_V(iRhoUz)
+       case('bx')
+          PlotVar_V(iVar) = FullB_D(x_)
+       case('by')
+          PlotVar_V(iVar) = FullB_D(y_)
+       case('bz')
+          PlotVar_V(iVar) = FullB_D(z_)
+       case('e')
+          !Internal plus kinetic energy
+          PlotVar_V(iVar) = InvGammaMinus1_I(iFluid)*State_V(iPFluid) + &
+               0.50*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
+          ! Add (B0+B1)^2  
+          if(iFluid == 1 .and. IsMhd.and.UseB0) &
+               PlotVar_V(iVar) = PlotVar_V(iVar) + 0.5*sum(FullB_D**2)
+       case('p','pth')
+          PlotVar_V(iVar) = State_V(iPFluid)
+       case('n','t','temp')
+          ! Calculate the number density
+          if(UseMultiSpecies)then
+             do jVar = SpeciesFirst_, SpeciesLast_
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(jVar)/MassSpecies_V(jVar)
+             end do
+          else if(iFluid == 1 .and. UseMultiIon)then
+             ! Add up ion number densities
+             do iIon = 1, nIonFluid
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(iRhoIon_I(iIon))/MassIon_I(iIon)
+             end do
+          else
+             PlotVar_V(iVar) = State_V(iRho)/MassFluid_I(iFluid)
+          end if
+
+          ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+          if(String /= 'n')then
+             ! t = p/n
+             PlotVar_V(iVar) = State_V(iPFluid) / PlotVar_V(iVar)
+
+             !
+             if(nFluid==1 .and. .not.UseElectronPressure &
+                  .and. ElectronPressureRatio > 0.0) &
+                  PlotVar_V(iVar) = PlotVar_V(iVar)&
+                  /(1 + ElectronPressureRatio)
+          end if
+       case('te')
+          !\
+          ! Use the following equation
+          ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TeFraction*State_V(iP)/State_V(Rho_)
+       case('ti')
+          !\
+          ! Use the following equation
+          ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TiFraction*State_V(p_)/State_V(Rho_)
+       case('ux')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho) &
+                     - OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho)
+          end if
+       case('uy')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUy)/State_V(iRho) &
+                     + OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy) / State_V(iRho)
+          end if
+       case('uxrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUx)/State_V(iRho)
+
+       case('uyrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUy) / State_V(iRho)
+       case('uz','uzrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUz) / State_V(iRho)
+       case('b1x')
+          PlotVar_V(iVar) = State_V(Bx_)
+       case('b1y')
+          PlotVar_V(iVar) = State_V(By_)
+       case('b1z')
+          PlotVar_V(iVar) = State_V(Bz_)
+       case('pperp')
+          PlotVar_V(iVar) = (3*State_V(iPFluid) &
+               -State_V(iPpar))/2.0
+       case('peperp')
+          PlotVar_V(iVar) = (3*State_V(Pe_) &
+               -State_V(Pepar_))/2.0
+
+       case('pvecx')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUx) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(x_) ) /State_V(iRho)
+       case('pvecy')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUy) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(y_) ) /State_V(iRho)
+       case('pvecz')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUz) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(z_) ) /State_V(iRho)
+
+          ! Radial component variables
+
+       case('ur')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / (State_V(iRho)*norm2(Xyz_D))
+       case('rhour','mr')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / norm2(Xyz_D)
+       case('br')
+          PlotVar_V(iVar) = sum(FullB_D*Xyz_D) /norm2(Xyz_D)
+       case('b1r')
+          PlotVar_V(iVar) = sum(State_V(Bx_:Bz_)*Xyz_D)/norm2(Xyz_D)
+       case('er')
+          PlotVar_V(iVar) =  sum( &
+               Xyz_D*cross_product(FullB_D, State_V(iRhoUx:iRhoUz))) &
+               / (State_V(iRho)*norm2(Xyz_D))
+       case('pvecr')
+          tmp1Var = sum(FullB_D**2)
+          tmp2Var = sum(FullB_D*State_V(iRhoUx:iRhoUz))
+          PlotVar_V(iVar) = sum ( &
+               Xyz_D*( tmp1Var*State_V(iRhoUx:iRhoUz) &
+               -  tmp2Var*FullB_D ) &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('b2ur')
+          PlotVar_V(iVar) = 0.5*sum(FullB_D(:)**2) &
+               *sum( State_V(iRhoUx:iRhoUz)*Xyz_D &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('dx')
+          PlotVar_V(iVar) = CellSize_DB(x_,iBlock)
+       case('dy')
+          PlotVar_V(iVar) = CellSize_DB(y_,iBlock)
+       case('dz')
+          PlotVar_V(iVar) = CellSize_DB(z_,iBlock)
+       case('dtblk')
+          PlotVar_V(iVar) = dt_BLK(iBlock)
+       case('proc')
+          PlotVar_V(iVar) = iProc
+       case('blk','block')
+          PlotVar_V(iVar) = iBlock
+       case('node')
+          PlotVar_V(iVar) = iNode_B(iBlock)
+
+       case('ew','erad')
+          if(Ew_ == 1)then
+             if(UseWavePressure)PlotVar_V(iVar) = &
+                  sum(State_V(WaveFirst_:WaveLast_))
+          else
+             PlotVar_V(iVar) = State_V(Ew_)
+          end if
+
+       case default
+          ! Check if the name is one of the state variable names
+          do jVar = 1, nVar
+             if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
+             PlotVar_V(iVar) = State_V(jVar)
+             EXIT
+          end do
+       end select
+    end do ! iVar
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine set_thread_plotvar
+  !=========================
   subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
@@ -1290,7 +1625,7 @@ contains
        call get_restart_file_name(iBlock, NameThisComp//'/restartOUT/')
        call open_file(file=NameRestartFile, form='UNFORMATTED',&
             NameCaller=NameSub)
-       do k = 1,nK; do j = 1, nJ
+       do k = kMin_,kMax_; do j = jMin_, jMax_
           nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&

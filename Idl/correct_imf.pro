@@ -1,6 +1,7 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan,
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-pro correct_imf,wIn,xIn,inputfile,outputfile
+pro correct_imf,wIn,xIn,inputfile,outputfile,gsm=gsm
 
 ; wIn contains the upstream data with 15 columns:
 ;    yr mo dy hr mn sc ms bx by bz ux uy uz rho T
@@ -8,6 +9,7 @@ pro correct_imf,wIn,xIn,inputfile,outputfile
 ;    relative to the inflow boundary in units of km !
 ; inputfile is the name of the original IMF file 
 ; outputfile is the name of the corrected IMF file
+; if gsm=1 then convert from GSM to GSE before propagation and back afterward.
 
 w = wIn
 x = xIn
@@ -41,11 +43,24 @@ Time = log_time(w,['year','mo','dy','hr','mn','sc','msc'],'s')
 ; number of msec from 01-Jan-0000 00:00:00.000
 cdf_epoch, epoch0, w(0,iyr), w(0,imo), w(0,idy), /compute
 
+if keyword_set(gsm) then begin
+
+   ;; Add logtime converted to millisec
+   epoch = epoch0 + Time*1d3
+
+   b = transpose(w(*,7:9))
+   gsm_gse, b, epoch
+   w(*,7:9) = transpose(b)
+   
+   u = transpose(w(*,10:12))
+   gsm_gse, u, epoch
+   w(*,10:12) = transpose(u)
+endif
+   
 ; Calculate the time delay
 iux = 10
 TimeDelay = -x/w(*,iux)
 NewTime   = Time+TimeDelay
-
 
 ; Smooth out rarefaction waves
 ibx = 7
@@ -57,7 +72,7 @@ for iVar=ibx,nVar-1 do begin
                                 ; For rarefaction waves the negative
                                 ; velocity is increasing
                                 ; Maybe a more sophisticated shock
-                                ; recognition is needde
+                                ; recognition is needed
 
             if w(i1,iux) gt w(i1-1,iux) then begin
                 for i=i0+1,i1-1 do begin
@@ -89,6 +104,20 @@ print,'writing into output file=', outputfile
 help,NewTime
 print,NewTime(0:10)
 print,'min/max NewTime=', min(NewTime),max(NewTime)
+
+if keyword_set(gsm) then begin
+   ;; Add logtime converted to millisec
+   epoch = epoch0 + NewTime*1d3
+
+   b = transpose(w(*,7:9))
+   gse_gsm, b, epoch
+   w(*,7:9) = transpose(b)
+   
+   u = transpose(w(*,10:12))
+   gse_gsm, u, epoch
+   w(*,10:12) = transpose(u)
+endif
+
 
 openw,1,outputfile
 printf,1,'Corrected IMF based on ',inputfile

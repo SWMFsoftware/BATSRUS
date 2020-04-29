@@ -439,7 +439,7 @@ contains
 
   subroutine pic_set_cell_status
     use BATL_lib, ONLY: x_, y_, z_
-    use ModMain, ONLY: iteration_number
+    use ModMain, ONLY: iteration_number, Time_Simulation
 
     integer:: iStatus
     integer::nx, ny, nz, i, j, k, iRegion
@@ -454,52 +454,17 @@ contains
        ny = PatchSize_DI(y_, iRegion)
        nz = PatchSize_DI(z_, iRegion)
        do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
+           r = sqrt(real(j-ny/2 + 0.5)**2 + real(i-nx/2 + 0.5)**2)
 
-          !write(*,*)"iteration_number = ", iteration_number
-
-          ! if(j-ny/2 < ny/4.0 + 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 .and. &
-          !j-ny/2 > -ny/4.0 - 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 ) then
-
-          !    call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
-          ! endif
-
-          !r = sqrt(real(j-ny/2 + 0.5)**2 + real(i-nx/2 + 0.5)**2)
-          !if(.true.) then
-          !if(r < nx/2) then
-          !if(i >nx/2 + nx/4*mod(iteration_number,10)/10.0 .and. j > ny/2) then
-          ! if((r < nx/4 + nx/4*mod(iteration_number,10)/10.0 .and. &
-          !       r > nx/8 + nx/10*mod(iteration_number,10)/10.0) .or. &
-          !       r < -nx/10) then
-          ! j-ny/2 < ny/4.0 + 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 .and. &
-          !   j-ny/2 > -ny/4.0 - 2*ny/5.0*mod(iteration_number,10)/10.0 + (i - nx/2)*0.5 ) then
-
-          call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
-          !endif
-
-
-          ! if(iteration_number <= 2  ) then
-          !    !.and. (j<ny/2 .or. i > nx/2)
-          !    call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
-          !  else
-          !     if(i>nx/2) then
-          !        call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
-          !     endif
-          !  endif
-
+           if((r < nx/4 + nx/4*mod(Time_Simulation,10.0)/10.0 .and. &
+                r > nx/8 + nx/10*mod(Time_Simulation,10.0)/10.0) .or. &
+                r < nx/10) then
+              ! Setting PIC region for tests only. 
+              call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+           endif
 
        enddo; enddo; enddo
     enddo
-
-    ! do iRegion = 1, nRegionPic
-    !    nx = PatchSize_DI(x_, iRegion)
-    !    ny = PatchSize_DI(y_, iRegion)
-    !    nz = PatchSize_DI(z_, iRegion)
-    !    do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
-    !       call get_point_status(Status_I,nx, ny, nz, i, j, k, iStatus)
-    !       write(*,*) "pic_set_cell_status: i, j, k, status = ", i,j,k,iStatus               
-    !    enddo; enddo; enddo
-    ! enddo
-
   end subroutine pic_set_cell_status
 
   !============================================================================
