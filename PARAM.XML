@@ -1507,7 +1507,7 @@ spherical coordinates case.
 Default value for TypeBcBody2 is 'none'.
 </command>
 
-<command name="INNERBCPE2P">
+<command name="INNERBCPE">
 	 <parameter name="RatioPe2P" type="real" default="0"/>
 
 #INNERBCPE
