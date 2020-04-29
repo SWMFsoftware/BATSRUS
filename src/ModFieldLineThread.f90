@@ -75,10 +75,10 @@ module ModFieldLineThread
      real,pointer :: Xi_III(:,:,:)
      !\
      ! Magnetic field intensity, the inverse of heliocentric distance,
-     ! and the gen coord over the radial direction
+     ! and the gen coords
      ! Dimensionless.
      !/
-     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord1_III(:,:,:)
+     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord_DIII(:,:,:,:)
      !\
      ! The use:
      ! PeSi_I(iPoint) = PeSi_I(iPoint-1)*exp(-TGrav_III(iPoint)/TeSi_I(iPoint))
@@ -323,7 +323,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
-    nullify(BoundaryThreads_B(iBlock) % Coord1_III)
+    nullify(BoundaryThreads_B(iBlock) % Coord_DIII)
     nullify(BoundaryThreads_B(iBlock) % TGrav_III)
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
@@ -349,7 +349,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
-    deallocate(BoundaryThreads_B(iBlock) % Coord1_III)
+    deallocate(BoundaryThreads_B(iBlock) % Coord_DIII)
     deallocate(BoundaryThreads_B(iBlock) % TGrav_III)
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
@@ -413,7 +413,7 @@ contains
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          allocate(BoundaryThreads_B(iBlock) % Coord1_III(&
+          allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
@@ -569,7 +569,7 @@ contains
     BoundaryThreads_B(iBlock) % Xi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
-    BoundaryThreads_B(iBlock) % Coord1_III = 0.0
+    BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
     BoundaryThreads_B(iBlock) % TGrav_III = 0.0
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
@@ -615,7 +615,7 @@ contains
        RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
        call xyz_to_coord(XyzStart_D, Coord_D)
-       BoundaryThreads_B(iBlock) % Coord1_III(0, j, k) = Coord_D(r_)
+       BoundaryThreads_B(iBlock) % Coord_DIII(:,0, j, k) = Coord_D
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
@@ -672,7 +672,7 @@ contains
              XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call xyz_to_coord(Xyz_D, Coord_D)
-             BoundaryThreads_B(iBlock) % Coord1_III(-iPoint, j, k) = Coord_D(r_)
+             BoundaryThreads_B(iBlock) % Coord_DIII(:,-iPoint, j, k) = Coord_D
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
@@ -1231,7 +1231,7 @@ contains
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
+                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
                      1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
              end do
