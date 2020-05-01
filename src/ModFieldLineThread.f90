@@ -1777,31 +1777,48 @@ contains
   !==============================
   subroutine triangulate_thread_for_plot
     use BATL_lib, ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB
+         CoordMin_DB, CellSize_DB, x_, y_, z_
+    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModConst, ONLY: cTiny, cRadToDeg
     real    :: Coord1
     integer :: i, j, k, iBlock, nPoint
     !Coordinates and state vector at the point of intersection of thread with
     !the spherical coordinate  surface of the grid for plotting 
     real    :: State_VI(2+TiSi_,nThread), State_V(TiSi_), Coord_D(2)
+    real    :: Xyz_DI(3,nThread), Xyz_D(3)
     !\
     !Data for interpolation: stencil and weights
     !/
     real    :: Weight_I(3)
-    integer :: Stencil_I(3)
-    logical :: DoTest
+    integer :: iStencil_I(3), iError
+    integer, allocatable :: list(:), lptr(:), lend(:)
+    logical :: DoTest, IsTriangleFound = .false.
     character(len=*), parameter:: NameSub = 'save_thread_for_plot'
     !-------------------------
     if(.not.IsUniformGrid)call stop_mpi(&
          'Triangulation does dot work for non-uniform grid in threaded gap')
     call test_start(NameSub, DoTest)
+    allocate(list(6*(nThread - 2)), lptr(6*(nThread - 2)), lend(nThread))
     do i = -nGUniform, 0
        !\
        ! Generalized radial coordinate of the grid points
        !/
        Coord1 = Coord1Max + real(i)*dCoord1Uniform
+       
        call get_thread_point(Coord1, State_VI)
+       !Convert lon and lat to Cartesian coordinates on a unit sphere 
+       call trans(nThread, State_VI(1,:), State_VI(2,:), &
+            Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:))
        !\
        ! Triangulate
+       !/
+       call trmesh(nThread, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
+            list, lptr, lend, iError)
+       if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+       !\
+       ! Now, interpolate state vector to the points of a grid used for 
+       ! plotting
        !/
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
@@ -1809,19 +1826,39 @@ contains
           do k = kMin_, kMax_ 
              do j = jMin_, jMax_
                 Coord_D = CoordMin_DB(2:,iBlock) + &
-                     CellSize_DB(2:, iBlock)*[j - 0.50, k-0.50]
-                !
+                     CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
+                call sph_to_xyz(1.0, Coord_D(1), Coord_D(2), Xyz_D)
+                call find_triangle_sph(Xyz_D, nThread, Xyz_DI ,&
+                     list, lptr, lend,                         &
+                     Weight_I(1), Weight_I(2), Weight_I(3),    &
+                     IsTriangleFound,&
+                     iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+                if(.not.IsTriangleFound.or.sum(Weight_I)<1.0 - cTiny&
+                     .or.sum(Weight_I) > 1.0 + cTiny)then
+                   write(*,*)'Spherical triangulation failed'
+                   write(*,*)'At the location x,y,z=', Xyz_D
+                   if(.not.IsTriangleFound)then
+                      write(*,*)'There is no triagle'
+                   elseif(sum(Weight_I)<1.0 - cTiny)then
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' < 1'
+                   else
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' > 1'
+                   end if
+                end if
                 !\
                 ! interpolate Te and Ne to the ghost cell center:
                 !/ 
                 BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
-                    State_VI(3:, Stencil_I(1))*Weight_I(1) + &
-                    State_VI(3:, Stencil_I(2))*Weight_I(2) + &
-                    State_VI(3:, Stencil_I(3))*Weight_I(3)
+                    State_VI(3:, iStencil_I(1))*Weight_I(1) + &
+                    State_VI(3:, iStencil_I(2))*Weight_I(2) + &
+                    State_VI(3:, iStencil_I(3))*Weight_I(3)
              end do
           end do
        end do
     end do
+    deallocate(list, lptr, lend)
     call test_stop(NameSub, DoTest)
   end subroutine triangulate_thread_for_plot
   !=========================================
