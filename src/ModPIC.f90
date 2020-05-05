@@ -35,7 +35,7 @@ module ModPIC
   logical, public:: UseAdaptivePic = .false.
 
   ! The viriables for adaptive PIC criterias
-  integer, public :: nCriteriaPic
+  integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
   real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:)
   integer, public:: nPatchExtend_D(3)=0
@@ -457,13 +457,13 @@ contains
 
        ! Set active PIC cells for adaptive PIC
        if(UseAdaptivePic) then
-
+          
           ! Set PIC region limit
-          if(allocated(iRegionPicLimit_I)) &
-               allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
+          allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
+          InsidePicRegionLimit_C = 1.0 ! initialized as inside
           ! Set user defined fixed pic regions
-          if(allocated(iRegionPic_I)) &
-               allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
+          allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
+          InsidePicRegion_C = 1.0
 
           call pic_find_node
           ! Calculate the pic region criteria
@@ -985,6 +985,11 @@ contains
 
           if(.not. allocated(J_D)) allocate(J_D(3))
 
+          if(nCriteriaPic==0) then
+             IsPicCrit_CB = iPicOn_             
+             RETURN
+          end if
+          
           do iBlock=1,nBlock       
 
              if(Unused_B(iBlock)) CYCLE
