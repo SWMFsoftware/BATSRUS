@@ -958,14 +958,16 @@ pro animate_data
            if keyword_set(timediff) then begin
               if npict eq 0 then begin
                  timeprev = time
+                 itprev   = it
                  wprev = w
                  w = 0.0*w
               endif else begin
                  dt = time - timeprev
-                 if dt eq 0 then dt=1
+                 if dt eq 0 then dt = it - itprev
                  w = (w - wprev)/dt
                  wprev = wprev + w*dt
                  timeprev = time
+                 itprev   = it
               endelse
            endif
 
@@ -1088,14 +1090,16 @@ pro animate_data
            if keyword_set(timediff) then begin
               if ipict eq 0 then begin
                  timeprev = time
+                 itprev   = it
                  wprev = w
                  w = 0.0*w
               endif else begin
                  dt = time - timeprev
-                 if dt eq 0 then dt=1
+                 if dt eq 0 then dt = it - itprev
                  w = (w - wprev)/dt
                  wprev = wprev + w*dt
                  timeprev = time
+                 itprev   = it
               endelse
            endif
 
