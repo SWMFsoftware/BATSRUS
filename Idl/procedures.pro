@@ -961,8 +961,10 @@ pro animate_data
                  wprev = w
                  w = 0.0*w
               endif else begin
-                 w = (w - wprev)/(time - timeprev)
-                 wprev = wprev + w*(time - timeprev)
+                 dt = time - timeprev
+                 if dt eq 0 then dt=1
+                 w = (w - wprev)/dt
+                 wprev = wprev + w*dt
                  timeprev = time
               endelse
            endif
@@ -1089,8 +1091,10 @@ pro animate_data
                  wprev = w
                  w = 0.0*w
               endif else begin
-                 w = (w - wprev)/(time - timeprev)
-                 wprev = wprev + w*(time - timeprev)
+                 dt = time - timeprev
+                 if dt eq 0 then dt=1
+                 w = (w - wprev)/dt
+                 wprev = wprev + w*dt
                  timeprev = time
               endelse
            endif
