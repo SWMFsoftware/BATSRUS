@@ -8,7 +8,6 @@ module ModPIC
        test_start, test_stop, iProc, iComm
 
   use ModGridInfo,  ONLY: iPicOn_, iPicOff_, &
-       CritPhy_, CritGeo_, CritEmpty_, &
        get_point_status, &
        set_point_status
   use ModFreq
