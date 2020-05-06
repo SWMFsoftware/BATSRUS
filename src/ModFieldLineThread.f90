@@ -264,11 +264,12 @@ module ModFieldLineThread
 contains
   !============================================================================
   subroutine read_threads(NameCommand, iSession)
-    use ModSize, ONLY: MaxBlock
+    use ModSize,      ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
+    use ModMain,      ONLY: NameThisComp
     character(len=*), intent(in):: NameCommand
     integer, intent(in):: iSession
-    integer :: iBlock
+    integer :: iBlock, iError
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_threads'
     !--------------------------------------------------------------------------
@@ -314,6 +315,12 @@ contains
           IsUniformGrid = .true.
           iMax = 0
           Coord1Norm0 = 0.0
+          call read_var('UseTriangulation', UseTriangulation, iError)
+          if(iError /= 0)then
+             UseTriangulation = .false.
+             if(iProc==0)write(*,'(a)')&
+                  NameThisComp//': Missing UseTriangulation is set to F'
+          end if
        else
           IsUniformGrid = .false.
           iMax = 1
@@ -1710,6 +1717,7 @@ contains
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, r_
     use ModInterpolate, ONLY: linear
+    use ModNumConst, ONLY: cHalfPi
     real,  intent(in) :: Coord1
     real, intent(out) :: State_VI(2+TiSi_, nThread)
     integer :: i, j, k, iBlock, nPoint, iBuff
@@ -1735,6 +1743,8 @@ contains
              ! Fill in an array with lon,lat values
              StateThread_VI(1:2, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
+             StateThread_VI(1, 1 - nPoint:0) = cHalfPi - &
+                  StateThread_VI(1, 1 - nPoint:0)
              !\
              ! Fill in an array with NeSi and TeSi values
              StateThread_VI(2+PSi_, 1 - nPoint:0) = &
@@ -1846,6 +1856,7 @@ contains
                       write(*,*)'The sum of interplolation weights=',&
                            sum(Weight_I),' > 1'
                    end if
+                   call stop_mpi('Interpolation on triangulated sphere fails')
                 end if
                 !\
                 ! interpolate Te and Ne to the ghost cell center:
