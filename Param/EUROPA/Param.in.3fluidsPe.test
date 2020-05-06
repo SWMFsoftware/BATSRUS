@@ -205,8 +205,8 @@ user            TypeResistivity
 !!! OUTPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #SAVERESTART
-F
-10000
+T
+100
 -1
 
 #RESTARTOUTFILE
@@ -222,7 +222,14 @@ VAR step date time      StringLog
 -1.                     DtSaveLogfile [sec]
 mlop recop chxop mlo2p reco2p chxo2p mloxp recoxp chxoxp OpRhopnt O2pRhopnt OXpRhopnt mloppnt recoppnt chxoppnt mlo2ppnt reco2ppnt chxo2ppnt mloxppnt recoxppnt chxoxppnt Pepnt
 
-#SAVEPLOT
+#SATELLITE
+1                       nSatellite
+MHD traj                StringSatellite
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite_3fpe_e4.dat   NameTrajectoryFile
+
+SAVEPLOT
 1
 cut  MHD idl_ascii
 100
