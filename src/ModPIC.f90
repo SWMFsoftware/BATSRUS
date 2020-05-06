@@ -11,7 +11,6 @@ module ModPIC
        get_point_status, &
        set_point_status
   use ModFreq
-  use CON_time,     ONLY: DoTimeAccurate
   ! Variables and methods for coupling BATSRUS with a PIC code
 
   implicit none
