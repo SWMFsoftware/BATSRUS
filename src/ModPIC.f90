@@ -11,7 +11,6 @@ module ModPIC
        get_point_status, &
        set_point_status
   use ModFreq
-  use CON_time,     ONLY: DoTimeAccurate
   ! Variables and methods for coupling BATSRUS with a PIC code
 
   implicit none
@@ -35,7 +34,7 @@ module ModPIC
   logical, public:: UseAdaptivePic = .false.
 
   ! The viriables for adaptive PIC criterias
-  integer, public :: nCriteriaPic
+  integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
   real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:)
   integer, public:: nPatchExtend_D(3)=0
@@ -459,11 +458,11 @@ contains
        if(UseAdaptivePic) then
 
           ! Set PIC region limit
-          if(allocated(iRegionPicLimit_I)) &
-               allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
+          allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
+          InsidePicRegionLimit_C = 1.0 ! initialized as inside
           ! Set user defined fixed pic regions
-          if(allocated(iRegionPic_I)) &
-               allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
+          allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
+          InsidePicRegion_C = 1.0
 
           call pic_find_node
           ! Calculate the pic region criteria
@@ -576,13 +575,13 @@ contains
        do iBlock=1,nBlock
 
           if(allocated(iRegionPic_I)) &
-              call block_inside_regions(iRegionPic_I, iBlock, &
-              size(InsidePicRegion_C), 'center', &
-              Value_I=InsidePicRegion_C)
+               call block_inside_regions(iRegionPic_I, iBlock, &
+               size(InsidePicRegion_C), 'center', &
+               Value_I=InsidePicRegion_C)
           if(allocated(iRegionPicLimit_I)) &
-              call block_inside_regions(iRegionPicLimit_I, iBlock, &
-              size(InsidePicRegionLimit_C), 'center', &
-              Value_I=InsidePicRegionLimit_C)
+               call block_inside_regions(iRegionPicLimit_I, iBlock, &
+               size(InsidePicRegionLimit_C), 'center', &
+               Value_I=InsidePicRegionLimit_C)
 
           do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -602,7 +601,7 @@ contains
                      IndexPatch_D(x_), &
                      IndexPatch_D(y_), &
                      IndexPatch_D(z_), iPicOn_)
-              
+
              else if(IsPicCrit_CB(i,j,k,iBlock)>0.0) then
                 ! if(InsidePicRegionLimit_C(i,j,k)<=0.0) CYCLE
                 ! Generate all extended patch indices
@@ -623,407 +622,414 @@ contains
                          ! set the point status
                          if(IsPointInside) then
                             call set_point_status(Status_I, nX, nY, nZ, &
-                              IndexPatch_D(x_), &
-                              IndexPatch_D(y_), &
-                              IndexPatch_D(z_), iPicOn_)
+                                 IndexPatch_D(x_), &
+                                 IndexPatch_D(y_), &
+                                 IndexPatch_D(z_), iPicOn_)
                          end if
-                      end do; end do; end do ! end loop extention on the pic domain
+                      end do
+                   end do
+                end do ! end loop extention on the pic domain
 
-                   end if 
-                end do
-             end do; end do; end do
+             end if
+          end do
+       end do; end do; end do
 
-          end do ! end loop thorugh regions
+    end do ! end loop thorugh regions
 
-          ! Global MPI reduction for Status_I array
-          call MPI_Allreduce(MPI_IN_PLACE, Status_I, nSizeStatus, MPI_INT, MPI_BOR, &
-               iComm, iError)
+    ! Global MPI reduction for Status_I array
+    call MPI_Allreduce(MPI_IN_PLACE, Status_I, nSizeStatus, MPI_INT, MPI_BOR, &
+         iComm, iError)
 
-          ! if(iProc==0) print*, "!!!! ", sum(Status_I)
+    ! if(iProc==0) print*, "!!!! ", sum(Status_I)
 
-          ! do iRegion = 1, nRegionPic
-          !    nx = PatchSize_DI(x_, iRegion)
-          !    ny = PatchSize_DI(y_, iRegion)
-          !    nz = PatchSize_DI(z_, iRegion)
-          !    do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
-          !        r = sqrt(real(j-ny/2 + 0.5)**2 + real(i-nx/2 + 0.5)**2)
+    ! do iRegion = 1, nRegionPic
+    !    nx = PatchSize_DI(x_, iRegion)
+    !    ny = PatchSize_DI(y_, iRegion)
+    !    nz = PatchSize_DI(z_, iRegion)
+    !    do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
+    !        r = sqrt(real(j-ny/2 + 0.5)**2 + real(i-nx/2 + 0.5)**2)
 
-          !        if((r < nx/4 + nx/4*mod(Time_Simulation,10.0)/10.0 .and. &
-          !             r > nx/8 + nx/10*mod(Time_Simulation,10.0)/10.0) .or. &
-          !             r < nx/10) then
-          !           ! Setting PIC region for tests only. 
-          !           call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
-          !        endif
+    !        if((r < nx/4 + nx/4*mod(Time_Simulation,10.0)/10.0 .and. &
+    !             r > nx/8 + nx/10*mod(Time_Simulation,10.0)/10.0) .or. &
+    !             r < nx/10) then
+    !           ! Setting PIC region for tests only. 
+    !           call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
+    !        endif
 
-          !    enddo; enddo; enddo
-          ! enddo
+    !    enddo; enddo; enddo
+    ! enddo
 
-        end subroutine pic_set_cell_status
+  end subroutine pic_set_cell_status
 
-        logical function is_inside_pic_grid(IndexPatch_D, iRegion)
+  logical function is_inside_pic_grid(IndexPatch_D, iRegion)
 
-          integer, intent(in) :: IndexPatch_D(3)
-          integer, intent(in) :: iRegion
+    integer, intent(in) :: IndexPatch_D(3)
+    integer, intent(in) :: iRegion
 
-          if(any(IndexPatch_D < 0) .or. &
-               any(IndexPatch_D >= PatchSize_DI(:, iRegion))) then
-             is_inside_pic_grid = .false.
-          else 
-             is_inside_pic_grid = .true.
-          end if
+    if(any(IndexPatch_D < 0) .or. &
+         any(IndexPatch_D >= PatchSize_DI(:, iRegion))) then
+       is_inside_pic_grid = .false.
+    else 
+       is_inside_pic_grid = .true.
+    end if
 
-        end function is_inside_pic_grid
+  end function is_inside_pic_grid
 
-        !============================================================================
-        subroutine is_inside_active_pic_region(xyz_D, IsInside)
-          ! It should be a function instead of a subroutine. --Yuxi
-          use BATL_lib, ONLY: nDim, x_, y_, z_
+  !============================================================================
+  subroutine is_inside_active_pic_region(xyz_D, IsInside)
+    ! It should be a function instead of a subroutine. --Yuxi
+    use BATL_lib, ONLY: nDim, x_, y_, z_
 
-          real, intent(in) :: Xyz_D(nDim)
-          logical, intent(out):: IsInside
-          real:: dshift_D(3)
+    real, intent(in) :: Xyz_D(nDim)
+    logical, intent(out):: IsInside
+    real:: dshift_D(3)
 
-          integer:: iRegion, iStatus, nX, nY, nZ
-          integer:: Index_D(3) = 0
-          integer:: dI = 0, dJ = 0, dK = 0
-          !-----------------------------------------------
-          iRegion = 1
+    integer:: iRegion, iStatus, nX, nY, nZ
+    integer:: Index_D(3) = 0
+    integer:: dI = 0, dJ = 0, dK = 0
+    !-----------------------------------------------
+    iRegion = 1
 
-          IsInside = .false. 
+    IsInside = .false. 
 
-          if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
-               (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return 
-          if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-               (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return
+    if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
+         (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return 
+    if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
+         (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return
 
-          nX = PatchSize_DI(x_, iRegion)
-          nY = PatchSize_DI(y_, iRegion)
-          nZ = PatchSize_DI(z_, iRegion)       
+    nX = PatchSize_DI(x_, iRegion)
+    nY = PatchSize_DI(y_, iRegion)
+    nZ = PatchSize_DI(z_, iRegion)       
 
-          do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
+    do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
 
-             dshift_D(x_) = dI
-             dshift_D(y_) = dJ
-             dshift_D(z_) = dK
+       dshift_D(x_) = dI
+       dshift_D(y_) = dJ
+       dshift_D(z_) = dK
 
-             ! Patch cell index
-             Index_D(1:nDim) = floor((Xyz_D + dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - XyzMinPic_DI(1:nDim,iRegion))/ &
-                  (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
+       ! Patch cell index
+       Index_D(1:nDim) = floor((Xyz_D + dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - XyzMinPic_DI(1:nDim,iRegion))/ &
+            (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
 
-             call get_point_status(Status_I, nx, ny, nz, Index_D(x_), Index_D(y_), &
-                  Index_D(z_), iStatus)
+       call get_point_status(Status_I, nx, ny, nz, Index_D(x_), Index_D(y_), &
+            Index_D(z_), iStatus)
 
-             if(iStatus==iPicOff_) return   
+       if(iStatus==iPicOff_) return   
 
-          enddo; enddo; enddo
-          IsInside = .true.
-        end subroutine is_inside_active_pic_region
+    enddo; enddo; enddo
+    IsInside = .true.
+  end subroutine is_inside_active_pic_region
 
-        !============================================================================
-        integer function pic_find_region(iBlock,i,j,k)
-          ! If a cell is inside the PIC region, return 1;
-          ! otherwise, return 0;
-          use BATL_lib, ONLY: nDim, Xyz_DGB
+  !============================================================================
+  integer function pic_find_region(iBlock,i,j,k)
+    ! If a cell is inside the PIC region, return 1;
+    ! otherwise, return 0;
+    use BATL_lib, ONLY: nDim, Xyz_DGB
 
-          integer, intent(in) :: iBlock,i,j,k
+    integer, intent(in) :: iBlock,i,j,k
 
-          integer:: iStatus
-          integer:: iRegion
-          real:: Xyz_D(nDim), Pic_D(nDim)
+    integer:: iStatus
+    integer:: iRegion
+    real:: Xyz_D(nDim), Pic_D(nDim)
 
-          character(len=*), parameter:: NameSub = 'pic_find_region'
-          !--------------------------------------------------------------------------
-          Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
+    character(len=*), parameter:: NameSub = 'pic_find_region'
+    !--------------------------------------------------------------------------
+    Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
 
-          iStatus=0
-          do iRegion = 1, nRegionPic
-             call mhd_to_pic_vec(iRegion, Xyz_D, Pic_D)
+    iStatus=0
+    do iRegion = 1, nRegionPic
+       call mhd_to_pic_vec(iRegion, Xyz_D, Pic_D)
 
-             if(all(Pic_D > 0 ).and.&
-                  all(Pic_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
-                  iStatus = 1
-          enddo
+       if(all(Pic_D > 0 ).and.&
+            all(Pic_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
+            iStatus = 1
+    enddo
 
-          pic_find_region=iStatus
-        end function pic_find_region
+    pic_find_region=iStatus
+  end function pic_find_region
 
-        !============================================================================
-        integer function pic_find_region_active(iBlock,i,j,k)
-          ! If a cell is inside the PIC region, return 1;
-          ! otherwise, return 0;
-          use BATL_lib, ONLY: nDim, Xyz_DGB
+  !============================================================================
+  integer function pic_find_region_active(iBlock,i,j,k)
+    ! If a cell is inside the PIC region, return 1;
+    ! otherwise, return 0;
+    use BATL_lib, ONLY: nDim, Xyz_DGB
 
-          integer, intent(in) :: iBlock,i,j,k
+    integer, intent(in) :: iBlock,i,j,k
 
-          integer:: iStatus
-          integer:: iRegion
-          real:: Xyz_D(nDim)
-          logical :: IsInside
+    integer:: iStatus
+    integer:: iRegion
+    real:: Xyz_D(nDim)
+    logical :: IsInside
 
-          character(len=*), parameter:: NameSub = 'pic_find_region_active'
-          !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'pic_find_region_active'
+    !--------------------------------------------------------------------------
 
-          iStatus=0
+    iStatus=0
 
-          Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
+    Xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
 
-          call is_inside_active_pic_region(Xyz_D, IsInside)
+    call is_inside_active_pic_region(Xyz_D, IsInside)
 
-          if (IsInside) iStatus=1
-          pic_find_region_active=iStatus
+    if (IsInside) iStatus=1
+    pic_find_region_active=iStatus
 
-        end function pic_find_region_active
+  end function pic_find_region_active
 
-        !============================================================================
-        integer function pic_find_region_criteria(iBlock,i,j,k)
-          ! If a cell is inside the PIC region, return 1;
-          ! otherwise, return 0;
-          use BATL_lib, ONLY: nDim, Xyz_DGB
+  !============================================================================
+  integer function pic_find_region_criteria(iBlock,i,j,k)
+    ! If a cell is inside the PIC region, return 1;
+    ! otherwise, return 0;
+    use BATL_lib, ONLY: nDim, Xyz_DGB
 
-          integer, intent(in) :: iBlock,i,j,k
+    integer, intent(in) :: iBlock,i,j,k
 
-          integer:: iStatus
-          integer:: iRegion
-          real:: Xyz_D(nDim)
-          logical :: IsInside
+    integer:: iStatus
+    integer:: iRegion
+    real:: Xyz_D(nDim)
+    logical :: IsInside
 
-          character(len=*), parameter:: NameSub = 'pic_find_region_criteria'
-          !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'pic_find_region_criteria'
+    !--------------------------------------------------------------------------
 
-          iStatus=0
+    iStatus=0
 
-          if (IsPicCrit_CB(i, j, k, iBlock) >= iPicOn_) iStatus = 1
+    if (IsPicCrit_CB(i, j, k, iBlock) >= iPicOn_) iStatus = 1
 
-          pic_find_region_criteria=iStatus
+    pic_find_region_criteria=iStatus
 
-        end function pic_find_region_criteria
+  end function pic_find_region_criteria
 
 
-        !============================================================================
-        subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
-          ! Transfer Pic coordinates to Mhd coordinates. Origin_D
-          ! is the origin of the PIC coordinates.
+  !============================================================================
+  subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
+    ! Transfer Pic coordinates to Mhd coordinates. Origin_D
+    ! is the origin of the PIC coordinates.
 
-          use BATL_lib, ONLY: nDim
+    use BATL_lib, ONLY: nDim
 
-          integer, intent(in) :: iRegion
-          real, intent(in)    :: CoordIn_D(nDim)
-          real, intent(out)   :: CoordOut_D(nDim)
-          real, intent(in), optional :: OriginIn_D(nDim)
-          real :: Origin_D(nDim), Coord_D(nDim), r_DD(3, 3)
+    integer, intent(in) :: iRegion
+    real, intent(in)    :: CoordIn_D(nDim)
+    real, intent(out)   :: CoordOut_D(nDim)
+    real, intent(in), optional :: OriginIn_D(nDim)
+    real :: Origin_D(nDim), Coord_D(nDim), r_DD(3, 3)
 
-          integer:: iDim, jDim
+    integer:: iDim, jDim
 
-          logical:: DoTest
-          character(len=*), parameter:: NameSub = 'pic_to_mhd_vec'
-          !--------------------------------------------------------------------------
-          call test_start(NameSub, DoTest)
-          if(DoTest)write(*,*) NameSub,' is called'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pic_to_mhd_vec'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
-          Origin_D = XyzMinPic_DI(:,iRegion)
-          if(present(OriginIn_D)) Origin_D = OriginIn_D
+    Origin_D = XyzMinPic_DI(:,iRegion)
+    if(present(OriginIn_D)) Origin_D = OriginIn_D
 
-          Coord_D = 0
+    Coord_D = 0
 
-          ! R_pic2mhd = transpose(R_mhd2pic)
-          Coord_D = CoordIn_D
-          do iDim = 1, nDim; do jDim = 1, nDim
-             R_DD(iDim,jDim) = r_DDI(jDim,iDim,iRegion)
-          enddo; enddo
+    ! R_pic2mhd = transpose(R_mhd2pic)
+    Coord_D = CoordIn_D
+    do iDim = 1, nDim; do jDim = 1, nDim
+       R_DD(iDim,jDim) = r_DDI(jDim,iDim,iRegion)
+    enddo; enddo
 
-          CoordOut_D = 0
-          do iDim = 1, nDim
-             CoordOut_D(iDim) = sum(R_DD(iDim,1:nDim)*Coord_D)
-          enddo
+    CoordOut_D = 0
+    do iDim = 1, nDim
+       CoordOut_D(iDim) = sum(R_DD(iDim,1:nDim)*Coord_D)
+    enddo
 
-          CoordOut_D = CoordOut_D + Origin_D
+    CoordOut_D = CoordOut_D + Origin_D
 
-          if(DoTest) then
-             write(*,*) 'Origin_D   = ', Origin_D
-             write(*,*) 'CoordIn_D  = ', CoordIn_D
-             write(*,*) 'CoordOut_D = ', CoordOut_D
-             do iDim = 1, nDim
-                write(*,*) 'iDim = ', iDim, 'R = ', R_DD(iDim,:)
-             enddo
-          endif
+    if(DoTest) then
+       write(*,*) 'Origin_D   = ', Origin_D
+       write(*,*) 'CoordIn_D  = ', CoordIn_D
+       write(*,*) 'CoordOut_D = ', CoordOut_D
+       do iDim = 1, nDim
+          write(*,*) 'iDim = ', iDim, 'R = ', R_DD(iDim,:)
+       enddo
+    endif
 
-          call test_stop(NameSub, DoTest)
-        end subroutine pic_to_mhd_vec
-        !============================================================================
+    call test_stop(NameSub, DoTest)
+  end subroutine pic_to_mhd_vec
+  !============================================================================
 
-        subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
-          ! DoMhd2Pic == true: transfer Mhd coordinates to a coordinates
-          !   that is parallel to the PIC coordinates but the origin point is
-          !   defined by Origin_D.
+  subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
+    ! DoMhd2Pic == true: transfer Mhd coordinates to a coordinates
+    !   that is parallel to the PIC coordinates but the origin point is
+    !   defined by Origin_D.
 
-          use BATL_lib, ONLY: nDim
+    use BATL_lib, ONLY: nDim
 
-          integer, intent(in) :: iRegion
-          real, intent(in)    :: CoordIn_D(nDim)
-          real, intent(out)   :: CoordOut_D(nDim)
-          real, intent(in), optional :: OriginIn_D(nDim)
-          real :: Origin_D(nDim), Coord_D(nDim), r_DD(3, 3)
+    integer, intent(in) :: iRegion
+    real, intent(in)    :: CoordIn_D(nDim)
+    real, intent(out)   :: CoordOut_D(nDim)
+    real, intent(in), optional :: OriginIn_D(nDim)
+    real :: Origin_D(nDim), Coord_D(nDim), r_DD(3, 3)
 
-          integer :: iDim
+    integer :: iDim
 
-          logical:: DoTest
-          character(len=*), parameter:: NameSub = 'mhd_to_pic_vec'
-          !--------------------------------------------------------------------------
-          call test_start(NameSub, DoTest)
-          if(DoTest)write(*,*) NameSub,' is called'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'mhd_to_pic_vec'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
-          Origin_D = XyzMinPic_DI(:,iRegion)
-          if(present(OriginIn_D)) Origin_D = OriginIn_D
+    Origin_D = XyzMinPic_DI(:,iRegion)
+    if(present(OriginIn_D)) Origin_D = OriginIn_D
 
-          Coord_D = CoordIn_D - Origin_D
+    Coord_D = CoordIn_D - Origin_D
 
-          CoordOut_D = 0
-          do iDim = 1, nDim
-             CoordOut_D(iDim) = sum(r_DDI(iDim,1:nDim,iRegion)*Coord_D)
-          enddo
+    CoordOut_D = 0
+    do iDim = 1, nDim
+       CoordOut_D(iDim) = sum(r_DDI(iDim,1:nDim,iRegion)*Coord_D)
+    enddo
 
-          if(DoTest) then
-             write(*,*) 'Origin_D   = ', Origin_D
-             write(*,*) 'CoordIn_D  = ', CoordIn_D
-             write(*,*) 'CoordOut_D = ', CoordOut_D
-             Do iDim = 1, nDim
-                write(*,*) 'iDim = ', iDim, 'R = ', r_DD(iDim,:)
-             enddo
-          endif
+    if(DoTest) then
+       write(*,*) 'Origin_D   = ', Origin_D
+       write(*,*) 'CoordIn_D  = ', CoordIn_D
+       write(*,*) 'CoordOut_D = ', CoordOut_D
+       Do iDim = 1, nDim
+          write(*,*) 'iDim = ', iDim, 'R = ', r_DD(iDim,:)
+       enddo
+    endif
 
-          call test_stop(NameSub, DoTest)
-        end subroutine mhd_to_pic_vec
-        !============================================================================
+    call test_stop(NameSub, DoTest)
+  end subroutine mhd_to_pic_vec
+  !============================================================================
 
-        subroutine coord_to_patch_index(iRegion, CoordPicIn_D, IndexPatchOut_D)
+  subroutine coord_to_patch_index(iRegion, CoordPicIn_D, IndexPatchOut_D)
 
-          ! This subroutine takes the PIC xyz coordinate and output
-          ! the patch index in IndexPatchOut_D
+    ! This subroutine takes the PIC xyz coordinate and output
+    ! the patch index in IndexPatchOut_D
 
-          use BATL_lib, ONLY: nDim
+    use BATL_lib, ONLY: nDim
 
-          integer, intent(in) :: iRegion
-          real, intent(in) :: CoordPicIn_D(nDim) ! xyz in PIC coordinates
-          integer:: IndexPatchOut_D(nDim)
+    integer, intent(in) :: iRegion
+    real, intent(in) :: CoordPicIn_D(nDim) ! xyz in PIC coordinates
+    integer:: IndexPatchOut_D(nDim)
 
-          logical:: DoTest
-          character(len=*), parameter:: NameSub = 'coord_to_patch_index'
-          !--------------------------------------------------------------------------
-          call test_start(NameSub, DoTest)
-          if(DoTest)write(*,*) NameSub,' is called'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'coord_to_patch_index'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
-          IndexPatchOut_D(1:nDim) = floor( (CoordPicIn_D - XyzMinPic_DI(1:nDim, iRegion))/ &
-               (DxyzPic_DI(1:nDim, iRegion) * nCellPerPatch) )
+    IndexPatchOut_D(1:nDim) = floor( (CoordPicIn_D - XyzMinPic_DI(1:nDim, iRegion))/ &
+         (DxyzPic_DI(1:nDim, iRegion) * nCellPerPatch) )
 
-          call test_stop(NameSub, DoTest)
-        end subroutine coord_to_patch_index
-        !============================================================================
+    call test_stop(NameSub, DoTest)
+  end subroutine coord_to_patch_index
+  !============================================================================
 
-        subroutine patch_index_to_coord(iRegion, IndexPatchIn_D, NameCoord, &
-                                        CoordOut_D)
-          
-          ! This subroutine takes the adaptive PIC patch index as input, and
-          ! output the corresponding MHD or PIC coordinates depends on NameCoord
+  subroutine patch_index_to_coord(iRegion, IndexPatchIn_D, NameCoord, &
+       CoordOut_D)
 
-          use BATL_lib, ONLY: nDim
+    ! This subroutine takes the adaptive PIC patch index as input, and
+    ! output the corresponding MHD or PIC coordinates depends on NameCoord
 
-          integer, intent(in) :: iRegion
-          integer, intent(in) :: IndexPatchIn_D(nDim)
-          character(len=3), intent(in) :: NameCoord
-          real, intent(out) :: CoordOut_D(nDim)
+    use BATL_lib, ONLY: nDim
 
-          real :: CoordPic_D(nDim), CoordMhd_D(nDim)
+    integer, intent(in) :: iRegion
+    integer, intent(in) :: IndexPatchIn_D(nDim)
+    character(len=3), intent(in) :: NameCoord
+    real, intent(out) :: CoordOut_D(nDim)
 
-          logical:: DoTest
-          character(len=*), parameter:: NameSub = 'patch_index_to_coord'
-          !--------------------------------------------------------------------------
-          call test_start(NameSub, DoTest)
-          if(DoTest)write(*,*) NameSub,' is called'
+    real :: CoordPic_D(nDim), CoordMhd_D(nDim)
 
-          CoordMhd_D(1:nDim) = IndexPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim, iRegion)*nCellPerPatch) + &
-                               XyzMinPic_DI(1:nDim, iRegion)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'patch_index_to_coord'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
-          if(NameCoord=='Mhd') then
-             CoordOut_D = CoordMhd_D
-          else if(NameCoord=='Pic') then
-             call mhd_to_pic_vec(iRegion,CoordMhd_D,CoordPic_D)
-             CoordOut_D = CoordPic_D
-          else 
-            if(iProc==0) call stop_mpi(NameSub// &
-               ': NameCoord ' // NameCoord // ' not defined!')
-          end if
-               
-          call test_stop(NameSub, DoTest)
-        end subroutine patch_index_to_coord
-        !============================================================================
+    CoordMhd_D(1:nDim) = IndexPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim, iRegion)*nCellPerPatch) + &
+         XyzMinPic_DI(1:nDim, iRegion)
 
+    if(NameCoord=='Mhd') then
+       CoordOut_D = CoordMhd_D
+    else if(NameCoord=='Pic') then
+       call mhd_to_pic_vec(iRegion,CoordMhd_D,CoordPic_D)
+       CoordOut_D = CoordPic_D
+    else 
+       if(iProc==0) call stop_mpi(NameSub// &
+            ': NameCoord ' // NameCoord // ' not defined!')
+    end if
 
-        subroutine calc_pic_criteria
+    call test_stop(NameSub, DoTest)
+  end subroutine patch_index_to_coord
+  !============================================================================
 
-          ! This subroutine takes the PIC xyz coordinate and output
-          ! the patch index in IndexPatchOut_D
 
-          use BATL_lib,     ONLY: nDim, nI, nJ, nK, nBlock, x_, y_, z_, &
-               iNode_B, Unused_B, iProc, MaxNode, &
-               block_inside_regions, get_region_indexes, &
-               Xyz_DGB
-          use BATL_size,    ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-          use ModAdvance,   ONLY: State_VGB, Bx_, By_, Bz_, Rho_
-          use ModB0,        ONLY: B0_DGB
-          use ModCurrent,   ONLY: get_current
+  subroutine calc_pic_criteria
 
-          integer :: iBlock, i, j, k, iCriteria
-          real :: CriteriaValue
-          real, allocatable :: j_D(:)
-          real :: jj, b
-          logical:: DoTest
+    ! This subroutine takes the PIC xyz coordinate and output
+    ! the patch index in IndexPatchOut_D
 
-          character(len=*), parameter:: NameSub = 'calc_pic_criteria'
-          !---------------------------------------------------------------。-----------
-          call test_start(NameSub, DoTest)
-          if(DoTest)write(*,*) NameSub,' is called'
+    use BATL_lib,     ONLY: nDim, nI, nJ, nK, nBlock, x_, y_, z_, &
+         iNode_B, Unused_B, iProc, MaxNode, &
+         block_inside_regions, get_region_indexes, &
+         Xyz_DGB
+    use BATL_size,    ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance,   ONLY: State_VGB, Bx_, By_, Bz_, Rho_
+    use ModB0,        ONLY: B0_DGB
+    use ModCurrent,   ONLY: get_current
 
-          if(.not. allocated(J_D)) allocate(J_D(3))
+    integer :: iBlock, i, j, k, iCriteria
+    real :: CriteriaValue
+    real, allocatable :: j_D(:)
+    real :: jj, b
+    logical:: DoTest
 
-          do iBlock=1,nBlock       
+    character(len=*), parameter:: NameSub = 'calc_pic_criteria'
+    !---------------------------------------------------------------。-----------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
-             if(Unused_B(iBlock)) CYCLE
-             if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
+    if(.not. allocated(J_D)) allocate(J_D(3))
 
-             do k=1,nK; do j=1,nJ; do i=1,nI
+    if(nCriteriaPic==0) then
+       IsPicCrit_CB = iPicOn_             
+       RETURN
+    end if
 
-                call get_current(i, j, k, iBlock, j_D)
+    do iBlock=1,nBlock       
 
-                jj = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
+       if(Unused_B(iBlock)) CYCLE
+       if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
-                b = sqrt((State_VGB(Bx_,i,j,k,iBlock))**2+&
-                     (State_VGB(By_,i,j,k,iBlock))**2+&
-                     (State_VGB(Bz_,i,j,k,iBlock))**2)
+       do k=1,nK; do j=1,nJ; do i=1,nI
 
-                do iCriteria=1, nCriteriaPic
+          call get_current(i, j, k, iBlock, j_D)
 
-                   select case(trim(NameCriteriaPic_I(iCriteria)))
-                   case('j/b')
-                      CriteriaValue = jj / b
-                   case('rho')
-                      CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
-                   end select
+          jj = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
 
-                   if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
-                        CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
-                      IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
-                   end if
+          b = sqrt((State_VGB(Bx_,i,j,k,iBlock))**2+&
+               (State_VGB(By_,i,j,k,iBlock))**2+&
+               (State_VGB(Bz_,i,j,k,iBlock))**2)
 
-                end do ! end loop criteria
+          do iCriteria=1, nCriteriaPic
 
-             end do; end do; end do
+             select case(trim(NameCriteriaPic_I(iCriteria)))
+             case('j/b')
+                CriteriaValue = jj / b
+             case('rho')
+                CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
+             end select
 
-          end do ! end loop blocks
+             if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
+                  CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
+                IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
+             end if
 
-          call test_stop(NameSub, DoTest)
-        end subroutine calc_pic_criteria
-        !============================================================================
+          end do ! end loop criteria
 
+       end do; end do; end do
 
-      end module ModPIC
-      !==============================================================================
+    end do ! end loop blocks
+
+    call test_stop(NameSub, DoTest)
+  end subroutine calc_pic_criteria
+  !============================================================================
+
+
+end module ModPIC
+!==============================================================================
