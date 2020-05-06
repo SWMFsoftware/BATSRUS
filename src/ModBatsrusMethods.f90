@@ -751,7 +751,7 @@ contains
     use ModUtilities, ONLY : upper_case
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: iProc
-    use ModFieldLineThread, ONLY: UseFieldLineThreads
+    ! use ModFieldLineThread, ONLY: UseFieldLineThreads
 
     character(len=*), intent(in) :: TypeSaveIn
 
@@ -823,10 +823,10 @@ contains
   contains
     !==========================================================================
     subroutine save_files
-      use ModFieldLineThread, ONLY: save_threads_for_plot
+      use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       logical :: SaveThreads4Plot
       !------------------------------------------------------------------------
-      SaveThreads4Plot = UseFieldLineThreads    
+      SaveThreads4Plot = DoPlotThreads    
       do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
