@@ -1276,7 +1276,7 @@ contains
        case('n', 'qtot')
           ! Number and charge densities
           DimFactor_V(iVar) = No2Io_V(UnitN_)
-       case('t','temp')
+       case('t','temp', 'te', 'ti')
           DimFactor_V(iVar) = &
                No2Io_V(UnitTemperature_)
        case('eta','visco')

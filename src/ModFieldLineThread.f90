@@ -17,7 +17,7 @@ module ModFieldLineThread
 
   PRIVATE ! Except
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
-  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + jDim_
+  integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
 
   public :: save_threads_for_plot     ! Get  State_VIII array
   public :: interpolate_thread_state  ! Interpolate state from State_VIII
@@ -75,10 +75,10 @@ module ModFieldLineThread
      real,pointer :: Xi_III(:,:,:)
      !\
      ! Magnetic field intensity, the inverse of heliocentric distance,
-     ! and the gen coord over the radial direction
+     ! and the gen coords
      ! Dimensionless.
      !/
-     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord1_III(:,:,:)
+     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord_DIII(:,:,:,:)
      !\
      ! The use:
      ! PeSi_I(iPoint) = PeSi_I(iPoint-1)*exp(-TGrav_III(iPoint)/TeSi_I(iPoint))
@@ -92,7 +92,12 @@ module ModFieldLineThread
      !\
      !  Thread solution: temperature and pressure SI
      !/
-     real,pointer :: TeSi_III(:,:,:),TiSi_III(:,:,:),PSi_III(:,:,:)
+     real, pointer :: TeSi_III(:,:,:), TiSi_III(:,:,:), PSi_III(:,:,:)
+     !\
+     ! amplitudes of waves
+     !/
+     real, pointer :: AMajor_III(:,:,:), AMinor_III(:,:,:)
+
      !\
      ! number of points
      !/
@@ -114,7 +119,8 @@ module ModFieldLineThread
      !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
-  integer, parameter :: PSi_=1, TeSi_=2, TiSi_ = min(3, Pe_+1)
+  integer, parameter :: PSi_=1, A2Major_ = 2, A2Minor_ = 3 , &
+       TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
   
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
@@ -169,6 +175,14 @@ module ModFieldLineThread
   !/
   logical, public :: DoPlotThreads = .false. 
   !\
+  ! If .true., use triangulation
+  !/
+  logical :: UseTriangulation = .false.
+  !\
+  ! Number of threads, originating from physical cells
+  !/
+  integer :: nThread = -1
+  !\
   ! Number of GhostCells in a uniform grid covering a threaded gap
   !/
   integer :: nGUniform = 0
@@ -180,6 +194,7 @@ module ModFieldLineThread
   ! Resolution along radial direction, if the grid is uniform
   !/
   real,    public :: dCoord1Uniform = -1.0
+  real            :: Coord1Min, Coord1Max
   !\
   !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
   !The uniform grid starts at i=0, if nUniform>=1.
@@ -232,6 +247,10 @@ module ModFieldLineThread
   !/
   integer, parameter:: nIntervalTR = 2
   !\
+  ! Number of threads on each processor
+  !/
+  integer, allocatable :: nThread_P(:)
+  !\
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
@@ -265,6 +284,7 @@ contains
              allocate(IsAllocatedThread_B(MaxBlock))
              DoThreads_B = .false.
              IsAllocatedThread_B = .false.
+             allocate(nThread_P(0:nProc - 1))
              allocate(BoundaryThreads_B(1:MaxBlock))
              do iBlock = 1, MaxBlock
                 call nullify_thread_b(iBlock)
@@ -281,6 +301,7 @@ contains
              end do
              deallocate(IsAllocatedThread_B)
              deallocate(  BoundaryThreads_B)
+             deallocate(nThread_P)
           end if
        end if
     case('#PLOTTHREADS')
@@ -317,11 +338,13 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
-    nullify(BoundaryThreads_B(iBlock) % Coord1_III)
+    nullify(BoundaryThreads_B(iBlock) % Coord_DIII)
     nullify(BoundaryThreads_B(iBlock) % TGrav_III)
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
+    nullify(BoundaryThreads_B(iBlock) % AMajor_III)
+    nullify(BoundaryThreads_B(iBlock) % AMinor_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
     nullify(BoundaryThreads_B(iBlock) % State_VIII)
@@ -341,11 +364,13 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
-    deallocate(BoundaryThreads_B(iBlock) % Coord1_III)
+    deallocate(BoundaryThreads_B(iBlock) % Coord_DIII)
     deallocate(BoundaryThreads_B(iBlock) % TGrav_III)
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMajor_III)
+    deallocate(BoundaryThreads_B(iBlock) % AMinor_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
     deallocate(BoundaryThreads_B(iBlock) % State_VIII)
@@ -355,7 +380,7 @@ contains
   end subroutine deallocate_thread_b
   !============================================================================
   subroutine set_threads
-    use BATL_lib,     ONLY: MaxBlock, Unused_B
+    use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
@@ -403,7 +428,7 @@ contains
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          allocate(BoundaryThreads_B(iBlock) % Coord1_III(&
+          allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
@@ -412,6 +437,10 @@ contains
           allocate(BoundaryThreads_B(iBlock) % TiSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMajor_III(&
+               -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          allocate(BoundaryThreads_B(iBlock) % AMinor_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
@@ -434,19 +463,22 @@ contains
           nPointMin = min(nPointMin, BoundaryThreads_B(iBlock)%nPoint_II(j,k))
        end do; end do
     end do
+    !\
+    ! Number of threads (originating from physical cells) at the given PE
+    !/
+    nThread = count(IsAllocatedThread_B(1:nBlock))*nJ*nK
     if(nProc==1)then
        nBlockSetAll = nBlockSet
        nPointMinAll = nPointMin
+       nThread_P(0) = nThread
     else
-       call MPI_REDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
-            0, iComm, iError)
+       call MPI_ALLREDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
+            iComm, iError)
        call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
             0, iComm, iError)
-       if(IsUniformGrid)then
-          dCoord1UniformPe = dCoord1Uniform
-          call MPI_ALLREDUCE(dCoord1UniformPe, dCoord1Uniform, 1, MPI_REAL, &
-               MPI_MAX, iComm, iError)    
-       end if
+       call MPI_ALLGATHER(nThread, 1, MPI_INTEGER, nThread_P, 1, MPI_INTEGER,&
+            iComm, iError)
+       nThread = sum(nThread_P)
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks'
@@ -454,6 +486,7 @@ contains
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
        end if
+       if(nProc<=4)write(*,*)'Number of thrreads at different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
   contains
@@ -484,8 +517,11 @@ contains
       !/
       if(nGUniform > 0)then
          iMin = -nGUniform
-         dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-              nGUniform  
+         if(dCoord1Uniform < 0.0)then
+            dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+                 nGUniform  
+            Coord1Min = Coord_D(r_); Coord1Max = CoordMin_DB(r_, iBlock)
+         end if
          dCoord1Inv = 1.0/dCoord1Uniform
       else
          iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
@@ -555,11 +591,13 @@ contains
     BoundaryThreads_B(iBlock) % Xi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
-    BoundaryThreads_B(iBlock) % Coord1_III = 0.0
+    BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
     BoundaryThreads_B(iBlock) % TGrav_III = 0.0
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
+    BoundaryThreads_B(iBlock) % AMajor_III = 0.0
+    BoundaryThreads_B(iBlock) % AMinor_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
     !\
@@ -599,7 +637,7 @@ contains
        RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
        call xyz_to_coord(XyzStart_D, Coord_D)
-       BoundaryThreads_B(iBlock) % Coord1_III(0, j, k) = Coord_D(r_)
+       BoundaryThreads_B(iBlock) % Coord_DIII(:,0, j, k) = Coord_D
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
@@ -656,7 +694,7 @@ contains
              XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call xyz_to_coord(Xyz_D, Coord_D)
-             BoundaryThreads_B(iBlock) % Coord1_III(-iPoint, j, k) = Coord_D(r_)
+             BoundaryThreads_B(iBlock) % Coord_DIII(:,-iPoint, j, k) = Coord_D
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
@@ -1170,6 +1208,10 @@ contains
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
+    if(UseTriangulation)then
+       call triangulate_thread_for_plot
+       RETURN
+    end if
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -1181,6 +1223,16 @@ contains
              ! Fill in an array with NeSi and TeSi values
              State_VI(PSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+             !\
+             !  Use geometric average of the face value for 
+             !  the wave amplitude to get the cell-centered aplitude squared
+             !/
+             State_VI(A2Major_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMajor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMajor_III(-nPoint:-1,j,k)
+             State_VI(A2Minor_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMinor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMinor_III(-nPoint:-1,j,k)
              State_VI(TeSi_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
              if(UseElectronPressure)then
@@ -1205,7 +1257,7 @@ contains
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
+                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
                      1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
              end do
@@ -1219,7 +1271,7 @@ contains
 
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar, Rho_
+    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModInterpolate, ONLY: interpolate_vector
     use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
                            UnitTemperature_, UnitEnergyDens_
@@ -1277,22 +1329,313 @@ contains
        ! Te = TeFraction*State_V(iP)/State_V(Rho_)
        State_V(Rho_) = TeFraction*pTotal/Te
     end if
-
+    State_V(WaveFirst_) = StateThread_V(A2Major_)
+    State_V(WaveLast_ ) = StateThread_V(A2Minor_)
   end subroutine interpolate_thread_state
   !============================================================================
-  subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, &
-       Xyz_D, B0_D, State_V, PlotVar_V)
-    use ModAdvance,     ONLY: nVar, Rho_
+  subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
+    State_V, PlotVar_V)
+    use ModMain
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use ModVarIndexes
+    use ModAdvance, ONLY : time_BLK, UseElectronPressure, &
+         UseMultiSpecies
+    use ModGeometry
+    use ModPhysics,       ONLY: BodyRho_I, BodyP_I, OmegaBody,  &
+         ElectronPressureRatio, InvGammaMinus1_I, Si2No_V, UnitB_
+    use ModUtilities,     ONLY: lower_case
+    use ModIO,            ONLY: NameVarUserTec_I, NameUnitUserTec_I, &
+         NameUnitUserIdl_I
+    use ModNumConst,      ONLY: cTiny
+    use ModMultiFluid,    ONLY: extract_fluid_name,      &
+         UseMultiIon, nIonFluid, MassIon_I, iPpar, iPFluid=>iP,   &
+         IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
+         ChargeIon_I
+    use ModCoordTransform, ONLY: cross_product
+    use BATL_lib,          ONLY: iNode_B, CellSize_DB
+    use ModB0,             ONLY: get_b0
+    use ModWaves,          ONLY: UseWavePressure
+    use ModCoronalHeating, ONLY: PoyntingFluxPerB
+
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
-    real,    intent(in) :: Xyz_D(3), B0_D(3), State_V(nVar)
-    real,    intent(out):: PlotVar_V(nPlotVar)
+    real,    intent(in) :: Xyz_D(3)
+    real, intent(inout) ::State_V(nVar)
+    real,   intent(out) :: PlotVar_V(nPlotVar)
+
+    !\
+    ! To calculate B0 and BFull, if needed
+    !/
+    real :: B0_D(3) = 0.0, FullB_D(3)
+    character (len=10)  :: String, NamePlotVar
+
+    real:: tmp1Var, tmp2Var
+   
+
+    integer :: iVar, jVar, iIon, iFluid
+    !\
+    ! CME parameters, if needed
+    !/
+    real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
+    !\
+    ! Conversion coefficients from the squared Alfven wave amplitude to
+    ! energy densities
+    !/
+    real :: SignBr, I0, I1
+    
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_plotvar'
     !-------------------
-    call stop_mpi(NameSub//': the routine is under development')
+    call test_start(NameSub, DoTest, iBlock)
+    !\
+    ! Calculate B0 and BFull
+    !/
+    B0_D = 0.0
+    if(UseB0)call get_b0(Xyz_D, B0_D)
+    if(UseCME)then
+       call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+            time_simulation, n_step, iteration_number)
+       Bcme_D = Bcme_D*Si2No_V(UnitB_)
+       B0_D = B0_D + Bcme_D
+    end if
+    FullB_D = State_V(Bx_:Bz_) + B0_D
+    
+    !\
+    ! Convert the squared Alfven wave amplitudes to
+    ! energy densities
+    !/
+    signBr = sign(1.0, sum(FullB_D*Xyz_D))
+    if(signBr < 0.0)then
+       !In this case WaveLast dominates over WaveFirst
+       !Currently, in the state vector WaveFirst is dominant
+       !Reorder this array
+       I0 = State_V(WaveLast_); I1 = State_V(WaveFirst_)
+       State_V(WaveFirst_) = I0; State_V(WaveLast_) = I1
+    end if
+    !Convert to the energy density
+    State_V(WaveFirst_:WaveLast_) = State_V(WaveFirst_:WaveLast_)*&
+         PoyntingFluxPerB*sqrt(State_V(Rho_))
+
+
+
+    PlotVar_V = 0.0
+    do iVar = 1, nPlotVar
+       NamePlotVar = NamePlotVar_V(iVar)
+
+       ! Default values for TecPlot variable name and TecPlot and IDL unit names
+       NameVarUserTec_I(iVar)  = NamePlotVar
+       NameUnitUserTec_I(iVar) = ' '
+       NameUnitUserIdl_I(iVar) = '?'
+
+       call lower_case(NamePlotVar)
+       String = NamePlotVar
+       call extract_fluid_name(String,iFluid)
+       select case(String)
+
+          ! Cartesian coordinates for non-Cartesian plots
+       case('x')
+          PlotVar_V(iVar) = Xyz_D(1)
+       case('y')
+          PlotVar_V(iVar) = Xyz_D(2)
+       case('z')
+          PlotVar_V(iVar) = Xyz_D(3)
+       case('r')
+          PlotVar_V(iVar) = norm2(Xyz_D)
+
+          ! BASIC MHD variables
+       case('rho')
+          PlotVar_V(iVar) = State_V(iRho)
+       case('rhoux','mx')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx) &
+                  -State_V(iRho)*OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)
+          end if
+       case('rhouy','my')
+          if (UseRotatingFrame) then
+                PlotVar_V(iVar) = State_V(iRhoUy) &
+                     +State_V(iRho)*OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy)
+          end if
+       case('rhouz','mz')
+          PlotVar_V(iVar) = State_V(iRhoUz)
+       case('bx')
+          PlotVar_V(iVar) = FullB_D(x_)
+       case('by')
+          PlotVar_V(iVar) = FullB_D(y_)
+       case('bz')
+          PlotVar_V(iVar) = FullB_D(z_)
+       case('e')
+          !Internal plus kinetic energy
+          PlotVar_V(iVar) = InvGammaMinus1_I(iFluid)*State_V(iPFluid) + &
+               0.50*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
+          ! Add (B0+B1)^2  
+          if(iFluid == 1 .and. IsMhd.and.UseB0) &
+               PlotVar_V(iVar) = PlotVar_V(iVar) + 0.5*sum(FullB_D**2)
+       case('p','pth')
+          PlotVar_V(iVar) = State_V(iPFluid)
+       case('n','t','temp')
+          ! Calculate the number density
+          if(UseMultiSpecies)then
+             do jVar = SpeciesFirst_, SpeciesLast_
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(jVar)/MassSpecies_V(jVar)
+             end do
+          else if(iFluid == 1 .and. UseMultiIon)then
+             ! Add up ion number densities
+             do iIon = 1, nIonFluid
+                PlotVar_V(iVar) = PlotVar_V(iVar) + &
+                     State_V(iRhoIon_I(iIon))/MassIon_I(iIon)
+             end do
+          else
+             PlotVar_V(iVar) = State_V(iRho)/MassFluid_I(iFluid)
+          end if
+
+          ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+          if(String /= 'n')then
+             ! t = p/n
+             PlotVar_V(iVar) = State_V(iPFluid) / PlotVar_V(iVar)
+
+             !
+             if(nFluid==1 .and. .not.UseElectronPressure &
+                  .and. ElectronPressureRatio > 0.0) &
+                  PlotVar_V(iVar) = PlotVar_V(iVar)&
+                  /(1 + ElectronPressureRatio)
+          end if
+       case('te')
+          !\
+          ! Use the following equation
+          ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TeFraction*State_V(iP)/State_V(Rho_)
+       case('ti')
+          !\
+          ! Use the following equation
+          ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
+          !/
+          PlotVar_V(iVar) = TiFraction*State_V(p_)/State_V(Rho_)
+       case('ux')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho) &
+                     - OmegaBody*Xyz_D(y_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUx)/State_V(iRho)
+          end if
+       case('uy')
+          if (UseRotatingFrame) then
+             PlotVar_V(iVar) = State_V(iRhoUy)/State_V(iRho) &
+                     + OmegaBody*Xyz_D(x_)
+          else
+             PlotVar_V(iVar) = State_V(iRhoUy) / State_V(iRho)
+          end if
+       case('uxrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUx)/State_V(iRho)
+
+       case('uyrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUy) / State_V(iRho)
+       case('uz','uzrot')
+          PlotVar_V(iVar) = &
+               State_V(iRhoUz) / State_V(iRho)
+       case('b1x')
+          PlotVar_V(iVar) = State_V(Bx_)
+       case('b1y')
+          PlotVar_V(iVar) = State_V(By_)
+       case('b1z')
+          PlotVar_V(iVar) = State_V(Bz_)
+       case('pperp')
+          PlotVar_V(iVar) = (3*State_V(iPFluid) &
+               -State_V(iPpar))/2.0
+       case('peperp')
+          PlotVar_V(iVar) = (3*State_V(Pe_) &
+               -State_V(Pepar_))/2.0
+
+       case('pvecx')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUx) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(x_) ) /State_V(iRho)
+       case('pvecy')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUy) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(y_) ) /State_V(iRho)
+       case('pvecz')
+          PlotVar_V(iVar) = ( &
+               ( FullB_D(x_)**2 + FullB_D(y_)**2 + FullB_D(z_)**2) * &
+               State_V(iRhoUz) &
+               -(FullB_D(x_)*State_V(iRhoUx) + FullB_D(y_)*State_V(iRhoUy) + &
+               FullB_D(z_)* State_V(iRhoUz))*FullB_D(z_) ) /State_V(iRho)
+
+          ! Radial component variables
+
+       case('ur')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / (State_V(iRho)*norm2(Xyz_D))
+       case('rhour','mr')
+          PlotVar_V(iVar) = sum(State_V(iRhoUx:iRhoUz)*Xyz_D) &
+                  / norm2(Xyz_D)
+       case('br')
+          PlotVar_V(iVar) = sum(FullB_D*Xyz_D) /norm2(Xyz_D)
+       case('b1r')
+          PlotVar_V(iVar) = sum(State_V(Bx_:Bz_)*Xyz_D)/norm2(Xyz_D)
+       case('er')
+          PlotVar_V(iVar) =  sum( &
+               Xyz_D*cross_product(FullB_D, State_V(iRhoUx:iRhoUz))) &
+               / (State_V(iRho)*norm2(Xyz_D))
+       case('pvecr')
+          tmp1Var = sum(FullB_D**2)
+          tmp2Var = sum(FullB_D*State_V(iRhoUx:iRhoUz))
+          PlotVar_V(iVar) = sum ( &
+               Xyz_D*( tmp1Var*State_V(iRhoUx:iRhoUz) &
+               -  tmp2Var*FullB_D ) &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('b2ur')
+          PlotVar_V(iVar) = 0.5*sum(FullB_D(:)**2) &
+               *sum( State_V(iRhoUx:iRhoUz)*Xyz_D &
+               ) / (State_V(iRho)*norm2(Xyz_D))
+       case('dx')
+          PlotVar_V(iVar) = CellSize_DB(x_,iBlock)
+       case('dy')
+          PlotVar_V(iVar) = CellSize_DB(y_,iBlock)
+       case('dz')
+          PlotVar_V(iVar) = CellSize_DB(z_,iBlock)
+       case('dtblk')
+          PlotVar_V(iVar) = dt_BLK(iBlock)
+       case('proc')
+          PlotVar_V(iVar) = iProc
+       case('blk','block')
+          PlotVar_V(iVar) = iBlock
+       case('node')
+          PlotVar_V(iVar) = iNode_B(iBlock)
+
+       case('ew','erad')
+          if(Ew_ == 1)then
+             if(UseWavePressure)PlotVar_V(iVar) = &
+                  sum(State_V(WaveFirst_:WaveLast_))
+          else
+             PlotVar_V(iVar) = State_V(Ew_)
+          end if
+
+       case default
+          ! Check if the name is one of the state variable names
+          do jVar = 1, nVar
+             if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
+             PlotVar_V(iVar) = State_V(jVar)
+             EXIT
+          end do
+       end select
+    end do ! iVar
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_thread_plotvar
-  !============================================================================
-   subroutine save_thread_restart
+  !=========================
+  subroutine save_thread_restart
     use ModMain,       ONLY: NameThisComp
     use BATL_lib, ONLY: nBlock, Unused_B
     use ModIoUnit,     ONLY: UnitTmp_
@@ -1342,6 +1685,182 @@ contains
          trim(NameRestartDir)//'thread_',iBlockRestart,'.blk'
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_restart_file_name
-  !============================================================================
+  !==========================ROUTINES USED FOR TRIANGULATION===================
+  subroutine broadcast_buffer(nVar, Buff_VI)
+    use ModMpi
+    integer, intent(in) :: nVar
+    real, intent(inout) :: Buff_VI(nVar, nThread)
+    integer             :: iBuff, iProcBCast, iError
+    !-----------------
+    iBuff = 0
+    do iProcBCast = 0, nProc-1
+       if(nThread_P(iProcBCast)==0)CYCLE
+       call MPI_BCAST(Buff_VI(:, iBuff+1:iBuff+nThread_P(iProcBCast)),&
+            nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
+       iBuff = iBuff + nThread_P(iProcBCast)
+    end do
+  end subroutine broadcast_buffer
+  !===========================================================================
+  !\
+  ! Calculate coordinates (lon, lat) of the intersection point of threads
+  ! with the spherical surface at the first generalized coordinate value 
+  ! equal to input Coord1
+  !/
+  subroutine get_thread_point(Coord1, State_VI)
+    use BATL_lib, ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, r_
+    use ModInterpolate, ONLY: linear
+    real,  intent(in) :: Coord1
+    real, intent(out) :: State_VI(2+TiSi_, nThread)
+    integer :: i, j, k, iBlock, nPoint, iBuff
+    real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'get_thread_coord'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    !Start value for Buffer index numerating the point related to given PE
+    if(iProc==0)then
+       iBuff = 0
+    else
+       iBuff = sum(nThread_P(0:iProc-1))
+    end if
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       do k = 1, nK
+          do j = 1, nJ
+             iBuff = iBuff + 1
+             nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
+             !\
+             ! Fill in an array with lon,lat values
+             StateThread_VI(1:2, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
+             !\
+             ! Fill in an array with NeSi and TeSi values
+             StateThread_VI(2+PSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+             !\
+             !  Use geometric average of the face value for 
+             !  the wave amplitude to get the cell-centered aplitude squared
+             !/
+             StateThread_VI(2+A2Major_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMajor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMajor_III(-nPoint:-1,j,k)
+             StateThread_VI(2+A2Minor_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMinor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMinor_III(-nPoint:-1,j,k)
+             StateThread_VI(2+TeSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
+             if(UseElectronPressure)then
+                StateThread_VI(2+TiSi_, 1 - nPoint:0) = &
+                     BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
+             end if
+             !\
+             ! interpolate Te and Ne to the ghost cell center:
+             !/ 
+             State_VI(:,iBuff)  = &
+                     linear(&
+                     a_VI =  StateThread_VI(:, 1 - nPoint:0),    &
+                     nVar = 2+TiSi_,                                    &
+                     iMin = 1 - nPoint,                           &
+                     iMax = 0,                                    &
+                     x = Coord1,                                  &
+                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
+                     1 - nPoint:0, j, k),                         &
+                     DoExtrapolate = .false.)
+          end do
+       end do
+    end do
+    call broadcast_buffer(nVar=2+TiSi_, Buff_VI=State_VI)
+    call test_stop(NameSub, DoTest)
+  end subroutine get_thread_point
+  !==============================
+  subroutine triangulate_thread_for_plot
+    use BATL_lib, ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, x_, y_, z_
+    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModConst, ONLY: cTiny, cRadToDeg
+    real    :: Coord1
+    integer :: i, j, k, iBlock, nPoint
+    !Coordinates and state vector at the point of intersection of thread with
+    !the spherical coordinate  surface of the grid for plotting 
+    real    :: State_VI(2+TiSi_,nThread), State_V(TiSi_), Coord_D(2)
+    real    :: Xyz_DI(3,nThread), Xyz_D(3)
+    !\
+    !Data for interpolation: stencil and weights
+    !/
+    real    :: Weight_I(3)
+    integer :: iStencil_I(3), iError
+    integer, allocatable :: list(:), lptr(:), lend(:)
+    logical :: DoTest, IsTriangleFound = .false.
+    character(len=*), parameter:: NameSub = 'save_thread_for_plot'
+    !-------------------------
+    if(.not.IsUniformGrid)call stop_mpi(&
+         'Triangulation does dot work for non-uniform grid in threaded gap')
+    call test_start(NameSub, DoTest)
+    allocate(list(6*(nThread - 2)), lptr(6*(nThread - 2)), lend(nThread))
+    do i = -nGUniform, 0
+       !\
+       ! Generalized radial coordinate of the grid points
+       !/
+       Coord1 = Coord1Max + real(i)*dCoord1Uniform
+       
+       call get_thread_point(Coord1, State_VI)
+       !Convert lon and lat to Cartesian coordinates on a unit sphere 
+       call trans(nThread, State_VI(1,:), State_VI(2,:), &
+            Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:))
+       !\
+       ! Triangulate
+       !/
+       call trmesh(nThread, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
+            list, lptr, lend, iError)
+       if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+       !\
+       ! Now, interpolate state vector to the points of a grid used for 
+       ! plotting
+       !/
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          if(.not.IsAllocatedThread_B(iBlock))CYCLE
+          do k = kMin_, kMax_ 
+             do j = jMin_, jMax_
+                Coord_D = CoordMin_DB(2:,iBlock) + &
+                     CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
+                call sph_to_xyz(1.0, Coord_D(1), Coord_D(2), Xyz_D)
+                call find_triangle_sph(Xyz_D, nThread, Xyz_DI ,&
+                     list, lptr, lend,                         &
+                     Weight_I(1), Weight_I(2), Weight_I(3),    &
+                     IsTriangleFound,&
+                     iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+                if(.not.IsTriangleFound.or.sum(Weight_I)<1.0 - cTiny&
+                     .or.sum(Weight_I) > 1.0 + cTiny)then
+                   write(*,*)'Spherical triangulation failed'
+                   write(*,*)'At the location x,y,z=', Xyz_D
+                   if(.not.IsTriangleFound)then
+                      write(*,*)'There is no triagle'
+                   elseif(sum(Weight_I)<1.0 - cTiny)then
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' < 1'
+                   else
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' > 1'
+                   end if
+                end if
+                !\
+                ! interpolate Te and Ne to the ghost cell center:
+                !/ 
+                BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
+                    State_VI(3:, iStencil_I(1))*Weight_I(1) + &
+                    State_VI(3:, iStencil_I(2))*Weight_I(2) + &
+                    State_VI(3:, iStencil_I(3))*Weight_I(3)
+             end do
+          end do
+       end do
+    end do
+    deallocate(list, lptr, lend)
+    call test_stop(NameSub, DoTest)
+  end subroutine triangulate_thread_for_plot
+  !=========================================
 end module ModFieldLineThread
 !==============================================================================

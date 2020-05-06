@@ -34,14 +34,14 @@ module ModVarIndexes
   ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       =  1,          &
-       RhoUx_     =  2, Ux_ = 2, &
-       RhoUy_     =  3, Uy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, &
+       Rho_       =  1,          SWHRho_   = 1, &
+       RhoUx_     =  2, Ux_ = 2, SWHRhoUx_ = 2, SWHUx_ = 2, &
+       RhoUy_     =  3, Uy_ = 3, SWHRhoUy_ = 3, SWHUy_ = 3, &
+       RhoUz_     =  4, Uz_ = 4, SWHRhoUz_ = 4, SWHUz_ = 4, &
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       P_         =  8, &
+       P_         =  8,          SWHP_  = 8, &
        Pu3Rho_    =  9, &
        Pu3RhoUx_  = 10, Pu3Ux_ = 10, &
        Pu3RhoUy_  = 11, Pu3Uy_ = 11, &
@@ -69,7 +69,7 @@ module ModVarIndexes
        Ne4RhoUy_  = 31, Ne4Uy_ = 31, &
        Ne4RhoUz_  = 32, Ne4Uz_ = 32, &
        Ne4P_      = 33, &   
-       Energy_    = nVar+1, &
+       Energy_    = nVar+1, SWHEnergy_ = nVar+1, &
        Pu3Energy_ = nVar+2, &
        NeuEnergy_ = nVar+3, &
        Ne2Energy_ = nVar+4, &
@@ -93,10 +93,10 @@ module ModVarIndexes
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
   real, parameter :: DefaultState_V(nVar+nFluid) = [ &
-       1.0,           & ! Rho_
-       0.0, 0.0, 0.0, & ! RhoUx_ .. RhoUz_
+       1.0,           & ! SWHRho_
+       0.0, 0.0, 0.0, & ! SWHRhoUx_ .. SWHRhoUz_
        0.0, 0.0, 0.0, & ! Bx_ .. Bz_
-       1.0,           & ! P_
+       1.0,           & ! SWHP_
        1.0,           & ! Pu3Rho_
        0.0, 0.0, 0.0, & ! Pu3RhoUx_ .. Pu3RhoUz_
        1.0,           & ! Pu3P_
@@ -112,7 +112,7 @@ module ModVarIndexes
        1.0,           & ! Ne4Rho_
        0.0, 0.0, 0.0, & ! Ne4RhoUx_ .. Ne4RhoUz_
        1.0,           & ! Ne4P_
-       1.0,           & ! Energy_
+       1.0,           & ! SWHEnergy_
        1.0,           & ! Pu3Energy_
        1.0,           & ! NeuEnergy_
        1.0,           & ! Neu2Energy_
@@ -121,8 +121,8 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=6):: NameVar_V(nVar+nFluid) = [ &
-       'Rho   ', & ! Rho_
-       'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_  RhoUz_
+       'Rho   ', & ! SWHRho_
+       'Mx    ', 'My    ', 'Mz    ', & ! RhoUx_ RhoUz_
        'Bx    ', 'By    ', 'Bz    ', & ! Bx_  Bz_
        'p     ',                     & ! p_
        'Pu3Rho',                     & ! Pu3Rho_
