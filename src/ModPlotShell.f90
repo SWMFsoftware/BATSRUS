@@ -128,7 +128,6 @@ contains
          xyz_to_coord, r_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModParallel,       ONLY: NeiLev, NOBLK
-    use ModB0,             ONLY: get_b0
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -139,7 +138,7 @@ contains
     integer :: i, j, k, iVar, iDirMin
 
     real :: r, Lon, Lat
-    real :: XyzPlot_D(3), XyzGm_D(3), B0_D(3) = 0.0
+    real :: XyzPlot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
     ! State at the grid point in the threaded gap
@@ -200,12 +199,10 @@ contains
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(IsThreadedBlock .and. r <= RadiusMin)then
+             if(IsThreadedBlock.and. r <= RadiusMin)then
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
-                if(UseB0) call get_b0(XyzGm_D, B0_D)
-                call set_thread_plotvar(iBlock, nPlotVar, &
-                     NamePlotVar_V(1:nPlotVar),& 
-                     XyzGm_D, B0_D, State_V, PlotVar_V(1:nPlotVar))
+                call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
+                     XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
              else
@@ -255,7 +252,15 @@ contains
     ! Save results to disk
     if(iProc==0) then
        ! Build a single-line list of variable names.
-       NameVar = 'r lon lat'
+       if(nR==1)then
+          NameVar = 'lon lat'
+       elseif(nLon==1)then
+          NameVar = 'r lat'
+       elseif(nLat==1)then
+          NameVar = 'r lon'
+       else
+          NameVar = 'r lon lat'
+       end if
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
@@ -268,15 +273,47 @@ contains
        end do; end do; end do
 
        ! Call save_plot_file to write data to disk.
-       call save_plot_file(NameFile, &
-            TypeFileIn=TypeFile_I(iFile), &
-            StringHeaderIn=NameUnit, &
-            nStepIn=n_step, &
-            TimeIn=time_simulation, &
-            NameVarIn = NameVar, &
-            CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
-            CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
-            VarIn_VIII = PlotVar_VIII(1:,:,:,:))
+       if(nR==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
+               VarIn_VII = PlotVar_VIII(1:,1,:,:))
+       elseif(nLon==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LatMax], &
+               VarIn_VII = PlotVar_VIII(1:,:,1,:))
+       elseif(nLat==1)then
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LonMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LonMax], &
+               VarIn_VII = PlotVar_VIII(1:,:,:,1))
+       else
+          call save_plot_file(NameFile, &
+               TypeFileIn=TypeFile_I(iFile), &
+               StringHeaderIn=NameUnit, &
+               nStepIn=n_step, &
+               TimeIn=time_simulation, &
+               NameVarIn = NameVar, &
+               CoordMinIn_D = [rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin], &
+               CoordMaxIn_D = [rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax], &
+               VarIn_VIII = PlotVar_VIII(1:,:,:,:))
+       end if
     end if
 
     ! Deallocate results arrays:.

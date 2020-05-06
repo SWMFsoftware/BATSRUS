@@ -666,9 +666,9 @@ contains
 
     use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
-    use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
     use ModKind
-    use BATL_lib, ONLY: find_grid_block, iNodeNei_IIIB, iTree_IA, Proc_, nProc, Unused_B
+    use BATL_lib, ONLY: find_grid_block, iNodeNei_IIIB, iTree_IA, Proc_, nProc, &
+         CellSize_DB, CoordMin_DB, Unused_B
     use BATL_size, ONLY: MaxBlock, nBlock
 
     use ModMpi
@@ -881,9 +881,9 @@ contains
          else
             write(*,*)NameSub,' WARNING ray passed through more than MaxCount=',&
                  MaxCount,' blocks:'
-            write(*,*)NameSub,'    iStart_D    =',iStart_D
-            write(*,*)NameSub,'    XyzRay_D    =',XyzRay_D
-            write(*,*)NameSub,'    XyzStart_BLK=',XyzStart_BLK(:,iBlockRay)
+            write(*,*)NameSub,' iStart_D    =', iStart_D
+            write(*,*)NameSub,' XyzRay_D    =', XyzRay_D
+            write(*,*)NameSub,' CoordMin_DB =', CoordMin_DB(:,iBlockRay)
             iFace = ray_loop_
          end if
 
@@ -891,7 +891,7 @@ contains
          case(ray_block_)
 
             ! Find the new PE and block for the current position
-            call find_grid_block(XyzRay_D,jProc,jBlock)
+            call find_grid_block(XyzRay_D, jProc, jBlock)
 
             if(jProc /= iProc)then
                ! Send ray to the next processor and return from here
@@ -914,13 +914,13 @@ contains
                CYCLE BLOCK
             else
                write(*,*)'ERROR for follow_this_ray, iProc=',iProc
-               write(*,*)'ERROR iBlockRay=jBlock=',iBlockRay,jBlock
+               write(*,*)'ERROR iBlockRay==jBlock    =',iBlockRay,jBlock
                write(*,*)'ERROR iStart_D, iProcStart =',iStart_D, iProcStart
-               write(*,*)'ERROR for XyzRay_D, iRay    =',XyzRay_D, iRay
-               write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
-                    CellSize_DB(x_,jBlock)
-               call stop_mpi(&
-                    'GM_ERROR in follow_ray: continues in same BLOCK')
+               write(*,*)'ERROR for XyzRay_D, r, iRay=',XyzRay_D, norm2(XyzRay_D), iRay
+               write(*,*)'CoordMin_DB, CellSize_DB  =', &
+                    CoordMin_DB(:,jBlock), CellSize_DB(:,jBlock)
+               !call stop_mpi(&
+               !     'GM_ERROR in follow_ray: continues in same BLOCK')
             end if
          case(ray_open_)
             ! The ray reached the outer boundary (or expected to do so)
@@ -4660,8 +4660,7 @@ contains
     real function interpolate_bb1(qbb)
 
       !------------------------------------------------------------------------
-      real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-           intent(in):: qbb
+      real, intent(in):: qbb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
       !------------------------------------------------------------------------
 
       ! Bilinear interpolation in 3D
@@ -4679,12 +4678,9 @@ contains
     end function interpolate_bb1
     !==========================================================================
     function interpolate_bb_v(nVar,qbb)
-      integer,intent(in)::nVar
-      !------------------------------------------------------------------------
-      real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-           intent(in):: qbb
-      real, dimension(nVar)::interpolate_bb_v
-
+      integer, intent(in):: nVar
+      real,    intent(in):: qbb(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+      real:: interpolate_bb_v(nVar)
       !------------------------------------------------------------------------
 
       ! Bilinear interpolation in 3D
@@ -4765,10 +4761,7 @@ contains
 
     real function interpolate_bb1_node(qbb)
 
-      !------------------------------------------------------------------------
-      real, dimension(1:nI+1,1:nJ+1,1:nK+1,MaxBlock), &
-           intent(in):: qbb
-
+      real, intent(in):: qbb(1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
       !-------------------------------------------------------------------------
 
       ! Bilinear interpolation in 3D
@@ -5320,7 +5313,7 @@ contains
     integer :: imin_r,imax_r,jmin_r,jmax_r,kmin_r,kmax_r
     integer :: imin_s,imax_s,jmin_s,jmax_s,kmin_s,kmax_s
 
-    ! Block index (1..MaxBlock)
+    ! Block index
     integer :: iBlock
 
     ! Descriptors for neighbor

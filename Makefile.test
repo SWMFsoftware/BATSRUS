@@ -53,9 +53,9 @@ test:
 	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
 	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
 	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
-	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment)
-	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment)
-	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment)
+	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment_alfven)
+	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment_shock)
+	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment_langmuir)
 	-@($(MAKE) test_func TESTDIR=run_test_func)
 	./Config.pl -noopenmp
 	@ls -l *.diff
@@ -1536,14 +1536,14 @@ test_2bodyplot_run:
 # Sort the files by numerical values of the first three columns (coordinates)
 test_2bodyplot_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log 
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		> test_2bodyplot.diff)
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 \
 		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
 		Param/2BODYPLOT/TestOutput/REFy*.out.gz \
-		 >> test_2bodyplot.diff)
-	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
+		>> test_2bodyplot.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p='sort -k1 -k2 -k3 -g | grep -v AUXDATA' \
 		${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz \
 		Param/2BODYPLOT/TestOutput/REFy*.dat.gz \
 		>> test_2bodyplot.diff)
@@ -1708,7 +1708,7 @@ test_europa3fluidspe_compile:
 	make PIDL
 
 test_europa3fluidspe_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/EUROPA/Param.in.3fluidsPe.test PARAM.in
+	cd ${TESTDIR}; cp Param/EUROPA/Param.in.3fluidsPe.test PARAM.in; cp Param/EUROPA/satellite-E4_flyby-from_pds.dat satellite_3fpe_e4.dat
 
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1716,11 +1716,10 @@ test_europa3fluidspe_run:
 
 test_europa3fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-		${TESTDIR}/RESULTS/GM/cut_mhd_1_n00000100.out \
-		Param/EUROPA/europa3fluidspe_cut_mhd_1_n00000100.out \
+		${TESTDIR}/RESULTS/GM/trj_satellite_3fpe_e4_n00000100.sat \
+		Param/EUROPA/trj_satellite_3fpe_e4_n00000100.sat \
 		> test_europa3fluidspe.diff)
 	ls -l test_europa3fluidspe.diff
-
 
 ### TEST FOR 2D REGIONS ######################################################
 
@@ -1794,9 +1793,9 @@ test_fivemoment_alfven_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_alfven_check:
-	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10         \
-		${TESTDIR}/RESULTS/GM/1d*t00024640_*out        \
-		Param/FIVEMOMENT/TestOutput/alfven_ref.out     \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
+		${TESTDIR}/RESULTS/GM/1d*t00024640_*out \
+		Param/FIVEMOMENT/TestOutput/alfven_ref.out \
 		> test_fivemoment_alfven.diff)
 	ls -l test_fivemoment_alfven.diff
 
@@ -1824,10 +1823,10 @@ test_fivemoment_shock_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
-	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10    \
-		${TESTDIR}/RESULTS/GM/1d*t00000002*out >  \
+	-@(${DIFFNUM} -t -r=8e-5 -a=1e-10 \
+		${TESTDIR}/RESULTS/GM/1d*t00000002*out \
 		Param/FIVEMOMENT/TestOutput/shock_ref.out \
-		test_fivemoment_shock.diff)
+		> test_fivemoment_shock.diff)
 	ls -l test_fivemoment_shock.diff
 
 test_fivemoment_langmuir:
