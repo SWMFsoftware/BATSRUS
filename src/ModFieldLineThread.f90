@@ -75,10 +75,10 @@ module ModFieldLineThread
      real,pointer :: Xi_III(:,:,:)
      !\
      ! Magnetic field intensity, the inverse of heliocentric distance,
-     ! and the gen coord over the radial direction
+     ! and the gen coords
      ! Dimensionless.
      !/
-     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord1_III(:,:,:)
+     real,pointer :: B_III(:,:,:),RInv_III(:,:,:), Coord_DIII(:,:,:,:)
      !\
      ! The use:
      ! PeSi_I(iPoint) = PeSi_I(iPoint-1)*exp(-TGrav_III(iPoint)/TeSi_I(iPoint))
@@ -175,6 +175,14 @@ module ModFieldLineThread
   !/
   logical, public :: DoPlotThreads = .false. 
   !\
+  ! If .true., use triangulation
+  !/
+  logical :: UseTriangulation = .false.
+  !\
+  ! Number of threads, originating from physical cells
+  !/
+  integer :: nThread = -1
+  !\
   ! Number of GhostCells in a uniform grid covering a threaded gap
   !/
   integer :: nGUniform = 0
@@ -186,6 +194,7 @@ module ModFieldLineThread
   ! Resolution along radial direction, if the grid is uniform
   !/
   real,    public :: dCoord1Uniform = -1.0
+  real            :: Coord1Min, Coord1Max
   !\
   !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
   !The uniform grid starts at i=0, if nUniform>=1.
@@ -238,6 +247,10 @@ module ModFieldLineThread
   !/
   integer, parameter:: nIntervalTR = 2
   !\
+  ! Number of threads on each processor
+  !/
+  integer, allocatable :: nThread_P(:)
+  !\
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
@@ -251,11 +264,12 @@ module ModFieldLineThread
 contains
   !============================================================================
   subroutine read_threads(NameCommand, iSession)
-    use ModSize, ONLY: MaxBlock
+    use ModSize,      ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
+    use ModMain,      ONLY: NameThisComp
     character(len=*), intent(in):: NameCommand
     integer, intent(in):: iSession
-    integer :: iBlock
+    integer :: iBlock, iError
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_threads'
     !--------------------------------------------------------------------------
@@ -271,6 +285,7 @@ contains
              allocate(IsAllocatedThread_B(MaxBlock))
              DoThreads_B = .false.
              IsAllocatedThread_B = .false.
+             allocate(nThread_P(0:nProc - 1))
              allocate(BoundaryThreads_B(1:MaxBlock))
              do iBlock = 1, MaxBlock
                 call nullify_thread_b(iBlock)
@@ -287,6 +302,7 @@ contains
              end do
              deallocate(IsAllocatedThread_B)
              deallocate(  BoundaryThreads_B)
+             deallocate(nThread_P)
           end if
        end if
     case('#PLOTTHREADS')
@@ -299,6 +315,12 @@ contains
           IsUniformGrid = .true.
           iMax = 0
           Coord1Norm0 = 0.0
+          call read_var('UseTriangulation', UseTriangulation, iError)
+          if(iError /= 0)then
+             UseTriangulation = .false.
+             if(iProc==0)write(*,'(a)')&
+                  NameThisComp//': Missing UseTriangulation is set to F'
+          end if
        else
           IsUniformGrid = .false.
           iMax = 1
@@ -323,7 +345,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
-    nullify(BoundaryThreads_B(iBlock) % Coord1_III)
+    nullify(BoundaryThreads_B(iBlock) % Coord_DIII)
     nullify(BoundaryThreads_B(iBlock) % TGrav_III)
     nullify(BoundaryThreads_B(iBlock) % TeSi_III)
     nullify(BoundaryThreads_B(iBlock) % TiSi_III)
@@ -349,7 +371,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
-    deallocate(BoundaryThreads_B(iBlock) % Coord1_III)
+    deallocate(BoundaryThreads_B(iBlock) % Coord_DIII)
     deallocate(BoundaryThreads_B(iBlock) % TGrav_III)
     deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
@@ -365,7 +387,7 @@ contains
   end subroutine deallocate_thread_b
   !============================================================================
   subroutine set_threads
-    use BATL_lib,     ONLY: MaxBlock, Unused_B
+    use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
@@ -413,7 +435,7 @@ contains
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          allocate(BoundaryThreads_B(iBlock) % Coord1_III(&
+          allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
@@ -448,19 +470,22 @@ contains
           nPointMin = min(nPointMin, BoundaryThreads_B(iBlock)%nPoint_II(j,k))
        end do; end do
     end do
+    !\
+    ! Number of threads (originating from physical cells) at the given PE
+    !/
+    nThread = count(IsAllocatedThread_B(1:nBlock))*nJ*nK
     if(nProc==1)then
        nBlockSetAll = nBlockSet
        nPointMinAll = nPointMin
+       nThread_P(0) = nThread
     else
-       call MPI_REDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
-            0, iComm, iError)
+       call MPI_ALLREDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
+            iComm, iError)
        call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
             0, iComm, iError)
-       if(IsUniformGrid)then
-          dCoord1UniformPe = dCoord1Uniform
-          call MPI_ALLREDUCE(dCoord1UniformPe, dCoord1Uniform, 1, MPI_REAL, &
-               MPI_MAX, iComm, iError)    
-       end if
+       call MPI_ALLGATHER(nThread, 1, MPI_INTEGER, nThread_P, 1, MPI_INTEGER,&
+            iComm, iError)
+       nThread = sum(nThread_P)
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
        write(*,*)'Set threads in ',nBlockSetAll,' blocks'
@@ -468,6 +493,7 @@ contains
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
        end if
+       if(nProc<=4)write(*,*)'Number of thrreads at different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
   contains
@@ -498,8 +524,11 @@ contains
       !/
       if(nGUniform > 0)then
          iMin = -nGUniform
-         dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
-              nGUniform  
+         if(dCoord1Uniform < 0.0)then
+            dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
+                 nGUniform  
+            Coord1Min = Coord_D(r_); Coord1Max = CoordMin_DB(r_, iBlock)
+         end if
          dCoord1Inv = 1.0/dCoord1Uniform
       else
          iMin = 1 - floor( (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
@@ -569,7 +598,7 @@ contains
     BoundaryThreads_B(iBlock) % Xi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
-    BoundaryThreads_B(iBlock) % Coord1_III = 0.0
+    BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
     BoundaryThreads_B(iBlock) % TGrav_III = 0.0
     BoundaryThreads_B(iBlock) % TeSi_III = -1.0
     BoundaryThreads_B(iBlock) % TiSi_III = -1.0
@@ -615,7 +644,7 @@ contains
        RStart = norm2(XyzStart_D)
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
        call xyz_to_coord(XyzStart_D, Coord_D)
-       BoundaryThreads_B(iBlock) % Coord1_III(0, j, k) = Coord_D(r_)
+       BoundaryThreads_B(iBlock) % Coord_DIII(:,0, j, k) = Coord_D
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax ! Ds is increased to 0.002 or 0.016
@@ -672,7 +701,7 @@ contains
              XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call xyz_to_coord(Xyz_D, Coord_D)
-             BoundaryThreads_B(iBlock) % Coord1_III(-iPoint, j, k) = Coord_D(r_)
+             BoundaryThreads_B(iBlock) % Coord_DIII(:,-iPoint, j, k) = Coord_D
              call get_b0(Xyz_D, B0_D)
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
@@ -1186,6 +1215,10 @@ contains
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'save_threads_for_plot'
     !--------------------------------------------------------------------------
+    if(UseTriangulation)then
+       call triangulate_thread_for_plot
+       RETURN
+    end if
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -1231,7 +1264,7 @@ contains
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
-                     x_I = BoundaryThreads_B(iBlock) % Coord1_III(&
+                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
                      1 - nPoint:0, j, k),                         &
                      DoExtrapolate = .false.)
              end do
@@ -1659,6 +1692,186 @@ contains
          trim(NameRestartDir)//'thread_',iBlockRestart,'.blk'
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_restart_file_name
-  !============================================================================
+  !==========================ROUTINES USED FOR TRIANGULATION===================
+  subroutine broadcast_buffer(nVar, Buff_VI)
+    use ModMpi
+    integer, intent(in) :: nVar
+    real, intent(inout) :: Buff_VI(nVar, nThread)
+    integer             :: iBuff, iProcBCast, iError
+    !-----------------
+    iBuff = 0
+    do iProcBCast = 0, nProc-1
+       if(nThread_P(iProcBCast)==0)CYCLE
+       call MPI_BCAST(Buff_VI(:, iBuff+1:iBuff+nThread_P(iProcBCast)),&
+            nVar*nThread_P(iProcBCast), MPI_REAL, iProcBCast, iComm, iError)
+       iBuff = iBuff + nThread_P(iProcBCast)
+    end do
+  end subroutine broadcast_buffer
+  !===========================================================================
+  !\
+  ! Calculate coordinates (lon, lat) of the intersection point of threads
+  ! with the spherical surface at the first generalized coordinate value 
+  ! equal to input Coord1
+  !/
+  subroutine get_thread_point(Coord1, State_VI)
+    use BATL_lib, ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, r_
+    use ModInterpolate, ONLY: linear
+    use ModNumConst, ONLY: cHalfPi
+    real,  intent(in) :: Coord1
+    real, intent(out) :: State_VI(2+TiSi_, nThread)
+    integer :: i, j, k, iBlock, nPoint, iBuff
+    real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'get_thread_coord'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    !Start value for Buffer index numerating the point related to given PE
+    if(iProc==0)then
+       iBuff = 0
+    else
+       iBuff = sum(nThread_P(0:iProc-1))
+    end if
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       do k = 1, nK
+          do j = 1, nJ
+             iBuff = iBuff + 1
+             nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
+             !\
+             ! Fill in an array with lon,lat values
+             StateThread_VI(1:2, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
+             StateThread_VI(1, 1 - nPoint:0) = cHalfPi - &
+                  StateThread_VI(1, 1 - nPoint:0)
+             !\
+             ! Fill in an array with NeSi and TeSi values
+             StateThread_VI(2+PSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+             !\
+             !  Use geometric average of the face value for 
+             !  the wave amplitude to get the cell-centered aplitude squared
+             !/
+             StateThread_VI(2+A2Major_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMajor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMajor_III(-nPoint:-1,j,k)
+             StateThread_VI(2+A2Minor_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % AMinor_III(1-nPoint:0,j,k) *&
+                  BoundaryThreads_B(iBlock) % AMinor_III(-nPoint:-1,j,k)
+             StateThread_VI(2+TeSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k)
+             if(UseElectronPressure)then
+                StateThread_VI(2+TiSi_, 1 - nPoint:0) = &
+                     BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
+             end if
+             !\
+             ! interpolate Te and Ne to the ghost cell center:
+             !/ 
+             State_VI(:,iBuff)  = &
+                     linear(&
+                     a_VI =  StateThread_VI(:, 1 - nPoint:0),    &
+                     nVar = 2+TiSi_,                                    &
+                     iMin = 1 - nPoint,                           &
+                     iMax = 0,                                    &
+                     x = Coord1,                                  &
+                     x_I = BoundaryThreads_B(iBlock) % Coord_DIII(r_,&
+                     1 - nPoint:0, j, k),                         &
+                     DoExtrapolate = .false.)
+          end do
+       end do
+    end do
+    call broadcast_buffer(nVar=2+TiSi_, Buff_VI=State_VI)
+    call test_stop(NameSub, DoTest)
+  end subroutine get_thread_point
+  !==============================
+  subroutine triangulate_thread_for_plot
+    use BATL_lib, ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, x_, y_, z_
+    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModConst, ONLY: cTiny, cRadToDeg
+    real    :: Coord1
+    integer :: i, j, k, iBlock, nPoint
+    !Coordinates and state vector at the point of intersection of thread with
+    !the spherical coordinate  surface of the grid for plotting 
+    real    :: State_VI(2+TiSi_,nThread), State_V(TiSi_), Coord_D(2)
+    real    :: Xyz_DI(3,nThread), Xyz_D(3)
+    !\
+    !Data for interpolation: stencil and weights
+    !/
+    real    :: Weight_I(3)
+    integer :: iStencil_I(3), iError
+    integer, allocatable :: list(:), lptr(:), lend(:)
+    logical :: DoTest, IsTriangleFound = .false.
+    character(len=*), parameter:: NameSub = 'save_thread_for_plot'
+    !-------------------------
+    if(.not.IsUniformGrid)call stop_mpi(&
+         'Triangulation does dot work for non-uniform grid in threaded gap')
+    call test_start(NameSub, DoTest)
+    allocate(list(6*(nThread - 2)), lptr(6*(nThread - 2)), lend(nThread))
+    do i = -nGUniform, 0
+       !\
+       ! Generalized radial coordinate of the grid points
+       !/
+       Coord1 = Coord1Max + real(i)*dCoord1Uniform
+       
+       call get_thread_point(Coord1, State_VI)
+       !Convert lon and lat to Cartesian coordinates on a unit sphere 
+       call trans(nThread, State_VI(1,:), State_VI(2,:), &
+            Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:))
+       !\
+       ! Triangulate
+       !/
+       call trmesh(nThread, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
+            list, lptr, lend, iError)
+       if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+       !\
+       ! Now, interpolate state vector to the points of a grid used for 
+       ! plotting
+       !/
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          if(.not.IsAllocatedThread_B(iBlock))CYCLE
+          do k = kMin_, kMax_ 
+             do j = jMin_, jMax_
+                Coord_D = CoordMin_DB(2:,iBlock) + &
+                     CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
+                call sph_to_xyz(1.0, Coord_D(1), Coord_D(2), Xyz_D)
+                call find_triangle_sph(Xyz_D, nThread, Xyz_DI ,&
+                     list, lptr, lend,                         &
+                     Weight_I(1), Weight_I(2), Weight_I(3),    &
+                     IsTriangleFound,&
+                     iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+                if(.not.IsTriangleFound.or.sum(Weight_I)<1.0 - cTiny&
+                     .or.sum(Weight_I) > 1.0 + cTiny)then
+                   write(*,*)'Spherical triangulation failed'
+                   write(*,*)'At the location x,y,z=', Xyz_D
+                   if(.not.IsTriangleFound)then
+                      write(*,*)'There is no triagle'
+                   elseif(sum(Weight_I)<1.0 - cTiny)then
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' < 1'
+                   else
+                      write(*,*)'The sum of interplolation weights=',&
+                           sum(Weight_I),' > 1'
+                   end if
+                   call stop_mpi('Interpolation on triangulated sphere fails')
+                end if
+                !\
+                ! interpolate Te and Ne to the ghost cell center:
+                !/ 
+                BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
+                    State_VI(3:, iStencil_I(1))*Weight_I(1) + &
+                    State_VI(3:, iStencil_I(2))*Weight_I(2) + &
+                    State_VI(3:, iStencil_I(3))*Weight_I(3)
+             end do
+          end do
+       end do
+    end do
+    deallocate(list, lptr, lend)
+    call test_stop(NameSub, DoTest)
+  end subroutine triangulate_thread_for_plot
+  !=========================================
 end module ModFieldLineThread
 !==============================================================================
