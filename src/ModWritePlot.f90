@@ -1025,7 +1025,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
-    use ModPIC, ONLY: pic_find_region
+    use ModPIC, ONLY: pic_find_region, pic_find_region_active, pic_find_region_criteria
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
@@ -1684,6 +1684,14 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
           end do; end do; end do
+       case('pic_active')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = pic_find_region_active(iBlock,i,j,k)
+          end do; end do; end do
+       case('pic_crit')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = pic_find_region_criteria(iBlock,i,j,k)
+          end do; end do; end do   
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
