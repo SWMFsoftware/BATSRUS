@@ -3056,14 +3056,6 @@ contains
          FluxType='Simple'
       case('ROE','Roe')
          FluxType='Roe'
-         if(UseAlfvenWaves .or. UseWavePressure)then
-            if(iProc==0) write(*,'(a)')NameSub // &
-                 'Wave transport and wave pressure do not work with ' // &
-                 trim(FluxType)
-            if(UseStrict)&
-                 call stop_mpi('Correct PARAM.in')
-            FluxType='Sokolov'
-         end if
       case('ROEOLD','RoeOld')
          FluxType='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
@@ -3090,7 +3082,7 @@ contains
       select case(TypeFluxNeutral)
       case('default')
          select case(FluxType)
-         case('Rusanov', 'Linde', 'Sokolov', 'Godunov','HLLDW', 'LFDW', 'HLLC')
+         case('Rusanov','Linde','Sokolov','Godunov','HLLDW','LFDW','HLLC')
             TypeFluxNeutral = FluxType
          case default
             TypeFluxNeutral = 'Linde'
@@ -3145,11 +3137,12 @@ contains
 
       ! Check flux types
       if( (FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') &
-           .and. .not.UseB)then
+           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+           (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
+           .or. .not.UseB) )then
          if (iProc == 0) then
-            write(*,'(a)')NameSub//&
-                 ' WARNING: HLLD/Roe(Old) flux is only implemented for MHD !!!'
+            write(*,'(a)')NameSub//' WARNING: '// &
+                 'HLLD/Roe(Old) flux only works for single fluid MHD !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
