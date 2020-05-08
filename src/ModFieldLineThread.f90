@@ -1721,12 +1721,13 @@ contains
     real,  intent(in) :: Coord1
     real, intent(out) :: State_VI(2+TiSi_, nThread)
     integer :: i, j, k, iBlock, nPoint, iBuff
+    integer, parameter:: Lon_ = 1, Lat_ = 2
     real    :: StateThread_VI(2+TiSi_, 1-nPointThreadMax:0)
     logical :: DoTest
     character(len=*), parameter:: NameSub = 'get_thread_coord'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    !Start value for Buffer index numerating the point related to given PE
+    !Start value for Buffer index numerating the points related to given PE
     if(iProc==0)then
        iBuff = 0
     else
@@ -1740,11 +1741,10 @@ contains
              iBuff = iBuff + 1
              nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
              !\
-             ! Fill in an array with lon,lat values
-             StateThread_VI(1:2, 1 - nPoint:0) = &
+             ! Fill in an array for this thread with lon,lat values
+             ! of the grid points on the thread 
+             StateThread_VI(Lon_:Lat_, 1 - nPoint:0) = &
                   BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
-             StateThread_VI(1, 1 - nPoint:0) = cHalfPi - &
-                  StateThread_VI(1, 1 - nPoint:0)
              !\
              ! Fill in an array with NeSi and TeSi values
              StateThread_VI(2+PSi_, 1 - nPoint:0) = &
@@ -1766,12 +1766,14 @@ contains
                      BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k)
              end if
              !\
-             ! interpolate Te and Ne to the ghost cell center:
+             ! Now we find the intersection point of the thread with the
+             ! spherical surface at given radial gen coordinate, Coord1
+             ! and interpolate the state vector to this point
              !/ 
              State_VI(:,iBuff)  = &
                      linear(&
-                     a_VI =  StateThread_VI(:, 1 - nPoint:0),    &
-                     nVar = 2+TiSi_,                                    &
+                     a_VI =  StateThread_VI(:, 1 - nPoint:0),     &
+                     nVar = Lat_ + TiSi_,                         &
                      iMin = 1 - nPoint,                           &
                      iMax = 0,                                    &
                      x = Coord1,                                  &
@@ -1781,51 +1783,95 @@ contains
           end do
        end do
     end do
-    call broadcast_buffer(nVar=2+TiSi_, Buff_VI=State_VI)
+    call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
   end subroutine get_thread_point
   !==============================
   subroutine triangulate_thread_for_plot
     use BATL_lib, ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_
-    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph
-    use ModCoordTransform, ONLY: sph_to_xyz
-    use ModConst, ONLY: cTiny, cRadToDeg
+    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
+         fix_state
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModConst, ONLY: cTiny, cRadToDeg, cPi
     real    :: Coord1
     integer :: i, j, k, iBlock, nPoint
+    !\
     !Coordinates and state vector at the point of intersection of thread with
     !the spherical coordinate  surface of the grid for plotting 
-    real    :: State_VI(2+TiSi_,nThread), State_V(TiSi_), Coord_D(2)
-    real    :: Xyz_DI(3,nThread), Xyz_D(3)
+    !/
+    integer, parameter :: Lon_ = 1, Lat_=2
+    real    :: State_VI(Lat_+TiSi_,nThread+2), State_V(TiSi_), &
+         Coord_D(Lon_:Lat_)
+    real    :: Xyz_DI(3,nThread+2), Xyz_D(3)
     !\
     !Data for interpolation: stencil and weights
     !/
     real    :: Weight_I(3)
     integer :: iStencil_I(3), iError
+    !\
+    ! Triangulation data
+    !/
     integer, allocatable :: list(:), lptr(:), lend(:)
+    !\
+    ! Local Ligicals
+    !/
     logical :: DoTest, IsTriangleFound = .false.
+    !\
+    !Add two triangulation nodes at the poles:
+    !/
+    real, parameter :: North_D(3)   = [0.0, 0.0, +1.0]
+    real, parameter :: South_D(3)   = [0.0, 0.0, -1.0]
     character(len=*), parameter:: NameSub = 'save_thread_for_plot'
     !-------------------------
     if(.not.IsUniformGrid)call stop_mpi(&
          'Triangulation does dot work for non-uniform grid in threaded gap')
     call test_start(NameSub, DoTest)
-    allocate(list(6*(nThread - 2)), lptr(6*(nThread - 2)), lend(nThread))
+    allocate(list(6*nThread), lptr(6*nThread), lend(nThread+2))
     do i = -nGUniform, 0
        !\
        ! Generalized radial coordinate of the grid points
-       !/
+       !  This is the SC low boundary
+       !/           V
        Coord1 = Coord1Max + real(i)*dCoord1Uniform
        
-       call get_thread_point(Coord1, State_VI)
-       !Convert lon and lat to Cartesian coordinates on a unit sphere 
-       call trans(nThread, State_VI(1,:), State_VI(2,:), &
-            Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:))
+       call get_thread_point(Coord1, State_VI(:,2:nThread+1))
+       !Convert lon and lat to Cartesian coordinates on a unit sphere
+ 
+       call trans( n=nThread,&
+            rlat=State_VI(2,2:nThread+1), &
+            rlon=State_VI(1,2:nThread+1), &
+            x= Xyz_DI(x_,2:nThread+1), &
+            y= Xyz_DI(y_,2:nThread+1), &
+            z=Xyz_DI(z_,2:nThread+1))
+       !Add two grid nodes at the poles:
+       Xyz_DI(:,1)             = South_D     ! = [0.0, 0.0, -1.0]
+       Xyz_DI(:,    nThread+2) = North_D     ! = [0.0, 0.0, +1.0]
        !\
        ! Triangulate
        !/
-       call trmesh(nThread, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
+       call trmesh(nThread+2, Xyz_DI(x_,:), Xyz_DI(y_,:), Xyz_DI(z_,:), &
             list, lptr, lend, iError)
        if(iError/=0)call stop_mpi(NameSub//': Triangilation failed')
+       !Fix states at the polar nodes:
+       !North:
+       call fix_state(iNodeToFix =         1,&
+                      nNode      = nThread+2,&
+                      iList_I    =      list,&
+                      iPointer_I =      lptr,&
+                      iEnd_I     =      lend,&
+                      Xyz_DI     =    Xyz_DI,&
+                      nVar       =     TiSi_,&
+                      State_VI   = State_VI(3:,:))
+       !South:
+       call fix_state(iNodeToFix = nThread+2,&
+                      nNode      = nThread+2,&
+                      iList_I    =      list,&
+                      iPointer_I =      lptr,&
+                      iEnd_I     =      lend,&
+                      Xyz_DI     =    Xyz_DI,&
+                      nVar       =     TiSi_,&
+                      State_VI   = State_VI(3:,:))      
        !\
        ! Now, interpolate state vector to the points of a grid used for 
        ! plotting
@@ -1837,38 +1883,35 @@ contains
              do j = jMin_, jMax_
                 Coord_D = CoordMin_DB(2:,iBlock) + &
                      CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
-                call sph_to_xyz(1.0, Coord_D(1), Coord_D(2), Xyz_D)
-                call find_triangle_sph(Xyz_D, nThread, Xyz_DI ,&
+                !\
+                !Transform longitude and latitude to the unit vector
+                !/
+                call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_),&
+                     Xyz_D)
+                !\
+                ! Find a triange into which this vector falls and the 
+                ! interpolation weights
+                !/
+                call find_triangle_sph(Xyz_D, nThread+2, Xyz_DI ,&
                      list, lptr, lend,                         &
                      Weight_I(1), Weight_I(2), Weight_I(3),    &
                      IsTriangleFound,&
                      iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
-                if(.not.IsTriangleFound.or.sum(Weight_I)<1.0 - cTiny&
-                     .or.sum(Weight_I) > 1.0 + cTiny)then
-                   write(*,*)'Spherical triangulation failed'
+                if(.not.IsTriangleFound)then
                    write(*,*)'At the location x,y,z=', Xyz_D
-                   if(.not.IsTriangleFound)then
-                      write(*,*)'There is no triagle'
-                   elseif(sum(Weight_I)<1.0 - cTiny)then
-                      write(*,*)'The sum of interplolation weights=',&
-                           sum(Weight_I),' < 1'
-                   else
-                      write(*,*)'The sum of interplolation weights=',&
-                           sum(Weight_I),' > 1'
-                   end if
                    call stop_mpi('Interpolation on triangulated sphere fails')
                 end if
                 !\
-                ! interpolate Te and Ne to the ghost cell center:
+                ! interpolate  state vector to a uniform grid point
                 !/ 
                 BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
                     State_VI(3:, iStencil_I(1))*Weight_I(1) + &
                     State_VI(3:, iStencil_I(2))*Weight_I(2) + &
                     State_VI(3:, iStencil_I(3))*Weight_I(3)
-             end do
-          end do
-       end do
-    end do
+             end do !j
+          end do    !k
+       end do       !iBlock
+    end do          !i
     deallocate(list, lptr, lend)
     call test_stop(NameSub, DoTest)
   end subroutine triangulate_thread_for_plot
