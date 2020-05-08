@@ -49,7 +49,8 @@ contains
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
     use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
-         split_string, join_string, open_file, lower_case, DoWriteCallSequence
+         split_string, join_string, open_file, lower_case, &
+         DoWriteCallSequence, StringTestSwmf => StringTest
     use CON_planet,       ONLY: get_planet
     use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
     use ModReadParam
@@ -136,7 +137,7 @@ contains
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
-         rRound0, rRound1
+         rRound0, rRound1, StringTest
 
     character (len=17) :: NameSub='MH_set_parameters'
 
@@ -570,6 +571,8 @@ contains
             "#TEST2IJK", "#TESTVAR", "#TESTDIM")
           call read_test_param(NameCommand)
           if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
+          if(NameCommand == "#TEST" .and. IsStandAlone) &
+               StringTestSwmf = StringTest
 
        case("#STRICT")
           call read_var('UseStrict',UseStrict)
