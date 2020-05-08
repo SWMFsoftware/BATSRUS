@@ -544,7 +544,7 @@ contains
          nDim, x_, y_, z_, find_grid_block, iNode_B, &
          nI, nJ, nK, Xyz_DGB, block_inside_regions
     use BATL_Region, ONLY: points_inside_region, &
-         point_inside_regions
+         is_point_inside_regions
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
     use ModMain
     use ModMpi
@@ -557,7 +557,6 @@ contains
     real:: XyzPic_D(nDim), XyzMhd_D(nDim), XyzMhdExtend_D(nDim)
     integer:: iBlock
     integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
-    logical:: IsPointInside = .false.
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
@@ -617,10 +616,8 @@ contains
                          ! convert patch index to MHD Coordinates
                          call patch_index_to_coord(iRegion, IndexPatch_D, 'Mhd', &
                               XyzMhdExtend_D)
-                         call point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D, &
-                              IsPointInside)
                          ! set the point status
-                         if(IsPointInside) then
+                         if(is_point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D)) then
                             call set_point_status(Status_I, nX, nY, nZ, &
                                  IndexPatch_D(x_), &
                                  IndexPatch_D(y_), &
