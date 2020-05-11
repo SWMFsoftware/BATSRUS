@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
-! use ModUtilties, ONLY: norm2
+!  use ModUtilities, ONLY: norm2
   use BATL_lib,      ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
        iProc, nProc, iComm, nJ, nK, jDim_, kDim_
