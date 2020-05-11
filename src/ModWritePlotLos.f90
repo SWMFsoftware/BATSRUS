@@ -632,7 +632,7 @@ contains
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
-      real:: XyzIntersect_D(3)
+      real:: XyzIntersect_D(3), XyzTR_D(3)
 
       !------------------------------------------------------------------------
 
@@ -706,13 +706,13 @@ contains
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           UseThreads = DoPlotThreads)
                      !\
-                     ! LOS ntersection with the chromosphere
+                     ! LOS ntersection with the top of Transition Region
                      !/ 
-                     XyzIntersect_D = XyzIntersect_D + (d - dChromo)*LosPix_D
-                     call find_grid_block((rInner + cTiny)*XyzIntersect_D/&
-                          norm2(XyzIntersect_D),iProcFound, iBlock)
+                     XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                     call find_grid_block((rInner + cTiny)*XyzTR_D/&
+                          norm2(XyzTR_D),iProcFound, iBlock)
                      if(iProc==iProcFound)call get_tr_los_image(&
-                          Xyz_D = XyzIntersect_D + (d - dChromo)*LosPix_D ,&
+                          Xyz_D = XyzTR_D ,&
                           DirLos_D = LosPix_D,                             &
                           iBlock = iBlock,                                 &
                           nPlotVar = nPlotVar,                             &
