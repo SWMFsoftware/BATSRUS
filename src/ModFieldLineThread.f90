@@ -21,7 +21,8 @@ module ModFieldLineThread
 
   public :: save_threads_for_plot     ! Get  State_VIII array
   public :: interpolate_thread_state  ! Interpolate state from State_VIII
-  public :: set_thread_plotvar
+  public :: set_thread_plotvar        ! Plot variables for "shell" plots
+  public :: get_tr_los_image          ! Correction for TR on LOS images
 
   !\
   ! rBody here is set to one keeping a capability to set
@@ -1916,5 +1917,86 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine triangulate_thread_for_plot
   !=========================================
+  subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, NamePlotVar_V,&
+       iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
+    use ModB0, ONLY: get_b0
+    !\
+    ! Using a tabulated analytical solution for the Transition Region (TR),
+    ! the contribution to the LOS image from the TR is calculated.
+    !/
+    !\
+    !INPUTS:
+    !\
+    !\
+    ! An intersection point of the LOS with the chromosphere top:
+    !/
+    real, intent(in)    :: Xyz_D(3)
+    !\
+    ! A unit vector in direction of the LOS:
+    !/
+    real, intent(in)    :: DirLos_D(3)
+    !(Extended) block ID
+    integer, intent(in) :: iBlock
+    !\
+    !Number of the variables to plot:
+    !/
+    integer, intent(in) :: nPlotVar
+    !\
+    !Names of the variables to plot
+    !/
+    character(len=20), intent(in) :: NamePlotVar_V(nPlotVar)
+    !\
+    ! Tables, in which the emissivity in different ion lines 
+    ! is tabulated:
+    !/
+    integer, intent(in) :: iTableEuv, iTableSxr, iTableGen
+    !\
+    ! Pixel intensity to be corrected
+    !/
+    real, intent(inout) :: PixIntensity_V(nPlotVar)
+    !/
+    !LOCALS:
+    !/
+    !\
+    ! Magnetic field at the point XYZ_D, and its direction vector:
+    !/
+    real :: B0_D(3), DirB_D(3)
+    !\
+    ! Radial direction:
+    !/
+    real :: DirR_D(3)
+    !\
+    ! cosine of angles between the radial direction and the directions of
+    ! LOS and magnetic field:
+    !/
+    real :: CosRLos, CosRB
+    !-----------------------------------------------
+    !\
+    ! If the non-uniform grid is used extending the existing block
+    ! adaptive grid, the grid normally does not even reach the chromosphere 
+    ! height, so that the contribution from the TR is not worth while 
+    ! quantifying.
+    !/
+    if(.not.IsUniformGrid)RETURN
+    !\
+    ! Radial direction:
+    !/
+    DirR_D = Xyz_D/norm2(Xyz_D)
+    !\
+    ! Cosine of angle between DirR and DirLos:
+    !/
+    CosRLos = abs(sum(DirR_D*DirLos_D))
+    !\
+    ! If the line is tangent to the solar surface, the intensity is too large
+    ! to be corrected
+    !/
+    if(CosRLos <= 0.01)RETURN
+    !\
+    ! Magnetic field vector and its angle with the radial direction:
+    !/
+    call get_b0(Xyz_D, B0_D)
+    DirB_D = B0_D/norm2(B0_D)
+    CosRB = abs(sum(DirR_D*DirB_D))
+  end subroutine get_tr_los_image
 end module ModFieldLineThread
 !==============================================================================

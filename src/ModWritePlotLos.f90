@@ -80,7 +80,7 @@ contains
     use ModPlotFile, ONLY: save_plot_file
     use ModWritePlot, ONLY: set_plot_scalars
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, find_grid_block, &
          IsCartesianGrid, IsCartesian, IsRzGeometry
     use ModSatelliteFile, ONLY: nSatellite, NameSat_I, XyzSat_DI,  &
          set_satellite_positions
@@ -163,7 +163,8 @@ contains
     real, allocatable :: InterpValues_I(:)
 
     integer :: iSat, iSatLoop
-
+    integer:: iProcFound
+      
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
@@ -271,7 +272,12 @@ contains
     call lower_case(plot_vars1)
     call split_string(plot_vars1, nPlotVarLosMax, plotvarnames, nPlotVar)
     call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
-
+    !\
+    ! Initialize table IDs. In this case automatically 
+    ! UseTableGen = (iTableGen >=0) and analogously for other table
+    ! related logicals.
+    !/
+    iTableEuv = -1; iTableSxr = -1; iTableGen =  -1
     ! For generalized Los Table check PlotVarNames for string 'tbl'
     UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
 
@@ -622,7 +628,7 @@ contains
     !==========================================================================
     subroutine integrate_image
       use ModFieldLineThread, ONLY: UseFieldLineThreads, DoPlotThreads, &
-           rChromo=>rBody
+           get_tr_los_image, rChromo=>rBody
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
@@ -699,6 +705,22 @@ contains
                      dChromo = - LosDotXyzPix + SqrtDiscr 
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           UseThreads = DoPlotThreads)
+                     !\
+                     ! LOS ntersection with the chromosphere
+                     !/ 
+                     XyzIntersect_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                     call find_grid_block((rInner + cTiny)*XyzIntersect_D/&
+                          norm2(XyzIntersect_D),iProcFound, iBlock)
+                     if(iProc==iProcFound)call get_tr_los_image(&
+                          Xyz_D = XyzIntersect_D + (d - dChromo)*LosPix_D ,&
+                          DirLos_D = LosPix_D,                             &
+                          iBlock = iBlock,                                 &
+                          nPlotVar = nPlotVar,                             &
+                          NamePlotVar_V = plotvarnames(1:nPlotVar),        &
+                          iTableEuv = iTableEuv,                           &
+                          iTableSxr = iTableSxr,                           &
+                          iTableGen = iTableGen,                           &
+                          PixIntensity_V  = ImagePe_VII(1:nPlotVar,iPix,jPix))
                   else
                      !Distance between two intersections with the low
                      !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
@@ -730,14 +752,12 @@ contains
       use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
       use ModFieldLineThread, ONLY: &
            IsUniformGrid, dCoord1Uniform
-      use BATL_lib,           ONLY: xyz_to_coord, find_grid_block, &
+      use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
       real, intent(in):: XyzStartIn_D(3)
       real, intent(in):: LengthMax
       logical, optional, intent(in) :: UseThreads
-
-      integer:: iProcFound
 
       real:: Length          ! Total length of integral
       real:: Ds              ! Length of line segment
