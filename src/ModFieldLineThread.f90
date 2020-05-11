@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
-
+!  use ModUtilities, ONLY: norm2
   use BATL_lib,      ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
        iProc, nProc, iComm, nJ, nK, jDim_, kDim_
@@ -1926,7 +1926,6 @@ contains
   !=========================================
   subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, NamePlotVar_V,&
        iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
-    use ModB0, ONLY: get_b0
     !\
     ! Using a tabulated analytical solution for the Transition Region (TR),
     ! the contribution to the LOS image from the TR is calculated.
@@ -1977,6 +1976,23 @@ contains
     ! LOS and magnetic field:
     !/
     real :: CosRLos, CosRB
+    !\
+    ! 1D Grid across the TR
+    !/
+    !Number of uniform meshes in the range from TeSiMin to Te on the TR top
+    integer, parameter :: nTRGrid = 20  
+    real :: Te_I(nTRGrid + 1), TAvr_I(nTRGrid + 1), Length_I
+    !\
+    ! Arrays to address to tables:
+    !/
+    ! Tabulated analytical solution:
+    real :: TRValue_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    ! Euv intensities:
+    real :: EuvValue_V(1:3), EuvValue_VI(3, nTRGrid +1)
+    ! Sxr intensities:
+    real :: SxrValue_V(1:2), SxrValue_VI(2, nTRGrid +1)
+    ! Gen table values:
+    real :: GenValue_V(1:nPlotVar), GenValue_VI(nPlotVar, nTRGrid +1)
     !-----------------------------------------------
     !\
     ! If the non-uniform grid is used extending the existing block
