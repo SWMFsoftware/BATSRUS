@@ -166,6 +166,13 @@ module ModFieldLineThread
   real, public :: cExchangeRateSi
 
   real, parameter:: TeGlobalMaxSi = 1.80e7
+  !\
+  ! Table numbers needed to use lookup table
+  !/
+  integer, public :: iTableTR
+  !Control parameter: minimum temerature
+  real, parameter, public:: TeSiMin = 5.0e4
+  real, public :: SqrtZ
 
   !\
   ! Logical from ModMain.

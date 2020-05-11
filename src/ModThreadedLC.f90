@@ -6,6 +6,7 @@ module ModThreadedLC
   use BATL_lib, ONLY: test_start, test_stop, iProc
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
+       iTableTR, TeSiMin, SqrtZ,                                 &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
        LambdaSi_, DLogLambdaOverDLogT_,                          &
        DoInit_, Done_, Enthalpy_, Heat_,                         &
@@ -76,14 +77,8 @@ module ModThreadedLC
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
 
   !\
-  ! Table numbers needed to use lookup table
+  ! Two logicals with self-explained names
   !/
-  integer :: iTableTR
-  !\
-  ! Control parameters: minimum temerature  and two logicals with
-  ! self-explained names
-  !/
-  real, parameter:: TeSiMin = 5.0e4
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
   !\
@@ -112,8 +107,6 @@ module ModThreadedLC
   !\
   ! See above for the use of the latter constant
   !/
-
-  real :: SqrtZ
   integer, parameter:: Impl_=3
 
   real,parameter:: cTol=1.0e-6
