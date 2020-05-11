@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
-
+! use ModUtilties, ONLY: norm2
   use BATL_lib, ONLY: test_start, test_stop, iProc
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
