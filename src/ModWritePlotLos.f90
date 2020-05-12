@@ -708,19 +708,22 @@ contains
                      !\
                      ! LOS ntersection with the top of Transition Region
                      !/ 
-                     XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
-                     call find_grid_block((rInner + cTiny)*XyzTR_D/&
-                          norm2(XyzTR_D),iProcFound, iBlock)
-                     if(iProc==iProcFound)call get_tr_los_image(&
-                          Xyz_D = XyzTR_D ,&
-                          DirLos_D = LosPix_D,                             &
-                          iBlock = iBlock,                                 &
-                          nPlotVar = nPlotVar,                             &
-                          NamePlotVar_V = plotvarnames(1:nPlotVar),        &
-                          iTableEuv = iTableEuv,                           &
-                          iTableSxr = iTableSxr,                           &
-                          iTableGen = iTableGen,                           &
-                          PixIntensity_V  = ImagePe_VII(1:nPlotVar,iPix,jPix))
+                     if(UseEuv .or. UseSxr .or. UseTableGen)then
+                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                        call find_grid_block((rInner + cTiny)*XyzTR_D/&
+                             norm2(XyzTR_D),iProcFound, iBlock)
+                        if( iProc==iProcFound)call get_tr_los_image(&
+                             Xyz_D = XyzTR_D ,&
+                             DirLos_D = LosPix_D,                             &
+                             iBlock = iBlock,                                 &
+                             nPlotVar = nPlotVar,                             &
+                             NamePlotVar_V = plotvarnames(1:nPlotVar),        &
+                             iTableEuv = iTableEuv,                           &
+                             iTableSxr = iTableSxr,                           &
+                             iTableGen = iTableGen,                           &
+                             PixIntensity_V  = ImagePe_VII(1:nPlotVar,        &
+                             iPix, jPix))
+                     end if
                   else
                      !Distance between two intersections with the low
                      !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
@@ -1092,7 +1095,7 @@ contains
          ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
          ! !! Really, cTolerance is the minimum number density in CGS units???
-         Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
+         Ne = 1.0e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
          LogNe = log10(Ne)
 
          ! rconv converts solar radii units to CGS for response function exponent
