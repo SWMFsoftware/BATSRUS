@@ -167,7 +167,6 @@ contains
             call get_region_indexes(StringPicRegionLimit, &
             iRegionPicLimit_I)
 
-
     case("#PICREGION")
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') &
