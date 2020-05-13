@@ -1926,6 +1926,7 @@ contains
   !=========================================
   subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, NamePlotVar_V,&
        iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
+    use ModLookupTable,  ONLY: interpolate_lookup_table
     !\
     ! Using a tabulated analytical solution for the Transition Region (TR),
     ! the contribution to the LOS image from the TR is calculated.
@@ -1957,6 +1958,10 @@ contains
     !/
     integer, intent(in) :: iTableEuv, iTableSxr, iTableGen
     !\
+    ! Logicals specifying the use of tables
+    !/
+    logical :: UseEuv, UseSxr, UseGenTable
+    !\
     ! Pixel intensity to be corrected
     !/
     real, intent(inout) :: PixIntensity_V(nPlotVar)
@@ -1981,7 +1986,8 @@ contains
     !/
     !Number of uniform meshes in the range from TeSiMin to Te on the TR top
     integer, parameter :: nTRGrid = 20  
-    real :: Te_I(nTRGrid + 1), TAvr_I(nTRGrid + 1), Length_I
+    !mesh-centered temperature and the spatial length of intervals, in cm!!
+    real :: TeAvrSi_I(nTRGrid + 1), DeltaLCgs_I(nTRGrid + 1)
     !\
     ! Arrays to address to tables:
     !/
@@ -1990,9 +1996,13 @@ contains
     ! Euv intensities:
     real :: EuvValue_V(1:3), EuvValue_VI(3, nTRGrid +1)
     ! Sxr intensities:
-    real :: SxrValue_V(1:2), SxrValue_VI(2, nTRGrid +1)
+    real :: SxrValue, SxrValue_VI(2, nTRGrid +1)
     ! Gen table values:
-    real :: GenValue_V(1:nPlotVar), GenValue_VI(nPlotVar, nTRGrid +1)
+    real :: GenValue_VI(nPlotVar, nTRGrid +1)
+    ! Plasma parameters at the top of TR
+    real :: TeSi, PTotSi, PeSi, PAvrSi
+    !Contribution to the image
+    real :: PlotVar_V(1:nPlotVar)
     !-----------------------------------------------
     !\
     ! If the non-uniform grid is used extending the existing block
@@ -2020,6 +2030,172 @@ contains
     call get_b0(Xyz_D, B0_D)
     DirB_D = B0_D/norm2(B0_D)
     CosRB = abs(sum(DirR_D*DirB_D))
+    UseEuv = iTableEuv > 0
+    UseSxr = iTableSxr > 0
+    UseGenTable = iTableGen > 0
+    call get_te_ptot(TeSi, PTotSi)
+    !\
+    ! Assiming equal electron and ion temperature
+    ! Pe = Z Pi, pTotal = (Z+1)Pi
+    ! So that Pi = pTotal/(Z+1) and
+    PeSi = Z*PTotSi/(1 + Z)
+    ! We define pAvr=sqrt(Pe*Pi)=sqrt(Z)*pTotal/(1+z)
+    PAvrSi = SqrtZ*PTotSi/(1 + Z)
+    call set_te_grid(TeSi, PTotSi)
+    PlotVar_V = 0
+    !Integrate plot variables
+    call set_plot_var
+    !Add contribution to the pixel intensity, account for
+    !the geometric factor
+    PixIntensity_V = PixIntensity_V + PlotVar_V *(CosRB/CosRLos)
+  contains
+    !=========================================
+    subroutine get_te_ptot(TeSi, PTotSi)
+      use BATL_lib,       ONLY: xyz_to_coord, CellSize_DB, CoordMin_DB, r_
+      use ModInterpolate, ONLY: interpolate_vector
+      !\
+      ! OUTPUT:
+      !/
+      real, intent(out) :: TeSi, PTotSi
+      !\
+      !Coords of the point in which to interpolate
+      !/
+      real :: Coord_D(3), CoordNorm_D(2)
+      real :: StateThread_V(PSi_:TiSi_)
+      !----------------------------------------------------------------
+      call xyz_to_coord(Xyz_D, Coord_D)
+      CoordNorm_D = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
+           CellSize_DB(r_+1:,iBlock) + 0.50
+
+      ! Along radial coordinate the resolution and location of the grid
+      ! may be different:
+      
+      ! Interpolate the state on threads to the given location
+      StateThread_V = interpolate_vector(                                 &
+           a_VC=BoundaryThreads_B(iBlock)%State_VIII(:,                   &
+           BoundaryThreads_B(iBlock)%iMin,:,:),                           &
+           nVar=TiSi_,                                                    &
+           nDim=2,                                                        &
+           Min_D=[jMin_, kMin_],                                          &
+           Max_D=[jMax_, kMax_],                                          &
+           x_D=CoordNorm_D)
+      PTotSi = StateThread_V( PSi_)
+      TeSi   = StateThread_V(TeSi_)
+    end subroutine get_te_ptot
+    !=========================================
+    subroutine set_te_grid(TeSi, PAvrSi)
+      !\
+      ! INPUTS:
+      !/
+      real, intent(in) :: TeSi, PAvrSi
+      real    :: DeltaTe      !Mesh of a temperature 
+      integer :: i            !Loop variable
+      real    :: LPAvrSi_I(nTRGrid + 1), TeSi_I(nTRGrid + 1)
+      real    :: DeltaLPAvrSi_I(nTRGrid + 1)
+      real    :: TRTable_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+      !--------------
+      DeltaTe = (TeSi - TeSiMin)/nTRGrid
+      TeSi_I(1) = TeSiMin
+      call interpolate_lookup_table(iTableTR, TeSiMin, 1.0e8, TRTable_V, &
+           DoExtrapolate=.false.)
+      !\
+      ! First value is now the product of the thread length in meters times
+      ! a geometric mean pressure, so that
+      !/
+      LPAvrSi_I(1) = TRTable_V(LengthPAvrSi_)
+      do i = 1, nTRGrid
+         TeSi_I(i +1) = TeSi_I(i) + DeltaTe
+         call interpolate_lookup_table(iTableTR, TeSi_I(i + 1), 1.0e8,    &
+              TRTable_V, DoExtrapolate=.false.)
+         LPAvrSi_I(i + 1) = TRTable_V(LengthPAvrSi_)
+         DeltaLPAvrSi_I(i) = LPAvrSi_I(i + 1) - LPAvrSi_I(i)
+         TeAvrSi_I(i) = (TeSi_I(i + 1) + TeSi_I(i))*0.50
+      end do
+      TeAvrSi_I(nTRGrid + 1) = TeSi
+      DeltaLPAvrSi_I(nTRGrid + 1) = LPAvrSi_I(1) - LPAvrSi_I(nTRGrid + 1)
+      !\
+      !Now, DeltaL_I is the length interval multiplied by PAvrSi.
+      !Get rid of the latter factor and convert from meters to cm:
+      !/
+      DeltaLCgs_I = DeltaLPAvrSi_I*100.0/PAvrSi
+    end subroutine set_te_grid
+    !================================
+    subroutine set_plot_var
+      use ModConst, ONLY: cBoltzmann
+      integer ::  i, iVar !Loop variables
+      !Electron density in particles per cm3:
+      real    :: NeCgs
+      !------------------------
+      if(UseGenTable)then
+         do i = 1, nTRGrid + 1
+            !Calculate mesh-centered electron density:
+            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
+            call interpolate_lookup_table(iTableGen, TeAvrSi_I(i), NeCgs, &
+                 GenValue_VI(:,i), DoExtrapolate=.true.)
+            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
+            GenValue_VI(:,i) = GenValue_VI(:,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
+                 DeltaLCgs_I(i)
+         end do
+         !Sum up the contributions from all temperature intervals:
+         do iVar = 1, nPlotVar
+            PlotVar_V(iVar) = sum(GenValue_VI(iVar,:))
+         end do
+         RETURN
+      end if
+      if (UseEuv) then
+         ! now interpolate EUV response values from a lookup table
+         do i = 1, nTRGrid +1
+            !Calculate mesh-centered electron density:
+            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
+            call interpolate_lookup_table(iTableEUV, TeAvrSi_I(i), NeCgs, &
+                 EuvValue_VI(:,i) , DoExtrapolate=.true.)
+            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
+            EuvValue_VI(:,i) = EuvValue_VI(:,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
+                 DeltaLCgs_I(i)
+         end do
+         !Sum up the contributions from all temperature intervals:
+         do iVar = 1,3
+            EuvValue_V(iVar) = sum(EuvValue_VI(iVar,:))
+         end do
+      end if
+      
+      if (UseSxr) then
+         ! now interpolate SXR response values from a lookup table
+         do i = 1, nTRGrid +1
+            !Calculate mesh-centered electron density:
+            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
+            call interpolate_lookup_table(iTableSXR, TeAvrSi_I(i), NeCgs, &
+                 SxrValue_VI(:,i), DoExtrapolate=.true.)
+            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
+            SxrValue_VI(1,i) = SxrValue_VI(1,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
+                 DeltaLCgs_I(i)
+         end do
+         !Sum up the contributions from all temperature intervals:
+         SxrValue = sum(SxrValue_VI(1,:))
+      end if
+      do iVar = 1, nPlotVar
+         select case(NamePlotVar_V(iVar))
+         case('euv171')
+            ! EUV 171
+            PlotVar_V(iVar) = EuvValue_V(1)
+
+         case('euv195')
+            ! EUV 195
+            PlotVar_V(iVar) = EuvValue_V(2)
+
+         case('euv284')
+            ! EUV 284
+            PlotVar_V(iVar) = EuvValue_V(3)
+
+         case('sxr')
+            ! Soft X-Ray (Only one channel for now, can add others later)
+            PlotVar_V(iVar) = SxrValue
+         case default
+            call stop_mpi('Unknown NamePlotVar='//NamePlotVar_V(iVar))
+         end select
+      end do
+    end subroutine set_plot_var
+    !================================
   end subroutine get_tr_los_image
 end module ModFieldLineThread
 !==============================================================================
