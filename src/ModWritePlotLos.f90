@@ -984,7 +984,7 @@ contains
 
       ! Added for EUV synth and sph geometry
       real :: GenLos_D(3)
-      real :: LogTe, LogNe, ResponseFactor, EuvResponse(3), SxrResponse(2)
+      real :: ResponseFactor, EuvResponse(3), SxrResponse(2)
 
       ! parameters for temperature cuttoff of EUV/SXR response
       ! idea is to neglect most of the broadened transition region
@@ -1088,21 +1088,20 @@ contains
          ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
-         ! !! This should not be needed here
-         LogTe = log10(TeSi)
 
-         ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-         ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
-
-         ! !! Really, cTolerance is the minimum number density in CGS units???
-         Ne = 1.0e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
-         LogNe = log10(Ne)
-
-         ! rconv converts solar radii units to CGS for response function exponent
-         ! calculate Ne**2 and normalize units (10 ^ an exponent)
-         ! ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
-
-         ResponseFactor = Ne**2*6.96e-16
+         ! Here 1e-6 is to convert to CGS
+         Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
+         
+         !\
+         !  ResponseFactor is applied to the product of tabulated "response
+         !  function" (which is provided in the tables without a scaling 
+         !  factor, 1e-26) by the element of dimensionless length, ds, which 
+         !  should be converted to cm by  multiplying it by UnitX (which gives 
+         !  meters) and by 100 cm/m. The dependence on density should be also 
+         !  accounted for by multiplying this by Ne**2, Ne being in psrticles 
+         !  per cm3 
+         !/
+         ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_)) 
 
          ! calculate temperature cutoff to neglect widened transition region
          FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
@@ -1112,7 +1111,7 @@ contains
             ! now interpolate EUV response values from a lookup table
             if (iTableEUV <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
-            call interpolate_lookup_table(iTableEUV, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableEUV, Te, Ne, &
                  EuvResponse, DoExtrapolate=.true.)
             EuvResponse = EuvResponse * FractionTrue
          end if
@@ -1121,7 +1120,7 @@ contains
             ! now interpolate SXR response values from a lookup table
             if (iTableSXR <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
-            call interpolate_lookup_table(iTableSXR, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableSXR, Te, Ne, &
                  SxrResponse, DoExtrapolate=.true.)
             SxrResponse = SxrResponse * FractionTrue
          end if
@@ -1131,7 +1130,7 @@ contains
                  call stop_mpi('Need to load #LOOKUPTABLE for ' &
                  //NameLosTable(iFile)//' response!')
             ! now interpolate the entire table
-            call interpolate_lookup_table(iTableGen, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableGen, Te, Ne, &
                  InterpValues_I, DoExtrapolate=.true.)
             InterpValues_I = InterpValues_I * FractionTrue
 
