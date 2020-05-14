@@ -325,7 +325,7 @@ contains
     !\
     ! Initialize all output parameters from 0D solution
     !/
-    call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
+    call interpolate_lookup_table(iTableTR, TeSiIn, Value_V, &
            DoExtrapolate=.false.)
     !\
     ! First value is now the product of the thread length in meters times
@@ -372,7 +372,6 @@ contains
                iVal=LengthPAvrSi_,      &
                ValIn=PeSiOut/SqrtZ*     &
                BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-               Arg2In=1.0e8,            &
                Value_V=Value_V,         &
                Arg1Out=TeSi_I(iPoint),  &
                DoExtrapolate=.false.)
@@ -636,7 +635,7 @@ contains
       !\
       ! Calculate flux to TR and its temperature derivative
       !/
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
            DoExtrapolate=.false.)
 
       do iIter = 1,nIter
@@ -783,7 +782,7 @@ contains
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
          !/
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
               DoExtrapolate=.false.)
          !\
          ! Set pressure for updated temperature
@@ -976,7 +975,7 @@ contains
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
             call stop_mpi('Stop!!!')
          end if
-         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 1.0e8, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), &
               Value_V, &
            DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &
