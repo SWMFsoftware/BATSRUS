@@ -937,9 +937,8 @@ contains
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
       call interpolate_lookup_table(iTable=iTable,&
-                                    iVal=HeatFluxLength_,       &
+                                    iVal=HeatFluxLength_, &
                                     ValIn=HeatFluxXLength,&
-                                    Arg2In=1.0e8, &
                                     Value_V=Value_V,      &
                                     Arg1Out=TMax,  &
                                     DoExtrapolate=.false.)
@@ -1024,11 +1023,11 @@ contains
             NameTable = 'TR',                                       &
             NameCommand = 'save',                                   &
             NameVar =                                               &
-            'logTe logNe '//                                        &
+            'logTe '//                                              &
             'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
-            nIndex_I = [500,2],                                   &
-            IndexMin_I = [1.0e4, 1.0e8],                           &
-            IndexMax_I = [1.0e8, 1.0e18],                          &
+            nIndex_I = [500],                                       &
+            IndexMin_I = [1.0e4],                                   &
+            IndexMax_I = [1.0e8],                                   &
             NameFile = 'TR.dat',                                    &
             TypeFile = TypeFile,                                    &
             StringDescription = &
@@ -1082,8 +1081,7 @@ contains
        end do
 
        do iTe = 2,500
-          call interpolate_lookup_table(iTable,&
-               TeSi_I(iTe), 1.0e2, LambdaCgs_V)
+          call interpolate_lookup_table(iTable, TeSi_I(iTe), LambdaCgs_V)
           LambdaSi_I(iTe) = LambdaCgs_V(1)*Radcool2Si
           if(iTe==1)CYCLE
           !\
@@ -2096,7 +2094,7 @@ contains
       !--------------
       DeltaTe = (TeSi - TeSiMin)/nTRGrid
       TeSi_I(1) = TeSiMin
-      call interpolate_lookup_table(iTableTR, TeSiMin, 1.0e8, TRTable_V, &
+      call interpolate_lookup_table(iTableTR, TeSiMin, TRTable_V, &
            DoExtrapolate=.false.)
       !\
       ! First value is now the product of the thread length in meters times
@@ -2105,7 +2103,7 @@ contains
       LPAvrSi_I(1) = TRTable_V(LengthPAvrSi_)
       do i = 1, nTRGrid
          TeSi_I(i +1) = TeSi_I(i) + DeltaTe
-         call interpolate_lookup_table(iTableTR, TeSi_I(i + 1), 1.0e8,    &
+         call interpolate_lookup_table(iTableTR, TeSi_I(i + 1),   &
               TRTable_V, DoExtrapolate=.false.)
          LPAvrSi_I(i + 1) = TRTable_V(LengthPAvrSi_)
          DeltaLPAvrSi_I(i) = LPAvrSi_I(i + 1) - LPAvrSi_I(i)
