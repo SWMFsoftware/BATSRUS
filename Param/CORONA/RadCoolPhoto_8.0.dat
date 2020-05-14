@@ -2,7 +2,7 @@ Radiative losses of optically thin Coronal plasma, sun_photospheric_2011_caffau.
 0 0.0 1 1 1
 600
 8.0
-log10Te lamdaT ChiantiVersion
+logTe lamdaT ChiantiVersion
 3.1983967   3.5327186e-14
 3.2064128   4.7226498e-14
 3.2144289   6.3134156e-14
