@@ -187,6 +187,11 @@ module ModFieldLineThread
   !/
   logical :: UseTriangulation = .false.
   !\
+  ! If .true. correct the contribution to the LOS plots from
+  ! the transition region
+  !/
+  logical, public :: DoCorrectLosPlot4TR = .false.
+  !\
   ! Number of threads, originating from physical cells
   !/
   integer :: nThread = -1
@@ -328,7 +333,23 @@ contains
              UseTriangulation = .false.
              if(iProc==0)write(*,'(a)')&
                   NameThisComp//': Missing UseTriangulation is set to F'
+             RETURN
           end if
+          !\
+          ! If the non-uniform grid is used extending the existing block
+          ! adaptive grid, the grid normally does not even reach the 
+          ! chromosphere height, so that the contribution from the TR is 
+          ! not worth while quantifying. With the uniform grid, this 
+          ! option is available.
+          !/
+          call read_var('DoTRCorrection', DoCorrectLosPlot4TR, iError)
+          if(iError /= 0)then
+             DoCorrectLosPlot4TR = .false.
+             if(iProc==0)write(*,'(a)')&
+                  NameThisComp//': Missing DoTRCorrection is set to F'
+             RETURN
+          end if         
+          
        else
           IsUniformGrid = .false.
           iMax = 1
@@ -2002,13 +2023,6 @@ contains
     !Contribution to the image
     real :: PlotVar_V(1:nPlotVar)
     !-----------------------------------------------
-    !\
-    ! If the non-uniform grid is used extending the existing block
-    ! adaptive grid, the grid normally does not even reach the chromosphere 
-    ! height, so that the contribution from the TR is not worth while 
-    ! quantifying.
-    !/
-    if(.not.IsUniformGrid)RETURN
     !\
     ! Radial direction:
     !/

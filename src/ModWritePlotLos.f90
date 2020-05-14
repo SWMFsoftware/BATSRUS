@@ -627,8 +627,8 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-      use ModFieldLineThread, ONLY: UseFieldLineThreads, DoPlotThreads, &
-           get_tr_los_image, rChromo=>rBody
+      use ModFieldLineThread, ONLY: UseFieldLineThreads, rChromo=>rBody,      &
+           get_tr_los_image, DoPlotThreads, DoTRCorrection=>DoCorrectLosPlot4TR
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
@@ -708,9 +708,10 @@ contains
                      !\
                      ! LOS ntersection with the top of Transition Region
                      !/ 
-                     if(UseEuv .or. UseSxr .or. UseTableGen)then
+                     if(DoTRCorrection.and.                                   &
+                          (UseEuv .or. UseSxr .or. UseTableGen))then
                          XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
-                        call find_grid_block((rInner + cTiny)*XyzTR_D/&
+                        call find_grid_block((rInner + cTiny)*XyzTR_D/        &
                              norm2(XyzTR_D),iProcFound, iBlock)
                         if( iProc==iProcFound)call get_tr_los_image(&
                              Xyz_D = XyzTR_D ,&
