@@ -466,6 +466,9 @@ contains
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
     use BATL_lib, ONLY: iProc
+    use ModFreq, ONLY: is_time_to
+    use ModPic, ONLY: UseAdaptivePic, AdaptPic, calc_pic_criteria, &
+         pic_set_cell_status
 
     !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
@@ -607,6 +610,16 @@ contains
 
     if(UseParticles) call advect_particle_line
 
+    ! Re-calculate the active PIC regions
+    if(UseAdaptivePic) then
+       if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate)) then
+          if(iProc==0) print*, "Re-calculating PIC region at simulation time ", Time_Simulation 
+          call calc_pic_criteria
+          call pic_set_cell_status
+       end if
+    end if
+
+    
     if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
          iProc,n_step,Time_Simulation
 

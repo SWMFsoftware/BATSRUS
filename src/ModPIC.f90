@@ -71,6 +71,7 @@ module ModPIC
 
   ! File sent by the PIC code
 
+  ! TODO: change the name nRegionPic to nGridPic ??
   ! PIC regions
   integer, public :: nRegionPic = 0
 
@@ -85,6 +86,7 @@ module ModPIC
   ! Each patch uses 1 bit to record its status, on or off. The second
   ! index is the region number. 
   integer, public, allocatable:: Status_I(:)
+  integer, public, allocatable:: StatusMin_I(:), StatusMax_I(:)  
   integer, public::  nSizeStatus
 
   integer, public:: nCellPerPatch = 2
@@ -165,7 +167,6 @@ contains
             call get_region_indexes(StringPicRegionLimit, &
             iRegionPicLimit_I)
 
-
     case("#PICREGION")
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') &
@@ -174,8 +175,9 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-
+       
     case("#PICREGIONUNIT")
+       ! TODO: change the command name to #PICGRIDUNIT
        UseSamePicUnit = .false. 
        call read_var('nPicRegion', nRegionPicTmp)
 
@@ -407,6 +409,7 @@ contains
        IsPicCrit_CB = iPicOff_
     end if
 
+
     do iRegion = 1, nRegionPic      
        do i=1, nDim
           ! Fix the PIC domain range.
@@ -414,19 +417,38 @@ contains
           LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
           if(UseAdaptivePic) PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
        end do
+    end do
 
-       if(UseAdaptivePic) then
-          if(iRegion==1) then
-             ! Assume the first PIC region is the largest. A temporary solution.
-             ! storage_size returns the size in bits. 
-             nSizeStatus = ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
-                  /storage_size(nSizeStatus))
-             if(allocated(Status_I)) deallocate(Status_I)             
-             allocate(Status_I(nSizeStatus))
-             Status_I = iPicOff_
-          endif
-       endif
+    if(UseAdaptivePic) then
+       if(allocated(StatusMin_I)) deallocate(StatusMin_I)
+       allocate(StatusMin_I(nRegionPic))
+       StatusMin_I = 0
 
+       if(allocated(StatusMax_I)) deallocate(StatusMax_I)
+       allocate(StatusMax_I(nRegionPic))
+       StatusMax_I = 0 
+
+       ! Calculate the size nSizeStatus and allocate integer array Status_I
+       ! to store the status of the patches for all PIC grids.
+
+       nSizeStatus = 0
+       do iRegion = 1, nRegionPic          
+          StatusMin_I(iRegion) = nSizeStatus + 1
+
+          StatusMax_I(iRegion) = StatusMin_I(iRegion) -1 + &
+               ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
+               /storage_size(nSizeStatus))
+
+          ! The number of integers needed to store the patch status information.
+          nSizeStatus = StatusMax_I(iRegion) 
+       enddo
+
+       if(allocated(Status_I)) deallocate(Status_I)             
+       allocate(Status_I(nSizeStatus))
+       Status_I = iPicOff_              
+    endif
+
+    do iRegion = 1, nRegionPic      
        XyzMaxPic_DI(:,iRegion) = XyzMinPic_DI(:,iRegion) + LenPic_DI(:,iRegion)      
 
        if(UseHallResist) then
@@ -454,22 +476,6 @@ contains
             (IonMassPerChargeSi*ScalingFactor_I(iRegion))**2
        mUnitPicSi_I(iRegion) = mUnitPicSi
 
-       ! Set active PIC cells for adaptive PIC
-       if(UseAdaptivePic) then
-
-          ! Set PIC region limit
-          allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
-          InsidePicRegionLimit_C = 1.0 ! initialized as inside
-          ! Set user defined fixed pic regions
-          allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
-          InsidePicRegion_C = 1.0
-
-          call pic_find_node
-          ! Calculate the pic region criteria
-          call calc_pic_criteria
-          call pic_set_cell_status
-       end if
-
        if(iProc==0)then
           write(*,*) NameSub,': iRegion            = ', iRegion
           write(*,*) NameSub,': IonMassPerChargeSi = ', IonMassPerChargeSi
@@ -478,8 +484,24 @@ contains
           write(*,*) NameSub,': ScalingFactor      = ', ScalingFactor_I(iRegion)
           write(*,*) NameSub,': mUnitPicSi         = ', mUnitPicSi_I(iRegion)
        end if
-
     end do
+
+    ! Set active PIC cells for adaptive PIC
+    if(UseAdaptivePic) then
+
+       ! Set PIC region limit
+       allocate(InsidePicRegionLimit_C(1:nI,1:nJ,1:nK))
+       InsidePicRegionLimit_C = 1.0 ! initialized as inside
+       ! Set user defined fixed pic regions
+       allocate(InsidePicRegion_C(1:nI,1:nJ,1:nK))
+       InsidePicRegion_C = 1.0
+
+       call pic_find_node
+       ! Calculate the pic region criteria
+       call calc_pic_criteria
+       call pic_set_cell_status
+    end if
+
 
     if(iProc == 0) then
        write(*,*) "Corrected IPIC3D  regions"
@@ -595,8 +617,11 @@ contains
              if(InsidePicRegion_C(i,j,k)>0.0) then
 
                 IndexPatch_D = IndexCenterPatch_D
+                if(.not. is_inside_pic_grid(IndexPatch_D, iRegion)) CYCLE
                 ! set the point status without extension on the edge
-                call set_point_status(Status_I, nX, nY, nZ, &
+                call set_point_status(&
+                     Status_I(StatusMin_I(iRegion):StatusMax_I(iRegion)), &
+                     nX, nY, nZ, &
                      IndexPatch_D(x_), &
                      IndexPatch_D(y_), &
                      IndexPatch_D(z_), iPicOn_)
@@ -617,8 +642,11 @@ contains
                          call patch_index_to_coord(iRegion, IndexPatch_D, 'Mhd', &
                               XyzMhdExtend_D)
                          ! set the point status
+
                          if(is_point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D)) then
-                            call set_point_status(Status_I, nX, nY, nZ, &
+                            call set_point_status(Status_I(&
+                                 StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                 nX, nY, nZ, &
                                  IndexPatch_D(x_), &
                                  IndexPatch_D(y_), &
                                  IndexPatch_D(z_), iPicOn_)
@@ -685,36 +713,47 @@ contains
     integer:: Index_D(3) = 0
     integer:: dI = 0, dJ = 0, dK = 0
     !-----------------------------------------------
-    iRegion = 1
+
 
     IsInside = .false. 
 
-    if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
-         (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return 
-    if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-         (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) return
+    do iRegion = 1, nRegionPic
 
-    nX = PatchSize_DI(x_, iRegion)
-    nY = PatchSize_DI(y_, iRegion)
-    nZ = PatchSize_DI(z_, iRegion)       
+       ! If Xyz_D is outside this PIC grid, then go to check the next PIC grid.
+       if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
+            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) cycle 
+       if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
+            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) cycle 
 
-    do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
+       nX = PatchSize_DI(x_, iRegion)
+       nY = PatchSize_DI(y_, iRegion)
+       nZ = PatchSize_DI(z_, iRegion)       
 
-       dshift_D(x_) = dI
-       dshift_D(y_) = dJ
-       dshift_D(z_) = dK
+       do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
 
-       ! Patch cell index
-       Index_D(1:nDim) = floor((Xyz_D + dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - XyzMinPic_DI(1:nDim,iRegion))/ &
-            (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
+          dshift_D(x_) = dI
+          dshift_D(y_) = dJ
+          dshift_D(z_) = dK
 
-       call get_point_status(Status_I, nx, ny, nz, Index_D(x_), Index_D(y_), &
-            Index_D(z_), iStatus)
+          ! Patch cell index
+          Index_D(1:nDim) = floor((Xyz_D + &
+               dshift_D(1:nDim)*DxyzPic_DI(1:nDim, iRegion) - &
+               XyzMinPic_DI(1:nDim,iRegion))/ &
+               (DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch))
 
-       if(iStatus==iPicOff_) return   
+          call get_point_status(&
+               Status_I(StatusMin_I(iRegion):StatusMax_I(iRegion)), &
+               nx, ny, nz, Index_D(x_), Index_D(y_), Index_D(z_), iStatus)
 
-    enddo; enddo; enddo
-    IsInside = .true.
+          if(iStatus==iPicOff_) return   
+
+       enddo; enddo; enddo
+
+       ! All the patches surround Xyz_D are actived. 
+       IsInside = .true.
+       return
+
+    end do
   end subroutine is_inside_active_pic_region
 
   !============================================================================
