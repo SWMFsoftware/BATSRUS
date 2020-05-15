@@ -36,18 +36,20 @@ contains
   end subroutine GM_get_for_pc_dt
 
   !============================================================================
-  subroutine GM_get_for_pc_grid_info(nInt, Int_I)
-    use ModPIC, ONLY: nSizeStatus, Status_I, &
-         UseAdaptivePic, pic_set_cell_status
+  subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+    use ModPIC, ONLY: nSizeStatus, Status_I, UseAdaptivePic, &
+         pic_set_cell_status, nRegionPic, StatusMax_I
         
-    integer, intent(inout) :: nInt
-    integer, optional, intent(out):: Int_I(nInt)
+    integer, intent(inout) :: nInt, nPicGrid
+    integer, optional, intent(out):: Int_I(nInt), AccumulatedSize_I(nPicGrid)
     !------------------------------------------
     if(.not.present(Int_I)) then
        nInt = nSizeStatus
+       nPicGrid = nRegionPic
     else
        if(UseAdaptivePic) call pic_set_cell_status
        Int_I = Status_I
+       AccumulatedSize_I = StatusMax_I
     endif
     
   end subroutine GM_get_for_pc_grid_info

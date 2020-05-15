@@ -34,7 +34,7 @@ contains
 
     use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
-    use ModAdvance, ONLY: UseEfield
+    use ModAdvance, ONLY: UseEfield, Pe_, UseElectronPressure
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb,                                        &
@@ -45,9 +45,10 @@ contains
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
-    use ModMultiFluid, ONLY: nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModMultiFluid, ONLY: nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I, &
+         iRhoIon_I, MassIon_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
-         iErImplFirst, iErImplLast
+         iErImplFirst, iErImplLast, iTeImpl
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
@@ -331,11 +332,36 @@ contains
              if(UseB0)call fix_b0(Bx_,Bz_)
           end if
        case('fixed_semi', 'inflow_semi', 'vary_semi')
-          if(IsLinear)then
+          if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+          else if (TypeBc == 'fixed_semi') then
+             if (iTeImpl .gt. 0) then
+                if (UseElectronPressure) then
+                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
+			CellState_VI(Pe_,iSide)/ &
+                        sum(CellState_VI(iRhoIon_I,iSide)/MassIon_I)
+                else
+                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
+                        CellState_VI(P_,iSide)/CellState_VI(Rho_,iSide)
+                end if
+             else
+                call stop_mpi(NameSub// &
+                  ': fixed_semi not working for TypeSemiImplicit='//TypeSemiImplicit)
+             end if
           else
              call set_solar_wind_bc
+             if (iTeImpl .gt. 0) then
+                if(UseElectronPressure) then
+                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
+			CellState_VI(Pe_,iSide)/ &
+                        sum(CellState_VI(iRhoIon_I,iSide)/MassIon_I)
+                else
+                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
+                        CellState_VI(P_,iSide)/CellState_VI(Rho_,iSide)
+                end if
+             end if
           end if
+          
        case('fixedb1')
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
        case('fixedb1_semi')
