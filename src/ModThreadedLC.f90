@@ -2,15 +2,16 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
-
+!  use ModUtilities, ONLY: norm2
   use BATL_lib, ONLY: test_start, test_stop, iProc
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
+       iTableTR, TeSiMin, SqrtZ,                                 &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
        LambdaSi_, DLogLambdaOverDLogT_,                          &
        DoInit_, Done_, Enthalpy_, Heat_,                         &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
-       kThreadMin=>jMin_, kThreadMax=>jMax_
+       kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
@@ -76,14 +77,8 @@ module ModThreadedLC
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
 
   !\
-  ! Table numbers needed to use lookup table
+  ! Two logicals with self-explained names
   !/
-  integer :: iTableTR
-  !\
-  ! Control parameters: minimum temerature  and two logicals with
-  ! self-explained names
-  !/
-  real, parameter:: TeSiMin = 5.0e4
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
   !\
@@ -112,8 +107,6 @@ module ModThreadedLC
   !\
   ! See above for the use of the latter constant
   !/
-
-  real :: SqrtZ
   integer, parameter:: Impl_=3
 
   real,parameter:: cTol=1.0e-6
@@ -332,7 +325,7 @@ contains
     !\
     ! Initialize all output parameters from 0D solution
     !/
-    call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
+    call interpolate_lookup_table(iTableTR, TeSiIn, Value_V, &
            DoExtrapolate=.false.)
     !\
     ! First value is now the product of the thread length in meters times
@@ -379,7 +372,6 @@ contains
                iVal=LengthPAvrSi_,      &
                ValIn=PeSiOut/SqrtZ*     &
                BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-               Arg2In=1.0e8,            &
                Value_V=Value_V,         &
                Arg1Out=TeSi_I(iPoint),  &
                DoExtrapolate=.false.)
@@ -396,6 +388,8 @@ contains
        BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
     case(Enthalpy_)
        call get_res_heating(nIterIn=nIter)
     case(Impl_)
@@ -417,6 +411,8 @@ contains
        BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
@@ -562,7 +558,7 @@ contains
     !==========================================================================
     subroutine advance_thread(IsTimeAccurate)
       use ModMain,     ONLY: cfl, Dt, time_accurate
-      use ModAdvance,  ONLY: time_BLK
+      use ModAdvance,  ONLY: time_BLK, nJ, nK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
       !\
       ! Advances the thread solution
@@ -593,7 +589,8 @@ contains
          if(time_accurate)then
             DtLocal = Dt*No2Si_V(UnitT_)
          else
-            DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
+            DtLocal = cfl*No2Si_V(UnitT_)*&
+                 time_BLK(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
          end if
          if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
          DtInv = 1/DtLocal
@@ -638,7 +635,7 @@ contains
       !\
       ! Calculate flux to TR and its temperature derivative
       !/
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
            DoExtrapolate=.false.)
 
       do iIter = 1,nIter
@@ -785,7 +782,7 @@ contains
          ! For next iteration calculate TR heat flux and
          ! its temperature derivative
          !/
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
               DoExtrapolate=.false.)
          !\
          ! Set pressure for updated temperature
@@ -978,7 +975,7 @@ contains
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
             call stop_mpi('Stop!!!')
          end if
-         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 1.0e8, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), &
               Value_V, &
            DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &

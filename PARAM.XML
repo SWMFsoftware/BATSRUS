@@ -1507,7 +1507,7 @@ spherical coordinates case.
 Default value for TypeBcBody2 is 'none'.
 </command>
 
-<command name="INNERBCPE2P">
+<command name="INNERBCPE">
 	 <parameter name="RatioPe2P" type="real" default="0"/>
 
 #INNERBCPE
@@ -9191,18 +9191,24 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 
 <command name="PLOTTHREADS">
 	 <parameter name="DoPlotThreads" type="logical" default="F"/>
-	 <parameter name="nGUniform" type="integer" default=""/>
+	 <parameter name="nGUniform" type="integer" default="0"/>
+	 <parameter name="UseTriangulation" type="logical" default="F"/>
 
 #PLOTTHREADS
 T	DoPlotThreads
 1       nGUniform
+F       UseTriangulation
 
 Used for plotting images in the solar corona. The threaded gap 
 contributes to the line-of-site integrals determining the intensity of
 the image pixel, if DoPlotThreads=.true. If nUniform is greater or equal
 to 1, the threaded gap is split for nGUniform intervals, uniformly in the
 first generalized coordinate. Otherwise, the grid for plotting continues 
-the grid of the block near the inner boundary, as extra ghost cells.  
+the grid of the block near the inner boundary, as extra ghost cells.
+
+If UseTriangulation = .flase., the thread are approximated with straight 
+radial lines, otherwise data from the actual curved threads are interpolated 
+to a uniform spherical grid using a triangulation on a unit spherical grid.    
  	
 </command>
 

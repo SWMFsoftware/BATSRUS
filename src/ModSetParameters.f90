@@ -49,7 +49,8 @@ contains
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
     use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
-         split_string, join_string, open_file, lower_case, DoWriteCallSequence
+         split_string, join_string, open_file, lower_case, &
+         DoWriteCallSequence, StringTestSwmf => StringTest
     use CON_planet,       ONLY: get_planet
     use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
     use ModReadParam
@@ -136,7 +137,7 @@ contains
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
-         rRound0, rRound1
+         rRound0, rRound1, StringTest
 
     character (len=17) :: NameSub='MH_set_parameters'
 
@@ -570,6 +571,8 @@ contains
             "#TEST2IJK", "#TESTVAR", "#TESTDIM")
           call read_test_param(NameCommand)
           if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
+          if(NameCommand == "#TEST" .and. IsStandAlone) &
+               StringTestSwmf = StringTest
 
        case("#STRICT")
           call read_var('UseStrict',UseStrict)
@@ -652,9 +655,10 @@ contains
        case("#HYPRE")
           call hypre_read_param
 
-       case("#PIC", "#PICREGION", '#PICREGIONROTATE', "#PICUNIT", &
-            "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST",&
-            "#PICADAPTIVE")
+       case("#PIC", "#PICGRID", '#PICREGIONROTATE', "#PICUNIT", &
+            "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST", &
+            "#PICADAPT", "#PICPATCH", "#PICCRITERIA", "#PICPATCHEXTEND", &
+            "#PICREGION", "#PICREGIONLIMIT")
           call pic_read_param(NameCommand)
 
        case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
@@ -3055,14 +3059,6 @@ contains
          FluxType='Simple'
       case('ROE','Roe')
          FluxType='Roe'
-         if(UseAlfvenWaves .or. UseWavePressure)then
-            if(iProc==0) write(*,'(a)')NameSub // &
-                 'Wave transport and wave pressure do not work with ' // &
-                 trim(FluxType)
-            if(UseStrict)&
-                 call stop_mpi('Correct PARAM.in')
-            FluxType='Sokolov'
-         end if
       case('ROEOLD','RoeOld')
          FluxType='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
@@ -3089,7 +3085,7 @@ contains
       select case(TypeFluxNeutral)
       case('default')
          select case(FluxType)
-         case('Rusanov', 'Linde', 'Sokolov', 'Godunov','HLLDW', 'LFDW', 'HLLC')
+         case('Rusanov','Linde','Sokolov','Godunov','HLLDW','LFDW','HLLC')
             TypeFluxNeutral = FluxType
          case default
             TypeFluxNeutral = 'Linde'
@@ -3144,11 +3140,12 @@ contains
 
       ! Check flux types
       if( (FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
-           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') &
-           .and. .not.UseB)then
+           FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') .and. &
+           (UseMultiIon .or. UseAlfvenWaves .or. UseWavePressure &
+           .or. .not.UseB) )then
          if (iProc == 0) then
-            write(*,'(a)')NameSub//&
-                 ' WARNING: HLLD/Roe(Old) flux is only implemented for MHD !!!'
+            write(*,'(a)')NameSub//' WARNING: '// &
+                 'HLLD/Roe(Old) flux only works for single fluid MHD !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
          end if
