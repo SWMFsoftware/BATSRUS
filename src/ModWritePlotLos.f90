@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModWritePlotLos
-
+!  use ModUtilities, ONLY: norm2
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
 
@@ -80,7 +80,7 @@ contains
     use ModPlotFile, ONLY: save_plot_file
     use ModWritePlot, ONLY: set_plot_scalars
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, find_grid_block, &
          IsCartesianGrid, IsCartesian, IsRzGeometry
     use ModSatelliteFile, ONLY: nSatellite, NameSat_I, XyzSat_DI,  &
          set_satellite_positions
@@ -163,7 +163,8 @@ contains
     real, allocatable :: InterpValues_I(:)
 
     integer :: iSat, iSatLoop
-
+    integer:: iProcFound
+      
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
@@ -271,7 +272,12 @@ contains
     call lower_case(plot_vars1)
     call split_string(plot_vars1, nPlotVarLosMax, plotvarnames, nPlotVar)
     call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
-
+    !\
+    ! Initialize table IDs. In this case automatically 
+    ! UseTableGen = (iTableGen >=0) and analogously for other table
+    ! related logicals.
+    !/
+    iTableEuv = -1; iTableSxr = -1; iTableGen =  -1
     ! For generalized Los Table check PlotVarNames for string 'tbl'
     UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
 
@@ -621,12 +627,12 @@ contains
   contains
     !==========================================================================
     subroutine integrate_image
-      use ModFieldLineThread, ONLY: UseFieldLineThreads, DoPlotThreads, &
-           rChromo=>rBody
+      use ModFieldLineThread, ONLY: UseFieldLineThreads, rChromo=>rBody,      &
+           get_tr_los_image, DoPlotThreads, DoTRCorrection=>DoCorrectLosPlot4TR
       real:: Distance
       real:: d=0.0, dMirror= 0.0, dChromo = -1.0, LosDotXyzPix, XyzPix2, &
            Discriminant = -1.0, SgrtDiscr, DiscrChromo = -1.0, SqrtDiscr
-      real:: XyzIntersect_D(3)
+      real:: XyzIntersect_D(3), XyzTR_D(3)
 
       !------------------------------------------------------------------------
 
@@ -699,6 +705,26 @@ contains
                      dChromo = - LosDotXyzPix + SqrtDiscr 
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           UseThreads = DoPlotThreads)
+                     !\
+                     ! LOS ntersection with the top of Transition Region
+                     !/ 
+                     if(DoTRCorrection.and.                                   &
+                          (UseEuv .or. UseSxr .or. UseTableGen))then
+                         XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
+                        call find_grid_block((rInner + cTiny)*XyzTR_D/        &
+                             norm2(XyzTR_D),iProcFound, iBlock)
+                        if( iProc==iProcFound)call get_tr_los_image(&
+                             Xyz_D = XyzTR_D ,&
+                             DirLos_D = LosPix_D,                             &
+                             iBlock = iBlock,                                 &
+                             nPlotVar = nPlotVar,                             &
+                             NamePlotVar_V = plotvarnames(1:nPlotVar),        &
+                             iTableEuv = iTableEuv,                           &
+                             iTableSxr = iTableSxr,                           &
+                             iTableGen = iTableGen,                           &
+                             PixIntensity_V  = ImagePe_VII(1:nPlotVar,        &
+                             iPix, jPix))
+                     end if
                   else
                      !Distance between two intersections with the low
                      !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
@@ -730,14 +756,12 @@ contains
       use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
       use ModFieldLineThread, ONLY: &
            IsUniformGrid, dCoord1Uniform
-      use BATL_lib,           ONLY: xyz_to_coord, find_grid_block, &
+      use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
       real, intent(in):: XyzStartIn_D(3)
       real, intent(in):: LengthMax
       logical, optional, intent(in) :: UseThreads
-
-      integer:: iProcFound
 
       real:: Length          ! Total length of integral
       real:: Ds              ! Length of line segment
@@ -925,7 +949,7 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-      use ModFieldLineThread, ONLY: interpolate_state
+      use ModFieldLineThread, ONLY: interpolate_thread_state
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
@@ -961,7 +985,7 @@ contains
 
       ! Added for EUV synth and sph geometry
       real :: GenLos_D(3)
-      real :: LogTe, LogNe, ResponseFactor, EuvResponse(3), SxrResponse(2)
+      real :: ResponseFactor, EuvResponse(3), SxrResponse(2)
 
       ! parameters for temperature cuttoff of EUV/SXR response
       ! idea is to neglect most of the broadened transition region
@@ -1034,7 +1058,7 @@ contains
          !/
          if(present(UseThreads))then
             ! Interpolate within the threaded gap
-            call interpolate_state(GenLos_D, iBlock, State_V)
+            call interpolate_thread_state(GenLos_D, iBlock, State_V)
          else
             ! Interpolate in the physical domain
             State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
@@ -1065,21 +1089,20 @@ contains
          ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
-         ! !! This should not be needed here
-         LogTe = log10(TeSi)
 
-         ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-         ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
-
-         ! !! Really, cTolerance is the minimum number density in CGS units???
-         Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
-         LogNe = log10(Ne)
-
-         ! rconv converts solar radii units to CGS for response function exponent
-         ! calculate Ne**2 and normalize units (10 ^ an exponent)
-         ! ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
-
-         ResponseFactor = Ne**2*6.96e-16
+         ! Here 1e-6 is to convert to CGS
+         Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
+         
+         !\
+         !  ResponseFactor is applied to the product of tabulated "response
+         !  function" (which is provided in the tables without a scaling 
+         !  factor, 1e-26) by the element of dimensionless length, ds, which 
+         !  should be converted to cm by  multiplying it by UnitX (which gives 
+         !  meters) and by 100 cm/m. The dependence on density should be also 
+         !  accounted for by multiplying this by Ne**2, Ne being in psrticles 
+         !  per cm3 
+         !/
+         ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_)) 
 
          ! calculate temperature cutoff to neglect widened transition region
          FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
@@ -1089,7 +1112,7 @@ contains
             ! now interpolate EUV response values from a lookup table
             if (iTableEUV <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
-            call interpolate_lookup_table(iTableEUV, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableEUV, Te, Ne, &
                  EuvResponse, DoExtrapolate=.true.)
             EuvResponse = EuvResponse * FractionTrue
          end if
@@ -1098,7 +1121,7 @@ contains
             ! now interpolate SXR response values from a lookup table
             if (iTableSXR <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
-            call interpolate_lookup_table(iTableSXR, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableSXR, Te, Ne, &
                  SxrResponse, DoExtrapolate=.true.)
             SxrResponse = SxrResponse * FractionTrue
          end if
@@ -1108,7 +1131,7 @@ contains
                  call stop_mpi('Need to load #LOOKUPTABLE for ' &
                  //NameLosTable(iFile)//' response!')
             ! now interpolate the entire table
-            call interpolate_lookup_table(iTableGen, LogTe, LogNe, &
+            call interpolate_lookup_table(iTableGen, Te, Ne, &
                  InterpValues_I, DoExtrapolate=.true.)
             InterpValues_I = InterpValues_I * FractionTrue
 

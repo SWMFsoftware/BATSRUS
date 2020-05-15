@@ -26,7 +26,9 @@ contains
     use ModMain
     use ModGeometry, ONLY: &
          XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
-    use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
+    use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, &
+         set_dimensional_factor
+    use ModFieldLineThread, ONLY: DoPlotThreads
     use ModIO
     use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, init_hdf5_plot
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
@@ -140,7 +142,7 @@ contains
          (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
          .or. plot_form(iFile)=='tcp')
 
-    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
+    call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar,    &
          UseArraySyntaxIn=.true.)
 
     call set_plot_scalars(iFile, MaxParam, nParam, NameParam_I, Param_I)
@@ -234,6 +236,19 @@ contains
     ! Spherical slices are special cases:
     DoPlotShell = plot_type1(1:3) == 'shl'
     DoPlotBox   = plot_type1(1:3) == 'box'
+
+    !\
+    ! If threaded gap is used, the dimensional factors should be calculated,
+    ! which are needed to convert a point state vector to a dimensional form
+    !/ 
+    if(DoPlotThreads.and.DoPlotShell)then
+       if(plot_dimensional(iFile))then
+          call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
+               DimFactor_V(1:nPlotVar) , DimFactorBody_V(1:nPlotVar))
+       else
+          DimFactor_V = 1.0;  DimFactorBody_V = 1.0
+       end if
+    end if
 
     if(DoSaveOneTecFile) then
        iUnit = io_unit_new()
@@ -1010,7 +1025,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
-    use ModPIC, ONLY: pic_find_region
+    use ModPIC, ONLY: pic_find_region, pic_find_region_active, pic_find_region_criteria
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
@@ -1669,6 +1684,14 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
           end do; end do; end do
+       case('pic_active')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = pic_find_region_active(iBlock,i,j,k)
+          end do; end do; end do
+       case('pic_crit')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = pic_find_region_criteria(iBlock,i,j,k)
+          end do; end do; end do   
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &

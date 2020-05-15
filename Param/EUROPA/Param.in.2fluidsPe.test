@@ -196,8 +196,8 @@ user            TypeResistivity
 !!! OUTPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #SAVERESTART
-F
-10000
+T
+100
 -1
 
 #RESTARTOUTFILE
@@ -220,7 +220,7 @@ MHD traj                StringSatellite
 -1.                     DtOutput [sec]
 satellite_2fpe_e4.dat   NameTrajectoryFile
 
-#SAVEPLOT
+SAVEPLOT
 1
 cut  MHD idl_ascii
 100
