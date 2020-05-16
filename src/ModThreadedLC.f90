@@ -3,21 +3,20 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
 !  use ModUtilities, ONLY: norm2
-  use BATL_lib, ONLY: test_start, test_stop, iProc
-  use ModFieldLineThread, ONLY: &
-       BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
-       iTableTR, TeSiMin, SqrtZ,                                 &
-       LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       LambdaSi_, DLogLambdaOverDLogT_,                          &
-       DoInit_, Done_, Enthalpy_, Heat_,                         &
-       jThreadMin=>jMin_, jThreadMax=>jMax_,                     &
+  use BATL_lib,            ONLY: test_start, test_stop, iProc
+  use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
+       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
+       DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
+  use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
+       DoInit_, Done_, Enthalpy_, Heat_,                                 &
+       jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
        kThreadMin=>kMin_, kThreadMax=>kMax_
-  use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
-  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+  use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
+  use ModCoronalHeating,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
        QeRatio
-  use ModPhysics,    ONLY: Z => AverageIonCharge
-  use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
-  use ModGeometry,   ONLY: Xyz_DGB
+  use ModPhysics,        ONLY: Z => AverageIonCharge
+  use ModConst,          ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
+  use ModGeometry,       ONLY: Xyz_DGB
   use ModCoordTransform, ONLY: determinant, inverse_matrix
   use omp_lib
   !\
@@ -38,11 +37,13 @@ module ModThreadedLC
   ! Te = TeFraction*State_V(iP)/State_V(Rho_)
   ! Pe = PeFraction*State_V(iP)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
-  !/
-
+  !
   use ModFieldLineThread, ONLY:  &
-       TeFraction, TiFraction, PeFraction, iP
+       TeFraction, TiFraction,  iP
   implicit none
+  real :: PeFraction
+
+
   !\
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
   ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
@@ -105,6 +106,31 @@ module ModThreadedLC
   real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
        (cBoltzmann*rSun)
   !\
+  ! In hydrogen palsma, the electron-ion heat exchange is described by
+  ! the equation as follows:
+  ! dTe/dt = -(Te-Ti)/(tau_{ei})
+  ! dTi/dt = +(Te-Ti)/(tau_{ei})
+  ! The expression for 1/tau_{ei} may be found in
+  ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5
+  ! note that in the Russian edition they denote k_B T as Te and
+  ! the factor 3 is missed in the denominator:
+  ! 1/tau_ei = 2* CoulombLog * sqrt{m_e} (e^2/cEps)**2* Z**2 *Ni /&
+  ! ( 3 * (2\pi k_B Te)**1.5 M_p). This exchange rate scales linearly
+  ! with the plasma density, therefore, we introduce its ratio to
+  ! the particle concentration. We calculate the temperature exchange
+  ! rate by multiplying the expression for electron-ion effective
+  ! collision rate,
+  ! \nu_{ei} = CoulombLog/sqrt(cElectronMass)*  &
+  !            ( cElectronCharge**2 / cEps)**2 /&
+  !            ( 3 *(cTwoPi*cBoltzmann)**1.50 )* Ne/Te**1.5
+  !  and then multiply in by the energy exchange coefficient
+  !            (2*cElectronMass/cProtonMass)
+  ! The calculation of the effective electron-ion collision rate is
+  ! re-usable and can be also applied to calculate the resistivity:
+  ! \eta = m \nu_{ei}/(e**2 Ne)
+  !/
+  real :: cExchangeRateSi
+  !\
   ! See above for the use of the latter constant
   !/
   integer, parameter:: Impl_=3
@@ -114,13 +140,14 @@ contains
   !============================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModLookupTable,  ONLY: i_lookup_table
-    use ModMultiFluid,   ONLY: MassIon_I
-    use ModFieldLineThread, ONLY: check_tr_table, &
-         nPointThreadMax, HeatCondParSi
-    use ModPhysics,            ONLY: &
+    use ModLookupTable,     ONLY: i_lookup_table
+    use ModConst,           ONLY: cElectronMass, &
+         cEps, cElectronCharge, cTwoPi, cProtonMass
+    use ModMultiFluid,      ONLY: MassIon_I
+    use ModFieldLineThread, ONLY:  nPointThreadMax
+    use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
-    use ModVarIndexes,         ONLY: Pe_, p_
+    use ModVarIndexes,      ONLY: Pe_, p_
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threaded_lc'
@@ -164,9 +191,9 @@ contains
     allocate(U_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); U_VVI = 0.0
     allocate(L_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); L_VVI = 0.0
     allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); M_VVI = 0.0
-
-    SqrtZ = sqrt(Z)
-
+    !\
+    ! Initialize transition region model:
+    call init_tr(Z=Z, TeChromoSi = 5.0e4)
     !\
     ! TeFraction is used for ideal EOS:
     !/
@@ -190,14 +217,41 @@ contains
        iP = p_
        PeFraction = Z/(1.0 + Z)
     end if
-    !\
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
     ! Pe = PeFraction*State_V(iP)
     !/
 
-    call check_tr_table
-    iTableTR = i_lookup_table('TR')
-    if(iTableTR<=0)call stop_mpi('TR table is not set')
+
+    !\
+    ! In hydrogen palsma, the electron-ion heat exchange is described by
+    ! the equation as follows:
+    ! dTe/dt = -(Te-Ti)/(tau_{ei})
+    ! dTi/dt = +(Te-Ti)/(tau_{ei})
+    ! The expression for 1/tau_{ei} may be found in
+    ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5
+    ! note that in the Russian edition they denote k_B T as Te and
+    ! the factor 3 is missed in the denominator:
+    ! 1/tau_ei = 2* CoulombLog * sqrt{m_e} (e^2/cEps)**2* Z**2 *Ni /&
+    ! ( 3 * (2\pi k_B Te)**1.5 M_p). This exchange rate scales linearly
+    ! with the plasma density, therefore, we introduce its ratio to
+    ! the particle concentration. We calculate the temperature exchange
+    ! rate by multiplying the expression for electron-ion effective
+    ! collision rate,
+    ! \nu_{ei} = CoulombLog/sqrt(cElectronMass)*  &
+    !            ( cElectronCharge**2 / cEps)**2 /&
+    !            ( 3 *(cTwoPi*cBoltzmann)**1.50 )* Ne/Te**1.5
+    !  and then multiply in by the energy exchange coefficient
+    !            (2*cElectronMass/cProtonMass)
+    ! The calculation of the effective electron-ion collision rate is
+    ! re-usable and can be also applied to calculate the resistivity:
+    ! \eta = m \nu_{ei}/(e**2 Ne)
+    !/
+    cExchangeRateSi = &
+         CoulombLog/sqrt(cElectronMass)*  &!\
+         ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
+         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
+         *(2*cElectronMass/cProtonMass)  /&! *energy exchange per ei collision
+         cBoltzmann
     !\
     ! Dimensionless temperature floor
     !/
@@ -262,7 +316,7 @@ contains
     !\
     ! USE:
     !/
-    use ModFieldLineThread, ONLY: HeatCondParSi
+    use ModTransitionRegion, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
