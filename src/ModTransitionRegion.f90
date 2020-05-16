@@ -107,8 +107,8 @@ contains
          NameTable = 'TR',                                       &
          NameCommand = 'save',                                   &
          NameVar =                                               &
-         'logTe logNe '//                                        &
-         'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
+         'logTe '//                                               &
+         'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT ',&
          nIndex_I = [500],                                       &
          IndexMin_I = [1.0e4],                                   &
          IndexMax_I = [1.0e8],                                   &
@@ -157,7 +157,7 @@ contains
           TeSi_I(iTe) = TeSi_I(iTe-1)*exp(DeltaLogTe)
        end do
 
-       do iTe = 2,500
+       do iTe = 1,500
           call interpolate_lookup_table(iTableRadCool,&
                TeSi_I(iTe), LambdaCgs_V)
           LambdaSi_I(iTe) = LambdaCgs_V(1)*Radcool2Si
