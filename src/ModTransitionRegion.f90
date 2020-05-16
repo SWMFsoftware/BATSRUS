@@ -107,15 +107,16 @@ contains
          NameTable = 'TR',                                       &
          NameCommand = 'save',                                   &
          NameVar =                                               &
-         'logTe '//                                               &
-         'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT ',&
+         'logTe LPe UHeat FluxXLength '//                        &
+         'dFluxXLegthOverDU Lambda dLogLambdaOverDLogT ',        &
          nIndex_I = [500],                                       &
          IndexMin_I = [1.0e4],                                   &
          IndexMax_I = [1.0e8],                                   &
          NameFile = 'TR.dat',                                    &
          TypeFile = TypeFile,                                    &
-         StringDescription = &
-         'Model for transition region: [K] [1/m3] [N/m] [m/s] [W/m] [1]')
+         StringDescription =                                     &
+         'Model for transition region: '//                       &
+         '[K] [N/m] [m/s] [W/m] [1] [W*m3/(k_B2)] [1]')
     
     ! The table is now initialized.
     iTableTR = i_lookup_table('TR')
