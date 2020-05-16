@@ -11,6 +11,7 @@ module ModFieldLineThread
   use ModB0,         ONLY: get_b0
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_
+  use ModTransitionRegion
 
   implicit none
   save
@@ -23,7 +24,6 @@ module ModFieldLineThread
   public :: interpolate_thread_state  ! Interpolate state from State_VIII
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
-
   !\
   ! rBody here is set to one keeping a capability to set
   ! the face-formulated boundary condition by modifying
@@ -120,6 +120,9 @@ module ModFieldLineThread
      !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
      real, pointer :: State_VIII(:,:,:,:)
   end type BoundaryThreads
+  !\
+  ! Conponenets of array stored at each thread for visualization
+  !/
   integer, parameter :: PSi_=1, A2Major_ = 2, A2Minor_ = 3 , &
        TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
   
@@ -128,52 +131,18 @@ module ModFieldLineThread
   !/
   !\
   ! Te = TeFraction*State_V(iP)/State_V(Rho_)
-  ! Pe = PeFraction*State_V(iP)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   !/
-  real, public    :: TeFraction, TiFraction, PeFraction
+  real, public    :: TeFraction, TiFraction
   integer, public :: iP
 
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
   !
-  integer,public :: nPointThreadMax = 45
+  integer,public :: nPointThreadMax = 100
   real           :: DsThreadMin = 0.002
 
-  !\
-  ! Normalization as used in the radcool table
-  !/
-  real, parameter :: RadNorm = 1.0E+22
-  !\
-  ! Correction coefficient to transform the units as used in the radcool
-  ! table to SI system.
-  !/
-  real, parameter :: Cgs2SiEnergyDens = &
-       1.0e-7&   ! erg = 1e-7 J
-       /1.0e-6    ! cm3 = 1e-6 m3
-  !\
-  ! To find the volumetric radiative cooling rate in J/(m^3 s)
-  ! the value found from radcool table should be multiplied by
-  ! RadcoolSi and by n_e[m^{-3}]*n_i[m^{-3}]
-  !/
-  real, public, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
-                          *Cgs2SiEnergyDens/RadNorm
-  !\
-  ! A constant factor to calculate the electron heat conduction
-  !/
-  real, public :: HeatCondParSi
-
-  real, public :: cExchangeRateSi
-
   real, parameter:: TeGlobalMaxSi = 1.80e7
-  !\
-  ! Table numbers needed to use lookup table
-  !/
-  integer, public :: iTableTR
-  !Control parameter: minimum temerature
-  real, parameter, public:: TeSiMin = 5.0e4
-  real, public :: SqrtZ
-
   !\
   ! Logical from ModMain.
   !/
@@ -223,18 +192,6 @@ module ModFieldLineThread
   public:: BoundaryThreads
   public:: read_threads      ! Read parameters of threads
   public:: check_tr_table    ! Calculate a table for transition region
-  !\
-  ! Correspondent named indexes: meaning of the columns in the table
-  !/
-  integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
-  integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
-  integer,public,parameter:: LambdaSi_=5, DLogLambdaOverDLogT_ = 6
-  !\
-  ! Global arrays used in calculating the tables
-  !/
-  real,dimension(1:500):: TeSi_I, LambdaSi_I, &
-       LPe_I, UHeat_I, dFluxXLengthOverDU_I, DLogLambdaOverDLogT_I
-
   public:: set_threads       ! (Re)Sets threads in the inner boundary blocks
 
   !\
@@ -349,7 +306,7 @@ contains
                   NameThisComp//': Missing DoTRCorrection is set to F'
              RETURN
           end if         
-          
+
        else
           IsUniformGrid = .false.
           iMax = 1
@@ -950,14 +907,10 @@ contains
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
       real :: HeatFluxXLength, Value_V(6)
-      integer:: iTable
       !------------------------------------------------------------------------
-      iTable = i_lookup_table('TR')
-      if(iTable<=0)call stop_mpi('TR table is not set')
-
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
-      call interpolate_lookup_table(iTable=iTable,&
+      call interpolate_lookup_table(iTable=iTableTR,&
                                     iVal=HeatFluxLength_, &
                                     ValIn=HeatFluxXLength,&
                                     Value_V=Value_V,      &
@@ -973,195 +926,6 @@ contains
     end subroutine limit_temperature
     !==========================================================================
   end subroutine set_threads_b
-  !============================================================================
-  subroutine check_tr_table(TypeFileIn)
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, &
-         cEps, cElectronCharge, cTwoPi, cProtonMass
-    use ModLookupTable, ONLY: &
-         i_lookup_table, init_lookup_table, make_lookup_table
-
-    character(LEN=*),optional,intent(in)::TypeFileIn
-
-    integer:: iTable
-    real,parameter:: CoulombLog = 20.0
-    character(len=5)::TypeFile
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'check_tr_table'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(present(TypeFileIn))then
-       TypeFile = TypeFileIn
-    else
-       TypeFile = 'ascii'
-    end if
-    ! electron heat conduct coefficient for single charged ions
-    ! = 9.2e-12 W/(m*K^(7/2))
-    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
-         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
-         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
-
-    !\
-    ! In hydrogen palsma, the electron-ion heat exchange is described by
-    ! the equation as follows:
-    ! dTe/dt = -(Te-Ti)/(tau_{ei})
-    ! dTi/dt = +(Te-Ti)/(tau_{ei})
-    ! The expression for 1/tau_{ei} may be found in
-    ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5
-    ! note that in the Russian edition they denote k_B T as Te and
-    ! the factor 3 is missed in the denominator:
-    ! 1/tau_ei = 2* CoulombLog * sqrt{m_e} (e^2/cEps)**2* Z**2 *Ni /&
-    ! ( 3 * (2\pi k_B Te)**1.5 M_p). This exchange rate scales linearly
-    ! with the plasma density, therefore, we introduce its ratio to
-    ! the particle concentration. We calculate the temperature exchange
-    ! rate by multiplying the expression for electron-ion effective
-    ! collision rate,
-    ! \nu_{ei} = CoulombLog/sqrt(cElectronMass)*  &
-    !            ( cElectronCharge**2 / cEps)**2 /&
-    !            ( 3 *(cTwoPi*cBoltzmann)**1.50 )* Ne/Te**1.5
-    !  and then multiply in by the energy exchange coefficient
-    !            (2*cElectronMass/cProtonMass)
-    ! The calculation of the effective electron-ion collision rate is
-    ! re-usable and can be also applied to calculate the resistivity:
-    ! \eta = m \nu_{ei}/(e**2 Ne)
-    !/
-    cExchangeRateSi = &
-         CoulombLog/sqrt(cElectronMass)*  &!\
-         ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
-         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
-         *(2*cElectronMass/cProtonMass)  /&! *energy exchange per ei collision
-         cBoltzmann
-    !\
-    ! an ultimate energy density equals
-    ! Z/(\gamma -1)*cExchangeRateSi*(Te -Ti)/Te^{7/2}Pe^2
-    !/
-
-    iTable =  i_lookup_table('TR')
-    if(iTable < 0)then
-
-       ! initialize the TR table
-       call init_lookup_table(                                      &
-            NameTable = 'TR',                                       &
-            NameCommand = 'save',                                   &
-            NameVar =                                               &
-            'logTe '//                                              &
-            'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
-            nIndex_I = [500],                                       &
-            IndexMin_I = [1.0e4],                                   &
-            IndexMax_I = [1.0e8],                                   &
-            NameFile = 'TR.dat',                                    &
-            TypeFile = TypeFile,                                    &
-            StringDescription = &
-            'Model for transition region: [K] [1/m3] [N/m] [m/s] [W/m] [1]')
-
-       iTable = i_lookup_table('TR')
-
-       ! The table is now initialized.
-
-       ! Fill in the table
-       call make_lookup_table(iTable, calc_tr_table)
-    end if
-    call test_stop(NameSub, DoTest)
-  end subroutine check_tr_table
-  !============================================================================
-  subroutine calc_tr_table(iTableIn, Arg1, Arg2, Value_V)
-    use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
-    use ModConst,      ONLY: cBoltzmann
-    integer, intent(in):: iTableIn
-    real, intent(in)   :: Arg1, Arg2
-    real, intent(out)  :: Value_V(:)
-    integer:: iTable, iTe
-    real   :: DeltaLogTe, LambdaCgs_V(1)
-
-    logical, save:: IsFirstCall = .true.
-    ! at the moment, radcool not a function of Ne, but need a dummy 2nd
-    ! index, and might want to include Ne dependence in table later.
-    ! Table variable should be normalized to radloss_cgs * 10E+22
-    ! since we don't want to deal with such tiny numbers
-    ! real, parameter :: RadNorm = 1.0E+22
-    ! real, parameter :: Cgs2SiEnergyDens = &
-    !     1.0e-7&   ! erg = 1e-7 J
-    !     /1.0e-6    ! cm3 = 1e-6 m3
-    ! real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
-    !     /RadNorm*Cgs2SiEnergyDens
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_tr_table'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    DeltaLogTe = log(1.0e8/1.0e4)/499 ! Log(MaxTe/MinTe)/(nPoint-1)
-    if(IsFirstCall)then
-       IsFirstCall=.false.
-       iTable = i_lookup_table('radcool')
-       if(iTable<=0)&
-            call stop_mpi('Transition region table needs radcool table')
-
-       TeSi_I(1) = 1.0e4; LPe_I(1) = 0.0; UHeat_I(1) = 0.0
-       do iTe = 2,500
-          TeSi_I(iTe) = TeSi_I(iTe-1)*exp(DeltaLogTe)
-       end do
-
-       do iTe = 2,500
-          call interpolate_lookup_table(iTable, TeSi_I(iTe), LambdaCgs_V)
-          LambdaSi_I(iTe) = LambdaCgs_V(1)*Radcool2Si
-          if(iTe==1)CYCLE
-          !\
-          ! Integrate \sqrt{2\int{\kappa_0\Lambda Te**1.5 d(log T)}}/k_B
-          !/
-          UHeat_I(iTe) = UHeat_I(iTe-1) + &
-               (LambdaSi_I(iTe-1)*TeSi_I(iTe-1)**1.50 + &
-               LambdaSi_I(iTe)*TeSi_I(iTe)**1.50)*DeltaLogTe
-       end do
-       UHeat_I = sqrt(HeatCondParSi*UHeat_I)/cBoltzmann
-
-       !\
-       ! Temporary fix to avoid a singularity in the first point
-       !/
-       UHeat_I(1) = UHeat_I(2)
-       do iTe = 2,500
-          !\
-          ! Integrate \int{\kappa_0\Lambda Te**3.5 d(log T)/UHeat}
-          !/
-          LPe_I(iTe) = LPe_I(iTe-1) + 0.5*DeltaLogTe* &
-               ( TeSi_I(iTe-1)**3.50/UHeat_I(iTe-1) + &
-               TeSi_I(iTe)**3.50/UHeat_I(iTe) )
-          !\
-          ! Not multiplied by \lappa_0
-          !/
-       end do
-       dFluxXLengthOverDU_I(1) = &
-            (LPe_I(2)*UHeat_I(2) - LPe_I(1)*UHeat_I(1))/&
-            (DeltaLogTe*TeSi_I(1)**3.50)
-       do iTe = 2,499
-          dFluxXLengthOverDU_I(iTe) = &
-               (LPe_I(iTe+1)*UHeat_I(iTe+1) - LPe_I(iTe-1)*UHeat_I(iTe-1))/&
-               (2*DeltaLogTe*TeSi_I(iTe)**3.50)
-       end do
-       dFluxXLengthOverDU_I(500) = &
-            (LPe_I(500)*UHeat_I(500) - LPe_I(499)*UHeat_I(499))/&
-            (DeltaLogTe*TeSi_I(500)**3.50)
-
-       LPe_I = LPe_I*HeatCondParSi
-       UHeat_I(1) = 0.0
-       !\
-       ! Calculate dLogLambda/DLogTe
-       !/
-       DLogLambdaOverDLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
-            DeltaLogTe
-       do iTe = 2,499
-          DLogLambdaOverDLogT_I(iTe) = &
-               log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/(2*DeltaLogTe)
-       end do
-       DLogLambdaOverDLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
-            DeltaLogTe
-    end if
-    iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = [ LPe_I(iTe), UHeat_I(iTe), &
-         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
-         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)]
-
-    call test_stop(NameSub, DoTest)
-  end subroutine calc_tr_table
   !============================================================================
   subroutine advance_threads(iAction)
 
@@ -1945,7 +1709,6 @@ contains
   !=========================================
   subroutine get_tr_los_image(Xyz_D, DirLos_D, iBlock, nPlotVar, NamePlotVar_V,&
        iTableEuv, iTableSxr, iTableGen, PixIntensity_V)
-    use ModLookupTable,  ONLY: interpolate_lookup_table
     !\
     ! Using a tabulated analytical solution for the Transition Region (TR),
     ! the contribution to the LOS image from the TR is calculated.
@@ -2000,28 +1763,14 @@ contains
     ! LOS and magnetic field:
     !/
     real :: CosRLos, CosRB
-    !\
-    ! 1D Grid across the TR
-    !/
-    !Number of uniform meshes in the range from TeSiMin to Te on the TR top
-    integer, parameter :: nTRGrid = 20  
-    !mesh-centered temperature and the spatial length of intervals, in cm!!
-    real :: TeAvrSi_I(nTRGrid + 1), DeltaLCgs_I(nTRGrid + 1)
-    !\
-    ! Arrays to address to tables:
-    !/
-    ! Tabulated analytical solution:
-    real :: TRValue_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
     ! Euv intensities:
-    real :: EuvValue_V(1:3), EuvValue_VI(3, nTRGrid +1)
+    real :: EuvValue_V(3)
     ! Sxr intensities:
-    real :: SxrValue, SxrValue_VI(2, nTRGrid +1)
-    ! Gen table values:
-    real :: GenValue_VI(nPlotVar, nTRGrid +1)
+    real :: SxrValue_V(2)
     ! Plasma parameters at the top of TR
     real :: TeSi, PTotSi, PeSi, PAvrSi
     !Contribution to the image
-    real :: PlotVar_V(1:nPlotVar)
+    real :: PlotVar_V(nPlotVar)
     !-----------------------------------------------
     !\
     ! Radial direction:
@@ -2053,7 +1802,6 @@ contains
     PeSi = Z*PTotSi/(1 + Z)
     ! We define pAvr=sqrt(Pe*Pi)=sqrt(Z)*pTotal/(1+z)
     PAvrSi = SqrtZ*PTotSi/(1 + Z)
-    call set_te_grid(TeSi, PTotSi)
     PlotVar_V = 0
     !Integrate plot variables
     call set_plot_var
@@ -2094,44 +1842,7 @@ contains
       PTotSi = StateThread_V( PSi_)
       TeSi   = StateThread_V(TeSi_)
     end subroutine get_te_ptot
-    !=========================================
-    subroutine set_te_grid(TeSi, PAvrSi)
-      !\
-      ! INPUTS:
-      !/
-      real, intent(in) :: TeSi, PAvrSi
-      real    :: DeltaTe      !Mesh of a temperature 
-      integer :: i            !Loop variable
-      real    :: LPAvrSi_I(nTRGrid + 1), TeSi_I(nTRGrid + 1)
-      real    :: DeltaLPAvrSi_I(nTRGrid + 1)
-      real    :: TRTable_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
-      !--------------
-      DeltaTe = (TeSi - TeSiMin)/nTRGrid
-      TeSi_I(1) = TeSiMin
-      call interpolate_lookup_table(iTableTR, TeSiMin, TRTable_V, &
-           DoExtrapolate=.false.)
-      !\
-      ! First value is now the product of the thread length in meters times
-      ! a geometric mean pressure, so that
-      !/
-      LPAvrSi_I(1) = TRTable_V(LengthPAvrSi_)
-      do i = 1, nTRGrid
-         TeSi_I(i +1) = TeSi_I(i) + DeltaTe
-         call interpolate_lookup_table(iTableTR, TeSi_I(i + 1),   &
-              TRTable_V, DoExtrapolate=.false.)
-         LPAvrSi_I(i + 1) = TRTable_V(LengthPAvrSi_)
-         DeltaLPAvrSi_I(i) = LPAvrSi_I(i + 1) - LPAvrSi_I(i)
-         TeAvrSi_I(i) = (TeSi_I(i + 1) + TeSi_I(i))*0.50
-      end do
-      TeAvrSi_I(nTRGrid + 1) = TeSi
-      DeltaLPAvrSi_I(nTRGrid + 1) = LPAvrSi_I(1) - LPAvrSi_I(nTRGrid + 1)
-      !\
-      !Now, DeltaL_I is the length interval multiplied by PAvrSi.
-      !Get rid of the latter factor and convert from meters to cm:
-      !/
-      DeltaLCgs_I = DeltaLPAvrSi_I*100.0/PAvrSi
-    end subroutine set_te_grid
-    !================================
+    !=============================
     subroutine set_plot_var
       use ModConst, ONLY: cBoltzmann
       integer ::  i, iVar !Loop variables
@@ -2139,73 +1850,42 @@ contains
       real    :: NeCgs
       !------------------------
       if(UseGenTable)then
-         do i = 1, nTRGrid + 1
-            !Calculate mesh-centered electron density:
-            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
-            call interpolate_lookup_table(iTableGen, TeAvrSi_I(i), NeCgs, &
-                 GenValue_VI(:,i), DoExtrapolate=.true.)
-            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
-            GenValue_VI(:,i) = GenValue_VI(:,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
-                 DeltaLCgs_I(i)
-         end do
-         !Sum up the contributions from all temperature intervals:
-         do iVar = 1, nPlotVar
-            PlotVar_V(iVar) = sum(GenValue_VI(iVar,:))
-         end do
-         RETURN
-      end if
-      if (UseEuv) then
-         ! now interpolate EUV response values from a lookup table
-         do i = 1, nTRGrid +1
-            !Calculate mesh-centered electron density:
-            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
-            call interpolate_lookup_table(iTableEUV, TeAvrSi_I(i), NeCgs, &
-                 EuvValue_VI(:,i) , DoExtrapolate=.true.)
-            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
-            EuvValue_VI(:,i) = EuvValue_VI(:,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
-                 DeltaLCgs_I(i)
-         end do
-         !Sum up the contributions from all temperature intervals:
-         do iVar = 1,3
-            EuvValue_V(iVar) = sum(EuvValue_VI(iVar,:))
-         end do
-      end if
+         call integrate_emission(TeSi, PAvrSi, iTableGen, nPlotVar, &
+              PlotVar_V)
+      else
+         if (UseEuv) then
+            ! now integrate EUV response values from a lookup table
+            call integrate_emission(TeSi, PAvrSi, iTableEuv, 3, &
+                 EuvValue_V)
+         end if
       
-      if (UseSxr) then
-         ! now interpolate SXR response values from a lookup table
-         do i = 1, nTRGrid +1
-            !Calculate mesh-centered electron density:
-            NeCgs = 1.0e-6*PeSi/(cBoltzmann*TeAvrSi_I(i))
-            call interpolate_lookup_table(iTableSXR, TeAvrSi_I(i), NeCgs, &
-                 SxrValue_VI(:,i), DoExtrapolate=.true.)
-            !Multiply by a scale factor 1e-26 of the table times Ne*Ni*DeltaL
-            SxrValue_VI(1,i) = SxrValue_VI(1,i)*NeCgs*(NeCgs/Z)*1.0e-26*&
-                 DeltaLCgs_I(i)
+         if (UseSxr) then
+            ! now integrate SXR response values from a lookup table
+            call integrate_emission(TeSi, PAvrSi, iTableSxr, 2, &
+                 SxrValue_V)
+         end if
+         do iVar = 1, nPlotVar
+            select case(NamePlotVar_V(iVar))
+            case('euv171')
+               ! EUV 171
+               PlotVar_V(iVar) = EuvValue_V(1)
+               
+            case('euv195')
+               ! EUV 195
+               PlotVar_V(iVar) = EuvValue_V(2)
+               
+            case('euv284')
+               ! EUV 284
+               PlotVar_V(iVar) = EuvValue_V(3)
+               
+            case('sxr')
+               ! Soft X-Ray (Only one channel for now, can add others later)
+               PlotVar_V(iVar) = SxrValue_V(1)
+            case default
+               call stop_mpi('Unknown NamePlotVar='//NamePlotVar_V(iVar))
+            end select
          end do
-         !Sum up the contributions from all temperature intervals:
-         SxrValue = sum(SxrValue_VI(1,:))
       end if
-      do iVar = 1, nPlotVar
-         select case(NamePlotVar_V(iVar))
-         case('euv171')
-            ! EUV 171
-            PlotVar_V(iVar) = EuvValue_V(1)
-
-         case('euv195')
-            ! EUV 195
-            PlotVar_V(iVar) = EuvValue_V(2)
-
-         case('euv284')
-            ! EUV 284
-            PlotVar_V(iVar) = EuvValue_V(3)
-
-         case('sxr')
-            ! Soft X-Ray (Only one channel for now, can add others later)
-            PlotVar_V(iVar) = SxrValue
-         case default
-            call stop_mpi('Unknown NamePlotVar='//NamePlotVar_V(iVar))
-         end select
-      end do
     end subroutine set_plot_var
     !================================
   end subroutine get_tr_los_image
