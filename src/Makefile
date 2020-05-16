@@ -101,6 +101,7 @@ OBJECTS = \
 	ModSingleFluid.o \
 	ModSize.o \
 	ModSolarwind.o \
+	ModTransitionRegion.o\
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
