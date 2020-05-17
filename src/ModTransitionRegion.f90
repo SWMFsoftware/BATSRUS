@@ -220,34 +220,39 @@ contains
 
   end subroutine calc_tr_table
   !===========================
-  subroutine integrate_emission(TeSi, PAvrSi, iTable, nVar, Integral_V)
+  subroutine integrate_emission(TeSi, PeSi, iTable, nVar, Integral_V)
     use ModConst, ONLY: cBoltzmann
     use ModLookupTable,  ONLY: interpolate_lookup_table
     !\
     ! INPUTS:
     !/
-    real,    intent(in)  :: TeSi, PAvrSi
+    ! The plasma parameters on top of the transition region:
+    real,    intent(in)  :: TeSi, PeSi
     integer, intent(in)  :: iTable, nVar
     real,    intent(out) :: Integral_V(nVar)
+    !\
+    ! The model is parameterized in terms of PAvr=sqrt(Pi*Pe) at Ti=Te
+    ! In terms of SqrtZ: PAvr = Pi*SqrtZ = Pe/SqrtZ
+    real    :: PAvrSi     
     !\
     ! 1D Grid across the TR
     !/
     !Number of uniform meshes in the range from TeSiMin to Te on the TR top
     integer, parameter :: nTRGrid = 20  
     !mesh-centered temperature and the spatial length of intervals, in cm!!
-    real :: TeAvrSi_I(nTRGrid + 1), DeltaLCgs_I(nTRGrid + 1)
+    real    :: TeAvrSi_I(nTRGrid + 1), DeltaLCgs_I(nTRGrid + 1)
     ! Tabulated analytical solution:
-    real    :: TRValue_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    real    :: TRTable_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
     ! Gen table values:
     real    :: Value_VI(nVar, nTRGrid +1)
     real    :: DeltaTe      !Mesh of a temperature 
     real    :: LPAvrSi_I(nTRGrid + 1), TeSi_I(nTRGrid + 1)
-    real    :: DeltaLPAvrSi_I(nTRGrid + 1)
-    real    :: TRTable_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    real    :: DeltaLPAvrSi_I(nTRGrid + 1) 
     integer ::  i, iVar !Loop variables
     !Electron density in particles per cm3:
     real    :: NeCgs, NiCgs
     !------------------------
+    PAvrSi = PeSi/SqrtZ
     DeltaTe = (TeSi - TeSiMin)/nTRGrid
     TeSi_I(1) = TeSiMin
     call interpolate_lookup_table(iTableTR, TeSiMin, TRTable_V, &
@@ -288,4 +293,40 @@ contains
     end do
   end subroutine integrate_emission
   !================================
+  subroutine plot_tr(nGrid, TeSi, PeSi, iTable)
+    !\
+    ! INPUTS:
+    !/
+    !Number of grid points. The grid is uniform if Te, but not in X
+    integer, intent(in)  :: nGrid 
+    ! The plasma parameters on top of the transition region:
+    real,    intent(in)  :: TeSi, PeSi
+    !The TR is mostly used to account for the integral of the spectral
+    !intensity across the transition region, which is tabulated in the
+    !lookup table. In this routine we can visualize the integrand
+    integer, optional, intent(in)  :: iTable
+    !\
+    ! The model is parameterized in terms of PAvr=sqrt(Pi*Pe) at Ti=Te
+    ! In terms of SqrtZ: PAvr = Pi*SqrtZ = Pe/SqrtZ
+    real    :: PAvrSi     
+    !\
+    ! 1D Grid across the TR
+    !/
+    !Number of uniform meshes in the range from TeSiMin to TeSi
+    !mesh-centered temperature and the 1D spatial coordinate which is the
+    !length in m from the top of chromosphere to the transition region
+    real :: TeSi_I(nGrid), LengthSi_I(nGrid)
+    ! Tabulated analytical solution:
+    real    :: TRValue_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    ! Plot variables:
+    real,allocatable    :: Value_VI(:,:)
+    real    :: DeltaTe      !Mesh of a temperature 
+    real    :: LPAvrSi_I(nGrid)
+    real    :: TRTable_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
+    integer ::  i, iVar !Loop variables
+    !Electron density in particles per cm3:
+    real    :: NeCgs_I(nGrid), NiCgs
+    !-------------------------------
+    PAvrSi = PeSi/SqrtZ
+  end subroutine plot_tr
 end module ModTransitionRegion

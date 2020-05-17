@@ -1768,7 +1768,7 @@ contains
     ! Sxr intensities:
     real :: SxrValue_V(2)
     ! Plasma parameters at the top of TR
-    real :: TeSi, PTotSi, PeSi, PAvrSi
+    real :: TeSi, PTotSi, PeSi
     !Contribution to the image
     real :: PlotVar_V(nPlotVar)
     !-----------------------------------------------
@@ -1800,8 +1800,8 @@ contains
     ! Pe = Z Pi, pTotal = (Z+1)Pi
     ! So that Pi = pTotal/(Z+1) and
     PeSi = Z*PTotSi/(1 + Z)
-    ! We define pAvr=sqrt(Pe*Pi)=sqrt(Z)*pTotal/(1+z)
-    PAvrSi = SqrtZ*PTotSi/(1 + Z)
+    
+    
     PlotVar_V = 0
     !Integrate plot variables
     call set_plot_var
@@ -1850,18 +1850,18 @@ contains
       real    :: NeCgs
       !------------------------
       if(UseGenTable)then
-         call integrate_emission(TeSi, PAvrSi, iTableGen, nPlotVar, &
+         call integrate_emission(TeSi, PeSi, iTableGen, nPlotVar, &
               PlotVar_V)
       else
          if (UseEuv) then
             ! now integrate EUV response values from a lookup table
-            call integrate_emission(TeSi, PAvrSi, iTableEuv, 3, &
+            call integrate_emission(TeSi, PeSi, iTableEuv, 3, &
                  EuvValue_V)
          end if
       
          if (UseSxr) then
             ! now integrate SXR response values from a lookup table
-            call integrate_emission(TeSi, PAvrSi, iTableSxr, 2, &
+            call integrate_emission(TeSi, PeSi, iTableSxr, 2, &
                  SxrValue_V)
          end if
          do iVar = 1, nPlotVar
