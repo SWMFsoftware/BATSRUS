@@ -1103,10 +1103,13 @@ contains
          !  per cm3 
          !/
          ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_)) 
-
-         ! calculate temperature cutoff to neglect widened transition region
-         FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
-
+         if(present(UseThreads))then
+            !The head conduction is not modified, the whole response is true:
+            FractionTrue = 1.0
+         else
+            ! calculate temperature cutoff to neglect widened transition region
+            FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
+         end if
          ! !! There should be just one table, not three!!!
          if (UseEuv) then
             ! now interpolate EUV response values from a lookup table
