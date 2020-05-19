@@ -1,8 +1,5 @@
 !- PARAM.in:  Example input file for BATSRUS --
 
-#ECHO
-T                       DoEcho
-
 #NORMALIZATION
 SOLARWIND
 
@@ -28,6 +25,9 @@ F
  0.5                    y2
 -0.5                    z1
  0.5                    z2
+
+#GRIDBLOCKALL
+600			MaxBlock
 
 #SOLARWIND
 8.0                     SW_rho_dim [n/cc] \ 
