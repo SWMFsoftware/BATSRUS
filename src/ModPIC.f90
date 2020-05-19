@@ -175,7 +175,7 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-       
+
     case("#PICREGIONUNIT")
        ! TODO: change the command name to #PICGRIDUNIT
        UseSamePicUnit = .false. 
@@ -618,8 +618,7 @@ contains
              ! Get the patch id from the MHD coordinates
              call coord_to_patch_index(iRegion, XyzMhd_D, IndexCenterPatch_D)
              ! turn on the pic in user_defined region
-             if(InsidePicRegion_C(i,j,k)>0.0) then
-
+             if(allocated(iRegionPic_I) .and. InsidePicRegion_C(i,j,k)>0.0) then
                 IndexPatch_D = IndexCenterPatch_D
                 if(.not. is_inside_pic_grid(IndexPatch_D, iRegion)) CYCLE
                 ! set the point status without extension on the edge
@@ -658,11 +657,11 @@ contains
                             end if
                          else ! turn all extended cells to iPicOn_
                             call set_point_status(Status_I(&
-                                    StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-                                    nX, nY, nZ, &
-                                    IndexPatch_D(x_), &
-                                    IndexPatch_D(y_), &
-                                    IndexPatch_D(z_), iPicOn_)
+                                 StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                 nX, nY, nZ, &
+                                 IndexPatch_D(x_), &
+                                 IndexPatch_D(y_), &
+                                 IndexPatch_D(z_), iPicOn_)
                          end if
                       end do
                    end do
@@ -740,7 +739,7 @@ contains
 
   end subroutine set_status_all
   !============================================================================
-  
+
   subroutine is_inside_active_pic_region(xyz_D, IsInside)
     ! It should be a function instead of a subroutine. --Yuxi
     use BATL_lib, ONLY: nDim, x_, y_, z_
@@ -1063,12 +1062,12 @@ contains
     if(.not. allocated(J_D)) allocate(J_D(3))
 
     IsPicCrit_CB = iPicOff_
-    
+
     if(nCriteriaPic==0) then
        IsPicCrit_CB = iPicOn_             
        RETURN
     end if
-    
+
     do iBlock=1,nBlock       
 
        if(Unused_B(iBlock)) CYCLE
