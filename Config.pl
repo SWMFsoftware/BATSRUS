@@ -63,11 +63,10 @@ my $Equation;
 my $UserModule;
 
 # Grid size variables
-my $NameSizeFile = "$Src/ModSize.f90";
 my $NameBatlFile = "srcBATL/BATL_size.f90";
 my $GridSize;
 my $GhostCell;
-my ($nI, $nJ, $nK, $MaxBlock, $MaxImplBlock, $nG);
+my ($nI, $nJ, $nK, $nG);
 
 # additional variable information
 my $nWave;
@@ -107,7 +106,7 @@ foreach (@Arguments){
     or            ($NewGhostCell and $NewGhostCell ne $GhostCell);
 
 # Show grid size in a compact form if requested
-print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock\n",
+print "Config.pl -g=$nI,$nJ,$nK\n",
     if $ShowGridSize and not $Show;
 
 # Set or list the equations
@@ -140,17 +139,6 @@ exit 0;
 
 sub get_settings{
 
-    # Read size of the grid from $NameSizeFile
-    open(FILE, $NameSizeFile) or die "$ERROR could not open $NameSizeFile\n";
-    while(<FILE>){
-	next if /^\s*!/; # skip commented out lines
-	$MaxImplBlock=$1 if /\bMaxImplBLK\s*=[^0-9]*(\d+)/i;
-    }
-    close FILE;
-
-    die "$ERROR could not read MaxImplBlock from $NameSizeFile\n" 
-	unless length($MaxImplBlock);                         
-
     # Make sure that BATL_size.f90 is up-to-date
     `make $NameBatlFile`;
     open(FILE, $NameBatlFile) or die "$ERROR could not open $NameBatlFile\n";
@@ -159,7 +147,6 @@ sub get_settings{
         $nI=$1           if /\bnI\s*=\s*(\d+)/i;
 	$nJ=$1           if /\bnJ\s*=\s*(\d+)/i;
 	$nK=$1           if /\bnK\s*=\s*(\d+)/i;
-        $MaxBlock=$1     if /\bMaxBlock\s*=\s*(\d+)/i;
 	$GhostCell=$1    if /\bnG\s*=\s*(\d)/;
     }
     close FILE;
@@ -169,10 +156,8 @@ sub get_settings{
     die "$ERROR could not read nK from $NameBatlFile\n" unless length($nK);
     die "$ERROR could not read nG from $NameBatlFile\n" 
 	unless length($GhostCell);
-    die "$ERROR could not read MaxBlock from $NameSizeFile\n" 
-	unless length($MaxBlock);
 
-    $GridSize = "$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock";
+    $GridSize = "$nI,$nJ,$nK";
 
 }
 
@@ -182,10 +167,10 @@ sub set_grid_size{
 
     $GridSize = $NewGridSize if $NewGridSize;
 
-    if($GridSize =~ /^[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*$/){
-	($nI,$nJ,$nK,$MaxBlock,$MaxImplBlock) = split(',', $GridSize);
+    if($GridSize =~ /^[1-9]\d*,[1-9]\d*,[1-9]\d*$/){
+	($nI,$nJ,$nK) = split(',', $GridSize);
     }elsif($GridSize){
-	die "$ERROR -g=$GridSize should be 5".
+	die "$ERROR -g=$GridSize should be 3".
 	    " positive integers separated with commas\n";
     }
 
@@ -197,9 +182,6 @@ sub set_grid_size{
     die "$ERROR nI=$nI must be an even integer\n"      if           $nI%2!=0;
     die "$ERROR nJ=$nJ must be 1 or an even integer\n" if $nJ>1 and $nJ%2!=0;
     die "$ERROR nK=$nK must be 1 or an even integer\n" if $nK>1 and $nK%2!=0;
-
-    die "$ERROR MaxImplBlock=$MaxImplBlock cannot exceed MaxBlock=$MaxBlock\n"
-	if $MaxImplBlock > $MaxBlock;
 
     if(not $Force){
 	die "$ERROR nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" 
@@ -214,14 +196,7 @@ sub set_grid_size{
 
 
     print "Writing new grid size $GridSize and $GhostCell ghost cells into ".
-	"$NameSizeFile and $NameBatlFile...\n";
-
-    @ARGV = ($NameSizeFile);
-    while(<>){
-	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(MaxImplBLK\s*=[^0-9]*)(\d+)/$1$MaxImplBlock/i;
-	print;
-    }
+	"$NameBatlFile...\n";
 
     @ARGV = ($NameBatlFile);
     while(<>){
@@ -230,7 +205,6 @@ sub set_grid_size{
 	s/\b(nJ\s*=[^0-9]*)(\d+)/$1$nJ/i;
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
 	s/\b(nG\s*=[^0-9]*)\d/$1$GhostCell/i;
-	s/\b(MaxBlock\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
 	print;
     }
 
@@ -359,19 +333,10 @@ sub set_user_module{
 
 sub current_settings{
 
-    $Settings = 
-	"Number of cells in a block        : nI=$nI, nJ=$nJ, nK=$nK\n";
-    $Settings .= 
-	"Max. number of blocks/PE          : MaxBlock=$MaxBlock\n";
-    $Settings .= 
-	"Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
-    $Settings .=
-	"Number of ghost cell layers       : nG=$GhostCell\n";
-    $Settings .=
-	"Number of wave bins               : nWave=$nWave\n" if $nWave;
-
-    $Settings .=
-	"Number of materials               : nMaterial=$nMaterial\n" 
+    $Settings  = "Number of cells in a block  : nI=$nI, nJ=$nJ, nK=$nK\n";
+    $Settings .= "Number of ghost cell layers : nG=$GhostCell\n";
+    $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
+    $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
 	if $nMaterial;
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
@@ -415,7 +380,7 @@ sub print_help{
     print "
 Additional options for BATSRUS/Config.pl:
 
--g=NI,NJ,NK,MAXBLK,MAXIMPLBLK     
+-g=NI,NJ,NK
                 Set grid size. NI, NJ and NK are the number of cells 
                 in the I, J and K directions, respectively. 
                 If NK = 1, the 3rd dimension is ignored: 2D grid.
@@ -423,9 +388,6 @@ Additional options for BATSRUS/Config.pl:
                 In non-ignored dimensions NI, NJ, NK have to be even integers.
                 To allow AMR, the number of cells has to be 4 or more in all 
                 non-ignored directions. 
-                MAXBLK is the maximum number of blocks per processor.
-                MAXIMPLBLK is the maximum number of implicitly integrated 
-                blocks per processor. Cannot be larger than MAXBLK.
 
 -ng             Print current setting for number of ghost cell layers.
 
