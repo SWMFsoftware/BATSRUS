@@ -1115,7 +1115,7 @@ contains
             ! now interpolate EUV response values from a lookup table
             if (iTableEUV <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
-            call interpolate_lookup_table(iTableEUV, Te, Ne, &
+            call interpolate_lookup_table(iTableEUV, TeSi, Ne, &
                  EuvResponse, DoExtrapolate=.true.)
             EuvResponse = EuvResponse * FractionTrue
          end if
@@ -1124,7 +1124,7 @@ contains
             ! now interpolate SXR response values from a lookup table
             if (iTableSXR <=0) &
                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
-            call interpolate_lookup_table(iTableSXR, Te, Ne, &
+            call interpolate_lookup_table(iTableSXR, TeSi, Ne, &
                  SxrResponse, DoExtrapolate=.true.)
             SxrResponse = SxrResponse * FractionTrue
          end if
@@ -1134,7 +1134,7 @@ contains
                  call stop_mpi('Need to load #LOOKUPTABLE for ' &
                  //NameLosTable(iFile)//' response!')
             ! now interpolate the entire table
-            call interpolate_lookup_table(iTableGen, Te, Ne, &
+            call interpolate_lookup_table(iTableGen, TeSi, Ne, &
                  InterpValues_I, DoExtrapolate=.true.)
             InterpValues_I = InterpValues_I * FractionTrue
 
