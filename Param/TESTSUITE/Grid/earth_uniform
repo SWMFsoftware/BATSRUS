@@ -9,6 +9,9 @@
 -64.                    z1
  64.                    z2
 
+#GRIDBLOCKALL
+720			MaxBlock
+
 !refine inside 1.5*rcurrents, rcurrents = 3.5
 #GRIDRESOLUTION
 2.0
