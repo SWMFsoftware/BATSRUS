@@ -9,6 +9,9 @@
 -140                    zMin
 140                     zMax
 
+#GRIDBLOCKALL
+500			MaxBlock
+
 #GRIDRESOLUTION
 35./256                 Resolution
 initial                 NameArea

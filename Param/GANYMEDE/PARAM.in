@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Test Ganymede run of steady state ideal MHD G8 flyby
 MhdHypPe equation set.

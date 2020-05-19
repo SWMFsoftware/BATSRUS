@@ -10,6 +10,9 @@
 -64.			z1
  64.			z2
 
+#GRIDBLOCKALL
+720			MaxBlock
+
 !refine all to at least 4.0 Re
 #GRIDRESOLUTION
 4.0                     Resolution
