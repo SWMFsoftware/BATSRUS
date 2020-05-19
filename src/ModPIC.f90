@@ -161,13 +161,13 @@ contains
           call read_var('nPatchExtend_D', nPatchExtend_D(iDim))
        end do
 
-    case("#PICREGIONLIMIT")
+    case("#PICREGIONMAX")
        call read_var('StringPicRegionLimit', StringPicRegionLimit)
        if (StringPicRegionLimit /= 'none') &
             call get_region_indexes(StringPicRegionLimit, &
             iRegionPicLimit_I)
 
-    case("#PICREGION")
+    case("#PICREGIONMIN")
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') &
             call get_region_indexes(StringPicRegion, iRegionPic_I)
@@ -445,7 +445,7 @@ contains
 
        if(allocated(Status_I)) deallocate(Status_I)             
        allocate(Status_I(nSizeStatus))
-       Status_I = iPicOff_              
+       call set_status_all(iPicOff_)
     endif
 
     do iRegion = 1, nRegionPic      
@@ -500,8 +500,12 @@ contains
        ! Calculate the pic region criteria
        call calc_pic_criteria
        call pic_set_cell_status
+       if(iProc==0) then
+          write(*,*)
+          write(*,*) NameSub,': Adapt-PIC Initialization Finished'
+          write(*,*)
+       end if
     end if
-
 
     if(iProc == 0) then
        write(*,*) "Corrected IPIC3D  regions"
@@ -585,7 +589,7 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
-    Status_I = iPicOff_
+    call set_status_all(iPicOff_)
 
     do iRegion = 1, nRegionPic
        nX = PatchSize_DI(x_, iRegion)
@@ -642,14 +646,23 @@ contains
                          call patch_index_to_coord(iRegion, IndexPatch_D, 'Mhd', &
                               XyzMhdExtend_D)
                          ! set the point status
-
-                         if(is_point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D)) then
+                         ! if PICREGIONMAX is defined in the PARAM.in
+                         if(allocated(iRegionPicLimit_I)) then
+                            if(is_point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D)) then
+                               call set_point_status(Status_I(&
+                                    StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                    nX, nY, nZ, &
+                                    IndexPatch_D(x_), &
+                                    IndexPatch_D(y_), &
+                                    IndexPatch_D(z_), iPicOn_)
+                            end if
+                         else ! turn all extended cells to iPicOn_
                             call set_point_status(Status_I(&
-                                 StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-                                 nX, nY, nZ, &
-                                 IndexPatch_D(x_), &
-                                 IndexPatch_D(y_), &
-                                 IndexPatch_D(z_), iPicOn_)
+                                    StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                    nX, nY, nZ, &
+                                    IndexPatch_D(x_), &
+                                    IndexPatch_D(y_), &
+                                    IndexPatch_D(z_), iPicOn_)
                          end if
                       end do
                    end do
@@ -699,8 +712,35 @@ contains
     end if
 
   end function is_inside_pic_grid
-
   !============================================================================
+
+  subroutine set_status_all(DstValue)
+    ! The subroutine that set entire Status_I to DstValue
+    use BATL_lib, ONLY: x_, y_, z_
+    integer, intent(in) :: DstValue
+
+    integer :: iRegion, nx, ny, nz, i, j, k
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_status_all'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    do iRegion = 1, nRegionPic
+       nx = PatchSize_DI(x_, iRegion)
+       ny = PatchSize_DI(y_, iRegion)
+       nz = PatchSize_DI(z_, iRegion)
+       do i = 0, nx-1; do j = 0, ny-1; do k = 0, nz-1
+          call set_point_status(Status_I(&
+               StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+               nx, ny, nz, i, j, k, DstValue)
+       enddo; enddo; enddo
+    enddo
+
+  end subroutine set_status_all
+  !============================================================================
+  
   subroutine is_inside_active_pic_region(xyz_D, IsInside)
     ! It should be a function instead of a subroutine. --Yuxi
     use BATL_lib, ONLY: nDim, x_, y_, z_
@@ -1022,11 +1062,13 @@ contains
 
     if(.not. allocated(J_D)) allocate(J_D(3))
 
+    IsPicCrit_CB = iPicOff_
+    
     if(nCriteriaPic==0) then
        IsPicCrit_CB = iPicOn_             
        RETURN
     end if
-
+    
     do iBlock=1,nBlock       
 
        if(Unused_B(iBlock)) CYCLE

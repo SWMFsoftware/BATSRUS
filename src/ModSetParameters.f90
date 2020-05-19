@@ -658,7 +658,7 @@ contains
        case("#PIC", "#PICGRID", '#PICREGIONROTATE', "#PICUNIT", &
             "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST", &
             "#PICADAPT", "#PICPATCH", "#PICCRITERIA", "#PICPATCHEXTEND", &
-            "#PICREGION", "#PICREGIONLIMIT")
+            "#PICREGIONMIN", "#PICREGIONMAX")
           call pic_read_param(NameCommand)
 
        case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
