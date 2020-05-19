@@ -635,7 +635,7 @@ contains
        case("#LINEARSOLVERACCURATESUM")
           call read_var('UseAccurateSum', UseAccurateSum)
 
-       case("#IMPLICIT", &
+       case("#IMPLICIT", "#GRIDBLOCKIMPL", "#GRIDBLOCKIMPLALL", &
             "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
             "#PARTIMPL", "#PARTIMPLICIT",     &
             "#IMPLSCHEME", "#IMPLICITSCHEME", &
@@ -2016,11 +2016,8 @@ contains
        case("#GRIDBLOCK", "#GRIDBLOCKALL")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('MaxBlock',     MaxBlock)
-          call read_var('MaxBlockImpl', MaxImplblk)
-          if(NameCommand == "#GRIDBLOCKALL")then
+          if(NameCommand == "#GRIDBLOCKALL") &
              MaxBlock   = 1 + (MaxBlock-1)/nProc
-             MaxImplblk = 1 + (MaxImplblk-1)/nProc
-          end if
 
        case("#CHECKGRIDSIZE")
           if(.not.is_first_session())CYCLE READPARAM
