@@ -34,7 +34,7 @@ contains
 
     use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
-    use ModAdvance, ONLY: UseEfield, Pe_, UseElectronPressure
+    use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb,                                        &
@@ -45,10 +45,9 @@ contains
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
-    use ModMultiFluid, ONLY: nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I, &
-         iRhoIon_I, MassIon_I
+    use ModMultiFluid, ONLY: nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
-         iErImplFirst, iErImplLast, iTeImpl
+         iErImplFirst, iErImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
@@ -334,34 +333,9 @@ contains
        case('fixed_semi', 'inflow_semi', 'vary_semi')
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-          else if (TypeBc == 'fixed_semi') then
-             if (iTeImpl .gt. 0) then
-                if (UseElectronPressure) then
-                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
-			CellState_VI(Pe_,iSide)/ &
-                        sum(CellState_VI(iRhoIon_I,iSide)/MassIon_I)
-                else
-                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
-                        CellState_VI(P_,iSide)/CellState_VI(Rho_,iSide)
-                end if
-             else
-                call stop_mpi(NameSub// &
-                  ': fixed_semi not working for TypeSemiImplicit='//TypeSemiImplicit)
-             end if
           else
              call set_solar_wind_bc
-             if (iTeImpl .gt. 0) then
-                if(UseElectronPressure) then
-                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
-			CellState_VI(Pe_,iSide)/ &
-                        sum(CellState_VI(iRhoIon_I,iSide)/MassIon_I)
-                else
-                   State_VG(iTeImpl,iMin:iMax,jMin:jMax,kMin:kMax) = &
-                        CellState_VI(P_,iSide)/CellState_VI(Rho_,iSide)
-                end if
-             end if
           end if
-          
        case('fixedb1')
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
        case('fixedb1_semi')
@@ -755,13 +729,18 @@ contains
 
     subroutine set_solar_wind_bc
 
-      use ModAdvance,    ONLY: nVar
-      use ModGeometry,   ONLY: x1, x2, y1, y2, z1, z2
-      use ModB0,         ONLY: B0_DGB
-      use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I
-      use ModSolarwind,  ONLY: get_solar_wind_point
-      use ModMain,       ONLY: time_simulation
-      use BATL_lib,      ONLY: Xyz_DGB, IsCartesianGrid
+      use ModAdvance,     ONLY: nVar, UseIdealEos, UseElectronPressure
+      use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
+      use ModB0,          ONLY: B0_DGB
+      use ModMultiFluid,  ONLY: iRho_I, iRhoIon_I, iUx_I, iUy_I, iUz_I, &
+           iPion_I, UseMultiIon, ChargeIon_I, MassIon_I
+      use ModSolarwind,   ONLY: get_solar_wind_point
+      use ModMain,        ONLY: time_simulation
+      use BATL_lib,       ONLY: Xyz_DGB, IsCartesianGrid
+      use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, &
+           iTeImpl
+      use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
+           ElectronPressureRatio
 
       ! index and location of a single point
       integer :: i, j, k
@@ -770,8 +749,10 @@ contains
       ! Varying solar wind parameters
       real :: SolarWind_V(nVar)
 
+      real :: Ne, Pe
+
       ! logical :: DoTest, DoTestMe
-      ! character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
+      character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
       !------------------------------------------------------------------------
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
@@ -797,10 +778,30 @@ contains
          call get_solar_wind_point(time_simulation, Xyz_D, SolarWind_V)
 
          if(present(iImplBlock))then
-            State_VG(:,i,j,k) = SolarWind_V(Bx_:Bz_)
-            ! Subtract B0:   B1 = B - B0
-            if(UseB0) State_VG(BxImpl_:BzImpl_,i,j,k) = &
-                 State_VG(BxImpl_:BzImpl_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+            if(UseSemiHallResist .or. UseSemiResistivity)then
+               State_VG(BxImpl_:BzImpl_,i,j,k) = SolarWind_V(Bx_:Bz_)
+               ! Subtract B0:   B1 = B - B0
+               if(UseB0) State_VG(BxImpl_:BzImpl_,i,j,k) = &
+                    State_VG(BxImpl_:BzImpl_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+            elseif(iTeImpl > 0)then
+               if(.not.UseIdealEos)then
+                  call stop_mpi(NameSub//': non-ideal not yet supported')
+               elseif(UseMultiIon)then
+                  Ne = sum(ChargeIon_I*Solarwind_V(iRhoIon_I)/MassIon_I)
+               else
+                  Ne = Solarwind_V(Rho_)*AverageIonCharge/MassIon_I(1)
+               end if
+               if(.not.UseIdealEos .and. .not.UseElectronPressure)then
+                  call stop_mpi(NameSub//': non-ideal not yet supported')
+               elseif(UseElectronPressure)then
+                  Pe = SolarWind_V(Pe_)
+               elseif(IsMhd)then
+                  Pe = SolarWind_V(p_)*PePerPtotal
+               else
+                  Pe = sum(SolarWind_V(iPIon_I))*ElectronPressureRatio
+               end if
+               State_VG(iTeImpl,i,j,k) = Pe/Ne
+            end if
          else
             State_VG(:,i,j,k) = SolarWind_V
 

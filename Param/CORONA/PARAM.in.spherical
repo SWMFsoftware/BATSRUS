@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #COMPONENT
 SC			NameComp
 
@@ -78,6 +75,9 @@ spherical_lnr		TypeGeometry
  24.0			yMax
 -24.0			zMin
  24.0			zMax
+
+#GRIDBLOCKALL
+3000			MaxBlock
 
 #LIMITRADIUS
 1.0			rMin

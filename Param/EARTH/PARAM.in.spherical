@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Spherical test run based on May 4 1998 storm
 
@@ -34,6 +31,9 @@ T			UseAccurateTrace
  64.			yMax
 -64.			zMin
  64.			zMax
+
+#GRIDBLOCKALL
+600			MaxBlock
 
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
@@ -171,6 +171,9 @@ F                       DoSaveRestart
 #FIXEDTIMESTEP
 T			UseDtFixed
 0.1	 		DtFixedDim
+
+#GRIDBLOCKIMPLALL
+300			MaxBlockImpl
 
 #IMPLICIT
 F			UsePointImplicit

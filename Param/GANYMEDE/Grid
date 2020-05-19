@@ -13,6 +13,9 @@ spherical_lnr		TypeGeometry
 -100                    z1            zMin
  100                    z2            zMax
 
+#GRIDBLOCKALL
+700			MaxBlock
+
 #LIMITRADIUS
 0.5                     rMin
 174.0                   rMax > (sqrt(100^2+100^2+100^2))

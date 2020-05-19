@@ -3,11 +3,7 @@
 # Compilation rules preceeded with a single TAB character.
 # Empty line before next conditional.
 
-# Do not optimize the implicit source code if only 1 implicit block is allowed
-$MaxImplBlock == 1
-	${COMPILE.f90}  ${Cflag0} ModPartImplicit.f90
-
-#Special rule to compile HDF5 code
+# Special rule to compile HDF5 code
 $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 	h5pfc ${Cflag2} ModHdf5.f90
 
@@ -27,6 +23,6 @@ $Compiler eq "crayftn"
 $Compiler eq "ifort"
 	${COMPILE.f90} ${Cflag1} ModWritePlot.f90
 
-# 
+# who know why
 $Compiler eq "nagfor"
 	${COMPILE.f90} ${Cflag0} ModRadioWaveImage.f90
