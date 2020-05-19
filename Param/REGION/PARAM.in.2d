@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Test BATL_region features
 
@@ -20,6 +17,9 @@ spherical_lnr		TypeGeometry
 +32.                    yMax
 -1.                     zMin
 +1.                     zMax
+
+#GRIDBLOCKALL
+700			MaxBlock
 
 #GRIDRESOLUTION
 0.5			Resolution

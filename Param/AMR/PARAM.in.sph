@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #STRICT
 T
 
@@ -28,6 +25,9 @@ F			DoTimeAccurate
  8.			yMax
 -8.			zMin
  8.			zMax
+
+#GRIDBLOCKALL
+4000			MaxBlock
 
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry

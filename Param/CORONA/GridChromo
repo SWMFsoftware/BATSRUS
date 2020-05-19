@@ -17,6 +17,9 @@ Param/CORONA/grid_TR.dat
 -100.0			zMin
  100.0			zMax
 
+#GRIDBLOCKALL
+4000			MaxBlock
+
 #LIMITRADIUS
 1.0			rMin
 24.0			rMax

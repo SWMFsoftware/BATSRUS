@@ -176,34 +176,30 @@ number of radiation energy groups to 30.
 
 The adaptive grid parameters can be set, for example, as
 \begin{verbatim}
-  Config.pl -g=4,4,4,2000,400 -ng=2
+  Config.pl -g=4,4,4 -ng=2
 \end{verbatim}
 This will create 3D grid blocks consisting of $4\times 4\times 4$ cells
 with 2 ghost cell layers (set by -ng).
-The maximum number of grid blocks per processor will be 2000 and at most 
-400 of these can be used by the implicit time stepping. If the implicit
-time stepping is not required for the run, it is best to set the number
-of implicit blocks to 1, so the implicit module is not optimized, which can
-save some compilation time. Note that the number of grid blocks can
-be set in the PARAM.in file with the \#GRIDBLOCK and \#GRIDBLOCKALL commands,
-the configuration simply sets the default values. The number of cells per
+Note that the number of grid blocks should
+be set in the PARAM.in file with the \#GRIDBLOCK and \#GRIDBLOCKALL commands.
+The number of cells per
 block, however, cannot be changed during run time, which helps the compiler
 to properly optimize the inner loops on the grid cell indexes.
 
 If the fifth order scheme is to be used, it requires three ghost cells
 and at least 6 cells in all used dimension:
 \begin{verbatim}
-  Config.pl -g=6,6,6,10,1 -ng=3
+  Config.pl -g=6,6,6 -ng=3
 \end{verbatim}
 The grid can also be 2 or even 1 dimensional. For 2D grids the number
 of cells in the third dimension is 1, for example,
 \begin{verbatim}
-  Config.pl -g=10,10,1,10,1 -ng=3
+  Config.pl -g=10,10,1 -ng=3
 \end{verbatim}
 will $10\times 10$ grid cells with 3 ghost cell layers in 2 spatial dimensions.
 For 1D grids both the second and third numbers are 1, e.g., 
 \begin{verbatim}
-  Config.pl -g=100,1,1,50,50 -ng=2
+  Config.pl -g=100,1,1 -ng=2
 \end{verbatim}
 The current grid settings can be inquired with
 \begin{verbatim}

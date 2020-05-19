@@ -1,8 +1,5 @@
 !- PARAM.in:  Example input file for BATSRUS --
 
-#ECHO
-T                       DoEcho
-
 #NORMALIZATION
 SOLARWIND
 
