@@ -127,12 +127,12 @@ contains
                   State_VG(iVar,iTest,jTest,kTest),&
                   State_VG(iVar,Ighost,Jghost,Kghost), &
                   State_VG(iVar,Ighost2,Jghost2,Kghost2)
-             else
-                write(*,*)'initial impl var',iVar, 'cell,ghost,ghost2=',&
+          else
+             write(*,*)'initial impl var',iVar, 'cell,ghost,ghost2=',&
                   State_VG(iVar,iTest,jTest,kTest),&
                   State_VG(iVar,Ighost,Jghost,Kghost), &
                   State_VG(iVar,Ighost2,Jghost2,Kghost2)
-             end if
+          end if
        end do
     end if
 
@@ -334,7 +334,12 @@ contains
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
-             call set_solar_wind_bc
+             if(time_accurate &
+                  .and.(TypeBc == 'vary'.or. TypeBc == 'inflow'))then
+                call set_solar_wind_bc
+             else
+                call set_fixed_semi_bc
+             end if
           end if
        case('fixedb1')
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
@@ -352,7 +357,7 @@ contains
              State_VG(:,0,jMin:jMax,kMin:kMax) = 0.0
           else
              call set_field_line_thread_bc( &
-               nGhost, iBlock, nVarState, State_VG, iImplBlock)
+                  nGhost, iBlock, nVarState, State_VG, iImplBlock)
           end if
        case('user_semi')
           if(IsLinear)then
@@ -389,15 +394,15 @@ contains
                   State_VG(iVar,iTest,jTest,kTest),&
                   State_VG(iVar,Ighost,Jghost,Kghost), &
                   State_VG(iVar,Ighost2,Jghost2,Kghost2)
-             else
-                write(*,*)'final impl var',iVar, 'cell,ghost,ghost2=',&
+          else
+             write(*,*)'final impl var',iVar, 'cell,ghost,ghost2=',&
                   State_VG(iVar,iTest,jTest,kTest),&
                   State_VG(iVar,Ighost,Jghost,Kghost), &
                   State_VG(iVar,Ighost2,Jghost2,Kghost2)
           end if
        end do
     end if
-       
+
     deallocate(SymmCoeff_V)
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -708,7 +713,54 @@ contains
 
     end subroutine set_fixed_bc
     !==========================================================================
+    subroutine set_fixed_semi_bc
 
+      use ModAdvance,     ONLY: UseIdealEos, UseElectronPressure
+      use ModMultiFluid,  ONLY: iRhoIon_I, iPion_I, UseMultiIon, ChargeIon_I, &
+           MassIon_I
+      use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
+      use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
+           ElectronPressureRatio
+
+      integer :: i, j, k
+      real :: Ne, Pe
+
+      character(len=*), parameter:: NameSub = 'set_fixed_semi_bc'
+      !------------------------------------------------------------------------
+
+      if(UseSemiHallResist .or. UseSemiResistivity)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
+         end do; end do; end do
+         ! Subtract B0:   B1 = B - B0
+         if(UseB0) call fix_b0(BxImpl_,BzImpl_)
+      elseif(iTeImpl > 0)then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            if(.not.UseIdealEos)then
+               call stop_mpi(NameSub//': non-ideal not yet implemented')
+            elseif(UseMultiIon)then
+               Ne = sum(ChargeIon_I*CellState_VI(iRhoIon_I,iSide)/MassIon_I)
+            else
+               Ne = CellState_VI(Rho_,iSide)*AverageIonCharge/MassIon_I(1)
+            end if
+            if(.not.UseIdealEos .and. .not.UseElectronPressure)then
+               call stop_mpi(NameSub//': non-ideal not yet implemented')
+            elseif(UseElectronPressure)then
+               Pe = CellState_VI(Pe_,iSide)
+            elseif(IsMhd)then
+               Pe = CellState_VI(p_,iSide)*PePerPtotal
+            else
+               Pe = sum(CellState_VI(iPIon_I,iSide))*ElectronPressureRatio
+            end if
+            State_VG(iTeImpl,i,j,k) = Pe/Ne
+         end do; end do; end do
+      else
+         call stop_mpi(NameSub// &
+              ': not working for TypeSemiImplicit='//TypeSemiImplicit)
+      end if
+
+    end subroutine set_fixed_semi_bc
+    !==========================================================================
     subroutine fix_b0(iVarMin, iVarMax)
 
       use ModB0, ONLY: B0_DGB
@@ -737,8 +789,7 @@ contains
       use ModSolarwind,   ONLY: get_solar_wind_point
       use ModMain,        ONLY: time_simulation
       use BATL_lib,       ONLY: Xyz_DGB, IsCartesianGrid
-      use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, &
-           iTeImpl
+      use ModSemiImplVar, ONLY: UseSemiHallResist, UseSemiResistivity, iTeImpl
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal, &
            ElectronPressureRatio
 
