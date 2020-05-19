@@ -12,6 +12,9 @@ spherical_lnr		TypeGeometry
 -24.                    zMin
  24.                    zMax
 
+#GRIDBLOCKALL
+1000			MaxBlock
+
 ! this should be here but was missed in the original test
 
 LIMITRADIUS

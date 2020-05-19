@@ -1,6 +1,3 @@
-#ECHO
-T
-
 #PROGRESS
 1			DnShowProgressShort
 100			DnShowProgressLong
@@ -51,6 +48,9 @@ T                       UseBody
  128.			yMax
 -128.			zMin
  128.			zMax
+
+#GRIDBLOCKALL
+4000			MaxBlock
 
 #AMRREGION
 nearbody                NameRegion

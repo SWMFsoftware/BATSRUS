@@ -1,6 +1,3 @@
-#ECHO
-T                       DoEcho
-
 #PLANET
 NONE
 
@@ -29,6 +26,9 @@ GM/restartIN/restart.H
  16.0                   yMax
 -16.0                   zMin
  16.0                   zMax
+
+#GRIDBLOCKALL
+400			MaxBlock
 
 #GRIDLEVEL
 3

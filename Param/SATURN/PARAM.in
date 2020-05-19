@@ -1,6 +1,3 @@
-#ECHO
-T
-
 #DESCRIPTION
 Test for Saturn
 
@@ -43,6 +40,9 @@ SOLARWIND
   1.92000E+02                         y2		yMax
  -1.92000E+02                         z1		zMin
   1.92000E+02                         z2		zMax
+
+#GRIDBLOCKALL
+720			MaxBlock
 
 #GRIDRESOLUTION
 3.0
