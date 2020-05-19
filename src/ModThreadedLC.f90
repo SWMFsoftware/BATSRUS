@@ -148,6 +148,7 @@ contains
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,      ONLY: Pe_, p_
+    use ModChromosphere,    ONLY: TeChromosphereSi
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threaded_lc'
@@ -193,7 +194,7 @@ contains
     allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); M_VVI = 0.0
     !\
     ! Initialize transition region model:
-    call init_tr(Z=Z, TeChromoSi = 5.0e4)
+    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
     !\
     ! TeFraction is used for ideal EOS:
     !/
