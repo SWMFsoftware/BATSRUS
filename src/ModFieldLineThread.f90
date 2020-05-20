@@ -20,8 +20,8 @@ module ModFieldLineThread
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
 
-  public :: save_threads_for_plot     ! Get  State_VIII array
-  public :: interpolate_thread_state  ! Interpolate state from State_VIII
+  public :: save_threads_for_plot     ! Get  State_VG array
+  public :: interpolate_thread_state  ! Interpolate state from State_VG
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
   public :: get_tr_los_image          ! Correction for TR on LOS images
   !\
@@ -118,7 +118,7 @@ module ModFieldLineThread
      real    :: dCoord1Inv   
      !/
      !\ PSi, TeSi amd TiSi for iMin:iMax,0:nJ+1,0:nK+1 as the first step
-     real, pointer :: State_VIII(:,:,:,:)
+     real, pointer :: State_VG(:,:,:,:)
   end type BoundaryThreads
   !\
   ! Conponenets of array stored at each thread for visualization
@@ -340,7 +340,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % AMinor_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
-    nullify(BoundaryThreads_B(iBlock) % State_VIII)
+    nullify(BoundaryThreads_B(iBlock) % State_VG)
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine nullify_thread_b
   !============================================================================
@@ -366,7 +366,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % AMinor_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
-    deallocate(BoundaryThreads_B(iBlock) % State_VIII)
+    deallocate(BoundaryThreads_B(iBlock) % State_VG)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
     call test_stop(NameSub, DoTest, iBlock)
@@ -441,7 +441,7 @@ contains
                jMin_:jMax_, kMin_:kMax_))
           call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
                BoundaryThreads_B(iBlock) % dCoord1Inv)
-          allocate(BoundaryThreads_B(iBlock) % State_VIII(&
+          allocate(BoundaryThreads_B(iBlock) % State_VG(&
                PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:iMax,&
                jMin_:jMax_, kMin_:kMax_))
           IsAllocatedThread_B(iBlock) = .true.
@@ -1048,7 +1048,7 @@ contains
                 !\
                 ! interpolate Te and Ne to the ghost cell center:
                 !/ 
-                BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
+                BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
                      linear(&
                      a_VI = State_VI(:, 1 - nPoint:0),            &
                      nVar = TiSi_,                                &
@@ -1098,7 +1098,7 @@ contains
 
     ! Interpolate the state on threads to the given location
     StateThread_V = interpolate_vector(                        &
-         a_VC=BoundaryThreads_B(iBlock)%State_VIII,            &
+         a_VC=BoundaryThreads_B(iBlock)%State_VG,            &
          nVar=TiSi_,                                           &
          nDim=3,                                               &
          Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
@@ -1159,7 +1159,7 @@ contains
     integer, intent(in) :: iBlock, nPlotVar
     character(LEN=20)   :: NamePlotVar_V(nPlotVar)
     real,    intent(in) :: Xyz_D(3)
-    real, intent(inout) ::State_V(nVar)
+    real, intent(inout) :: State_V(nVar)
     real,   intent(out) :: PlotVar_V(nPlotVar)
 
     !\
@@ -1695,7 +1695,7 @@ contains
                 !\
                 ! interpolate  state vector to a uniform grid point
                 !/ 
-                BoundaryThreads_B(iBlock) % State_VIII(:, i, j, k)  = &
+                BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
                     State_VI(3:, iStencil_I(1))*Weight_I(1) + &
                     State_VI(3:, iStencil_I(2))*Weight_I(2) + &
                     State_VI(3:, iStencil_I(3))*Weight_I(3)
@@ -1832,7 +1832,7 @@ contains
       
       ! Interpolate the state on threads to the given location
       StateThread_V = interpolate_vector(                                 &
-           a_VC=BoundaryThreads_B(iBlock)%State_VIII(:,                   &
+           a_VC=BoundaryThreads_B(iBlock)%State_VG(:,                     &
            BoundaryThreads_B(iBlock)%iMin,:,:),                           &
            nVar=TiSi_,                                                    &
            nDim=2,                                                        &
