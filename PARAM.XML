@@ -1795,29 +1795,43 @@ component.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="GRIDBLOCK" alias="GRIDBLOCKALL" if="$_IsFirstSession">
-  <parameter name="MaxBlock" type="integer" min="1" default="400"/>
-  <parameter name="MaxBlockImpl" type="integer"
-	     min="1" default="1"/>
+  <parameter name="MaxBlock" type="integer" min="1" default="10"/>
 
 #GRIDBLOCK
-400		MaxBlock
-100		MaxBlockImpl
+100		MaxBlock
 
 #GRIDBLOCKALL
 4000            MaxBlock on all processors
-1000            MaxBlockImpl on all processors
 
 This command can be used in the first session of BATSRUS only.
 
-Set the maximum number of grid blocks and the maximum number
-of blocks advanced by the part-implicit method (see #IMPLICIT)
-either per processor (#MAXBLOCK) or in total (#MAXBLOCKALL). It is a good
-idea to set these values to be larger but close to the actual number of blocks
+Set the maximum number of grid blocks either per processor (#GRIDBLOCK) 
+or in total (#GRIDBLOCKALL). Typically it is better to set the total
+number so the code can run on arbitrary number of CPUs.
+It is a good idea to set these values to be 
+larger than but close to the actual number of blocks
 used during the run to minimize memory use and improve performance.
-Note that MaxBlockImpl cannot be more than MaxBlock.
 
-The default values are either the original values shown above in the
-MAXBLOCK example or set by the Config.pl -g=.... configuration.
+The default value is 100 blocks per processor. 
+</command>
+
+<command name="GRIDBLOCKIMPL" alias="GRIDBLOCKIMPLALL">
+  <parameter name="MaxBlockImpl" type="integer" min="-1" default="-1"/>
+
+#GRIDBLOCKIMPL
+100		MaxBlockImpl per processor
+
+#GRIDBLOCKIMPLALL
+1000            MaxBlockImpl on all processors
+
+This command can be used when or before the part implicit scheme is switched on.
+
+Set the maximum number of grid blocks advanced by the part-implicit method 
+(see #IMPLICIT) either per processor (#MAXBLOCKIMPL) or in total 
+(#MAXBLOCKIMPLALL). Note that MaxBlockImpl cannot be more than MaxBlock,
+but it can be smaller to save memory. 
+
+The default is that all blocks are implicit if the part-implicit scheme is used.
 </command>
 
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
@@ -9172,6 +9186,21 @@ perturbation at the proton gyro-radius scale is large enough.
 See van der Holst et al. (2014) for details of the StochasticExponent and
 StochasticAmplitude input parameters. The maximum possible StochasticExponent
 is 0.34 for randomly phased kinetic Alfven waves.
+
+</command>
+
+<comand name ="#CHROMOSPHERE">
+	<parameter name="UseChromosphereHeating type="logical" default="F"/>
+    	<parameter name="NumberDensChromosphereCgs" type="real" default="2e11"/>
+    	<parameter name="TeChromosphereSi" type="real" default="5e4"/>
+#CHROMOSPHERE
+F			UseChromosphereHeating
+2e11                    NumberDensChromosphereCgs
+5e4			TeChromosphereSi
+
+Set plasma parameters on top of chromosphere. If desired, the special heating 
+function may be applied to mantain a hydrostatic density profile in the 
+chromosphere at constant Te=TeChromosphereSi
 
 </command>
 

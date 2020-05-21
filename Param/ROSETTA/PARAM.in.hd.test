@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 hydrodynamic case
 
@@ -39,6 +36,9 @@ Position of Rosetta
  8.0                    yMax
 -8.0                    zMin
  8.0                    zMax
+
+#GRIDBLOCKALL
+400			MaxBlock
 
 #GRIDLEVEL
 2

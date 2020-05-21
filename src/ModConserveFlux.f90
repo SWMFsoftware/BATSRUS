@@ -29,7 +29,7 @@ module ModConserveFlux
        CellFace_DFB, FaceNormal_DDFB, Unused_BP
 
   implicit none
-
+  SAVE
   private ! except
 
   public:: &

@@ -25,8 +25,9 @@ USERMANUAL.dvi: \
 	param.tex \
 	../../PARAM.xmltex \
 	output.tex \
-	idl.tex \
-	tecplot.tex
+	visualization.tex \
+	synopticSW.tex
+
 
 PDF:  USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
 

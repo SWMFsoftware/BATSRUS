@@ -17,8 +17,8 @@ module ModChromosphere
   ! the decay length = (30 m/K)*TeCromosphere SI
   logical:: UseChromosphereHeating    = .false.
 
-  real   :: NumberDensChromosphereCgs = 1.0e+12 ! [cm^{-3}
-  real   :: TeChromosphereSi = 1.0e4            ! [K]
+  real   :: NumberDensChromosphereCgs = 2.0e+11 ! [cm^{-3}
+  real   :: TeChromosphereSi = 5.0e4            ! [K]
 
   !\
   ! TRANSITION REGION

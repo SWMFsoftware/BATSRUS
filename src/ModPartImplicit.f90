@@ -20,6 +20,9 @@ module ModPartImplicit
 
   ! Local variables
 
+  ! Maximum number of implicit blocks
+  integer:: MaxBlockImpl = 0
+
   ! Use energy or pressure as the implicit variable
   logical :: UseImplicitEnergy = .true.
 
@@ -123,6 +126,11 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
+    case("#GRIDBLOCKIMPL", "#GRIDBLOCKIMPLALL")
+       call read_var('MaxBlockImpl', MaxBlockImpl)
+       if(NameCommand == "#GRIDBLOCKIMPLALL") &
+            MaxBlockImpl = 1 + (MaxBlockImpl-1)/nProc
+
     case('#IMPLICIT')
        call read_var('UsePointImplicit', UsePointImplicit)
        call read_var('UsePartImplicit',  UsePartImplicit)
@@ -248,18 +256,24 @@ contains
     call test_start(NameSub, DoTest)
     if(allocated(Impl_VGB)) RETURN
 
+    ! Set default for MaxBlockImpl
+    if(MaxBlockImpl < 1) MaxBlockImpl = MaxBlock
+
+    ! Cannot exceed MaxBlock
+    MaxBlockImpl = min(MaxBlockImpl, MaxBlock)
+
     ! Solve for all variables implicitly
-    MaxImplVar = nVar*nIJK*MaxImplBLK
+    MaxImplVar = nVar*nIJK*MaxBlockImpl
 
     ! Arrays for all implicit variables
-    allocate(Impl_VGB(nVar,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBLK))
+    allocate(Impl_VGB(nVar,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlockImpl))
     allocate(ImplOld_VCB(nVar,nI,nJ,nK,MaxBlock))
 
     ! Arrays for split implicit variables
-    allocate(ResExpl_VCB(nVar,nI,nJ,nK,MaxImplBLK))
-    allocate(ResImpl_VCB(nVar,nI,nJ,nK,MaxImplBLK))
+    allocate(ResExpl_VCB(nVar,nI,nJ,nK,MaxBlockImpl))
+    allocate(ResImpl_VCB(nVar,nI,nJ,nK,MaxBlockImpl))
 
-    allocate(JacImpl_VVCIB(nVar,nVar,nI,nJ,nK,nStencil,MaxImplBLK))
+    allocate(JacImpl_VVCIB(nVar,nVar,nI,nJ,nK,nStencil,MaxBlockImpl))
     allocate(Rhs0_I(MaxImplVar))
     allocate(Rhs_I(MaxImplVar))
     allocate(x_I(MaxImplVar))
@@ -267,7 +281,7 @@ contains
     allocate(IsImplCell_CB(nI,nJ,nK,MaxBlock))
 
     ! Conversion of block index
-    allocate(iBlockFromImpl_B(MaxImplBLK))
+    allocate(iBlockFromImpl_B(MaxBlockImpl))
 
     if(iProc==0)then
        call write_prefix
@@ -1187,7 +1201,7 @@ contains
     call timing_start(NameSub)
 
     if(.not.allocated(ImplEps_VCB)) &
-         allocate(ImplEps_VCB(nVar,nI,nJ,nK,MaxImplBLK))
+         allocate(ImplEps_VCB(nVar,nI,nJ,nK,MaxBlockImpl))
 
     xNorm = sum(x_I**2)
     call MPI_allreduce(xNorm, xNormTotal, 1, MPI_REAL, MPI_SUM,iComm,iError)
@@ -1877,7 +1891,6 @@ contains
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
     use ModGeometry, ONLY: r_BLK, true_cell
-    use ModSize, ONLY: nI, nJ, nK
 
     integer :: iBlock, iBlockImpl
     integer :: i, j, k
@@ -1899,13 +1912,13 @@ contains
     nBlockImpl = count(iTypeAdvance_B(1:nBlock) == ImplBlock_)
 
     ! Check for too many implicit blocks
-    if(nBlockImpl > MaxImplBLK)then
+    if(nBlockImpl > MaxBlockImpl)then
        write(*,*)'ERROR: Too many implicit blocks!'
-       write(*,*)'MaxImplBLK < nBlockImpl :',MaxImplBLK,nBlockImpl
+       write(*,*)'MaxBlockImpl < nBlockImpl :',MaxBlockImpl,nBlockImpl
        call stop_mpi( &
             'Change number of processors,'// &
             ' reduce number of implicit blocks,'// &
-            ' or increase MaxImplBLK in ModSize.f90 !')
+            ' or increase MaxBlockImpl in ModSize.f90 !')
     end if
 
     ! Number of implicit variables
@@ -1958,7 +1971,7 @@ contains
     use ModSize, ONLY: nG, nI, nJ, nK
 
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-    real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxImplBLK)
+    real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxBlockImpl)
 
     integer :: iBlockImpl, iBlock, i, j, k, iFluid
 
@@ -2067,10 +2080,10 @@ contains
 
   subroutine implicit2explicit(Var_VCB)
 
-    use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
+    use ModMain, ONLY: nI,nJ,nK
     use ModAdvance, ONLY: State_VGB
 
-    real :: Var_VCB(:,:,:,:,:)   ! dimension(nVar,nI,nJ,nK,MaxImplBLK)
+    real :: Var_VCB(:,:,:,:,:)   ! dimension(nVar,nI,nJ,nK,MaxBlockImpl)
     integer :: iBlockImpl, iBlock
 
     logical:: DoTest

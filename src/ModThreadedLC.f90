@@ -8,6 +8,7 @@ module ModThreadedLC
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
+       PSi_, TeSi_, TiSi_, A2Major_, A2Minor_,                           &
        DoInit_, Done_, Enthalpy_, Heat_,                                 &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
        kThreadMin=>kMin_, kThreadMax=>kMax_
@@ -60,7 +61,7 @@ module ModThreadedLC
   !\
   ! Arrays for 1D distributions
   !/
-  real,allocatable,dimension(:):: ReflCoef_I, APlus_I, AMinus_I, &
+  real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I, &
        TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I, &
        TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,&
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I, &
@@ -148,6 +149,7 @@ contains
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,      ONLY: Pe_, p_
+    use ModChromosphere,    ONLY: TeChromosphereSi
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_threaded_lc'
@@ -156,8 +158,8 @@ contains
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     allocate(ReflCoef_I(0:nPointThreadMax)); ReflCoef_I = 0.0
-    allocate(   APlus_I(0:nPointThreadMax));    APlus_I = 0.0
-    allocate(  AMinus_I(0:nPointThreadMax));   AMinus_I = 0.0
+    allocate(   AMajor_I(0:nPointThreadMax));    AMajor_I = 0.0
+    allocate(  AMinor_I(0:nPointThreadMax));   AMinor_I = 0.0
 
     allocate(   TeSi_I(nPointThreadMax));     TeSi_I = 0.0
     allocate(TeSiOld_I(nPointThreadMax));  TeSiOld_I = 0.0
@@ -193,7 +195,7 @@ contains
     allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); M_VVI = 0.0
     !\
     ! Initialize transition region model:
-    call init_tr(Z=Z, TeChromoSi = 5.0e4)
+    call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
     !\
     ! TeFraction is used for ideal EOS:
     !/
@@ -406,9 +408,9 @@ contains
        !\
        ! Retrieve temperature and pressure distribution
        !/
-       TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k)
-       TiSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k)
-       PSi_I(1:nPoint)  = BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)
+       TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k)
+       TiSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
+       PSi_I(1:nPoint)  = BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
        if(iAction/=Enthalpy_)then
           TeSi_I(nPoint)   = TeSiIn
           TiSi_I(nPoint)   = TiSiIn
@@ -439,11 +441,11 @@ contains
        call set_pressure
        call advance_thread(IsTimeAccurate=.false.)
        call get_res_heating(nIterIn=nIter)
-       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
-       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:0,j,k) =  AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case(Enthalpy_)
        call get_res_heating(nIterIn=nIter)
     case(Impl_)
@@ -462,11 +464,11 @@ contains
        ! Calculate AWaves and store pressure and temperature
        !/
        call get_res_heating(nIterIn=nIter)
-       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%AMajor_III(-nPoint:0,j,k) =  APlus_I(0:nPoint) 
-       BoundaryThreads_B(iBlock)%AMinor_III(-nPoint:0,j,k) = AMinus_I(0:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:0,j,k) = AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
@@ -926,14 +928,14 @@ contains
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
-           AMinusBC=AMinorIn,              &
-           APlusBC=AMajorOut,              &
+           AMinorBC=AMinorIn,              &
+           AMajorBC=AMajorOut,              &
            nIterIn=nIterIn)
 
       ResHeating_I = 0.0
       ResHeating_I(1:nPoint-1) = &
-           (APlus_I(0:nPoint-2)**2 - AMinus_I(0:nPoint-2)**2)&
-           -(APlus_I(1:nPoint-1  )**2 - AMinus_I(1:nPoint-1)**2)
+           (AMajor_I(0:nPoint-2)**2 - AMinor_I(0:nPoint-2)**2)&
+           -(AMajor_I(1:nPoint-1  )**2 - AMinor_I(1:nPoint-1)**2)
     end subroutine get_res_heating
     !==========================================================================
     subroutine get_heat_cond
@@ -1114,15 +1116,15 @@ contains
     end do
   end subroutine tridiag_3by3_block
   !============================================================================
-  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       APlusBC, nIterIn)
+  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinorBC,&
+       AMajorBC, nIterIn)
     use ModCoronalHeating, ONLY: MaxImbalance
     ! INPUT
     integer,         intent(in):: nI
     real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
-    real,            intent(in):: AMinusBC         ! BC for A-
+    real,            intent(in):: AMinorBC         ! BC for A-
     ! OUTPUT
-    real,           intent(out):: APlusBC          ! BC for A+
+    real,           intent(out):: AMajorBC          ! BC for A+
     integer,optional,intent(in):: nIterIn
     real:: DeltaXi
     integer::iStep,iIter
@@ -1131,8 +1133,8 @@ contains
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
-    APlus_I(0:nI)  = 1.0
-    AMinus_I(0:nI) = AMinusBC
+    AMajor_I(0:nI)  = 1.0
+    AMinor_I(0:nI) = AMinorBC
     if(present(nIterIn))then
        nIter=nIterIn
     else
@@ -1140,32 +1142,32 @@ contains
     end if
     do iIter=1,nIter
        !\
-       ! Go forward, integrate APlus_I with given AMinus_I
+       ! Go forward, integrate AMajor_I with given AMinor_I
        !/
        ADiffMax = 0.0
        do iStep=1, nI
           ! Predictor
-          AP = APlus_I(iStep-1); AM = AMinus_I(iStep-1)
+          AP = AMajor_I(iStep-1); AM = AMinor_I(iStep-1)
           Derivative = -AM*(max(0.0, AP - MaxImbalance*AM) - &
                max(0.0, AM - MaxImbalance*AP) )*&
                min(0.5*ReflCoef_I(iStep-1)/max(AM,AP),  1.0)- &
                AP*AM
-          AOld = APlus_I(iStep)
+          AOld = AMajor_I(iStep)
           DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
 
           ! Corrector
-          AMMid = 0.5*(AMinus_I(iStep-1) + AMinus_I(iStep))
+          AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
           APMid = AP + 0.5*Derivative*DeltaXi
           Derivative = -AMMid*&
                (max(0.0,APMid - MaxImbalance*AMMid) - &
                max(0.0,AMMid - MaxImbalance*APMid))*&
                min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/&
                max(AMMid,APMid), 1.0) - AMMid*APMid
-          APlus_I(iStep) = AP + Derivative*DeltaXi
+          AMajor_I(iStep) = AP + Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
-               abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
+               abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
        end do
-       ! Go backward, integrate APlus_I with given AMinus_I
+       ! Go backward, integrate AMajor_I with given AMinor_I
        ! We integrate equation,
        !\
        ! 2da_-/d\xi=
@@ -1175,29 +1177,29 @@ contains
        !/
        do iStep=nI - 1, 0, -1
           ! Predictor
-          AP = APlus_I(iStep+1); AM = AMinus_I(iStep+1)
+          AP = AMajor_I(iStep+1); AM = AMinor_I(iStep+1)
           Derivative = -AP*(max(0.0,AP - MaxImbalance*AM) - &
                max(0.0,AM - MaxImbalance*AP)     )*&
                min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
                AP*AM
-          AOld = AMinus_I(iStep)
+          AOld = AMinor_I(iStep)
           DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
 
           ! Corrector
-          APMid = 0.5*(APlus_I(iStep+1) + APlus_I(iStep))
+          APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
           AMMid = AM - 0.5*Derivative*DeltaXi
           Derivative = -APMid*&
                ( max(0.0,APMid -MaxImbalance*AMMid)- &
                max(0.0,AMMid - MaxImbalance*APMid) )*&
                min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/&
                max(AMMid, APMid), 1.0) + AMMid*APMid
-          AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
+          AMinor_I(iStep) = AMinor_I(iStep+1) - Derivative*DeltaXi
           ADiffMax = max(ADiffMax,&
-               abs(AOld - AMinus_I(iStep))/max(AOld, AMinus_I(iStep)))
+               abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
        end do
        if(ADiffMax<cTol)EXIT
     end do
-    APlusBC = APlus_I(nI)
+    AMajorBC = AMajor_I(nI)
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
