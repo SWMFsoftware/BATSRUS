@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #PROGRESS
 1			DnShowProgressShort
 100			DnShowProgressLong
@@ -45,6 +42,9 @@ T                       UseBody
   64.			yMax
  -64.			zMin
   64.			zMax
+
+#GRIDBLOCKALL
+400			MaxBlock
 
 #GRIDRESOLUTION
 2.0			Resolution

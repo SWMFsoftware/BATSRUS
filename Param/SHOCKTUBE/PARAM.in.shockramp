@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #PLANET
 NONE			NamePlanet
 
@@ -17,7 +14,7 @@ F			UseNonConservative
 6			nI
 6			nJ
 1			nK
-800			MinBlockALL
+2000			MinBlockALL
 
 #GRID
 20			nRootBlockX

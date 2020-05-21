@@ -1,8 +1,5 @@
 !- PARAM.in:  Example input file for BATSRUS --
 
-#ECHO
-T                       DoEcho
-
 #PLANET
 HALLEY
 
@@ -17,10 +14,6 @@ F			DoTimeAccurate
 0                       iMinute
 0                       iSecond
 0.0			FracSecond
-
-#DEBUG
-T                       DoDebug         (use it as if(okdebug.and.oktest)...)
-T                       DoDebugGhost    (parameter for show_BLK in library.f90)
 
 TESTIJK
 1                       iTest           (cell index for testing)
@@ -72,6 +65,9 @@ ionosphere		TypeBcInner
  0.02                  y2
 -0.02                  z1
  0.02                  z2
+
+#GRIDBLOCKALL
+400			MaxBlock
 
 #BODY 
 F                         body1
