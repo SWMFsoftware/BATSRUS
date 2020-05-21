@@ -6,11 +6,11 @@ module ModRadiativeCooling
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest
 !  use ModUtilities, ONLY: norm2
-  use ModChromosphere
+  use ModChromosphere, redefined=>TeChromosphereSi
   use ModSize
   implicit none
   save
-
+  real, parameter:: TeChromosphereSi = 1.0e4
   logical:: UseRadCooling      =.false.
   logical:: UseRadCoolingTable =.false.
   integer,private:: iTableRadCool      =-1
