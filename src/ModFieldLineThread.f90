@@ -5,21 +5,23 @@ module ModFieldLineThread
 !  use ModUtilities, ONLY: norm2
   use BATL_lib,      ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
-       iProc, nProc, iComm, nJ, nK, jDim_, kDim_
+       iProc, nProc, iComm, nJ, nK, jDim_, kDim_, MaxBlock
   use ModAdvance,    ONLY: UseElectronPressure
   use ModMain,       ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,         ONLY: get_b0
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModVarIndexes, ONLY: Pe_, p_
+  use ModMultiFluid, ONLY: MassIon_I
   use ModTransitionRegion
 
   implicit none
-  save
+  SAVE
 
   PRIVATE ! Except
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
-
+  
+  public :: init                      ! Initializes module
   public :: save_threads_for_plot     ! Get  State_VG array
   public :: interpolate_thread_state  ! Interpolate state from State_VG
   public :: set_thread_plotvar        ! Plot variables for "shell" plots
@@ -127,9 +129,10 @@ module ModFieldLineThread
   !/
   !\
   ! Te = TeFraction*State_V(iP)/State_V(Rho_)
+  ! Pe = PeFraction*State_V(iP)
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   !/
-  real, public    :: TeFraction, TiFraction
+  real, public    :: TeFraction, TiFraction, PeFraction
   integer, public :: iP
 
   type(BoundaryThreads), public, allocatable :: BoundaryThreads_B(:)
@@ -226,11 +229,70 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   !/
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+
+  logical :: IsInitialized = .false.
   character(len=100) :: NameRestartFile
 contains
   !============================================================================
+  subroutine init
+    integer :: iBlock !Loop variable
+    !------------
+    if(IsInitialized)RETURN
+    IsInitialized = .true.
+    !\
+    ! TeFraction is used for ideal EOS:
+    !/
+    if(UseElectronPressure)then
+       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
+       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
+       ! TeFraction is defined such that Te = Pe/rho * TeFraction
+       TeFraction = MassIon_I(1)/Z
+       ! Pi = n*Te (dimensionless) and n=rho/ionmass
+       ! so that Pi = (rho/ionmass)*Ti
+       ! TiFraction is defined such that Ti = Pi/rho * TiFraction
+       TiFraction = MassIon_I(1)
+       iP = Pe_
+       PeFraction = 1.0
+    else
+       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
+       ! so that p=rho/massion *T*(1+ne/n Te/T)
+       ! TeFraction is defined such that Te = p/rho * TeFraction
+       TeFraction = MassIon_I(1)/(1 + Z)
+       TiFraction = TeFraction
+       iP = p_
+       PeFraction = Z/(1.0 + Z)
+    end if
+    ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
+    ! Pe = PeFraction*State_V(iP)
+    !/
+  
+    allocate(        DoThreads_B(MaxBlock))
+    allocate(IsAllocatedThread_B(MaxBlock))
+    DoThreads_B = .false.
+    IsAllocatedThread_B = .false.
+    allocate(nThread_P(0:nProc - 1))
+    allocate(BoundaryThreads_B(1:MaxBlock))
+    do iBlock = 1, MaxBlock
+       call nullify_thread_b(iBlock)
+    end do
+  end subroutine init
+  !============================================================================
+  subroutine clean
+    integer :: iBlock !Loop variable
+    !----------------------------
+    if(.not.IsInitialized)RETURN
+    IsInitialized = .false.
+    deallocate(DoThreads_B)
+    do iBlock = 1, MaxBlock
+       if(IsAllocatedThread_B(iBlock))&
+            call deallocate_thread_b(iBlock)
+    end do
+    deallocate(IsAllocatedThread_B)
+    deallocate(  BoundaryThreads_B)
+    deallocate(nThread_P)
+  end subroutine clean
+  !============================================================================
   subroutine read_threads(NameCommand, iSession)
-    use ModSize,      ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
     use ModMain,      ONLY: NameThisComp
     character(len=*), intent(in):: NameCommand
@@ -245,31 +307,11 @@ contains
        call read_var('UseFieldLineThreads', UseFieldLineThreads)
        if(UseFieldLineThreads)then
           if(iSession/=1)call stop_mpi(&
-               'UseFieldLineThreads can only be set ON during the first session')
-          if(.not.allocated(DoThreads_B))then
-             allocate(        DoThreads_B(MaxBlock))
-             allocate(IsAllocatedThread_B(MaxBlock))
-             DoThreads_B = .false.
-             IsAllocatedThread_B = .false.
-             allocate(nThread_P(0:nProc - 1))
-             allocate(BoundaryThreads_B(1:MaxBlock))
-             do iBlock = 1, MaxBlock
-                call nullify_thread_b(iBlock)
-             end do
-          end if
+               'UseFieldLineThreads can be set ON in the first session only')
           call read_var('nPointThreadMax', nPointThreadMax)
           call read_var('DsThreadMin', DsThreadMin)
        else
-          if(allocated(DoThreads_B))then
-             deallocate(DoThreads_B)
-             do iBlock = 1, MaxBlock
-                if(IsAllocatedThread_B(iBlock))&
-                     call deallocate_thread_b(iBlock)
-             end do
-             deallocate(IsAllocatedThread_B)
-             deallocate(  BoundaryThreads_B)
-             deallocate(nThread_P)
-          end if
+          call clean
        end if
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
@@ -1124,7 +1166,7 @@ contains
          NameUnitUserIdl_I
     use ModNumConst,      ONLY: cTiny
     use ModMultiFluid,    ONLY: extract_fluid_name,      &
-         UseMultiIon, nIonFluid, MassIon_I, iPpar, iPFluid=>iP,   &
+         UseMultiIon, nIonFluid, iPpar, iPFluid=>iP,   &
          IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, &
          ChargeIon_I
     use ModCoordTransform, ONLY: cross_product

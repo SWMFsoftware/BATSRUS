@@ -40,11 +40,9 @@ module ModThreadedLC
   ! Ti = TiFraction*State_V(p_)/State_V(Rho_)
   !
   use ModFieldLineThread, ONLY:  &
-       TeFraction, TiFraction,  iP
+       TeFraction, TiFraction,  iP, PeFraction
   implicit none
-  real :: PeFraction
-
-
+  SAVE
   !\
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
   ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
@@ -145,7 +143,7 @@ contains
     use ModConst,           ONLY: cElectronMass, &
          cEps, cElectronCharge, cTwoPi, cProtonMass
     use ModMultiFluid,      ONLY: MassIon_I
-    use ModFieldLineThread, ONLY:  nPointThreadMax
+    use ModFieldLineThread, ONLY:  nPointThreadMax, init_thread=>init
     use ModPhysics,         ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,      ONLY: Pe_, p_
@@ -197,32 +195,9 @@ contains
     ! Initialize transition region model:
     call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
     !\
-    ! TeFraction is used for ideal EOS:
+    ! Initialize thread structure
     !/
-    if(UseElectronPressure)then
-       ! Pe = ne*Te (dimensionless) and n=rho/ionmass
-       ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
-       ! TeFraction is defined such that Te = Pe/rho * TeFraction
-       TeFraction = MassIon_I(1)/Z
-       ! Pi = n*Te (dimensionless) and n=rho/ionmass
-       ! so that Pi = (rho/ionmass)*Ti
-       ! TiFraction is defined such that Ti = Pi/rho * TiFraction
-       TiFraction = MassIon_I(1)
-       iP = Pe_
-       PeFraction = 1.0
-    else
-       ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
-       ! so that p=rho/massion *T*(1+ne/n Te/T)
-       ! TeFraction is defined such that Te = p/rho * TeFraction
-       TeFraction = MassIon_I(1)/(1 + Z)
-       TiFraction = TeFraction
-       iP = p_
-       PeFraction = Z/(1.0 + Z)
-    end if
-    ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
-    ! Pe = PeFraction*State_V(iP)
-    !/
-
+    call init_thread
 
     !\
     ! In hydrogen palsma, the electron-ion heat exchange is described by
