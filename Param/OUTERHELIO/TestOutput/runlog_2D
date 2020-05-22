@@ -1,0 +1,475 @@
+Main dir=/home/tkeebler/BATSRUS
+Remote  =git@gitlab.umich.edu:swmf_software
+BATSRUS                             modified  2020-05-21 5258414  
+  util                              original  2020-05-20 517e802  
+  share                             modified  2020-05-21 306fcb4  
+  share/Python                      original  2020-05-20 a7a0280  
+  srcBATL                           original  2020-05-15 49bc125  
+  util/HYPRE_FAILED                 original  2018-06-19 9f1e885  
+
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2017
+
+ BATSRUS version 9.20 is running as GM on      1 PE(s) with up to  2 threads/PE
+
+ EQUATIONS:   MHD
+ USER MODULE: 2D Outer Heliosphere, Zieger & Toth (2015) 2.30
+
+ModReadParam::read_file: read and broadcast nLine= 171 lines of text
+ ----- Starting Session            1  ------
+ GM_set_parameters: READ iSession =           1  iLine=           0  nLine =        1000
+
+#UPDATECHECK
+F		UseUpdateCheck
+
+#COMPONENT
+OH                      NameComp
+
+#STARTTIME
+1990                    iYear
+11                      iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+
+#SOLARWINDFILE
+T                       UseSolarWindFile
+imf_19901101.dat        NameSolarWindFile
+
+#TIMEACCURATE
+F                       IsTimeAccurate		DoTimeAccurate
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+
+#BODY
+T                       UseBody (rest of parameters read if true)
+1.0                     rBody (normalized units)
+0.01                    BodyNDim(1) [/cc] number density for inner boundary
+1.09E5                  BodyTDim(1) [K] temperature for inner boundary
+
+#IOUNITS
+USER		TypeIoUnit
+
+#NORMALIZATION
+USER		TypeNormalization
+
+#RESTARTOUTFILE
+one		TypeRestartOutFile
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+10                      nRootBlock1 (radial direction)		nRootBlockX
+10                      nRootBlock2 (longitude direction)		nRootBlockY
+1                       nRootBlock3 (latitude direction)		nRootBlockZ
+-100.0                  xMin
+100.0                   xMax
+-100.0                  yMin
+100.0                   yMax
+-100.0                  zMin
+100.0                   zMax
+
+#GRIDBLOCK
+1000                    MaxBlock (previously in Config.pl)
+
+#GRIDBLOCKIMPL
+1                       MaxBlockImpl (previously in Config.pl)
+
+#GRIDGEOMETRYLIMIT
+spherical_lnr           TypeGeometry
+1.0                     Coord1Min Radius		CoordDimMin_D
+75.0                    Coord1Max  (slightly larger than sqrt(2)*50)		CoordDimMax_D
+0.0                     Coord2Min Longitude		CoordDimMin_D
+360.0                   Coord2Max		CoordDimMax_D
+-1.0                    Coord3Min Latitude		CoordDimMin_D
+1.0                     Coord3Max		CoordDimMax_D
+
+#OUTERBOUNDARY
+none                    rmin		TypeCellBc
+outflow                 rmax		TypeCellBc
+periodic                phimin lonmin		TypeCellBc
+periodic                phimax lonmax		TypeCellBc
+float                   latmin		TypeCellBc
+float                   latmax		TypeCellBc
+
+#INNERBOUNDARY
+user                    SolarWindInput		TypeBcInner
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.80                    CflExpl
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#CONSERVATIVECRITERIA
+0                       nConsCrit remove?		nConservCrit
+
+#SAVERESTART
+T                       DoSaveRestart
+100                     DnSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+step date RAW           StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#SAVEINITIAL
+T                       DoSaveInitial
+
+#SAVEPLOT
+1                       nPlotFile
+z=0 MHD idl             StringPlot
+10                      DnSavePlot
+-1.0                    DtSavePlot
+-1.0                    DxSavePlot
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates ! freeze neutrals !
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH     ! slow solar wind
+5.0             SWH_rho_dim [n/cc]
+1.0E5           SWH_T_dim [K]
+400.0           SWH_Ux_dim [km/s]
+0.0             SWH_Uy_dim [km/s]
+0.0             SWH_Uz_dim [km/s]
+5.0             SWH_Bx_dim [nT]
+0.0             SWH_By_dim [nT]
+0.0             SWH_Bz_dim [nT]
+
+#VLISW          ! fast solar wind
+0.06            VLISW_rho_dim [n/cc]
+6519.0          VLISW_T_dim
+26.3            VLISW_Ux_dim
+0.0             VLISW_Uy_dim
+-2.3            VLISW_Uz_dim
+0.4111          VLISW_Bx_dim
+-0.0748         VLISW_By_dim
+-0.1296         VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+500             MaxIteration
+-1.0            tSimulationMax
+ OH_set_parameters: CHECK iSession =           1
+  
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
+init_mod_field_trace allocated arrays
+ read_solar_wind_file reading imf_19901101.dat
+ read_solar_wind_file read         3555  points from imf_19901101.dat
+     total blocks =          100
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: USER            Normalization: USER
+
+          Gamma:         1.66666667
+
+          rBody:         1.00000E+00, rPlanet:     6.96000E+08
+          BodyNDim:      1.00000E-02, BodyTDim:    1.09000E+05
+          BdpDim:        0.00000E+00, Tilt [deg]:  0.00000E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      8.08238E+03
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with minmod limiter
+          Linde flux function
+          Steady state calculation
+          Explicit time stepping
+              nStage: 2
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =            1
+ Available threads   : nThread =            2
+
+ After initial grid setup:
+   nBlockMax and MaxBlock      =          100        1000
+   Total number of blocks used =          100
+   Total number of cells       =        20000
+   Total number of true cells  =        20000
+   Min and max AMR levels      =            0           0
+   Min and max cell size in Phi=    3.6000000000000001        3.6000000000000001     
+
+ root blocks:       10      10       1
+ nIJK_D:            10      10       2
+ x:            -1.00000000E+02  1.00000000E+02
+ y:            -1.00000000E+02  1.00000000E+02
+ z:            -1.00000000E+02  1.00000000E+02
+
+saved ifile= 6 type=z=0_mhd              at n_step=      0
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.06    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.06     99.99         1         1
+save_plot                 0.01     23.27         1         1
+exch_msgs                 0.01      9.56         1         2
+save_logfile              0.01      9.51         1         1
+exch_energy               0.00      4.38         1         2
+batl_pass                 0.00      2.21         1         3
+single_pass               0.00      1.90         1         3
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ user_set_face_boundary: PhiEarth0[deg]=  -37.241710028452111     
+ user_set_face_boundary: XyzPlanetHgi_D=  0.79100610196832588      -0.60131441015573872        7.6496854892381894E-002
+ user_set_face_boundary: FaceCoords_D=  0.99970139621422693        3.1416882041337892E-002  -8.7285689368622604E-003
+ user_set_face_boundary: XyzSph_DD=  0.99946850221857209        3.1409563052670543E-002  -8.7265354983737751E-003  -8.7222294798890276E-003  -2.7410710412615285E-004 -0.99996192306417120       -3.1410759078128292E-002  0.99950656036573160        0.0000000000000000     
+ user_set_face_boundary: RotationPeriodSun=   2192832.0000000000     
+ user_set_face_boundary: OmegaOrbit, TimeSim=   1.9910638536072600E-007   0.0000000000000000     
+ user_set_face_boundary: PhiEarth0[deg]=  -37.241710028452111     
+ user_set_face_boundary: XyzPlanetHgi_D=  0.79100610196832588      -0.60131441015573872        7.6496854892381894E-002
+ user_set_face_boundary: FaceCoords_D= -0.99970139621422693       -3.1416882041337593E-002  -8.7285689368622604E-003
+ user_set_face_boundary: XyzSph_DD= -0.99946850221857209       -3.1409563052670245E-002  -8.7265354983737751E-003   8.7222294798890276E-003   2.7410710412615024E-004 -0.99996192306417120        3.1410759078127994E-002 -0.99950656036573160        0.0000000000000000     
+ user_set_face_boundary: RotationPeriodSun=   2192832.0000000000     
+ user_set_face_boundary: OmegaOrbit, TimeSim=   1.9910638536072600E-007   0.0000000000000000     
+ First error for Time step reduction, min(factor) (PE=           0 ) at iter=           1  with value=   9.3750000000000000E-002
+saved ifile= 6 type=z=0_mhd              at n_step=     10
+Speed is 216239.0 c/s/p after      0.8 s at N =      10
+saved ifile= 6 type=z=0_mhd              at n_step=     20
+Speed is 218633.6 c/s/p after      1.6 s at N =      20
+saved ifile= 6 type=z=0_mhd              at n_step=     30
+Speed is 218567.8 c/s/p after      2.4 s at N =      30
+saved ifile= 6 type=z=0_mhd              at n_step=     40
+Speed is 218217.5 c/s/p after      3.2 s at N =      40
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.61302652887263254       0.79030903890076165       -8.7285689368622604E-003   89.441710028452093       -6.7765263153862216       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=     50
+Speed is 218251.0 c/s/p after      4.1 s at N =      50
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.79030903890076165       0.61302652887263243        8.7285689368623819E-003   75.041710028452101       -5.6855143153862215       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=     60
+Speed is 218163.1 c/s/p after      4.9 s at N =      60
+saved ifile= 6 type=z=0_mhd              at n_step=     70
+Speed is 217814.1 c/s/p after      5.7 s at N =      70
+saved ifile= 6 type=z=0_mhd              at n_step=     80
+Speed is 218314.8 c/s/p after      6.5 s at N =      80
+saved ifile= 6 type=z=0_mhd              at n_step=     90
+Speed is 218773.1 c/s/p after      7.3 s at N =      90
+saved ifile= 1 type=restart              at n_step=    100
+saved ifile= 6 type=z=0_mhd              at n_step=    100
+Speed is 211450.7 c/s/p after      8.1 s at N =     100
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     8.13    8.128    8.128   100.00
+-------------------------------------------------------------------------------
+advance                 100     100     8.13    0.081    0.081    99.98
+-------------------------------------------------------------------------------
+   100 of    500 iterations completed.   Expected time to completion:     32.51
+
+saved ifile= 6 type=z=0_mhd              at n_step=    110
+Speed is 218772.7 c/s/p after      8.9 s at N =     110
+ user_set_face_boundary GhostFace_V=  0.80000000000000004       -11.871519379906710       -8.5468750608679045       0.12703795683921590       0.80745868530015663       0.95728976577814229       0.30478727267481320       0.43097999999999992     
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.98788087269399516       0.15646495912895289        8.7285689368623819E-003   46.241710028452111       -3.5034903153862218       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=    120
+Speed is 216600.0 c/s/p after      9.8 s at N =     120
+saved ifile= 6 type=z=0_mhd              at n_step=    130
+Speed is 217837.1 c/s/p after     10.6 s at N =     130
+saved ifile= 6 type=z=0_mhd              at n_step=    140
+Speed is 218283.4 c/s/p after     11.4 s at N =     140
+saved ifile= 6 type=z=0_mhd              at n_step=    150
+Speed is 217953.2 c/s/p after     12.2 s at N =     150
+saved ifile= 6 type=z=0_mhd              at n_step=    160
+Speed is 214530.2 c/s/p after     13.0 s at N =     160
+ user_set_face_boundary GhostFace_V=  0.80000000000000004        11.871519379906710        8.5468750608679098      -0.12703795683921415      -0.80332711920794830      -0.95364730029567424       0.32636003416259518       0.43097999999999992     
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.97610699937981393       0.21818576450265953       -8.7285689368622604E-003   49.841710028452106       -3.7762433153862220       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=    170
+Speed is 217516.6 c/s/p after     13.8 s at N =     170
+saved ifile= 6 type=z=0_mhd              at n_step=    180
+Speed is 217409.9 c/s/p after     14.6 s at N =     180
+saved ifile= 6 type=z=0_mhd              at n_step=    190
+Speed is 216054.3 c/s/p after     15.5 s at N =     190
+saved ifile= 1 type=restart              at n_step=    200
+saved ifile= 6 type=z=0_mhd              at n_step=    200
+Speed is 209278.2 c/s/p after     16.3 s at N =     200
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    16.28   16.280   16.280   100.00
+-------------------------------------------------------------------------------
+advance                 200     200    16.28    0.081    0.081    99.98
+-------------------------------------------------------------------------------
+   200 of    500 iterations completed.   Expected time to completion:     24.42
+
+saved ifile= 6 type=z=0_mhd              at n_step=    210
+Speed is 217594.0 c/s/p after     17.1 s at N =     210
+saved ifile= 6 type=z=0_mhd              at n_step=    220
+Speed is 218401.0 c/s/p after     17.9 s at N =     220
+saved ifile= 6 type=z=0_mhd              at n_step=    230
+Speed is 218352.9 c/s/p after     18.7 s at N =     230
+saved ifile= 6 type=z=0_mhd              at n_step=    240
+Speed is 217646.9 c/s/p after     19.5 s at N =     240
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.56219294590920155       0.82724179877458304       -8.7285689368622604E-003   93.041710028452101       -7.0492793153862223       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.89118020990393898       0.45407899703184396        8.7285689368623819E-003   64.241710028452118       -4.8672553153862221       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=    250
+Speed is 218875.6 c/s/p after     20.4 s at N =     250
+saved ifile= 6 type=z=0_mhd              at n_step=    260
+Speed is 217523.8 c/s/p after     21.2 s at N =     260
+saved ifile= 6 type=z=0_mhd              at n_step=    270
+Speed is 217296.6 c/s/p after     22.0 s at N =     270
+saved ifile= 6 type=z=0_mhd              at n_step=    280
+Speed is 137393.4 c/s/p after     22.8 s at N =     280
+saved ifile= 6 type=z=0_mhd              at n_step=    290
+Speed is 217353.1 c/s/p after     23.7 s at N =     290
+saved ifile= 1 type=restart              at n_step=    300
+saved ifile= 6 type=z=0_mhd              at n_step=    300
+Speed is 208957.5 c/s/p after     24.5 s at N =     300
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     300    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    24.49   24.490   24.490   100.00
+-------------------------------------------------------------------------------
+advance                 300     300    24.49    0.082    0.082    99.98
+-------------------------------------------------------------------------------
+   300 of    500 iterations completed.   Expected time to completion:     16.32
+
+saved ifile= 6 type=z=0_mhd              at n_step=    310
+Speed is 218410.5 c/s/p after     25.3 s at N =     310
+saved ifile= 6 type=z=0_mhd              at n_step=    320
+Speed is 217812.6 c/s/p after     26.1 s at N =     320
+saved ifile= 6 type=z=0_mhd              at n_step=    330
+Speed is 217090.5 c/s/p after     26.9 s at N =     330
+saved ifile= 6 type=z=0_mhd              at n_step=    340
+Speed is 218352.5 c/s/p after     27.7 s at N =     340
+saved ifile= 6 type=z=0_mhd              at n_step=    350
+Speed is 218023.9 c/s/p after     28.6 s at N =     350
+saved ifile= 6 type=z=0_mhd              at n_step=    360
+Speed is 216785.6 c/s/p after     29.4 s at N =     360
+saved ifile= 6 type=z=0_mhd              at n_step=    370
+Speed is 218784.4 c/s/p after     30.2 s at N =     370
+saved ifile= 6 type=z=0_mhd              at n_step=    380
+Speed is 216771.3 c/s/p after     31.0 s at N =     380
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0  0.97610699937981393       0.21818576450265953        8.7285689368623819E-003   49.841710028452106       -3.7762433153862220       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=    390
+Speed is 217334.0 c/s/p after     31.8 s at N =     390
+saved ifile= 1 type=restart              at n_step=    400
+saved ifile= 6 type=z=0_mhd              at n_step=    400
+Speed is 209322.3 c/s/p after     32.6 s at N =     400
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     400    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    32.63   32.633   32.633   100.00
+-------------------------------------------------------------------------------
+advance                 400     400    32.63    0.082    0.082    99.98
+-------------------------------------------------------------------------------
+   400 of    500 iterations completed.   Expected time to completion:      8.16
+
+saved ifile= 6 type=z=0_mhd              at n_step=    410
+Speed is 217768.8 c/s/p after     33.4 s at N =     410
+ user_set_face_boundary iProc, Xyz, Phi, dDay, Rho =           0   9.4126658043604594E-002  0.99575603152349346        8.7285689368623819E-003   121.84171002845211       -9.2313033153862225       0.80000000000000004        14.557662300564544       -1.4396710314464629       -1.0406610826560576       -1.2360438739865298       0.18409164080650442       0.31558566995400755       0.43097999999999992     
+saved ifile= 6 type=z=0_mhd              at n_step=    420
+Speed is 213724.4 c/s/p after     34.3 s at N =     420
+saved ifile= 6 type=z=0_mhd              at n_step=    430
+Speed is 218503.9 c/s/p after     35.1 s at N =     430
+saved ifile= 6 type=z=0_mhd              at n_step=    440
+Speed is 215661.4 c/s/p after     35.9 s at N =     440
+saved ifile= 6 type=z=0_mhd              at n_step=    450
+Speed is 217983.4 c/s/p after     36.7 s at N =     450
+saved ifile= 6 type=z=0_mhd              at n_step=    460
+Speed is 218101.7 c/s/p after     37.5 s at N =     460
+saved ifile= 6 type=z=0_mhd              at n_step=    470
+Speed is 214010.2 c/s/p after     38.3 s at N =     470
+saved ifile= 6 type=z=0_mhd              at n_step=    480
+Speed is 218528.2 c/s/p after     39.1 s at N =     480
+saved ifile= 6 type=z=0_mhd              at n_step=    490
+Speed is 217710.5 c/s/p after     40.0 s at N =     490
+saved ifile= 1 type=restart              at n_step=    500
+saved ifile= 6 type=z=0_mhd              at n_step=    500
+Speed is 211219.5 c/s/p after     40.8 s at N =     500
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     500    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    40.77   40.775   40.775   100.00
+-------------------------------------------------------------------------------
+advance                 500     500    40.77    0.082    0.082    99.98
+-------------------------------------------------------------------------------
+   500 of    500 iterations completed.   Expected time to completion:      0.00
+
+
+    Finished Numerical Simulation
+    -----------------------------
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     500    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  40.77    100.00         1         1
+-------------------------------------------------------------------------------
+advance                  40.77     99.98       500       500
+advance_explicit         38.30     93.94       500       500
+calc_fluxes              23.93     58.69       500     50000
+calc_facevalues           9.51     23.33       500     50000
+calc_sources              1.83      4.48       500     50000
+exch_msgs                 1.66      4.08      1000      1000
+exch_energy               1.27      3.12      1000      1000
+update_state              1.24      3.04       500     50000
+save_logfile              0.97      2.38       500       500
+update_check              0.68      1.68       500      1000
+save_plot                 0.66      1.61        50        50
+batl_pass                 0.39      0.95      1000      1000
+single_pass               0.36      0.89      1000      1000
+integrate_domain          0.16      0.39       500       500
+set_face_boundary         0.11      0.26       500      5000
+write_restart_files       0.01      0.03         5         5
+send_cons_flux            0.01      0.02       500      1000
+init_pass                 0.00      0.01      1000      1000
+barrier-expl2             0.00      0.00       500      1000
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
+Error report for Time step reduction, min(factor)
+ OCCURED first=           1  last=           2  count_max=           4  count_sum=           4
+ VALUES min=   9.3750000000000000E-002  max=  0.37500000000000000       mean=  0.30468750000000000       last=  0.37500000000000000       last_sum=  0.37500000000000000     
+
