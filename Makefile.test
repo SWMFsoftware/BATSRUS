@@ -32,6 +32,7 @@ test:
 	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
 	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
 	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
+	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
@@ -121,6 +122,7 @@ test_help:
 	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
 	@echo "    test_multifluid            (run multi-fluid test)"
 	@echo "    test_multiion              (run multi-ion test)"
+	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_partsteady            (run part steady test)"
@@ -776,7 +778,41 @@ test_chromo_check:
 	ls -l test_chromo.diff
 
 
-### STANDALONE OUTER HELIOSPHERE TESTS ###
+### STANDALONE 2D OUTER HELIOSPHERE TEST ###
+
+test_outerhelio2d:
+	@echo "test_outerhelio2d_compile..." > test_outerhelio2d.diff
+	$(MAKE) test_outerhelio2d_compile
+	@echo "test_outerhelio2d_rundir..." >> test_outerhelio2d.diff
+	$(MAKE) test_outerhelio2d_rundir
+	@echo "test_outerhelio2d_run..." >> test_outerhelio2d.diff
+	$(MAKE) test_outerhelio2d_run
+	@echo "test_outerhelio2d_check..." >> test_outerhelio2d.diff
+	$(MAKE) test_outerhelio2d_check
+
+test_outerhelio2d_compile:
+	./Config.pl ${OPENMP} -u=OuterHelio2d -e=Mhd -f -g=10,10,2
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_outerhelio2d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.2D ./PARAM.in
+
+test_outerhelio2d_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_outerhelio2d_check:
+	-@(${DIFFNUM} -t -r=1e-5 \
+		${TESTDIR}/RESULTS/OH/log_n000010.log \
+		Param/OUTERHELIO/TestOutput/log_n000010_2D.log \
+		> test_outerhelio2d.diff)
+	ls -l test_outerhelio2d.diff
+
+
+### STANDALONE 3D OUTER HELIOSPHERE TESTS ###
 
 test_outerhelio:
 	@echo "test_outerhelio_compile..." > test_outerhelio.diff
@@ -808,6 +844,7 @@ test_outerhelio_check:
 		Param/OUTERHELIO/TestOutput/log_n000010.log \
 		> test_outerhelio.diff)
 	ls -l test_outerhelio.diff
+
 
 test_outerheliopui:
 	@echo "test_outerheliopui_compile..." > test_outerheliopui.diff
