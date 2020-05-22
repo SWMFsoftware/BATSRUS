@@ -1710,7 +1710,7 @@ contains
              call read_var('No2SiUnitX',   No2Si_V(UnitX_))
              call read_var('No2SiUnitU',   No2Si_V(UnitU_))
              call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
-          case('PLANETARY', 'SOLARWIND')
+          case('PLANETARY', 'SOLARWIND', 'OUTERHELIO')
              ! Depends on other commands, defined in set_physics
           case('USER')
              ! Call user_normalization later in set_units (see set_physics.f90)
@@ -2899,6 +2899,11 @@ contains
          ! Normalization and I/O units
          TypeNormalization     = "SOLARWIND"
          TypeIoUnit            = "HELIOSPHERIC"
+
+         if(NameThisComp == "OH")then
+            TypeNormalization = "OUTERHELIO"
+            TypeIoUnit        = "OUTERHELIO"
+         end if
 
       case('GM')
          ! Body Parameters

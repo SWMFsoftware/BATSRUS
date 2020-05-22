@@ -755,6 +755,10 @@ contains
        No2Si_V(UnitX_)   = rPlanetSi
        No2Si_V(UnitU_)   = rPlanetSi
        No2Si_V(UnitRho_) = 1000000*cProtonMass ! AtomicMass
+    case("OUTERHELIO")
+       No2Si_V(UnitX_)   = cAU                 ! AU
+       No2Si_V(UnitU_)   = 1000.0              ! km/s
+       No2Si_V(UnitRho_) = 1000000*cProtonMass ! amu/cm^3
     case("SOLARWIND")
        ! rPlanet, SW sound speed, SW density in amu/cm^3
        No2Si_V(UnitX_)   = rPlanetSi
