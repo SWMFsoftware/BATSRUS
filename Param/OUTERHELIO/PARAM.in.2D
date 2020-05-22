@@ -1,0 +1,152 @@
+! PARAM.in file for 2D Outer Heliosphere test
+! Created 2020.05.20, Keebler
+
+#UPDATECHECK
+F
+
+#COMPONENT
+OH                      NameComp
+T                       UseComp
+
+#TIMEACCURATE
+F                       IsTimeAccurate
+
+#GRAVITY
+F                       UseGravity
+0                       iDirGravity
+
+#BODY
+T                       UseBody
+1.0                     rBody [AU] Earth's orbit
+0.01                    BodyNDim [/cc] number density for inner boundary
+1.09E5                  BodyTDim [K] temperature for inner boundary
+
+#IOUNITS
+USER
+
+#NORMALIZATION
+USER
+
+#RESTARTOUTFILE
+one
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+10                      nRootBlock1 (radial direction)
+10                      nRootBlock2 (longitude direction)
+1                       nRootBlock3 (latitude direction)
+-100.0                  xMin
+100.0                   xMax
+-100.0                  yMin
+100.0                   yMax
+-100.0                  zMin
+100.0                   zMax
+
+#GRIDBLOCK
+1000                    MaxBlock
+
+#GRIDBLOCKIMPL
+1                       MaxBlockImpl
+
+#GRIDGEOMETRYLIMIT
+spherical_lnr           TypeGeometry
+1.0                     Coord1Min (radius)
+75.0                    Coord1Max
+0.0                     Coord2Min (longitude)
+360.0                   Coord2Max
+-1.0                    Coord3Min (latitude)
+1.0                     Coord3Max
+
+#OUTERBOUNDARY
+none                    rmin
+outflow                 rmax
+periodic                phimin lonmin
+periodic                phimax lonmax
+float                   latmin
+float                   latmax
+
+#INNERBOUNDARY
+user                    SolarWindInput
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.80                    CflExpl
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#CONSERVATIVECRITERIA
+0                       nConsCrit remove?
+
+#SAVERESTART
+T                       DoSaveRestart
+100                     DnSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+10                      DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#SAVEINITIAL
+F                       DoSaveInitial
+
+#SAVEPLOT
+1                       nPlotFile
+z=0 MHD idl             StringPlot
+10                      DnSavePlot
+-1.0                    DtSavePlot
+-1.0                    DxSavePlot
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates ! freeze neutrals !
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH     ! slow solar wind
+5.0             SWH_rho_dim [n/cc]
+1.0E5           SWH_T_dim [K]
+400.0           SWH_Ux_dim [km/s]
+0.0             SWH_Uy_dim [km/s]
+0.0             SWH_Uz_dim [km/s]
+5.0             SWH_Bx_dim [nT]
+0.0             SWH_By_dim [nT]
+0.0             SWH_Bz_dim [nT]
+
+#VLISW          ! fast solar wind
+0.06            VLISW_rho_dim [n/cc]
+6519.0          VLISW_T_dim
+26.3            VLISW_Ux_dim
+0.0             VLISW_Uy_dim
+-2.3            VLISW_Uz_dim
+0.4111          VLISW_Bx_dim
+-0.0748         VLISW_By_dim
+-0.1296         VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+
+#STOP
+100             MaxIteration
+-1.0            tSimulationMax
+
+
