@@ -159,7 +159,7 @@ module ModMain
   ! Number of explicitly and implicitly advanced blocks
   integer :: nBlockExplAll, nBlockImplAll
 
-  ! Index limits for the cell faces (needed for the constrained trasnsport)
+  ! Index limits for the cell faces (needed for the constrained transport)
   integer, parameter :: nIFace=nI+1
   integer, parameter :: nJFace=nJ+1
   integer, parameter :: nKFace=nK+1

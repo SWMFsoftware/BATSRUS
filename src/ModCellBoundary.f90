@@ -26,7 +26,7 @@ module ModCellBoundary
 contains
   !============================================================================
 
-  recursive subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
+  subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
 
     ! Set ghost cells values in State_VG based on TypeCellBc_I.

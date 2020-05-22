@@ -4,58 +4,75 @@
 \section{Tecplot}
 
 Tecplot is a visualization package created by Amtec Engineering, Inc.
-out of Bellevue, Washington.  The package was originally designed for
-visualization of the output of computational fluid dynamics (CFD)
-codes and now is a good multipurpose visualization package.  
+out of Bellevue, Washington.
+The package was originally designed for visualization of the output of
+computational fluid dynamics (CFD) codes and now is a good multipurpose
+visualization package.  
 The strengths of Tecplot are the point and click interface, the 
 wide range of options and the ability to produce high quality
 three dimensional images in postscript, encapsulated postscript, tiff
-and other formats.  The package comes with detailed
-documentation for processing data and creating images.
+and other formats.
+The software comes with detailed documentation for processing data and creating
+images.
+Starting in 2017, Tecplot provides the PyTecplot (at https://www.tecplot.com/docs/pytecplot/)
+package for connecting Python scripts to the Tecplot 360 visualization engine.
+
+Currently BATS-R-US supports output in Tecplot ASCII format, which can be
+processed by preplot into \verb|.plt| binary format.
+The direct support for Tecplot binary formats \verb|.plt| and \verb|.szplt|
+may be included in the future.
 
 Tecplot requires a license.
 
 \section{IDL}
 
-IDL is well suited to visualize 1D and 2D data on structured and 
-unstructured (AMR) grids, and 3D data on structured grids. 
-It is a full programming language that can perform complex
-data processing and visualization tasks efficiently.
-The IDL programs developed for the SWMF can be found
-in the {\tt share/IDL/} directory including detailed 
-documentation.
+IDL is well suited to visualize 1D and 2D data on structured and unstructured
+(AMR) grids, and 3D data on structured grids. 
+It is a full programming language that can perform complex data processing and
+visualization tasks efficiently.
+The IDL programs developed for the SWMF can be found in the {\tt share/IDL/}
+directory including detailed documentation.
 
-IDL requires a license, although it can be used in demo mode
-for free. Each session is limited to 7 minutes, which is 
-actually sufficient to create plots.
+IDL requires a license, although it can be used in demo mode for free.
+In demo mode each session is limited to 7 minutes, which is actually 
+sufficient to create plots.
 
-\section{Matlab}
+\section{MATLAB}
 
-Matlab requires a license.
+MATLAB is a multi-paradigm numerical computing environment and proprietary
+programming language developed by MathWorks.
+Link to the MATLAB package VisAnaMatlab is can be found in the {\tt share/MATLAB/} directory.
+This package can read, process, and plot SWMF data, similarly to the IDL scripts.
+
+MATLAB requires a license.
+
+\section{Julia}
+
+Julia is a high-level, high-performance, dynamic programming language
+well-suited for high-performance numerical analysis and computational sciences.
+The VisAnaJulia package, available in {\tt share/Julia}, is developed to read,
+process and visualize SWMF output files.
+It also provides the functionality of converting Tecplot \verb|.dat| format
+into VTK format.
+Documentations can be found inside the package.
+
+Julia is open source, as is the VisAnaJulia package.
 
 \section{VisIt}
 
-VisIt is a high performance visualization package that
-can render 3d data efficiently.
+VisIt is a high performance visualization package built upon the VTK library.
 It can read the HDF5 output with extension .batl.
 
 Visit is free.
 
-\section{Paraview}
+\section{ParaView}
 
-Paraview is a high performance visualization package.
-It can render 3D data efficiently using parallel processing. 
+ParaView is another high performance visualization package built upon the VTK
+library.
+The Tecplot \verb|.dat| files from BATS-R-US can be converted into VTK files
+with the VisAnaJulia package for processing in ParaView.
 
 Paraview is free.
-
-\section{Julia}
-
-The VisAna package was developed by Hongyang Zhu starting from 2019
-to read, process and visualize SWMF output files. 
-VisAna is written in Julia, which is a modern efficient programming
-language. It is available in {\tt share/Julia}. 
-
-VisAna is an open source program.
 
 \section{Python}
 
