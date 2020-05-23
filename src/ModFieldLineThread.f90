@@ -439,33 +439,46 @@ contains
        if(.not.IsAllocatedThread_B(iBlock))then
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % BDsInvSi_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % DsOverBSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % DsOverBSi_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % TMax_II(&
                jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % TMax_II = 0.0
           allocate(BoundaryThreads_B(iBlock) % Xi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % Xi_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % B_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % B_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % RInv_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % TGrav_III = 0.0
           allocate(BoundaryThreads_B(iBlock) % State_VIII(PSi_:TiSi_,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % State_VIII = 0.0
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % nPoint_II = -1
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % DeltaR_II = 0.0
           call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
                BoundaryThreads_B(iBlock) % dCoord1Inv)
           allocate(BoundaryThreads_B(iBlock) % State_VG(&
-               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:iMax,&
+               PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:1,&
                jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % State_VG = 0.0
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -1085,13 +1098,10 @@ contains
   end subroutine save_threads_for_plot
   !============================================================================
   subroutine interpolate_thread_state(Coord_D, iBlock, State_V)
-
+    use ModAdvance,     ONLY: nVar
     use BATL_lib,       ONLY: MinIJK_D, MaxIJK_D, &
          CoordMin_DB, CellSize_DB, r_
-    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
     use ModInterpolate, ONLY: interpolate_vector
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
-                           UnitTemperature_, UnitEnergyDens_
     !\
     !Coords of the point in which to interpolate
     !/
@@ -1101,10 +1111,6 @@ contains
     !Interpolated state vector
     real,    intent(out):: State_V(nVar)
     real                :: StateThread_V(PSi_:TiSi_), CoordNorm_D(3)
-    !\
-    ! Dimensionless plasma parameters
-    !/
-    real :: pTotal, Te, Ti
     character(len=*), parameter:: NameSub = 'interpolate_thread_state'
     !-------------------------------------------------------------------------
     CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
@@ -1117,13 +1123,30 @@ contains
 
     ! Interpolate the state on threads to the given location
     StateThread_V = interpolate_vector(                        &
-         a_VC=BoundaryThreads_B(iBlock)%State_VG,            &
+         a_VC=BoundaryThreads_B(iBlock)%State_VG(:,:iMax,:,:), &
          nVar=TiSi_,                                           &
          nDim=3,                                               &
          Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
          Max_D=[iMax, jMax_, kMax_],                           &
          x_D=CoordNorm_D,                                      &
          DoExtrapolate=.false.                                 )
+    call state_thread_to_mhd(StateThread_V, State_V)
+  end subroutine interpolate_thread_state
+  !============================================================================
+  subroutine state_thread_to_mhd(StateThread_V, State_V)
+    use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
+    use ModInterpolate, ONLY: interpolate_vector
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
+                           UnitTemperature_, UnitEnergyDens_
+    !INPUT:
+    real,    intent(in) :: StateThread_V(PSi_:TiSi_)
+    !MHD state vector
+    real,    intent(out):: State_V(nVar)
+    !\
+    ! Dimensionless plasma parameters
+    !/
+    real :: pTotal, Te, Ti
+    character(len=*), parameter:: NameSub = 'state_thread_to_mhd'
     !Nullify momentum and field components of the state vector
     State_V = 0.0
     !Transform Si parameters to diminsionless ones:
@@ -1148,7 +1171,7 @@ contains
     end if
     State_V(WaveFirst_) = StateThread_V(A2Major_)
     State_V(WaveLast_ ) = StateThread_V(A2Minor_)
-  end subroutine interpolate_thread_state
+  end subroutine state_thread_to_mhd
   !============================================================================
   subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
     State_V, PlotVar_V)
