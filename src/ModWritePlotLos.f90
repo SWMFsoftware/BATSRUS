@@ -695,7 +695,7 @@ contains
                if(UseFieldLineThreads)then
                   ! The discriminant controlling intersection with
                   ! the chromosphere 
-                  DiscrChromo = LosDotXyzPix**2 - XyzPix2 + (rChromo + cTiny)**2
+                  DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
                   ! Integrate in the other direction too if no intesection
                   LosPix_D = -LosPix_D
                   if(DiscrChromo > 0)then
@@ -839,13 +839,6 @@ contains
             ! Stop integration if we reached the edge of the domain
             if(  any(CoordLosNew_D > CoordMax_D) .or. &
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
-         else
-            !\
-            !Stop integration if the ray returns to the domain
-            !or reaches chromosphere
-            !/
-            if(CoordLosNew_D(r_) > CoordMin_D(r_) .or. &
-               norm2(XyzLos_D) < rChromo )EXIT LOOPLINE
          end if
          if(Ds <= 0.0)then
             !To prevent intinite looping
@@ -889,6 +882,14 @@ contains
 
          ! Check if mid point will be inside the block. If not, reduce Ds
          IsEdge = .false.
+         if(Ds > LengthMax - Length + cTiny)then
+            !\
+            !Reduce the integration step newr the end of segment...
+            Ds = LengthMax - Length + cTiny
+            !...and prohibit its further increase
+            IsEdge = .true.
+         end if
+ 
          do
             ! Move to the middle of the segment
             XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
