@@ -199,10 +199,16 @@ contains
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(IsThreadedBlock.and. r <= RadiusMin)then
+             if(IsThreadedBlock.and. Coord_D(r_) < & 
+                  CoordMin_DB(r_,iBlock) + 0.50*CellSize_DB(r_,iBlock))then
+                !\
+                ! The threaded gap is used and the point is below
+                ! the first layer of grid cell centers
+                ! Interpolate using the solution on threads
+                !/
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
-                call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(1:nPlotVar),& 
-                     XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
+                call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(&
+                     1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))
                 PlotVar_VIII(1:, i, j, k) = PlotVar_V(1:nPlotVar)*&
                      DimFactor_V(1:nPlotVar)
              else
