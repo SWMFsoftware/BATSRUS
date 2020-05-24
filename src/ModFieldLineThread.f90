@@ -121,8 +121,8 @@ module ModFieldLineThread
   !\
   ! Conponenets of array stored at each thread for visualization
   !/
-  integer, public, parameter :: PSi_=1, A2Major_ = 2, A2Minor_ = 3 , &
-       TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
+  integer, public, parameter :: PSi_=1, A2Major_ = 2, AMajor_ = 2, &
+       A2Minor_ = 3 , AMinor_ = 3, TeSi_=4, TiSi_ = TeSi_ + min(1, Pe_-1)
   
   !\
   ! To espress Te  and Ti in terms of P and rho, for ideal EOS:
@@ -1116,20 +1116,39 @@ contains
     CoordNorm_D(r_+1:) = (Coord_D(r_+1:) - CoordMin_DB(r_+1:,iBlock))/&
          CellSize_DB(r_+1:,iBlock) + 0.50
 
-    ! Along radial coordinate the resolution and location of the grid
-    ! may be different:
-    CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
-         BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
 
-    ! Interpolate the state on threads to the given location
-    StateThread_V = interpolate_vector(                        &
-         a_VC=BoundaryThreads_B(iBlock)%State_VG(:,:iMax,:,:), &
-         nVar=TiSi_,                                           &
-         nDim=3,                                               &
-         Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
-         Max_D=[iMax, jMax_, kMax_],                           &
-         x_D=CoordNorm_D,                                      &
-         DoExtrapolate=.false.                                 )
+    if(IsUniformGrid.and.(Coord_D(r_) > CoordMin_DB(r_,iBlock)))then
+       !\
+       ! The point is in between the uniform grid and the first layer pf
+       ! physical cells, the width of this gap being the half cell size
+       !/
+       CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*2/&
+            CellSize_DB(r_,iBlock)
+       ! Interpolate the state on threads to the given location
+       StateThread_V = interpolate_vector(                        &
+            a_VC=BoundaryThreads_B(iBlock)%State_VG(:,iMax:1,:,:),&
+            nVar=TiSi_,                                           &
+            nDim=3,                                               &
+            Min_D=[iMax, jMin_, kMin_],                           &
+            Max_D=[1, jMax_, kMax_],                              &
+            x_D=CoordNorm_D,                                      &
+            DoExtrapolate=.false.                                 )
+    else
+       ! Along radial coordinate the resolution and location of the grid
+       ! may be different for uniform or non-uniform grid
+       CoordNorm_D(r_) = (Coord_D(r_) - CoordMin_DB(r_,iBlock))*&
+            BoundaryThreads_B(iBlock) % dCoord1Inv - Coord1Norm0
+       ! Interpolate the state on threads to the given location
+       StateThread_V = interpolate_vector(                        &
+            a_VC=BoundaryThreads_B(iBlock)%State_VG(:,            &
+            BoundaryThreads_B(iBlock)%iMin:iMax,:,:),             &
+            nVar=TiSi_,                                           &
+            nDim=3,                                               &
+            Min_D=[BoundaryThreads_B(iBlock)%iMin, jMin_, kMin_], &
+            Max_D=[iMax, jMax_, kMax_],                           &
+            x_D=CoordNorm_D,                                      &
+            DoExtrapolate=.false.                                 )
+    end if
     call state_thread_to_mhd(StateThread_V, State_V)
   end subroutine interpolate_thread_state
   !============================================================================
@@ -1618,24 +1637,18 @@ contains
                   BoundaryThreads_B(iBlock) % Coord_DIII(2:,1-nPoint:0,j,k)
              !\
              ! Fill in an array with NeSi and TeSi values
-             StateThread_VI(2+PSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k)
+             StateThread_VI(2+PSi_:2+TiSi_, 1 - nPoint:0) = &
+                  BoundaryThreads_B(iBlock) % State_VIII(:,1-nPoint:0,j,k)
              !\
              !  Use geometric average of the face value for 
              !  the wave amplitude to get the cell-centered aplitude squared
              !/
              StateThread_VI(2+A2Major_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Major_,1-nPoint:0,j,k) *&
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Major_,-nPoint:-1,j,k)
+                  StateThread_VI(2+AMajor_, 1 - nPoint:0)*&
+                  BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:-1,j,k)
              StateThread_VI(2+A2Minor_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Minor_,1-nPoint:0,j,k) *&
-                  BoundaryThreads_B(iBlock) % State_VIII(A2Minor_,-nPoint:-1,j,k)
-             StateThread_VI(2+TeSi_, 1 - nPoint:0) = &
-                  BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k)
-             if(UseElectronPressure)then
-                StateThread_VI(2+TiSi_, 1 - nPoint:0) = &
-                     BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
-             end if
+                  StateThread_VI(2+AMinor_, 1 - nPoint:0)*&
+                  BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:-1,j,k)
              !\
              ! Now we find the intersection point of the thread with the
              ! spherical surface at given radial gen coordinate, Coord1
@@ -1657,7 +1670,7 @@ contains
     call broadcast_buffer(nVar=Lat_+TiSi_, Buff_VI=State_VI)
     call test_stop(NameSub, DoTest)
   end subroutine get_thread_point
-  !==============================
+  !====================================================================
   subroutine triangulate_thread_for_plot
     use BATL_lib,               ONLY: nBlock, Unused_B, &
          CoordMin_DB, CellSize_DB, x_, y_, z_, Xyz_DGB
