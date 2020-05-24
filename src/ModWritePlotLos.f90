@@ -955,12 +955,12 @@ contains
       use ModMain,        ONLY: NameVarLower_V
       use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
       use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-      use ModFieldLineThread, ONLY: interpolate_thread_state
+      use ModFieldLineThread, ONLY: interpolate_thread_state, DoPlotThreads
       use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
            iRhoIon_I, iPIon_I
       use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
       use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
-      use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D
+      use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D, CoordMin_D
       use ModUserInterface ! user_set_plot_var
 
       real, intent(in):: Ds          ! Length of line segment
@@ -1062,7 +1062,9 @@ contains
          !`Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
          !/
-         if(present(UseThreads))then
+         if(present(UseThreads)  & !This point is in the threaded gap OR the
+              .or.(DoPlotThreads.and.& !gap is used AND point is close to it
+              GenLos_D(r_) < CoordMin_D(r_) + 0.50*CellSize_D(r_)))then
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V)
          else
@@ -1075,9 +1077,6 @@ contains
       end if
 
       if(UseEuv .or. UseSxr .or. UseTableGen)then
-
-         ! !! All these log and 10** should be eliminated.
-         ! !! The general table should be log based, so it does the log internally
 
          if(UseMultiIon)then
             Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
