@@ -755,7 +755,7 @@ contains
 
       use ModGeometry,        ONLY: x1, x2, y1, y2, z1, z2
       use ModFieldLineThread, ONLY: &
-           IsUniformGrid, dCoord1Uniform
+           IsUniformGrid, dCoord1Uniform, rChromo=>rBody
       use BATL_lib,           ONLY: xyz_to_coord, &
            get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
@@ -839,7 +839,13 @@ contains
             ! Stop integration if we reached the edge of the domain
             if(  any(CoordLosNew_D > CoordMax_D) .or. &
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
-            !Else the reay cannot cross the boundaries 
+         else
+            !\
+            !Stop integration if the ray returns to the domain
+            !or reaches chromosphere
+            !/
+            if(CoordLosNew_D(r_) > CoordMin_D(r_) .or. &
+               norm2(XyzLos_D) < rChromo )EXIT LOOPLINE
          end if
          if(Ds <= 0.0)then
             !To prevent intinite looping
