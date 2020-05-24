@@ -174,8 +174,8 @@ module ModFieldLineThread
   !\
   ! Resolution along radial direction, if the grid is uniform
   !/
-  real,    public :: dCoord1Uniform = -1.0
-  real            :: Coord1Min, Coord1Max
+  real,    public :: dCoord1Uniform  = -1.0
+  real,    public :: Coord1TopThread = -1.0
   !\
   !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
   !The uniform grid starts at i=0, if nUniform>=1.
@@ -548,7 +548,7 @@ contains
          if(dCoord1Uniform < 0.0)then
             dCoord1Uniform = (CoordMin_DB(r_, iBlock) - Coord_D(r_))/&
                  nGUniform  
-            Coord1Min = Coord_D(r_); Coord1Max = CoordMin_DB(r_, iBlock)
+            Coord1TopThread = CoordMin_DB(r_, iBlock)
          end if
          dCoord1Inv = 1.0/dCoord1Uniform
       else
@@ -1135,9 +1135,7 @@ contains
   !============================================================================
   subroutine state_thread_to_mhd(StateThread_V, State_V)
     use ModAdvance,     ONLY: nVar, Rho_, WaveFirst_, WaveLast_
-    use ModInterpolate, ONLY: interpolate_vector
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, &
-                           UnitTemperature_, UnitEnergyDens_
+    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_
     !INPUT:
     real,    intent(in) :: StateThread_V(PSi_:TiSi_)
     !MHD state vector
@@ -1172,6 +1170,46 @@ contains
     State_V(WaveFirst_) = StateThread_V(A2Major_)
     State_V(WaveLast_ ) = StateThread_V(A2Minor_)
   end subroutine state_thread_to_mhd
+  !============================================================================
+  subroutine state_mhd_to_thread(State_V, Xyz_D, B0_D, StateThread_V)
+    use ModPhysics,        ONLY: No2Si_V, UnitTemperature_, &
+         UnitEnergyDens_
+    use ModVarIndexes,      ONLY: Rho_, p_, Pe_, Bx_, Bz_, nVar
+    use ModWaves,           ONLY: WaveFirst_, WaveLast_
+    use  ModCoronalHeating, ONLY:PoyntingFluxPerB
+    !INPUT:
+    !MHD state vector
+    real,    intent(in) :: State_V(nVar)
+    !Cartesian coords and B0 field to idenify major and minor waves
+    real,    intent(in) :: Xyz_D(3), B0_D(3)
+    !OUTPUT:
+    !Thread state vector
+    real,    intent(out):: StateThread_V(PSi_:TiSi_)
+    !LOCALS:
+    !Total magnetic field
+    real :: BTotal_D(3)
+    !-----------------------
+    BTotal_D = State_V(Bx_:Bz_) + B0_D
+    if(sum(BTotal_D*Xyz_D) <  0.0)then
+       StateThread_V(A2Major_) = State_V(WaveLast_ )
+       StateThread_V(A2Minor_) = State_V(WaveFirst_)
+    else
+       StateThread_V(A2Major_) = State_V(WaveFirst_)
+       StateThread_V(A2Minor_) = State_V(WaveLast_ )
+    end if
+    StateThread_V(A2Major_:A2Minor_) = StateThread_V(A2Major_:A2Minor_)/&
+            (sqrt(State_V(Rho_))* PoyntingFluxPerB)
+    StateThread_V(TeSi_) = TeFraction*State_V(iP)/State_V(Rho_)         &
+         *No2Si_V(UnitTemperature_)
+    if(useElectronPressure)then
+       StateThread_V(TiSi_) = TiFraction*State_V(p_)    &
+               /State_V(Rho_)*No2Si_V(UnitTemperature_)
+       StateThread_V(PSi_) = (State_V(p_)+State_V(Pe_)) &
+            *No2Si_V(UnitEnergyDens_)
+    else
+       StateThread_V(PSi_) = State_V(p_)*No2Si_V(UnitEnergyDens_)
+    end if
+  end subroutine state_mhd_to_thread
   !============================================================================
   subroutine set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V, Xyz_D, & 
     State_V, PlotVar_V)
@@ -1621,12 +1659,14 @@ contains
   end subroutine get_thread_point
   !==============================
   subroutine triangulate_thread_for_plot
-    use BATL_lib, ONLY: nBlock, Unused_B, &
-         CoordMin_DB, CellSize_DB, x_, y_, z_
-    use ModTriangulateSpherical, ONLY:trans, trmesh, find_triangle_sph, &
+    use BATL_lib,               ONLY: nBlock, Unused_B, &
+         CoordMin_DB, CellSize_DB, x_, y_, z_, Xyz_DGB
+    use ModB0,                  ONLY: B0_DGB
+    use ModAdvance,             ONLY: State_VGB
+    use ModTriangulateSpherical,ONLY:trans, trmesh, find_triangle_sph, &
          fix_state
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModConst, ONLY: cTiny, cRadToDeg, cPi
+    use ModCoordTransform,      ONLY: rlonlat_to_xyz
+    use ModConst,               ONLY: cTiny, cRadToDeg, cPi
     real    :: Coord1
     integer :: i, j, k, iBlock, nPoint
     !\
@@ -1666,7 +1706,7 @@ contains
        ! Generalized radial coordinate of the grid points
        !  This is the SC low boundary
        !/           V
-       Coord1 = Coord1Max + real(i)*dCoord1Uniform
+       Coord1 = Coord1TopThread + real(i)*dCoord1Uniform
        
        call get_thread_point(Coord1, State_VI(:,2:nThread+1))
        !Convert lon and lat to Cartesian coordinates on a unit sphere
@@ -1712,40 +1752,53 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           if(.not.IsAllocatedThread_B(iBlock))CYCLE
-          do k = kMin_, kMax_ 
-             do j = jMin_, jMax_
-                Coord_D = CoordMin_DB(2:,iBlock) + &
-                     CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
-                !\
-                !Transform longitude and latitude to the unit vector
-                !/
-                call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_),&
-                     Xyz_D)
-                !\
-                ! Find a triange into which this vector falls and the 
-                ! interpolation weights
-                !/
-                call find_triangle_sph(Xyz_D, nThread+2, Xyz_DI ,&
-                     list, lptr, lend,                         &
-                     Weight_I(1), Weight_I(2), Weight_I(3),    &
-                     IsTriangleFound,&
-                     iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
-                if(.not.IsTriangleFound)then
-                   write(*,*)'At the location x,y,z=', Xyz_D
-                   call stop_mpi('Interpolation on triangulated sphere fails')
-                end if
-                !\
-                ! interpolate  state vector to a uniform grid point
-                !/ 
-                BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
-                    State_VI(3:, iStencil_I(1))*Weight_I(1) + &
-                    State_VI(3:, iStencil_I(2))*Weight_I(2) + &
-                    State_VI(3:, iStencil_I(3))*Weight_I(3)
-             end do !j
-          end do    !k
+          do k = kMin_, kMax_; do j = jMin_, jMax_
+             Coord_D = CoordMin_DB(2:,iBlock) + &
+                  CellSize_DB(2:, iBlock)*[j - 0.50, k - 0.50]
+             !\
+             !Transform longitude and latitude to the unit vector
+             !/
+             call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_),&
+                  Xyz_D)
+             !\
+             ! Find a triange into which this vector falls and the 
+             ! interpolation weights
+             !/
+             call find_triangle_sph(Xyz_D, nThread+2, Xyz_DI ,&
+                  list, lptr, lend,                         &
+                  Weight_I(1), Weight_I(2), Weight_I(3),    &
+                  IsTriangleFound,&
+                  iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+             if(.not.IsTriangleFound)then
+                write(*,*)'At the location x,y,z=', Xyz_D
+                call stop_mpi('Interpolation on triangulated sphere fails')
+             end if
+             !\
+             ! interpolate  state vector to a uniform grid point
+             !/ 
+             BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
+                  State_VI(3:, iStencil_I(1))*Weight_I(1) + &
+                  State_VI(3:, iStencil_I(2))*Weight_I(2) + &
+                  State_VI(3:, iStencil_I(3))*Weight_I(3)
+          end do; end do    !j,k
        end do       !iBlock
     end do          !i
     deallocate(list, lptr, lend)
+    !\
+    ! One extra layer passing through physical cell centers (i=1)
+    !/
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       do k = kMin_, kMax_; do j = jMin_, jMax_
+          call state_mhd_to_thread(&
+               State_V       = State_VGB(:, 1, j, k, iBlock), &
+               Xyz_D         = Xyz_DGB(  :, 1, j, k, iBlock), &
+               B0_D          = B0_DGB(   :, 1, j, k, iBlock), &
+               StateThread_V = &
+               BoundaryThreads_B(iBlock) % State_VG(:, 1, j, k))
+       end do; end do
+    end do
     call test_stop(NameSub, DoTest)
   end subroutine triangulate_thread_for_plot
   !=========================================
