@@ -153,7 +153,7 @@ module ModFieldLineThread
   !\
   ! If .true., use triangulation
   !/
-  logical :: UseTriangulation = .false.
+  logical, public :: UseTriangulation = .false.
   !\
   ! If .true. correct the contribution to the LOS plots from
   ! the transition region

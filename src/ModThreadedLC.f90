@@ -8,7 +8,7 @@ module ModThreadedLC
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
-       PSi_, TeSi_, TiSi_, A2Major_, A2Minor_,                           &
+       UseTriangulation, PSi_, TeSi_, TiSi_, AMajor_, AMinor_,           &
        DoInit_, Done_, Enthalpy_, Heat_,                                 &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
        kThreadMin=>kMin_, kThreadMax=>kMax_
@@ -419,8 +419,8 @@ contains
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:0,j,k) =  AMajor_I(0:nPoint) 
-       BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) =  AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case(Enthalpy_)
        call get_res_heating(nIterIn=nIter)
     case(Impl_)
@@ -442,8 +442,8 @@ contains
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%State_VIII(A2Major_,-nPoint:0,j,k) = AMajor_I(0:nPoint) 
-       BoundaryThreads_B(iBlock)%State_VIII(A2Minor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
@@ -1184,7 +1184,7 @@ contains
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModMain,       ONLY: n_step, iteration_number, time_simulation
     use ModAdvance,      ONLY: State_VGB
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nJ, nK
     use BATL_size, ONLY:  nJ, nK
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
@@ -1195,7 +1195,7 @@ contains
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-
+    use ModFieldLineThread, ONLY: DoPlotThreads
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -1209,7 +1209,7 @@ contains
     !/
     integer:: iAction
 
-    integer :: i, j, k, Major_, Minor_
+    integer :: i, j, k, Major_, Minor_, kStart, kEnd, jStart, jEnd
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
@@ -1237,18 +1237,37 @@ contains
     do k = MinK, MaxK; do j = MinJ, maxJ; do i = 1 - nGhost, 0
        State_VG(:, i,j,k) = State_VG(:,1, j, k)
     end do; end do; end do
+    if((.not.DoPlotTHreads).or.UseTriangulation)then
+       !\
+       ! In this case only the threads originating from
+       ! the physical cells are needed
+       !/
+       kStart =  1; jStart =  1
+       kEnd   = nK; jEnd   = nJ
+    else
+       !\
+       ! For graphic we need threads originating from
+       ! both physical cells and from one layer of ghost
+       ! cells in j- and k- direction
+       !/
+       kStart = kThreadMin 
+       kEnd   = kThreadMax
+       jStart = jThreadMin 
+       jEnd   = jThreadMax
+    end if
+   
     !\
     ! Fill in the temperature array
     !/
     if(UseIdealEos)then
-       do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
+       do k = kStart, kEnd; do j = jStart, jEnd
           Te_G(0:1,j,k) = TeFraction*State_VGB(iP,1,j,k,iBlock) &
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
-    do k = kThreadMin, kThreadMax; do j = jThreadMin, jThreadMax
+    do k = kStart, kEnd; do j = jStart, jEnd
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
