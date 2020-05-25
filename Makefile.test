@@ -799,15 +799,20 @@ test_outerhelio2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.2D ./PARAM.in
+	cd ${TESTDIR}; cp Param/OUTERHELIO/imf_oh2d_test.dat ./imf_oh2d_test.dat
 
 test_outerhelio2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerhelio2d_check:
+	#-@(${DIFFNUM} -t -r=1e-5 \
+	#	${TESTDIR}/RESULTS/OH/log_n000001.log \
+	#	Param/OUTERHELIO/TestOutput/log_n000001_2D.log \
+	#	> test_outerhelio2d.diff)
 	-@(${DIFFNUM} -t -r=1e-5 \
-		${TESTDIR}/RESULTS/OH/log_n000010.log \
-		Param/OUTERHELIO/TestOutput/log_n000010_2D.log \
+		${TESTDIR}/RESULTS/OH/z=0*.outs \
+		Param/OUTERHELIO/TestOutput/z=0*_2D.outs \
 		> test_outerhelio2d.diff)
 	ls -l test_outerhelio2d.diff
 
