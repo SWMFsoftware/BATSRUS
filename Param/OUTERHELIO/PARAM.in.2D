@@ -11,6 +11,18 @@ T                       UseComp
 #TIMEACCURATE
 F                       IsTimeAccurate
 
+#STARTTIME
+1990			iYear
+11			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+
+#SOLARWINDFILE
+T			UseSolarWindFile
+imf_oh2d_test.dat	NameSolarWindFile
+
 #GRAVITY
 F                       UseGravity
 0                       iDirGravity
@@ -18,25 +30,25 @@ F                       UseGravity
 #BODY
 T                       UseBody
 1.0                     rBody [AU] Earth's orbit
-0.01                    BodyNDim [/cc] number density for inner boundary
-1.09E5                  BodyTDim [K] temperature for inner boundary
+0.01                     BodyNDim [/cc] (used for plotting only)
+1.09E5                  BodyTDim [K] (used for plotting only)
 
 #IOUNITS
 USER
 
 #NORMALIZATION
-USER
+OUTERHELIO
 
 #RESTARTOUTFILE
 one
 
 #PLOTFILENAME
-year                   NameMaxTimeUnit
+year                    NameMaxTimeUnit
 
 #GRID
 10                      nRootBlock1 (radial direction)
 10                      nRootBlock2 (longitude direction)
-1                       nRootBlock3 (latitude direction)
+2                       nRootBlock3 (latitude direction)
 -100.0                  xMin
 100.0                   xMax
 -100.0                  yMin
@@ -44,11 +56,8 @@ year                   NameMaxTimeUnit
 -100.0                  zMin
 100.0                   zMax
 
-#GRIDBLOCK
+#GRIDBLOCKALL
 1000                    MaxBlock
-
-#GRIDBLOCKIMPL
-1                       MaxBlockImpl
 
 #GRIDGEOMETRYLIMIT
 spherical_lnr           TypeGeometry
@@ -73,7 +82,8 @@ user                    SolarWindInput
 #SCHEME
 2                       nOrder
 Linde                   TypeFlux
-minmod                  TypeLimiter
+mc3                     TypeLimiter
+1.5			BetaLimiter
 
 #TIMESTEPPING
 2                       nStage (1 or 2)
@@ -86,14 +96,12 @@ F                       UseNonConservative
 0                       nConsCrit remove?
 
 #SAVERESTART
-T                       DoSaveRestart
-100                     DnSaveRestart
--1.0                    DtSaveRestart
+F                       DoSaveRestart
 
 #SAVELOGFILE
 T                       DoSaveLogfile
 RAW                     StringLogfile
-10                      DnSaveLogfile
+1                       DnSaveLogfile
 -1.                     DtSaveLogfile
 
 #SAVEINITIAL
@@ -101,7 +109,7 @@ F                       DoSaveInitial
 
 #SAVEPLOT
 1                       nPlotFile
-z=0 MHD idl             StringPlot
+z=0 MHD idl_ascii       StringPlot
 10                      DnSavePlot
 -1.0                    DtSavePlot
 -1.0                    DxSavePlot
@@ -123,30 +131,50 @@ F                       UseUserUpdateStates ! freeze neutrals !
 
 #USERINPUTBEGIN --------------------------------------------------------
 
-#SOLARWINDH     ! slow solar wind
-5.0             SWH_rho_dim [n/cc]
-1.0E5           SWH_T_dim [K]
-400.0           SWH_Ux_dim [km/s]
-0.0             SWH_Uy_dim [km/s]
-0.0             SWH_Uz_dim [km/s]
-5.0             SWH_Bx_dim [nT]
-0.0             SWH_By_dim [nT]
-0.0             SWH_Bz_dim [nT]
+ ! not actually used
 
-#VLISW          ! fast solar wind
-0.06            VLISW_rho_dim [n/cc]
-6519.0          VLISW_T_dim
-26.3            VLISW_Ux_dim
-0.0             VLISW_Uy_dim
--2.3            VLISW_Uz_dim
-0.4111          VLISW_Bx_dim
--0.0748         VLISW_By_dim
--0.1296         VLISW_Bz_dim
+ ! add IMF file, explore removing this section as well
+
+#SOLARWINDH     ! slow solar wind
+5.0                    SWH_rho_dim [n/cc]
+1.0E5                  SWH_T_dim [K]
+400.0                  SWH_Ux_dim [km/s]
+0.0                    SWH_Uy_dim [km/s]
+0.0                    SWH_Uz_dim [km/s]
+5.0                    SWH_Bx_dim [nT]
+0.0                    SWH_By_dim [nT]
+0.0                    SWH_Bz_dim [nT]
+
+#VLISW          ! local interstellar wind
+0.06                   VLISW_rho_dim [n/cc]
+6519.0                 VLISW_T_dim
+26.3                   VLISW_Ux_dim
+0.0                    VLISW_Uy_dim
+-2.3                   VLISW_Uz_dim
+0.4111                 VLISW_Bx_dim
+-0.0748                VLISW_By_dim
+-0.1296                VLISW_Bz_dim
 
 #USERINPUTEND ----------------------------------------------------------
 
 #STOP
-100             MaxIteration
--1.0            tSimulationMax
+500		       MaxIteration
+-1.0           	       tSimulationMax
 
+#RUN ###################################################################
 
+#TIMEACCURATE
+T		       DoTimeAccurate
+
+#SAVEPLOT
+1		       nPlotFile
+z=0 MHD idl_ascii      StringPlot
+-1  		       DnSavePlot
+43200.0		       DtSavePlot (1/2 day)
+-1		       DxSavePlot
+
+#STOP
+-1		       MaxIteration
+864000.0	       tSimulationMax (10 days)
+
+432000.0	       tSimulationMax (5 days)
