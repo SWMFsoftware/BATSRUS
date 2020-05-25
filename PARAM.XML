@@ -9222,7 +9222,8 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 	 <parameter name="DoPlotThreads" type="logical" default="F"/>
 	 <parameter name="nGUniform" type="integer" default="0"/>
 	 <parameter name="UseTriangulation" type="logical" default="F"/>
-
+	 </parameter>	 
+   
 #PLOTTHREADS
 T	DoPlotThreads
 1       nGUniform
@@ -9241,7 +9242,23 @@ to a uniform spherical grid using a triangulation on a unit spherical grid.
  	
 </command>
 
+<command name="INTERPOLATESPHTRIANGLE">
+	 <parameter name="UseInterpolationOrig" type="logical" default="F"/>
 
+#INTERPOLATESPHTRIANGLE
+F        UseInterpolationOrig
+
+
+When triangulation described in the previos command is done, interpolation 
+may be done with two ways to find the interpolation weights: (1) via the areas 
+of spherical trangles; or (2) via areas of planar trianles on a plane passing 
+through three nodes of the interpolation stencil (the latter is the "original"
+interpolation mechanism by Renka, who proved its good theretical 
+properties, such as continuity of the interpolated valiable across the
+boundary of interpolation stencil). The "original" algorithm is applied
+if the logical, UseInterpolationOrig  is set to .true.
+
+</command>
 
 <command name="THREADEDBC">
 	 <parameter name="UseAlignedVelocity" type="logical" default="T"/>
@@ -9250,7 +9267,6 @@ to a uniform spherical grid using a triangulation on a unit spherical grid.
 			<option name="first" />
 			<option name="second"/>
 			<option name="limited"          default="T"/>
-		</parameter>
 
 #THREADEDBC
 T	  UseAlignedVelocity
