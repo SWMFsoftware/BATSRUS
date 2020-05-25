@@ -1065,7 +1065,8 @@ contains
          !/
          if(present(UseThreads)  & !This point is in the threaded gap OR the
               .or.(DoPlotThreads.and.& !gap is used AND point is close to it
-              GenLos_D(r_) < CoordMin_D(r_) + 0.50*CellSize_D(r_)))then
+              GenLos_D(1) < CoordMin_D(1) + &
+              0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
             call interpolate_thread_state(GenLos_D, iBlock, State_V)
          else

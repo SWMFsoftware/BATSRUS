@@ -199,8 +199,8 @@ contains
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(IsThreadedBlock.and. Coord_D(r_) < & 
-                  CoordMin_DB(r_,iBlock) + 0.50*CellSize_DB(r_,iBlock))then
+             if(IsThreadedBlock.and. Coord_D(1) < & 
+                  CoordMin_DB(1,iBlock) + 0.50*CellSize_DB(1,iBlock))then
                 !\
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
