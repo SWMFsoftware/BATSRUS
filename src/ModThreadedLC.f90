@@ -325,7 +325,7 @@ contains
     !\
     ! Arrays needed to use lookup table
     !/
-    real    :: Value_V(6)
+    real    :: Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_)
     !\
     ! Limited Speed
     !/
