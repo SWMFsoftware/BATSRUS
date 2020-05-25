@@ -271,6 +271,7 @@ contains
     DoThreads_B = .false.
     IsAllocatedThread_B = .false.
     allocate(nThread_P(0:nProc - 1))
+    nThread_P = 0
     allocate(BoundaryThreads_B(1:MaxBlock))
     do iBlock = 1, MaxBlock
        call nullify_thread_b(iBlock)
@@ -375,6 +376,9 @@ contains
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
     nullify(BoundaryThreads_B(iBlock) % State_VG)
+    BoundaryThreads_B(iBlock) % iAction    = 0
+    BoundaryThreads_B(iBlock) % iMin       = 0
+    BoundaryThreads_B(iBlock) % DCoord1Inv = 0.0
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine nullify_thread_b
   !============================================================================
