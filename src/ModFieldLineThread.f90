@@ -536,7 +536,7 @@ contains
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
        end if
-       if(nProc<=4)write(*,*)'Number of thrreads at different PEs: ', nThread_P
+       if(nProc<=4)write(*,*)'Number of threads on different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
   contains
