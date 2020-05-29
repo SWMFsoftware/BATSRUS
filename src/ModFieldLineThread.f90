@@ -149,16 +149,28 @@ module ModFieldLineThread
   !\
   ! If .true., use threaded gap in plots
   !/
-  logical, public :: DoPlotThreads = .false. 
+  logical, public :: DoPlotThreads = .true. 
   !\
   ! If .true., use triangulation
   !/
-  logical, public :: UseTriangulation = .false.
+  logical, public :: UseTriangulation = .true.
+  !\
+  ! When the triangulation is done, interpolation may be done with
+  ! two ways to find the interpolation weights: via the areas of spherical
+  ! trangles, or via areas of planar trianles on a plane passing through
+  ! three nodes of the interpolation stencil (the latter is the "original"
+  ! interpolation mechanism by Renka, who proved its good theretical 
+  ! properties, such as continuity of the interpolated valiable across the
+  ! boundary of interpolation stencil). The "original" algorithm is applied
+  ! if the following logical is set to .true.
+  !/
+  logical         :: UseInterpolationOrig = .false. 
+  
   !\
   ! If .true. correct the contribution to the LOS plots from
   ! the transition region
   !/
-  logical, public :: DoCorrectLosPlot4TR = .false.
+  logical, public :: DoCorrectLosPlot4TR = .true.
   !\
   ! Number of threads, originating from physical cells
   !/
@@ -166,11 +178,11 @@ module ModFieldLineThread
   !\
   ! Number of GhostCells in a uniform grid covering a threaded gap
   !/
-  integer :: nGUniform = 0
+  integer :: nGUniform = 10
   !\
   ! The following logical is .true., if nUniform >=1
   !/
-  logical, public :: IsUniformGrid = .false.
+  logical, public :: IsUniformGrid = .true.
   !\
   ! Resolution along radial direction, if the grid is uniform
   !/
@@ -180,13 +192,13 @@ module ModFieldLineThread
   !The cell-centered grid starts at i=1, if nUniform <=0 (no uniform grid)
   !The uniform grid starts at i=0, if nUniform>=1.
   !/
-  integer :: iMax = 1
+  integer :: iMax = 0
   !\
   ! For the cell-centered grid,  the normalized radial gen coordinate 
   ! equals -0.5 for i=0. 
   ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
   !/
-  real   :: Coord1Norm0 = -0.50
+  real   :: Coord1Norm0 = 0.0
 
   public:: BoundaryThreads
   public:: read_threads      ! Read parameters of threads
@@ -324,13 +336,7 @@ contains
           IsUniformGrid = .true.
           iMax = 0
           Coord1Norm0 = 0.0
-          call read_var('UseTriangulation', UseTriangulation, iError)
-          if(iError /= 0)then
-             UseTriangulation = .false.
-             if(iProc==0)write(*,'(a)')&
-                  NameThisComp//': Missing UseTriangulation is set to F'
-             RETURN
-          end if
+          call read_var('UseTriangulation', UseTriangulation)
           !\
           ! If the non-uniform grid is used extending the existing block
           ! adaptive grid, the grid normally does not even reach the 
@@ -338,11 +344,23 @@ contains
           ! not worth while quantifying. With the uniform grid, this 
           ! option is available.
           !/
-          call read_var('DoTRCorrection', DoCorrectLosPlot4TR, iError)
+          call read_var('DoTRCorrection', DoCorrectLosPlot4TR)
+          !\
+          ! When the triangulation is done, interpolation may be done with
+          ! two ways to find the interpolation weights: via the areas of 
+          ! spherical triangles, or via areas of planar trianles on a plane
+          ! latter is the "original" passing through three nodes of the 
+          ! interpolation stencil (the interpolation mechanism by Renka, who 
+          ! proved its good theretical properties, such as continuity of
+          ! the interpolated valiable across the boundary of interpolation 
+          ! stencil). The "original" algorithm is applied if the following 
+          ! logical is set to .true.
+          !/
+          call read_var('UseInterpolationOrig', UseInterpolationOrig, iError)
           if(iError /= 0)then
-             DoCorrectLosPlot4TR = .false.
+             UseInterpolationOrig = .false.
              if(iProc==0)write(*,'(a)')&
-                  NameThisComp//': Missing DoTRCorrection is set to F'
+                  NameThisComp//': Missing UseInterpolationOrig is set to F'
              RETURN
           end if         
 
@@ -518,7 +536,7 @@ contains
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
        end if
-       if(nProc<=4)write(*,*)'Number of thrreads at different PEs: ', nThread_P
+       if(nProc<=4)write(*,*)'Number of threads on different PEs: ', nThread_P
     end if
     call test_stop(NameSub, DoTest)
   contains
@@ -1681,7 +1699,7 @@ contains
     use ModB0,                  ONLY: B0_DGB
     use ModAdvance,             ONLY: State_VGB
     use ModTriangulateSpherical,ONLY:trans, trmesh, find_triangle_sph, &
-         fix_state
+         find_triangle_orig, fix_state
     use ModCoordTransform,      ONLY: rlonlat_to_xyz
     use ModConst,               ONLY: cTiny, cRadToDeg, cPi
     real    :: Coord1
@@ -1781,17 +1799,23 @@ contains
              ! Find a triange into which this vector falls and the 
              ! interpolation weights
              !/
-             call find_triangle_sph(Xyz_D, nThread+2, Xyz_DI ,&
-                  list, lptr, lend,                         &
-                  Weight_I(1), Weight_I(2), Weight_I(3),    &
-                  IsTriangleFound,&
-                  iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+             if(UseInterpolationOrig)then
+                call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI ,&
+                     list, lptr, lend,                            &
+                     Weight_I, IsTriangleFound, iStencil_I)
+             else
+                call find_triangle_sph( Xyz_D, nThread+2, Xyz_DI ,&
+                     list, lptr, lend,                            &
+                     Weight_I(1), Weight_I(2), Weight_I(3),       &
+                     IsTriangleFound,                             &
+                     iStencil_I(1), iStencil_I(2), iStencil_I(3)) 
+             end if
              if(.not.IsTriangleFound)then
                 write(*,*)'At the location x,y,z=', Xyz_D
                 call stop_mpi('Interpolation on triangulated sphere fails')
              end if
              !\
-             ! interpolate  state vector to a uniform grid point
+             ! interpolate  state vector to a grid point of a uniform grid
              !/ 
              BoundaryThreads_B(iBlock) % State_VG(:, i, j, k)  = &
                   State_VI(3:, iStencil_I(1))*Weight_I(1) + &

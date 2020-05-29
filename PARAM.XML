@@ -8354,8 +8354,8 @@ the electrons (usually is).
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction should work fine.
 
-The default is UseElectronEnetropy true, because the solution near strong
-shocks is more reliable.
+The default value of UseElectronEnetropy is false, but it is better to turn 
+it on because the solution near strong shocks is more reliable.
 </command>
 
 <command name="ANISOTROPICPRESSURE">
@@ -9189,19 +9189,19 @@ is 0.34 for randomly phased kinetic Alfven waves.
 
 </command>
 
-<comand name ="#CHROMOSPHERE">
-	<parameter name="UseChromosphereHeating type="logical" default="F"/>
-    	<parameter name="NumberDensChromosphereCgs" type="real" default="2e11"/>
-    	<parameter name="TeChromosphereSi" type="real" default="5e4"/>
+<command name="#CHROMOSPHERE">
+	<parameter name="UseChromoHeating" type="logical" default="F"/>
+    	<parameter name="NumberDensCgs" type="real" default="2e11"/>
+    	<parameter name="TeChromoSi" type="real" default="5e4"/>
+
 #CHROMOSPHERE
-F			UseChromosphereHeating
-2e11                    NumberDensChromosphereCgs
-5e4			TeChromosphereSi
+F			UseChromoHeating
+2e11                    NumberDensCgs
+5e4			TeChromoSi
 
 Set plasma parameters on top of chromosphere. If desired, the special heating 
 function may be applied to mantain a hydrostatic density profile in the 
 chromosphere at constant Te=TeChromosphereSi
-
 </command>
 
 <command name="RADIATIVECOOLING">
@@ -9221,13 +9221,17 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 <command name="PLOTTHREADS">
 	 <parameter name="DoPlotThreads" type="logical" default="F"/>
 	 <parameter name="nGUniform" type="integer" default="0"/>
-	 <parameter name="UseTriangulation" type="logical" default="F"/>
-	 </parameter>	 
+	 <parameter name="UseTriangulation" type="logical" default="F"/> 
+	 <parameter name="DoTRCorrection" type="logical" default="F"/>
+	 <parameter name="UseInterpolationOrig" type="logical" default="F"/>
    
 #PLOTTHREADS
 T	DoPlotThreads
-1       nGUniform
-F       UseTriangulation
+10       nGUniform
+T       UseTriangulation
+T       DoTRCorrection
+T	UseInterpolationOrig  
+
 
 Used for plotting images in the solar corona. The threaded gap 
 contributes to the line-of-site integrals determining the intensity of
@@ -9238,18 +9242,13 @@ the grid of the block near the inner boundary, as extra ghost cells.
 
 If UseTriangulation = .flase., the thread are approximated with straight 
 radial lines, otherwise data from the actual curved threads are interpolated 
-to a uniform spherical grid using a triangulation on a unit spherical grid.    
+to a uniform spherical grid using a triangulation on a unit spherical grid. 
+
+If DoTRCorrection is .true. correct the contribution frop the threaded gap to 
+the LOS plots is corrected to account for the contribution from transition 
+region   
  	
-</command>
-
-<command name="INTERPOLATESPHTRIANGLE">
-	 <parameter name="UseInterpolationOrig" type="logical" default="F"/>
-
-#INTERPOLATESPHTRIANGLE
-F        UseInterpolationOrig
-
-
-When triangulation described in the previos command is done, interpolation 
+When triangulation on sphere as described above is completed, interpolation 
 may be done with two ways to find the interpolation weights: (1) via the areas 
 of spherical trangles; or (2) via areas of planar trianles on a plane passing 
 through three nodes of the interpolation stencil (the latter is the "original"
@@ -9266,8 +9265,8 @@ if the logical, UseInterpolationOrig  is set to .true.
 	 <parameter name="TypeBc" type="string" input="select">
 			<option name="first" />
 			<option name="second"/>
-			<option name="limited"          default="T"/>
-
+			<option name="limited"  default="T"/>
+			</parameter>
 #THREADEDBC
 T	  UseAlignedVelocity
 F         DoConvergenceCheck
