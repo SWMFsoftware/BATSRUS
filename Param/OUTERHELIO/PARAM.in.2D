@@ -110,7 +110,7 @@ F                       DoSaveInitial
 #SAVEPLOT
 1                       nPlotFile
 z=0 MHD idl_ascii       StringPlot
-10                      DnSavePlot
+100                     DnSavePlot
 -1.0                    DtSavePlot
 -1.0                    DxSavePlot
 
@@ -170,11 +170,13 @@ T		       DoTimeAccurate
 1		       nPlotFile
 z=0 MHD idl_ascii      StringPlot
 -1  		       DnSavePlot
-43200.0		       DtSavePlot (1/2 day)
+0.5 day		       DtSavePlot (1/2 day)
 -1		       DxSavePlot
 
 #STOP
 -1		       MaxIteration
+1 day		       tSimulationMax
+
 864000.0	       tSimulationMax (10 days)
 
 432000.0	       tSimulationMax (5 days)
