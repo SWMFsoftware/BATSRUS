@@ -802,14 +802,10 @@ test_outerhelio2d_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/imf_oh2d_test.dat ./imf_oh2d_test.dat
 
 test_outerhelio2d_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_outerhelio2d_check:
-	#-@(${DIFFNUM} -t -r=1e-5 \
-	#	${TESTDIR}/RESULTS/OH/log_n000001.log \
-	#	Param/OUTERHELIO/TestOutput/log_n000001_2D.log \
-	#	> test_outerhelio2d.diff)
 	-@(${DIFFNUM} -t -r=1e-5 \
 		${TESTDIR}/RESULTS/OH/z=0_mhd_1_t19901102_*.out \
 		Param/OUTERHELIO/TestOutput/z=0_2D.out.gz \
