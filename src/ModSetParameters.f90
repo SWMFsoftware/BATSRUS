@@ -2529,7 +2529,7 @@ contains
        case("#TRANSITIONREGION")
           call read_modified_cooling
 
-       case("#FIELDLINETHREAD", '#PLOTTHREADS', "#INTERPOLATESPHTRIANGLE")
+       case("#FIELDLINETHREAD", '#PLOTTHREADS')
           call read_threads(NameCommand, iSession)
 
        case("#THREADEDBC")
