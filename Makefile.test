@@ -653,7 +653,7 @@ test_graydiffusion:
 	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
-	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4
+	./Config.pl -noopenmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -791,7 +791,7 @@ test_outerhelio2d:
 	$(MAKE) test_outerhelio2d_check
 
 test_outerhelio2d_compile:
-	./Config.pl ${OPENMP} -u=OuterHelio2d -e=Mhd -f -g=10,10,2 -noopenmp
+	./Config.pl -noopenmp -u=OuterHelio2d -e=Mhd -f -g=10,10,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1354,7 +1354,7 @@ test_cometfluids_start:
 	$(MAKE) test_cometfluids_check
 
 test_cometfluids_compile:
-	./Config.pl -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
+	./Config.pl -noopenmp -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
