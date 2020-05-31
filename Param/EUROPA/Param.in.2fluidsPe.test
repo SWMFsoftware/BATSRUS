@@ -35,7 +35,7 @@ F                       UseRotation
 1000                    dnProgress2 (frequency of summaries to STDOUT)
 
 #CPUTIMEMAX
-600
+6000
 
 !!! TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
