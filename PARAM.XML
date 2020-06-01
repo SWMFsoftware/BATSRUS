@@ -1562,18 +1562,21 @@ the inner boundary is at least RatioRe2P. The default value of RatioPe2P is 0.
 </command>
 
 <command name="MAGNETICINNERBOUNDARY">
-	 <parameter name="DoReflectInnerB1" type="logical" default="T"/>
+	 <parameter name="B1rCoef" type="real" min="-1" max="1" default="-1"/>
 
 #MAGNETICINNERBOUNDARY
-T		DoReflectInnerB1
+-1.0		B1rCoef
 
-If DoReflectInnerB1 is true, the B1 part of the magnetic field is reflected
-for the ionosphere type inner boundary conditions, i.e. the radial
-component of the total magnetic field is forced to coincide with the B0
-value. This helps to recover the magnetic field after a very strong event.
-The false value allows B1 to float, which relies on numerical diffusion to work.
+The radial component of B1 on the ghost face is set as
+B1rGhost = B1rCoef*B1rTrue at the inner boundary. B1rCoef=-1 corresponds
+to a reflective boundary, while B1rCoef=1 is a floating
+(zero gradient) boundary. Any value between -1 and 1 is possible.
+Using floating condition, however, will not work well for strong storms,
+as there is no mechanism to restore the dipole after the storm.
+Reflective will recover the dipole, but it may result in some less
+stable behavior. The optimal value may be problem dependent.
 
-The default and recommended value is DoReflectInnerB1 true as shown.
+The default value corresponding to reflection is shown above.
 </command>
 
 <command name="BUFFERGRID">
