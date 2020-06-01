@@ -197,6 +197,14 @@ contains
     !==========================================================================
 
   end subroutine write_tecplot_data
+  !==========================================================================
+  function int2str(i) result(res)
+    character(:),allocatable :: res
+    integer,intent(in) :: i
+    character(range(i)+2) :: tmp
+    write(tmp,'(i0)') i
+    res = trim(tmp)
+  end function int2str
   !============================================================================
 
   subroutine write_tecplot_connect(iFile, NameFile)
@@ -623,7 +631,7 @@ contains
          write(UnitTmp_) 'TITLE="BATSRUS: cut Data, '//textDateTime//'"',&
               NEW_LINE('a')
       else
-         write(UnitTmp_) 'TITLE="BATSRUS: ', nDim,&
+         write(UnitTmp_) 'TITLE="BATSRUS: ', int2str(nDim),&
               'D Data,'//textDateTime//'"',NEW_LINE('a')
       end if
       write(UnitTmp_) trim(StringUnit),NEW_LINE('a')
@@ -631,14 +639,14 @@ contains
       case(2) 
          write(UnitTmp_) &
               'ZONE T="2D   '//textNandT//'"', &
-              ', N=', nPointAll, &    
-              ', E=', nBrickAll, &
+              ', N=', int2str(nPointAll), &    
+              ', E=', int2str(nBrickAll), &
               ', F=FEPOINT, ET=QUADRILATERAL', NEW_LINE('a')   
       case(3)  
          write(UnitTmp_) & 
               'ZONE T="3D   '//textNandT//'"', &
-              ', N=', nPointAll, &  
-              ', E=', nBrickAll, & 
+              ', N=', int2str(nPointAll), &  
+              ', E=', int2str(nBrickAll), & 
               ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
       end select
     else
@@ -673,7 +681,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_head
   !============================================================================
-
+  
   subroutine write_tecplot_auxdata(iUnitIn)
 
     use ModMain, ONLY : nI,nJ,nK, &
@@ -697,6 +705,8 @@ contains
     character(len=8)  :: real_date
     character(len=10) :: real_time
     integer :: iUnitHere
+    character(40) :: tmp
+    character(:), allocatable :: str
     character(len=1), parameter :: Newline = NEW_LINE('a')
 
     logical:: DoTest
@@ -715,33 +725,45 @@ contains
 
        ! BLOCKS
        write(iUnitHere) &
-            'AUXDATA BLOCKS="',nBlockAll,'  ',nI,' x',nJ,' x',nK,'"',Newline
+            'AUXDATA BLOCKS="',int2str(nBlockAll),'  ',int2str(nI),' x',&
+            int2str(nJ),' x',int2str(nK),'"',Newline
        
        ! BODYDENSITY
-       write(iUnitHere) &
-            'AUXDATA BODYNUMDENSITY="',BodyNDim_I(IonFirst_),'"',Newline
+       write(tmp, '(a,(f5.2),2a)') 'AUXDATA BODYNUMDENSITY="',&
+            BodyNDim_I(IonFirst_), '"',Newline
+       str = trim(tmp)
+       write(iUnitHere) str
        
        ! BORIS
-       if(UseBorisCorrection .or. UseBorisSimple)then
-          write(iUnitHere) 'AUXDATA BORIS="T ',ClightFactor,'"',Newline
+       if(UseBorisCorrection .or. UseBorisSimple) then
+          write(tmp, '(a,(f8.4),2a)') 'AUXDATA BORIS="T ', ClightFactor, '"',&
+               Newline
+          str = trim(tmp)
+          write(iUnitHere) str
        else
-          write(iUnitHere) 'AUXDATA BORIS="F"',Newline
+          write(tmp, '(2a)') 'AUXDATA BORIS="F"',Newline
+          str =	trim(tmp)
+          write(iUnitHere) str
        end if
        
        ! BTHETATILT
-       write(iUnitHere) &
+       write(tmp, '(a,(f12.4),2a)') &
             'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"',Newline
+       str = trim(tmp)
+       write(iUnitHere) str
        
        ! CELLS
-       write(iUnitHere) 'AUXDATA CELLS="',nBlockALL*nIJK,'"',Newline
+       write(iUnitHere) 'AUXDATA CELLS="',int2str(nBlockALL*nIJK),&
+            '"', Newline
        
        ! CELLSUSED
-       write(iUnitHere) &
-            'AUXDATA CELLSUSED="',nTrueCells,'"',Newline
+       write(iUnitHere) 'AUXDATA CELLSUSED="',int2str(nTrueCells),'"',Newline
        
        ! CODEVERSION
-       write(iUnitHere) &
+       write(tmp, '(a,(f5.2),2a)') &
             'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"',Newline
+       str = trim(tmp)
+       write(iUnitHere) str
        
        ! COORDSYSTEM
        write(iUnitHere) &
@@ -758,24 +780,31 @@ contains
        write(iUnitHere) 'AUXDATA FLUXTYPE="',FluxType,'"',Newline
        
        ! GAMMA
-       write(iUnitHere) 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
+       write(tmp, '(a,(f14.6),2a)') 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
+       str = trim(tmp)
+       write(iUnitHere) str
        
        ! ITER
-       write(iUnitHere) 'AUXDATA ITER="',n_step,'"',Newline
+       write(iUnitHere) 'AUXDATA ITER="',int2str(n_step),'"',Newline
        
        ! NPROC
-       write(iUnitHere) 'AUXDATA NPROC="',nProc,'"',Newline
+       write(iUnitHere) 'AUXDATA NPROC="',int2str(nProc),'"',Newline
        
        ! ORDER
        if(nOrder > 1)then
-          write(iUnitHere) 'AUXDATA ORDER="',nOrder,' ',trim(TypeLimiter),&
-               ', beta=',BetaLimiter,'"',Newline
+          write(tmp, '(5a,(f8.5),2a)') 'AUXDATA ORDER="',&
+               int2str(nOrder),' ',&
+               trim(TypeLimiter),', beta=',BetaLimiter,'"',Newline
+          str = trim(tmp)
+          write(iUnitHere) str
        else
-          write(iUnitHere) 'AUXDATA ORDER="',nOrder,'"',Newline
+          write(iUnitHere) 'AUXDATA ORDER="',int2str(nOrder),'"',Newline
        end if
        
        ! RBODY
-       write(iUnitHere) 'AUXDATA RBODY="',rBody,'"',Newline
+       write(tmp, '(a,(f12.2),2a)') 'AUXDATA RBODY="',rBody,'"',Newline
+       str = trim(tmp)
+       write(iUnitHere) str
        
        ! SAVEDATE
        call Date_and_time(real_date, real_time)
@@ -1168,8 +1197,8 @@ contains
              write(iUnit)trim(unitstr_TEC),NEW_LINE('a')
              write(iUnit) &
                   'ZONE T="3D   '//textNandT//'"', &
-                  ', N=',nNodeALL, &
-                  ', E=',nBlockALL*nIJK, &
+                  ', N=', int2str(nNodeALL), &
+                  ', E=', int2str(nBlockALL*nIJK), &
                   ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
           end if
 
