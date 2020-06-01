@@ -66,8 +66,8 @@ module ModFaceBoundary
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
-  ! Shall we make B1_radial = 0 at the inner boundary?
-  logical:: DoReflectInnerB1 = .true.
+  ! Set B1_radial_ghost = B1rCoef * B1_radial_true at the inner boundary
+  real:: B1rCoef = -1.0
 
   ! The lower bound of pe/p at inner boundary when the electron 
   ! pressure equation is used. 
@@ -131,7 +131,7 @@ contains
             write(*,*) "Young et al IBC activated, F10.7=", F107Young
        
     case("#MAGNETICINNERBOUNDARY")
-       call read_var('DoReflectInnnerB1', DoReflectInnerB1)
+       call read_var('B1rCoef', B1rCoef)
     case default
        call stop_mpi(NameSub//': unknown command = '//NameCommand)
     end select
@@ -922,11 +922,12 @@ contains
 
          end if
 
-         if(DoReflectInnerB1)then
+         if(B1rCoef /= 1.0)then
             ! Change B_ghost so that the radial component of Bghost + Btrue = 0
-            ! Brefl = 2*r*(B.r)/r^2
-            Brefl_D = 2*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)&
-                 /    sum(FaceCoords_D**2)
+            ! Brefl = (1-B1rCoef)*r*(B.r)/r^2, so Bghost = Btrue - Brefl
+            Brefl_D = (1-B1rCoef) &
+                 *FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)&
+                 /sum(FaceCoords_D**2)
             VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - Brefl_D
          end if
 
@@ -946,10 +947,11 @@ contains
                  - 2*UdotR*r2Inv*FaceCoords_D
          end do
 
-         ! Reflect Br according to DoReflectInnerB1
-         if(DoReflectInnerB1) &
+         ! Set B1rGhost according to B1rCoef
+         if(B1rCoef /= 1.0) &
               VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) &
-              - 2*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)*r2Inv*FaceCoords_D
+              - (1-B1rCoef) &
+              *sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)*r2Inv*FaceCoords_D
 
       case('buffergrid')
          ! REVISION: June  2011 - R. Oran - generalized.

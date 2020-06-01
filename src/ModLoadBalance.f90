@@ -530,13 +530,15 @@ contains
                DoBalanceOnlyIn=.true.,               &
                nExtraData=nBuffer,                   &
                pack_extra_data=pack_load_balance,    &
-               unpack_extra_data=unpack_load_balance )
+               unpack_extra_data=unpack_load_balance,&
+               DoTestIn=DoTest)
 
           call set_batsrus_grid
           call set_batsrus_state
        else
           call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
-               iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A)
+               iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A,&
+               DoTestIn=DoTest)
           call set_batsrus_grid
        end if
 
