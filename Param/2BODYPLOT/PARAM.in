@@ -161,7 +161,7 @@ ionosphere		TypeBcInner
 fixed			TypeBcBody2
 
 #MAGNETICINNERBOUNDARY
-F			DoReflectInnerB1
+1.0			DoReflectInnerB1
 
 #SAVELOGFILE
 T
