@@ -19,6 +19,10 @@ package for connecting Python scripts to the Tecplot 360 visualization engine.
 
 Currently BATS-R-US supports output in Tecplot ASCII format, which can be
 processed by preplot into \verb|.plt| binary format.
+There is also an option of \verb|.dat| output of ASCII header with binary data
+and connectivity, which is more efficient but cannot be processed by preplot.
+This file can be read and converted into VTK files by the Julia package mentioned in Section \ref{sec:julia}.
+The generated unstructured grid \verb|.vtu| files can be read by Tecplot.
 The direct support for Tecplot binary formats \verb|.plt| and \verb|.szplt|
 may be included in the future.
 
@@ -46,7 +50,7 @@ This package can read, process, and plot SWMF data, similarly to the IDL scripts
 
 MATLAB requires a license.
 
-\section{Julia}
+\section{Julia} \label(sec:julia)
 
 Julia is a high-level, high-performance, dynamic programming language
 well-suited for high-performance numerical analysis and computational sciences.
