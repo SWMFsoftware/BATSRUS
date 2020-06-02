@@ -1041,7 +1041,7 @@ contains
                       plot_dimensional(iFileInstrument) =                    &
                            index(plot_string,'INS')>0
                       plot_vars(iFileInstrument) = 'wl pb'
-                      plot_pars(iFileInstrument) = 'mu'
+                      plot_pars(iFileInstrument) = 'obsx obsy obsz'
 
                       select case(trim(NameSat))
                       case('sta')
