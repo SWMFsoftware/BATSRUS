@@ -551,30 +551,22 @@ contains
              write(TextDateTime0,FormatTime) iStartTime_I
              write(TextDateTime ,FormatTime) iTime_I
 
+             ! Optimize the amount of information required in the header
+
              ! TIMEEVENT and TIMEEVENTSTART
              StringHeadLine = trim(StringHeadline)// &
-                  '_TIMEEVENT='//trim(TextDateTime)// &
-                  '_TIMEEVENTSTART='//TextDateTime0
+                  ' TIMEEVENT='//trim(TextDateTime)// &
+                  ' TIMEEVENTSTART='//TextDateTime0
 
              ! TIMESECONDSABSOLUTE
              ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-             write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-             StringHeadLine = trim(StringHeadLine)//&
-                  '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
-
-             ! ITER
-             write(StringTmp,'(i12)')n_step
-             write(StringHeadLine,'(a)')trim(StringHeadLine)//'_ITER='//&
-                  adjustl(StringTmp)
+             ! write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+             ! StringHeadLine = trim(StringHeadLine)//&
+             !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
              ! NAMELOSTABLE
-             StringHeadLine = trim(StringHeadLine)//'_NAMELOSTABLE='//&
+             StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
                   NameLosTable(iFile)
-
-             ! HGIXYZ
-             write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-             write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
-                  adjustl(StringTmp)
 
           endif
 
