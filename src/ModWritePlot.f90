@@ -901,6 +901,12 @@ contains
           Param_I(iPar) = Eta0Si
        case('mu')
           Param_I(iPar) = mu_los
+       case('obsx')
+          Param_I(iPar) = ObsPos_DI(1,iFile)
+       case('obsy')
+          Param_I(iPar) = ObsPos_DI(2,iFile)
+       case('obsz')
+          Param_I(iPar) = ObsPos_DI(3,iFile)
        case('rTrace')
           Param_I(iPar) = rTrace
        case('dt')
