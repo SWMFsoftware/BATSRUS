@@ -4,6 +4,6 @@ ionosphere		innerBCtype
 ionosphere		InnerBCTypeBody2  !This is read only if UseBody2=.true.
 
 #MAGNETICINNERBOUNDARY
-F			DoReflectInnerB1
+1.0			B1rCoef
 
 #END
