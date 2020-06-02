@@ -1250,7 +1250,8 @@ contains
                    if(NodeUniqueGlobal_NB(i,j,k,iBlock))then
                       write(UnitTmp_) &
                            NodeXYZ_DN(1:3,i,j,k),       &
-                           real(PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),4)
+                           real(PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBlock),&
+                           Real4_)
                    end if
                 end do; end do; end do
                 ! Write point connectivity
