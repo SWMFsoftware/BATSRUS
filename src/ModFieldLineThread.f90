@@ -1639,6 +1639,10 @@ contains
     character(len=*), parameter:: NameSub = 'get_thread_coord'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    !Initialize output array
+
+    State_VI = 0.0
+
     !Start value for Buffer index numerating the points related to given PE
     if(iProc==0)then
        iBuff = 0
