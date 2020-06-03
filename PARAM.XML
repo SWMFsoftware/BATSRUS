@@ -9221,19 +9221,49 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 
 </command>
 
+</commandgroup>
+
+<commandgroup name="THREADED LOW SOLAR CORONA">
+
+<command name="FIELDLINETHREAD">
+	 <parameter name="UseFieldLineThreads" type="logical" defailt="F"/>
+	 <parameter name="nPointThreadMax" type="integer" default="100"/>
+	 <parameter name="DsThreadMin" type="real" default="0.002"/>
+
+#FIELDLINETHREAD
+T		UseFieldLineThreads
+200		nPointThreadMax
+0.002   	DsThreadMax
+
+If the logical, UseFieldLineThreads is set to .true., then, from center of 
+physical cell near the inner boundary, the magnetic field line (tread) is 
+traced toward photosphere, by integrating equation dx/ds = B/ |B| with a step
+DsThreadMin. The line is not allowed to turn back (outward the Sun). Except 
+for this, no other means is used to help the line to reach the photosphere. If
+within nPointThreadMax steps the photosphere is not reached, then the tracing 
+is repeated again, with the integration step being 2*DsThreadMin, and within 
+this second and last (for the given line) integration, the angle is limited 
+between the line and radial direction, so that the line is guaranteed to 
+reach the photosphere within nPointThreadMax steps. The set of points on the 
+line obtained in the course of integration form equally spaced grid on the 
+thread (with the mesh egual to DsThreadMin for the most of threads, and twice 
+this for the other) on which to solve the governing equations.  
+
+</command>
+
 <command name="PLOTTHREADS">
 	 <parameter name="DoPlotThreads" type="logical" default="F"/>
 	 <parameter name="nGUniform" type="integer" default="0"/>
 	 <parameter name="UseTriangulation" type="logical" default="F"/> 
 	 <parameter name="DoTRCorrection" type="logical" default="F"/>
-	 <parameter name="UseInterpolationOrig" type="logical" default="F"/>
+	 <parameter name="UsePlanarTriangles" type="logical" default="F"/>
    
 #PLOTTHREADS
 T	DoPlotThreads
-10       nGUniform
+10      nGUniform
 T       UseTriangulation
-T       DoTRCorrection
-T	UseInterpolationOrig  
+T       UseTRCorrection
+T	UsePlanarTriangles  
 
 
 Used for plotting images in the solar corona. The threaded gap 
@@ -9247,7 +9277,7 @@ If UseTriangulation = .flase., the thread are approximated with straight
 radial lines, otherwise data from the actual curved threads are interpolated 
 to a uniform spherical grid using a triangulation on a unit spherical grid. 
 
-If DoTRCorrection is .true. correct the contribution frop the threaded gap to 
+If UseTRCorrection is .true. correct the contribution frop the threaded gap to 
 the LOS plots is corrected to account for the contribution from transition 
 region   
  	
@@ -9258,7 +9288,7 @@ through three nodes of the interpolation stencil (the latter is the "original"
 interpolation mechanism by Renka, who proved its good theretical 
 properties, such as continuity of the interpolated valiable across the
 boundary of interpolation stencil). The "original" algorithm is applied
-if the logical, UseInterpolationOrig  is set to .true.
+if the logical, UsePlanarTriangles  is set to .true.
 
 </command>
 
