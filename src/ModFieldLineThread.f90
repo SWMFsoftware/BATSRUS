@@ -164,13 +164,13 @@ module ModFieldLineThread
   ! boundary of interpolation stencil). The "original" algorithm is applied
   ! if the following logical is set to .true.
   !/
-  logical         :: UseInterpolationOrig = .false. 
+  logical         :: UsePlanarTriangles = .false. 
   
   !\
   ! If .true. correct the contribution to the LOS plots from
   ! the transition region
   !/
-  logical, public :: DoCorrectLosPlot4TR = .true.
+  logical, public :: UseTRCorrection = .true.
   !\
   ! Number of threads, originating from physical cells
   !/
@@ -344,7 +344,7 @@ contains
           ! not worth while quantifying. With the uniform grid, this 
           ! option is available.
           !/
-          call read_var('DoTRCorrection', DoCorrectLosPlot4TR)
+          call read_var('UseTRCorrection', UseTRCorrection)
           !\
           ! When the triangulation is done, interpolation may be done with
           ! two ways to find the interpolation weights: via the areas of 
@@ -356,11 +356,11 @@ contains
           ! stencil). The "original" algorithm is applied if the following 
           ! logical is set to .true.
           !/
-          call read_var('UseInterpolationOrig', UseInterpolationOrig, iError)
+          call read_var('UsePlanarTriangles', UsePlanarTriangles, iError)
           if(iError /= 0)then
-             UseInterpolationOrig = .false.
+             UsePlanarTriangles = .false.
              if(iProc==0)write(*,'(a)')&
-                  NameThisComp//': Missing UseInterpolationOrig is set to F'
+                  NameThisComp//': Missing UsePlanarTriangles is set to F'
              RETURN
           end if         
 
@@ -1803,7 +1803,7 @@ contains
              ! Find a triange into which this vector falls and the 
              ! interpolation weights
              !/
-             if(UseInterpolationOrig)then
+             if(UsePlanarTriangles)then
                 call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI ,&
                      list, lptr, lend,                            &
                      Weight_I, IsTriangleFound, iStencil_I)
