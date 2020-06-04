@@ -757,8 +757,8 @@ contains
        No2Si_V(UnitRho_) = 1000000*cProtonMass ! AtomicMass
     case("OUTERHELIO")
        No2Si_V(UnitX_)   = cAU                 ! AU
-       No2Si_V(UnitU_)   = 1000.0              ! km/s
-       No2Si_V(UnitRho_) = 1000000*cProtonMass ! amu/cm^3
+       No2Si_V(UnitU_)   = sqrt(Gamma*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1)) ! m/s
+       No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim ! amu/cm^3
     case("SOLARWIND")
        ! rPlanet, SW sound speed, SW density in amu/cm^3
        No2Si_V(UnitX_)   = rPlanetSi
@@ -949,6 +949,47 @@ contains
        NameIdlUnit_V(UnitDivB_)        = 'G/cm'
        NameIdlUnit_V(UnitTemperature_) = 'K'
 
+    case("OUTERHELIO")
+       Io2Si_V(UnitX_)           = rPlanetSi                 ! R
+       Io2Si_V(UnitRho_)         = 1.0E+3                    ! g/cm^3
+       Io2Si_V(UnitN_)           = 1.0E+6                    ! #/cm^3
+       Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
+       Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
+       Io2Si_V(UnitB_)           = 1.0E-4                    ! Gauss
+       Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
+       Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
+       Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
+       Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
+       Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
+       !\
+       ! set string variables used for writing output - TECPLOT
+       !/
+       NameTecUnit_V(UnitX_)           = '[R]'
+       NameTecUnit_V(UnitRho_)         = '[g/cm^3]'
+       NameTecUnit_V(UnitU_)           = '[km/s]'
+       NameTecUnit_V(UnitN_)           = '[amu/cm^3]'
+       NameTecUnit_V(UnitP_)           = '[dyne/cm^2]'
+       NameTecUnit_V(UnitB_)           = '[Gauss]'
+       NameTecUnit_V(UnitRhoU_)        = '[g/cm^2/s]'
+       NameTecUnit_V(UnitEnergyDens_)  = '[erg/cm^3]'
+       NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'
+       NameTecUnit_V(UnitDivB_)        = '[Gauss/cm]'
+       NameTecUnit_V(UnitAngle_)       = '[deg]'
+       !\
+       ! set string variables used for writing output - IDL
+       !/
+       NameIdlUnit_V(UnitX_)           = 'R'
+       NameIdlUnit_V(UnitRho_)         = 'g/cm3'
+       NameIdlUnit_V(UnitU_)           = 'km/s'
+       NameIdlUnit_V(UnitN_)           = 'mp/cc'
+       NameIdlUnit_V(UnitP_)           = 'dyne/cm^2'
+       NameIdlUnit_V(UnitB_)           = 'G'
+       NameIdlUnit_V(UnitRhoU_)        = 'g/cm^2/s'
+       NameIdlUnit_V(UnitEnergyDens_)  = 'erg/cm3'
+       NameIdlUnit_V(UnitJ_)           = 'uA/m2'
+       NameIdlUnit_V(UnitDivB_)        = 'G/cm'
+       NameIdlUnit_V(UnitTemperature_) = 'K'
+       
     case("NONE")
        ! I/O and normalized units are the same, so
        Io2Si_V = No2Si_V
