@@ -208,7 +208,7 @@ T			DoSaveInitial
 -1.0			tSimulationMax
 
 #RUN ########################################################################
-
+Begin session: 2
 #AMR
 -1			DnRefine
 
@@ -245,44 +245,44 @@ GL			TypeCme
 0.8			ModulationRho
 0.8			ModulationP
 
-#STOP
-51			MaxIteration
--1.0			tSimulationMax
+!#STOP
+!51			MaxIteration
+!-1.0			tSimulationMax
 
-#RUN #############################################################
+!#RUN #####################################################
+!begin session 3
+!#USER_FLAGS
+!T			UseUserInnerBCs
+!F			UseUserSource
+!T			UseUserPerturbation
+!T			UseUserOuterBcs
+!F			UseUserICs
+!F			UseUserSpecifyRefinement
+!F			UseUserLogFiles
+!F			UseUserWritePlot
+!F			UseUserAMR
+!F			UseUserEchoInput
+!F			UseUserB0
+!T			UseUserInitSession
+!F			UseUserUpdateStates
 
-#USER_FLAGS
-T			UseUserInnerBCs
-F			UseUserSource
-T			UseUserPerturbation
-T			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
-
-#CME
-T			UseCme
-T			DoAddFluxRope
-270.0			LongitudeCme
-5.0			LatitudeCme
-60.0			OrientationCme
-TD14			TypeCme
-1.0			AnalyticTdCoordScale
-1.0			AnalyticTdFieldScale
-1.83			AnalyticTdCoeffR
-0.75			AnalyticTdCoeffA
-0.83			AnalyticTdCoeffD
+!#CME
+!T			UseCme
+!T			DoAddFluxRope
+!270.0			LongitudeCme
+!5.0			LatitudeCme
+!60.0			OrientationCme
+!TD14			TypeCme
+!1.0			AnalyticTdCoordScale
+!1.0			AnalyticTdFieldScale
+!1.83			AnalyticTdCoeffR
+!0.75			AnalyticTdCoeffA
+!0.83			AnalyticTdCoeffD
 
 #STOP
 -1			MaxIteration
 5.0			tSimulationMax
-
+!
 #RUN ########################################################################
 
 #USER_FLAGS
