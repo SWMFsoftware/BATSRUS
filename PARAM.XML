@@ -4787,6 +4787,53 @@ but on some systems the flush may be very slow.
 The default is to flush the output, i.e. DoFlush=T.
 </command>
 </commandgroup>
+<commandgroup name="ERUPTIVE EVENT GENERATOR">
+<command name="CME">
+	 <parameter name="UseCme" type="logical" default="F">
+	 <parameter name="DoAddFluxRope" type="logical" default="F">
+	 <rarameter name="LongitudeCme" type="real" 
+	 	    			min="0" max="359" default="0">
+	 <rarameter name="LatitudeCme" type="real" 	
+	 	    		        min="-89" max="89" default="0">	
+	 <rarameter name="OrientationCme" type="real" 
+	 	    			min="0" max="359" default="0">	
+	 <parameter name="TypeCme" type="string" case="upper" input="select"
+							required="T">
+		<option name="GL"				/>
+		<option name="GIBSON-LOW"			/>
+		<option name="TD"	         		/>
+		<option name="TITOV-DEMOULIN"			/>
+		<option name="TD14"				/>
+			</parameter>
+	<if expr="$TypeCme =~ /GL|GIBSON-LOW/">
+	</if>
+	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
+	</if>
+	<if expr="$TypeCme =~ /TD14/">
+	</if>
+
+#CME
+T		UseCme
+T		DoAddFluxRope
+0		LongitudeCme
+0		LatitudeCme
+0		OrientationCme
+GL		TypeCme
+
+First five parameters are common for all types of EE generators. If UseCme is 
+.true. the generator may be applied permanently, usually via the boundary 
+condition. If, in addition to this, DoAddFluxRope is .true. the confiruation in 
+applied at each grid point, but for a single time (via the "user perturbation")
+
+Three parameters characterize location of the superimposed configuration and 
+its orientation. LongitudeCme and LatitudeCme are the longitude and latitude
+of the configuration center respectively, in angular degrees. OrientationCme
+provides the angle of rotation about the radial direction (again, in angular 
+degrees) needed to transform the coordinate system of the model to that of the
+configuration.
+ 
+</command>
+</commandgroup>
 <commandgroup name="AMR PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
