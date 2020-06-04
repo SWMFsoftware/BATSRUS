@@ -757,8 +757,8 @@ contains
        No2Si_V(UnitRho_) = 1000000*cProtonMass ! AtomicMass
     case("OUTERHELIO")
        No2Si_V(UnitX_)   = cAU                 ! AU
-       No2Si_V(UnitU_)   = sqrt(Gamma*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1)) ! m/s
-       No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim ! amu/cm^3
+       No2Si_V(UnitU_)   = 1000.0              ! km/s
+       No2Si_V(UnitRho_) = 1000000*cProtonMass ! amu/cm^3
     case("SOLARWIND")
        ! rPlanet, SW sound speed, SW density in amu/cm^3
        No2Si_V(UnitX_)   = rPlanetSi
@@ -967,7 +967,7 @@ contains
        NameTecUnit_V(UnitX_)           = '[R]'
        NameTecUnit_V(UnitRho_)         = '[g/cm^3]'
        NameTecUnit_V(UnitU_)           = '[km/s]'
-       NameTecUnit_V(UnitN_)           = '[amu/cm^3]'
+       NameTecUnit_V(UnitN_)           = '[1/cm^3]'
        NameTecUnit_V(UnitP_)           = '[dyne/cm^2]'
        NameTecUnit_V(UnitB_)           = '[Gauss]'
        NameTecUnit_V(UnitRhoU_)        = '[g/cm^2/s]'
@@ -981,7 +981,7 @@ contains
        NameIdlUnit_V(UnitX_)           = 'R'
        NameIdlUnit_V(UnitRho_)         = 'g/cm3'
        NameIdlUnit_V(UnitU_)           = 'km/s'
-       NameIdlUnit_V(UnitN_)           = 'mp/cc'
+       NameIdlUnit_V(UnitN_)           = '1/cm^3'
        NameIdlUnit_V(UnitP_)           = 'dyne/cm^2'
        NameIdlUnit_V(UnitB_)           = 'G'
        NameIdlUnit_V(UnitRhoU_)        = 'g/cm^2/s'
