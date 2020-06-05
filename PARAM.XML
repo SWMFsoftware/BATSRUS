@@ -4806,6 +4806,12 @@ The default is to flush the output, i.e. DoFlush=T.
 		<option name="TD14"				/>
 			</parameter>
 	<if expr="$TypeCme =~ /GL|GIBSON-LOW/">
+	<parameter name="BStrength" type="real" default="0">
+	<parameter name="Radius" type="real" min="0" default="0">
+	<parameter name="aStretch" type="real" min="0" default="0">
+	<parameter name="ApexHeight" type="real" min="0" default="0">
+	<parameter name="ModulationRho" type="real" default="0">
+	<parameter name="ModulationP" type="real" default="0">
 	</if>
 	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
 	</if>
@@ -4813,12 +4819,18 @@ The default is to flush the output, i.e. DoFlush=T.
 	</if>
 
 #CME
-T		UseCme
-T		DoAddFluxRope
-0		LongitudeCme
-0		LatitudeCme
-0		OrientationCme
-GL		TypeCme
+T			UseCme
+T			DoAddFluxRope
+0			LongitudeCme
+0			LatitudeCme
+0			OrientationCme
+GL			TypeCme
+1.0			BStrength
+1.03			Radius
+0.3			aStretch
+1.8			ApexHeight
+0.8			ModulationRho
+0.8			ModulationP
 
 First five parameters are common for all types of EE generators. If UseCme is 
 .true. the generator may be applied permanently, usually via the boundary 
@@ -4831,7 +4843,45 @@ of the configuration center respectively, in angular degrees. OrientationCme
 provides the angle of rotation about the radial direction (again, in angular 
 degrees) needed to transform the coordinate system of the model to that of the
 configuration.
- 
+!!!!!!!!!!!!!!!!!!!!!!!GIBSON-LOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+The latest implementation for the Gibson-Low eruptive event generator 
+(TypeCme=GL or TypeCme=Gibson-Low) follows the paper Borovikov, D., I. V. 
+Sokolov, W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event 
+generator based on the Gibson-Low magnetic configuration, J. Geophys. Res. 
+Space Physics, 122, 7979–7984, doi:10.1002/2017JA024304. With this regard, 
+parameter, BStrength (denoted as B0 in the cited paper) is the characteristic 
+magnetic field, in Gauss, such that the magnetic field at the center of 
+configuration (prior to stretching) equals ~0.7 B0. It is signed variable, two 
+choises of sign correspond to two possible signs of the integral helicity. 
+Radius of configuration is the radius of the last magnetic (spherical) surface 
+confining all currents in the configuration. aStretch ("a" in the paper) is 
+the scale of stretching transformation (see details in the paper). Finally, 
+ApexHeight is the altitude of top of configuration respectively to the solar 
+surface. It is expoected that Radius < ApexHeight < 2*Radius.
+!!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+If you have an outdated parameter file you can convert it to the standard
+format as follows:
+1. Move line for BStrength to have it just below "GL      TypeCme" line.
+2. Move  line for reading Radius just below the line for BStrength.
+3. RESCALE the OLD data for BStrength as follows:
+
+   BStrengthNew = 13.1687517342067082*BStrengthOld*Radius**2
+4. The old line for reading Distance should be converted to the line for
+   reading ApexHeight = Distance + Radius - aStretch - 1
+5. Line for reading pBackground should be removed
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+The lines for reading ModulationRho and ModulationP are redundant and in the
+absence of these lines in the parameter file the code does not stop and does not
+complain.
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+0			LongitudeCme
+0			LatitudeCme
+0			OrientationCme
+TD			TypeCme
+!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 </command>
 </commandgroup>
 <commandgroup name="AMR PARAMETERS">
