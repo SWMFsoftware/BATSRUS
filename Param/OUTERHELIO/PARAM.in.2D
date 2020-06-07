@@ -173,7 +173,3 @@ z=0 MHD idl_ascii      StringPlot
 #STOP
 -1		       MaxIteration
 1 day		       tSimulationMax
-
-864000.0	       tSimulationMax (10 days)
-
-432000.0	       tSimulationMax (5 days)
