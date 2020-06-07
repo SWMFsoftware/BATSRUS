@@ -4814,6 +4814,11 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="ModulationP" type="real" default="0">
 	</if>
 	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
+	<parameter name="BcTubeDim" type="real" min="0" default="0">
+	<parameter name="RadiusMajor" type="real" min="0" default="0">
+	<parameter name="RadiusMinor" type="real" min="0" default="0">
+	<parameter name="Depth" type="real" min="0" default="0">
+        <parameter name="Mass" type="real" min="0" default="0">
 	</if>
 	<if expr="$TypeCme =~ /TD14/">
 	</if>
@@ -4873,15 +4878,37 @@ format as follows:
 The lines for reading ModulationRho and ModulationP are redundant and in the
 absence of these lines in the parameter file the code does not stop and does not
 complain.
-
+!!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULIN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #CME
 T			UseCme
 T			DoAddFluxRope
-0			LongitudeCme
-0			LatitudeCme
-0			OrientationCme
+180.0                   LongitudeCme
+15.0                    LatitudeCme
+30.0                    OrientationCme
 TD			TypeCme
-!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+10.0			BcTubeDim
+1.0			RadiusMajor
+0.4			RadiusMinor
+0.1			Depth
+1.000E+13               Mass
+
+BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
+is created by the current inside the toroidal filament. RadiusMajor and 
+RadiusMinor are characteristics of the toroid shape. Depth characterizes 
+the toroid center location below the photosphere level. Mass in kilograms 
+is an approximate integral of density over the volume of current filament.
+!!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+To convert an outdated parameter file, with the Current in [A] and spatial 
+scales in [m], one can convert it to the standard format as follows:
+
+1. RESCALE the data for Current[A] as follows:
+
+   BcTubeDim[Gs] = 2.0E-03*cPi*Current[A]/RadiusMajor[m]
+
+2. Convert all spatial scales (RadiusMajor, RadiusMinor, Depth) in meters 
+   into those is R_S:
+   Scale[R_s] = Scale[m]/6.96E+08
+  
 </command>
 </commandgroup>
 <commandgroup name="AMR PARAMETERS">
