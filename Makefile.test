@@ -155,7 +155,7 @@ test_fluxemergence:
 	$(MAKE) test_fluxemergence_check
 
 test_fluxemergence_compile:
-	./Config.pl -e=MhdEosRad -u=Ee -g=10,10,10
+	./Config.pl ${OPENMP} -e=MhdEosRad -u=Ee -g=10,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -264,7 +264,7 @@ test_partsteady:
 	$(MAKE) test_partsteady_check
 
 test_partsteady_compile:
-	./Config.pl -u=Default -e=MhdHyp -g=4,4,1
+	./Config.pl ${OPENMP} -u=Default -e=MhdHyp -g=4,4,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -296,7 +296,7 @@ test_hallmhd:
 	$(MAKE) test_hallmhd_check
 
 test_hallmhd_compile:
-	./Config.pl ${OPENMP} -u=Waves -e=Mhd -f -g=4,2,2
+	./Config.pl -noopenmp -u=Waves -e=Mhd -f -g=4,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -453,7 +453,7 @@ test_magnetometer:
 	$(MAKE) test_magnetometer_check
 
 test_magnetometer_compile:
-	./Config.pl -u=Default -e=Mhd -g=4,4,4
+	./Config.pl ${OPENMP} -u=Default -e=Mhd -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 	
@@ -523,7 +523,7 @@ test_mhdions:
 	$(MAKE) test_mhdions_check
 
 test_mhdions_compile:
-	./Config.pl -u=Default -e=MhdIons -f -g=64,2,2
+	./Config.pl ${OPENMP} -u=Default -e=MhdIons -f -g=64,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -587,7 +587,7 @@ test_eosgodunov:
 	$(MAKE) test_eosgodunov_check
 
 test_eosgodunov_compile:
-	./Config.pl ${OPENMP} -e=HdEos -u=Eos -g=10,1,1
+	./Config.pl -noopenmp -e=HdEos -u=Eos -g=10,1,1
 	$(MAKE) CRASH
 	make PIDL
 
@@ -619,7 +619,7 @@ test_laserpackage:
 	$(MAKE) test_laserpackage_check
 
 test_laserpackage_compile:
-	./Config.pl -e=Crash -u=Crash -g=8,8,1 -nMaterial=5 -nWave=30
+	./Config.pl ${OPENMP} -e=Crash -u=Crash -g=8,8,1 -nMaterial=5 -nWave=30
 	./Config.pl -hypre -noopenmp
 	$(MAKE) CRASH
 	make PIDL
@@ -687,7 +687,7 @@ test_coronasph:
 	$(MAKE) test_coronasph_check
 
 test_coronasph_compile:
-	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4
+	./Config.pl ${OPENMP} -u=Sc -e=MhdCorona -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -720,7 +720,7 @@ test_awsomfluids:
 	$(MAKE) test_awsomfluids_check
 
 test_awsomfluids_compile:
-	./Config.pl -f -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
+	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -754,8 +754,9 @@ test_chromo:
 	@echo "test_chromo_check..." >> test_chromo.diff
 	$(MAKE) test_chromo_check
 
+# Fails on Pleiades with OpenMP
 test_chromo_compile:
-	./Config.pl ${OPENMP} -u=ScChromo -e=MhdWaves -g=6,4,4
+	./Config.pl -noopenmp -u=ScChromo -e=MhdWaves -g=6,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -890,7 +891,7 @@ test_func:
 	$(MAKE) test_func_check
 
 test_func_compile:
-	./Config.pl -u=Default -e=Mhd -g=8,8,8
+	./Config.pl ${OPENMP} -u=Default -e=Mhd -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1240,7 +1241,7 @@ test_mercurysph:
 	$(MAKE) test_mercurysph_check
 
 test_mercurysph_compile:
-	./Config.pl -u=Mercury -e=MhdPe -g=8,8,8
+	./Config.pl ${OPENMP} -u=Mercury -e=MhdPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1278,8 +1279,9 @@ test_ganymede:
 	@echo "test_ganymede_check..." >> test_ganymede.diff
 	$(MAKE) test_ganymede_check
 
+# Fails on Pleiades with OpenMP
 test_ganymede_compile:
-	./Config.pl ${OPENMP} -u=Ganymede -e=MhdHypPe -g=8,8,8
+	./Config.pl -noopenmp -u=Ganymede -e=MhdHypPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1317,7 +1319,7 @@ test_comet:
 	$(MAKE) test_comet_check
 
 test_comet_compile:
-	./Config.pl -u=Comet6Sp -e=MhdComet -g=8,8,8
+	./Config.pl ${OPENMP} -u=Comet6Sp -e=MhdComet -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1421,8 +1423,9 @@ test_earthsph_start:
 	@echo "test_earthsph_check..." >> test_earthsph.diff
 	$(MAKE) test_earthsph_check
 
+# Fails with OpenMP on Pleiades
 test_earthsph_compile:
-	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,8,8
+	./Config.pl -noopenmp -e=Mhd -u=Default -g=8,8,8
 	${MAKE} BATSRUS
 	make PIDL
 
@@ -1489,7 +1492,7 @@ test_amrsph:
 	$(MAKE) test_amrsph_check
 
 test_amrsph_compile:
-	./Config.pl -e=Mhd -u=Default -g=4,4,4
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1595,7 +1598,7 @@ test_cometCGhd:
 	$(MAKE) test_cometCGhd_check
 
 test_cometCGhd_compile:
-	./Config.pl -u=CometCG -e=Hd -g=8,8,8
+	./Config.pl ${OPENMP} -u=CometCG -e=Hd -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1671,7 +1674,7 @@ test_europa2fluidspe_start:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
+	./Config.pl -noopenmp -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1706,7 +1709,7 @@ test_europa3fluidspe_start:
 	$(MAKE) test_europa3fluidspe_check
 
 test_europa3fluidspe_compile:
-	./Config.pl -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
+	./Config.pl -noopenmp -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1876,7 +1879,7 @@ test_L1toBC:
 	$(MAKE) test_L1toBC_check
 
 test_L1toBC_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,1,1 -ng=3
+	./Config.pl ${OPENMP} -e=Mhd -u=Default -g=8,1,1 -ng=3
 	$(MAKE) BATSRUS
 	make PIDL
 
