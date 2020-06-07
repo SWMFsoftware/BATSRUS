@@ -24,9 +24,6 @@ T                       UseBody (rest of parameters read if true)
 0.18                    BodyNDim(6) for 4th neutral fluid 
 6519.0                  BodyTDim(6)
 
-#IOUNITS
-USER			TypeIoUnit
-
 #NORMALIZATION
 USER			TypeNormalization
 
@@ -216,7 +213,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #OHBOUNDARY
@@ -320,7 +317,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #TIMESTEPPING
