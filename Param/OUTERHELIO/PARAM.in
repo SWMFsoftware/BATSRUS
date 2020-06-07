@@ -22,9 +22,6 @@ T                       UseBody
 0.18                    BodyNDim(5) for 4th neutral fluid
 6519.0                  BodyTDim(5)
 
-#IOUNITS
-USER			TypeIoUnit
-
 #NORMALIZATION
 USER			TypeNormalization
 
@@ -204,7 +201,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #OHBOUNDARY
@@ -287,7 +284,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #SCHEME

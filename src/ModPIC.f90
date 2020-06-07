@@ -312,7 +312,7 @@ contains
   subroutine pic_init_region
 
     use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, &
-         x_, y_, z_, nI, nJ, nK, nBlock, MaxNode, Unused_B
+         x_, y_, z_, nI, nJ, nK, nBlock, MaxBlock, MaxNode, Unused_B
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
@@ -405,7 +405,7 @@ contains
 
     if(UseAdaptivePic) then
        if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
-       allocate(IsPicCrit_CB(1:nI,1:nJ,1:nK,1:nBlock))
+       allocate(IsPicCrit_CB(1:nI,1:nJ,1:nK,1:MaxBlock))
        IsPicCrit_CB = iPicOff_
     end if
 
