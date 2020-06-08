@@ -328,7 +328,8 @@ contains
        end if
     case('#PLOTTHREADS')
        call read_var('DoPlotThreads', DoPlotThreads)
-       if(DoPlotThreads)call read_var('nGUniform', nGUniform)
+       if(.not.DoPlotThreads)RETURN
+       call read_var('nGUniform', nGUniform)
        if(nGUniform > 0)then
           !\
           ! Use uniform grid
@@ -394,7 +395,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
     nullify(BoundaryThreads_B(iBlock) % State_VG)
-    BoundaryThreads_B(iBlock) % iAction    = 0
+    BoundaryThreads_B(iBlock) % iAction    = Done_
     BoundaryThreads_B(iBlock) % iMin       = 0
     BoundaryThreads_B(iBlock) % DCoord1Inv = 0.0
     call test_stop(NameSub, DoTest, iBlock)
@@ -982,7 +983,7 @@ contains
   end subroutine set_threads_b
   !============================================================================
   subroutine advance_threads(iAction)
-
+    use ModParallel, ONLY: NeiLev, NOBLK
     use BATL_lib, ONLY: nBlock, Unused_B
 
     integer, intent(in)::iAction
@@ -994,7 +995,16 @@ contains
     call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+        if(NeiLev(1,iBlock)/=NOBLK)then
+           if(.not.IsAllocatedThread_B(iBlock))then
+              CYCLE
+           else
+              call stop_mpi('Threads are at block not near inner boundary')
+           end if
+        else
+           if(.not.IsAllocatedThread_B(iBlock))&
+                call stop_mpi('No threads at the block near inner boundary')
+        end if
        if(BoundaryThreads_B(iBlock)%iAction /= Done_)&
             call stop_mpi('An attempt to readvance not advanced threads')
        BoundaryThreads_B(iBlock)%iAction = iAction
