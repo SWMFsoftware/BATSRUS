@@ -405,7 +405,7 @@ contains
 
     if(UseAdaptivePic) then
        if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
-       allocate(IsPicCrit_CB(1:nI,1:nJ,1:nK,1:MaxBlock))
+       allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
        IsPicCrit_CB = iPicOff_
     end if
 
@@ -1039,20 +1039,22 @@ contains
     ! This subroutine takes the PIC xyz coordinate and output
     ! the patch index in IndexPatchOut_D
 
-    use BATL_lib,     ONLY: nDim, nI, nJ, nK, nBlock, x_, y_, z_, &
-         iNode_B, Unused_B, iProc, MaxNode, &
+    use BATL_lib,        ONLY: nDim, nI, nJ, nK, nBlock, MaxBlock, &
+         x_, y_, z_, iNode_B, Unused_B, iProc, MaxNode, &
          block_inside_regions, get_region_indexes, &
          Xyz_DGB
-    use BATL_size,    ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,   ONLY: State_VGB, Bx_, By_, Bz_, Rho_
-    use ModB0,        ONLY: B0_DGB
-    use ModCurrent,   ONLY: get_current
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
+         Ux_, Uy_, Uz_
+    use ModCurrent,      ONLY: get_current
+    use ModCellGradient, ONLY: calc_divergence
 
     integer :: iBlock, i, j, k, iCriteria
+    integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
     real :: CriteriaValue
-    real, allocatable :: j_D(:)
-    real :: jj, b
-    logical:: DoTest
+    real, allocatable :: j_D(:), Ufield_DGB(:,:,:,:,:), DivU_CB(:,:,:,:)
+    real :: current, b
+    logical:: DoTest, SatisfyAll
 
     character(len=*), parameter:: NameSub = 'calc_pic_criteria'
     !---------------------------------------------------------------。-----------
@@ -1061,47 +1063,80 @@ contains
 
     if(.not. allocated(J_D)) allocate(J_D(3))
 
-    IsPicCrit_CB = iPicOff_
-
     if(nCriteriaPic==0) then
        IsPicCrit_CB = iPicOn_             
        RETURN
     end if
+
+    ! if pic criteria exists in PARAM.in
+    if(.not. allocated(PicCritInfo_CBI)) &
+         allocate(PicCritInfo_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
+
+    IsPicCrit_CB = iPicOff_
+    PicCritInfo_CBI = iPicOff_
+
+    if(allocated(DivU_CB)) deallocate(DivU_CB)
+    if(allocated(Ufield_DGB)) deallocate(Ufield_DGB)
+
+    ! loop through criterias and allocate variables
+    do iCriteria=1, nCriteriaPic
+       select case(trim(NameCriteriaPic_I(iCriteria)))
+       case('divu')
+          allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          DivU_CB = 0.0
+          Ufield_DGB = 0.0
+       end select
+    end do
 
     do iBlock=1,nBlock       
 
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
+       if(allocated(DivU_CB)) then
+          Ufield_DGB(:,:,:,:,iBlock) = State_VGB(Ux_:Uz_,:,:,:,iBlock)
+          call calc_divergence(iBlock, Ufield_DGB(:,:,:,:,iBlock), &
+               0, DivU_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
+       end if
+
        do k=1,nK; do j=1,nJ; do i=1,nI
-
-          call get_current(i, j, k, iBlock, j_D)
-
-          jj = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
-
-          b = sqrt((State_VGB(Bx_,i,j,k,iBlock))**2+&
-               (State_VGB(By_,i,j,k,iBlock))**2+&
-               (State_VGB(Bz_,i,j,k,iBlock))**2)
-
           do iCriteria=1, nCriteriaPic
-
              select case(trim(NameCriteriaPic_I(iCriteria)))
              case('j/b')
-                CriteriaValue = jj / b
+                call get_current(i, j, k, iBlock, j_D)
+                current = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
+                b = sqrt((State_VGB(Bx_,i,j,k,iBlock))**2+&
+                     (State_VGB(By_,i,j,k,iBlock))**2+&
+                     (State_VGB(Bz_,i,j,k,iBlock))**2)
+                CriteriaValue = current / b
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
+             case('divu')
+                CriteriaValue = DivU_CB(i,j,k,iBlock)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
                   CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
-                IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
+                PicCritInfo_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
              end if
-
+             
           end do ! end loop criteria
-
        end do; end do; end do
-
     end do ! end loop blocks
+
+    ! IsPicCrit_CB = product(PicCritInfo_CBI, dim=5)
+
+    ! collect pic crit info
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       do iBlock=1,nBlock
+          SatisfyAll = .true.
+          do iCriteria=1, nCriteriaPic
+             if(PicCritInfo_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) SatisfyAll = .false.
+          end do
+          if(SatisfyAll) IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
+       end do
+    end do; end do; end do
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_pic_criteria
