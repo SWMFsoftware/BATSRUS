@@ -700,7 +700,7 @@ contains
                      !\
                      ! LOS ntersection with the top of Transition Region
                      !/ 
-                     if(UseTRCorrection.and.                                   &
+                     if(UseTRCorrection.and.DoPlotThreads.and.                &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                          XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
                         call find_grid_block((rInner + cTiny)*XyzTR_D/        &
@@ -873,15 +873,7 @@ contains
          end if
 
          ! Check if mid point will be inside the block. If not, reduce Ds
-         IsEdge = .false.
-         if(Ds > LengthMax - Length + cTiny)then
-            !\
-            !Reduce the integration step newr the end of segment...
-            Ds = LengthMax - Length + cTiny
-            !...and prohibit its further increase
-            IsEdge = .true.
-         end if
- 
+         IsEdge = .false. 
          do
             ! Move to the middle of the segment
             XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
@@ -928,16 +920,23 @@ contains
                if(Ds < DsTiny)CYCLE LOOPLINE
             end do
          end if
+         if(Length + Ds >= LengthMax)then
+            !\
+            !Reduce the integration step newr the end of segment...
+            if(iProc == iProcFound)&
+                 ! Add contribution from this segment to the image
+                 call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
+            RETURN
+         else
+            if(iProc == iProcFound)then
+               ! Add contribution from this segment to the image
+               call add_segment(Ds, XyzLosNew_D, UseThreads)
+            end if
 
-         if(iProc == iProcFound)then
-            ! Add contribution from this segment to the image
-            call add_segment(Ds, XyzLosNew_D, UseThreads)
+            ! Move XyzLosNew to the end of the segment
+            XyzLosNew_D = XyzLos_D + Ds*LosPix_D
+            call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
          end if
-
-         ! Move XyzLosNew to the end of the segment
-         XyzLosNew_D = XyzLos_D + Ds*LosPix_D
-         call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
-
       end do LOOPLINE
 
     end subroutine integrate_line
