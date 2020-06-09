@@ -653,7 +653,7 @@ test_graydiffusion:
 	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
-	./Config.pl -noopenmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4
+	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
