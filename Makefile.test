@@ -619,8 +619,8 @@ test_laserpackage:
 	$(MAKE) test_laserpackage_check
 
 test_laserpackage_compile:
-	./Config.pl ${OPENMP} -e=Crash -u=Crash -g=8,8,1 -nMaterial=5 -nWave=30
-	./Config.pl -hypre -noopenmp
+	./Config.pl -noopenmp -e=Crash -u=Crash -g=8,8,1 -nMaterial=5 -nWave=30
+	./Config.pl -hypre
 	$(MAKE) CRASH
 	make PIDL
 
