@@ -1674,7 +1674,7 @@ test_europa2fluidspe_start:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl -noopenmp -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
+	./Config.pl ${OPENMP} -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1709,7 +1709,7 @@ test_europa3fluidspe_start:
 	$(MAKE) test_europa3fluidspe_check
 
 test_europa3fluidspe_compile:
-	./Config.pl -noopenmp -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
+	./Config.pl ${OPENMP} -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
