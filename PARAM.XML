@@ -4819,6 +4819,24 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="RadiusMinor" type="real" min="0" default="0">
 	<parameter name="Depth" type="real" min="0" default="0">
         <parameter name="Mass" type="real" min="0" default="0">
+	<parameter name="TypeCharge" type="string" case="lower" input="select"
+				     		   	required="F">
+		<option name="" 				/>
+		<option name="none"				/>
+		<option name="steady"	         		/>
+		<option name="moving"				/>
+		<option name="cancelflux"			/>
+			</parameter>
+	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	<parameter name="BqFieldDim" type="real" min="0" default="0">
+	<parameter name="qDistance" type="real" min="0" default="0">
+	<if expr="$TypeCharge =~ /moving|cancelflux/">
+	<parameter name="qVelXDim" type="real" min="0" default="0">
+	<if expr="$TypeCharge =~ /moving/">
+	<parameter name="qVelYDim" type="real" default="0">
+	</if>	
+	</if>
+	</if>
 	</if>
 	<if expr="$TypeCme =~ /TD14/">
 	</if>
@@ -4887,10 +4905,13 @@ T			DoAddFluxRope
 30.0                    OrientationCme[deg]
 TD			TypeCme  GL/TD/TD14
 10.0			BcTubeDim    [Gs]
-1.0			RadiusMajor  [R_s]
-0.4			RadiusMinor  [R_s]
-0.1			Depth        [R_s]
+0.5			RadiusMajor  [R_s]
+0.2			RadiusMinor  [R_s]
+0.2			Depth        [R_s]
 1.000E+13               Mass         [kg???]
+steady			TypeCharge  none/steady/moving/cancelflux
+5			BqFieldDim   [Gs]
+0.4			qDistance    [R_s]					
 
 BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
 is created by the current inside the toroidal filament. RadiusMajor and 
