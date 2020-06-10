@@ -4814,7 +4814,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	<parameter name="ModulationP" type="real" default="0">
 	</if>
 	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
-	<parameter name="BcTubeDim" type="real" min="0" default="0">
+	<parameter name="BcTubeDim" type="real" default="0">
 	<parameter name="RadiusMajor" type="real" min="0" default="0">
 	<parameter name="RadiusMinor" type="real" min="0" default="0">
 	<parameter name="Depth" type="real" min="0" default="0">
@@ -4826,16 +4826,16 @@ The default is to flush the output, i.e. DoFlush=T.
 #CME
 T			UseCme
 T			DoAddFluxRope
-0			LongitudeCme
-0			LatitudeCme
-0			OrientationCme
-GL			TypeCme
-1.0			BStrength
-1.03			Radius
-0.3			aStretch
-1.8			ApexHeight
-0.8			ModulationRho
-0.8			ModulationP
+0			LongitudeCme   [deg]
+0			LatitudeCme    [deg]
+0			OrientationCme [deg]
+GL			TypeCme    TD/TD14/GL
+1.0			BStrength      [Gs]
+1.03			Radius         [Rs]
+0.3			aStretch       [Rs]
+1.8			ApexHeight     [Rs]
+0.8			ModulationRho  [??]\
+0.8			ModulationP    [??]/Look redundant
 
 First five parameters are common for all types of EE generators. If UseCme is 
 .true. the generator may be applied permanently, usually via the boundary 
@@ -4882,15 +4882,15 @@ complain.
 #CME
 T			UseCme
 T			DoAddFluxRope
-180.0                   LongitudeCme
-15.0                    LatitudeCme
-30.0                    OrientationCme
-TD			TypeCme
-10.0			BcTubeDim
-1.0			RadiusMajor
-0.4			RadiusMinor
-0.1			Depth
-1.000E+13               Mass
+180.0                   LongitudeCme  [deg]
+15.0                    LatitudeCme   [deg]
+30.0                    OrientationCme[deg]
+TD			TypeCme  GL/TD/TD14
+10.0			BcTubeDim    [Gs]
+1.0			RadiusMajor  [R_s]
+0.4			RadiusMinor  [R_s]
+0.1			Depth        [R_s]
+1.000E+13               Mass         [kg???]
 
 BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
 is created by the current inside the toroidal filament. RadiusMajor and 
@@ -4908,6 +4908,23 @@ scales in [m], one can convert it to the standard format as follows:
 2. Convert all spatial scales (RadiusMajor, RadiusMinor, Depth) in meters 
    into those is R_S:
    Scale[R_s] = Scale[m]/6.96E+08
+!!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+FOR GL configuration, the field parameter, BStrength, may be both positive 
+and negative. In changing the sign for negative, the poloidal field 
+components change their sign, hence, the toroidal current too. However,
+the sign of toroidal magnetic field is fixed by the choice of active region 
+geometry and does not change the sign when BSthrength flips. hence, the 
+toroidal current-to-field ratio also changes sign and so does the helicity, if
+the negative BStrength is chosen.  
+
+For TD configuration,  magnetic field at the center of configuration is 
+always positive,  starpping field is negative. Phi-conponent of the toroidal 
+current is positive. However, the sign of the field toroidal component may be
+both positive and negative, corresponding to the positive and negative 
+helicity. To set the negative helicity, the input parameter, BcTube, should 
+be negative. This choice affects only the sign of helicity, but not the 
+direction of the poloidal magnetic field components, including the nagnetic 
+field at the center of configuration.
   
 </command>
 </commandgroup>
