@@ -71,7 +71,6 @@ module ModUser
 contains
   !============================================================================
 
-
   subroutine user_read_inputs
 
     use ModMain,       ONLY: UseUserInitSession, lVerbose
@@ -728,7 +727,7 @@ contains
     real    :: Xyz_D(3), JetCenter_D(3)
     real    :: CrossProduct_D(3), Urot_D(3)
     real    :: DistanceJet
-    real    :: Ucoeff = 0.0
+    real    :: Ucoeff
     real    :: r
     ! Above is for jet only
 
