@@ -32,7 +32,6 @@ module ModCoronalHeating
   ! Variables and parameters for various heating models
 
   ! quantitative parameters for exponential heating model
-
   real :: HeatingAmplitude, HeatingAmplitudeCgs = 6.07e-7
   real :: DecayLengthExp = 0.7  ! in Solar Radii units
   logical :: UseExponentialHeating = .false.
@@ -59,7 +58,7 @@ module ModCoronalHeating
   logical,public :: UseAlfvenWaveDissipation = .false.
   real,   public :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real,   public :: LperpTimesSqrtB
-  real    :: Crefl = 0.04
+  real :: Crefl = 0.04
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
@@ -74,8 +73,8 @@ module ModCoronalHeating
   real :: DecayLengthCh = 0.7
 
   ! Arrays for the calculated heat function and dissipated wave energy
-  real,public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real,public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
+  real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
+  real, public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
   !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
   
   character(len=lStringLine) :: TypeHeatPartitioning
@@ -100,7 +99,8 @@ module ModCoronalHeating
   ! Elsasser variables in the cascade rate
   logical, public :: UseAlignmentAngle = .false.
   real, public :: Cdiss_C(nI,nJ,nK) = 1.0
-
+  !$omp threadprivate(Cdiss_C)
+  
   logical :: DoInit = .true.
 
   public :: get_coronal_heat_factor
@@ -149,8 +149,9 @@ contains
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
     real :: BzCgs_II(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
-    real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
+    real    :: TotalCoronalHeating, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
+    !$omp threadprivate(TimeUpdateLast, DoFirst)
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
 
@@ -598,10 +599,10 @@ contains
     !
     ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
     ! should really be using the computational domain, but global
-    ! feild line tracing for this purpose is not easily implemented
+    ! field line tracing for this purpose is not easily implemented
     real :: Ufinal
-    real :: UminIfOpen = 290.0
-    real :: UmaxIfOpen = 300.0
+    real :: UminIfOpen
+    real :: UmaxIfOpen
     real :: Weight
     real :: B_D(3)
 
@@ -986,6 +987,7 @@ contains
     real, intent(out) :: GradLogAlfven_D(nDim)
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    !$omp threadprivate(LogAlfven_FD)
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
     if(IsNewBlockAlfven)then
@@ -1180,7 +1182,7 @@ contains
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: pMin, P_I(nIonFluid), Ppar_I(nIonFluid)
     real :: Wmajor, Wminor, Wplus, Wminus, WmajorGyro, WminorGyro, Wgyro
-    real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
+    real :: DampingElectron, DampingPar_I(nIonFluid)
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Sigma, SignMajor
     real :: QratioProton, ExtensionCoef, Qmajor, Qminor
