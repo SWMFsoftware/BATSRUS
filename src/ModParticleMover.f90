@@ -472,6 +472,8 @@ contains
           U_D =  Coord_DI(Ux_:Uz_, iParticle)
           !\
           ! Interpolate fields with obtained weight coefficients
+          ! This step corresponds to Equation 20 in Moschou, Sokolov et al. 2019
+          ! Hybrid paper of ASTRONUM
           !/
           B_D = 0.0;   E_D = 0.0
           ! get potential part of the magnetic field at given location 
@@ -490,6 +492,8 @@ contains
           end do
           !\
           ! Calculate individual contributions from E, B field on  velocity 
+          ! This step corresponds to Equation 7, 21 and Stage 2 in Figure 2
+          ! of the Moschou, Sokolov et al. 2019 Hybrid paper of ASTRONUM
           !/
           !Electric field force, divided by particle mass
           !and multiplied by \Delta t/2
@@ -517,6 +521,8 @@ contains
        end if    !End of Boris step advancing the velocity
        !\
        ! Advance coordinates through a half step
+       ! This step corresponds to Equation 16 of Moschou, Sokolov et al. 2019
+       ! Hybrid paper of ASTRONUM
        !/
        Coord_DI(x_:nDim, iParticle) = Coord_DI(x_:nDim, iParticle) + &
             0.5*Dt*Coord_DI(Ux_:U_+nDim,iParticle)
@@ -557,6 +563,8 @@ contains
     ! Get the contribution to moments of VDF, 
     ! from a given particle with coordinates at half time step
     ! after velocity.
+    ! This step corresponds to Equation 17 of Moschou, Sokolov et al. 2019
+    ! Hybrid paper of ASTRONUM
     !/
     !Zero moment
     Moments_V(Rho_)          =  Coord_DI(Mass_, iParticle)
