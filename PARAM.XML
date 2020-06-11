@@ -9197,6 +9197,8 @@ alfvenwavedissipation	TypeCoronalHeating
 turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
+1.2			rNoReflection (read for turbulentcascade if 
+				      UseWaveReflection is .true.)
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale
