@@ -277,14 +277,20 @@ contains
              !\
              ! Ballistically (with no change in particle velocity)
              ! propagate particles for a half time-step
+             ! This step corresponds to Equation 16 of Moschou, Sokolov et al.
+             ! 2019 Hybrid paper of ASTRONUM
              !/
              call trace_particles(Dt=Dt, DoBorisStepIn=.false.)
              if(UseHybrid)call get_state_from_vdf
           end if
           !\
-          ! Calculate acceleration by the electromagnetic force. Then
-          ! ballistically (with no change in particle velocity)
+          ! Calculate acceleration by the electromagnetic force. 
+          ! This step corresponds to Equation 7, 21 and Stage 2 in Figure 2
+          ! of the Moschou, Sokolov et al. 2019 Hybrid paper of ASTRONUM
+          ! Then ballistically (with no change in particle velocity)
           ! propagate them for a half time-step
+          ! This step corresponds to Equation 16 of Moschou, Sokolov et al. 2019
+          ! Hybrid paper of ASTRONUM
           !/
           if(UseFlic)then
              if(iStage==2)call trace_particles(&
