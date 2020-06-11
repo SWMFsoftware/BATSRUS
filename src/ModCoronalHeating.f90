@@ -62,6 +62,7 @@ module ModCoronalHeating
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
+  real,   public :: rMinWaveReflection     = 0.0
 
   logical,public :: IsNewBlockAlfven = .true.
   !$omp threadprivate( IsNewBlockAlfven )
@@ -424,7 +425,7 @@ contains
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
 
-    integer :: iFluid
+    integer :: iFluid, iError
 
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
@@ -462,6 +463,10 @@ contains
           UseTurbulentCascade = .true.
           call read_var('UseWaveReflection', UseWaveReflection)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          if(UseWaveReflection)then
+             call read_var('rMinWaveReflection', rMinWaveReflection, iError)
+             if(iError/=0)rMinWaveReflection = 0.0
+          end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -881,7 +886,7 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: true_cell, R_BLK
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
@@ -901,7 +906,8 @@ contains
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if( (.not.true_cell(i,j,k,iBlock)).or.&
+            R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
