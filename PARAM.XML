@@ -9175,7 +9175,7 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
 	<if expr="$TypeCoronalHeating =~ /turbulentcascade/">
 	    <parameter name="UseWaveReflection" type="logical" default="T"/>
 	    <parameter name="LperpTimesSqrtBSi" type="real" default="1.5E5"/>
-	    <parameter name="rNoReflection" type = "real" default="0"/>
+	    <parameter name="rMinWaveReflection" type = "real" default="0"/>
 	</if>
 
 #CORONALHEATING
@@ -9197,7 +9197,7 @@ alfvenwavedissipation	TypeCoronalHeating
 turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
-1.2			rNoReflection (read for turbulentcascade if 
+1.2			rMinWaveReflection (read for turbulentcascade if 
 				      UseWaveReflection is .true.)
 
 If UseCoronalHeating is false, no CoronalHeating is included.
@@ -9235,8 +9235,8 @@ magnetic field) direction. Similar to Hollweg (1986) we use a simple scaling
 law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
 $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
-If rNoReflection > rBody is set, then the wave reflection is switched 
-off in the cells, at which R_BLK(i,j,k,iBlock) < rNoReflection 
+If rMinWaveReflection > rBody is set, then the wave reflection is switched 
+off in the cells, at which R_BLK(i,j,k,iBlock) < rMinWaveReflection 
 
 The default is TypeCoronalHeating="none"
 </command>

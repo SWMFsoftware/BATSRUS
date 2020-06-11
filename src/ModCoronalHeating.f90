@@ -63,7 +63,7 @@ module ModCoronalHeating
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
-  real,   public :: rNoReflection     = 0.0
+  real,   public :: rMinWaveReflection     = 0.0
 
   logical,public :: IsNewBlockAlfven = .true.
   !$omp threadprivate( IsNewBlockAlfven )
@@ -463,8 +463,8 @@ contains
           call read_var('UseWaveReflection', UseWaveReflection)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
-             call read_var('rNoReflection', rNoReflection, iError)
-             if(iError/=0)rNoReflection = 0.0
+             call read_var('rMinWaveReflection', rMinWaveReflection, iError)
+             if(iError/=0)rMinWaveReflection = 0.0
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -906,7 +906,7 @@ contains
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.true_cell(i,j,k,iBlock)).or.&
-            R_BLK(i,j,k, iBlock) < rNoReflection)CYCLE
+            R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 

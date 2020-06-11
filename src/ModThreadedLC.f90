@@ -846,7 +846,7 @@ contains
     end subroutine advance_thread
     !==========================================================================
     subroutine get_res_heating(nIterIn)
-      use ModCoronalHeating,  ONLY: rNoReflection
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
       integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
@@ -885,8 +885,8 @@ contains
       !\
       ! 4. Calculate the reflection coefficient
       !/
-      if(rNoReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
-         !All thread points are below rNoReflection
+      if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
+         !All thread points are below rMinWaveReflection
          ReflCoef_I(1:nPoint-1) = 0
       else
          ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
@@ -898,8 +898,8 @@ contains
          ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
               (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
          !
-         !  Some thread points may be below rNoReflection
-         where( rNoReflection*BoundaryThreads_B(iBlock)%RInv_III(&
+         !  Some thread points may be below rMinWaveReflection
+         where( rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(&
              2-nPoint:0,j,k) > 1.0) ReflCoef_I(1:nPoint-1) = 0.0
       end if
       ReflCoef_I(0) =  ReflCoef_I(1); ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
