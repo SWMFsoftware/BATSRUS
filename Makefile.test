@@ -653,7 +653,7 @@ test_graydiffusion:
 	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
-	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4
+	./Config.pl -noopenmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1661,9 +1661,6 @@ test_cometCGfluids_check:
 ### TEST FOR EUROPA TWO ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa2fluidspe:
-	-@($(MAKE) test_europa2fluidspe_start)
-
-test_europa2fluidspe_start:
 	@echo "test_europa2fluidspe_compile..." > test_europa2fluidspe.diff
 	$(MAKE) test_europa2fluidspe_compile
 	@echo "test_europa2fluidspe_rundir..." >> test_europa2fluidspe.diff
@@ -1674,7 +1671,7 @@ test_europa2fluidspe_start:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl ${OPENMP} -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
+	./Config.pl -noopenmp -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1696,9 +1693,6 @@ test_europa2fluidspe_check:
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa3fluidspe:
-	-@($(MAKE) test_europa3fluidspe_start)
-
-test_europa3fluidspe_start:
 	@echo "test_europa3fluidspe_compile..." > test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_compile
 	@echo "test_europa3fluidspe_rundir..." >> test_europa3fluidspe.diff
