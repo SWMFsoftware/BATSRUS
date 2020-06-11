@@ -646,7 +646,7 @@ contains
                               XyzMhdExtend_D)
                          ! set the point status
                          ! if PICREGIONMAX is defined in the PARAM.in
-                         if(allocated(iRegionPicLimit_I)) then
+                         if(allocated(iRegionPicLimit_I) .and. AdaptPic % DoThis) then
                             if(is_point_inside_regions(iRegionPicLimit_I, XyzMhdExtend_D)) then
                                call set_point_status(Status_I(&
                                     StatusMin_I(iRegion):StatusMax_I(iRegion)),&

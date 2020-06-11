@@ -613,7 +613,7 @@ contains
       real    :: EnthalpyFlux, FluxConst
       real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
       !\
-      ! Coreection accounting for the Enthlpy flux from the TR
+      ! Correction accounting for the Enthlpy flux from the TR
       real    :: PressureTRCoef
       !------------------------------------------------------------------------
       if(IsTimeAccurate)then
@@ -650,7 +650,6 @@ contains
       ! Turbulent heating and mass flux are not iterated
       !/
       call get_res_heating(nIterIn=nIter)
-      ! if(.not.IsTimeAccurate.and.TeSi_I(nPoint)>1.0e6)ResHeating_I=0.0
       if(USi>0)then
          FluxConst    = USi * PSi_I(nPoint)/&
               ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
@@ -847,6 +846,7 @@ contains
     end subroutine advance_thread
     !==========================================================================
     subroutine get_res_heating(nIterIn)
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
       integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
@@ -885,26 +885,34 @@ contains
       !\
       ! 4. Calculate the reflection coefficient
       !/
-      ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
-      ReflCoef_I(0) =  ReflCoef_I(1)
-      do iPoint = 2, nPoint-2
-         ReflCoef_i(iPoint) = &
-              abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
-              (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
-      end do
-      ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
-           (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
-      ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
-      !\
-      ! Solve amplitudes of the Alfven waves (arrays there have dimension)
-      ! (0:nI)
-      !/
+      if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
+         !All thread points are below rMinWaveReflection
+         ReflCoef_I(1:nPoint-1) = 0
+      else
+         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
+         do iPoint = 2, nPoint -2
+            ReflCoef_i(iPoint) = &
+                 abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
+                 (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
+         end do
+         ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
+              (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
+         !
+         !  Some thread points may be below rMinWaveReflection
+         where( rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(&
+             2-nPoint:0,j,k) > 1.0) ReflCoef_I(1:nPoint-1) = 0.0
+      end if
+      ReflCoef_I(0) =  ReflCoef_I(1); ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
+         !\
+         ! Solve amplitudes of the Alfven waves (arrays there have dimension)
+         ! (0:nI)
+         !/
       call solve_a_plus_minus(&
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinorBC=AMinorIn,              &
-           AMajorBC=AMajorOut,              &
+           AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
 
       ResHeating_I = 0.0
@@ -1142,7 +1150,7 @@ contains
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
        end do
-       ! Go backward, integrate AMajor_I with given AMinor_I
+       ! Go backward, integrate AMinor_I with given AMajor_I
        ! We integrate equation,
        !\
        ! 2da_-/d\xi=
