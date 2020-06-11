@@ -71,18 +71,18 @@ REFDIR = run_test_ref
 OPENMP = -openmp
 
 test_help:
-	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test MPIRUN=               (run tests serially)"
-	@echo "    test OPENMP=               (run tests with no openmp)"
-	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
-	@echo "    test PARALLEL=mpiexec      (run tests with mpiexec)"
-	@echo "    test NP=3 NTHREAD=2        (run tests with ${PARALLEL} -n 3 and 2 threads)"
+	@echo "    test                       (run tests with ${MPIRUN} and ${NTHREAD} OpenMP threads)"
+	@echo "    test NP=3 NTHREAD=4        (run tests with ${PARALLEL} -n 3 and 4 threads)"
+	@echo "    test NP='8 --oversubscribe'(run tests with ${PARALLEL} -n 8 --oversubscribe)"
+	@echo "    test PARALLEL=aprun        (run tests with aprun instead of mpiexec)"
+	@echo "    test NPFLAG=-np            (run tests with -np instead of -n)"
+	@echo "    test MPIRUN=               (run tests without MPI)"
+	@echo "    test OPENMP=               (run tests without OpenMP)"
 	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr_rundir            (create run directory for test_amr)"
-	@echo "    test_amr_run NP=4          (run test_amr on 4 cores)"
+	@echo "    test_amr_run NP=4          (run test_amr with 4 MPI processes)"
 	@echo "    test_amr_check             (check test_amr results against reference)"
 	@echo "    test_amr_check BLESS=YES   (update test_amr reference solutions)"
-	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr TESTDIR=run_amr   (run AMR test in run_amr directory)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
@@ -653,7 +653,7 @@ test_graydiffusion:
 	$(MAKE) test_graydiffusion_check
 
 test_graydiffusion_compile:
-	./Config.pl ${OPENMP} -e=HdEosRad -u=GrayDiffusion -g=32,4,4
+	./Config.pl -noopenmp -e=HdEosRad -u=GrayDiffusion -g=32,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -720,7 +720,7 @@ test_awsomfluids:
 	$(MAKE) test_awsomfluids_check
 
 test_awsomfluids_compile:
-	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
+	./Config.pl -f ${OPENMP} -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1661,9 +1661,6 @@ test_cometCGfluids_check:
 ### TEST FOR EUROPA TWO ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa2fluidspe:
-	-@($(MAKE) test_europa2fluidspe_start)
-
-test_europa2fluidspe_start:
 	@echo "test_europa2fluidspe_compile..." > test_europa2fluidspe.diff
 	$(MAKE) test_europa2fluidspe_compile
 	@echo "test_europa2fluidspe_rundir..." >> test_europa2fluidspe.diff
@@ -1674,7 +1671,7 @@ test_europa2fluidspe_start:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl ${OPENMP} -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
+	./Config.pl -noopenmp -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1696,9 +1693,6 @@ test_europa2fluidspe_check:
 ### TEST FOR EUROPA THREE ION FLUIDS + ELECTRON PRESSURE ###
 
 test_europa3fluidspe:
-	-@($(MAKE) test_europa3fluidspe_start)
-
-test_europa3fluidspe_start:
 	@echo "test_europa3fluidspe_compile..." > test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_compile
 	@echo "test_europa3fluidspe_rundir..." >> test_europa3fluidspe.diff
