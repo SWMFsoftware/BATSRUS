@@ -720,7 +720,7 @@ test_awsomfluids:
 	$(MAKE) test_awsomfluids_check
 
 test_awsomfluids_compile:
-	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
+	./Config.pl -f ${OPENMP} -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
