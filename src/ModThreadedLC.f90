@@ -134,7 +134,7 @@ module ModThreadedLC
   !/
   integer, parameter:: Impl_=3
 
-  real,parameter:: cTol=1.0e-6
+  real :: cTol=1.0e-6
 contains
   !============================================================================
   subroutine init_threaded_lc
@@ -262,6 +262,7 @@ contains
     use ModReadParam, ONLY: read_var
     character(LEN=7)::TypeBc = 'limited'
     logical:: DoTest
+    integer :: iError
     character(len=*), parameter:: NameSub = 'read_threaded_bc'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -279,6 +280,8 @@ contains
        if(iProc==0)write(*,'(a)')&
             'Unknown TypeBc = '//TypeBc//', reset to limited'
     end select
+    call read_var('cTol',cTol, iError)
+    if(iError/=0)cTol = 1.0e-6 !Recover the default value
     call test_stop(NameSub, DoTest)
   end subroutine read_threaded_bc
   !============================================================================
@@ -293,6 +296,7 @@ contains
     !\
     ! USE:
     !/
+    use ModAdvance,          ONLY: nJ
     use ModTransitionRegion, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
@@ -351,11 +355,14 @@ contains
     !/
     real :: HeatFlux2TR
 
-    character(len=*), parameter:: NameSub = 'solve_boundary_thread'
+    character(len=*), parameter:: NameSub = 'solve_thread'
+    character(len=12) :: NameTiming
     !-------------------------------------------------------------------
     !\
     ! Initialize all output parameters from 0D solution
     !/
+    write(NameTiming,'(a,i2.2)')'set_thread',j + nJ*(k - 1)
+    call timing_start(NameTiming)
     call interpolate_lookup_table(iTableTR, TeSiIn, Value_V, &
            DoExtrapolate=.false.)
     !\
@@ -432,6 +439,7 @@ contains
        DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
             BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
+       call timing_stop(NameTiming)
        RETURN
     case(Heat_)
        call advance_thread(IsTimeAccurate=.true.)
@@ -563,6 +571,7 @@ contains
        end do
        call stop_mpi('Failure')
     end if
+    call timing_stop(NameTiming)
   contains
     !==========================================================================
     subroutine set_pressure
