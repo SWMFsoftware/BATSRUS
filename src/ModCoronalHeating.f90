@@ -20,6 +20,15 @@ module ModCoronalHeating
 
   PRIVATE  ! except
 
+  public :: get_coronal_heat_factor
+  public :: get_coronal_heating
+  public :: get_cell_heating
+  public :: get_block_heating
+  public :: apportion_coronal_heating
+  public :: get_wave_reflection
+  public :: init_coronal_heating
+  public :: read_corona_heating
+  
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:
   real, public :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
@@ -62,7 +71,7 @@ module ModCoronalHeating
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
-  real,   public :: rMinWaveReflection     = 0.0
+  real,   public :: rMinWaveReflection = 0.0
 
   logical,public :: IsNewBlockAlfven = .true.
   !$omp threadprivate( IsNewBlockAlfven )
@@ -103,15 +112,6 @@ module ModCoronalHeating
   
   logical :: DoInit = .true.
 
-  public :: get_coronal_heat_factor
-  public :: get_coronal_heating
-  public :: get_cell_heating
-  public :: get_block_heating
-  public :: apportion_coronal_heating
-  public :: get_wave_reflection
-  public :: init_coronal_heating
-  public :: read_corona_heating
-
   ! Bill Abbet's model, if .true.
   logical, public :: UseUnsignedFluxModel = .false.
 
@@ -149,9 +149,9 @@ contains
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
     real :: BzCgs_II(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
-    real    :: TotalCoronalHeating, TimeUpdateLast = -1.0
+    real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
-    !$omp threadprivate(TimeUpdateLast, DoFirst)
+    !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
 
@@ -339,7 +339,7 @@ contains
     use BATL_lib,     ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
-    real, intent(in)    :: Bz_V(1:nI, 1:nJ, 0:nK+1)
+    real, intent(in)    :: Bz_V(1:nI, 1:nJ, 0:nK+1) ! temporary array created
     real, intent(out)   :: BzCgs_II(1:nI, 1:nJ)
     real :: MinZ, MaxZ, DxLeft, z
     integer :: iLeft
@@ -703,8 +703,8 @@ contains
     ! should really be using the computational domain, but global
     ! feild line tracing for this purpose is not easily implemented
     real :: Ufinal
-    real :: UminIfOpen = 290.0
-    real :: UmaxIfOpen = 300.0
+    real :: UminIfOpen
+    real :: UmaxIfOpen
     real :: Weight
     real :: B_D(3)
 
