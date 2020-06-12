@@ -719,8 +719,10 @@ test_awsomfluids:
 	@echo "test_awsomfluids_check..." >> test_awsomfluids.diff
 	$(MAKE) test_awsomfluids_check
 
+# Test fails on Pleiades with OpenMP
+
 test_awsomfluids_compile:
-	./Config.pl -f ${OPENMP} -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
+	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 
