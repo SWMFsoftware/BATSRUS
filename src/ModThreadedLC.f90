@@ -281,7 +281,9 @@ contains
             'Unknown TypeBc = '//TypeBc//', reset to limited'
     end select
     call read_var('cTol',cTol, iError)
-    if(iError/=0)cTol = 1.0e-6 !Recover the default value
+    if(iError/=0)then
+       cTol = 1.0e-6 !Recover the default value
+    end if
     call test_stop(NameSub, DoTest)
   end subroutine read_threaded_bc
   !============================================================================
@@ -342,7 +344,7 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer        :: nPoint, iPoint
-    integer        :: nIter = 20
+    integer        :: nIter = 40
     !\
     ! Corrrect density and pressure values in the ghost
     !/
@@ -859,6 +861,10 @@ contains
       integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
+      !
+      !Sum of a_+ and a_- and iterative values for it
+      !
+      real    :: Sigma, SigmaOld, Aux, XiTot 
       !------------------------------------------------------------------------
       !\
       ! Now prepare to calculate Alfven wave amplitude distribution
@@ -891,13 +897,44 @@ contains
               sqrt(SqrtRho)
          Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
-      !\
-      ! 4. Calculate the reflection coefficient
-      !/
+
+      !
+      ! 4. Solve amplitudes of the Alfven waves (arrays there have dimension)
+      ! (0:nI)
+      !
+      ! 4.1. As zero order approximation we solve waves with no reflection
+      ! 
+      ! solve equation 
+      !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
+      !
+      ! The sought value is in between 1 and 1 + AMinorIn
+      Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
+      do while(abs(Sigma - SigmaOld) > 0.01*cTol)
+         SigmaOld = Sigma
+         Aux = exp(-SigmaOld*XiTot)
+         Sigma = SigmaOld -( & !Residual function
+              (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
+              (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
+      end do
+      !
+      ! 4.2. Apply boundary conditions
+      !
+      AMajor_I(0) = 1; AMinor_I(nPoint) = AMinorIn
+      !
+      ! 4.3. Now, apply formulae, which are valid for no-reflection case:
+      !
+      AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
+      AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
+           exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
+ 
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
          !All thread points are below rMinWaveReflection
-         ReflCoef_I(1:nPoint-1) = 0
+         AMajorOut = AMajor_I(nPoint)
+         ReflCoef_I(0:nPoint) = 0
       else
+         !\
+         ! 5. Calculate the reflection coefficient
+         !/
          ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
          do iPoint = 2, nPoint -2
             ReflCoef_i(iPoint) = &
@@ -910,19 +947,16 @@ contains
          !  Some thread points may be below rMinWaveReflection
          where( rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(&
              2-nPoint:0,j,k) > 1.0) ReflCoef_I(1:nPoint-1) = 0.0
-      end if
-      ReflCoef_I(0) =  ReflCoef_I(1); ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
-         !\
-         ! Solve amplitudes of the Alfven waves (arrays there have dimension)
-         ! (0:nI)
-         !/
-      call solve_a_plus_minus(&
+         ReflCoef_I(0) =  ReflCoef_I(1)
+         ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
+         call solve_a_plus_minus(&
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
+      end if
 
       ResHeating_I = 0.0
       ResHeating_I(1:nPoint-1) = &
@@ -1005,7 +1039,7 @@ contains
            (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
       M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
            2*ResCooling_I(1:nPoint-1)/&
-           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/dCons
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
 
     end subroutine get_heat_cond
     !==========================================================================
@@ -1125,8 +1159,8 @@ contains
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
-    AMajor_I(0:nI)  = 1.0
-    AMinor_I(0:nI) = AMinorBC
+    !AMajor_I(0:nI)  = 1.0
+    !AMinor_I(0:nI)  = AMinorBC
     if(present(nIterIn))then
        nIter=nIterIn
     else
@@ -1190,6 +1224,11 @@ contains
                abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
        end do
        if(ADiffMax<cTol)EXIT
+       if(DoConvergenceCheck.and.iIter==nIter)then
+          write(*,*)'XiTot=', Xi_I(nI),' ADiffMax=', ADiffMax,&
+               ' AMinorBC=',AMinorBC
+          call stop_mpi('Did not reach convergence in solve_a_plus_minus')
+       end if
     end do
     AMajorBC = AMajor_I(nI)
   end subroutine solve_a_plus_minus
@@ -1227,7 +1266,8 @@ contains
     integer:: iAction
 
     integer :: i, j, k, Major_, Minor_, kStart, kEnd, jStart, jEnd
-    real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
+    real :: TeSi, PeSi, BDirThread_D(3), BDirFace_D(3)! BDir_D(3), 
+    real :: U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
     real :: RhoNoDimOut, UAbsMax
@@ -1285,21 +1325,47 @@ contains
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
     do k = kStart, kEnd; do j = jStart, jEnd
+       !
+       ! Field on thread is nothing but B0_field. On top of thread
+       ! there is the cell-centered B0:
+       !
+       BDirThread_D = B0_DGB(:, 1, j, k, iBlock)
+       !
+       ! On the other hand, the heat flux through the inner bopundary, which 
+       ! needs to be set via the bondary condition is epressed in terms of
+       ! the face-averaged field:
+       !
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
+       BDirFace_D = B1_D + 0.50*(BDirThread_D + &
             B0_DGB(:, 0, j, k, iBlock))
-       BDir_D = BDir_D/max(norm2(BDir_D), 1e-30)
-       DirR_D = Xyz_DGB(:,1,j,k,iBlock)
-       DirR_D = DirR_D/max(norm2(DirR_D),1e-30)
+       BDirFace_D = BDirFace_D/max(norm2(BDirFace_D), 1e-30)
+       !!$ To be deleted
+       !BDirThread_D = BDirFace_D
+       if(UseCME)then
+          !
+          ! Thread field may include a contribution from CME 
+          !
+          !
+          call EEE_get_state_BC(Xyz_DGB(:,1,j,k,iBlock), &
+               RhoCme, Ucme_D, Bcme_D, pCme, &
+               time_simulation, n_step, iteration_number)
+          BDirThread_D = BDirThread_D + Bcme_D*Si2No_V(UnitB_)
+       end if
+       BDirThread_D = BDirThread_D/max(norm2(BDirThread_D), 1e-30)
 
-       if(sum(BDir_D*DirR_D) <  0.0)then
-          BDir_D = -BDir_D
+       DirR_D = Xyz_DGB(:,1,j,k,iBlock)
+       DirR_D = DirR_D/norm2(DirR_D)
+
+       if(sum(BDirThread_D*DirR_D) <  0.0)then
+          BDirThread_D = -BDirThread_D
           Major_ = WaveLast_
           Minor_ = WaveFirst_
        else
           Major_ = WaveFirst_
           Minor_ = WaveLast_
        end if
+       if(sum(BDirFace_D*DirR_D) <  0.0)&
+            BDirFace_D = -BDirFace_D       
        !\
        ! Calculate input parameters for solving the thread
        !/
@@ -1313,7 +1379,7 @@ contains
             (SqrtRho* PoyntingFluxPerB)  ))
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
-       U = sum(U_D*BDir_D)
+       U = sum(U_D*BDirThread_D)
        U = sign(min(abs(U), UAbsMax), U)
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
@@ -1332,7 +1398,7 @@ contains
           ! dTe/ds*(b . DirR)
           !/
           Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&
-               sum(BDir_D*DirR_D),0.7)*&
+               sum(BDirFace_D*DirR_D),0.7)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           !\
           ! Version Easter 2015 Limit TeGhost
@@ -1390,13 +1456,13 @@ contains
           !/
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
           if(UseAlignedVelocity)then
-             U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
+             U   = sum(U_D*BDirThread_D); U_D = U_D - U*BDirThread_D
              U   = sign(min(abs(U), UAbsMax), U)
           else
              U = 0
           end if
           State_VG(RhoUx_:RhoUz_, i, j, k) = -U_D*State_VG(Rho_,i,j,k) &
-                + U*BDir_D*State_VG(Rho_,i,j,k)
+                + U*BDirThread_D*State_VG(Rho_,i,j,k)
 
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
