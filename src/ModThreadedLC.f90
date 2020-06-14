@@ -134,7 +134,8 @@ module ModThreadedLC
   !/
   integer, parameter:: Impl_=3
 
-  real :: cTol=1.0e-6
+  integer        :: nIter = 20
+  real           :: cTol=1.0e-6
 contains
   !============================================================================
   subroutine init_threaded_lc
@@ -176,7 +177,8 @@ contains
 
     allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
     allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
-    allocate(DResCoolingOverDLogT_I(nPointThreadMax)); DResCoolingOverDLogT_I = 0.0
+    allocate(DResCoolingOverDLogT_I(nPointThreadMax)) 
+    DResCoolingOverDLogT_I = 0.0
     allocate(ResEnthalpy_I(nPointThreadMax));ResEnthalpy_I = 0.0
     allocate(ResHeatCond_I(nPointThreadMax));ResHeatCond_I = 0.0
     allocate( ResGravity_I(nPointThreadMax)); ResGravity_I = 0.0
@@ -283,7 +285,10 @@ contains
     call read_var('cTol',cTol, iError)
     if(iError/=0)then
        cTol = 1.0e-6 !Recover the default value
+       RETURN
     end if
+    call read_var('nIter', nIter, iError)
+    if(iError/=0)nIter = 20 !Recover a default value
     call test_stop(NameSub, DoTest)
   end subroutine read_threaded_bc
   !============================================================================
@@ -344,7 +349,6 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer        :: nPoint, iPoint
-    integer        :: nIter = 40
     !\
     ! Corrrect density and pressure values in the ghost
     !/
@@ -639,9 +643,12 @@ contains
       else
          DtInv = 0.0
       end if
-      !\
+      !
+      ! In the equations below: 
+      ! 
+      !
       ! Initialization
-      !/
+      !
       TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
       TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
@@ -700,16 +707,20 @@ contains
                  ElectronEnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
             ResEnthalpy_I(1)   = 0.0
             L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
-                 - ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
+                 - ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
+                 (3.50*Cons_I(2:nPoint-1))
             M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
-                 + ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
+                 + ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
+                 (3.50*Cons_I(2:nPoint-1))
          elseif(USi<0)then
             ResEnthalpy_I(1:nPoint-1) = &
                  -ElectronEnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
             U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
-                 + ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
+                 + ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
+                 (3.50*Cons_I(1:nPoint-1))
             M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
-                 - ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
+                 - ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
+                 (3.50*Cons_I(1:nPoint-1))
          end if
          !==========Add Gravity Source================================
          !\
@@ -755,6 +766,15 @@ contains
          M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) +&
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
+         !M_VVI(Cons_,LogP_,1:nPoint-1) = M_VVI(Cons_,LogP_,1:nPoint-1)&
+         !  -0.250*QeRatio*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
+         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+              0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+              TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
+              0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          DCons_VI = 0.0
          IonEnthalpyFlux = ElectronEnthalpyFlux/Z
          ResEnthalpy_I=0.0
@@ -785,6 +805,15 @@ contains
          M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) -&
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
+         !M_VVI(Ti_,LogP_,1:nPoint-1) = M_VVI(Ti_,LogP_,1:nPoint-1)&
+         !  -0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
+         M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
+              0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+              TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
+              0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          call tridiag_3by3_block(n=nPoint-1,  &
               L_VVI=L_VVI(:,:,1:nPoint-1),&
               M_VVI=M_VVI(:,:,1:nPoint-1),&
