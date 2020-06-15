@@ -44,14 +44,14 @@ module ModFieldLineThread
      ! Renamed and revised: in meters
      !/
      real,pointer :: LengthSi_III(:,:,:)
-     !\
-     ! The integral, \int{B ds}, from the photoshere to the given point
+     
+     ! 
      ! Renamed and revised: only the value BDsInv_III(0,j,k) keeps this
      ! sense and used for calculating TMax_II(j,k). The values of
      ! BDsInv_III(negative iPoint,j,k) are equal to
      ! ds[m]/(B[T]*PoyntingFluxPerBSi). Are used to calculate
      ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsInv
-     !/
+     !
      real,pointer :: BDsInvSi_III(:,:,:)
      !\
      ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
@@ -64,7 +64,7 @@ module ModFieldLineThread
      !\
      ! Ds[m]/(B[T]*PoyntingFluxPerBSi)
      ! By multiplying this by 2*(3/2Pe) we obtain the internal energy in the
-     ! interval between two grid points, in seconds. The physical meanin is
+     ! interval between two grid points, in seconds. The physical meaning is
      ! how soon a plasma may be heated by this internal energy in the cell
      ! volume with having a BC for the Poynting flux at the left boundary
      ! and zero flux at the right boundary: In Si system
@@ -623,7 +623,8 @@ contains
     ! Aux
     real :: ROld, Aux, CoefXi
     real :: DirB_D(MaxDim), DirR_D(MaxDim), XyzOld_D(MaxDim)
-    real:: CosBRMin = 1.0
+    real :: CosBRMin = 1.0
+    real :: BdS,  IntegralBdS
     integer, parameter::nCoarseMax = 2
 
     logical:: DoTest
@@ -758,12 +759,51 @@ contains
           write(*,*)'iPoint, R=', iPoint, R
           call stop_mpi('Thread did not reach the photosphere!')
        end if
+       !
+       ! With assumed default value for nIntervalTR = 2
+       ! nPoint is the total number of temperature grid points,
+       ! indexed (1-nPoint:0)
+       ! Point with index= -1 - nPoint is at the photosphere level
+       ! Point with index= -nPoint is inside the transition region.
+       ! The distance between the points -1-nPoint and -nPoint is 
+       ! Aux*Ds<=Ds. The distance between the points -nPoint and
+       ! 1 - nPoint is Ds. The point 1 - nPoint is on top of the TR.
+       ! 
+       ! At the grid points, (1-nPoint:0) are defined:
+       ! 
+       ! Electron temperature State_VIII(TeSi_,1-nPoint:0, j,k)
+       ! Ion Temperature      State_VIII(TiSi_,1-nPoint:0, j,k)
+       ! Pressure             State_VIII(PSi_ ,1-nPoint:0, j,k)  
+       ! Gen. coords.         Coord_DIII(:    ,1-nPoint:0, j,k)
+       ! Magnetic field                  B_III(1-nPoint:0, j,k)
+       ! Inv. heliocentric distance   RInv_III(1-nPoint:0, j,k)
+       !
+       ! At by one smaller number of grid points is defined:
+       !
+       ! Barometric factor:          TGrav_III(1-nPoint:0, j,k)
+       !
+       ! At by one larger number of grid points are defined:
+       !
+       ! Amplitude of major wave State_VIII(AMajor_,-nPoint:0, j,k)
+       ! Amplitude of minor wave State_VIII(AMajor_,-nPoint:0, j,k)
+       ! The wave grid point with index -nPoint<iPoint<0 is between
+       ! iPoint and iPoint+1 points of the temperature grid. The
+       ! marginal points are at the top of TR and at the top of thread
+       ! just as for the temperature grid, therefore, the marginal 
+       ! grid spaces are of the length of Ds/2
+       !
+       ! Differentials and integrals over length:
+       ! LengthSi_III
+       ! BDsInvSi_III
+       ! DsOverBSi_III
+       ! Xi_III
 
+       ! 
        ! Calculate more accurately the intersection point
        ! with the photosphere surface
        ROld = 1/BoundaryThreads_B(iBlock) % RInv_III(1-iPoint, j, k)
        Aux = (ROld - RBody) / (ROld -R)
-       Xyz_D =(1 - Aux)*XyzOld_D +  Aux*Xyz_D
+       Xyz_D = (1 - Aux)*XyzOld_D +  Aux*Xyz_D
        !\
        ! Store the last point
        !/
@@ -771,11 +811,11 @@ contains
        call get_b0(Xyz_D, B0_D)
        B0 = norm2(B0_D)
        BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
-       !\
+       !
        ! Store the number of points. This will be the number of temperature
        ! nodes such that the first one is on the top of the TR, the last
        ! one is in the center of physical cell
-       !/
+       !
        nPoint = iPoint + 1 - nIntervalTR
        BoundaryThreads_B(iBlock) % nPoint_II(j,k) = nPoint
        BoundaryThreads_B(iBlock)%TGrav_III(2-nPoint:0,j,k) = &
@@ -783,28 +823,26 @@ contains
             (-BoundaryThreads_B(iBlock)%RInv_III(2-nPoint:0,j,k) + &
             BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-1,j,k))
 
-       !\
+       !
        ! Store the lengths
-       !/
+       !
        BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) = &
             Ds*Aux*No2Si_V(UnitX_)
-       BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) = &
+       IntegralBdS = &
             Ds*Aux*0.50*(                                         &
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +    &
             BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
        iPoint = iPoint - 1
-       !\
+       !
        !     |           |
        !-iPoint-1      -iPoint
-       !/
+       !
        iInterval = 1
        do while(iInterval < nIntervalTR)
           BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =     &
                BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k) + &
                Ds*No2Si_V(UnitX_)
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =     &
-               BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) + &
-               Ds*0.50*(&
+          IntegralBdS = IntegralBdS + Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +       &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
           iPoint = iPoint - 1
@@ -850,27 +888,23 @@ contains
           BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =      &
                BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k ) + &
                Ds*No2Si_V(UnitX_)
-          !\
+          !
           ! Sum up the integral of Bds, dimensionless, to calculate TMax
-          !/
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =      &
-               BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) +  &
-               Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
+          !
+          BdS = Ds*0.50*(&
+               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) + &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-          !\
+          IntegralBdS = IntegralBdS + BdS
+          !
           ! 1/(ds*B*Poynting-flux-over-field ratio)
           ! calculated in the flux point, so that the averaged magnetic field
           ! is used. Calculated in SI units. While multiplied by the difference
           ! in the conservative variable, 2/7*kappa*\Delta T^{7/2} gives the
           ! ratio of the heat flux to the effective Poynting flux.
-          !/
+          !
           BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) =   1/  &
-               (PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
-               No2Si_V(UnitX_)*Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
-               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) ) )
-          !\
+               (PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_)*BdS)
+          !
           ! The distance between the flux points (as well as the AW amplitude
           ! nodes multiplied by the coefficient to find dimensionless
           ! wave damping per the unit of length. Calculated in terms of
@@ -881,33 +915,33 @@ contains
                BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
                Ds*sqrt(CoefXi/               &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k))
-          !\
+          !
           ! Distance between the flux points (faces) divided by
           ! the magnetic field in the temperature point (or, same,
           ! multiplied by the crosssection of the flux tube)
           ! and divided by the Poynting-flux-to-field ratio.
-          !/
+          !
           BoundaryThreads_B(iBlock) % DsOverBSi_III(1-iPoint, j, k) =     &
                Ds*No2Si_V(UnitX_)/                                        &
                (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)         &
                *PoyntingFluxPerBSi*No2Si_V(UnitB_))
           iPoint = iPoint - 1
        end do
-       !\
+       !
        !          |       |           Temperature nodes
        !         -1       0
        !              x       x       Flux nodes
        !             -1       0
-       !/
+       !
 
-       !\
+       !
        ! Correct the effective length of the last flux node
        !          |       |           Temperature nodes
        !         -1       0
        !              x   <---x       Flux nodes
        !             -1       0
        !
-       !/
+       !
        BoundaryThreads_B(iBlock) % Xi_III(0, j, k) =         &
             BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
             0.50*Ds*sqrt(CoefXi/                             &
@@ -916,8 +950,10 @@ contains
        BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
             norm2(Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock) )
 
-       call limit_temperature(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
+       !??
+       
+       call limit_temperature(&
+            IntegralBdS, BoundaryThreads_B(iBlock)%TMax_II(j, k))
 
     end do; end do
     if(DoThreadRestart)call read_thread_restart(iBlock)
