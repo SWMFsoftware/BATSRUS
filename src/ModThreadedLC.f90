@@ -768,13 +768,13 @@ contains
                (3.50*Cons_I(1:nPoint-1))
          !M_VVI(Cons_,LogP_,1:nPoint-1) = M_VVI(Cons_,LogP_,1:nPoint-1)&
          !  -0.250*QeRatio*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-              0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-              TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
-              0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
+         !M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         !M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
+         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          DCons_VI = 0.0
          IonEnthalpyFlux = ElectronEnthalpyFlux/Z
          ResEnthalpy_I=0.0
@@ -807,13 +807,13 @@ contains
                (3.50*Cons_I(1:nPoint-1))
          !M_VVI(Ti_,LogP_,1:nPoint-1) = M_VVI(Ti_,LogP_,1:nPoint-1)&
          !  -0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
-              0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-              TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
-              0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
+         !M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
+         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         !M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
+         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          call tridiag_3by3_block(n=nPoint-1,  &
               L_VVI=L_VVI(:,:,1:nPoint-1),&
               M_VVI=M_VVI(:,:,1:nPoint-1),&
@@ -937,28 +937,28 @@ contains
       !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
       !
       ! The sought value is in between 1 and 1 + AMinorIn
-      Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
-      do while(abs(Sigma - SigmaOld) > 0.01*cTol)
-         SigmaOld = Sigma
-         Aux = exp(-SigmaOld*XiTot)
-         Sigma = SigmaOld -( & !Residual function
-              (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
-              (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
-      end do
+      !Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
+      !do while(abs(Sigma - SigmaOld) > 0.01*cTol)
+      !   SigmaOld = Sigma
+      !   Aux = exp(-SigmaOld*XiTot)
+      !   Sigma = SigmaOld -( & !Residual function
+      !        (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
+      !        (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
+      !end do
       !
       ! 4.2. Apply boundary conditions
       !
-      AMajor_I(0) = 1; AMinor_I(nPoint) = AMinorIn
+      !AMajor_I(0) = 1; AMinor_I(nPoint) = AMinorIn
       !
       ! 4.3. Now, apply formulae, which are valid for no-reflection case:
       !
-      AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
-      AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
-           exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
+      !AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
+      !AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
+      !     exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
  
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
          !All thread points are below rMinWaveReflection
-         AMajorOut = AMajor_I(nPoint)
+      !   AMajorOut = AMajor_I(nPoint)
          ReflCoef_I(0:nPoint) = 0
       else
          !\
@@ -978,14 +978,14 @@ contains
              2-nPoint:0,j,k) > 1.0) ReflCoef_I(1:nPoint-1) = 0.0
          ReflCoef_I(0) =  ReflCoef_I(1)
          ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
-         call solve_a_plus_minus(&
+      end if
+      call solve_a_plus_minus(&
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
-      end if
 
       ResHeating_I = 0.0
       ResHeating_I(1:nPoint-1) = &
@@ -1188,8 +1188,8 @@ contains
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
-    !AMajor_I(0:nI)  = 1.0
-    !AMinor_I(0:nI)  = AMinorBC
+    AMajor_I(0:nI)  = 1.0
+    AMinor_I(0:nI)  = AMinorBC
     if(present(nIterIn))then
        nIter=nIterIn
     else
