@@ -210,9 +210,10 @@ contains
   subroutine set_b0_cell(iBlock)
 
     ! Calculate the cell centered B0 for block iBlock
-
+    use ModConst, ONLY: cTiny
     use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B
-    use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+    use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+         CoordMin_D, CoordMin_DB
 
     integer, intent(in) :: iBlock
 
@@ -232,7 +233,8 @@ contains
     ! calculated B0 the threads may or may not need to be calculated
     ! depending on the block proximity to the Sun
     !/
-    if(UseFieldLineThreads)DoThreads_B(iBlock) = .true.
+    if(UseFieldLineThreads)DoThreads_B(iBlock) = &
+          abs(CoordMin_D(1) - CoordMin_DB(1,iBlock)) < cTiny
     if(DoTest)write(*,*)'B0*Cell_BLK=',&
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
