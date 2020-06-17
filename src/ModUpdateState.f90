@@ -1733,7 +1733,7 @@ contains
   subroutine update_b0
 
     use ModMain,          ONLY: nBlock, Unused_B, UseNewMagnetogram,      &
-         time_simulation, NameThisComp, t_max, tMagnetogram, DoThreads_B, &
+         time_simulation, NameThisComp, t_max, tMagnetogram, & 
          time_accurate
     use ModPhysics,       ONLY: ThetaTilt
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
@@ -1806,7 +1806,6 @@ contains
     ! Recalculate B0 face values at resolution changes
     call set_b0_reschange
     if(UseFieldLineThreads)then
-       DoThreads_B = .true.
        call set_threads
        call exchange_messages
     end if

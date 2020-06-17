@@ -445,7 +445,12 @@ contains
                call deallocate_thread_b(iBlock)
           CYCLE
        end if
-       if(.not.DoThreads_B(iBlock))CYCLE
+       if(.not.DoThreads_B(iBlock))then
+          if(IsAllocatedThread_B(iBlock).and.&
+               NeiLev(1,iBlock)/=NOBLK)&
+               call deallocate_thread_b(iBlock)
+          CYCLE
+       end if
        DoThreads_B(iBlock) = .false.
        !\
        ! Check if the block is at the inner boundary
