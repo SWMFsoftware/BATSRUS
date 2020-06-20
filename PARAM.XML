@@ -9254,7 +9254,8 @@ If MaxImbalance=2 (default value), this agrees with the usual assumption that
 80% of the turbulent energy is transported outward, but 20% (which is one fourth
 =1/(2**2) of the outward propagated turbulence) is reflected toward the Sun.
 
-</command.
+</command>
+
 <command name="LONGSCALEHEATING">
 	<parameter name="DoChHeat" type="logical" default="F"	/>
 	<if expr="$DoChHeat">
