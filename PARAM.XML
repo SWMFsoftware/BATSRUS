@@ -9240,7 +9240,21 @@ off in the cells, at which R_BLK(i,j,k,iBlock) < rMinWaveReflection
 
 The default is TypeCoronalHeating="none"
 </command>
+<command name="LIMITIMBALANCE">
+	 <parameter name="MaxImbalance" type="real" default="2.0"/>
 
+#LIMITIMBALANCE
+2.0		MaxImbalance
+
+This command allows the user to adjust (usually, reduce) the reflection
+of Alfven waves in the coronal hole, if the "turbulentcascade" type of
+coronal heating is applied. In brief, the reflected energy flux is limited
+by the 1/(MaxImbalance**2) fraction of the outgoing turbulent energy flux.
+If MaxImbalance=2 (default value), this agrees with the usual assumption that
+80% of the turbulent energy is transported outward, but 20% (which is one fourth
+=1/(2**2) of the outward propagated turbulence) is reflected toward the Sun.
+
+</command.
 <command name="LONGSCALEHEATING">
 	<parameter name="DoChHeat" type="logical" default="F"	/>
 	<if expr="$DoChHeat">
