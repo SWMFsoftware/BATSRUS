@@ -235,6 +235,13 @@ contains
           if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
           if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
 
+          do iDim = 1, nDim
+             if (XyzMinPic_DI(iDim, iRegion) >= XyzMaxPic_DI(iDim, iRegion)) &
+                  call stop_mpi(NameSub//':MinPic should be smaller than MaxPic!')
+             if(DxyzPic_DI(iDim, iRegion)<0) call stop_mpi(NameSub//&
+                  ':The PIC cell size should be a positive number!')
+          enddo
+
           ! Origo point for the IPIC3D grid for this region
           XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
 
@@ -415,7 +422,16 @@ contains
           ! Fix the PIC domain range.
           nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
           LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
-          if(UseAdaptivePic) PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
+          if(UseAdaptivePic) then
+             PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
+             
+             if(iProc == 0 .and. mod(nCell, nCellPerPatch) .ne. 0)&
+                  call stop_mpi(&
+                  'In all directions, the PIC grid cell number '//&
+                  '(defined by #PICGRID) should be divisible by the patch size,'&
+                  //' which is defined by #PICPATCH.')
+             
+          endif
        end do
     end do
 
