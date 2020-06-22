@@ -253,12 +253,11 @@ T			DoAddFluxRope
 -10.0			LatitudeCme
 0.0			OrientationCme
 GL			TypeCme
-1.39707287148199	BStrength
+1.4			BStrength
 1.03			Radius
 0.7			Stretch
 1.13			ApexHeight
-0.8			ModulationRho
-0.8			ModulationP
+
 
 !#STOP
 !51			MaxIteration
