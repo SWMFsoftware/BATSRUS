@@ -71,7 +71,7 @@ REFDIR = run_test_ref
 OPENMP = -openmp
 
 test_help:
-	@echo "    test                       (run tests with ${MPIRUN} and ${NTHREAD} OpenMP threads)"
+	@echo "    test                       (run tests with ${OMPIRUN})"
 	@echo "    test NP=3 NTHREAD=4        (run tests with ${PARALLEL} -n 3 and 4 threads)"
 	@echo "    test NP='8 --oversubscribe'(run tests with ${PARALLEL} -n 8 --oversubscribe)"
 	@echo "    test PARALLEL=aprun        (run tests with aprun instead of mpiexec)"
@@ -805,7 +805,7 @@ test_outerhelio2d_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/imf_oh2d_test.dat ./imf_oh2d_test.dat
 
 test_outerhelio2d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_outerhelio2d_check:
@@ -898,7 +898,7 @@ test_func_compile:
 	make PIDL
 
 test_func_run: test_rundir
-	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
+	./TestSuite.pl -r='${OMPIRUN} ' -d=${TESTDIR} func
 
 test_func_ref:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
@@ -958,7 +958,7 @@ test_titan_restart:
 test_titan_restart_save:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_titan
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -966,7 +966,7 @@ test_titan_restart_read:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
@@ -1029,7 +1029,7 @@ test_mars_restart:
 test_mars_restart_save:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_mars
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -1037,7 +1037,7 @@ test_mars_restart_read:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
@@ -1100,7 +1100,7 @@ test_marsfluids_restart:
 test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_marsfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -1108,7 +1108,7 @@ test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
@@ -1171,7 +1171,7 @@ test_venus_restart:
 test_venus_restart_save:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_venus
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -1179,7 +1179,7 @@ test_venus_restart_read:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
@@ -1388,7 +1388,7 @@ test_cometfluids_restart:
 test_cometfluids_restart_save:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_cometfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
@@ -1396,7 +1396,7 @@ test_cometfluids_restart_read:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
-	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
@@ -1885,7 +1885,7 @@ test_L1toBC_rundir: test_rundir
 	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
 
 test_L1toBC_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_L1toBC_check:
