@@ -1712,8 +1712,9 @@ test_europa3fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.3fluids PARAM.in; \
 	   	       cp Param/EUROPA/satellite_e4.dat satellite_3fpe_e4.dat
 
+# OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; -noopenmp ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
 
 test_europa3fluidspe_check:
