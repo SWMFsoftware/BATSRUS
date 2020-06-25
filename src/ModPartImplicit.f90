@@ -2325,7 +2325,7 @@ contains
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
          set_block_values, set_cell_values, get_speed_max, &
-         DoLf, DoAw, DoRoe, DoHll, DoHlld, UnLeft_I, UnRight_I
+         UnLeft_I, UnRight_I
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
 
@@ -2340,12 +2340,6 @@ contains
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    DoLf  = .true.
-    DoAw  = .false.
-    DoRoe = .false.
-    DoHll = .false.
-    DoHlld= .false.
 
     ! The electron speed is set to zero (I can't remember why)
     UnLeft_I(eFluid_)  = 0.0
@@ -2363,6 +2357,8 @@ contains
 
        call set_cell_values
 
+       ! This is inconsistent for hd with Sokolov scheme,
+       ! because originally the maximum speed from Rusanov scheme is applied!
        call get_speed_max(Primitive_V, &
             B0_DF( x_,iFace, jFace, kFace), &
             B0_DF( y_,iFace, jFace, kFace), &
