@@ -814,7 +814,7 @@ contains
          !M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
          !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
          !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
-         call tridiag_3by3_block(n=nPoint-1,  &
+         call tridiag_block_matrix(nDim=3, nI=nPoint-1,  &
               L_VVI=L_VVI(:,:,1:nPoint-1),&
               M_VVI=M_VVI(:,:,1:nPoint-1),&
               U_VVI=U_VVI(:,:,1:nPoint-1),&
@@ -981,15 +981,10 @@ contains
       call solve_a_plus_minus(&
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
-           Xi_I=Xi_I(0:nPoint),            &
+           DXi_I=DXi_I(1:nPoint),          &
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
-
-      ResHeating_I = 0.0
-      ResHeating_I(1:nPoint-1) = &
-           (AMajor_I(0:nPoint-2)**2 - AMinor_I(0:nPoint-2)**2)&
-           -(AMajor_I(1:nPoint-1  )**2 - AMinor_I(1:nPoint-1)**2)
     end subroutine get_res_heating
     !==========================================================================
     subroutine get_heat_cond
@@ -1108,14 +1103,18 @@ contains
   ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
   ! Here each of the compenets w_i and r_i are 2-component states and
   ! m_i, l_i, u_i are 2*2 matrices                                             !
-  subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-
-    integer, intent(in):: n
-    real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
-    real, intent(out):: W_VI(3,n)
+  subroutine tridiag_block_matrix(nDim,nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
+    integer, intent(in):: nDim
+    integer, intent(in):: nI
+    real, intent(in)   :: L_VVI(nDim,nDim,nI)
+    real, intent(in)   :: M_VVI(nDim,nDim,nI)
+    real, intent(in)   :: U_VVI(nDim,nDim,nI)
+    real, intent(in)   :: R_VI(nDim,nI)
+    real, intent(out)  :: W_VI(nDim,nI)
 
     integer:: j
-    real   :: TildeM_VV(3,3), TildeMInv_VV(3,3), TildeMInvDotU_VVI(3,3,2:n)
+    real   :: TildeM_VV(nDim,nDim), TildeMInv_VV(nDim,nDim) 
+    real   :: TildeMInvDotU_VVI(nDim,nDim,2:nI)
 
     !\
     ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation
@@ -1123,18 +1122,18 @@ contains
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
     !/
-    character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
+    character(len=*), parameter:: NameSub = 'tridiag_block_matrix'
     !--------------------------------------------------------------------------
     if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
-    TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
+    TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
     !\
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
     W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
-    do j=2,n
+    do j=2, nI
        !\
        ! Next 3*3 blok element of the matrix, Inverted(Tilde(M)).U
        !/
@@ -1153,7 +1152,7 @@ contains
        !\
        ! Next element of inverted(Tilde(M))
        !/
-       TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
+       TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
        !\
        ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
        ! satisfying the eq. (tilde(M) + L).W = R
@@ -1161,21 +1160,21 @@ contains
        W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j)) - &
             matmul(TildeMInv_VV,matmul(L_VVI(:,:,j),W_VI(:,j-1)))
     end do
-    do j=n-1,1,-1
+    do j = nI - 1, 1, -1
        !\
        ! Finally we solve equation
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        !/
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-  end subroutine tridiag_3by3_block
+  end subroutine tridiag_block_matrix
   !============================================================================
-  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinorBC,&
+  subroutine solve_a_plus_minus(nI, ReflCoef_I, DXi_I, AMinorBC,&
        AMajorBC, nIterIn)
     use ModCoronalHeating, ONLY: MaxImbalance
     ! INPUT
     integer,         intent(in):: nI
-    real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
+    real,            intent(in):: ReflCoef_I(0:nI), DXi_I(1:nI)
     real,            intent(in):: AMinorBC         ! BC for A-
     ! OUTPUT
     real,           intent(out):: AMajorBC          ! BC for A+
@@ -1187,6 +1186,7 @@ contains
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     real :: DeltaAPlus_I(1:nI), DeltaAMinus_I(0:nI-1)
     real :: Source_I(0:nI), SourceAdvection_I(0:nI)
+    real :: DissipationMinus_I(1:nI), DissipationPlus_I(1:nI)
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
     AMajor_I(0:nI)  = 1.0
@@ -1196,6 +1196,8 @@ contains
     else
        nIter=nIterMax
     end if
+    DissipationMinus_I = 0.0
+    DissipationPlus_I  = 0.0
     do iIter=1,nIter
        !\
        ! Go forward, integrate AMajor_I with given AMinor_I
@@ -1209,17 +1211,19 @@ contains
                min(0.5*ReflCoef_I(iStep-1)/max(AM,AP),  1.0)- &
                AP*AM
           AOld = AMajor_I(iStep)
-          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
+          DeltaXi = DXi_I(iStep)
 
           ! Corrector
           AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
           APMid = AP + 0.5*Derivative*DeltaXi
-          Derivative = -AMMid*&
+          
+          DissipationPlus_I(iStep) = (-AMMid*&
                (max(0.0,APMid - MaxImbalance*AMMid) - &
                max(0.0,AMMid - MaxImbalance*APMid))*&
                min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/&
-               max(AMMid,APMid), 1.0) - AMMid*APMid
-          AMajor_I(iStep) = AP + Derivative*DeltaXi
+               max(AMMid,APMid), 1.0) - AMMid*APMid)*DeltaXi
+          
+          AMajor_I(iStep) = AP + DissipationPlus_I(iStep)
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
        end do
@@ -1234,22 +1238,22 @@ contains
        do iStep=nI - 1, 0, -1
           ! Predictor
           AP = AMajor_I(iStep+1); AM = AMinor_I(iStep+1)
-          Derivative = -AP*(max(0.0,AP - MaxImbalance*AM) - &
+          Derivative = AP*(max(0.0,AP - MaxImbalance*AM) - &
                max(0.0,AM - MaxImbalance*AP)     )*&
-               min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
+               min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) - &
                AP*AM
           AOld = AMinor_I(iStep)
-          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
+          DeltaXi = DXi_I(iStep+1)
 
           ! Corrector
           APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
-          AMMid = AM - 0.5*Derivative*DeltaXi
-          Derivative = -APMid*&
+          AMMid = AM + 0.5*Derivative*DeltaXi
+          DissipationMinus_I(iStep + 1) = (APMid*&
                ( max(0.0,APMid -MaxImbalance*AMMid)- &
                max(0.0,AMMid - MaxImbalance*APMid) )*&
                min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/&
-               max(AMMid, APMid), 1.0) + AMMid*APMid
-          AMinor_I(iStep) = AMinor_I(iStep+1) - Derivative*DeltaXi
+               max(AMMid, APMid), 1.0) - AMMid*APMid)*DeltaXi
+          AMinor_I(iStep) = AMinor_I(iStep+1) + DissipationMinus_I(iStep + 1)
           ADiffMax = max(ADiffMax,&
                abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
        end do
@@ -1261,6 +1265,11 @@ contains
        end if
     end do
     AMajorBC = AMajor_I(nI)
+    ResHeating_I = 0.0
+    ResHeating_I(1:nI-1) = -(AMajor_I(0:nI-2) + AMajor_I(1:nI-1  ))*&
+         DissipationPlus_I(1:nI-1) -&
+         (AMinor_I(0:nI-2) + AMinor_I(1:nI-1))*&
+         DissipationMinus_I(1:nI-1)
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
