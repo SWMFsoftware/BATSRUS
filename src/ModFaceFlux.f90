@@ -84,7 +84,7 @@ module ModFaceFlux
   character(len=10), public:: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
-  logical, public:: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
+  logical :: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
@@ -4081,7 +4081,7 @@ contains
       end if
 
       ! Fast speed multipled by the face area
-      if(UseBorisSimple .or. (UseEfield))then
+      if(UseBorisSimple .or. UseEfield)then
          Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
@@ -4123,7 +4123,7 @@ contains
       if(UseAlfvenWaves.and.UseAwSpeed) then
          !\
          ! In this case the propagation speed for
-         ! Alfven waves equal to the Alvfen speed
+         ! Alfven waves equal to the Alfven speed
          ! may happen to be larger that the fast wave
          ! speed in the "hat" state
          !/
