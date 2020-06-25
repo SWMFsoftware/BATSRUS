@@ -4787,56 +4787,57 @@ but on some systems the flush may be very slow.
 The default is to flush the output, i.e. DoFlush=T.
 </command>
 </commandgroup>
+
 <commandgroup name="ERUPTIVE EVENT GENERATOR">
 <command name="CME">
-	 <parameter name="UseCme" type="logical" default="F">
-	 <parameter name="DoAddFluxRope" type="logical" default="F">
-	 <rarameter name="LongitudeCme" type="real" 
-	 	    			min="0" max="359" default="0">
-	 <rarameter name="LatitudeCme" type="real" 	
-	 	    		        min="-89" max="89" default="0">	
-	 <rarameter name="OrientationCme" type="real" 
-	 	    			min="0" max="359" default="0">	
-	 <parameter name="TypeCme" type="string" case="upper" input="select"
-							required="T">
-		<option name="GL"				/>
-		<option name="GIBSON-LOW"			/>
-		<option name="TD"	         		/>
-		<option name="TITOV-DEMOULIN"			/>
-		<option name="TD14"				/>
-			</parameter>
+	<parameter name="UseCme" type="logical" default="F" />
+	<parameter name="DoAddFluxRope" type="logical" default="F" />
+	<parameter name="LongitudeCme" type="real"
+	 	   		       min="0" max="359" default="0" />
+	<parameter name="LatitudeCme" type="real"
+		   		      min="-89" max="89" default="0" />	
+	<parameter name="OrientationCme" type="real" 
+	 	   			 min="0" max="359" default="0" />
+	<parameter name="TypeCme" type="string" case="upper" input="select"
+		   		  		required="T">
+		<option name="GL"             />
+		<option name="GIBSON-LOW"     />
+		<option name="TD"	      />
+		<option name="TITOV-DEMOULIN" />
+		<option name="TD14"	      />
+	</parameter>
 	<if expr="$TypeCme =~ /GL|GIBSON-LOW/">
-	<parameter name="BStrength" type="real" default="0">
-	<parameter name="Radius" type="real" min="0" default="0">
-	<parameter name="aStretch" type="real" min="0" default="0">
-	<parameter name="ApexHeight" type="real" min="0" default="0">
-	<parameter name="ModulationRho" type="real" default="0">
-	<parameter name="ModulationP" type="real" default="0">
+	    <parameter name="BStrength" type="real" default="0" />
+	    <parameter name="Radius" type="real" min="0" default="0" />
+	    <parameter name="aStretch" type="real" min="0" default="0" />
+	    <parameter name="ApexHeight" type="real" min="0" default="0" />
+	    <parameter name="ModulationRho" type="real" default="0" />
+	    <parameter name="ModulationP" type="real" default="0" />
 	</if>
 	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
-	<parameter name="BcTubeDim" type="real" default="0">
-	<parameter name="RadiusMajor" type="real" min="0" default="0">
-	<parameter name="RadiusMinor" type="real" min="0" default="0">
-	<parameter name="Depth" type="real" min="0" default="0">
-        <parameter name="Mass" type="real" min="0" default="0">
-	<parameter name="TypeCharge" type="string" case="lower" input="select"
-				     		   	required="F">
-		<option name="" 				/>
-		<option name="none"				/>
-		<option name="steady"	         		/>
-		<option name="moving"				/>
-		<option name="cancelflux"			/>
-			</parameter>
-	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	<parameter name="BqFieldDim" type="real" min="0" default="0">
-	<parameter name="qDistance" type="real" min="0" default="0">
-	<if expr="$TypeCharge =~ /moving|cancelflux/">
-	<parameter name="qVelXDim" type="real" min="0" default="0">
-	<if expr="$TypeCharge =~ /moving/">
-	<parameter name="qVelYDim" type="real" default="0">
-	</if>	
-	</if>
-	</if>
+	    <parameter name="BcTubeDim" type="real" default="0" />
+	    <parameter name="RadiusMajor" type="real" min="0" default="0" />
+	    <parameter name="RadiusMinor" type="real" min="0" default="0" />
+	    <parameter name="Depth" type="real" min="0" default="0" />
+            <parameter name="Mass" type="real" min="0" default="0" />
+	    <parameter name="TypeCharge" type="string" case="lower"
+	    	       			 input="select" required="F">
+		<option name="" 	  />
+		<option name="none"	  />
+		<option name="steady"	  />
+		<option name="moving"	  />
+		<option name="cancelflux" />
+	    </parameter>
+	    <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	    	<parameter name="BqFieldDim" type="real" min="0" default="0" />
+		<parameter name="qDistance" type="real" min="0" default="0" />
+	    </if>
+	    <if expr="$TypeCharge =~ /moving|cancelflux/">
+	    	<parameter name="qVelXDim" type="real" min="0" default="0" />
+	    </if>
+	    <if expr="$TypeCharge =~ /moving/">
+	    	<parameter name="qVelYDim" type="real" default="0" />
+	    </if>
 	</if>
 	<if expr="$TypeCme =~ /TD14/">
 	</if>
@@ -4856,9 +4857,10 @@ GL			TypeCme    TD/TD14/GL
 0.8			ModulationP    [??]/Look redundant
 
 First five parameters are common for all types of EE generators. If UseCme is 
-.true. the generator may be applied permanently, usually via the boundary 
-condition. If, in addition to this, DoAddFluxRope is .true. the confiruation in 
-applied at each grid point, but for a single time (via the "user perturbation")
+.true. the generator may be applied permanently, usually via the boundary
+condition. If, in addition to this, DoAddFluxRope is .true. the confiruation
+in applied at each grid point, but for a single time (via the "user
+perturbation")
 
 Three parameters characterize location of the superimposed configuration and 
 its orientation. LongitudeCme and LatitudeCme are the longitude and latitude
@@ -4880,7 +4882,7 @@ Radius of configuration is the radius of the last magnetic (spherical) surface
 confining all currents in the configuration. aStretch ("a" in the paper) is 
 the scale of stretching transformation (see details in the paper). Finally, 
 ApexHeight is the altitude of top of configuration respectively to the solar 
-surface. It is expoected that Radius < ApexHeight < 2*Radius.
+surface. It is expoected that Radius &lt ApexHeight &lt 2*Radius.
 !!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 If you have an outdated parameter file you can convert it to the standard
 format as follows:
@@ -4949,6 +4951,7 @@ field at the center of configuration.
   
 </command>
 </commandgroup>
+
 <commandgroup name="AMR PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -9236,7 +9239,7 @@ law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
 $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
-off in the cells, at which R_BLK(i,j,k,iBlock) < rMinWaveReflection 
+off in the cells, at which R_BLK(i,j,k,iBlock) &lt rMinWaveReflection 
 
 The default is TypeCoronalHeating="none"
 </command>
@@ -9338,8 +9341,9 @@ Default is DoOpenClosedField = .false.
                 <parameter name="QionRatio" type="real" default="0.6" />
         </if>
 	<if expr="$TypeHeatPartitioning =~ /stochasticheating/">
-                <parameter name="StochasticExponent" type="real" default="0.17" />
-                <parameter name="StochasticExponent" type="real" default="0.18" />
+                <parameter name="StochasticExponent" type="real" default="0.21" />
+                <parameter name="StochasticAmplitude" type="real"
+		 default="0.18" max="0.34" />
         </if>
 
 #HEATPARTITIONING
@@ -9349,8 +9353,8 @@ uniform			TypeHeatPartitioning
 
 #HEATPARTITIONING
 stochasticheating	TypeHeatPartitioning
-0.17			StochasticExponent
-0.21			StochasticAmplitude
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 If the #CORONALHEATING command is used in combination with more than one pressure
 state variable, then the heat partitioning is automatically called. The type
@@ -9359,7 +9363,7 @@ of heat partitioning can be selected with the #HEATPARTITIONING command.
 TypeHeatPartitioning='uniform' is the default. QionRatio is the fraction of the
 coronal heating that is used for the ion heating, while QionParRatio is the
 fraction of the coronal heating that is used for the parallel ion heating.
-The fraction of election heating is 1.0-QionRatio.
+The fraction of electron heating is 1.0-QionRatio.
 
 If TypeHeatPartitioning='stochasticheating', then the heat partitioning follows
 a strategy based on the dissipation of kinetic Alfven waves. In particular we
