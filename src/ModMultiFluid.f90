@@ -119,6 +119,7 @@ contains
     integer, optional, intent(out) :: iFluidOut
     
     integer :: i, l, iFluid
+    character(:), allocatable :: SubString
 
     character(len=*), parameter:: NameSub = 'extract_fluid_name'
     !--------------------------------------------------------------------------
@@ -133,7 +134,8 @@ contains
        if(String(1:l) == NameFluid)then
           ! Found fluid name, remove it from s
           iFluid = i
-          String = String(l+1:len(String))
+          SubString = String(l+1:len(String))
+          String = SubString
           EXIT
        end if
     end do
