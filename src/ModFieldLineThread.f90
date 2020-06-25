@@ -46,13 +46,13 @@ module ModFieldLineThread
      real,pointer :: LengthSi_III(:,:,:)
      
      ! 
-     ! Renamed and revised: only the value BDsInv_III(0,j,k) keeps this
+     ! Renamed and revised: only the value BDsFaceInv_III(0,j,k) keeps this
      ! sense and used for calculating TMax_II(j,k). The values of
-     ! BDsInv_III(negative iPoint,j,k) are equal to
+     ! BDsFaceInv_III(negative iPoint,j,k) are equal to
      ! ds[m]/(B[T]*PoyntingFluxPerBSi). Are used to calculate
-     ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsInv
+     ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsFaceInv
      !
-     real,pointer :: BDsInvSi_III(:,:,:)
+     real,pointer :: BDsFaceInvSi_III(:,:,:)
      !\
      ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
      ! temperature equals the Poynting flux (which is not realistic and means
@@ -69,13 +69,13 @@ module ModFieldLineThread
      ! volume with having a BC for the Poynting flux at the left boundary
      ! and zero flux at the right boundary: In Si system
      !/
-     real,pointer :: DsOverBSi_III(:,:,:)
+     real,pointer :: DsCellOverBSi_III(:,:,:)
 
      !\
-     ! The integral, sqrt(PoyntingFluxPerB/LPerp**2)*\int{1/sqrt(B) ds}
+     ! The integral, sqrt(PoyntingFluxPerB/LPerp**2)*(1/sqrt(B)) ds
      ! Dimensionless.
      !/
-     real,pointer :: Xi_III(:,:,:)
+     real,pointer :: DXiCell_III(:,:,:)
      !\
      ! Magnetic field intensity, the inverse of heliocentric distance,
      ! and the gen coords
@@ -134,6 +134,15 @@ module ModFieldLineThread
   !/
   real, public    :: TeFraction, TiFraction, PeFraction
   integer, public :: iP
+
+  !
+  ! CoefXi/sqrt(VAlfven[NoDim]) is dXi/ds[NoDim]
+  ! While setting thread,  we use only the 
+  ! thread-dependent factor in DXi, namely,
+  ! ds*CoefXi. In ModThreadedLC DXi will be divided
+  ! by sqrt(vAlfven)
+  real,    public :: CoefXi
+
 
   type(BoundaryThreads), public, allocatable :: BoundaryThreads_B(:)
 
@@ -247,6 +256,8 @@ module ModFieldLineThread
 contains
   !============================================================================
   subroutine init
+    use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+         LPerpTimesSqrtB
     integer :: iBlock !Loop variable
     !------------
     if(IsInitialized)RETURN
@@ -276,7 +287,9 @@ contains
     end if
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
     ! Pe = PeFraction*State_V(iP)
-    !/
+    !
+    CoefXi = sqrt(PoyntingFluxPerB)/LperpTimesSqrtB
+    
   
     allocate(        DoThreads_B(MaxBlock))
     allocate(IsAllocatedThread_B(MaxBlock))
@@ -383,10 +396,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     nullify(BoundaryThreads_B(iBlock) % LengthSi_III)
-    nullify(BoundaryThreads_B(iBlock) % BDsInvSi_III)
-    nullify(BoundaryThreads_B(iBlock) % DsOverBSi_III)
+    nullify(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III)
+    nullify(BoundaryThreads_B(iBlock) % DsCellOverBSi_III)
     nullify(BoundaryThreads_B(iBlock) % TMax_II)
-    nullify(BoundaryThreads_B(iBlock) % Xi_III)
+    nullify(BoundaryThreads_B(iBlock) % DXiCell_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
     nullify(BoundaryThreads_B(iBlock) % Coord_DIII)
@@ -408,10 +421,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     deallocate(BoundaryThreads_B(iBlock) % LengthSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % BDsInvSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % DsOverBSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % DsCellOverBSi_III)
     deallocate(BoundaryThreads_B(iBlock) % TMax_II)
-    deallocate(BoundaryThreads_B(iBlock) % Xi_III)
+    deallocate(BoundaryThreads_B(iBlock) % DXiCell_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
     deallocate(BoundaryThreads_B(iBlock) % Coord_DIII)
@@ -428,6 +441,7 @@ contains
   subroutine set_threads
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: NeiLev, NOBLK
+    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
     use ModMpi
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
@@ -468,45 +482,60 @@ contains
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
-          allocate(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
+
+          allocate(BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % BDsInvSi_III = 0.0
-          allocate(BoundaryThreads_B(iBlock) % DsOverBSi_III(&
+          BoundaryThreads_B(iBlock) % BDsFaceInvSi_III = 0.0
+
+          allocate(BoundaryThreads_B(iBlock) % DsCellOverBSi_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % DsOverBSi_III = 0.0
+          BoundaryThreads_B(iBlock) % DsCellOverBSi_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % TMax_II(&
                jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % TMax_II = 0.0
-          allocate(BoundaryThreads_B(iBlock) % Xi_III(&
+          BoundaryThreads_B(iBlock) % TMax_II = &
+               1.0e8*Si2No_V(UnitTemperature_)
+
+          allocate(BoundaryThreads_B(iBlock) % DXiCell_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % Xi_III = 0.0
+          BoundaryThreads_B(iBlock) % DXiCell_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % B_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % B_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % RInv_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % Coord_DIII(3,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % TGrav_III = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % State_VIII(PSi_:TiSi_,&
                -nPointThreadMax:0,jMin_:jMax_, kMin_:kMax_))
-          BoundaryThreads_B(iBlock) % State_VIII = 0.0
+          BoundaryThreads_B(iBlock) % State_VIII(TeSi_:TiSi_,:,:,:) = -1
+          BoundaryThreads_B(iBlock) % State_VIII(PSi_:A2Minor_,:,:,:) = 0.0
+
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % nPoint_II = -1
+
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % DeltaR_II = 0.0
+
           call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
                BoundaryThreads_B(iBlock) % dCoord1Inv)
           allocate(BoundaryThreads_B(iBlock) % State_VG(&
                PSi_:TiSi_, BoundaryThreads_B(iBlock) % iMin:1,&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % State_VG = 0.0
+
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -626,11 +655,11 @@ contains
     !/
     real:: RhoCme, Ucme_D(MaxDim), Bcme_D(MaxDim), pCme
     ! Aux
-    real :: ROld, Aux, CoefXi
+    real :: ROld, Aux
     real :: DirB_D(MaxDim), DirR_D(MaxDim), XyzOld_D(MaxDim)
     real :: CosBRMin = 1.0
     real :: BdS,  IntegralBdS
-    integer, parameter::nCoarseMax = 2
+    integer, parameter :: nCoarseMax = 2
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_threads_b'
@@ -641,26 +670,9 @@ contains
     ! Initialize threads
     !/
     BoundaryThreads_B(iBlock) % iAction = DoInit_
-    BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
-    BoundaryThreads_B(iBlock) % BDsInvSi_III = 0.0
-    BoundaryThreads_B(iBlock) % DsOverBSi_III = 0.0
-    BoundaryThreads_B(iBlock) % TMax_II = 1.0e8*Si2No_V(UnitTemperature_)
-    BoundaryThreads_B(iBlock) % Xi_III = 0.0
-    BoundaryThreads_B(iBlock) % B_III = 0.0
-    BoundaryThreads_B(iBlock) % RInv_III = 0.0
-    BoundaryThreads_B(iBlock) % Coord_DIII = 0.0
-    BoundaryThreads_B(iBlock) % TGrav_III = 0.0
-    BoundaryThreads_B(iBlock) % State_VIII(TeSi_:TiSi_,:,:,:) = -1
-    BoundaryThreads_B(iBlock) % State_VIII(PSi_:A2Minor_,:,:,:) = 0.0
+
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
-    !\
-    ! sqrt(CoefXi/VAlfven[NoDim]) is dXi/ds[NoDim]
-    ! While setting thread,  we calculate only the thread-dependent
-    ! sqrt(CoefXi/B[NoDim]). In ModThreadedLC DXi will be multiplied
-    ! by RhoNoDim**0.25
-    !/
-    CoefXi = PoyntingFluxPerB/LperpTimesSqrtB**2
 
     ! Loop over the thread starting points
     do k = kMin_, kMax_; do j = jMin_, jMax_
@@ -799,8 +811,8 @@ contains
        !
        ! Differentials and integrals over length:
        ! LengthSi_III
-       ! BDsInvSi_III
-       ! DsOverBSi_III
+       ! BDsFaceInvSi_III
+       ! DsCellOverBSi_III
        ! Xi_III
 
        ! 
@@ -860,28 +872,27 @@ contains
        !                    -iPoint-1    -iPoint
        ! Here, iPoint is the current value, equal to nPoint-1, nPoint being the
        ! stored value. Now, LengthSi = Ds*(nInterval - 1 + Aux), as long as the
-       ! first interval is shorter than Ds. Then, BDsInvSi is the
+       ! first interval is shorter than Ds. Then, BDsFaceInvSi is the
        ! dimensionless and not inverted integral of Bds over the first
        ! intervals.
        !/
 
-       BoundaryThreads_B(iBlock) % BDsInvSi_III(-1-iPoint, j, k) = 1/  &
-            (BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k)*  &
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)*          &
+       BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(-nPoint, j, k) = 1/  &
+            (BoundaryThreads_B(iBlock) % LengthSi_III(1-nPoint, j, k)*  &
+            BoundaryThreads_B(iBlock) % B_III(1-nPoint, j, k)*          &
             No2Si_V(UnitB_)*PoyntingFluxPerBSi)
 
        !\
        ! The flux node -iPoint-1=-nPoint is placed to the same position
        ! as the temperature node with the same number
        !/
-       BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k) =             &
-            0.50*Ds*sqrt(CoefXi/                                       &
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
+       BoundaryThreads_B(iBlock) % DXiCell_III(1-nPoint, j, k) =             &
+            0.50*Ds*CoefXi
        !\
        ! As long as the flux node is placed as discussed above, the
        ! first computational cell is twice shorter
        !/
-       BoundaryThreads_B(iBlock) % DsOverBSi_III(-iPoint, j, k) =      &
+       BoundaryThreads_B(iBlock) % DsCellOverBSi_III(-iPoint, j, k) =      &
             0.50*Ds*No2Si_V(UnitX_)/                                   &
             ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
             *PoyntingFluxPerBSi*No2Si_V(UnitB_) )
@@ -907,7 +918,7 @@ contains
           ! in the conservative variable, 2/7*kappa*\Delta T^{7/2} gives the
           ! ratio of the heat flux to the effective Poynting flux.
           !
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) =   1/  &
+          BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(-iPoint, j, k) =   1/  &
                (PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_)*BdS)
           !
           ! The distance between the flux points (as well as the AW amplitude
@@ -916,17 +927,14 @@ contains
           ! the magnetic field in the midpoint. Should be multiplied by the
           ! dimensionless density powered 1/4. Dimensionless.
           !/
-          BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k) =            &
-               BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
-               Ds*sqrt(CoefXi/               &
-               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k))
+          BoundaryThreads_B(iBlock) % DXiCell_III(1-iPoint, j, k) = Ds*CoefXi 
           !
           ! Distance between the flux points (faces) divided by
           ! the magnetic field in the temperature point (or, same,
           ! multiplied by the crosssection of the flux tube)
           ! and divided by the Poynting-flux-to-field ratio.
           !
-          BoundaryThreads_B(iBlock) % DsOverBSi_III(1-iPoint, j, k) =     &
+          BoundaryThreads_B(iBlock) % DsCellOverBSi_III(1-iPoint, j, k) =     &
                Ds*No2Si_V(UnitX_)/                                        &
                (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)         &
                *PoyntingFluxPerBSi*No2Si_V(UnitB_))
@@ -947,10 +955,8 @@ contains
        !             -1       0
        !
        !
-       BoundaryThreads_B(iBlock) % Xi_III(0, j, k) =         &
-            BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
-            0.50*Ds*sqrt(CoefXi/                             &
-            BoundaryThreads_B(iBlock) % B_III(0, j, k))
+       BoundaryThreads_B(iBlock) % DXiCell_III(0, j, k) =         &
+            BoundaryThreads_B(iBlock) % DXiCell_III(0, j, k)*0.50 
 
        BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
             norm2(Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock) )
@@ -969,7 +975,7 @@ contains
        write(*,'(a,3es18.10)')'DeltaR=  ',&
             BoundaryThreads_B(iBlock) % DeltaR_II(jTest,kTest)
        write(*,'(a)')&
-            'B[NoDim] RInv[NoDim] LengthSi BDsInvSi Xi[NoDim]'
+            'B[NoDim] RInv[NoDim] LengthSi BDsFaceInvSi Xi[NoDim]'
        do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
           write(*,'(5es18.10)')&
                BoundaryThreads_B(iBlock) % B_III(&
@@ -978,9 +984,9 @@ contains
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % LengthSi_III(&
                iPoint, jTest, kTest),&
-               BoundaryThreads_B(iBlock) % BDsInvSi_III(&
+               BoundaryThreads_B(iBlock) % BDsFaceInvSi_III(&
                iPoint, jTest, kTest),&
-               BoundaryThreads_B(iBlock) % Xi_III(&
+               BoundaryThreads_B(iBlock) % DXiCell_III(&
                iPoint, jTest, kTest)
        end do
     end if
