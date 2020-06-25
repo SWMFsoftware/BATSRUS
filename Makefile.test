@@ -1703,8 +1703,9 @@ test_europa3fluidspe:
 	@echo "test_europa3fluidspe_check..." >> test_europa3fluidspe.diff
 	$(MAKE) test_europa3fluidspe_check
 
+# OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_compile:
-	./Config.pl ${OPENMP} -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
+	./Config.pl -noopenmp -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1712,7 +1713,6 @@ test_europa3fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.3fluids PARAM.in; \
 	   	       cp Param/EUROPA/satellite_e4.dat satellite_3fpe_e4.dat
 
-# OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
