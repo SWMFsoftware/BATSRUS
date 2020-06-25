@@ -653,11 +653,11 @@ contains
       TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
-           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
+           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
            PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
       SpecIonHeat_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)/Z
       ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
-           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
+           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
            PSi_I(1:nPoint-1)**2/(&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
            TeSi_I(1:nPoint-1)**1.5)
@@ -861,7 +861,7 @@ contains
          call set_pressure
          call get_res_heating(nIterIn=nIter)
          ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
-              BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
+              BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
               PSi_I(1:nPoint-1)**2/(&
               (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
               TeSi_I(1:nPoint-1)**1.5)
@@ -893,7 +893,7 @@ contains
       !
       !Sum of a_+ and a_- and iterative values for it
       !
-      real    :: Sigma, SigmaOld, Aux, XiTot 
+      real    :: Sigma, SigmaOld, Aux, XiTot, vAlfven 
       !------------------------------------------------------------------------
       !\
       ! Now prepare to calculate Alfven wave amplitude distribution
@@ -915,15 +915,14 @@ contains
          !\
          ! 2. Calculate Alfven wave speed
          !/
-         VaLog_I(iPoint) = &
-            log(BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho)
+         vAlfven = BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho
+         VaLog_I(iPoint) = log(vAlfven)
          !\
          ! 3. Calculate dimensionless length (in terms of the dissipation length
          !/
          DXi_I(iPoint) = &
-              (BoundaryThreads_B(iBlock)% Xi_III(iPoint-nPoint,j,k) - &
-              BoundaryThreads_B(iBlock)% Xi_III(iPoint-1-nPoint,j,k))*&
-              sqrt(SqrtRho)
+              BoundaryThreads_B(iBlock)% DXiCell_III(iPoint-nPoint,j,k)/&
+              sqrt(vAlfven)
          Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
 
@@ -1005,7 +1004,7 @@ contains
       ! Dimensionless flux= dCons/ds(1/( (PoyntingFlux/B)B)
       !/
       U_VVI(Cons_,Cons_,1:nPoint-1) = &
-           -BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint:-1,j,k)
+           -BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(1-nPoint:-1,j,k)
       L_VVI(Cons_,Cons_,2:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-2)
       M_VVI(Cons_,Cons_,2:nPoint-1) = &
            -U_VVI(Cons_,Cons_,2:nPoint-1) - L_VVI(Cons_,Cons_,2:nPoint-1)
@@ -1018,14 +1017,14 @@ contains
       ! Add left heat flux to the TR
       !/
       HeatFlux2TR = Value_V(HeatFluxLength_)*&
-           BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
+           BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k)
       ResHeatCond_I(1) = ResHeatCond_I(1) -  HeatFlux2TR
       !\
       ! Linearize left heat flux to the TR
       !/
 
       M_VVI(Cons_,Cons_,1) = -U_VVI(Cons_,Cons_,1) + Value_V(DHeatFluxXOverU_)*&
-           BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
+           BoundaryThreads_B(iBlock)% BDsFaceInvSi_III(-nPoint,j,k)
       !\
       ! Add other left heat fluxes
       !/
@@ -1090,7 +1089,7 @@ contains
               Value_V, &
            DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &
-              -BoundaryThreads_B(iBlock)%DsOverBSi_III(iPoint-nPoint,j,k)&
+              -BoundaryThreads_B(iBlock)%DsCellOverBSi_III(iPoint-nPoint,j,k)&
               *Value_V(LambdaSI_)*Z*&
               (PSi_I(iPoint)/(Z*TeSi_I(iPoint)+TiSi_I(iPoint)))**2
          DResCoolingOverDLogT_I(iPoint) = &
@@ -1186,6 +1185,8 @@ contains
     integer, parameter:: nIterMax = 10
     integer:: nIter
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
+    real :: DeltaAPlus_I(1:nI), DeltaAMinus_I(0:nI-1)
+    real :: Source_I(0:nI), SourceAdvection_I(0:nI)
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
     AMajor_I(0:nI)  = 1.0
