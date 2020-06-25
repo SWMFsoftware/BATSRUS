@@ -1714,7 +1714,7 @@ test_europa3fluidspe_rundir: test_rundir
 
 # OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_run:
-	cd ${TESTDIR}; -noopenmp ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
 
 test_europa3fluidspe_check:
