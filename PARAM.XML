@@ -4910,7 +4910,7 @@ TD			TypeCme  GL/TD/TD14
 0.5			RadiusMajor  [R_s]
 0.2			RadiusMinor  [R_s]
 0.2			Depth        [R_s]
-1.000E+13               Mass         [kg???]
+1.000E+16               Mass         [g]
 steady			TypeCharge  none/steady/moving/cancelflux
 5			BqFieldDim   [Gs]
 0.4			qDistance    [R_s]					
