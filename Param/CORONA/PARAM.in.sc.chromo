@@ -325,7 +325,7 @@ TD			TypeCme
 1.005747126436782	RadiusMajor
 0.431034482758621	RadiusMinor
 0.1436781609195402	Depth
-1.000E+13		Mass
+1.000E+16		Mass
 
 #STOP
 -1			MaxIteration
