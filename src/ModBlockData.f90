@@ -142,6 +142,9 @@ contains
     ! Set pointer to new storage
     Data_B(iBlock) % Array_I => DataTemp_I
 
+    ! Disassociate pointer
+    nullify(DataTemp_I)
+
     if(DoDebug)then
        if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' allocated size=',size(DataTemp_I)
