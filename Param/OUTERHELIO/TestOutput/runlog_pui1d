@@ -1,0 +1,421 @@
+Main dir=/home/kmarc/Git/SWMF/GM/BATSRUS
+Remote  =git@gitlab.umich.edu:swmf_software
+BATSRUS                             modified  2020-06-26 2fb5167  
+  srcBATL                           original  2020-06-18 e7caf5d  
+
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2017
+
+ BATSRUS version 9.20 is running as GM on      2 PE(s) with up to  2 threads/PE
+
+ EQUATIONS:   SWH + PUI and four neutrals
+ USER MODULE: Outer Heliosphere with 4 neutrals and 2 ion fluids, Opher & Toth 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 164 lines of text
+ ----- Starting Session            1  ------
+ GM_set_parameters: READ iSession =           1  iLine=           0  nLine =        1000
+
+#COMPONENT
+OH		NameComp
+
+#TIMEACCURATE
+T		DoTimeAccurate
+
+#GRAVITY
+F                       UseGravity
+
+#BODY
+F			UseBody
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-200			xMin
+200			xMax
+-200			yMin
+200			yMax
+-200			zMin
+200			zMax
+
+#OUTERBOUNDARY
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#FIXEDTIMESTEP
+T			UseFixedDt		UseDtFixed
+0.01 year		DtFixed		DtFixedDim  3.15576000E+05
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+0.1 year   		DtSaveLogfile		DtSaveLogfile  3.15576000E+06
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+y=0 VAR idl		StringPlot
+-1			DnOutput		DnSavePlot
+0.1 year		DtOuput		DtSavePlot  3.15576000E+06
+0.0			DxOutput		DxSavePlot
+{MHD} fluid		NamePlotVar		NameVars
+{default}		NamePlotParam		NamePars
+
+#USERFLAGS
+F			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#UNIFORMSTATE
+0.01			Rho
+-100			Ux
+0			Uy
+0			Uz
+0.01			Bx
+0.0			By
+0			Bz
+2.6E-13			P
+1E-3			Pu3Rho
+-100			Pu3Ux
+0			Pu3Uy
+0			Pu3Uz
+1.01E-12		Pu3P
+1E-5			NeuRho
+0			NeuUx
+0			NeuUy
+0			NeuUz
+1E-16			NeuP
+1E-5			Ne2Rho
+0			Ne2Ux
+0			Ne2Uy
+0			Ne2Uz
+1E-16			Ne2P
+1E-5			Ne3Rho
+0			Ne3Ux
+0			Ne3Uy
+0			Ne3Uz
+1E-16			Ne3P
+0.18			Ne4Rho
+100			Ne4Ux
+0			Ne4Uy
+0			Ne4Uz
+1.6E-13			Ne4P
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07                 	SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4                  PU3_rho_dim [n/cc]		Pu3_rho_dim
+8.20E6                   PU3_T_dim [K]		Pu3_T_dim
+417.07                   PU3_Ux_dim [km/s]		Pu3_Ux_dim
+0                        PU3_Uy_dim [km/s]		Pu3_Uy_dim
+0                        PU3_Uz_dim [km/s]		Pu3_Uz_dim
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0              	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.3                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.411			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+-1			MaxIteration
+5 year			tSimulationMax		tSimulationMax  1.57788000E+08
+ OH_set_parameters: CHECK iSession =           1
+  
+ The code is configured with nG=           2  ghost cell layers.
+ The selected scheme requires nGUsed=           1  layers!
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
+init_mod_field_trace allocated arrays
+ find_test_cell WARNING iBlockTest=           1  is larger than nBlock=           0
+     total blocks =            1
+ find_test_cell WARNING iBlockTest=           1  is larger than nBlock=           0
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: OUTERHELIO            Normalization: OUTERHELIO
+
+          Gamma:         1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667
+
+          UseBody1: .false.
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      2.99790E+05
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          1st-order scheme
+          Rusanov flux function
+          Rusanov flux for neutral fluids
+          Time accurate calculation
+          Explicit time stepping
+          Point-implicit time stepping
+              nStage: 1
+              Dt:       2.1094952755677603E-003
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =            2
+ Available threads   : nThread =            2
+
+ After initial grid setup:
+   nBlockMax and MaxBlock      =            1         400
+   Total number of blocks used =            1
+   Total number of cells       =           64
+   Total number of true cells  =           64
+   Min and max AMR levels      =            0           0
+   Min and max cell size in x/r=    100.00000000000000        100.00000000000000     
+
+ root blocks:        1       1       1
+ nIJK_D:             4       4       4
+ x:            -2.00000000E+02  2.00000000E+02
+ y:            -2.00000000E+02  2.00000000E+02
+ z:            -2.00000000E+02  2.00000000E+02
+
+ find_test_cell WARNING iBlockTest=           1  is larger than nBlock=           0
+saved ifile= 6 type=y=0_var              at n_step=      0 time=   0:00:00 h:m:s
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.00    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.00     99.88         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+saved ifile= 6 type=y=0_var              at n_step=     10 time= 876:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.0 s at N =      10 ( 3.1558E+06 s)
+saved ifile= 6 type=y=0_var              at n_step=     20 time=1753:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.0 s at N =      20 ( 6.3115E+06 s)
+saved ifile= 6 type=y=0_var              at n_step=     30 time=2629:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.0 s at N =      30 ( 9.4673E+06 s)
+saved ifile= 6 type=y=0_var              at n_step=     40 time=3506:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      40 ( 1.2623E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=     50 time=4383:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      50 ( 1.5779E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=     60 time=5259:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      60 ( 1.8935E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=     70 time=6136:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      70 ( 2.2090E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=     80 time=7012:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      80 ( 2.5246E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=     90 time=7889:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =      90 ( 2.8402E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    100 time=8766:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.1 s at N =     100 ( 3.1558E+07 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     0.14    0.139    0.139   100.00
+-------------------------------------------------------------------------------
+advance                 100     100     0.14    0.001    0.001    99.69
+-------------------------------------------------------------------------------
+   100 of    500 iterations completed.   Expected time to completion:      0.56
+
+saved ifile= 6 type=y=0_var              at n_step=    110 time=9642:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     110 ( 3.4713E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    120 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     120 ( 3.7869E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    130 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     130 ( 4.1025E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    140 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     140 ( 4.4181E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    150 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     150 ( 4.7336E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    160 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     160 ( 5.0492E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    170 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.2 s at N =     170 ( 5.3648E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    180 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     180 ( 5.6804E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    190 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     190 ( 5.9959E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    200 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     200 ( 6.3115E+07 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     0.28    0.278    0.278   100.00
+-------------------------------------------------------------------------------
+advance                 200     200     0.28    0.001    0.001    99.68
+-------------------------------------------------------------------------------
+   200 of    500 iterations completed.   Expected time to completion:      0.42
+
+saved ifile= 6 type=y=0_var              at n_step=    210 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     210 ( 6.6271E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    220 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     220 ( 6.9427E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    230 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     230 ( 7.2582E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    240 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     240 ( 7.5738E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    250 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.3 s at N =     250 ( 7.8894E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    260 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     260 ( 8.2050E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    270 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     270 ( 8.5206E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    280 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     280 ( 8.8361E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    290 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     290 ( 9.1517E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    300 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     300 ( 9.4673E+07 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     300    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     0.42    0.416    0.416   100.00
+-------------------------------------------------------------------------------
+advance                 300     300     0.41    0.001    0.001    99.68
+-------------------------------------------------------------------------------
+   300 of    500 iterations completed.   Expected time to completion:      0.28
+
+saved ifile= 6 type=y=0_var              at n_step=    310 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     310 ( 9.7829E+07 s)
+saved ifile= 6 type=y=0_var              at n_step=    320 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.4 s at N =     320 ( 1.0098E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    330 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     330 ( 1.0414E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    340 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     340 ( 1.0730E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    350 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     350 ( 1.1045E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    360 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     360 ( 1.1361E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    370 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     370 ( 1.1676E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    380 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     380 ( 1.1992E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    390 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.5 s at N =     390 ( 1.2307E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    400 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     400 ( 1.2623E+08 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     400    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     0.55    0.554    0.554   100.00
+-------------------------------------------------------------------------------
+advance                 400     400     0.55    0.001    0.001    99.68
+-------------------------------------------------------------------------------
+   400 of    500 iterations completed.   Expected time to completion:      0.14
+
+saved ifile= 6 type=y=0_var              at n_step=    410 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     410 ( 1.2939E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    420 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     420 ( 1.3254E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    430 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     430 ( 1.3570E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    440 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     440 ( 1.3885E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    450 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     450 ( 1.4201E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    460 time=****:36:00 h:m:s
+Speed is      0.0 c/s/p after      0.6 s at N =     460 ( 1.4516E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    470 time=****:12:00 h:m:s
+Speed is      0.0 c/s/p after      0.7 s at N =     470 ( 1.4832E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    480 time=****:48:00 h:m:s
+Speed is      0.0 c/s/p after      0.7 s at N =     480 ( 1.5148E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    490 time=****:24:00 h:m:s
+Speed is      0.0 c/s/p after      0.7 s at N =     490 ( 1.5463E+08 s)
+saved ifile= 6 type=y=0_var              at n_step=    500 time=****:00:00 h:m:s
+Speed is      0.0 c/s/p after      0.7 s at N =     500 ( 1.5779E+08 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     500    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     0.69    0.692    0.692   100.00
+-------------------------------------------------------------------------------
+advance                 500     500     0.69    0.001    0.001    99.68
+-------------------------------------------------------------------------------
+   500 of    500 iterations completed.   Expected time to completion:      0.00
+
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.15779E+09 (************ min, 43830.000000 hrs)
+saved ifile= 1 type=restart              at n_step=    500 time=****:00:00 h:m:s
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     500    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.69    100.00         1         1
+-------------------------------------------------------------------------------
+advance                   0.69     99.64       500       500
+advance_explicit          0.66     95.08       500       500
+barrier-expl2             0.65     93.12       500       500
+save_logfile              0.01      2.12        50        50
+barrier-expl1             0.01      1.68       500       500
+save_plot                 0.01      1.53        50        50
+exch_msgs                 0.00      0.65       500       500
+batl_pass                 0.00      0.56       500       500
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
+ Error report: no errors...
