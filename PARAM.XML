@@ -4882,7 +4882,7 @@ Radius of configuration is the radius of the last magnetic (spherical) surface
 confining all currents in the configuration. aStretch ("a" in the paper) is 
 the scale of stretching transformation (see details in the paper). Finally, 
 ApexHeight is the altitude of top of configuration respectively to the solar 
-surface. It is expoected that Radius &lt ApexHeight &lt 2*Radius.
+surface. It is expoected that Radius &lt; ApexHeight &lt; 2*Radius.
 !!!!!!!!!!!!!!!!!!!!!Backward compatibility!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 If you have an outdated parameter file you can convert it to the standard
 format as follows:
@@ -9239,7 +9239,7 @@ law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
 $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
-off in the cells, at which R_BLK(i,j,k,iBlock) &lt rMinWaveReflection 
+off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection 
 
 The default is TypeCoronalHeating="none"
 </command>
