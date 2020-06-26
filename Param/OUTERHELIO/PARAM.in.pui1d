@@ -2,7 +2,7 @@
 OH
 
 #TIMEACCURATE
-T
+T			IsTimeAccurate
 
 #GRAVITY
 F                       UseGravity
