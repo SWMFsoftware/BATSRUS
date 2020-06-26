@@ -1,8 +1,8 @@
 #COMPONENT
-OH
+OH			NameComp
 
 #TIMEACCURATE
-T			IsTimeAccurate
+T			DoTimeAccurate
 
 #GRAVITY
 F                       UseGravity
