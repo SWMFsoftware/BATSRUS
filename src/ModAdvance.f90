@@ -334,6 +334,18 @@ contains
     if(allocated(DivB1_GB))        deallocate(DivB1_GB)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
     if(allocated(iTypeAdvance_B))  deallocate(iTypeAdvance_B)
+    if(allocated(ExNum_CB))        deallocate(ExNum_CB)
+    if(allocated(EyNum_CB))        deallocate(EyNum_CB)
+    if(allocated(EzNum_CB))        deallocate(EzNum_CB)
+    if(allocated(Efield_DGB))      deallocate(Efield_DGB)
+    if(allocated(Source_VCB))      deallocate(Source_VCB)
+    if(allocated(FluxCenter_VGD))  deallocate(FluxCenter_VGD)
+    if(allocated(IsLowOrderOnly_B))deallocate(IsLowOrderOnly_B)
+    if(allocated(LowOrderCrit_XB)) deallocate(LowOrderCrit_XB)
+    if(allocated(LowOrderCrit_YB)) deallocate(LowOrderCrit_YB)
+    if(allocated(LowOrderCrit_ZB)) deallocate(LowOrderCrit_ZB)
+    if(allocated(Vel_IDGB))        deallocate(Vel_IDGB)
+    !$omp parallel
     if(allocated(LeftState_VX))    deallocate(LeftState_VX, RightState_VX)
     if(allocated(LeftState_VY))    deallocate(LeftState_VY, RightState_VY)
     if(allocated(LeftState_VZ))    deallocate(LeftState_VZ, RightState_VZ)
@@ -348,25 +360,15 @@ contains
     if(allocated(uDotArea_ZI))     deallocate(uDotArea_ZI)
     if(allocated(bCrossArea_DX))   deallocate(bCrossArea_DX)
     if(allocated(bCrossArea_DY))   deallocate(bCrossArea_DY)
-    if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)
-    if(allocated(ExNum_CB))        deallocate(ExNum_CB)
-    if(allocated(EyNum_CB))        deallocate(EyNum_CB)
-    if(allocated(EzNum_CB))        deallocate(EzNum_CB)
-    if(allocated(Efield_DGB))      deallocate(Efield_DGB)
-    if(allocated(Source_VCB))      deallocate(Source_VCB)
-    if(allocated(FluxCenter_VGD))  deallocate(FluxCenter_VGD)
+    if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)    
     if(allocated(Weight_IVX))      deallocate(Weight_IVX)
     if(allocated(Weight_IVY))      deallocate(Weight_IVY)
     if(allocated(Weight_IVZ))      deallocate(Weight_IVZ)
-    if(allocated(IsLowOrderOnly_B))deallocate(IsLowOrderOnly_B)
     if(allocated(FaceDivU_IX))     deallocate(FaceDivU_IX)
     if(allocated(FaceDivU_IY))     deallocate(FaceDivU_IY)
     if(allocated(FaceDivU_IZ))     deallocate(FaceDivU_IZ)
-    if(allocated(LowOrderCrit_XB)) deallocate(LowOrderCrit_XB)
-    if(allocated(LowOrderCrit_YB)) deallocate(LowOrderCrit_YB)
-    if(allocated(LowOrderCrit_ZB)) deallocate(LowOrderCrit_ZB)
-    if(allocated(Vel_IDGB))        deallocate(Vel_IDGB)
-    
+    !$omp end parallel
+
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'
