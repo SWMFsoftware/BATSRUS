@@ -84,6 +84,9 @@ module ModPointImplicit
   !$omp threadprivate( IsPointImplSource )
   !$omp threadprivate( IsPointImplMatrixSet )
   !$omp threadprivate( IsPointImplPerturbed )
+
+  real, allocatable :: Matrix_II(:,:), Rhs_I(:)
+  !$omp threadprivate( Matrix_II, Rhs_I )
   
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
@@ -133,6 +136,12 @@ contains
 
     if(.not.allocated(UsePointImplicit_B)) RETURN
     deallocate(UsePointImplicit_B)
+    if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
+    if(allocated(DsDu_VVC)) deallocate(DsDu_VVC)
+    if(allocated(Rhs_I)) deallocate(Rhs_I)
+    if(allocated(Matrix_II)) deallocate(Matrix_II)
+    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
+    if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
 
   end subroutine clean_mod_point_impl
   !============================================================================
@@ -188,9 +197,6 @@ contains
     real :: StateExpl_VC(nVar,nI,nJ,nK)
     real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
     real :: State0_C(nI,nJ,nK)
-
-    real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
-    !$omp threadprivate( Matrix_II, Rhs_I )
     
     logical :: DoTestCell
 
