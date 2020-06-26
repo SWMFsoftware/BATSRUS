@@ -115,7 +115,8 @@ module ModFaceValue
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
-  real, allocatable:: FaceL_I(:), FaceR_I(:)
+  real :: FaceL_I(1:MaxIJK+2), FaceR_I(0:MaxIJK+1)
+
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
   !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
@@ -124,7 +125,7 @@ module ModFaceValue
   !$omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
-  real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
+  real :: WeightL_II(-2:2,0:MaxIJK+1), WeightR_II(-2:2,0:MaxIJK+1)
   !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
@@ -848,13 +849,6 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
-
-    if(.not.allocated(FaceL_I)) then
-       allocate(FaceL_I(1:MaxIJK+2))
-       allocate(FaceR_I(0:MaxIJK+1))
-       allocate(WeightL_II(-2:2,0:MaxIJK+1))
-       allocate(WeightR_II(-2:2,0:MaxIJK+1))
-    endif
 
     UseTrueCell = body_BLK(iBlock)
 
