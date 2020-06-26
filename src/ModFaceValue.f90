@@ -93,7 +93,7 @@ module ModFaceValue
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
 
   ! primitive variables
-  real, allocatable, save:: Primitive_VG(:,:,:,:)
+  real :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( Primitive_VG )
   
   ! Variables for "body" blocks with masked cells
@@ -848,9 +848,6 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
-
-    if(.not.allocated(Primitive_VG))&
-         allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     if(.not.allocated(FaceL_I)) then
        allocate(FaceL_I(1:MaxIJK+2))
