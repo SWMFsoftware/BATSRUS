@@ -658,7 +658,7 @@ contains
        case("#PIC", "#PICGRID", '#PICREGIONROTATE', "#PICUNIT", &
             "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST", &
             "#PICADAPT", "#PICPATCH", "#PICCRITERIA", "#PICPATCHEXTEND", &
-            "#PICREGIONMIN", "#PICREGIONMAX")
+            "#PICREGIONMIN", "#PICREGIONMAX","#RESTARTPICSTATUS")
           call pic_read_param(NameCommand)
 
        case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
@@ -2017,7 +2017,7 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('MaxBlock',     MaxBlock)
           if(NameCommand == "#GRIDBLOCKALL") &
-             MaxBlock   = 1 + (MaxBlock-1)/nProc
+               MaxBlock   = 1 + (MaxBlock-1)/nProc
 
        case("#CHECKGRIDSIZE")
           if(.not.is_first_session())CYCLE READPARAM
