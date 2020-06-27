@@ -405,27 +405,27 @@ contains
 
     call open_file(file=NameFile, NameCaller=NameSub)
 
-    write(UnitTmp_,*)'#CODEVERSION'
+    write(UnitTmp_,'(a)')'#CODEVERSION'
     write(UnitTmp_,'(f5.2,a35)')CodeVersion,'CodeVersion'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#USERMODULE'
-    write(UnitTmp_,*)       NameUserModule
+    write(UnitTmp_,'(a)')'#USERMODULE'
+    write(UnitTmp_,'(a)')       NameUserModule
     write(UnitTmp_,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#COMPONENT'
+    write(UnitTmp_,'(a)')'#COMPONENT'
     write(UnitTmp_,'(a2,a38)')NameThisComp,'NameComp'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#PRECISION'
+    write(UnitTmp_,'(a)')'#PRECISION'
     write(UnitTmp_,'(i1,a39)')nByteReal,'nByteReal'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#EQUATION'
+    write(UnitTmp_,'(a)')'#EQUATION'
     write(UnitTmp_,'(a,a32)')NameEquation,'NameEquation'
     write(UnitTmp_,'(i8,a32)')nVar,'nVar'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#RESTARTVARIABLES'
-    write(UnitTmp_,*) trim(NameVarCouple)
+    write(UnitTmp_,'(a)')'#RESTARTVARIABLES'
+    write(UnitTmp_,'(a)') trim(NameVarCouple)
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#CHECKGRIDSIZE'
+    write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nI,'nI'
     write(UnitTmp_,'(i8,a32)') nJ,'nJ'
     write(UnitTmp_,'(i8,a32)') nK,'nK'
@@ -433,25 +433,25 @@ contains
     if (IsStandAlone .and. NameThisComp == 'GM') then
        write(UnitTmp_,*)
        if(NamePlanet == 'NEW')then
-          write(UnitTmp_,*)'!!! PLANET'
+          write(UnitTmp_,'(a)')'!!! PLANET'
        else
-          write(UnitTmp_,*)'#PLANET'
+          write(UnitTmp_,'(a)')'#PLANET'
        end if
        write(UnitTmp_,'(a,a32)') NamePlanet,'NamePlanet'
        if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
           write(UnitTmp_,*)
-          write(UnitTmp_,*)'#IDEALAXES'
+          write(UnitTmp_,'(a)')'#IDEALAXES'
        end if
     end if
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#NEWRESTART'
+    write(UnitTmp_,'(a)')'#NEWRESTART'
     write(UnitTmp_,'(l1,a39)')UseConstrainB,'DoRestartBFace'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#RESTARTINFILE'
+    write(UnitTmp_,'(a)')'#RESTARTINFILE'
     ! Note that the output file format is saved as the input for next restart
     write(UnitTmp_,'(a,a30)')TypeRestartOutFile,'TypeRestartInFile'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#NSTEP'
+    write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a32)')n_step,'nStep'
     write(UnitTmp_,*)
     if(n_prev == n_step)then
@@ -460,7 +460,7 @@ contains
        write(UnitTmp_,'(es22.15,a18)')dt_prev,'DtPrev'
        write(UnitTmp_,*)
     end if
-    write(UnitTmp_,*)'#STARTTIME'
+    write(UnitTmp_,'(a)')'#STARTTIME'
     write(UnitTmp_,'(i8,a32)')iStartTime_I(1),'iYear'
     write(UnitTmp_,'(i8,a32)')iStartTime_I(2),'iMonth'
     write(UnitTmp_,'(i8,a32)')iStartTime_I(3),'iDay'
@@ -468,15 +468,15 @@ contains
     write(UnitTmp_,'(i8,a32)')iStartTime_I(5),'iMinute'
     write(UnitTmp_,'(i8,a32)')iStartTime_I(6),'iSecond'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#TIMESIMULATION'
+    write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')time_simulation,'tSimulation'
     write(UnitTmp_,*)
     if(.not.IsCartesian)then
        IsLimitedGeometry = CoordDimMin_D(1) < CoordDimMax_D(1)
        if(IsLimitedGeometry) then
-          write(UnitTmp_,*)'#GRIDGEOMETRYLIMIT'
+          write(UnitTmp_,'(a)')'#GRIDGEOMETRYLIMIT'
        else
-          write(UnitTmp_,*)'#GRIDGEOMETRY'
+          write(UnitTmp_,'(a)')'#GRIDGEOMETRY'
        endif
        write(UnitTmp_,'(a20,a20)')TypeGeometry, 'TypeGeometry'
        if(IsGenRadius) write(UnitTmp_,'(a100)')NameGridFile
@@ -494,7 +494,7 @@ contains
        endif
        write(UnitTmp_,*)
     end if
-    write(UnitTmp_,*)'#GRID'
+    write(UnitTmp_,'(a)')'#GRID'
     write(UnitTmp_,'(i8,a32)') nRoot_D(1), 'nRootBlockX'
     write(UnitTmp_,'(i8,a32)') nRoot_D(2), 'nRootBlockY'
     write(UnitTmp_,'(i8,a32)') nRoot_D(3), 'nRootBlockZ'
@@ -507,15 +507,15 @@ contains
     write(UnitTmp_,*)
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
-       write(UnitTmp_,*)'#LIMITRADIUS'
+       write(UnitTmp_,'(a)')'#LIMITRADIUS'
        write(UnitTmp_,'(es22.15,a18)') RadiusMin, 'RadiusMin'
        write(UnitTmp_,'(es22.15,a18)') RadiusMax, 'RadiusMax'
        write(UnitTmp_,*)
     end if
-    write(UnitTmp_,*)'#COORDSYSTEM'
+    write(UnitTmp_,'(a)')'#COORDSYSTEM'
     write(UnitTmp_,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#SOLARWIND'
+    write(UnitTmp_,'(a)')'#SOLARWIND'
     write(UnitTmp_,'(es22.15,a18)')SW_n_dim,  'SwNDim'
     write(UnitTmp_,'(es22.15,a18)')SW_T_dim,  'SwTDim'
     write(UnitTmp_,'(es22.15,a18)')SW_Ux_dim, 'SwUxDim'
@@ -525,25 +525,25 @@ contains
     write(UnitTmp_,'(es22.15,a18)')SW_By_dim, 'SwByDim'
     write(UnitTmp_,'(es22.15,a18)')SW_Bz_dim, 'SwBzDim'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#IOUNITS'
+    write(UnitTmp_,'(a)')'#IOUNITS'
     write(UnitTmp_,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#NORMALIZATION'
+    write(UnitTmp_,'(a)')'#NORMALIZATION'
     if(TypeNormalization == "NONE")then
-       write(UnitTmp_,*)'NONE'
+       write(UnitTmp_,'(a)')'NONE'
     else
-       write(UnitTmp_,*)'READ'
+       write(UnitTmp_,'(a)')'READ'
        write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
        write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
        write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
     end if
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'#PLOTFILENAME'
+    write(UnitTmp_,'(a)')'#PLOTFILENAME'
     write(UnitTmp_,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
     write(UnitTmp_,*)
 
     if(body1)then
-       write(UnitTmp_,*)'#BODY'
+       write(UnitTmp_,'(a)')'#BODY'
        write(UnitTmp_,'(l1,a39)')      .true., 'UseBody'
        write(UnitTmp_,'(es22.15,a18)') rBody, 'rBody'
        if(NameThisComp=='GM') &
@@ -564,7 +564,7 @@ contains
     end if
 
     if(UseBody2)then
-       write(UnitTmp_,*)'#SECONDBODY'
+       write(UnitTmp_,'(a)')'#SECONDBODY'
        write(UnitTmp_,'(l1,a39)')     UseBody2,      'UseBody2'
        write(UnitTmp_,'(es22.15,a18)')Rbody2,        'rBody2'
        write(UnitTmp_,'(es22.15,a18)')xbody2,        'xBody2'
@@ -578,21 +578,21 @@ contains
        write(UnitTmp_,*)
     end if
 
-    write(UnitTmp_,*)'#RESTARTWITHFULLB'
+    write(UnitTmp_,'(a)')'#RESTARTWITHFULLB'
     write(UnitTmp_,*)
 
-    write(UnitTmp_,*)'#END'
+    write(UnitTmp_,'(a)')'#END'
     write(UnitTmp_,*)
-    write(UnitTmp_,*)'Additional info'
+    write(UnitTmp_,'(a)')'Additional info'
     write(UnitTmp_,*)
     write(UnitTmp_,'(l8,a)') time_accurate,   ' time_accurate'
     write(UnitTmp_,*)
     if(time_accurate)write(UnitTmp_,'(2es13.5,a)')&
          time_simulation, dt, ' time_simulation, dt'
 
-    write(UnitTmp_,*)'Io2Si_V='
+    write(UnitTmp_,'(a)')'Io2Si_V='
     write(UnitTmp_,'(100es13.5)') Io2Si_V
-    write(UnitTmp_,*)'No2Io_V='
+    write(UnitTmp_,'(a)')'No2Io_V='
     write(UnitTmp_,'(100es13.5)') No2Io_V
 
     call close_file
