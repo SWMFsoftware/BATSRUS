@@ -367,6 +367,9 @@ contains
     if(allocated(FaceDivU_IX))     deallocate(FaceDivU_IX)
     if(allocated(FaceDivU_IY))     deallocate(FaceDivU_IY)
     if(allocated(FaceDivU_IZ))     deallocate(FaceDivU_IZ)
+    if(allocated(MhdFlux_VX))      deallocate(MhdFlux_VX)
+    if(allocated(MhdFlux_VY))      deallocate(MhdFlux_VY)
+    if(allocated(MhdFlux_VZ))      deallocate(MhdFlux_VZ)
     !$omp end parallel
 
     if(iProc==0)then
