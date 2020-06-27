@@ -36,11 +36,11 @@ contains
     select case(inopt)
     case (0)
        write(iUnitOut,*)
-       call write_prefix; write(iUnitOut,*) &
+       call write_prefix; write(iUnitOut,'(a)') &
             " BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme"
-       call write_prefix; write(iUnitOut,*) &
+       call write_prefix; write(iUnitOut,'(a)') &
             "          for 3D Heliospheric Flows"
-       call write_prefix; write(iUnitOut,*) &
+       call write_prefix; write(iUnitOut,'(a)') &
             " University of Michigan, 1995-2017"
        write(iUnitOut,*)
        if(IsStandAlone)then
@@ -50,7 +50,7 @@ contains
                ' PE(s) with up to', nThread, ' threads/PE'
           write(iUnitOut,*)
        end if
-       call write_prefix; write(iUnitOut,*) &
+       call write_prefix; write(iUnitOut,'(a)') &
             ' EQUATIONS:   '//NameEquation
        call write_prefix; write(iUnitOut,'(a,f5.2)') &
             ' USER MODULE: '//NameUserModule,VersionUserModule
