@@ -319,7 +319,7 @@ contains
   subroutine pic_init_region
 
     use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, &
-         x_, y_, z_, nI, nJ, nK, nBlock, MaxBlock, MaxNode, Unused_B
+         x_, y_, z_, nI, nJ, nK, nBlock, MaxBlock, MaxNode, Unused_B, Unset_
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
@@ -468,13 +468,22 @@ contains
        XyzMaxPic_DI(:,iRegion) = XyzMinPic_DI(:,iRegion) + LenPic_DI(:,iRegion)      
 
        if(UseHallResist) then
-          ! If UseHallResist is true, find out the Hall factor in the middle
-          ! of this PIC region, and use this Hall factor as the scaling factor.
-          PicMiddle_D = 0
-          PicMiddle_D(1:nDim) = XyzMinPic_DI(:,iRegion) + 0.5*LenPic_DI(:,iRegion)
-          call find_grid_block(PicMiddle_D, iProcPic,iBlockPic, &
-               iCellOut_D=iCell_D)
+          PicMiddle_D = 0         
+          do i = 0, 2             
+             ! Part of the PIC grid may overlap with the MHD body, where the
+             ! Hall factor is not defined. But it is not likely that the
+             ! lower corner, the middle point, and the upper corner
+             ! are all inside a body.
+             PicMiddle_D(1:nDim) = XyzMinPic_DI(:,iRegion) + &
+                  0.5*i*LenPic_DI(:,iRegion)
+             call find_grid_block(PicMiddle_D, iProcPic,iBlockPic, &
+                  iCellOut_D=iCell_D)
+             if(iProcPic .ne. Unset_) exit
+          enddo
 
+          if(iProc == 0 .and. iProcPic == Unset_) call stop_mpi(&
+               'Error: can not get the scaling factor for the PIC grid!')
+          
           if(iProcPic == iProc) then
              call set_hall_factor_cell(iBlockPic, .false.)
              ScalingFactor_I(iRegion) = HallFactor_C( & 
@@ -484,8 +493,9 @@ contains
              if(ScalingFactor_I(iRegion) == 0) &
                   ScalingFactor_I(iRegion) = HallFactorMax
           endif
+          
           call MPI_Bcast(ScalingFactor_I(iRegion),1,MPI_REAL, &
-               iProcPic,iComm,iError)          
+               iProcPic,iComm,iError)
        endif
 
        mUnitPicSi = 1e7*xUnitPicSi_I(iRegion) * &
@@ -541,7 +551,7 @@ contains
   subroutine pic_find_node
     ! Find out the blocks that overlaped with PIC region(s).
     use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
-         x_, y_, z_, MaxNode
+         x_, y_, z_, MaxNode, Unset_
     integer:: nIjk_D(1:MaxDim), Ijk_D(1:MaxDim)
     real:: Pic_D(1:MaxDim), Mhd_D(1:MaxDim)
     integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
@@ -570,7 +580,9 @@ contains
           PIC_D(1:nDim) = Ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
           call pic_to_mhd_vec(iRegion,Pic_D,MHD_D)
           call find_grid_block(MHD_D, iProcFound, iBlock, iNodeOut=iNode)
-          IsPicNode_A(iNode) = .true.
+          if(iProcFound .ne. Unset_) then  
+             IsPicNode_A(iNode) = .true.
+          endif
        enddo; enddo; enddo
 
     enddo
