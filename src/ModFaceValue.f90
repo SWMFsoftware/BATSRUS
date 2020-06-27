@@ -27,7 +27,8 @@ module ModFaceValue
   public:: correct_monotone_restrict
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
-
+  public:: clean_mod_face_value
+  
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
@@ -93,7 +94,7 @@ module ModFaceValue
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
 
   ! primitive variables
-  real :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  real, allocatable, save:: Primitive_VG(:,:,:,:)
   !$omp threadprivate( Primitive_VG )
   
   ! Variables for "body" blocks with masked cells
@@ -115,8 +116,7 @@ module ModFaceValue
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
-  real :: FaceL_I(1:MaxIJK+2), FaceR_I(0:MaxIJK+1)
-
+  real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
   !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
@@ -125,10 +125,20 @@ module ModFaceValue
   !$omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
-  real :: WeightL_II(-2:2,0:MaxIJK+1), WeightR_II(-2:2,0:MaxIJK+1)
+  real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
   !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
+  !============================================================================
+  subroutine clean_mod_face_value
+
+    if(allocated(iVarLimitRatio_I))  deallocate(iVarLimitRatio_I)
+    if(allocated(Primitive_VG))      deallocate(Primitive_VG)
+    if(allocated(iRegionLowOrder_I)) deallocate(iRegionLowOrder_I)
+    if(allocated(FaceL_I))           deallocate( &
+         FaceL_I, FaceR_I, WeightL_II, WeightR_II)
+    
+  end subroutine clean_mod_face_value
   !============================================================================
   subroutine read_face_value_param(NameCommand)
 
@@ -849,6 +859,16 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
+
+    if(.not.allocated(Primitive_VG))&
+         allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+
+    if(.not.allocated(FaceL_I)) then
+       allocate(FaceL_I(1:MaxIJK+2))
+       allocate(FaceR_I(0:MaxIJK+1))
+       allocate(WeightL_II(-2:2,0:MaxIJK+1))
+       allocate(WeightR_II(-2:2,0:MaxIJK+1))
+    endif
 
     UseTrueCell = body_BLK(iBlock)
 
@@ -2596,7 +2616,7 @@ contains
       real:: pL, pR, Dp, Ratio, Coef1, Coef
 
       real:: FlatCoef_I(-1:MaxIJK+2)
-      real, allocatable:: FlatCoef_G(:,:,:)
+      real, allocatable, save:: FlatCoef_G(:,:,:)
 
       integer:: i, j, k, iFluid
       !------------------------------------------------------------------------
