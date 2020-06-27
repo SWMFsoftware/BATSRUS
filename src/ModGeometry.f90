@@ -103,7 +103,7 @@ contains
 
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,*) 'init_mod_geometry allocated arrays'
+       write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
@@ -129,7 +129,7 @@ contains
 
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,*) 'clean_mod_geometry deallocated arrays'
+       write(iUnitOut,'(a)') 'clean_mod_geometry deallocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
