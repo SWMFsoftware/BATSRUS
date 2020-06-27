@@ -150,8 +150,8 @@ program BATSRUS
 
   if(iProc == 0 .and. lVerbose >= 0)then
      write(*,*)
-     write(*,*)'    Finished Numerical Simulation'
-     write(*,*)'    -----------------------------'
+     write(*,'(a)')'    Finished Numerical Simulation'
+     write(*,'(a)')'    -----------------------------'
      if (time_accurate)   write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
           '   Simulated Time T = ',time_simulation, &
           ' (',time_simulation/60.00, &
@@ -163,8 +163,8 @@ program BATSRUS
 
   if(iProc == 0 .and. lVerbose > 0)then
      write(*,*)
-     write(*,*)'    Finished Saving Output Files'
-     write(*,*)'    ----------------------------'
+     write(*,'(a)')'    Finished Saving Output Files'
+     write(*,'(a)')'    ----------------------------'
   end if
 
   call timing_stop('BATSRUS')
