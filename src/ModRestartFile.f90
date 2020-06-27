@@ -19,9 +19,12 @@ module ModRestartFile
   use ModIO,         ONLY: Restart_Bface
   use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
   use ModMain,       ONLY: UseConstrainB
+  use ModPIC,        ONLY: write_pic_status_file, &
+       read_pic_status_file, DoRestartPicStatus, &
+       UseAdaptivePic
   use ModImplicit, ONLY: UseImplicit, &
        n_prev, ImplOld_VCB, dt_prev
-  use ModKind,       ONLY: Real4_, Real8_
+  use ModKind,       ONLY: Real4_, Real8_, Int8_
   use ModIoUnit,     ONLY: UnitTmp_
   use ModUtilities,  ONLY: open_file, close_file
   use ModGroundMagPerturb, ONLY: DoWriteIndices
@@ -68,12 +71,12 @@ module ModRestartFile
   character(len(NameVar_V)+1), allocatable, public:: NameVarRestartTo_V(:)
 
   ! Local variables
-  character(len=*), parameter :: StringRestartExt = ".rst"
-  character(len=*), parameter :: NameBlkFile      = "blk"
-  character(len=*), parameter :: NameHeaderFile   = "restart.H"
-  character(len=*), parameter :: NameDataFile     = "data.rst"
-  character(len=*), parameter :: NameIndexFile    = "index.rst"
-  character(len=*), parameter :: NameGeoindFile   = "geoindex.rst"
+  character(len=*), parameter :: StringRestartExt  = ".rst"
+  character(len=*), parameter :: NameBlkFile       = "blk"
+  character(len=*), parameter :: NameHeaderFile    = "restart.H"
+  character(len=*), parameter :: NameDataFile      = "data.rst"
+  character(len=*), parameter :: NameIndexFile     = "index.rst"
+  character(len=*), parameter :: NameGeoindFile    = "geoindex.rst"
 
   integer :: nByteRealRead = 8     ! Real precision in restart files
 
@@ -839,7 +842,7 @@ contains
     inquire (IOLENGTH = lReal) 1.0
 
     ! Calculate the record length for the first block
-     if (DoRead) then
+    if (DoRead) then
        inquire (IOLENGTH = lRecord ) &
             Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
             StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,1)
@@ -864,7 +867,7 @@ contains
     end if
 
     if(DoTest)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
-          nByteReal, nByteRealRead, lRecord
+         nByteReal, nByteRealRead, lRecord
 
     if(DoRead)then
        if(nByteReal /= nByteRealRead) &
@@ -1022,6 +1025,8 @@ contains
 
     call close_file
 
+    if(DoRestartPicStatus) call read_pic_status_file
+
     call test_stop(NameSub, DoTest)
   end subroutine read_direct_restart_file
   !============================================================================
@@ -1089,6 +1094,8 @@ contains
     end do
 
     call close_file
+
+    if(UseAdaptivePic) call write_pic_status_file
 
     call test_stop(NameSub, DoTest)
   end subroutine write_direct_restart_file
@@ -1260,6 +1267,7 @@ contains
     character(len=*), parameter:: NameSub = 'match_copy_restart_variables'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if(.not. DoChangeRestartVariables) then
        do iBlock = 1,nBlock
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
@@ -1366,10 +1374,10 @@ contains
              end do
           case default
              if(iProc==0) &
-                write(*,*) 'WARNING!!! : the state variable ', &
-                NameVar_V(iVar) //                            &
-                     'is not present in the restart file and no rule is'//&
-                     ' implemented to define its value.'
+                  write(*,*) 'WARNING!!! : the state variable ', &
+                  NameVar_V(iVar) //                            &
+                  'is not present in the restart file and no rule is'//&
+                  ' implemented to define its value.'
              if(UseStrict) then
                 call stop_mpi(NameSub// &
                      ' ERROR: State after restart not well defined!')
