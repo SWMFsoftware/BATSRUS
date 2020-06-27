@@ -34,7 +34,7 @@ contains
     allocate(NodeUniqueGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,*) 'init_mod_nodes allocated arrays'
+       write(iUnitOut,'(a)') 'init_mod_nodes allocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
@@ -53,7 +53,7 @@ contains
 
     if(iProc==0)then
        call write_prefix
-       write(iUnitOut,*) 'clean_mod_nodes deallocated arrays'
+       write(iUnitOut,'(a)') 'clean_mod_nodes deallocated arrays'
     end if
 
     call test_stop(NameSub, DoTest)
