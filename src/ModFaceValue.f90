@@ -27,7 +27,8 @@ module ModFaceValue
   public:: correct_monotone_restrict
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
-
+  public:: clean_mod_face_value
+  
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
@@ -128,6 +129,16 @@ module ModFaceValue
   !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
+  !============================================================================
+  subroutine clean_mod_face_value
+
+    if(allocated(iVarLimitRatio_I))  deallocate(iVarLimitRatio_I)
+    if(allocated(Primitive_VG))      deallocate(Primitive_VG)
+    if(allocated(iRegionLowOrder_I)) deallocate(iRegionLowOrder_I)
+    if(allocated(FaceL_I))           deallocate( &
+         FaceL_I, FaceR_I, WeightL_II, WeightR_II)
+    
+  end subroutine clean_mod_face_value
   !============================================================================
   subroutine read_face_value_param(NameCommand)
 
@@ -2605,7 +2616,7 @@ contains
       real:: pL, pR, Dp, Ratio, Coef1, Coef
 
       real:: FlatCoef_I(-1:MaxIJK+2)
-      real, allocatable:: FlatCoef_G(:,:,:)
+      real, allocatable, save:: FlatCoef_G(:,:,:)
 
       integer:: i, j, k, iFluid
       !------------------------------------------------------------------------
