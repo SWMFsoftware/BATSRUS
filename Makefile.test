@@ -35,6 +35,7 @@ test:
 	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
+	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
 	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
 	-@($(MAKE) test_titan TESTDIR=run_test_titan)
@@ -125,6 +126,7 @@ test_help:
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
+	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
@@ -880,6 +882,37 @@ test_outerheliopui_check:
 		Param/OUTERHELIO/TestOutput/log_n000010_pui.log \
 		> test_outerheliopui.diff)
 	ls -l test_outerheliopui.diff
+
+test_outerheliopui_1d:
+	@echo "test_outerheliopui_1d_compile..." > test_outerheliopui_1d.diff
+	$(MAKE) test_outerheliopui_1d_compile
+	@echo "test_outerheliopui_1d_rundir..." >> test_outerheliopui_1d.diff
+	$(MAKE) test_outerheliopui_1d_rundir
+	@echo "test_outerheliopui_1d_run..." >> test_outerheliopui_1d.diff
+	$(MAKE) test_outerheliopui_1d_run
+	@echo "test_outerheliopui_1d_check..." >> test_outerheliopui_1d.diff
+	$(MAKE) test_outerheliopui_1d_check
+
+test_outerheliopui_1d_compile:
+	./Config.pl ${OPENMP} -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_outerheliopui_1d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui1d ./PARAM.in
+
+test_outerheliopui_1d_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_outerheliopui_1d_check:
+	-@(${DIFFNUM} -t -r=1e-5 \
+                ${TESTDIR}/RESULTS/OH/log_n000000.log \
+                Param/OUTERHELIO/TestOutput/log_n000000_pui1d.log \
+                > test_outerheliopui_1d.diff)
+	ls -l test_outerheliopui_1d.diff
 
 ### FUNCTIONALITY TEST SUITE ###
 
