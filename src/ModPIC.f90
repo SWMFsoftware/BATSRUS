@@ -29,9 +29,12 @@ module ModPIC
   public:: mhd_to_pic_vec
   public:: is_inside_active_pic_region
   public:: calc_pic_criteria
+  public:: write_pic_status_file
+  public:: read_pic_status_file
 
   logical, public:: UsePic = .false.
   logical, public:: UseAdaptivePic = .false.
+  logical, public:: DoRestartPicStatus = .false.
 
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
@@ -42,6 +45,7 @@ module ModPIC
   ! Description of the region where the pic region is fixed there
   character(len=200):: StringPicRegion = 'none'
   character(len=200):: StringPicRegionLimit = 'none'
+  character(len=*), parameter :: NamePicStatusFile = "picstatus.rst"
 
   type(FreqType), public :: &
        AdaptPic = FreqType(.true.,100000,huge(1.0),-1,-1.0)
@@ -171,6 +175,9 @@ contains
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') &
             call get_region_indexes(StringPicRegion, iRegionPic_I)
+
+    case('#RESTARTPICSTATUS')
+       call read_var('DoRestartPicStatus', DoRestartPicStatus)
 
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
@@ -323,10 +330,10 @@ contains
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
-    use ModPhysics,   ONLY: IonMassPerCharge
-    use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
-    use ModVarIndexes,ONLY: IsMhd
-    use ModMpi,       ONLY: MPI_REAL
+    use ModPhysics,    ONLY: IonMassPerCharge
+    use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
+    use ModVarIndexes, ONLY: IsMhd
+    use ModMpi,        ONLY: MPI_REAL
 
     ! PIC grid indexes
     integer:: iRegion
@@ -424,18 +431,19 @@ contains
           LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
           if(UseAdaptivePic) then
              PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
-             
+
              if(iProc == 0 .and. mod(nCell, nCellPerPatch) .ne. 0)&
                   call stop_mpi(&
                   'In all directions, the PIC grid cell number '//&
                   '(defined by #PICGRID) should be divisible by the patch size,'&
                   //' which is defined by #PICPATCH.')
-             
+
           endif
        end do
     end do
 
-    if(UseAdaptivePic) then
+    if(.not. DoRestartPicStatus .and. UseAdaptivePic) then
+       ! if DoRestartPicStatus, the arrays are allocated in Restart Part
        if(allocated(StatusMin_I)) deallocate(StatusMin_I)
        allocate(StatusMin_I(nRegionPic))
        StatusMin_I = 0
@@ -446,7 +454,6 @@ contains
 
        ! Calculate the size nSizeStatus and allocate integer array Status_I
        ! to store the status of the patches for all PIC grids.
-
        nSizeStatus = 0
        do iRegion = 1, nRegionPic          
           StatusMin_I(iRegion) = nSizeStatus + 1
@@ -462,6 +469,7 @@ contains
        if(allocated(Status_I)) deallocate(Status_I)             
        allocate(Status_I(nSizeStatus))
        call set_status_all(iPicOff_)
+
     endif
 
     do iRegion = 1, nRegionPic      
@@ -524,8 +532,12 @@ contains
 
        call pic_find_node
        ! Calculate the pic region criteria
-       call calc_pic_criteria
-       call pic_set_cell_status
+
+       if(.not. DoRestartPicStatus) then
+          call calc_pic_criteria
+          call pic_set_cell_status
+       end if
+
        if(iProc==0) then
           write(*,*)
           write(*,*) NameSub,': Adapt-PIC Initialization Finished'
@@ -546,6 +558,72 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine pic_init_region
+  !============================================================================
+
+  subroutine write_pic_status_file
+
+    use ModUtilities,   ONLY: open_file, close_file
+    use ModIoUnit,      ONLY: UnitTmp_
+
+    integer:: iError
+
+    logical:: DoTest
+    character(len=100) :: NameFile
+    character(len=*), parameter:: NameSub = 'write_pic_status_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    ! Status_I exists in every proc, use only the first one
+    if(iProc /= 0) RETURN 
+
+    NameFile = trim('GM/restartOUT/')//NamePicStatusFile
+    call open_file(FILE=NameFile, form='UNFORMATTED', NameCaller=NameSub)
+    write(UnitTmp_) nSizeStatus
+    write(UnitTmp_) Status_I
+    write(UnitTmp_) nRegionPic
+    write(UnitTmp_) StatusMin_I
+    write(UnitTmp_) StatusMax_I
+
+    call close_file
+
+    call test_stop(NameSub, DoTest)
+  end subroutine write_pic_status_file
+  !============================================================================
+
+  subroutine read_pic_status_file
+
+    use ModUtilities,   ONLY: open_file, close_file
+    use ModIoUnit,      ONLY: UnitTmp_
+
+    integer:: iError
+
+    logical:: DoTest
+    character(len=100) :: NameFile
+    character(len=*), parameter:: NameSub = 'read_pic_status_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    NameFile = trim('GM/restartIN/')//NamePicStatusFile    
+    call open_file(FILE=NameFile, status='old', form='UNFORMATTED', &
+         NameCaller=NameSub)
+    read(UnitTmp_, iostat = iError) nSizeStatus
+    if(allocated(Status_I)) deallocate(Status_I)
+    allocate(Status_I(nSizeStatus))
+    read(UnitTmp_, iostat = iError) Status_I
+    read(UnitTmp_, iostat = iError) nRegionPic
+    if(allocated(StatusMin_I)) deallocate(StatusMin_I)
+    allocate(StatusMin_I(nRegionPic))
+    if(allocated(StatusMax_I)) deallocate(StatusMax_I)
+    allocate(StatusMax_I(nRegionPic))
+    read(UnitTmp_, iostat = iError) StatusMin_I
+    read(UnitTmp_, iostat = iError) StatusMax_I
+    call close_file
+
+    if(iError /= 0) call stop_mpi(NameSub// &
+         ' could not read data from '//trim(NameFile))
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_pic_status_file
   !============================================================================
 
   subroutine pic_find_node
@@ -1148,7 +1226,7 @@ contains
                   CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
                 PicCritInfo_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
              end if
-             
+
           end do ! end loop criteria
        end do; end do; end do
     end do ! end loop blocks
