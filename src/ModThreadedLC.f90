@@ -14,7 +14,7 @@ module ModThreadedLC
        kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
-       QeRatio
+       QeRatio, MaxImbalance
   use ModPhysics,        ONLY: Z => AverageIonCharge
   use ModConst,          ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,       ONLY: Xyz_DGB
@@ -43,57 +43,59 @@ module ModThreadedLC
        TeFraction, TiFraction,  iP, PeFraction
   implicit none
   SAVE
-  !\
+  !
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
   ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
-  !/
+  !
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
 
-  !\
+  !
   ! Temperature 3D array
-  !/
+  !
   real,allocatable :: Te_G(:,:,:)
   !$omp threadprivate( Te_G )
-  !\
+  !
   ! Arrays for 1D distributions
-  !/
-  real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I, &
-       TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I, &
-       TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,&
-       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I, &
+  !
+  real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I,            &
+       TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                  &
+       TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
+       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
-       ExchangeRate_I
-  !\
+       ExchangeRate_I,  SourceAdvectionPlus_I,  SourceAdvectionMinus_I,      &
+       DissipationMinus_I, DissipationPlus_I
+  !
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
   ! specific heat at constant pressure. For pressure the barometric
   ! formula is applied
-  !/
+  !
   integer, parameter:: Cons_ = 1, Ti_=2, LogP_ = 3
+  integer, parameter:: ConsAMajor_ = 4, ConsMinor_ = 5
   real, allocatable, dimension(:,:):: Res_VI, DCons_VI
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
 
-  !\
+  !
   ! Two logicals with self-explained names
-  !/
+  !
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
-  !\
+  !
   ! Two parameters controling the choise of the order for density and
   ! pressure: first order (LimMin=LimMax=0), second order (LimMin=LimMax=1)
   ! or limited second order as a default
-  !/
+  !
   real:: LimMin = 0.0, LimMax = 1
-  !\
+  !
   ! Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
-  !/
+  !
   real           ::  RhoNoDimCoef
-  !\
+  !
   ! Misc
-  !/
+  !
   real:: TeMin, ConsMin, ConsMax, TeSiMax
   !\
   ! For transforming conservative to TeSi and back
@@ -186,6 +188,12 @@ contains
     allocate(     Xi_I(0:nPointThreadMax));     Xi_I = 0.0
     allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
     allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
+    allocate(DissipationMinus_I(nPointThreadMax)); DissipationMinus_I = 0.0
+    allocate(DissipationPlus_I(nPointThreadMax)); DissipationPlus_I = 0.0
+    allocate(SourceAdvectionPlus_I( nPointThreadMax))
+    SourceAdvectionPlus_I  = 0.0
+    allocate(SourceAdvectionMinus_I(nPointThreadMax))
+    SourceAdvectionMinus_I = 0.0
 
     allocate(  Res_VI(Cons_:LogP_,nPointThreadMax));      Res_VI = 0.0
     allocate(DCons_VI(Cons_:LogP_,nPointThreadMax));    DCons_VI = 0.0
@@ -838,6 +846,26 @@ contains
            nIterIn=nIterIn)
     end subroutine solve_heating
     !==========================================================================
+    real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
+      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+      !------------------------------------------------------------------------
+      dissipation_major = (-AMinor*&
+           (max(0.0,AMajor - MaxImbalance*AMinor)      &
+           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           - AMinor*AMajor)*DeltaXi
+    end function dissipation_major
+    !==========================================================================
+    real function dissipation_minor(AMajor, AMinor, Reflection, DeltaXi)
+      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+      !------------------------------------------------------------------------
+      dissipation_minor = ( AMajor*&
+           (max(0.0,AMajor - MaxImbalance*AMinor)      &
+           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           - AMinor*AMajor)*DeltaXi
+    end function dissipation_minor
+    !==========================================================================
     subroutine advance_thread(IsTimeAccurate)
       use ModMain,     ONLY: cfl, Dt, time_accurate
       use ModAdvance,  ONLY: time_BLK, nJ, nK
@@ -1215,7 +1243,6 @@ contains
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     real :: DeltaAPlus_I(1:nI), DeltaAMinus_I(0:nI-1)
     real :: Source_I(0:nI), SourceAdvection_I(0:nI)
-    real :: DissipationMinus_I(1:nI), DissipationPlus_I(1:nI)
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
     AMajor_I(0:nI)  = 1.0
