@@ -437,7 +437,7 @@ contains
           if(UseAdaptivePic) then
              PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
 
-             if(iProc == 0 .and. mod(nCell, nCellPerPatch) .ne. 0)&
+             if(iProc == 0 .and. mod(nCell, nCellPerPatch) /= 0)&
                   call stop_mpi(&
                   'In all directions, the PIC grid cell number '//&
                   '(defined by #PICGRID) should be divisible by the patch size,'&
@@ -491,7 +491,7 @@ contains
                   0.5*i*LenPic_DI(:,iRegion)
              call find_grid_block(PicMiddle_D, iProcPic,iBlockPic, &
                   iCellOut_D=iCell_D)
-             if(iProcPic .ne. Unset_) exit
+             if(iProcPic /= Unset_) exit
           enddo
 
           if(iProc == 0 .and. iProcPic == Unset_) call stop_mpi(&
@@ -632,11 +632,13 @@ contains
   !============================================================================
 
   subroutine pic_find_node
-    ! Find out the blocks that overlaped with PIC region(s).
+
+    ! Find blocks that overlap with PIC region(s).
     use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
          x_, y_, z_, MaxNode, Unset_
+
     integer:: nIjk_D(1:MaxDim), Ijk_D(1:MaxDim)
-    real:: Pic_D(1:MaxDim), Mhd_D(1:MaxDim)
+    real:: XyzPic_D(1:MaxDim), XyzMhd_D(1:MaxDim)
     integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
 
     logical:: DoTest
@@ -648,7 +650,7 @@ contains
     if(.not.allocated(IsPicNode_A)) allocate(IsPicNode_A(MaxNode))
     IsPicNode_A = .false.
 
-    nIjk_D = 1; PIC_D = 0; MHD_D=0
+    nIjk_D = 1; XyzPic_D = 0; XyzMhd_D=0
 
     do iRegion = 1, nRegionPic
        nIjk_D(1:nDim) = int(&
@@ -658,14 +660,14 @@ contains
             ' nIjk_D = ',nIjk_D(1:nDim)
 
        do k=1, nIjk_D(z_); do j=1, nIjk_D(y_); do i=1, nIjk_D(x_)
-          ! Loop through all the PIC node points.
+
+          ! Loop through all the PIC node points
           Ijk_D(x_) = i - 1; Ijk_D(y_) = j - 1; Ijk_D(z_) = k - 1
-          PIC_D(1:nDim) = Ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
-          call pic_to_mhd_vec(iRegion,Pic_D,MHD_D)
-          call find_grid_block(MHD_D, iProcFound, iBlock, iNodeOut=iNode)
-          if(iProcFound .ne. Unset_) then  
-             IsPicNode_A(iNode) = .true.
-          endif
+          XyzPic_D(1:nDim) = Ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
+          call pic_to_mhd_vec(iRegion, XyzPic_D, XyzMhd_D)
+          call find_grid_block(XyzMhd_D, iProcFound, iBlock, iNodeOut=iNode)
+          if(iProcFound /= Unset_) IsPicNode_A(iNode) = .true.
+             
        enddo; enddo; enddo
 
     enddo
