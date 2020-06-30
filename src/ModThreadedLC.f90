@@ -19,6 +19,8 @@ module ModThreadedLC
   use ModConst,          ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,       ONLY: Xyz_DGB
   use ModCoordTransform, ONLY: determinant, inverse_matrix
+  use ModLinearAdvection, ONLY:  &
+       lin_advection_source_plus, lin_advection_source_minus 
   use omp_lib
   !\
   !   Hydrostatic equilibrium in an isothermal corona:
@@ -853,26 +855,92 @@ contains
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
     end subroutine solve_heating
-    !==========================================================================
+    !============================================================================
     real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
-      !------------------------------------------------------------------------
+      !--------------------------------------------------------------------------
       dissipation_major = (-AMinor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor)*DeltaXi
     end function dissipation_major
-    !==========================================================================
+    !============================================================================
     real function dissipation_minor(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
-      !------------------------------------------------------------------------
+      !--------------------------------------------------------------------------
       dissipation_minor = ( AMajor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor)*DeltaXi
     end function dissipation_minor
+    !============================================================================
+    subroutine get_res_heating
+      real    :: DeltaXi, AMajor, AMinor, ReflCoef
+      integer :: iPoint
+      !---------------------------------------------------------
+      ResHeating_I = 0.0;  Res_VI(ConsAMajor_:ConsAMinor_,:)   = 0
+      M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      !\
+      ! Go forward, integrate AMajor_I with given AMinor_I
+      !/
+      L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      L_VVI(ConsAMajor_,ConsAMAjor_,1:nPoint) = -1
+      call lin_advection_source_plus(&
+           nX=nPoint,                &
+           nGCLeft=0,                &
+           nGCRight=0,               &
+           FIn_I=AMajor_I(1:nPoint), &
+           Source_I = Res_VI(ConsAMajor_,1:nPoint), BetaIn = 1.3)
+      !
+      ! Go backward, integrate AMinor_I with given AMajor_I
+      ! We integrate equation,
+      !
+      ! -2da_-/d\xi=
+      != max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+      ! *min(ReflCoef,2max(a_,a_+)) -2a_-a_+
+      !
+      U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      U_VVI(ConsAMinor_,ConsAMinor_,1:nPoint) = -1
+      call lin_advection_source_minus(&
+           nX=nPoint,                &
+           nGCLeft=0,                &
+           nGCRight=0,               &
+           FIn_I=AMinor_I(1:nPoint), &
+           Source_I = Res_VI(ConsAMinor_,1:nPoint), BetaIn = 1.3)
+      !
+      !Account for reflection and dissipation:
+      !
+      do iPoint = 1, nPoint
+         AMajor  = AMajor_I( iPoint)
+         AMinor  = AMinor_I( iPoint)
+         DeltaXi = DXi_I(iPoint)
+         ReflCoef = 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint))
+         !
+         ! Sources
+         !
+         DissipationPlus_I( iPoint) = dissipation_major(AMajor, AMinor,&
+              ReflCoef, DeltaXi)
+         DissipationMinus_I(iPoint) = dissipation_minor(AMajor, AMinor,&
+              ReflCoef, DeltaXi)
+         Res_VI(ConsAMajor_,iPoint) = Res_VI(ConsAMajor_,iPoint) +     &
+              DissipationPlus_I( iPoint) 
+         Res_VI(ConsAMinor_,iPoint) = Res_VI(ConsAMinor_,iPoint) +     &
+              DissipationMinus_I( iPoint) 
+         ResHeating_I(iPoint) = -2*AMajor*DissipationPlus_I(iPoint) -  &
+           2*AMinor*DissipationMinus_I(iPoint)
+         !
+         ! Jacobian
+         !
+         M_VVI(ConsAMajor_,ConsAMajor_,iPoint) = 1 + AMinor*DeltaXi
+         M_VVI(ConsAMajor_,ConsAMinor_,iPoint) = - DissipationPlus_I(iPoint)/&
+              AMinor
+         M_VVI(ConsAMinor_,ConsAMinor_,iPoint) = 1 + AMajor*DeltaXi
+         M_VVI(ConsAMinor_,ConsAMajor_,iPoint) = - DissipationMinus_I(iPoint)/&
+              AMajor
+      end do
+    end subroutine get_res_heating
     !============================================================================
     subroutine solve_a_plus_minus(AMinorBC,&
          AMajorBC, nIterIn)
