@@ -73,7 +73,7 @@ module ModPointImplicit
 
   ! balance point implicit blocks once or multiple times?
   logical, public:: DoBalancePointImplicit = .false.
-  logical, public:: IsDynamicPointImplicit = .false.
+  logical, public, protected:: IsDynamicPointImplicit = .false.
 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
@@ -97,10 +97,6 @@ module ModPointImplicit
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
   public:: init_point_implicit_num
-  !hyzhou: there is some problem for the init function here. It is called 
-  ! inside a parallel region, so should I just declare the seemingly shared
-  ! vars as threadprivate (even though they don't change), or rewrite the 
-  ! logic?
 
   ! Local variables
   ! Number of point implicit variables
@@ -121,7 +117,7 @@ module ModPointImplicit
   logical:: DoNormalizeCell = .false.
   
 contains
-  !============================================================================  
+  !============================================================================
   subroutine init_mod_point_impl
 
     if(allocated(UsePointImplicit_B)) RETURN
@@ -131,7 +127,7 @@ contains
 
   end subroutine init_mod_point_impl
 
-  !============================================================================  
+  !============================================================================
   subroutine clean_mod_point_impl
 
     if(.not.allocated(UsePointImplicit_B)) RETURN
