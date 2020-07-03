@@ -21,7 +21,7 @@ contains
   subroutine GM_get_for_pc_dt(DtSi)
 
     ! Calculate the global time step for PC
-    
+
     use ModMain,            ONLY: Dt
     use ModPhysics,         ONLY: No2Si_V, UnitT_
     use ModTimeStepControl, ONLY: set_global_timestep
@@ -39,7 +39,9 @@ contains
   subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
     use ModPIC, ONLY: nSizeStatus, Status_I, UseAdaptivePic, &
          pic_set_cell_status, nRegionPic, StatusMax_I
-        
+
+    use ModPIC,      ONLY:DoRestartPicStatus
+
     integer, intent(inout) :: nInt, nPicGrid
     integer, optional, intent(out):: Int_I(nInt), AccumulatedSize_I(nPicGrid)
     !------------------------------------------
@@ -47,11 +49,12 @@ contains
        nInt = nSizeStatus
        nPicGrid = nRegionPic
     else
-       if(UseAdaptivePic) call pic_set_cell_status
+       if(.not. DoRestartPicStatus .and. UseAdaptivePic) &
+            call pic_set_cell_status
        Int_I = Status_I
        AccumulatedSize_I = StatusMax_I
     endif
-    
+
   end subroutine GM_get_for_pc_grid_info
 
   !============================================================================
@@ -76,7 +79,7 @@ contains
     integer :: iFluid, iSpecies, iRegion 
     integer :: i, j, n
     !--------------------------------------------------------------------------
-    
+
     if(.not.present(iParam_I))then
        ! nDim, nRegion
        ! nVar, nIonFluid, nSpecies, nCellPerPatch
@@ -117,7 +120,7 @@ contains
           Param_I(n) = 0.0; n = n+1
           Param_I(n:n+1) = DxyzPic_DI(x_,iRegion)*No2Si_V(UnitX_); n = n+2
        end if
-       
+
        if(nDim > 2) then
           Param_I(n) = XyzMinPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
           Param_I(n) = LenPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
@@ -166,7 +169,7 @@ contains
 
     Param_I(n) = rPlanetSi;  n = n+1
     Param_I(n) = No2Si_V(UnitX_)
-    
+
   end subroutine GM_get_for_pc_init
   !============================================================================
 
@@ -254,7 +257,7 @@ contains
        end if
 
        Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
-       
+
     end do
 
   end subroutine GM_get_for_pc
@@ -361,7 +364,7 @@ contains
                    if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                         State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
                 endif
-                
+
                 do iVar = 1, nVar
                    ! Check for positivity
                    if(DefaultState_V(iVar) > 0 .and. State_VGB(iVar,i,j,k,iBlock) <= 0) then
