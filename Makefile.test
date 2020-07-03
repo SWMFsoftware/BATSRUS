@@ -1686,8 +1686,8 @@ test_europa2fluidspe_run:
 
 test_europa2fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-	    ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat \
-	    Param/EUROPA/TestOutput/trj_satellite_2fpe_e4_n00000100.sat.gz \
+	    ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000010.sat \
+	    Param/EUROPA/TestOutput/trj_satellite_2fpe_e4_n00000010.sat.gz \
 		> test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
