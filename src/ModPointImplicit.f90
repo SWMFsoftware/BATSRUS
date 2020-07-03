@@ -69,6 +69,8 @@ module ModPointImplicit
 
   ! Default is true for multi-ion and ion-electron equations
   logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield
+  ! Allows the user to specify the blocks to use the point implicit scheme
+  ! individually
   logical, public, allocatable:: UsePointImplicit_B(:)
 
   ! balance point implicit blocks once or multiple times?
@@ -77,7 +79,6 @@ module ModPointImplicit
 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
-  !$omp threadprivate( iVarPointImpl_I )
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
@@ -87,13 +88,13 @@ module ModPointImplicit
 
   real, allocatable :: Matrix_II(:,:), Rhs_I(:)
   !$omp threadprivate( Matrix_II, Rhs_I )
-  
+
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
   !$omp threadprivate( EpsPointImpl_V, DsDu_VVC )
-  
+
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
   public:: init_point_implicit_num
@@ -115,18 +116,122 @@ module ModPointImplicit
 
   ! Normalize variables cell-by-cell or per block
   logical:: DoNormalizeCell = .false.
-  
+
 contains
   !============================================================================
-  subroutine init_mod_point_impl
+  subroutine init_mod_point_impl(init_point_implicit)
+
+    use ModKind,    ONLY: nByteReal
+    use ModMain,    ONLY: nI, nJ, nK, nVar
+
+    interface
+       subroutine init_point_implicit
+       end subroutine init_point_implicit
+    end interface
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(allocated(UsePointImplicit_B)) RETURN
+
     allocate(UsePointImplicit_B(MaxBlock))
     ! Default is true for multi-ion and electron-ion equations
     UsePointImplicit_B = UsePointImplicit
 
-  end subroutine init_mod_point_impl
+    ! Set default perturbation parameters
+    !
+    ! Perturbation_V = abs(State_V)*EpsPointImpl + EpsPointImpl_V
 
+    allocate(EpsPointImpl_V(nVar))
+    if(nByteReal == 8)then
+       ! Precision of 8-byte arithmetic is roughly P = 1e-12
+       if(IsAsymmetric)then
+          ! Optimal value is the square root of P for 1-sided derivative
+          EpsPointImpl   = 1.e-6
+       else
+          ! Optimal value is the 2/3 power of P for 1-sided derivative
+          EpsPointImpl   = 1.e-9
+       end if
+    else
+       ! Precision of 4-byte arithmetic is roughly P = 1e-6
+       if(IsAsymmetric)then
+          ! Optimal value is the square root of P for 1-sided derivative
+          EpsPointImpl   = 1.e-3
+       else
+          ! Optimal value is the 2/3 power of P for 1-sided derivative
+          EpsPointImpl   = 1.e-4
+       end if
+    end if
+    ! Set the smallest value for the perturbation. This divides the
+    ! difference of the source terms Spert - Sorig, so it cannot be
+    ! too small otherwise the error in the source term becomes large.
+    EpsPointImpl_V = EpsPointImpl
+
+    ! This call should allocate and set the iVarPointImpl_I index array.
+    ! If IsPointImplMatrixSet=T is set then the dS/dU matrix is analytic.
+    ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and
+    ! iVarPointImplNum_I index array may be set with the number and indexes
+    ! of point implicit variables that require numerical derivatives
+    ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
+    ! Finally, init_point_implicit may also modify the EpsPointImpl and
+    ! EpsPointImpl_V parameters.
+
+    nVarPointImplNum = 0
+    call init_point_implicit
+
+    if(.not.allocated(iVarPointImpl_I)) call stop_mpi( NameSub // &
+       ': init_point_implicit did not set iVarPointImpl_I')
+
+    ! If IsPointImplMatrixSet is false and the iVarPointImplNum_I array is
+    ! not set, then all variables require numerical derivatives,
+    ! so we simply copy iVarPointImpl_I into iVarPointImplNum_I
+    if(.not.IsPointImplMatrixSet .and. nVarPointImplNum == 0) &
+       call init_point_implicit_num
+
+    nVarPointImpl = size(iVarPointImpl_I)
+
+    !$omp parallel
+    allocate( &
+       DsDu_VVC(nVar,nVar,nI,nJ,nK), &
+       Matrix_II(nVarPointImpl,nVarPointImpl), &
+       Rhs_I(nVarPointImpl))
+    !$omp end parallel
+
+    if(iProc==0 .and. index(StringTest, NameSub)>0)then
+       write(*,*)NameSub,' allocated arrays'
+       write(*,*)NameSub,': nVarPointImpl  =', nVarPointImpl
+       write(*,*)NameSub,': iVarPointImpl_I=', iVarPointImpl_I
+       write(*,*)NameSub,': IsPointImplMatrixSet=', IsPointImplMatrixSet
+       if(.not.IsPointImplMatrixSet)then
+          write(*,*)NameSub,': nVarPointImplNum  =', nVarPointImplNum
+          write(*,*)NameSub,': iVarPointImplNum_I=', iVarPointImplNum_I
+          write(*,*)NameSub,': EpsPointImpl  =', EpsPointImpl
+          write(*,*)NameSub,': EpsPointImpl_V=', EpsPointImpl_V
+       end if
+    end if
+
+    call test_stop(NameSub, DoTest)
+  end subroutine init_mod_point_impl
+  !============================================================================
+  subroutine init_point_implicit_num
+
+    ! Set iVarPointImplicitNum_I, the list of variables to be perturbed
+    ! by copying iVarPointImplicit_I
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_point_implicit_num'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
+    nVarPointImplNum = size(iVarPointImpl_I)
+    allocate(iVarPointImplNum_I(nVarPointImplNum))
+    iVarPointImplNum_I = iVarPointImpl_I
+
+    call test_stop(NameSub, DoTest)
+  end subroutine init_point_implicit_num
   !============================================================================
   subroutine clean_mod_point_impl
 
@@ -150,11 +255,6 @@ contains
     call test_start(NameSub, DoTest)
     call read_var('UsePointImplicit', UsePointImplicit)
 
-    ! the array allows the user to specify the blocks to
-    ! use the point implicit scheme individually
-    if(.not.allocated(UsePointImplicit_B)) &
-         allocate(UsePointImplicit_B(MaxBlock))
-    UsePointImplicit_B = UsePointImplicit
     if(UsePointImplicit) then
        call read_var('BetaPointImplicit', BetaPointImpl)
        call read_var('IsAsymmetric',      IsAsymmetric)
@@ -164,10 +264,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_point_implicit_param
   !============================================================================
-  subroutine update_point_implicit(iBlock, &
-       calc_point_impl_source, init_point_implicit)
+  subroutine update_point_implicit(iBlock, calc_point_impl_source)
 
-    use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
@@ -183,9 +281,6 @@ contains
        subroutine calc_point_impl_source(iBlock)
          integer, intent(in) :: iBlock
        end subroutine calc_point_impl_source
-
-       subroutine init_point_implicit
-       end subroutine init_point_implicit
     end interface
 
     integer :: i, j, k, iVar, jVar, iIVar, iJVar, iFluid
@@ -193,7 +288,7 @@ contains
     real :: StateExpl_VC(nVar,nI,nJ,nK)
     real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
     real :: State0_C(nI,nJ,nK)
-    
+
     logical :: DoTestCell
 
     logical:: DoTest
@@ -204,80 +299,6 @@ contains
 
     ! Switch to implicit user sources
     IsPointImplSource = .true.
-
-    ! Initialization
-    if(.not.allocated(iVarPointImpl_I))then
-
-       ! Set default perturbation parameters
-       !
-       ! Perturbation_V = abs(State_V)*EpsPointImpl + EpsPointImpl_V
-
-       allocate(EpsPointImpl_V(nVar))
-       if(nByteReal == 8)then
-          ! Precision of 8-byte arithmetic is roughly P = 1e-12
-          if(IsAsymmetric)then
-             ! Optimal value is the square root of P for 1-sided derivative
-             EpsPointImpl   = 1.e-6
-          else
-             ! Optimal value is the 2/3 power of P for 1-sided derivative
-             EpsPointImpl   = 1.e-9
-          end if
-       else
-          ! Precision of 4-byte arithmetic is roughly P = 1e-6
-          if(IsAsymmetric)then
-             ! Optimal value is the square root of P for 1-sided derivative
-             EpsPointImpl   = 1.e-3
-          else
-             ! Optimal value is the 2/3 power of P for 1-sided derivative
-             EpsPointImpl   = 1.e-4
-          end if
-       end if
-       ! Set the smallest value for the perturbation. This divides the
-       ! difference of the source terms Spert - Sorig, so it cannot be
-       ! too small otherwise the error in the source term becomes large.
-       EpsPointImpl_V = EpsPointImpl
-
-       ! This call should allocate and set the iVarPointImpl_I index array.
-       ! If IsPointImplMatrixSet=T is set then the dS/dU matrix is analytic.
-       ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and
-       ! iVarPointImplNum_I index array may be set with the number and indexes
-       ! of point implicit variables that require numerical derivatives
-       ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
-       ! Finally, init_point_implicit may also modify the EpsPointImpl and
-       ! EpsPointImpl_V parameters.
-
-       nVarPointImplNum = 0
-       call init_point_implicit
-
-       if(.not.allocated(iVarPointImpl_I)) call stop_mpi( NameSub // &
-            ': init_point_implicit did not set iVarPointImpl_I')
-
-       ! If IsPointImplMatrixSet is false and the iVarPointImplNum_I array is
-       ! not set, then all variables require numerical derivatives,
-       ! so we simply copy iVarPointImpl_I into iVarPointImplNum_I
-       if(.not.IsPointImplMatrixSet .and. nVarPointImplNum == 0) &
-            call init_point_implicit_num
-
-       nVarPointImpl = size(iVarPointImpl_I)
-
-       allocate( &
-            DsDu_VVC(nVar,nVar,nI,nJ,nK), &
-            Matrix_II(nVarPointImpl,nVarPointImpl), &
-            Rhs_I(nVarPointImpl))
-
-       if(iProc==0 .and. index(StringTest, NameSub)>0)then
-          write(*,*)NameSub,' allocated arrays'
-          write(*,*)NameSub,': nVarPointImpl  =', nVarPointImpl
-          write(*,*)NameSub,': iVarPointImpl_I=', iVarPointImpl_I
-          write(*,*)NameSub,': IsPointImplMatrixSet=', IsPointImplMatrixSet
-          if(.not.IsPointImplMatrixSet)then
-             write(*,*)NameSub,': nVarPointImplNum  =', nVarPointImplNum
-             write(*,*)NameSub,': iVarPointImplNum_I=', iVarPointImplNum_I
-             write(*,*)NameSub,': EpsPointImpl  =', EpsPointImpl
-             write(*,*)NameSub,': EpsPointImpl_V=', EpsPointImpl_V
-          end if
-       end if
-    end if
 
     ! The beta parameter is always one in the first stage
     if(iStage == 1 .or. .not. time_accurate)then
@@ -369,7 +390,7 @@ contains
              ! Calculate perturbed source
              Source_VC = 0.0
              call calc_point_impl_source(iBlock)
-             
+
              ! Calculate dS/dU matrix elements with symmetric differencing
              do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
@@ -514,25 +535,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_point_implicit
-  !============================================================================
-
-  subroutine init_point_implicit_num
-
-    ! Set iVarPointImplicitNum_I, the list of variables to be perturbed
-    ! by copying iVarPointImplicit_I
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_point_implicit_num'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
-    nVarPointImplNum = size(iVarPointImpl_I)
-    allocate(iVarPointImplNum_I(nVarPointImplNum))
-    iVarPointImplNum_I = iVarPointImpl_I
-
-    call test_stop(NameSub, DoTest)
-  end subroutine init_point_implicit_num
   !============================================================================
 
   subroutine linear_equation_solver(nVar, Matrix_VV, Rhs_V)
