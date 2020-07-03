@@ -2878,11 +2878,11 @@ contains
       select case(NameThisComp)
       case('SC','IH','OH','EE')
          ! Body parameters
-         UseGravity=.true.
-         body1      =.true.
+         UseGravity = .true.
+         body1      = .true.
          if(NameThisComp == 'EE') body1 = .false.
-         Rbody      = 1.00
-         Rcurrents  =-1.00
+         Rbody      = 1.0
+         Rcurrents  =-1.0
 
          ! Non Conservative Parameters
          UseNonConservative   = .false.
@@ -2907,10 +2907,10 @@ contains
 
       case('GM')
          ! Body Parameters
-         UseGravity=.false.
-         body1      =.true.
-         Rbody      = 3.00
-         Rcurrents  = 4.00
+         UseGravity = .false.
+         body1      = .true.
+         Rbody      = 3.0
+         Rcurrents  = 4.0
 
          ! Non Conservative Parameters
          UseNonConservative   = .true.
