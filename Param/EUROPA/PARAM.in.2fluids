@@ -196,7 +196,7 @@ user            TypeResistivity
 !!! OUTPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #SAVERESTART
-T
+F
 100
 -1
 
@@ -204,7 +204,7 @@ T
 one			TypeRestartOutFile
 
 #SAVEINITIAL
-T
+F
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
@@ -216,7 +216,7 @@ mlop recop chxop mlo2p reco2p chxo2p OpRhopnt O2pRhopnt mloppnt recoppnt chxoppn
 #SATELLITE
 1                       nSatellite
 MHD traj                StringSatellite
-100                     DnOutput
+10                     	DnOutput
 -1.                     DtOutput [sec]
 satellite_2fpe_e4.dat   NameTrajectoryFile
 
@@ -323,7 +323,7 @@ outflowfix
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #STOP
-100                  MaxIteration
--1                     tSimulationMax
+10			MaxIteration
+-1                     	tSimulationMax
 
 #END
