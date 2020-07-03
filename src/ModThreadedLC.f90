@@ -14,11 +14,13 @@ module ModThreadedLC
        kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
   use ModCoronalHeating,   ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB,    &
-       QeRatio
+       QeRatio, MaxImbalance
   use ModPhysics,        ONLY: Z => AverageIonCharge
   use ModConst,          ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,       ONLY: Xyz_DGB
   use ModCoordTransform, ONLY: determinant, inverse_matrix
+  use ModLinearAdvection, ONLY:  &
+       lin_advection_source_plus, lin_advection_source_minus 
   use omp_lib
   !\
   !   Hydrostatic equilibrium in an isothermal corona:
@@ -43,36 +45,38 @@ module ModThreadedLC
        TeFraction, TiFraction,  iP, PeFraction
   implicit none
   SAVE
-  !\
+  !
   ! energy flux needed to raise the mass flux rho*u to the heliocentric
   ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
-  !/
+  !
   real :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
 
-  !\
+  !
   ! Temperature 3D array
-  !/
+  !
   real,allocatable :: Te_G(:,:,:)
   !$omp threadprivate( Te_G )
   !\
   ! Arrays for 1D distributions
-  !/
-  real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I, &
-       TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I, &
-       TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,&
-       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I, &
+  !
+  real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I,            &
+       TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                  &
+       TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
+       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
-       ExchangeRate_I
-  !\
+       ExchangeRate_I,  SourceAdvectionPlus_I,  SourceAdvectionMinus_I,      &
+       DissipationMinus_I, DissipationPlus_I
+  !
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
   ! specific heat at constant pressure. For pressure the barometric
   ! formula is applied
-  !/
+  !
   integer, parameter:: Cons_ = 1, Ti_=2, LogP_ = 3
+  integer, parameter:: ConsAMajor_ = 4, ConsAMinor_ = 5
   real, allocatable, dimension(:,:):: Res_VI, DCons_VI
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
 
@@ -186,13 +190,22 @@ contains
     allocate(     Xi_I(0:nPointThreadMax));     Xi_I = 0.0
     allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
     allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
+    allocate(DissipationMinus_I(nPointThreadMax)); DissipationMinus_I = 0.0
+    allocate(DissipationPlus_I(nPointThreadMax)); DissipationPlus_I = 0.0
+    allocate(SourceAdvectionPlus_I( nPointThreadMax))
+    SourceAdvectionPlus_I  = 0.0
+    allocate(SourceAdvectionMinus_I(nPointThreadMax))
+    SourceAdvectionMinus_I = 0.0
 
-    allocate(  Res_VI(Cons_:LogP_,nPointThreadMax));      Res_VI = 0.0
-    allocate(DCons_VI(Cons_:LogP_,nPointThreadMax));    DCons_VI = 0.0
+    allocate(  Res_VI(Cons_:ConsAMinor_,nPointThreadMax));      Res_VI = 0.0
+    allocate(DCons_VI(Cons_:ConsAMinor_,nPointThreadMax));    DCons_VI = 0.0
 
-    allocate(U_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); U_VVI = 0.0
-    allocate(L_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); L_VVI = 0.0
-    allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); M_VVI = 0.0
+    allocate(U_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax))
+    U_VVI = 0.0
+    allocate(L_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax)) 
+    L_VVI = 0.0
+    allocate(M_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax)) 
+    M_VVI = 0.0
     !\
     ! Initialize transition region model:
     call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
@@ -399,43 +412,36 @@ contains
        TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k)
        TiSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
        PSi_I(1:nPoint)  = BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
+       AMajor_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMajor_,1-nPoint:0,j,k)
+       AMinor_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMinor_,1-nPoint:0,j,k)
        if(iAction/=Enthalpy_)then
           TeSi_I(nPoint)   = TeSiIn
           TiSi_I(nPoint)   = TiSiIn
        end if
+       AMinor_I(nPoint)    = AMinorIn
     end if
     select case(iAction)
     case(DoInit_)
-       !\
+       !
        ! As a first approximation, recover Te from the analytical solution
-       !/
-       TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
-       do iPoint = nPoint-1, 1, -1
-          call interpolate_lookup_table(&
-               iTable=iTableTR,         &
-               iVal=LengthPAvrSi_,      &
-               ValIn=PeSiOut/SqrtZ*     &
-               BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-               Value_V=Value_V,         &
-               Arg1Out=TeSi_I(iPoint),  &
-               DoExtrapolate=.false.)
-       end do
-       TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
-       TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
-       !\
+       !
+       call analytical_te_ti
+       !
        ! The analytical solution assumes constant pressure and
        ! no heating. Calculate the pressure distribution
-       !/
+       !
        call set_pressure
+       !
+       ! Get wave from analytical solution with noreflection
        call advance_thread(IsTimeAccurate=.false.)
-       call get_res_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIter)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) =  AMajor_I(0:nPoint) 
        BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case(Enthalpy_)
-       call get_res_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIter)
     case(Impl_)
        call advance_thread(IsTimeAccurate=.true.)
        !\
@@ -452,7 +458,7 @@ contains
        !\
        ! Calculate AWaves and store pressure and temperature
        !/
-       call get_res_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIter)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
@@ -489,25 +495,25 @@ contains
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )  ! < O!
-    !\
+    !
     !
     !      ghost cell | phys.cell
     !           *<-delta R->*
     !      PGhost=exp(-dLogP/dR*DeltaR)*PPhys
-    !/
+    !
     BarometricFactor = exp(&
          (log(PSi_I(nPoint)) - log(PSi_I(nPoint-1)))*GhostCellCorr )
-    !\
+    !
     ! Limit Barometric factor
-    !/
+    !
     BarometricFactor=min(BarometricFactor,2.0)
 
     SecondOrderPeSi  = PeSiIn*BarometricFactor
-    !\
+    !
     ! In the ghost cell value of density in addition to the
     ! barometric factor the temperature gradient is accounted for,
     ! which is cotrolled by the heat flux derived from the TFL model:
-    !/
+    !
 
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/min(          &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
@@ -579,6 +585,22 @@ contains
     end if
     call timing_stop(NameTiming)
   contains
+    subroutine analytical_te_ti
+      integer :: iPoint
+      TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
+      do iPoint = nPoint-1, 1, -1
+         call interpolate_lookup_table(&
+              iTable=iTableTR,         &
+              iVal=LengthPAvrSi_,      &
+              ValIn=PeSiOut/SqrtZ*     &
+              BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
+              Value_V=Value_V,         &
+              Arg1Out=TeSi_I(iPoint),  &
+              DoExtrapolate=.false.)
+      end do
+      TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
+      TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
+    end subroutine analytical_te_ti
     !==========================================================================
     subroutine set_pressure
       integer::iPoint
@@ -602,307 +624,15 @@ contains
       end do
     end subroutine set_pressure
     !==========================================================================
-    subroutine advance_thread(IsTimeAccurate)
-      use ModMain,     ONLY: cfl, Dt, time_accurate
-      use ModAdvance,  ONLY: time_BLK, nJ, nK
-      use ModPhysics,  ONLY: UnitT_, No2Si_V
-      !\
-      ! Advances the thread solution
-      ! If IsTimeAccurate, the solution is advanced through the time
-      ! interval, DtLocal. Otherwise, it looks for the steady-state solution
-      ! with the advanced boundary condition
-      !/
-      logical, intent(in) :: IsTimeAccurate
-      !\
-      ! Time step in the physical cell from which the thread originates
-      !/
-      real    :: DtLocal,DtInv
-      !\
-      ! Loop variable
-      !/
-
-      integer :: iPoint, iIter
-      !\
-      ! Enthalpy correction coefficients
-      !/
-      real    :: EnthalpyFlux, FluxConst
-      real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
-      !\
-      ! Correction accounting for the Enthlpy flux from the TR
-      real    :: PressureTRCoef
-      !------------------------------------------------------------------------
-      if(IsTimeAccurate)then
-         if(time_accurate)then
-            DtLocal = Dt*No2Si_V(UnitT_)
-         else
-            DtLocal = cfl*No2Si_V(UnitT_)*&
-                 time_BLK(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
-         end if
-         if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
-         DtInv = 1/DtLocal
-      else
-         DtInv = 0.0
-      end if
-      !
-      ! In the equations below: 
-      ! 
-      !
-      ! Initialization
-      !
-      TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
-      TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
-      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
-      SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
-           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
-           PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
-      SpecIonHeat_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)/Z
-      ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
-           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
-           PSi_I(1:nPoint-1)**2/(&
-           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
-           TeSi_I(1:nPoint-1)**1.5)
-      DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0
-      DeltaIonEnergy_I = 0.0
-      PressureTRCoef = 1.0; FluxConst = 0.0
-      !\
-      ! Turbulent heating and mass flux are not iterated
-      !/
-      call get_res_heating(nIterIn=nIter)
-      if(USi>0)then
-         FluxConst    = USi * PSi_I(nPoint)/&
-              ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-      elseif(USi<0)then
-         FluxConst    = USi * PeSiIn/&
-              (TeSiIn*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-
-      end if
-      EnthalpyFlux = FluxConst/Z& ! 5/2*U*Pi*(Z+1)
-           *(InvGammaMinus1 +1)*(1 + Z)
-      !\
-      ! Calculate flux to TR and its temperature derivative
-      !/
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
-           DoExtrapolate=.false.)
-
-      do iIter = 1,nIter
-         !\
-         ! Iterations
-         !/
-         TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
-         TiSiOld_I(1:nPoint) = TiSi_I(1:nPoint)
-         !\
-         ! Shape the source.
-         !/
-         call get_heat_cond
-         !\
-         ! Add enthalpy correction
-         !/
-         if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
-               0.50*HeatFlux2TR/TeSi_I(1)),FluxConst)
-         ElectronEnthalpyFlux = EnthalpyFlux*Z/(1 + Z)
-         if(USi>0)then
-            ResEnthalpy_I(2:nPoint-1) = &
-                 ElectronEnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-            ResEnthalpy_I(1)   = 0.0
-            L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
-                 - ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
-                 (3.50*Cons_I(2:nPoint-1))
-            M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
-                 + ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
-                 (3.50*Cons_I(2:nPoint-1))
-         elseif(USi<0)then
-            ResEnthalpy_I(1:nPoint-1) = &
-                 -ElectronEnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
-            U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
-                 + ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
-                 (3.50*Cons_I(1:nPoint-1))
-            M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
-                 - ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
-                 (3.50*Cons_I(1:nPoint-1))
-         end if
-         !==========Add Gravity Source================================
-         !\
-         ! cGravPot = cGravitation*mSun*cAtomicMass/&
-         !/   (cBoltzmann*rSun)
-         ! GravHydroDyn = cGravPot*MassIon_I(1)/Z
-         !\
-         ! energy flux needed to raise the mass flux rho*u to the
-         ! heliocentric distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-         !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-         !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
-         !/
-
-         ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
-              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
-              + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-         ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(     &
-              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
-              + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
-         ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
-              0.5*ResGravity_I(1:nPoint-1)
-
-         !\
-         ! For the time accurate mode, account for the time derivative
-         ! The contribution to the Jacobian be modified although the specific
-         ! heat should not,  because the conservative variable is
-         ! flux-by-length, not the temperature
-         !/
-         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-              DtInv*SpecHeat_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/   &
-              (3.50*Cons_I(1:nPoint-1))
-         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
-              DtInv*SpecIonHeat_I(1:nPoint-1)
-         PressureTRCoef = sqrt(max(&
-              1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))
-         Res_VI(Cons_,1:nPoint-1) = -DeltaEnergy_I(1:nPoint-1) +      &
-              ResHeating_I(1:nPoint-1)*QeRatio +  ResCooling_I(1:nPoint-1) +&
-              ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1) +&
-              ExchangeRate_I(1:nPoint-1)*&
-              (TiSi_I(1:nPoint-1) - TeSi_I(1:nPoint-1))
-         M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) -&
-               ExchangeRate_I(1:nPoint-1)
-         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) +&
-               ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
-               (3.50*Cons_I(1:nPoint-1))
-         !M_VVI(Cons_,LogP_,1:nPoint-1) = M_VVI(Cons_,LogP_,1:nPoint-1)&
-         !  -0.250*QeRatio*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         !M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         !M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
-         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
-         DCons_VI = 0.0
-         IonEnthalpyFlux = ElectronEnthalpyFlux/Z
-         ResEnthalpy_I=0.0
-         if(USi>0)then
-            ResEnthalpy_I(2:nPoint-1) = &
-                 IonEnthalpyFlux*(TiSi_I(1:nPoint-2) - TiSi_I(2:nPoint-1))
-            ResEnthalpy_I(1)   = 0.0
-            L_VVI(Ti_,Ti_,2:nPoint-1) =  L_VVI(Ti_,Ti_,2:nPoint-1)&
-                 - IonEnthalpyFlux
-            M_VVI(Ti_,Ti_,2:nPoint-1) =  M_VVI(Ti_,Ti_,2:nPoint-1)&
-                 + IonEnthalpyFlux
-         elseif(USi<0)then
-            ResEnthalpy_I(1:nPoint-1) = &
-                 -IonEnthalpyFlux*(TiSi_I(2:nPoint) - TiSi_I(1:nPoint-1))
-            U_VVI(Ti_,Ti_,1:nPoint-1) = U_VVI(Ti_,Ti_,1:nPoint-1)&
-                 + IonEnthalpyFlux
-            M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1)&
-                 - IonEnthalpyFlux
-         end if
-         ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
-              0.5*ResGravity_I(1:nPoint-1)
-         Res_VI(Ti_,1:nPoint-1) = -DeltaIonEnergy_I(1:nPoint-1) +      &
-              ResHeating_I(1:nPoint-1)*(1-QeRatio) + ResEnthalpy_I(1:nPoint-1)&
-              + ExchangeRate_I(1:nPoint-1)*&
-              (TeSi_I(1:nPoint-1) - TiSi_I(1:nPoint-1))
-         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) +&
-               ExchangeRate_I(1:nPoint-1)
-         M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) -&
-               ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
-               (3.50*Cons_I(1:nPoint-1))
-         !M_VVI(Ti_,LogP_,1:nPoint-1) = M_VVI(Ti_,LogP_,1:nPoint-1)&
-         !  -0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         !M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
-         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         !M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
-         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
-         call tridiag_3by3_block(n=nPoint-1,  &
-              L_VVI=L_VVI(:,:,1:nPoint-1),&
-              M_VVI=M_VVI(:,:,1:nPoint-1),&
-              U_VVI=U_VVI(:,:,1:nPoint-1),&
-              R_VI=Res_VI(:,1:nPoint-1),  &
-              W_VI=DCons_VI(:,1:nPoint-1))
-         !\
-         ! limit DeltaCons
-         !/
-         DCons_VI(Cons_,1:nPoint-1) = max(min(DCons_VI(Cons_, 1:nPoint-1), &
-              ConsMax - Cons_I(    1:nPoint-1),        Cons_I(1:nPoint-1)),&
-              ConsMin - Cons_I(    1:nPoint-1),   -0.5*Cons_I(1:nPoint-1))
-         DCons_VI(Ti_,1:nPoint-1) = max(min(DCons_VI(Ti_, 1:nPoint-1), &
-              TeSiMax - TiSi_I(    1:nPoint-1),        TiSi_I(1:nPoint-1)),&
-              TeSiMin - TiSi_I(    1:nPoint-1),   -0.5*TiSi_I(1:nPoint-1))
-         !\
-         ! Apply DeltaCons
-         !/
-         Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_VI(Cons_,1:nPoint-1)
-         !\
-         ! Recover temperature
-         !/
-         TeSi_I(1:nPoint-1) = &
-              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
-         TiSi_I(1:nPoint-1) = TiSi_I(1:nPoint-1) + DCons_VI(Ti_,1:nPoint-1)
-         !\
-         ! Change in the internal energy (to correct the energy source
-         ! for the time-accurate mode):
-         !/
-         DeltaEnergy_I(1:nPoint-1) = DtInv*SpecHeat_I(1:nPoint-1)* &
-              (TeSi_I(1:nPoint-1) - TeSiStart_I(1:nPoint-1))
-         DeltaIonEnergy_I(1:nPoint-1) = DtInv*SpecIonHeat_I(1:nPoint-1)* &
-              (TiSi_I(1:nPoint-1) - TiSiStart_I(1:nPoint-1))
-         !\
-         ! Calculate TR pressure
-         ! For next iteration calculate TR heat flux and
-         ! its temperature derivative
-         !/
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
-              DoExtrapolate=.false.)
-         !\
-         ! Set pressure for updated temperature
-         !/
-         Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
-         call set_pressure
-         call get_res_heating(nIterIn=nIter)
-         ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
-              BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
-              PSi_I(1:nPoint-1)**2/(&
-              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
-              TeSi_I(1:nPoint-1)**1.5)
-         if(all(abs(DCons_VI(Cons_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
-      end do
-      if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
-           .and.DoConvergenceCheck)then
-         write(*,'(a)')'TeOld Te TeMin PSi_I Heating Enthalpy'
-         do iPoint=1,nPoint
-            write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
-                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
-                 PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
-         end do
-         write(*,'(a,es15.6,a,3es15.6)')'Error =',maxval(&
-              abs(DCons_VI(Cons_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
-              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-         write(*,'(a,5es15.6)')&
-              'Input parameters: TeSiIn,USiIn,USi,PeSiIn,PCoef=',&
-              TeSiIn,USiIn,USi,PeSiIn,PressureTRCoef
-         call stop_mpi('Algorithm failure in advance_thread')
-      end if
-    end subroutine advance_thread
-    !==========================================================================
-    subroutine get_res_heating(nIterIn)
-      use ModCoronalHeating,  ONLY: rMinWaveReflection
-      integer, intent(in)::nIterIn
+    subroutine get_dxi_and_xi
       integer:: iPoint
-      real    :: SqrtRho, RhoNoDim
-      !
-      !Sum of a_+ and a_- and iterative values for it
-      !
-      real    :: Sigma, SigmaOld, Aux, XiTot, vAlfven 
+      real    :: SqrtRho, RhoNoDim, vAlfven 
       !------------------------------------------------------------------------
-      !\
-      ! Now prepare to calculate Alfven wave amplitude distribution
-      !/
-      Xi_I(0) = 0.0
+      !
       do iPoint=1,nPoint
-         !\
+         !
          ! 1. Calculate sqrt(RhoNoDim)
-         !/
+         !
          RhoNoDim = RhoNoDimCoef*PSi_I(iPoint)/&
               (Z*TeSi_I(iPoint) + TiSi_I(iPoint))
          if(RhoNoDim<=0.0)then
@@ -912,58 +642,81 @@ contains
             call stop_mpi('Non-positive Density in '//NameSub)
          end if
          SqrtRho = sqrt(RhoNoDim)
-         !\
+         !
          ! 2. Calculate Alfven wave speed
-         !/
+         !
          vAlfven = BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho
          VaLog_I(iPoint) = log(vAlfven)
-         !\
+         !
          ! 3. Calculate dimensionless length (in terms of the dissipation length
-         !/
+         !
          DXi_I(iPoint) = &
               BoundaryThreads_B(iBlock)% DXiCell_III(iPoint-nPoint,j,k)/&
               sqrt(vAlfven)
-         Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
-
+      Xi_I(1) = 0.50*DXi_I(1)
+      do iPoint = 2, nPoint
+         Xi_I(iPoint) = Xi_I(iPoint) + 0.50*(DXi_I(iPoint-1) + DXi_I(iPoint))
+      end do
       !
-      ! 4. Solve amplitudes of the Alfven waves (arrays there have dimension)
-      ! (0:nI)
+      ! Correct the end points by the half intervals
       !
+      Xi_I(1) = 0.0; Xi_I(nPoint) = Xi_I(nPoint) + 0.50*DXi_I(nPoint)
+    end subroutine get_dxi_and_xi
+    !==========================================================================
+    subroutine analytical_waves
+      integer:: iPoint
+      !
+      !Sum of a_+ and a_- and iterative values for it
+      !
+      real    :: Sigma, SigmaOld, Aux, XiTot
+      !------------------------------------------------------------------------
+      
       ! 4.1. As zero order approximation we solve waves with no reflection
       ! 
       ! solve equation 
       !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
       !
       ! The sought value is in between 1 and 1 + AMinorIn
-      !Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
-      !do while(abs(Sigma - SigmaOld) > 0.01*cTol)
-      !   SigmaOld = Sigma
-      !   Aux = exp(-SigmaOld*XiTot)
-      !   Sigma = SigmaOld -( & !Residual function
-      !        (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
-      !        (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
-      !end do
+      Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
+      do while(abs(Sigma - SigmaOld) > 0.01*cTol)
+         SigmaOld = Sigma
+         Aux = exp(-SigmaOld*XiTot)
+         Sigma = SigmaOld -( & !Residual function
+              (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
+              (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
+      end do
       !
       ! 4.2. Apply boundary conditions
       !
-      !AMajor_I(0) = 1; AMinor_I(nPoint) = AMinorIn
+      AMajor_I(0) = 1; AMinor_I(nPoint) = AMinorIn
       !
       ! 4.3. Now, apply formulae, which are valid for no-reflection case:
       !
-      !AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
-      !AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
-      !     exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
- 
-      if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 )then 
+      AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
+      AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
+           exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
+    end subroutine analytical_waves
+    !==========================================================================
+    !=================Calculation of sources and Jacobian matrices=============
+    !==========================================================================
+    !==========================================================================
+    subroutine get_reflection
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
+      integer:: iPoint
+      !
+      if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 &
+           )then
+         ! 
          !All thread points are below rMinWaveReflection
-      !   AMajorOut = AMajor_I(nPoint)
+         ! 
          ReflCoef_I(0:nPoint) = 0
       else
-         !\
-         ! 5. Calculate the reflection coefficient
-         !/
-         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
+         !
+         ! Calculate the reflection coefficient
+         !
+         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/&
+              (0.50*DXi_I(2) + DXi_I(1))
          do iPoint = 2, nPoint -2
             ReflCoef_i(iPoint) = &
                  abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
@@ -978,23 +731,15 @@ contains
          ReflCoef_I(0) =  ReflCoef_I(1)
          ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
       end if
-      call solve_a_plus_minus(&
-           nI=nPoint,                      &
-           ReflCoef_I=ReflCoef_I(0:nPoint),&
-           Xi_I=Xi_I(0:nPoint),            &
-           AMinorBC=AMinorIn,              &
-           AMajorBC=AMajorOut,             &
-           nIterIn=nIterIn)
-
-      ResHeating_I = 0.0
-      ResHeating_I(1:nPoint-1) = &
-           (AMajor_I(0:nPoint-2)**2 - AMinor_I(0:nPoint-2)**2)&
-           -(AMajor_I(1:nPoint-1  )**2 - AMinor_I(1:nPoint-1)**2)
-    end subroutine get_res_heating
+    end subroutine get_reflection
+    !==========================================================================
     !==========================================================================
     subroutine get_heat_cond
       !------------------------------------------------------------------------
-      M_VVI = 0.0; ResHeatCond_I = 0.0; U_VVI = 0.0; L_VVI = 0.0
+      M_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0 
+      ResHeatCond_I = 0.0 
+      U_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0 
+      L_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0
       !----------------
       !\
       ! Contribution from heat conduction fluxes
@@ -1097,6 +842,477 @@ contains
       end do
     end subroutine get_cooling
     !==========================================================================
+    subroutine solve_heating(nIterIn)
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
+      integer, intent(in)::nIterIn
+      integer:: iPoint 
+      !------------------------------------------------------------------------
+      call get_dxi_and_xi
+      !call analytical_wave
+      call get_reflection
+      call solve_a_plus_minus(&
+           AMinorBC=AMinorIn,              &
+           AMajorBC=AMajorOut,             &
+           nIterIn=nIterIn)
+    end subroutine solve_heating
+    !============================================================================
+    real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
+      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+      !--------------------------------------------------------------------------
+      dissipation_major = (-AMinor*&
+           (max(0.0,AMajor - MaxImbalance*AMinor)      &
+           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           - AMinor*AMajor)*DeltaXi
+    end function dissipation_major
+    !============================================================================
+    real function dissipation_minor(AMajor, AMinor, Reflection, DeltaXi)
+      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+      !--------------------------------------------------------------------------
+      dissipation_minor = ( AMajor*&
+           (max(0.0,AMajor - MaxImbalance*AMinor)      &
+           -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+           min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+           - AMinor*AMajor)*DeltaXi
+    end function dissipation_minor
+    !============================================================================
+    subroutine get_res_heating
+      real    :: DeltaXi, AMajor, AMinor, ReflCoef
+      integer :: iPoint
+      !---------------------------------------------------------
+      ResHeating_I = 0.0;  Res_VI(ConsAMajor_:ConsAMinor_,:)   = 0
+      M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      !\
+      ! Go forward, integrate AMajor_I with given AMinor_I
+      !/
+      L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      L_VVI(ConsAMajor_,ConsAMAjor_,1:nPoint) = -1
+      call lin_advection_source_plus(&
+           nX=nPoint,                &
+           nGCLeft=0,                &
+           nGCRight=0,               &
+           FIn_I=AMajor_I(1:nPoint), &
+           Source_I = Res_VI(ConsAMajor_,1:nPoint), BetaIn = 1.3)
+      !
+      ! Go backward, integrate AMinor_I with given AMajor_I
+      ! We integrate equation,
+      !
+      ! -2da_-/d\xi=
+      != max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+      ! *min(ReflCoef,2max(a_,a_+)) -2a_-a_+
+      !
+      U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
+      U_VVI(ConsAMinor_,ConsAMinor_,1:nPoint) = -1
+      call lin_advection_source_minus(&
+           nX=nPoint,                &
+           nGCLeft=0,                &
+           nGCRight=0,               &
+           FIn_I=AMinor_I(1:nPoint), &
+           Source_I = Res_VI(ConsAMinor_,1:nPoint), BetaIn = 1.3)
+      !
+      !Account for reflection and dissipation:
+      !
+      do iPoint = 1, nPoint
+         AMajor  = AMajor_I( iPoint)
+         AMinor  = AMinor_I( iPoint)
+         DeltaXi = DXi_I(iPoint)
+         ReflCoef = 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint))
+         !
+         ! Sources
+         !
+         DissipationPlus_I( iPoint) = dissipation_major(AMajor, AMinor,&
+              ReflCoef, DeltaXi)
+         DissipationMinus_I(iPoint) = dissipation_minor(AMajor, AMinor,&
+              ReflCoef, DeltaXi)
+         Res_VI(ConsAMajor_,iPoint) = Res_VI(ConsAMajor_,iPoint) +     &
+              DissipationPlus_I( iPoint) 
+         Res_VI(ConsAMinor_,iPoint) = Res_VI(ConsAMinor_,iPoint) +     &
+              DissipationMinus_I( iPoint) 
+         ResHeating_I(iPoint) = -2*AMajor*DissipationPlus_I(iPoint) -  &
+           2*AMinor*DissipationMinus_I(iPoint)
+         !
+         ! Jacobian
+         !
+         M_VVI(ConsAMajor_,ConsAMajor_,iPoint) = 1 + AMinor*DeltaXi
+         M_VVI(ConsAMajor_,ConsAMinor_,iPoint) = - DissipationPlus_I(iPoint)/&
+              AMinor
+         M_VVI(ConsAMinor_,ConsAMinor_,iPoint) = 1 + AMajor*DeltaXi
+         M_VVI(ConsAMinor_,ConsAMajor_,iPoint) = - DissipationMinus_I(iPoint)/&
+              AMajor
+      end do
+    end subroutine get_res_heating
+    !============================================================================
+    subroutine solve_a_plus_minus(AMinorBC,&
+         AMajorBC, nIterIn)
+      ! INPUT
+      real,            intent(in):: AMinorBC         ! BC for A-
+      ! OUTPUT
+      real,           intent(out):: AMajorBC          ! BC for A+
+      integer,optional,intent(in):: nIterIn
+      real:: DeltaXi
+      integer::iPoint,iIter
+      integer, parameter:: nIterMax = 10
+      integer:: nIter
+      real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
+      character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
+      !--------------------------------------------------------------------------
+      AMajor_I(0:nPoint)  = 1.0
+      AMinor_I(0:nPoint)  = AMinorBC
+      if(present(nIterIn))then
+         nIter=nIterIn
+      else
+         nIter=nIterMax
+      end if
+      DissipationMinus_I = 0.0
+      DissipationPlus_I  = 0.0
+      do iIter=1,nIter
+         !\
+         ! Go forward, integrate AMajor_I with given AMinor_I
+         !/
+         ADiffMax = 0.0
+         do iPoint=1, nPoint
+            ! Predictor
+            AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
+            AOld = AMajor_I(iPoint)
+            DeltaXi = DXi_I(iPoint)
+            
+            ! Corrector
+            AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
+            APMid = AP + 0.50*dissipation_major(AP, AM, &
+                 ReflCoef_I(iPoint-1),DeltaXi)
+            
+            DissipationPlus_I(iPoint) = dissipation_major(&
+                 APMid, AMMid, &
+                 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
+            
+            AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
+            ADiffMax = max(ADiffMax, &
+                 abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
+         end do
+         ! Go backward, integrate AMinor_I with given AMajor_I
+         ! We integrate equation,
+         !
+         ! 2da_-/d\xi=
+         !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+         ! *min(ReflCoef,2max(a_,a_+))-
+         ! -2a_-a_+
+         !
+         do iPoint = nPoint - 1, 0, -1
+            ! Predictor
+            AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
+            AOld = AMinor_I(iPoint)
+            DeltaXi = DXi_I(iPoint+1)
+            
+            ! Corrector
+            APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
+            AMMid = AM + 0.5*dissipation_minor(AP, AM, &
+                 ReflCoef_I(iPoint+1),DeltaXi)
+            DissipationMinus_I(iPoint + 1) = dissipation_minor(&
+                 APMid, AMMid, &
+                 0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
+            AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint + 1)
+            ADiffMax = max(ADiffMax,&
+                 abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
+         end do
+         if(ADiffMax<cTol)EXIT
+         if(DoConvergenceCheck.and.iIter==nIter)then
+            write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
+                 ' AMinorBC=',AMinorBC
+            call stop_mpi('Did not reach convergence in solve_a_plus_minus')
+         end if
+      end do
+      AMajorBC = AMajor_I(nPoint)
+      ResHeating_I = 0.0
+      ResHeating_I(1:nPoint-1) = &
+           -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
+           DissipationPlus_I(1:nPoint-1) -&
+           (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
+           DissipationMinus_I(1:nPoint-1)
+    end subroutine solve_a_plus_minus
+    !==========================================================================
+    subroutine advance_thread(IsTimeAccurate)
+      use ModMain,     ONLY: cfl, Dt, time_accurate
+      use ModAdvance,  ONLY: time_BLK, nJ, nK
+      use ModPhysics,  ONLY: UnitT_, No2Si_V
+      !
+      ! Advances the thread solution
+      ! If IsTimeAccurate, the solution is advanced through the time
+      ! interval, DtLocal. Otherwise, it looks for the steady-state solution
+      ! with the advanced boundary condition
+      !
+      logical, intent(in) :: IsTimeAccurate
+      !
+      ! Time step in the physical cell from which the thread originates
+      !
+      real    :: DtLocal,DtInv
+      !
+      ! Loop variable
+      !
+
+      integer :: iPoint, iIter
+      !
+      ! Enthalpy correction coefficients
+      !
+      real    :: EnthalpyFlux, FluxConst
+      real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
+      !
+      ! Correction accounting for the Enthlpy flux from the TR
+      real    :: PressureTRCoef
+      !------------------------------------------------------------------------
+      if(IsTimeAccurate)then
+         if(time_accurate)then
+            DtLocal = Dt*No2Si_V(UnitT_)
+         else
+            DtLocal = cfl*No2Si_V(UnitT_)*&
+                 time_BLK(1,max(min(j,nJ),1),max(min(k,nK),1),iBlock)
+         end if
+         if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
+         DtInv = 1/DtLocal
+      else
+         DtInv = 0.0
+      end if
+      !
+      ! In the equations below: 
+      ! 
+      !
+      ! Initialization
+      !
+      TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
+      TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
+      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
+      SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
+           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
+           PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
+      SpecIonHeat_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)/Z
+      ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
+           BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
+           PSi_I(1:nPoint-1)**2/(&
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
+           TeSi_I(1:nPoint-1)**1.5)
+      DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0
+      DeltaIonEnergy_I = 0.0
+      PressureTRCoef = 1.0; FluxConst = 0.0
+      !
+      ! Turbulent heating and mass flux are not iterated
+      !
+      call solve_heating(nIterIn=nIter)
+      if(USi>0)then
+         FluxConst    = USi * PSi_I(nPoint)/&
+              ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+      elseif(USi<0)then
+         FluxConst    = USi * PeSiIn/&
+              (TeSiIn*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+
+      end if
+      EnthalpyFlux = FluxConst/Z& ! 5/2*U*Pi*(Z+1)
+           *(InvGammaMinus1 +1)*(1 + Z)
+      !
+      ! Calculate flux to TR and its temperature derivative
+      !
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
+           DoExtrapolate=.false.)
+
+      do iIter = 1,nIter
+         !
+         ! Iterations
+         !
+         TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
+         TiSiOld_I(1:nPoint) = TiSi_I(1:nPoint)
+         !
+         ! Shape the source.
+         !
+         call get_heat_cond
+         !
+         ! Add enthalpy correction
+         !
+         if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
+               0.50*HeatFlux2TR/TeSi_I(1)),FluxConst)
+         ElectronEnthalpyFlux = EnthalpyFlux*Z/(1 + Z)
+         if(USi>0)then
+            ResEnthalpy_I(2:nPoint-1) = &
+                 ElectronEnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+            ResEnthalpy_I(1)   = 0.0
+            L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
+                 - ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
+                 (3.50*Cons_I(2:nPoint-1))
+            M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
+                 + ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/&
+                 (3.50*Cons_I(2:nPoint-1))
+         elseif(USi<0)then
+            ResEnthalpy_I(1:nPoint-1) = &
+                 -ElectronEnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
+            U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
+                 + ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
+                 (3.50*Cons_I(1:nPoint-1))
+            M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
+                 - ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/&
+                 (3.50*Cons_I(1:nPoint-1))
+         end if
+         !==========Add Gravity Source================================
+         !
+         ! cGravPot = cGravitation*mSun*cAtomicMass/&
+         !   (cBoltzmann*rSun)
+         ! GravHydroDyn = cGravPot*MassIon_I(1)/Z
+         !
+         ! energy flux needed to raise the mass flux rho*u to the
+         ! heliocentric distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+         !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+         !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
+         !
+
+         ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
+              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
+              + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+         ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(     &
+              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
+              + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
+         ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
+              0.5*ResGravity_I(1:nPoint-1)
+
+         !
+         ! For the time accurate mode, account for the time derivative
+         ! The contribution to the Jacobian be modified although the specific
+         ! heat should not,  because the conservative variable is
+         ! flux-by-length, not the temperature
+         !
+         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+              DtInv*SpecHeat_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/   &
+              (3.50*Cons_I(1:nPoint-1))
+         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
+              DtInv*SpecIonHeat_I(1:nPoint-1)
+         PressureTRCoef = sqrt(max(&
+              1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))
+         Res_VI(Cons_,1:nPoint-1) = -DeltaEnergy_I(1:nPoint-1) +      &
+              ResHeating_I(1:nPoint-1)*QeRatio +  ResCooling_I(1:nPoint-1) +&
+              ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1) +&
+              ExchangeRate_I(1:nPoint-1)*&
+              (TiSi_I(1:nPoint-1) - TeSi_I(1:nPoint-1))
+         M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) -&
+               ExchangeRate_I(1:nPoint-1)
+         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) +&
+               ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
+               (3.50*Cons_I(1:nPoint-1))
+         !M_VVI(Cons_,LogP_,1:nPoint-1) = M_VVI(Cons_,LogP_,1:nPoint-1)&
+         !  -0.250*QeRatio*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
+         !M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         !M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
+         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
+         DCons_VI = 0.0
+         IonEnthalpyFlux = ElectronEnthalpyFlux/Z
+         ResEnthalpy_I=0.0
+         if(USi>0)then
+            ResEnthalpy_I(2:nPoint-1) = &
+                 IonEnthalpyFlux*(TiSi_I(1:nPoint-2) - TiSi_I(2:nPoint-1))
+            ResEnthalpy_I(1)   = 0.0
+            L_VVI(Ti_,Ti_,2:nPoint-1) =  L_VVI(Ti_,Ti_,2:nPoint-1)&
+                 - IonEnthalpyFlux
+            M_VVI(Ti_,Ti_,2:nPoint-1) =  M_VVI(Ti_,Ti_,2:nPoint-1)&
+                 + IonEnthalpyFlux
+         elseif(USi<0)then
+            ResEnthalpy_I(1:nPoint-1) = &
+                 -IonEnthalpyFlux*(TiSi_I(2:nPoint) - TiSi_I(1:nPoint-1))
+            U_VVI(Ti_,Ti_,1:nPoint-1) = U_VVI(Ti_,Ti_,1:nPoint-1)&
+                 + IonEnthalpyFlux
+            M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1)&
+                 - IonEnthalpyFlux
+         end if
+         ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
+              0.5*ResGravity_I(1:nPoint-1)
+         Res_VI(Ti_,1:nPoint-1) = -DeltaIonEnergy_I(1:nPoint-1) +      &
+              ResHeating_I(1:nPoint-1)*(1-QeRatio) + ResEnthalpy_I(1:nPoint-1)&
+              + ExchangeRate_I(1:nPoint-1)*&
+              (TeSi_I(1:nPoint-1) - TiSi_I(1:nPoint-1))
+         M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) +&
+               ExchangeRate_I(1:nPoint-1)
+         M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) -&
+               ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
+               (3.50*Cons_I(1:nPoint-1))
+         !M_VVI(Ti_,LogP_,1:nPoint-1) = M_VVI(Ti_,LogP_,1:nPoint-1)&
+         !  -0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
+         !M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
+         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
+         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
+         !M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
+         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
+         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
+         call tridiag_block_matrix(nDim=LogP_, nI=nPoint-1,     &
+              L_VVI=L_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
+              M_VVI=M_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
+              U_VVI=U_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
+              R_VI=Res_VI(  Cons_:LogP_,            1:nPoint-1),&
+              W_VI=DCons_VI(Cons_:LogP_,            1:nPoint-1))
+         !
+         ! limit DeltaCons
+         !
+         DCons_VI(Cons_,1:nPoint-1) = max(min(DCons_VI(Cons_, 1:nPoint-1), &
+              ConsMax - Cons_I(    1:nPoint-1),        Cons_I(1:nPoint-1)),&
+              ConsMin - Cons_I(    1:nPoint-1),   -0.5*Cons_I(1:nPoint-1))
+         DCons_VI(Ti_,1:nPoint-1) = max(min(DCons_VI(Ti_, 1:nPoint-1), &
+              TeSiMax - TiSi_I(    1:nPoint-1),        TiSi_I(1:nPoint-1)),&
+              TeSiMin - TiSi_I(    1:nPoint-1),   -0.5*TiSi_I(1:nPoint-1))
+         !
+         ! Apply DeltaCons
+         !
+         Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_VI(Cons_,1:nPoint-1)
+         !
+         ! Recover temperature
+         !
+         TeSi_I(1:nPoint-1) = &
+              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+         TiSi_I(1:nPoint-1) = TiSi_I(1:nPoint-1) + DCons_VI(Ti_,1:nPoint-1)
+         !
+         ! Change in the internal energy (to correct the energy source
+         ! for the time-accurate mode):
+         !
+         DeltaEnergy_I(1:nPoint-1) = DtInv*SpecHeat_I(1:nPoint-1)* &
+              (TeSi_I(1:nPoint-1) - TeSiStart_I(1:nPoint-1))
+         DeltaIonEnergy_I(1:nPoint-1) = DtInv*SpecIonHeat_I(1:nPoint-1)* &
+              (TiSi_I(1:nPoint-1) - TiSiStart_I(1:nPoint-1))
+         !
+         ! Calculate TR pressure
+         ! For next iteration calculate TR heat flux and
+         ! its temperature derivative
+         !
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
+              DoExtrapolate=.false.)
+         !
+         ! Set pressure for updated temperature
+         !
+         Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
+         call set_pressure
+         call solve_heating(nIterIn=nIter)
+         ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
+              BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
+              PSi_I(1:nPoint-1)**2/(&
+              (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
+              TeSi_I(1:nPoint-1)**1.5)
+         if(all(abs(DCons_VI(Cons_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
+      end do
+      if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
+           .and.DoConvergenceCheck)then
+         write(*,'(a)')'TeOld Te TeMin PSi_I Heating Enthalpy'
+         do iPoint=1,nPoint
+            write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+                 PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
+         end do
+         write(*,'(a,es15.6,a,3es15.6)')'Error =',maxval(&
+              abs(DCons_VI(Cons_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
+              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+         write(*,'(a,5es15.6)')&
+              'Input parameters: TeSiIn,USiIn,USi,PeSiIn,PCoef=',&
+              TeSiIn,USiIn,USi,PeSiIn,PressureTRCoef
+         call stop_mpi('Algorithm failure in advance_thread')
+      end if
+    end subroutine advance_thread
+
   end subroutine solve_boundary_thread
   !============================================================================
   ! This routine solves three-diagonal system of equations:                    !
@@ -1106,16 +1322,20 @@ contains
   !  ||...                   || ||...|| ||...||                                !
   !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                                !
   ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
-  ! Here each of the compenets w_i and r_i are 2-component states and
-  ! m_i, l_i, u_i are 2*2 matrices                                             !
-  subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-
-    integer, intent(in):: n
-    real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
-    real, intent(out):: W_VI(3,n)
+  ! Here each of the compenets w_i and r_i are nDim-component states and
+  ! m_i, l_i, u_i are nDim*nDim matrices                                             !
+  subroutine tridiag_block_matrix(nDim,nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
+    integer, intent(in):: nDim
+    integer, intent(in):: nI
+    real, intent(in)   :: L_VVI(nDim,nDim,nI)
+    real, intent(in)   :: M_VVI(nDim,nDim,nI)
+    real, intent(in)   :: U_VVI(nDim,nDim,nI)
+    real, intent(in)   :: R_VI(nDim,nI)
+    real, intent(out)  :: W_VI(nDim,nI)
 
     integer:: j
-    real   :: TildeM_VV(3,3), TildeMInv_VV(3,3), TildeMInvDotU_VVI(3,3,2:n)
+    real   :: TildeM_VV(nDim,nDim), TildeMInv_VV(nDim,nDim) 
+    real   :: TildeMInvDotU_VVI(nDim,nDim,2:nI)
 
     !\
     ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation
@@ -1123,18 +1343,18 @@ contains
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
     !/
-    character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
+    character(len=*), parameter:: NameSub = 'tridiag_block_matrix'
     !--------------------------------------------------------------------------
-    if (determinant(M_VVI(:,:,1)) == 0.0) then
+    if (determinant(M_VVI(:,:,1),nDim) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
-    TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
+    TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
     !\
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
     W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
-    do j=2,n
+    do j=2, nI
        !\
        ! Next 3*3 blok element of the matrix, Inverted(Tilde(M)).U
        !/
@@ -1145,7 +1365,7 @@ contains
        !/
        TildeM_VV = M_VVI(:,:,j) - &
             matmul(L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j))
-       if (determinant(TildeM_VV) == 0.0) then
+       if (determinant(TildeM_VV, nDim) == 0.0) then
           write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
                M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
           call stop_mpi('3*3 block Tridiag failed')
@@ -1153,7 +1373,7 @@ contains
        !\
        ! Next element of inverted(Tilde(M))
        !/
-       TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
+       TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
        !\
        ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
        ! satisfying the eq. (tilde(M) + L).W = R
@@ -1161,107 +1381,14 @@ contains
        W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j)) - &
             matmul(TildeMInv_VV,matmul(L_VVI(:,:,j),W_VI(:,j-1)))
     end do
-    do j=n-1,1,-1
+    do j = nI - 1, 1, -1
        !\
        ! Finally we solve equation
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        !/
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-  end subroutine tridiag_3by3_block
-  !============================================================================
-  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinorBC,&
-       AMajorBC, nIterIn)
-    use ModCoronalHeating, ONLY: MaxImbalance
-    ! INPUT
-    integer,         intent(in):: nI
-    real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
-    real,            intent(in):: AMinorBC         ! BC for A-
-    ! OUTPUT
-    real,           intent(out):: AMajorBC          ! BC for A+
-    integer,optional,intent(in):: nIterIn
-    real:: DeltaXi
-    integer::iStep,iIter
-    integer, parameter:: nIterMax = 10
-    integer:: nIter
-    real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
-    real :: DeltaAPlus_I(1:nI), DeltaAMinus_I(0:nI-1)
-    real :: Source_I(0:nI), SourceAdvection_I(0:nI)
-    character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
-    !--------------------------------------------------------------------------
-    AMajor_I(0:nI)  = 1.0
-    AMinor_I(0:nI)  = AMinorBC
-    if(present(nIterIn))then
-       nIter=nIterIn
-    else
-       nIter=nIterMax
-    end if
-    do iIter=1,nIter
-       !\
-       ! Go forward, integrate AMajor_I with given AMinor_I
-       !/
-       ADiffMax = 0.0
-       do iStep=1, nI
-          ! Predictor
-          AP = AMajor_I(iStep-1); AM = AMinor_I(iStep-1)
-          Derivative = -AM*(max(0.0, AP - MaxImbalance*AM) - &
-               max(0.0, AM - MaxImbalance*AP) )*&
-               min(0.5*ReflCoef_I(iStep-1)/max(AM,AP),  1.0)- &
-               AP*AM
-          AOld = AMajor_I(iStep)
-          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
-
-          ! Corrector
-          AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
-          APMid = AP + 0.5*Derivative*DeltaXi
-          Derivative = -AMMid*&
-               (max(0.0,APMid - MaxImbalance*AMMid) - &
-               max(0.0,AMMid - MaxImbalance*APMid))*&
-               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/&
-               max(AMMid,APMid), 1.0) - AMMid*APMid
-          AMajor_I(iStep) = AP + Derivative*DeltaXi
-          ADiffMax = max(ADiffMax, &
-               abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
-       end do
-       ! Go backward, integrate AMinor_I with given AMajor_I
-       ! We integrate equation,
-       !\
-       ! 2da_-/d\xi=
-       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
-       ! *min(ReflCoef,2max(a_,a_+))-
-       ! -2a_-a_+
-       !/
-       do iStep=nI - 1, 0, -1
-          ! Predictor
-          AP = AMajor_I(iStep+1); AM = AMinor_I(iStep+1)
-          Derivative = -AP*(max(0.0,AP - MaxImbalance*AM) - &
-               max(0.0,AM - MaxImbalance*AP)     )*&
-               min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
-               AP*AM
-          AOld = AMinor_I(iStep)
-          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
-
-          ! Corrector
-          APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
-          AMMid = AM - 0.5*Derivative*DeltaXi
-          Derivative = -APMid*&
-               ( max(0.0,APMid -MaxImbalance*AMMid)- &
-               max(0.0,AMMid - MaxImbalance*APMid) )*&
-               min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/&
-               max(AMMid, APMid), 1.0) + AMMid*APMid
-          AMinor_I(iStep) = AMinor_I(iStep+1) - Derivative*DeltaXi
-          ADiffMax = max(ADiffMax,&
-               abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
-       end do
-       if(ADiffMax<cTol)EXIT
-       if(DoConvergenceCheck.and.iIter==nIter)then
-          write(*,*)'XiTot=', Xi_I(nI),' ADiffMax=', ADiffMax,&
-               ' AMinorBC=',AMinorBC
-          call stop_mpi('Did not reach convergence in solve_a_plus_minus')
-       end if
-    end do
-    AMajorBC = AMajor_I(nI)
-  end subroutine solve_a_plus_minus
+  end subroutine tridiag_block_matrix
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock)
