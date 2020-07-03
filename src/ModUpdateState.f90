@@ -156,7 +156,7 @@ contains
     ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
     ! and heat exchange between electrons and ions (mult-ion is not coded).
-    
+
     if(.not.UseMultiIon .and. UseResistivity .and. &
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
@@ -295,14 +295,11 @@ contains
     if(UsePointImplicit)then
        if(IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock)) then
           if(UseEfield)then
-             call update_point_implicit(iBlock, ion_electron_source_impl, &
-                  ion_electron_init_point_impl)
+             call update_point_implicit(iBlock, ion_electron_source_impl)
           elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
-             call update_point_implicit(iBlock, multi_ion_source_impl, &
-                  multi_ion_init_point_impl)
+             call update_point_implicit(iBlock, multi_ion_source_impl)
           elseif(UseUserSource) then
-             call update_point_implicit(iBlock, user_calc_sources, &
-                  user_init_point_implicit)
+             call update_point_implicit(iBlock, user_calc_sources)
           end if
 
           ! Make ion temperatures equal if requested
@@ -313,7 +310,7 @@ contains
           ! Make sure that energy is consistent
           if(UseEfield)then
              if(.not. UseNonconservative) then
-                ! Add q/m rhou.E to ion energy source terms for the 
+                ! Add q/m rhou.E to ion energy source terms for the
                 ! energy equation, q/m*rho*(E dot u) if UseEfield.
                 ! Tests show that putting the energy source terms after
                 ! the point implicit update is more stable than putting
@@ -339,7 +336,7 @@ contains
                 ! Re-calculate the pressure from the energy.
                 ! In this case, the pressure source terms in the user file
                 ! would not contribute to the pressure. It requires that
-                ! the user MUST provide the corresponding source terms  for 
+                ! the user provide the corresponding source terms for
                 ! the energy equation in the user file.
                 call calc_pressure_cell(iBlock)
              else
@@ -1733,7 +1730,7 @@ contains
   subroutine update_b0
 
     use ModMain,          ONLY: nBlock, Unused_B, UseNewMagnetogram,      &
-         time_simulation, NameThisComp, t_max, tMagnetogram, & 
+         time_simulation, NameThisComp, t_max, tMagnetogram, &
          time_accurate
     use ModPhysics,       ONLY: ThetaTilt
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
