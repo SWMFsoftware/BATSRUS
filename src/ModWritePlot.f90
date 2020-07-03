@@ -16,7 +16,7 @@ module ModWritePlot
   public:: reverse_field
 
 contains
-  !============================================================================
+  !==============================©==============================================
 
   subroutine write_plot(iFile)
 
@@ -240,7 +240,7 @@ contains
     !\
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
-    !/ 
+    !/
     if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
        if(plot_dimensional(iFile))then
           call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
@@ -1016,7 +1016,7 @@ contains
     use ModResistivity, ONLY: Eta_GB, Eta0
     use ModFaceGradient, ONLY: get_face_curl
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
-    use ModPointImplicit, ONLY: UsePointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
          IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
@@ -1504,7 +1504,7 @@ contains
              call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,iBlock), &
                   nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
           else
-             ! Div B from face fluxes                                       
+             ! Div B from face fluxes
              do k = 1, nK; do j = 1, nJ; do i =1, nI
                 if(.not. true_cell(i,j,k,iBlock)) CYCLE
                 PlotVar(i,j,k,iVar) = &
@@ -1621,8 +1621,10 @@ contains
           PlotVar(:,:,:,iVar) = iBoundary_GB(:,:,:,iBlock)
        case('evolve','impl')
           PlotVar(:,:,:,iVar) = iTypeAdvance_B(iBlock)
-          if(UsePointImplicit_B(iBlock))&
-               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
+          if(UsePointImplicit)then
+             if(UsePointImplicit_B(iBlock))&
+                PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
+          end if
        case('balance')
           if(allocated(iTypeBalance_A)) &
                PlotVar(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlock))
@@ -1635,7 +1637,7 @@ contains
                Value_I=PlotVar(MinI,MinJ,MinK,iVar))
        case('lowcritx')
           PlotVar(:,:,:,iVar) = 0
-          ! LowOrderCrit_XB is actually face based. 
+          ! LowOrderCrit_XB is actually face based.
           if(allocated(LowOrderCrit_XB)) &
                PlotVar(1:nI,1:nJ,1:nK,iVar) = &
                LowOrderCrit_XB(1:nI,1:nJ,1:nK,iBlock)
@@ -1697,7 +1699,7 @@ contains
        case('pic_crit')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = pic_find_region_criteria(iBlock,i,j,k)
-          end do; end do; end do   
+          end do; end do; end do
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
