@@ -6,7 +6,6 @@ module ModPIC
 
   use BATL_lib,     ONLY: &
        test_start, test_stop, iProc, iComm
-
   use ModGridInfo,  ONLY: iPicOn_, iPicOff_, &
        get_point_status, &
        set_point_status
@@ -29,19 +28,24 @@ module ModPIC
   public:: mhd_to_pic_vec
   public:: is_inside_active_pic_region
   public:: calc_pic_criteria
+  public:: write_pic_status_file
+  public:: read_pic_status_file
 
   logical, public:: UsePic = .false.
   logical, public:: UseAdaptivePic = .false.
+  logical, public:: DoRestartPicStatus = .false.
 
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
-  real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:)
+  real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
+       CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
   integer, public:: nPatchExtend_D(3)=0
 
   ! Description of the region where the pic region is fixed there
   character(len=200):: StringPicRegion = 'none'
   character(len=200):: StringPicRegionLimit = 'none'
+  character(len=*), parameter :: NamePicStatusFile = "picstatus.rst"
 
   type(FreqType), public :: &
        AdaptPic = FreqType(.true.,100000,huge(1.0),-1,-1.0)
@@ -145,18 +149,23 @@ contains
        call read_var('nCriteriaPic', nCriteriaPic)
        if(.not. allocated(NameCriteriaPic_I)) &
             allocate(NameCriteriaPic_I(nCriteriaPic))
+       ! Criteria in IO units
+       if(.not. allocated(CriteriaMaxPicDim_I)) &
+            allocate(CriteriaMaxPicDim_I(nCriteriaPic))
+       if(.not. allocated(CriteriaMinPicDim_I)) &
+            allocate(CriteriaMinPicDim_I(nCriteriaPic))
+       ! Criteria in normalized units
        if(.not. allocated(CriteriaMaxPic_I)) &
             allocate(CriteriaMaxPic_I(nCriteriaPic))
        if(.not. allocated(CriteriaMinPic_I)) &
             allocate(CriteriaMinPic_I(nCriteriaPic))
        do iCriteria=1, nCriteriaPic
           call read_var('NameCriteriaPic_I', NameCriteriaPic_I(iCriteria))
-          call read_var('CriteriaMinPic_I', CriteriaMinPic_I(iCriteria))
-          call read_var('CriteriaMaxPic_I', CriteriaMaxPic_I(iCriteria))
+          call read_var('CriteriaMinPic_I', CriteriaMinPicDim_I(iCriteria))
+          call read_var('CriteriaMaxPic_I', CriteriaMaxPicDim_I(iCriteria))
        end do
 
     case("#PICPATCHEXTEND")
-       !       if(.not. allocated(nPatchExtend_D)) allocate(nPatchExtend_D(1:nDim))
        do iDim = 1, nDim
           call read_var('nPatchExtend_D', nPatchExtend_D(iDim))
        end do
@@ -171,6 +180,9 @@ contains
        call read_var('StringPicRegion', StringPicRegion)
        if (StringPicRegion /= 'none') &
             call get_region_indexes(StringPicRegion, iRegionPic_I)
+
+    case('#RESTARTPICSTATUS')
+       call read_var('DoRestartPicStatus', DoRestartPicStatus)
 
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
@@ -323,10 +335,10 @@ contains
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax, UseHallResist, &
          HallFactor_C, set_hall_factor_cell
-    use ModPhysics,   ONLY: IonMassPerCharge
-    use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
-    use ModVarIndexes,ONLY: IsMhd
-    use ModMpi,       ONLY: MPI_REAL
+    use ModPhysics,    ONLY: IonMassPerCharge
+    use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
+    use ModVarIndexes, ONLY: IsMhd
+    use ModMpi,        ONLY: MPI_REAL
 
     ! PIC grid indexes
     integer:: iRegion
@@ -424,18 +436,19 @@ contains
           LenPic_DI(i,iRegion) =  nCell*DxyzPic_DI(i,iRegion)
           if(UseAdaptivePic) then
              PatchSize_DI(i,iRegion) = nCell/nCellPerPatch
-             
+
              if(iProc == 0 .and. mod(nCell, nCellPerPatch) .ne. 0)&
                   call stop_mpi(&
                   'In all directions, the PIC grid cell number '//&
                   '(defined by #PICGRID) should be divisible by the patch size,'&
                   //' which is defined by #PICPATCH.')
-             
+
           endif
        end do
     end do
 
-    if(UseAdaptivePic) then
+    if(.not. DoRestartPicStatus .and. UseAdaptivePic) then
+       ! if DoRestartPicStatus, the arrays are allocated in Restart Part
        if(allocated(StatusMin_I)) deallocate(StatusMin_I)
        allocate(StatusMin_I(nRegionPic))
        StatusMin_I = 0
@@ -446,7 +459,6 @@ contains
 
        ! Calculate the size nSizeStatus and allocate integer array Status_I
        ! to store the status of the patches for all PIC grids.
-
        nSizeStatus = 0
        do iRegion = 1, nRegionPic          
           StatusMin_I(iRegion) = nSizeStatus + 1
@@ -462,6 +474,7 @@ contains
        if(allocated(Status_I)) deallocate(Status_I)             
        allocate(Status_I(nSizeStatus))
        call set_status_all(iPicOff_)
+
     endif
 
     do iRegion = 1, nRegionPic      
@@ -524,8 +537,12 @@ contains
 
        call pic_find_node
        ! Calculate the pic region criteria
-       call calc_pic_criteria
-       call pic_set_cell_status
+
+       if(.not. DoRestartPicStatus) then
+          call calc_pic_criteria
+          call pic_set_cell_status
+       end if
+
        if(iProc==0) then
           write(*,*)
           write(*,*) NameSub,': Adapt-PIC Initialization Finished'
@@ -546,6 +563,72 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine pic_init_region
+  !============================================================================
+
+  subroutine write_pic_status_file
+
+    use ModUtilities,   ONLY: open_file, close_file
+    use ModIoUnit,      ONLY: UnitTmp_
+
+    integer:: iError
+
+    logical:: DoTest
+    character(len=100) :: NameFile
+    character(len=*), parameter:: NameSub = 'write_pic_status_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    ! Status_I exists in every proc, use only the first one
+    if(iProc /= 0) RETURN 
+
+    NameFile = trim('GM/restartOUT/')//NamePicStatusFile
+    call open_file(FILE=NameFile, form='UNFORMATTED', NameCaller=NameSub)
+    write(UnitTmp_) nSizeStatus
+    write(UnitTmp_) Status_I
+    write(UnitTmp_) nRegionPic
+    write(UnitTmp_) StatusMin_I
+    write(UnitTmp_) StatusMax_I
+
+    call close_file
+
+    call test_stop(NameSub, DoTest)
+  end subroutine write_pic_status_file
+  !============================================================================
+
+  subroutine read_pic_status_file
+
+    use ModUtilities,   ONLY: open_file, close_file
+    use ModIoUnit,      ONLY: UnitTmp_
+
+    integer:: iError
+
+    logical:: DoTest
+    character(len=100) :: NameFile
+    character(len=*), parameter:: NameSub = 'read_pic_status_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    NameFile = trim('GM/restartIN/')//NamePicStatusFile    
+    call open_file(FILE=NameFile, status='old', form='UNFORMATTED', &
+         NameCaller=NameSub)
+    read(UnitTmp_, iostat = iError) nSizeStatus
+    if(allocated(Status_I)) deallocate(Status_I)
+    allocate(Status_I(nSizeStatus))
+    read(UnitTmp_, iostat = iError) Status_I
+    read(UnitTmp_, iostat = iError) nRegionPic
+    if(allocated(StatusMin_I)) deallocate(StatusMin_I)
+    allocate(StatusMin_I(nRegionPic))
+    if(allocated(StatusMax_I)) deallocate(StatusMax_I)
+    allocate(StatusMax_I(nRegionPic))
+    read(UnitTmp_, iostat = iError) StatusMin_I
+    read(UnitTmp_, iostat = iError) StatusMax_I
+    call close_file
+
+    if(iError /= 0) call stop_mpi(NameSub// &
+         ' could not read data from '//trim(NameFile))
+
+    call test_stop(NameSub, DoTest)
+  end subroutine read_pic_status_file
   !============================================================================
 
   subroutine pic_find_node
@@ -616,7 +699,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
-
+    
     call set_status_all(iPicOff_)
 
     do iRegion = 1, nRegionPic
@@ -1067,25 +1150,31 @@ contains
     ! This subroutine takes the PIC xyz coordinate and output
     ! the patch index in IndexPatchOut_D
 
-    use BATL_lib,        ONLY: nDim, nI, nJ, nK, nBlock, MaxBlock, &
+    use BATL_lib,        ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
          x_, y_, z_, iNode_B, Unused_B, iProc, MaxNode, &
-         block_inside_regions, get_region_indexes, &
-         Xyz_DGB
+         block_inside_regions, get_region_indexes, Xyz_DGB, &
+         message_pass_cell
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
-         Ux_, Uy_, Uz_
+         x_, y_, z_, Ux_, Uy_, Uz_
     use ModCurrent,      ONLY: get_current
-    use ModCellGradient, ONLY: calc_divergence
+    use ModCellGradient, ONLY: calc_divergence, calc_gradient
+    use ModB0,           ONLY: B0_DGB
+    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
     real :: CriteriaValue
     real, allocatable :: j_D(:), Ufield_DGB(:,:,:,:,:), DivU_CB(:,:,:,:)
+    real, allocatable :: FullBfield_DGB(:,:,:,:,:), UnitBfield_DGB(:,:,:,:,:), &
+         bNorm_GB(:,:,:,:), GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
+         GradUnitBz_DGB(:,:,:,:,:), Curvature_DGB(:,:,:,:,:), &
+         DivCurvature_CB(:,:,:,:)
     real :: current, b
     logical:: DoTest, SatisfyAll
 
     character(len=*), parameter:: NameSub = 'calc_pic_criteria'
-    !---------------------------------------------------------------。-----------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
@@ -1100,20 +1189,53 @@ contains
     if(.not. allocated(PicCritInfo_CBI)) &
          allocate(PicCritInfo_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
 
+    do iCriteria=1,nCriteriaPic
+       select case(trim(NameCriteriaPic_I(iCriteria)))
+       case('j/b')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
+       case('divu')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
+       case('divcurv')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)/Io2No_V(UnitX_)**2
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)/Io2No_V(UnitX_)**2
+       end select
+    end do
+
     IsPicCrit_CB = iPicOff_
     PicCritInfo_CBI = iPicOff_
 
-    if(allocated(DivU_CB)) deallocate(DivU_CB)
-    if(allocated(Ufield_DGB)) deallocate(Ufield_DGB)
+    if(allocated(DivU_CB))           deallocate(DivU_CB)
+    if(allocated(Ufield_DGB))        deallocate(Ufield_DGB)
+    if(allocated(Curvature_DGB))     deallocate(Curvature_DGB)
+    if(allocated(DivCurvature_CB))   deallocate(DivCurvature_CB)
+    if(allocated(FullBfield_DGB))    deallocate(FullBfield_DGB)
+    if(allocated(UnitBfield_DGB))    deallocate(UnitBfield_DGB)
+    if(allocated(bNorm_GB))          deallocate(bNorm_GB)
+    if(allocated(GradUnitBx_DGB))    deallocate(GradUnitBx_DGB)
+    if(allocated(GradUnitBy_DGB))    deallocate(GradUnitBy_DGB)
+    if(allocated(GradUnitBz_DGB))    deallocate(GradUnitBz_DGB)
+
+    allocate(FullBfield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+    FullBfield_DGB(:,:,:,:,:) = &
+         State_VGB(Bx_:Bz_,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
 
     ! loop through criterias and allocate variables
+    ! also the unit transfer is done here
     do iCriteria=1, nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
        case('divu')
           allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
           allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          DivU_CB = 0.0
-          Ufield_DGB = 0.0
+       case('divcurv')
+          allocate(UnitBfield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(bNorm_GB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(Curvature_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(DivCurvature_CB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(GradUnitBx_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(GradUnitBy_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(GradUnitBz_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
        end select
     end do
 
@@ -1128,27 +1250,67 @@ contains
                0, DivU_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
        end if
 
+       if(allocated(DivCurvature_CB)) then
+
+          do k=minK,maxK; do j=minJ,maxJ; do i=minI,maxI
+             bNorm_GB(i,j,k,iBlock) = sqrt(FullBfield_DGB(x_,i,j,k,iBlock)**2+&
+                  FullBfield_DGB(y_,i,j,k,iBlock)**2+&
+                  FullBfield_DGB(z_,i,j,k,iBlock)**2)
+             UnitBfield_DGB(:,i,j,k,iBlock) = &
+                  FullBfield_DGB(:,i,j,k,iBlock) / bNorm_GB(i,j,k,iBlock)
+          end do; end do; end do
+
+          ! Notice that Gradient B field only have physical cell values
+          call calc_gradient(iBlock, UnitBfield_DGB(Bx_,:,:,:,iBlock), &
+               nG, GradUnitBx_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
+          call calc_gradient(iBlock, UnitBfield_DGB(By_,:,:,:,iBlock), &
+               nG, GradUnitBy_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
+          call calc_gradient(iBlock, UnitBfield_DGB(Bz_,:,:,:,iBlock), &
+               nG, GradUnitBy_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
+
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             ! calculate the b*grad part of curvature
+             Curvature_DGB(x_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock) &
+                  *GradUnitBx_DGB(:,i,j,k,iBlock))
+             Curvature_DGB(y_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock) &
+                  *GradUnitBy_DGB(:,i,j,k,iBlock))
+             Curvature_DGB(z_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock) &
+                  *GradUnitBz_DGB(:,i,j,k,iBlock))
+          end do; end do; end do
+       end if
+    end do
+
+    ! Fill the ghost cells for calculating divergence
+    if(allocated(Curvature_DGB)) call message_pass_cell(3, Curvature_DGB)
+
+    do iBlock=1,nBlock
+
+       if(allocated(Curvature_DGB)) call calc_divergence(iBlock, Curvature_DGB(:,:,:,:,iBlock), &
+            0, DivCurvature_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
+
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iCriteria=1, nCriteriaPic
              select case(trim(NameCriteriaPic_I(iCriteria)))
              case('j/b')
                 call get_current(i, j, k, iBlock, j_D)
                 current = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
-                b = sqrt((State_VGB(Bx_,i,j,k,iBlock))**2+&
-                     (State_VGB(By_,i,j,k,iBlock))**2+&
-                     (State_VGB(Bz_,i,j,k,iBlock))**2)
+                b = sqrt(FullBfield_DGB(x_,i,j,k,iBlock)**2+&
+                     FullBfield_DGB(y_,i,j,k,iBlock)**2+&
+                     FullBfield_DGB(z_,i,j,k,iBlock)**2)
                 CriteriaValue = current / b
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
                 CriteriaValue = DivU_CB(i,j,k,iBlock)
+             case('divcurv')
+                CriteriaValue = DivCurvature_CB(i,j,k,iBlock)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
                   CriteriaValue < CriteriaMaxPic_I(iCriteria)) then
                 PicCritInfo_CBI(i,j,k,iBlock,iCriteria) = iPicOn_
              end if
-             
+
           end do ! end loop criteria
        end do; end do; end do
     end do ! end loop blocks

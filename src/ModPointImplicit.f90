@@ -73,7 +73,7 @@ module ModPointImplicit
 
   ! balance point implicit blocks once or multiple times?
   logical, public:: DoBalancePointImplicit = .false.
-  logical, public:: IsDynamicPointImplicit = .false.
+  logical, public, protected:: IsDynamicPointImplicit = .false.
 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
@@ -84,6 +84,9 @@ module ModPointImplicit
   !$omp threadprivate( IsPointImplSource )
   !$omp threadprivate( IsPointImplMatrixSet )
   !$omp threadprivate( IsPointImplPerturbed )
+
+  real, allocatable :: Matrix_II(:,:), Rhs_I(:)
+  !$omp threadprivate( Matrix_II, Rhs_I )
   
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
@@ -94,10 +97,6 @@ module ModPointImplicit
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
   public:: init_point_implicit_num
-  !hyzhou: there is some problem for the init function here. It is called 
-  ! inside a parallel region, so should I just declare the seemingly shared
-  ! vars as threadprivate (even though they don't change), or rewrite the 
-  ! logic?
 
   ! Local variables
   ! Number of point implicit variables
@@ -118,7 +117,7 @@ module ModPointImplicit
   logical:: DoNormalizeCell = .false.
   
 contains
-  !============================================================================  
+  !============================================================================
   subroutine init_mod_point_impl
 
     if(allocated(UsePointImplicit_B)) RETURN
@@ -128,11 +127,17 @@ contains
 
   end subroutine init_mod_point_impl
 
-  !============================================================================  
+  !============================================================================
   subroutine clean_mod_point_impl
 
     if(.not.allocated(UsePointImplicit_B)) RETURN
     deallocate(UsePointImplicit_B)
+    if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
+    if(allocated(DsDu_VVC)) deallocate(DsDu_VVC)
+    if(allocated(Rhs_I)) deallocate(Rhs_I)
+    if(allocated(Matrix_II)) deallocate(Matrix_II)
+    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
+    if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
 
   end subroutine clean_mod_point_impl
   !============================================================================
@@ -188,9 +193,6 @@ contains
     real :: StateExpl_VC(nVar,nI,nJ,nK)
     real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
     real :: State0_C(nI,nJ,nK)
-
-    real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
-    !$omp threadprivate( Matrix_II, Rhs_I )
     
     logical :: DoTestCell
 
