@@ -76,9 +76,8 @@ module ModPointImplicit
   ! balance point implicit blocks once or multiple times?
   logical, public:: DoBalancePointImplicit = .false.
   logical, public, protected:: IsDynamicPointImplicit = .false.
-
-  integer, public, allocatable :: &
-       iVarPointImpl_I(:)          ! Indexes of point implicit variables
+  ! Indexes of point implicit variables
+  integer, public, allocatable :: iVarPointImpl_I(:)
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
@@ -93,7 +92,7 @@ module ModPointImplicit
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
-  !$omp threadprivate( EpsPointImpl_V, DsDu_VVC )
+  !$omp threadprivate( DsDu_VVC )
 
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
@@ -106,7 +105,6 @@ module ModPointImplicit
   ! Number and indexes of variables with numerical derivatives
   integer :: nVarPointImplNum = 0
   integer, allocatable :: iVarPointImplNum_I(:)
-  !$omp threadprivate( iVarPointImplNum_I )
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
   real:: BetaPointImpl = 1.0
@@ -238,11 +236,13 @@ contains
     if(.not.allocated(UsePointImplicit_B)) RETURN
     deallocate(UsePointImplicit_B)
     if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
+    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
+    if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
+    !$omp parallel
     if(allocated(DsDu_VVC)) deallocate(DsDu_VVC)
     if(allocated(Rhs_I)) deallocate(Rhs_I)
     if(allocated(Matrix_II)) deallocate(Matrix_II)
-    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
-    if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
+    !$omp end parallel
 
   end subroutine clean_mod_point_impl
   !============================================================================
@@ -326,10 +326,6 @@ contains
     Source_VC = 0.0
     DsDu_VVC  = 0.0
 
-    ! call timing_stop('pointimplinit')
-
-    ! call timing_start('pointimplsrc')
-
     call calc_point_impl_source(iBlock)
 
     ! Calculate (part of) Jacobian numerically if necessary
@@ -409,7 +405,6 @@ contains
        IsPointImplPerturbed = .false.
 
     end if
-    ! call timing_stop('pointimplsrc')
 
     if(DoTest)then
        do iIVar=1,nVarPointImpl
