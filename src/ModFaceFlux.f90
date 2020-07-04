@@ -3215,7 +3215,7 @@ submodule (ModFaceFlux) Rotation
 
 contains
 
-  subroutine rotate_state_vectors
+  module subroutine rotate_state_vectors
 
     use ModCoordTransform, ONLY: cross_product
 
@@ -3325,7 +3325,7 @@ contains
 
   end subroutine rotate_state_vectors
   !============================================================================
-  subroutine rotate_flux_vector(FluxRot_V, Flux_V)
+  module subroutine rotate_flux_vector(FluxRot_V, Flux_V)
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
 
@@ -3387,7 +3387,7 @@ submodule (ModFaceFlux) CellFlux
 
 contains
 
-  subroutine calc_cell_flux(iBlock)
+  module subroutine calc_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
 
@@ -3483,7 +3483,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_cell_flux
   !============================================================================
-  subroutine calc_simple_cell_flux(iBlock)
+  module subroutine calc_simple_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
 
@@ -3598,8 +3598,8 @@ end submodule CellFlux
 submodule (ModFaceFlux) WaveSpeed
 
 contains
-  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
-       UseAwSpeedIn)
+  module subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, &
+    cLeft_I, cRight_I, UseAwSpeedIn)
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
        iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
@@ -4406,7 +4406,7 @@ end submodule WaveSpeed
 submodule (ModFaceFlux) RoeSolver
 
 contains
-  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
+  module subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
 
     use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
 
