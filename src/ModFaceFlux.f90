@@ -54,7 +54,7 @@ module ModFaceFlux
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
   use omp_lib
-
+  
   implicit none
   save
 
@@ -67,45 +67,6 @@ module ModFaceFlux
   public :: get_physical_flux
   public :: get_speed_max
 
-  interface
-    module subroutine rotate_flux_vector(FluxRot_V, Flux_V)
-      real, intent(in)   :: FluxRot_V(:)
-      real, intent(inout):: Flux_V(:)
-    end subroutine
-
-    module subroutine rotate_state_vectors
-
-    end subroutine
-  end interface
-
-  interface
-    module subroutine calc_cell_flux(iBlock)
-      integer, intent(in) :: iBlock
-    end subroutine
-    module subroutine calc_simple_cell_flux(iBlock)
-      integer, intent(in) :: iBlock
-    end subroutine
-  end interface
-
-  interface
-    module subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, &
-        cLeft_I, cRight_I, UseAwSpeedIn)
-      real,    intent(in) :: State_V(nVar)
-      real,    intent(in) :: B0x, B0y, B0z
-      real, optional, intent(out) :: Cmax_I(nFluid)  ! max speed relative to lab
-      real, optional, intent(out) :: Cleft_I(nFluid) ! maximum left speed
-      real, optional, intent(out) :: Cright_I(nFluid)! maximum right speed
-      logical, optional, intent(in):: UseAwSpeedIn   ! use AW speed definitions
-    end subroutine
-  end interface
-
-  interface
-    module subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
-      real, intent(out):: Flux_V(:)
-      real, intent(in) :: StateLeftCons_V(:), StateRightCons_V(:)
-    end subroutine
-  end interface
-
   private ! except
 
   ! Number of fluxes including pressure and energy fluxes
@@ -117,104 +78,113 @@ module ModFaceFlux
   integer:: iEnergyMin = nVar+1, iEnergyMax = nVar + nFluid
   !$omp threadprivate( iFluidMin, iFLuidMax, iVarMin, iVarMax )
   !$omp threadprivate( iEnergyMin, iEnergyMax )
-
+  
   ! Neutral fluids may use different flux function
+  logical:: UseDifferentNeutralFlux = .false.
   character(len=10), public:: TypeFluxNeutral = 'default'
 
-  ! Logicals for choosing numerical fluxes
-  logical :: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
+  ! Logicals so we don't need string comparisons
+  logical, public:: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
-
+  
   ! 1D Burgers' equation, works for Hd equations.
   logical, public:: DoBurgers = .false.
 
   logical :: UseLindeFix
-  logical, public :: DoTestCell
+  logical, public:: DoTestCell
   logical :: IsBoundary
   !$omp threadprivate( DoTestCell, IsBoundary )
-
+  
   ! Index of the block for this face
   integer :: iBlockFace
   !$omp threadprivate( iBlockFace )
-
+  
   ! Direction of the face
   integer :: iDimFace
   !$omp threadprivate( iDimFace )
-
+  
   ! index of the face
   integer, public:: iFace,jFace,kFace
   !$omp threadprivate( iFace,jFace,kFace )
-
+  
   ! index of cell in the negative and positive directions from face
   integer :: iLeft,  jLeft, kLeft
   integer :: iRight, jRight, kRight
   !$omp threadprivate( iLeft, jLeft, kLeft, iRight, jRight, kRight )
-
+  
   real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
   real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
 
-  ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
+  ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated 
   ! in terms of divergence of the MHD part of momentum flux.
-  ! For this reason we calculate the MHD flux for the first ion fluid even
+  ! For this reason we calculate the MHD flux for the first ion fluid even 
   ! in the case when only its hydrodynamic part matters.
   real :: MhdFlux_V(     RhoUx_:RhoUz_)     = 0.0
-  real :: MhdFluxLeft_V( RhoUx_:RhoUz_)     = 0.0
-  real :: MhdFluxRight_V(RhoUx_:RhoUz_)     = 0.0
-
+  real :: MhdFluxLeft_V( RhoUx_:RhoUz_)     = 0.0 
+  real :: MhdFluxRight_V(RhoUx_:RhoUz_)     = 0.0 
+  
+  real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
+  real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
+  real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL = 0.0, DeltaBnR = 0.0
   real, public:: Area = 0.0
   real :: Area2 = 0.0, AreaX, AreaY, AreaZ
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
+  !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
   !$omp threadprivate( MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V)
+  !$omp threadprivate( DissipationFlux_V )
   !$omp threadprivate( B0x, B0y, B0z )
+  !$omp threadprivate( DiffBb )
   !$omp threadprivate( DeltaBnL, DeltaBnR )
   !$omp threadprivate( Area, Area2, AreaX, AreaY, AreaZ )
-
+  
   ! Maximum speed for the Courant condition
   real :: CmaxDt = 0.0
   !$omp threadprivate( CmaxDt )
-
+  
   ! Normal velocities for all fluids plus electrons
   real :: Unormal_I(nFluid+1) = 0.0
   real, public:: UnLeft_I(nFluid+1)  = 0.0
   real, public:: UnRight_I(nFluid+1) = 0.0
   !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
-
+  
   real :: bCrossArea_D(3) = [ 0.0, 0.0, 0.0 ] ! B x Area for current -> BxJ
   real :: Enormal = 0.0                       ! normal electric field -> divE
-  !$omp threadprivate( bCrossArea_D, Enormal)
-
+  real :: Pe      = 0.0                       ! electron pressure -> grad Pe
+  real :: Pwave   = 0.0  
+  !$omp threadprivate( bCrossArea_D, Enormal, Pe, Pwave)
+  
   ! Variables for normal resistivity
   real :: EtaJx, EtaJy, EtaJz, Eta = 0.0
   !$omp threadprivate( EtaJx, EtaJy, EtaJz, Eta )
-
+  
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff
   real, public:: HallJx, HallJy, HallJz
   !$omp threadprivate( InvDxyz, HallCoeff, HallJx, HallJy, HallJz )
-
+  
   ! Variables needed for Biermann battery term
   logical, public:: UseHallGradPe = .false.
   logical :: IsNewBlockGradPe = .true.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
-  real, allocatable, public, protected:: Pe_G(:,:,:)
+  real, allocatable, public:: Pe_G(:,:,:)
   !$omp threadprivate( UseHallGradPe, IsNewBlockGradPe )
   !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
   !$omp threadprivate( Pe_G )
-
+  
   ! Variables needed by viscosity
   real :: ViscoCoeff = 0.0
   !$omp threadprivate( ViscoCoeff )
-
+  
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
        HeatCondCoefNormal
   !$omp threadprivate( DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux )
   !$omp threadprivate( HeatCondCoefNormal )
-
+  
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
   integer, parameter :: nFluxMhd = 9
@@ -234,7 +204,7 @@ module ModFaceFlux
   !$omp threadprivate( B0n, B0t1, B0t2 )
   !$omp threadprivate( UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L )
   !$omp threadprivate( UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R )
-
+  
   ! Limit propagation speeds to reduce numerical diffusion
   logical, public:: UseClimit = .false.
   real :: ClimitDim = -1.0, rClimit = -1.0
@@ -242,26 +212,26 @@ module ModFaceFlux
   ! Variables introduced for regional Boris correction
   real :: InvClightFace, InvClight2Face
   !$omp threadprivate( InvClightFace, InvClight2Face )
-
+  
   ! One of the two possible ways to treat the MHD-like systems
   ! (partially symmetrizable, following the Godunov definition).
   ! If UseRS7=.true. then use the 7-wave Riemann Solver (RS) with
-  ! continuous normal component of the magnetic field across the face.
+  ! continuous  normal component of the magnetic field across the face.
   ! The number of jumps in the physical variables across the face is equal
   ! to the number of waves, resulting in a well-posed Riemann problem.
   ! This approach is an alternative to the 8-wave scheme.
   logical :: UseRS7 = .false.
-
+  
   ! Local logical variables for various terms that may be switched off
   ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
        DoIonHeatConduction = .false., DoHallInduction = .false.
-
+  
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
-
+  
 contains
   !============================================================================
 
@@ -289,9 +259,174 @@ contains
 
   end subroutine face_flux_set_parameters
   !============================================================================
+
+  subroutine rotate_state_vectors
+
+    use ModCoordTransform, ONLY: cross_product
+
+    ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
+    ! StateRight_V(B*_), StateRight_V(U*_) into normal and
+    ! tangential components with respect to the face.
+    ! Store the rotated vector components in scalar variables UnL, Ut1L, ....
+    ! Also store the transformation for rotating back.
+    ! Current implementation is for a single ion fluid.
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid)then
+       select case (iDimFace)
+       case (x_) ! x face
+          ! B0 on the face
+          B0n  = B0x
+          B0t1 = B0y
+          B0t2 = B0z
+          ! Left face
+          UnL   =  StateLeft_V(Ux_)
+          Ut1L  =  StateLeft_V(Uy_)
+          Ut2L  =  StateLeft_V(Uz_)
+          B1nL  =  StateLeft_V(Bx_)
+          B1t1L =  StateLeft_V(By_)
+          B1t2L =  StateLeft_V(Bz_)
+          ! Right face
+          UnR   =  StateRight_V(Ux_)
+          Ut1R  =  StateRight_V(Uy_)
+          Ut2R  =  StateRight_V(Uz_)
+          B1nR  =  StateRight_V(Bx_)
+          B1t1R =  StateRight_V(By_)
+          B1t2R =  StateRight_V(Bz_)
+       case (y_) ! y face
+          ! B0 on the face
+          B0n  = B0y
+          B0t1 = B0z
+          B0t2 = B0x
+          ! Left face
+          UnL   =  StateLeft_V(Uy_)
+          Ut1L  =  StateLeft_V(Uz_)
+          Ut2L  =  StateLeft_V(Ux_)
+          B1nL  =  StateLeft_V(By_)
+          B1t1L =  StateLeft_V(Bz_)
+          B1t2L =  StateLeft_V(Bx_)
+          ! Right face
+          UnR   =  StateRight_V(Uy_)
+          Ut1R  =  StateRight_V(Uz_)
+          Ut2R  =  StateRight_V(Ux_)
+          B1nR  =  StateRight_V(By_)
+          B1t1R =  StateRight_V(Bz_)
+          B1t2R =  StateRight_V(Bx_)
+       case (z_) ! z face
+          ! B0 on the face
+          B0n  = B0z
+          B0t1 = B0x
+          B0t2 = B0y
+          ! Left face
+          UnL   =  StateLeft_V(Uz_)
+          Ut1L  =  StateLeft_V(Ux_)
+          Ut2L  =  StateLeft_V(Uy_)
+          B1nL  =  StateLeft_V(Bz_)
+          B1t1L =  StateLeft_V(Bx_)
+          B1t2L =  StateLeft_V(By_)
+          ! Right face
+          UnR   =  StateRight_V(Uz_)
+          Ut1R  =  StateRight_V(Ux_)
+          Ut2R  =  StateRight_V(Uy_)
+          B1nR  =  StateRight_V(Bz_)
+          B1t1R =  StateRight_V(Bx_)
+          B1t2R =  StateRight_V(By_)
+       end select
+    else
+       if(Normal_D(z_) < 0.5)then
+          ! Tangent1 = Normal x (0,0,1)
+          Tangent1_D(x_) =  Normal_D(y_)
+          Tangent1_D(y_) = -Normal_D(x_)
+          Tangent1_D(z_) = 0.0
+       else
+          ! Tangent1 = Normal x (1,0,0)
+          Tangent1_D(x_) = 0.0
+          Tangent1_D(y_) =  Normal_D(z_)
+          Tangent1_D(z_) = -Normal_D(y_)
+       end if
+       ! Normalize Tangent1 vector
+       Tangent1_D = Tangent1_D/norm2(Tangent1_D)
+       ! Tangent2 = Normal x Tangent1
+       Tangent2_D = cross_product(Normal_D, Tangent1_D)
+
+       ! B0 on the face
+       B0n   = sum(Normal_D  *[B0x, B0y, B0z])
+       B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
+       B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
+       ! Left face
+       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
+       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
+       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
+       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
+       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
+       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
+       ! Right face
+       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
+       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
+       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
+       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
+       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
+       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
+    end if
+
+  end subroutine rotate_state_vectors
+  !============================================================================
+  subroutine rotate_flux_vector(FluxRot_V, Flux_V)
+    real, intent(in)   :: FluxRot_V(:)
+    real, intent(inout):: Flux_V(:)
+
+    ! Rotate n,t1,t2 components back to x,y,z components
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid)then
+       select case (iDimFace)
+       case (x_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(Bx_    ) = FluxRot_V(B1n_)
+          Flux_V(By_    ) = FluxRot_V(B1t1_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t2_)
+       case (y_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t2_)
+          Flux_V(By_    ) = FluxRot_V(B1n_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t1_)
+       case (z_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUn_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t1_)
+          Flux_V(By_    ) = FluxRot_V(B1t2_)
+          Flux_V(Bz_    ) = FluxRot_V(B1n_)
+       end select
+    else
+       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
+
+       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
+       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
+       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
+    end if
+
+  end subroutine rotate_flux_vector
+  !============================================================================
   subroutine init_mod_face_flux
 
-    ! Set the logicals of type of flux used in the current session and
+    ! Set the logicals of type of flux used in the current session and 
     ! the logicals of diffusion, conduction and induction.
 
     use ModMain, ONLY: UseHyperbolicDivb
@@ -318,10 +453,10 @@ contains
     DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
     DoHllcNeutral    = TypeFluxNeutral == 'HLLC'
 
-    UseRS7 = DoRoe  ! This is always true for the current implementation
+    UseRS7 = DoRoe  ! This is always true for the current implementation   
     UseLindeFix = UseB .and. &
          (UseHyperbolicDivb .or. DoHll .or. DoLfdw .or. DoHlldw &
-         .or. DoHlld .or. DoAw)
+         .or. DoHlld .or. DoAw)    
 
     DoRadDiffusion      = UseRadDiffusion .and.&
          .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
@@ -547,7 +682,7 @@ contains
          end if
          StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
          StateRight_V = RightState_VX(:,iFace,jFace,kFace)
-
+                  
          call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace))
 
          if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = MhdFlux_V
@@ -558,9 +693,9 @@ contains
          endif
 
          VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
-
+         
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(DoCorrectFace) call correct_u_normal(x_, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(x_)
          uDotArea_XI(iFace,jFace,kFace,:)   = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -648,7 +783,7 @@ contains
 
          VdtFace_y(iFace,jFace,kFace) = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(y_, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(y_)
          uDotArea_YI(iFace,jFace,kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -736,7 +871,7 @@ contains
 
          VdtFace_z(iFace,jFace,kFace)       = CmaxDt*Area
 
-         if(DoCorrectFace) call correct_u_normal(z_, Unormal_I)
+         if(DoCorrectFace) call correct_u_normal(z_)
          uDotArea_ZI(iFace,jFace,kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -765,12 +900,12 @@ contains
     !==========================================================================
 
     subroutine add_artificial_viscosity(Flux_V)
-      ! This subroutine adds artificial viscosity to the fluid
-      ! density/moment/energy/pressure equations, but not the EM field
+      ! This subroutine adds artificial viscosity to the fluid 
+      ! density/moment/energy/pressure equations, but not the EM field 
       ! equations.
-      ! The algorithm is implemented based on the paper of
-      ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
-      ! for more details.
+      ! The algorithm is implemented based on the paper of 
+      ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
+      ! for more details. 
 
       use ModAdvance, ONLY: State_VGB, Energy_GBI
       use ModPhysics, ONLY: Gamma_I
@@ -789,17 +924,17 @@ contains
       do iFluid = 1, nFluid
          if(nFluid > 1) call select_fluid(iFluid)
 
-         ! Calculate the 5th-order artificial viscosity.
+         ! Calculate the 5th-order artificial viscosity. 
          ! See eq(36) of P. McCorquodale and P. Colella (2010), where
          ! a 4th-order viscosity term is presented.
          s1 = State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace)/ &
               State_VGB(iRho,iLeft,jLeft,kLeft, iBlockFace)
          s2 = State_VGB(iP,iFace,jFace,kFace,iBlockFace)/ &
               State_VGB(iRho,iFace,jFace,kFace, iBlockFace)
-
+         
          Sound3 = sqrt((min(s1, s2)*Gamma_I(iFluid)))**3
 
-         FaceDivU = min(abs(FaceDivU_I(iFluid)), abs(CmaxDt))
+         FaceDivU = min(abs(FaceDivU_I(iFluid)), abs(CmaxDt))                  
          Coef = AlphaVisco*FaceDivU*Area* &
               min(1.0, abs(FaceDivU**3/Sound3)/BetaVisco)
 
@@ -813,7 +948,7 @@ contains
 
          Flux_V(iP) = Flux_V(iP) - Coef* &
               (State_VGB(iP,iFace,jFace,kFace,iBlockFace) - &
-              State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))
+              State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))   
 
          ! Energy flux
          Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
@@ -821,7 +956,7 @@ contains
               Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
 
          If(iFluid == 1) then
-            ! Diffuse scalars with the same coef of the first fluid.
+            ! Diffuse scalars with the same coef of the first fluid. 
             do iVar=ScalarFirst_, ScalarLast_
                Flux_V(iVar) = &
                     Flux_V(iVar) - Coef* &
@@ -889,6 +1024,7 @@ contains
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
     if(.not.IsCartesian)then
+
        if(IsRzGeometry)then
           AreaX = CellFace_DFB(1,iFace,jFace,kFace,iBlockFace)
           AreaY = 0.0
@@ -906,6 +1042,21 @@ contains
              AreaZ = 0.0
           end if
        end if
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < 1e-30)then
+
+          if(DoTestCell)write(*,*)NameSub,': Area2=', Area2
+
+          ! The face is at the pole
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D = Normal_D/norm2(Normal_D)
+          Area  = 0.0
+          Area2 = 0.0
+       else
+          Area = sqrt(Area2)
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
+       end if
     end if
 
     call set_cell_values_common
@@ -920,6 +1071,7 @@ contains
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
     if(.not.IsCartesian)then
+
        if(IsRzGeometry)then
           AreaX = 0.0
           AreaY = CellFace_DFB(2,iFace,jFace,kFace,iBlockFace)
@@ -933,6 +1085,23 @@ contains
              AreaZ = 0.0
           end if
        end if
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < 1e-30)then
+
+          if(DoTestCell)write(*,*)NameSub,': Area2=', Area2
+
+          ! The face is at the pole
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D = Normal_D/norm2(Normal_D)
+          Area  = 0.0
+          Area2 = 0.0
+       else
+          Area = sqrt(Area2)
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
+
+       end if
+
     end if
 
     call set_cell_values_common
@@ -947,9 +1116,26 @@ contains
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(.not.IsCartesian)then
+
        AreaX = FaceNormal_DDFB(x_, 3, iFace,jFace,kFace, iBlockFace)
        AreaY = FaceNormal_DDFB(y_, 3, iFace,jFace,kFace, iBlockFace)
        AreaZ = FaceNormal_DDFB(z_, 3, iFace,jFace,kFace, iBlockFace)
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < 1e-30)then
+
+          if(DoTestCell)write(*,*) NameSub,': Area2 = ', Area2
+
+          ! The face is at the pole
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D = Normal_D/norm2(Normal_D)
+
+          Area  = 0.0
+          Area2 = 0.0
+       else
+          Area = sqrt(Area2)
+          Normal_D = [AreaX, AreaY, AreaZ]/Area
+       end if
     end if
 
     call set_cell_values_common
@@ -964,23 +1150,6 @@ contains
     real :: r
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
-    Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-    if(Area2 < 1e-30)then
-
-       if(DoTestCell)write(*,*) NameSub,': Area2 = ', Area2
-
-       ! The face is at the pole
-       Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
-            -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
-       Normal_D = Normal_D/norm2(Normal_D)
-
-       Area  = 0.0
-       Area2 = 0.0
-    else
-       Area = sqrt(Area2)
-       Normal_D = [AreaX, AreaY, AreaZ]/Area
-    end if
-
     if(DoTestCell .and. .not.IsCartesian) &
          write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,Normal_D=', &
          Area2, AreaX, AreaY, AreaZ, Normal_D
@@ -1080,28 +1249,26 @@ contains
 
     real :: Cmax
     real :: DiffBn_D(3), DiffE
-    real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight
+    real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
-    real :: dB0_D(3), Current_D(3), DiffBb ! (1/4)(BnL-BnR)^2
-    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: DissipationFlux_V(nFlux) ! New Roe solver
-    real :: Pe                       ! electron pressure -> grad Pe
-    real :: Pwave
+    real :: B0_D(3), dB0_D(3), Current_D(3)
+
     real :: GradPe_D(3)
     real :: InvElectronDens
     integer :: i, j, k, iFluid
     real :: NatomicSi, TeSi
 
-    real :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
+    real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !$omp threadprivate( b_DG )
+    
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
-       StateLeft_V (Rho_) = sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
-       StateRight_V(Rho_) = sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
+       StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
+       StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
     ! Calculate current for the face if needed for (Hall) resistivity
@@ -1109,6 +1276,7 @@ contains
        if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
        call get_face_curl(iDimFace, iFace,jFace,kFace, iBlockFace, &
             IsNewBlockCurrent, b_DG, Current_D)
+       Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
 
     ! Calculateing stress tensor for viscosity Visco_DDI
@@ -1118,15 +1286,15 @@ contains
     end if
 
     if(Eta > 0.0)then
-       EtaJx = Eta*Current_D(1)
-       EtaJy = Eta*Current_D(2)
-       EtaJz = Eta*Current_D(3)
+       EtaJx = Eta*Jx
+       EtaJy = Eta*Jy
+       EtaJz = Eta*Jz
     end if
 
     if(HallCoeff > 0.0)then
-       HallJx = HallCoeff*Current_D(1)
-       HallJy = HallCoeff*Current_D(2)
-       HallJz = HallCoeff*Current_D(3)
+       HallJx = HallCoeff*Jx
+       HallJy = HallCoeff*Jy
+       HallJz = HallCoeff*Jz
     end if
 
     if(UseHallGradPe)then
@@ -1200,60 +1368,61 @@ contains
     end if
 
     if(UseB)then
-      if(DoRoe)then
-        if(IsBoundary)then
-          uLeft_D  = StateLeft_V(Ux_:Uz_)
-          uRight_D = StateRight_V(Ux_:Uz_)
-        else
-          ! Since the divB source term is calculated using the
-          ! cell centered velocity, the numerical diffusion
-          ! for the normal magnetic field should be evaluated
-          ! in terms of the cell centered velocity too
-          uLeft_D = &
-          State_VGB(RhoUx_:RhoUz_,iLeft,jLeft,kLeft,iBlockFace) &
-            /        State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
-          uRight_D = &
-          State_VGB(RhoUx_:RhoUz_,iRight,jRight,kRight,iBlockFace) &
-            /        State_VGB(Rho_,iRight,jRight,kRight,iBlockFace)
-        end if
+       if(DoRoe)then
+          if(IsBoundary)then
+             uLeft_D  = StateLeft_V(Ux_:Uz_)
+             uRight_D = StateRight_V(Ux_:Uz_)
+          else
+             ! Since the divB source term is calculated using the
+             ! cell centered velocity, the numerical diffusion
+             ! for the normal magnetic field should be evaluated
+             ! in terms of the cell centered velocity too
+             uLeft_D = &
+                  State_VGB(RhoUx_:RhoUz_,iLeft,jLeft,kLeft,iBlockFace) &
+                  /        State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
+             uRight_D = &
+                  State_VGB(RhoUx_:RhoUz_,iRight,jRight,kRight,iBlockFace) &
+                  /        State_VGB(Rho_,iRight,jRight,kRight,iBlockFace)
+          end if
 
-        if(UseB0)then
-          dB0_D = B0_DGB(:, iLeft,  jLeft,  kLeft,  iBlockFace)  &
-          -  B0_DGB(:, iRight, jRight, kRight, iBlockFace)
-        else
-          dB0_D = 0.0
-        end if
+          if(UseB0)then
+             dB0_D = B0_DGB(:, iLeft,  jLeft,  kLeft,  iBlockFace)  &
+                  -  B0_DGB(:, iRight, jRight, kRight, iBlockFace)
+          else
+             dB0_D = 0.0
+          end if
 
-        call get_dissipation_flux_mhd(Normal_D, &
-          StateLeft_V, StateRight_V,            &
-          [B0x,B0y,B0z], dB0_D,                 &
-          uLeft_D, uRight_D, DeltaBnL, DeltaBnR,&
-          IsBoundary, .false.,                  &
-          DissipationFlux_V, cMax, Unormal_I(1))
+          B0_D = [B0x,B0y,B0z]
 
-        Unormal_I = Unormal_I(1)
-      end if
+          call get_dissipation_flux_mhd(Normal_D,         &
+               StateLeft_V, StateRight_V,                 &
+               B0_D, dB0_D,                    &
+               uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
+               IsBoundary, .false.,                       &
+               DissipationFlux_V, cMax, Unormal_I(1))
 
-      if(UseRS7 .or. UseLindeFix)then
-        ! Sokolov's algorithm
-        ! Calculate the jump in the normal magnetic field vector
-        DiffBn_D = Normal_D* &
-        0.5*sum((StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_))*Normal_D)
+          Unormal_I=Unormal_I(1)
+       end if
+       if(UseRS7 .or. UseLindeFix)then
+          ! Sokolov's algorithm
+          ! Calculate the jump in the normal magnetic field vector
+          DiffBn_D = Normal_D* &
+               0.5*sum((StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_))*Normal_D)
 
-        ! Remove the jump in the normal magnetic field
-        StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
-        StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
+          ! Remove the jump in the normal magnetic field
+          StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
+          StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
 
-        ! The energy jump is also modified by
-        ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
-        ! We store half of this in DiffE
-        DiffE = &
-        0.5*sum((StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_))*DiffBn_D)
+          ! The energy jump is also modified by
+          ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
+          ! We store half of this in DiffE
+          DiffE = &
+               0.5*sum((StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_))*DiffBn_D)
 
-        DiffBb = sum(DiffBn_D**2)
-      end if
+          DiffBb = sum(DiffBn_D**2)
+       end if
     end if
-
+    
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
@@ -1262,7 +1431,7 @@ contains
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
-
+    
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
@@ -1271,7 +1440,7 @@ contains
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
        if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
-
+       
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
             PwaveRight)
@@ -1319,14 +1488,14 @@ contains
        elseif(DoAw)then
           call artificial_wind
        elseif(DoRoeOld)then
-          call roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
+          call roe_solver(Flux_V)
        elseif(DoRoe)then
           call roe_solver_new
        else
           call stop_mpi(NameSub//': Unknown flux type for ions')
        end if
     end if
-
+    
     if(UseLindeFix)then
 
        if(UseHyperbolicDivb) then
@@ -1454,7 +1623,7 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              ! Calculate the MHD momentum  flux (may be used to calculate
+              ! Calculate the MHD momentum  flux (may be used to calculate 
               ! electric field)
               MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
          Enormal   = 0.5*(EnLeft + EnRight)
@@ -1520,7 +1689,7 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              ! Calculate MHD momentum flux (may be used to calculate
+              ! Calculate MHD momentum flux (may be used to calculate 
               ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
@@ -1642,7 +1811,7 @@ contains
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
-
+      
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1654,14 +1823,14 @@ contains
       Unormal_I(iFluidMin:iFluidMax) = &
            WeightRight*UnRight_I(iFluidMin:iFluidMax) &
            + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
-
+      
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              ! Calculate the MHD momentum flux (may be used to
+              ! Calculate the MHD momentum flux (may be used to 
               ! calculate electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
-              +           WeightRight*MhdFluxRight_V
+              +           WeightRight*MhdFluxRight_V  
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
@@ -1675,26 +1844,26 @@ contains
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
-
+      
       ! The propagation speeds are modified by the DoAw = .true. !
       !------------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z,  &
            Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
            UseAwSpeedIn = .true.)
-
+      
       Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
       Cleft  = min(0.0, minval(Cleft_I(iFluidMin:iFluidMax)))
       Cright = max(0.0, maxval(Cright_I(iFluidMin:iFluidMax)))
-
+      
       WeightLeft  = Cright/(Cright - Cleft)
       WeightRight = 1.0 - WeightLeft
       Diffusion   = Cright*WeightRight
-
+      
       Flux_V(iVarMin:iVarMax) = &
            ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
-           -            StateLeftCons_V(iVarMin:iVarMax)) )
+           -            StateLeftCons_V(iVarMin:iVarMax)) )  
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
            ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
@@ -1710,7 +1879,7 @@ contains
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
-              ! Calculate MHD momentum flux (may be used to calculate
+              ! Calculate MHD momentum flux (may be used to calculate 
               ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
@@ -2527,7 +2696,7 @@ contains
           Flux_V(Hyp_) = 0.0
        end if
     end if
-
+    
     if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(DoHeatConduction)then
        if(UseElectronPressure)then
@@ -2577,7 +2746,7 @@ contains
          ! Peperp = (3*pe - Pepar)/2
          PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
       end if
-
+         
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Electric field divided by speed of light:
@@ -2700,7 +2869,7 @@ contains
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
-      p       = State_V(p_)
+      p       = State_V(p_)      
 
       !\
       ! Hydrodynamic part of fluxes
@@ -2708,7 +2877,7 @@ contains
 
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
-
+      
       ! f_n[rho] = Rho*U_i
       Flux_V(Rho_) = Rho*Un
 
@@ -2740,7 +2909,7 @@ contains
               *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
 
          Flux_V(RhoUx_) = sum(RhoUn_I*Ux_I) + pPerp*NormalX
-         Flux_V(RhoUy_) = sum(RhoUn_I*Uy_I) + pPerp*NormalY
+         Flux_V(RhoUy_) = sum(RhoUn_I*Uy_I) + pPerp*NormalY 
          Flux_V(RhoUz_) = sum(RhoUn_I*Uz_I) + pPerp*NormalZ
       else
          ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
@@ -2776,7 +2945,7 @@ contains
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
          Flux_V(Energy_)= Flux_V(Energy_) &
-              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) 
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
 
@@ -2852,13 +3021,13 @@ contains
          MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
          MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
          Flux_V(Energy_)= Flux_V(Energy_) &
-              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) 
          !\
          ! Don't we need Flux_V(PePar_)?
          !/
          if(DoTestCell)then
             write(*,*) NameSub, ' after anisoPe flux:'
-            write(*,*) 'DpPerB(pe)  =', DpPerB
+            write(*,*) 'DpPerB(pe)  =', DpPerB 
             write(*,*) 'FullBx      =', FullBx
             write(*,*) 'FullBy      =', FullBy
             write(*,*) 'FullBz      =', FullBz
@@ -2880,7 +3049,7 @@ contains
       Flux_V(Energy_) = Flux_V(Energy_) &
            + Un*pExtra                      & !Work of electrons and waves
            + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz !Poynting
-
+      
       ! Correct energy flux, so that the electron contribution to the energy
       ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
       if(UseElectronPressure .and. nIonFluid == 1 .and. iFluid == 1)then
@@ -2910,7 +3079,7 @@ contains
          ! calculate number densities
          ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
          InvElectronDens = 1.0/sum(ChargeDens_I)
-
+         
          ! calculate positive charge velocity
          UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
          UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
@@ -3106,7 +3275,7 @@ contains
 
       ! Needed for adiabatic source term for electron pressure
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
-
+      
     end subroutine get_hd_flux
     !==========================================================================
 
@@ -3119,275 +3288,8 @@ contains
 
   end subroutine get_physical_flux
   !============================================================================
-  subroutine correct_u_normal(iDim, Unormal_I)
 
-    ! Make Unormal 6th order accuracte
-    use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModAdvance,    ONLY: State_VGB
-    use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
-         Xi_, Eta_, Zeta_, nDim
-
-    integer, intent(in):: iDim
-    real, intent(inout):: Unormal_I(:)
-
-    integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
-    real :: Ucell_I(4), Unormal, Ucell_D(3)
-    real :: Normal0_D(3), Area0_D(3)
-    integer:: iCell, iCount
-
-    character(len=*), parameter:: NameSub = 'correct_u_normal'
-    !--------------------------------------------------------------------------
-    do iFluid = iFluidMin, iFluidMax
-
-       Unormal = Unormal_I(iFluid)
-       iRho = iRho_I(iFluid)
-       iRhoUx = iRhoUx_I(iFluid)
-       iRhoUz = iRhoUz_I(iFluid)
-
-       if(.not. IsCartesian) then
-          if(iDim == x_) then
-             iCount = 1
-             do iCell = iFace - 2, iFace + 1
-                Area0_D(1:nDim) = CellCoef_DDGB( &
-                     Xi_,:,iCell,jFace,kFace,iBlockFace)
-                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
-                     norm2(Area0_D(1:nDim))
-                Ucell_D = &
-                     State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
-                     State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
-                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
-                iCount = iCount + 1
-             enddo
-
-          elseif(iDim == y_) then
-             iCount = 1
-             do iCell = jFace - 2, jFace + 1
-                Area0_D(1:nDim) = CellCoef_DDGB( &
-                     Eta_,:,iFace,iCell,kFace,iBlockFace)
-                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
-                     norm2(Area0_D(1:nDim))
-                Ucell_D = &
-                     State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
-                     State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
-                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
-                iCount = iCount + 1
-             enddo
-          elseif(iDim == z_) then
-             iCount = 1
-             do iCell = kFace - 2, kFace + 1
-                Area0_D = CellCoef_DDGB( &
-                     Zeta_,:,iFace,jFace,iCell,iBlockFace)
-                Normal0_D = Area0_D/norm2(Area0_D)
-
-                Ucell_D = &
-                     State_VGB(iRhoUx:iRhoUz,iFace,jFace,iCell,iBlockFace)/&
-                     State_VGB(iRho,iFace,jFace,iCell,iBlockFace)
-                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
-                iCount = iCount + 1
-             enddo
-          endif
-       else
-          if(iDim == x_) then
-             iRhoUx = iRhoUx_I(iFluid)
-             Ucell_I = &
-                  State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
-                  State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
-          elseif(iDim == y_) then
-             iRhoUy = iRhoUy_I(iFluid)
-             Ucell_I = &
-                  State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
-                  State_VGB(iRho,iFace,jFace-2:jFace+1,kFace,iBlockFace)
-          else
-             iRhoUz = iRhoUz_I(iFluid)
-             Ucell_I = State_VGB(iRhoUz,iFace,jFace,kFace-2:kFace+1,iBlockFace)/&
-                  State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
-          endif
-       endif
-       Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
-    enddo
-
-  end subroutine correct_u_normal
-  !============================================================================
-end module ModFaceFlux
-!==============================================================================
-
-submodule (ModFaceFlux) Rotation
-
-contains
-
-  module subroutine rotate_state_vectors
-
-    use ModCoordTransform, ONLY: cross_product
-
-    ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
-    ! StateRight_V(B*_), StateRight_V(U*_) into normal and
-    ! tangential components with respect to the face.
-    ! Store the rotated vector components in scalar variables UnL, Ut1L, ....
-    ! Also store the transformation for rotating back.
-    ! Current implementation is for a single ion fluid.
-    !--------------------------------------------------------------------------
-    if(IsCartesianGrid)then
-      select case (iDimFace)
-      case (x_) ! x face
-        ! B0 on the face
-        B0n  = B0x
-        B0t1 = B0y
-        B0t2 = B0z
-        ! Left face
-        UnL   =  StateLeft_V(Ux_)
-        Ut1L  =  StateLeft_V(Uy_)
-        Ut2L  =  StateLeft_V(Uz_)
-        B1nL  =  StateLeft_V(Bx_)
-        B1t1L =  StateLeft_V(By_)
-        B1t2L =  StateLeft_V(Bz_)
-        ! Right face
-        UnR   =  StateRight_V(Ux_)
-        Ut1R  =  StateRight_V(Uy_)
-        Ut2R  =  StateRight_V(Uz_)
-        B1nR  =  StateRight_V(Bx_)
-        B1t1R =  StateRight_V(By_)
-        B1t2R =  StateRight_V(Bz_)
-      case (y_) ! y face
-        ! B0 on the face
-        B0n  = B0y
-        B0t1 = B0z
-        B0t2 = B0x
-        ! Left face
-        UnL   =  StateLeft_V(Uy_)
-        Ut1L  =  StateLeft_V(Uz_)
-        Ut2L  =  StateLeft_V(Ux_)
-        B1nL  =  StateLeft_V(By_)
-        B1t1L =  StateLeft_V(Bz_)
-        B1t2L =  StateLeft_V(Bx_)
-        ! Right face
-        UnR   =  StateRight_V(Uy_)
-        Ut1R  =  StateRight_V(Uz_)
-        Ut2R  =  StateRight_V(Ux_)
-        B1nR  =  StateRight_V(By_)
-        B1t1R =  StateRight_V(Bz_)
-        B1t2R =  StateRight_V(Bx_)
-      case (z_) ! z face
-        ! B0 on the face
-        B0n  = B0z
-        B0t1 = B0x
-        B0t2 = B0y
-        ! Left face
-        UnL   =  StateLeft_V(Uz_)
-        Ut1L  =  StateLeft_V(Ux_)
-        Ut2L  =  StateLeft_V(Uy_)
-        B1nL  =  StateLeft_V(Bz_)
-        B1t1L =  StateLeft_V(Bx_)
-        B1t2L =  StateLeft_V(By_)
-        ! Right face
-        UnR   =  StateRight_V(Uz_)
-        Ut1R  =  StateRight_V(Ux_)
-        Ut2R  =  StateRight_V(Uy_)
-        B1nR  =  StateRight_V(Bz_)
-        B1t1R =  StateRight_V(Bx_)
-        B1t2R =  StateRight_V(By_)
-      end select
-    else
-      if(Normal_D(z_) < 0.5)then
-        ! Tangent1 = Normal x (0,0,1)
-        Tangent1_D(x_) =  Normal_D(y_)
-        Tangent1_D(y_) = -Normal_D(x_)
-        Tangent1_D(z_) = 0.0
-      else
-        ! Tangent1 = Normal x (1,0,0)
-        Tangent1_D(x_) = 0.0
-        Tangent1_D(y_) =  Normal_D(z_)
-        Tangent1_D(z_) = -Normal_D(y_)
-      end if
-      ! Normalize Tangent1 vector
-      Tangent1_D = Tangent1_D/norm2(Tangent1_D)
-      ! Tangent2 = Normal x Tangent1
-      Tangent2_D = cross_product(Normal_D, Tangent1_D)
-
-      ! B0 on the face
-      B0n   = sum(Normal_D  *[B0x, B0y, B0z])
-      B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
-      B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
-      ! Left face
-      UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
-      Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
-      Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
-      B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
-      B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
-      B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
-      ! Right face
-      UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
-      Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
-      Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
-      B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
-      B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
-      B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
-    end if
-
-  end subroutine rotate_state_vectors
-  !============================================================================
-  module subroutine rotate_flux_vector(FluxRot_V, Flux_V)
-    real, intent(in)   :: FluxRot_V(:)
-    real, intent(inout):: Flux_V(:)
-
-    ! Rotate n,t1,t2 components back to x,y,z components
-    !--------------------------------------------------------------------------
-    if(IsCartesianGrid)then
-      select case (iDimFace)
-      case (x_)
-        Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
-        Flux_V(RhoUy_ ) = FluxRot_V(RhoUt1_)
-        Flux_V(RhoUz_ ) = FluxRot_V(RhoUt2_)
-        Flux_V(Bx_    ) = FluxRot_V(B1n_)
-        Flux_V(By_    ) = FluxRot_V(B1t1_)
-        Flux_V(Bz_    ) = FluxRot_V(B1t2_)
-      case (y_)
-        Flux_V(RhoUx_ ) = FluxRot_V(RhoUt2_)
-        Flux_V(RhoUy_ ) = FluxRot_V(RhoUn_)
-        Flux_V(RhoUz_ ) = FluxRot_V(RhoUt1_)
-        Flux_V(Bx_    ) = FluxRot_V(B1t2_)
-        Flux_V(By_    ) = FluxRot_V(B1n_)
-        Flux_V(Bz_    ) = FluxRot_V(B1t1_)
-      case (z_)
-        Flux_V(RhoUx_ ) = FluxRot_V(RhoUt1_)
-        Flux_V(RhoUy_ ) = FluxRot_V(RhoUt2_)
-        Flux_V(RhoUz_ ) = FluxRot_V(RhoUn_)
-        Flux_V(Bx_    ) = FluxRot_V(B1t1_)
-        Flux_V(By_    ) = FluxRot_V(B1t2_)
-        Flux_V(Bz_    ) = FluxRot_V(B1n_)
-      end select
-    else
-      Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
-      +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
-      +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
-      Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
-      +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
-      +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
-      Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
-      +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
-      +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
-
-      Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
-      +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
-      +           Tangent2_D(x_)*FluxRot_V(B1t2_)
-      Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
-      +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
-      +           Tangent2_D(y_)*FluxRot_V(B1t2_)
-      Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
-      +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
-      +           Tangent2_D(z_)*FluxRot_V(B1t2_)
-    end if
-
-  end subroutine rotate_flux_vector
-  !============================================================================
-
-end submodule Rotation
-
-
-submodule (ModFaceFlux) CellFlux
-
-contains
-
-  module subroutine calc_cell_flux(iBlock)
+  subroutine calc_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
 
@@ -3402,7 +3304,6 @@ contains
 
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
-    real:: Pe
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -3412,78 +3313,78 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(.not.allocated(FluxLeft_VGD)) allocate( &
-    FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
-    FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
+         FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
+         FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
 
     UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
-      call set_block_values(iBlock, iDim)
+       call set_block_values(iBlock, iDim)
 
-      if(Dt > 0)then
-        CmaxAll = CellSize_DB(iDim,iBlock)/Dt
-        if(.not.UseDtFixed) CmaxAll = Cfl*CmaxAll
-      else
-        CmaxAll = 0.0
-      end if
+       if(Dt > 0)then
+          CmaxAll = CellSize_DB(iDim,iBlock)/Dt
+          if(.not.UseDtFixed) CmaxAll = Cfl*CmaxAll
+       else
+          CmaxAll = 0.0
+       end if
 
-      do k = MinK, MaxK; kFace = k
-        do j = MinJ, MaxJ; jFace = j
-          do i = MinI, MaxI; iFace = i
-            !!! call set_cell_values
+       do k = MinK, MaxK; kFace = k
+          do j = MinJ, MaxJ; jFace = j
+             do i = MinI, MaxI; iFace = i
+                !!! call set_cell_values
 
-            ! Get primitive variables used by get_physical_flux
-            Primitive_V = State_VGB(:,i,j,k,iBlock)
-            do iFluid = 1, nFluid
-              iRho = iRho_I(iFluid)
-              iUx = iUx_I(iFluid)
-              iUz = iUz_I(iFluid)
-              RhoInv = 1/Primitive_V(iRho)
-              Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
-            end do
+                ! Get primitive variables used by get_physical_flux
+                Primitive_V = State_VGB(:,i,j,k,iBlock)
+                do iFluid = 1, nFluid
+                   iRho = iRho_I(iFluid)
+                   iUx = iUx_I(iFluid)
+                   iUz = iUz_I(iFluid)
+                   RhoInv = 1/Primitive_V(iRho)
+                   Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
+                end do
 
-            if(UseB0)then
-              B0x = B0_DGB(x_,i,j,k,iBlock)
-              B0y = B0_DGB(x_,i,j,k,iBlock)
-              B0z = B0_DGB(x_,i,j,k,iBlock)
-            end if
+                if(UseB0)then
+                   B0x = B0_DGB(x_,i,j,k,iBlock)
+                   B0y = B0_DGB(x_,i,j,k,iBlock)
+                   B0z = B0_DGB(x_,i,j,k,iBlock)
+                end if
 
-            ! Get the flux
-            call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-            Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                ! Get the flux
+                call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
-            FluxLeft_VGD(:,i,j,k,iDim) = &
-            0.5*Area*(Flux_V + CmaxAll*Conservative_V)
-            FluxRight_VGD(:,i,j,k,iDim)= &
-            0.5*Area*(Flux_V - CmaxAll*Conservative_V)
+                FluxLeft_VGD(:,i,j,k,iDim) = &
+                     0.5*Area*(Flux_V + CmaxAll*Conservative_V)
+                FluxRight_VGD(:,i,j,k,iDim)= &
+                     0.5*Area*(Flux_V - CmaxAll*Conservative_V)
 
-            ! Get the maximum speed
-            call get_speed_max(Primitive_V, B0x, B0y, B0z, Cmax_I)
-            CmaxArea = maxval(Cmax_I)*Area
-            select case(iDim)
-            case(1)
-              if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
-              k>0 .and. k<=nK) &
-              VdtFace_X(i,j,k) = CmaxArea
-            case(2)
-              if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
-              k>0 .and. k<=nK) &
-              VdtFace_Y(i,j,k) = CmaxArea
-            case(3)
-              if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
-              k>0 .and. k<=nK+1) &
-              VdtFace_Z(i,j,k) = CmaxArea
-            end select
+                ! Get the maximum speed
+                call get_speed_max(Primitive_V, B0x, B0y, B0z, Cmax_I)
+                CmaxArea = maxval(Cmax_I)*Area
+                select case(iDim)
+                case(1)
+                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK) &
+                        VdtFace_X(i,j,k) = CmaxArea
+                case(2)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
+                        k>0 .and. k<=nK) &
+                        VdtFace_Y(i,j,k) = CmaxArea
+                case(3)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK+1) &
+                        VdtFace_Z(i,j,k) = CmaxArea
+                end select
 
+             end do
           end do
-        end do
-      end do
+       end do
     end do
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_cell_flux
   !============================================================================
-  module subroutine calc_simple_cell_flux(iBlock)
+  subroutine calc_simple_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
 
@@ -3511,95 +3412,89 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(.not.allocated(FluxCenter_VGD)) allocate( &
-    FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
+         FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
     if(.not.allocated(Flux_VD)) allocate(Flux_VD(nFlux,nDim))
 
     HallCoeff     = -1.0
     if(UseHallResist .and. .not.UseSemiHallResist) call stop_mpi(NameSub// &
-    ": Hall Resistivity has not been implemented!")
+         ": Hall Resistivity has not been implemented!")
 
     BiermannCoeff = -1.0
     if(UseBiermannBattery) call stop_mpi(NameSub// &
-    ": BiermannBattery has not been implemented!")
+         ": BiermannBattery has not been implemented!")
 
     ViscoCoeff = 0.0
     if(UseViscosity) call stop_mpi(NameSub// &
-    ": Viscosity has not been implemented!")
+         ": Viscosity has not been implemented!")
 
     UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
-      call set_block_values(iBlock, iDim)
+       call set_block_values(iBlock, iDim)
 
-      do k = MinK, MaxK; kFace = k
-        do j = MinJ, MaxJ; jFace = j
-          do i = MinI, MaxI; iFace = i
+       do k = MinK, MaxK; kFace = k
+          do j = MinJ, MaxJ; jFace = j
+             do i = MinI, MaxI; iFace = i
 
-            Eta = 0.0
-            if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
+                Eta = 0.0
+                if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
 
-            if(UseClimit)  call stop_mpi(&
-            "Climit has not been implemented for cell fulx!")
+                if(UseClimit)  call stop_mpi(&
+                     "Climit has not been implemented for cell fulx!")
 
-            ! Get primitive variables used by get_physical_flux
-            Primitive_V = State_VGB(:,i,j,k,iBlock)
-            do iFluid = 1, nFluid
-              iRho = iRho_I(iFluid)
-              iUx = iUx_I(iFluid)
-              iUz = iUz_I(iFluid)
-              RhoInv = 1/Primitive_V(iRho)
-              Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
-            end do
+                ! Get primitive variables used by get_physical_flux
+                Primitive_V = State_VGB(:,i,j,k,iBlock)
+                do iFluid = 1, nFluid
+                   iRho = iRho_I(iFluid)
+                   iUx = iUx_I(iFluid)
+                   iUz = iUz_I(iFluid)
+                   RhoInv = 1/Primitive_V(iRho)
+                   Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
+                end do
 
-            if(UseB0)then
-              B0x = B0_DGB(x_,i,j,k,iBlock)
-              B0y = B0_DGB(y_,i,j,k,iBlock)
-              B0z = B0_DGB(z_,i,j,k,iBlock)
-            end if
+                if(UseB0)then
+                   B0x = B0_DGB(x_,i,j,k,iBlock)
+                   B0y = B0_DGB(y_,i,j,k,iBlock)
+                   B0z = B0_DGB(z_,i,j,k,iBlock)
+                end if
 
-            ! Get the flux
-            call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-            Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
-            if(.not. UseHighFDGeometry) then
-              FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
-            else
-              ! 'Area' is included in the transform coef:
-              FluxCenter_VGD(:,i,j,k,iDim) = Flux_V
-            endif
+                ! Get the flux
+                call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                if(.not. UseHighFDGeometry) then
+                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
+                else
+                   ! 'Area' is included in the transform coef:
+                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V
+                endif
+             end do
           end do
-        end do
-      end do
+       end do
     end do
 
     if(UseHighFDGeometry) then
-      do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-        do iFlux = 1, nFlux
-          Flux_VD(iFlux,:) = FluxCenter_VGD(iFlux,i,j,k,:)
-        enddo
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do iFlux = 1, nFlux
+             Flux_VD(iFlux,:) = FluxCenter_VGD(iFlux,i,j,k,:)
+          enddo
 
-        do iFlux = 1, nFlux
-          FluxCenter_VGD(iFlux,i,j,k,x_) = &
-          sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Xi_,:,i,j,k,iBlock))
-          FluxCenter_VGD(iFlux,i,j,k,y_) = &
-          sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Eta_,:,i,j,k,iBlock))
-          if(nK > 1) FluxCenter_VGD(iFlux,i,j,k,z_) = &
-          sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Zeta_,:,i,j,k,iBlock))
-        enddo
-      enddo; enddo; enddo
+          do iFlux = 1, nFlux
+             FluxCenter_VGD(iFlux,i,j,k,x_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Xi_,:,i,j,k,iBlock))
+             FluxCenter_VGD(iFlux,i,j,k,y_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Eta_,:,i,j,k,iBlock))
+             if(nK > 1) FluxCenter_VGD(iFlux,i,j,k,z_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Zeta_,:,i,j,k,iBlock))
+          enddo
+       enddo; enddo; enddo
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_simple_cell_flux
   !============================================================================
 
-end submodule CellFlux
-
-
-submodule (ModFaceFlux) WaveSpeed
-
-contains
-  module subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, &
-    cLeft_I, cRight_I, UseAwSpeedIn)
+  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
+       UseAwSpeedIn)
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
        iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
@@ -3626,7 +3521,7 @@ contains
     real :: UnLeft, UnRight
     integer :: iError = -1
     integer :: iFluid
-
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_speed_max'
     !--------------------------------------------------------------------------
@@ -3938,7 +3833,7 @@ contains
          write(*,'(a9,es13.5)') 'B0y  =', B0y
          write(*,'(a9,es13.5)') 'B0z  =', B0z
       end if
-
+      
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -4126,7 +4021,7 @@ contains
             Ppar  = Ppar + Ppar1
             Pperp = Pperp + 0.5*(3*p1 - Ppar1)
          end if
-
+            
 
          BnInvB2 = FullBn**2/FullB2
          Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
@@ -4186,7 +4081,7 @@ contains
       end if
 
       ! Fast speed multipled by the face area
-      if(UseBorisSimple .or. UseEfield)then
+      if(UseBorisSimple .or. (UseEfield))then
          Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
@@ -4228,7 +4123,7 @@ contains
       if(UseAlfvenWaves.and.UseAwSpeed) then
          !\
          ! In this case the propagation speed for
-         ! Alfven waves equal to the Alfven speed
+         ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
          ! speed in the "hat" state
          !/
@@ -4401,17 +4296,100 @@ contains
 
   end subroutine get_speed_max
   !============================================================================
-end submodule WaveSpeed
 
-submodule (ModFaceFlux) RoeSolver
+  subroutine correct_u_normal(iDim)
 
-contains
-  module subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
+    ! Make Unormal 6th order accuracte
+    use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModAdvance,    ONLY: State_VGB
+    use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
+         Xi_, Eta_, Zeta_, nDim
+
+    integer, intent(in):: iDim
+
+    integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
+    real :: Ucell_I(4), Unormal, Ucell_D(3)
+    real :: Normal0_D(3), Area0_D(3)
+    integer:: iCell, iCount
+
+    character(len=*), parameter:: NameSub = 'correct_u_normal'
+    !--------------------------------------------------------------------------
+    do iFluid = iFluidMin, iFluidMax
+
+       Unormal = Unormal_I(iFluid)
+       iRho = iRho_I(iFluid)
+       iRhoUx = iRhoUx_I(iFluid)
+       iRhoUz = iRhoUz_I(iFluid)
+
+       if(.not. IsCartesian) then
+          if(iDim == x_) then
+             iCount = 1
+             do iCell = iFace - 2, iFace + 1
+                Area0_D(1:nDim) = CellCoef_DDGB( &
+                     Xi_,:,iCell,jFace,kFace,iBlockFace)
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
+                     norm2(Area0_D(1:nDim))
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
+                     State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
+                iCount = iCount + 1
+             enddo
+
+          elseif(iDim == y_) then
+             iCount = 1
+             do iCell = jFace - 2, jFace + 1
+                Area0_D(1:nDim) = CellCoef_DDGB( &
+                     Eta_,:,iFace,iCell,kFace,iBlockFace)
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/&
+                     norm2(Area0_D(1:nDim))
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
+                     State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
+                iCount = iCount + 1
+             enddo
+          elseif(iDim == z_) then
+             iCount = 1
+             do iCell = kFace - 2, kFace + 1
+                Area0_D = CellCoef_DDGB( &
+                     Zeta_,:,iFace,jFace,iCell,iBlockFace)
+                Normal0_D = Area0_D/norm2(Area0_D)
+
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iFace,jFace,iCell,iBlockFace)/&
+                     State_VGB(iRho,iFace,jFace,iCell,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                iCount = iCount + 1
+             enddo
+          endif
+       else
+          if(iDim == x_) then
+             iRhoUx = iRhoUx_I(iFluid)
+             Ucell_I = &
+                  State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
+                  State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
+          elseif(iDim == y_) then
+             iRhoUy = iRhoUy_I(iFluid)
+             Ucell_I = &
+                  State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
+                  State_VGB(iRho,iFace,jFace-2:jFace+1,kFace,iBlockFace)
+          else
+             iRhoUz = iRhoUz_I(iFluid)
+             Ucell_I = State_VGB(iRhoUz,iFace,jFace,kFace-2:kFace+1,iBlockFace)/&
+                  State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
+          endif
+       endif
+       Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
+    enddo
+
+  end subroutine correct_u_normal
+  !============================================================================
+  subroutine roe_solver(Flux_V)
 
     use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
 
-    real, intent(out):: Flux_V(:) ! nFlux
-    real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
+    real, intent(out):: Flux_V(nFlux)
 
     ! Number of MHD waves including the divB wave
     integer, parameter :: nWaveMhd=8
@@ -4952,4 +4930,5 @@ contains
   end subroutine roe_solver
   !============================================================================
 
-end submodule RoeSolver
+end module ModFaceFlux
+!==============================================================================
