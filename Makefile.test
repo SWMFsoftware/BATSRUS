@@ -1030,7 +1030,7 @@ test_mars_start:
 	$(MAKE) test_mars_check
 
 test_mars_compile:
-	./Config.pl ${OPENMP} -u=Mars -e=MhdMars -g=6,6,6
+	./Config.pl -noopenmp -u=Mars -e=MhdMars -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1101,7 +1101,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
+	./Config.pl -noopenmp -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1276,7 +1276,7 @@ test_mercurysph:
 	$(MAKE) test_mercurysph_check
 
 test_mercurysph_compile:
-	./Config.pl ${OPENMP} -u=Mercury -e=MhdPe -g=8,8,8
+	./Config.pl -noopenmp -u=Mercury -e=MhdPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
