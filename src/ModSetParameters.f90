@@ -38,7 +38,7 @@ contains
          read_region_param, read_test_param, NameVarTest, iVarTest, &
          BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
-         iProc, nProc, iComm 
+         iProc, nProc, iComm
     use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,&
          DoAmr
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&
@@ -67,7 +67,7 @@ contains
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
          read_boundary_geometry_param
     use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit, &
-         init_mod_point_impl
+         IsDynamicPointImplicit, init_mod_point_impl
     use ModRestartFile, ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
@@ -89,7 +89,8 @@ contains
          UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
          TNeutralsISW_dim, mProtonMass
 
-    use ModMultiIon, ONLY: multi_ion_set_parameters
+    use ModMultiIon, ONLY: multi_ion_set_parameters, &
+         multi_ion_init_point_impl
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
          read_solar_wind_file, normalize_solar_wind_data
     use ModSatelliteFile, ONLY: nSatellite, FilenameSat_I, NameSat_I, &
@@ -110,7 +111,8 @@ contains
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
     use ModPIC, ONLY: pic_read_param
-    use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I
+    use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
+         ion_electron_init_point_impl
     use ModFaceBoundary, ONLY: read_face_boundary_param
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
@@ -377,7 +379,17 @@ contains
        if(UseConstrainB)    call init_mod_ct
        if(UseImplicit)      call init_mod_part_impl
        if(UseSemiImplicit)  call init_mod_semi_impl
-       call init_mod_point_impl
+
+       if(UsePointImplicit)then
+          if(UseEfield)then
+             call init_mod_point_impl(ion_electron_init_point_impl)
+          elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
+             call init_mod_point_impl(multi_ion_init_point_impl)
+          elseif(UseUserSource)then
+             call init_mod_point_impl(user_init_point_implicit)
+          end if
+       end if
+
        call init_mod_face_flux
        if(DoConserveFlux)   call init_mod_cons_flux
        call init_mod_magperturb
@@ -1150,7 +1162,7 @@ contains
                       end if
                    end do
 
-                   ! reset 
+                   ! reset
                    StringInstrument_I = ''
 
                    ! adjust iFileStart
@@ -1380,7 +1392,7 @@ contains
           end do
 
           ! write out the change if ins/INS is found
-          if (nPlotFile > nPlotFileRead .and. iProc == 0) then 
+          if (nPlotFile > nPlotFileRead .and. iProc == 0) then
              write(*,*) ''
              write(*,*) '----------------------------------------'
              write(*,*) ' nPlotFile    =', nPlotFile
@@ -2878,11 +2890,11 @@ contains
       select case(NameThisComp)
       case('SC','IH','OH','EE')
          ! Body parameters
-         UseGravity=.true.
-         body1      =.true.
+         UseGravity = .true.
+         body1      = .true.
          if(NameThisComp == 'EE') body1 = .false.
-         Rbody      = 1.00
-         Rcurrents  =-1.00
+         Rbody      = 1.0
+         Rcurrents  =-1.0
 
          ! Non Conservative Parameters
          UseNonConservative   = .false.
@@ -2907,10 +2919,10 @@ contains
 
       case('GM')
          ! Body Parameters
-         UseGravity=.false.
-         body1      =.true.
-         Rbody      = 3.00
-         Rcurrents  = 4.00
+         UseGravity = .false.
+         body1      = .true.
+         Rbody      = 3.0
+         Rcurrents  = 4.0
 
          ! Non Conservative Parameters
          UseNonConservative   = .true.
@@ -3532,7 +3544,7 @@ contains
 
       ! Fix NameSat_I if needed
       NameSat_I = 'none'
-      do iSat = 1, nSatellite 
+      do iSat = 1, nSatellite
          if (index(FilenameSat_I(iSat), 'sta') > 0 .or.  &
               index(FilenameSat_I(iSat), 'stereoa') > 0) &
               NameSat_I(iSat) = 'sta'
