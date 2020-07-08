@@ -123,13 +123,20 @@ module ModUserInterface
 
      end subroutine user_set_plot_var
 
-     subroutine user_calc_sources(iBlock)
+     subroutine user_calc_sources_expl(iBlock)
 
        implicit none
        integer, intent(in) :: iBlock
 
-     end subroutine user_calc_sources
+     end subroutine user_calc_sources_expl
 
+     subroutine user_calc_sources_impl(iBlock)
+
+       implicit none
+       integer, intent(in) :: iBlock
+
+     end subroutine user_calc_sources_impl
+     
      subroutine user_init_point_implicit
 
        implicit none

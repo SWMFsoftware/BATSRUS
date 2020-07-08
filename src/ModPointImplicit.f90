@@ -71,17 +71,16 @@ module ModPointImplicit
   logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield
   ! Allows the user to specify the blocks to use the point implicit scheme
   ! individually
-  logical, public, allocatable:: UsePointImplicit_B(:)
+  logical, public, allocatable:: UseUserPointImplicit_B(:)
 
   ! balance point implicit blocks once or multiple times?
   logical, public:: DoBalancePointImplicit = .false.
   logical, public, protected:: IsDynamicPointImplicit = .false.
   ! Indexes of point implicit variables
   integer, public, allocatable :: iVarPointImpl_I(:)
-  logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
+  !logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
-  !$omp threadprivate( IsPointImplSource )
   !$omp threadprivate( IsPointImplMatrixSet )
   !$omp threadprivate( IsPointImplPerturbed )
 
@@ -122,6 +121,8 @@ contains
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: nI, nJ, nK, nVar
 
+    optional :: init_point_implicit
+
     interface
        subroutine init_point_implicit
        end subroutine init_point_implicit
@@ -132,11 +133,11 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(allocated(UsePointImplicit_B)) RETURN
+    if(allocated(UseUserPointImplicit_B)) RETURN
 
-    allocate(UsePointImplicit_B(MaxBlock))
+    allocate(UseUserPointImplicit_B(MaxBlock))
     ! Default is true for multi-ion and electron-ion equations
-    UsePointImplicit_B = UsePointImplicit
+    UseUserPointImplicit_B = UsePointImplicit
 
     ! Set default perturbation parameters
     !
@@ -233,8 +234,8 @@ contains
   !============================================================================
   subroutine clean_mod_point_impl
 
-    if(.not.allocated(UsePointImplicit_B)) RETURN
-    deallocate(UsePointImplicit_B)
+    if(.not.allocated(UseUserPointImplicit_B)) RETURN
+    deallocate(UseUserPointImplicit_B)
     if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
@@ -297,8 +298,9 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     call timing_start(NameSub)
 
+    !hyzhou
     ! Switch to implicit user sources
-    IsPointImplSource = .true.
+    !IsPointImplSource = .true.
 
     ! The beta parameter is always one in the first stage
     if(iStage == 1 .or. .not. time_accurate)then
@@ -523,8 +525,9 @@ contains
        end do
     end if
 
+    !hyzhou
     ! Switch back to explicit user sources
-    IsPointImplSource = .false.
+    !IsPointImplSource = .false.
 
     call timing_stop(NameSub)
 
