@@ -88,10 +88,10 @@ contains
     ! Add electron, ion and electric field source terms to Source_VC
     ! Calculate dS/dU Jacobian
 
-    use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
+    use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
 
-    integer, intent(in)          :: iBlock
+    integer, intent(in) :: iBlock
 
     real:: State_V(nVar), b_D(3)
     integer:: i, j, k, iVar
@@ -106,19 +106,16 @@ contains
 
     DoTestCell = .false.
 
-    if(UsePointImplicit .and. .not. IsPointImplSource) then
-       if (DoTest) write(*,*) NameSub, ' initial RETURN'
-       RETURN
-    end if
-
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
-    if(UsePointImplicit .and. UseUserSource) call user_calc_sources(iBlock)
+    if(UsePointImplicit .and. UseUserSource)then
+       if(UseUserPointImplicit_B(iBlock)) call user_calc_sources_impl(iBlock)
+    end if
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms)
     if(IsPointImplPerturbed .and. IsAnalyticJacobian) then
-       if (DoTest) write(*,*) &
+       if(DoTest) write(*,*) &
             NameSub, ' no evaluation in the numerical Jacobian calculation'
        RETURN
     end if
