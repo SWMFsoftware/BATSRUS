@@ -1101,7 +1101,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl -${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
+	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
