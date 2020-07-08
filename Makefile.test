@@ -1030,7 +1030,7 @@ test_mars_start:
 	$(MAKE) test_mars_check
 
 test_mars_compile:
-	./Config.pl ${OPENMP} -u=Mars -e=MhdMars -g=6,6,6
+	./Config.pl -${OPENMP} -u=Mars -e=MhdMars -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1101,7 +1101,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
+	./Config.pl -${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1276,7 +1276,7 @@ test_mercurysph:
 	$(MAKE) test_mercurysph_check
 
 test_mercurysph_compile:
-	./Config.pl ${OPENMP} -u=Mercury -e=MhdPe -g=8,8,8
+	./Config.pl -noopenmp -u=Mercury -e=MhdPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1719,8 +1719,8 @@ test_europa2fluidspe_run:
 
 test_europa2fluidspe_check:
 	-@(${DIFFNUM} -t -r=8e-5 -a=8e-07 \
-	    ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000100.sat \
-	    Param/EUROPA/TestOutput/trj_satellite_2fpe_e4_n00000100.sat.gz \
+	    ${TESTDIR}/RESULTS/GM/trj_satellite_2fpe_e4_n00000010.sat \
+	    Param/EUROPA/TestOutput/trj_satellite_2fpe_e4_n00000010.sat.gz \
 		> test_europa2fluidspe.diff)
 	ls -l test_europa2fluidspe.diff
 
