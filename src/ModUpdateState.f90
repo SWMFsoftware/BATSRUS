@@ -119,7 +119,7 @@ contains
     use ModGeometry, ONLY: true_cell
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: pe_, p_
-    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
+    use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
          IsDynamicPointImplicit, update_point_implicit
     use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
          multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
@@ -131,7 +131,7 @@ contains
          calc_resistivity_source
     use ModFaceValue, ONLY: UseFaceIntegral4
     use BATL_lib, ONLY: CellVolume_GB
-    use ModUserInterface ! user_calc_sources, user_init_point_implicit
+    use ModUserInterface
     use ModMessagePass, ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
          ion_electron_init_point_impl, HypEDecay
@@ -293,13 +293,13 @@ contains
 
     ! Add point implicit user or multi-ion source terms
     if(UsePointImplicit)then
-       if(IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock)) then
+       if(IsDynamicPointImplicit .or. UseUserPointImplicit_B(iBlock)) then
           if(UseEfield)then
              call update_point_implicit(iBlock, ion_electron_source_impl)
           elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
              call update_point_implicit(iBlock, multi_ion_source_impl)
           elseif(UseUserSource) then
-             call update_point_implicit(iBlock, user_calc_sources)
+             call update_point_implicit(iBlock, user_calc_sources_impl)
           end if
 
           ! Make ion temperatures equal if requested

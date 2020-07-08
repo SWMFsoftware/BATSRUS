@@ -14,7 +14,7 @@ module ModLoadBalance
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
-  use ModPointImplicit, ONLY: UsePointImplicit_B, &
+  use ModPointImplicit, ONLY: UseUserPointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
   use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
   use ModFieldTrace, ONLY: ray
@@ -117,7 +117,7 @@ contains
     Buffer_I(1) = real(nDynamicData)
 
     if(DoBalancePointImplicit)then
-       if(UsePointImplicit_B(iBlock))then
+       if(UseUserPointImplicit_B(iBlock))then
           Buffer_I(2) = 1.0
        else
           Buffer_I(2) = 0.0
@@ -196,7 +196,7 @@ contains
     nDynamicData = nint(Buffer_I(1))
 
     if(DoBalancePointImplicit) &
-         UsePointImplicit_B(iBlock) = Buffer_I(2) > 0.5
+         UseUserPointImplicit_B(iBlock) = Buffer_I(2) > 0.5
 
     ! Read rest of the blockData buffer
     iData = nScalarData
@@ -419,7 +419,8 @@ contains
              end if
 
              if(DoBalancePointImplicit)then
-                if(UsePointImplicit_B(iBlock)) iType = iType + iPointImplBlock
+                if(UseUserPointImplicit_B(iBlock)) &
+                     iType = iType + iPointImplBlock
              end if
 
              if(UseFieldLineThreads)then
@@ -799,4 +800,3 @@ contains
 
 end module ModLoadBalance
 !==============================================================================
-
