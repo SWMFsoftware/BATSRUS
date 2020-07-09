@@ -297,10 +297,6 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     call timing_start(NameSub)
 
-    !hyzhou
-    ! Switch to implicit user sources
-    !IsPointImplSource = .true.
-
     ! The beta parameter is always one in the first stage
     if(iStage == 1 .or. .not. time_accurate)then
        BetaStage = 1.0
@@ -523,10 +519,6 @@ contains
                State_VGB(iVar,iTest,jTest,kTest,iBlock)
        end do
     end if
-
-    !hyzhou
-    ! Switch back to explicit user sources
-    !IsPointImplSource = .false.
 
     call timing_stop(NameSub)
 
