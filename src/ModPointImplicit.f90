@@ -78,7 +78,6 @@ module ModPointImplicit
   logical, public, protected:: IsDynamicPointImplicit = .false.
   ! Indexes of point implicit variables
   integer, public, allocatable :: iVarPointImpl_I(:)
-  !logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
   !$omp threadprivate( IsPointImplMatrixSet )
