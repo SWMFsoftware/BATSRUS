@@ -19,10 +19,9 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_resistivity,            &
-       IMPLEMENTED8 => user_calc_sources_expl,          &
-       IMPLEMENTED9 => user_calc_sources_impl,          &
-       IMPLEMENTED10=> user_init_point_implicit,        &
-       IMPLEMENTED11=> user_get_b0
+       IMPLEMENTED8 => user_calc_sources_impl,          &
+       IMPLEMENTED9 => user_init_point_implicit,        &
+       IMPLEMENTED10=> user_get_b0
 
   include 'user_module.h' ! list of public methods
 
@@ -1101,12 +1100,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources_impl
-  !============================================================================
-  subroutine user_calc_sources_expl(iBlock)
-
-     integer, intent(in) :: iBlock
-
-  end subroutine user_calc_sources_expl
   !============================================================================
   subroutine user_init_point_implicit
 
