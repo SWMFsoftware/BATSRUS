@@ -200,7 +200,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+    
   end subroutine user_calc_sources_expl
   !============================================================================
   
@@ -210,7 +210,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+    
   end subroutine user_calc_sources_impl
   !============================================================================
   
