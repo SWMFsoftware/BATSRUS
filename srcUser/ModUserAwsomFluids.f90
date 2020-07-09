@@ -20,9 +20,9 @@ module ModUser
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_resistivity,            &
        IMPLEMENTED8 => user_calc_sources_expl,          &
-       IMPLEMENTED8 => user_calc_sources_impl,          &
-       IMPLEMENTED9 => user_init_point_implicit,        &
-       IMPLEMENTED10=> user_get_b0
+       IMPLEMENTED9 => user_calc_sources_impl,          &
+       IMPLEMENTED10=> user_init_point_implicit,        &
+       IMPLEMENTED11=> user_get_b0
 
   include 'user_module.h' ! list of public methods
 
