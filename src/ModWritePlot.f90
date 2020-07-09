@@ -1016,7 +1016,7 @@ contains
     use ModResistivity, ONLY: Eta_GB, Eta0
     use ModFaceGradient, ONLY: get_face_curl
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
-    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
          IsMhd, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
@@ -1622,7 +1622,7 @@ contains
        case('evolve','impl')
           PlotVar(:,:,:,iVar) = iTypeAdvance_B(iBlock)
           if(UsePointImplicit)then
-             if(UsePointImplicit_B(iBlock))&
+             if(UseUserPointImplicit_B(iBlock))&
                 PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
           end if
        case('balance')
