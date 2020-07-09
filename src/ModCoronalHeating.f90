@@ -89,17 +89,17 @@ module ModCoronalHeating
   character(len=lStringLine) :: TypeHeatPartitioning
 
   ! Switch whether to use uniform heat partition
-  logical :: UseUniformHeatPartition = .true.
+  logical :: UseUniformHeatPartition = .false.
   real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
   real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
   real, public :: QeRatio = 0.4
 
   ! Dimensionless parameters for stochastic heating
-  logical :: UseStochasticHeating = .false.
+  logical :: UseStochasticHeating = .true.
   real :: StochasticExponent   = 0.21
   real :: StochasticAmplitude  = 0.18
   real :: StochasticExponent2  = 0.21
-  real :: StochasticAmplitude2 = 0.0
+  real :: StochasticAmplitude2 = 0.0 ! 1.17
 
   ! Use a lookup table for linear Landau and transit-time damping of KAWs
   integer :: iTableHeatPartition = -1
