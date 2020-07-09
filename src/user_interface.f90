@@ -180,16 +180,29 @@ end subroutine user_set_plot_var
 
 !====================================================================
 
-subroutine user_calc_sources(iBlock)
+subroutine user_calc_sources_expl(iBlock)
 
-  use ModUser, ONLY: user_sub => user_calc_sources
+  use ModUser, ONLY: user_sub => user_calc_sources_expl
   implicit none
 
   integer, intent(in) :: iBlock
   !-------------------------------------------------------------------
   call user_sub(iBlock)
 
-end subroutine user_calc_sources
+end subroutine user_calc_sources_expl
+
+!====================================================================
+
+subroutine user_calc_sources_impl(iBlock)
+
+  use ModUser, ONLY: user_sub => user_calc_sources_impl
+  implicit none
+
+  integer, intent(in) :: iBlock
+  !-------------------------------------------------------------------
+  call user_sub(iBlock)
+
+end subroutine user_calc_sources_impl
 
 !=====================================================================
 

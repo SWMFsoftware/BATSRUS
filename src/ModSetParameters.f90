@@ -383,10 +383,12 @@ contains
        if(UsePointImplicit)then
           if(UseEfield)then
              call init_mod_point_impl(ion_electron_init_point_impl)
-          elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
+          elseif(UseMultiIon)then
              call init_mod_point_impl(multi_ion_init_point_impl)
           elseif(UseUserSource)then
              call init_mod_point_impl(user_init_point_implicit)
+          else
+             !call init_mod_point_impl
           end if
        end if
 
