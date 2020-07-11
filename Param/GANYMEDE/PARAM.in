@@ -69,15 +69,6 @@ F
 1.0                     AverageIonCharge [e]
 1.0/5.0                 ElectronTemperatureRatio
 
-#TEST
-krylov
-
-#KRYLOV
-GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
-nul             	TypeInitKrylov (nul, old, explicit, scaled)
-0.001          		ErrorMaxKrylov
-200             	MaxMatvecKrylov
-
 #MINIMUMPRESSURE
 0.001			pMinDim
 0.001			PeMinDim for electron pressure
@@ -188,6 +179,8 @@ mc3                     TypeLimiter
 #SEMIIMPLICIT
 T			UseSemiImplicit
 resistivity		TypeSemiImplicit
+
+By default the semi-Krylov solver is used.
 
 #SAVEINITIAL
 F	
