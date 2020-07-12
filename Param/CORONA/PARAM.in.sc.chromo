@@ -92,7 +92,7 @@ T			UseHeatFluxRegion
 8.0			rCollisionless
 
 #TEST
-krylov
+update_b0
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -310,7 +310,7 @@ F			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
-F			UseUserB0
+T			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
@@ -327,12 +327,30 @@ TD			TypeCme
 0.1436781609195402	Depth
 F			UsePlasmaBeta
 1.000E+16		Mass
+cancelflux
+100			BStrapping [Gs]
+0.4			qDistance
+10			UChargeX
+
+#HELIOUPDATEB0
+2.0
 
 #STOP
 -1			MaxIteration
 10.0			tSimulationMax
 
 #RUN ########################################################################
+
+#HELIOUPDATEB0
+-1.0
+
+#MINIMUMPRESSURE
+1.0E-9            pMinDim
+1.0e-9            peMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4
+5.0e4
 
 #TIMESTEPLIMIT
 T                       UseDtLimit
