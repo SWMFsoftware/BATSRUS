@@ -8,7 +8,8 @@ module GM_couple_im
   use BATL_lib, ONLY: iProc, iComm
   use ModMpi
   use ModNumConst, ONLY: cRadToDeg, cDegToRad
-  use CON_coupler, ONLY: Grid_C, ncell_id
+  use CON_coupler, ONLY: Grid_C, ncell_id, &
+       nVarBuffer_CC, iVarSource_VCC, GM_, IM_, lComp_I
 
   use ModMain, ONLY: n_step, &
        DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
@@ -16,6 +17,9 @@ module GM_couple_im
        UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
        Bdp, DipoleStrengthSi, rCurrents, rBody
 
+  use ModImCoupling, ONLY: nVarCouple, iVarCouple_V
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except
@@ -29,6 +33,7 @@ module GM_couple_im
   public:: GM_satinit_for_im        ! initialize satellite
   public:: GM_get_sat_for_im        ! get satellite info
   public:: GM_put_from_im           ! from IM
+  public:: GM_put_from_im_cimi           ! from IM
 
   character(len=*), parameter :: NameMod='GM_couple_im'
 
@@ -74,37 +79,23 @@ contains
     ! and the number of variables to pass to IM
     use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
     use CON_line_extract, ONLY: line_get
-
+    use CON_planet, ONLY: RadiusPlanet, IonosphereHeight
+    
     integer, intent(in)           :: iSizeIn, jSizeIn, nDensityIn
     character (len=*), intent(in) :: NameVar
     integer, intent(out)          :: nVarLine, nPointLine
     real :: Radius
 
-    character (len=*), parameter :: NameSub='GM_get_for_im_trace'
+    character (len=*), parameter :: NameSub='GM_get_for_im_trace_crcm'
     !---------------------------------------------------------------------
-
-    if(DoMultiFluidIMCoupling)then
-       if (nDensityIn==4) then
-          if(NameVar /= &
-               'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp')&
-               call CON_stop(NameSub//' invalid NameVar='//NameVar)
-       else
-          if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
-               call CON_stop(NameSub//' invalid NameVar='//NameVar)
-       endif
-    else if(DoAnisoPressureIMCoupling)then
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
-    else
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
-    end if
-
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
+    Radius = (RadiusPlanet + IonosphereHeight) / RadiusPlanet
+
     ! The CRCM ionosphere radius in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+
     DoExtractUnitSi = .true.
 
     call integrate_field_from_sphere(&
@@ -112,14 +103,14 @@ contains
 
     call line_get(nVarLine, nPointLine)
 
-    nVarLine = 4 ! We only pass line index, length, B and radial distance to RB
+    nVarLine = 4 ! We only pass line index, length, B and radial distance to IM
 
   end subroutine GM_get_for_im_trace_crcm
 
   !==========================================================================
 
   subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nDensityIn, &
-       nVarIn, BufferLine_VI, nVarLine, nPointLine, NameVar)
+       nVarIn, BufferLine_VI, nVarLine, nPointLine, BufferSolarWind_V, NameVar)
 
     use ModGeometry,ONLY: x2
     use ModIoUnit, ONLY: UNITTMP_
@@ -136,12 +127,16 @@ contains
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
-
+    
     integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut
 
     integer, intent(in) :: nPointLine, nVarLine
     real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+
+    !solar wind values
+    real,    intent(out):: BufferSolarWind_V(8)
+
     character (len=*), intent(in):: NameVar
 
     integer :: nVarExtract, nPoint, iPoint, iStartPoint
@@ -165,24 +160,9 @@ contains
        KpOut = -1
     endif
 
+    ! Set buffer variable indexes 
+    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-3, NameSub)
     
-    if(DoMultiFluidIMCoupling)then
-       if (nDensityIn==4) then
-          if(NameVar /= &
-               'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp')&
-               call CON_stop(NameSub//' invalid NameVar='//NameVar)
-       else
-          if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
-               call CON_stop(NameSub//' invalid NameVar='//NameVar)
-       endif
-    else if(DoAnisoPressureIMCoupling)then
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
-    else
-       if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
-    end if
-
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
 
@@ -220,41 +200,31 @@ contains
              ! set line index to -1. for non-closed field line
              ! It would be much better not to send the line at all !!!
              BufferLine_VI(1,iStartPoint:iPoint) = -1
-             Buffer_IIV(iLat, iLon, 1:2) = NoValue*1e6    ! x, y
-             Buffer_IIV(iLat, iLon, 3) = NoValue       ! Bmin
-             Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
-             if(DoMultiFluidIMCoupling) &
-                  Buffer_IIV(iLat, iLon, 7:10) = 0.0
-             if(DoAnisoPressureIMCoupling) &
-                  Buffer_IIV(iLat, iLon, 7) = 0.0
-
+             Buffer_IIV(iLat, iLon, :) = NoValue   
+             
           else
              ! For closed field lines 
              ! Location of Bmin for this field line
-             iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), dim=1) &
+             iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), DIM=1) &
                   + iStartPoint - 1
-             Buffer_IIV(iLat, iLon, 3) = BufferLine_VI(4, iLocBmin)    ! Bmin
-
+             
              ! Convert location from GM to SMG coordinates
              XyzBminSm_D = matmul(SmGm_DD, Buffer_VI(2:4,iLocBmin))
-             Buffer_IIV(iLat, iLon, 1) = XyzBminSm_D(1) ! x
-             Buffer_IIV(iLat, iLon, 2) = XyzBminSm_D(2) ! y
-             Buffer_IIV(iLat, iLon, 4) = Buffer_VI(4+Rho_,iLocBmin) &
-                  /cProtonMass                          ! rho in [#/m^3]
-             Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)    ! p
-             if(DoMultiFluidIMCoupling)then
-                Buffer_IIV(iLat, iLon, 7+iIon-IonFirst_) &   ! Rho for each species [kg/m3]
-                     = Buffer_VI(4+iRho_I(iIon), iLocBmin) 
-                Buffer_IIV(iLat, iLon, 10+iIon-IonFirst_) &  ! P for each species
-                     = Buffer_VI(4+iP_I(iIon),   iLocBmin)
-                
-             end if
-             ! Ppar and HpRho share the same index in buffer_iiv for now
-             ! does not work for multifluid MHD with anisotropic pressure
-             if(DoAnisoPressureIMCoupling) &                           ! Ppar
-                  Buffer_IIV(iLat, iLon, 7) = Buffer_VI(4+Ppar_,  iLocBmin) 
-          end if
+             Buffer_IIV(iLat,iLon,1) = XyzBminSm_D(1)            ! x
+             Buffer_IIV(iLat,iLon,2) = XyzBminSm_D(2)            ! y
 
+             Buffer_IIV(iLat,iLon,3) = BufferLine_VI(4,iLocBmin) ! Bmin
+             
+             ! Put coupled variables (densities and pressures) into buffer
+             Buffer_IIV(iLat,iLon,4:) = Buffer_VI(4+iVarCouple_V,iLocBmin) 
+
+             !write(*,*) 'iVarCouple_V in GM_copuple_im'
+             !write(*,*) iVarCouple_V
+
+             !call CON_stop(NameSub//' done')
+             
+          end if
+          
           ! Set the start point for the next field line
           iStartPoint = iPoint +1
        end if
@@ -263,21 +233,19 @@ contains
     deallocate(Buffer_VI)
     call line_clean
 
-    ! Send solar wind values in the array of the extra integral
-    ! This is a temporary solution. IM should use MHD_SUM_rho and MHD_SUM_p
+    ! Pass the solar wind values note that the first ion density is passed
+    ! as the solar wind number density
 
     call get_solar_wind_point(Time_Simulation, (/x2, 0.0, 0.0/), SolarWind_V)
 
-    Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
-    Buffer_IIV(2,:,6) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
-    Buffer_IIV(3,:,6) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
-    Buffer_IIV(4,:,6) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
-    Buffer_IIV(5,:,6) = SolarWind_V(Bx_) * No2Si_V(UnitB_)
-    Buffer_IIV(6,:,6) = SolarWind_V(By_) * No2Si_V(UnitB_)
-    Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
-    Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
-
-
+    BufferSolarWind_V(1) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
+    BufferSolarWind_V(2) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
+    BufferSolarWind_V(3) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
+    BufferSolarWind_V(4) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
+    BufferSolarWind_V(5) = SolarWind_V(Bx_) * No2Si_V(UnitB_)
+    BufferSolarWind_V(6) = SolarWind_V(By_) * No2Si_V(UnitB_)
+    BufferSolarWind_V(7) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
+    BufferSolarWind_V(8) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
     ! test only for anisop
     if(iProc == 0 .and. DoTest .and. DoAnisoPressureIMCoupling)then
@@ -700,7 +668,11 @@ contains
     use ModMain, ONLY : n_step,time_simulation
     use ModIoUnit, ONLY: UNITTMP_
     use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
-
+    use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
+         SpeciesLast_
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
+    
+    
     character(len=80):: filename
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVar
@@ -760,31 +732,355 @@ contains
        IM_lon = Grid_C(IM_)% Coord2_I * cRadToDeg
     end if
 
+    !initialize
+    IsImRho_I(:)  = .false.
+    IsImP_I(:)    = .false.
+    IsImPpar_I(:) = .false.
+
+    
     ! Store IM variable for internal use
-    IM_p    = Buffer_IIV(:,:,pres_)
-    IM_dens = Buffer_IIV(:,:,dens_)
+    ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
+ !   IM_p    = Buffer_IIV(:,:,pres_)
+
+    ImRho_CV     (:,:,1) = Buffer_IIV(:,:,dens_)
+!    IM_dens = Buffer_IIV(:,:,dens_)
     iNewPIm  = iNewPIm + 1
 
+    IsImRho_I(1)  = .true.
+    IsImP_I(1)    = .true.
+    IsImPpar_I(1) = .false.
+    
     ! for multifluid                                               
     if(DoMultiFluidIMCoupling)then
-       IM_Hpp = Buffer_IIV(:,:,Hpres_)
-       IM_Opp = Buffer_IIV(:,:,Opres_)
-       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
-       IM_Opdens = Buffer_IIV(:,:,Odens_)
+       if (UseMultiSpecies) then
+          ImRho_CV(:,:,2)= Buffer_IIV(:,:,Hdens_)
+          !       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
+          ImRho_CV(:,:,3)= Buffer_IIV(:,:,Odens_)
+          !       IM_Opdens = Buffer_IIV(:,:,Odens_)
+          IsImRho_I(:)  = .true.
+          !IsImRho_I(1)  = .false.
+       else
+          ImP_CV(:,:,1)= Buffer_IIV(:,:,Hpres_)
+          !       IM_Hpp = Buffer_IIV(:,:,Hpres_)
+          ImP_CV(:,:,2)= Buffer_IIV(:,:,Opres_)
+          !       IM_Opp = Buffer_IIV(:,:,Opres_)
+          ImRho_CV(:,:,1)= Buffer_IIV(:,:,Hdens_)
+          !       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
+          ImRho_CV(:,:,2)= Buffer_IIV(:,:,Odens_)
+          !       IM_Opdens = Buffer_IIV(:,:,Odens_)
+          IsImRho_I(:)  = .true.
+          IsImP_I(:)    = .true.
+          IsImPpar_I(:) = .false.
+       endif
     endif
 
     ! for anisotropic pressure                                      
     if(DoAnisoPressureIMCoupling)then
-       IM_ppar = Buffer_IIV(:,:,parpres_)
+       ImPpar_CV(:,:,1)= Buffer_IIV(:,:,Opres_)
+!       IM_ppar = Buffer_IIV(:,:,parpres_)
        IM_bmin = Buffer_IIV(:,:,bmin_)
+       IsImPpar_I(1) = .true.
     end if
 
-    if(DoTest)call write_IMvars_tec  ! TecPlot output
-    if(DoTest)call write_IMvars_idl  ! IDL     output
+!    if(DoTest)call write_IMvars_tec  ! TecPlot output
+!    if(DoTest)call write_IMvars_idl  ! IDL     output
 
   contains
 
-    !==========================================================================
+!    !============================================================================
+!    subroutine write_IMvars_tec
+!      integer :: j2
+!      real :: lonShift
+!      !-------------------------------------------------------------------------
+!      if(iProc /= 0)RETURN
+!
+!      !write values to plot file
+!      write(filename,'(a,i6.6,a)')"IMp_n=",n_step,".dat"
+!      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+!      write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
+!      if(DoMultiFluidIMCoupling)then
+!         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+!              &"IM pressure", "IM density", &                                   
+!              &"IM Hp pressure", "IM Hp density", &                             
+!              &"IM Op pressure", "IM Op density"'
+!      else
+!         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+!              &"IM pressure", "IM density"'
+!      end if
+!      write(UNITTMP_,'(a,i4,a,i4,a)') &
+!           'ZONE T="IM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
+!      do i=1,iSizeIn
+!         do j2=1,jSizeIn+1
+!            j=j2; if(j2==jSizeIn+1) j=1
+!            lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
+!            if(DoMultiFluidIMCoupling)then
+!               write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+!                    IM_p(i,j),IM_dens(i,j), &
+!                    IM_Hpp(i,j),IM_Hpdens(i,j),IM_Opp(i,j), IM_Opdens(i,j)
+!            else
+!               write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
+!                    IM_p(i,j),IM_dens(i,j)
+!            endif
+!         end do
+!      end do
+!      CLOSE(UNITTMP_)
+!
+!    end subroutine write_IMvars_tec
+!
+!    !==========================================================================
+!    subroutine write_IMvars_idl
+!      if(iProc /= 0)RETURN
+!
+!      !write values to plot file
+!      write(filename,'(a,i6.6,a)')"IMp_n=",n_step,".out"
+!      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
+!           iostat =iError)
+!      if (iError /= 0) call CON_stop("Can not open file "//filename)
+!      write(UNITTMP_,'(a79)')            'IM pressure'
+!      write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,0,2
+!      write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
+!      if(DoMultiFluidIMCoupling)then
+!         write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho'
+!      else
+!         write(UNITTMP_,'(a79)')'Lon Lat p rho'
+!      endif
+!      do i=iSizeIn,1,-1
+!         do j=1,jSizeIn
+!            if(DoMultiFluidIMCoupling)then
+!               write(UNITTMP_,'(100(1pe18.10))') &
+!                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
+!                    IM_Hpp(i,j), IM_Hpdens(i,j), IM_Opp(i,j), IM_Opdens(i,j)
+!            else
+!               write(UNITTMP_,'(100(1pe18.10))') &
+!                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j)
+!            endif
+!         end do
+!      end do
+!      CLOSE(UNITTMP_)
+!
+!    end subroutine write_IMvars_idl
+
+  end subroutine GM_put_from_im
+
+
+
+
+  !==========================================================================
+
+  subroutine GM_put_from_im_cimi(Buffer_IIV,iSizeIn,jSizeIn,nVarIm,NameVarIm)
+
+    use CON_coupler
+    use CON_world,      ONLY: get_comp_info
+    use CON_comp_param, ONLY: lNameVersion
+    use ModImCoupling                              ! Storage for IM pressure
+    use ModMain, ONLY : n_step,time_simulation
+    use ModIoUnit, ONLY: UNITTMP_
+    use BATL_lib, ONLY: iProc
+    use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
+    use ModVarIndexes, ONLY: nFluid, iRho_I, iP_I, iPparIon_I,SpeciesFirst_, &
+         SpeciesLast_,NameVar_V
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
+    use ModUtilities,       ONLY: split_string
+    character(len=80):: filename
+
+    integer, intent(in) :: iSizeIn,jSizeIn,nVarIm
+    real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIm)
+
+    integer :: iFluid, iVarIm
+    !list of first nVarIm-1 variables provided by IM
+    character(len=*), intent(in) :: NameVarIm
+
+    character(len=lNameVersion) :: NameVersionIm
+    integer :: nCells_D(2), iError, i,j
+
+    integer,allocatable, save :: iRhoIm_I(:),  iPIm_I(:),  iPparIm_I(:)
+
+    character (len=15),allocatable :: NameVarIm_V(:)
+    
+    integer, save :: nDensity
+    integer, allocatable, save :: iDens_I(:)
+    integer :: iDensity
+    logical,save :: IsFirstCall = .true.
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='GM_put_from_im'
+    !--------------------------------------------------------------------------
+
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+
+    nCells_D=ncell_id(IM_)
+    if( iSizeIn /= nCells_D(1) .or. jSizeIn /= nCells_D(2) ) then
+
+       write(*,*)NameSub//' grid sizes do not agree iSize,jSize,nCells=',&
+            iSizeIn,jSizeIn,nCells_D(1:2)
+       call CON_stop(NameSub//' SWMF_ERROR')
+    end if
+
+    if(.not.allocated(IM_lat))then
+       ! Allocate IM_lat, IM_lon, IM_p, IM_dens
+       call im_pressure_init(iSizeIn, jSizeIn)
+       ! Set up IM ionospheric grid and store.
+       ! Latitude specification is module specific, we must set it up
+       ! according to the IM module we have selected.
+       ! Determine version of IM:
+       call get_comp_info(IM_, NameVersion=NameVersionIm)
+       if(NameVersionIm(1:3) == 'RAM')then
+          ! HEIDI and RAM-SCB have similar equatorial grids.
+          IM_lat = Grid_C(IM_) % Coord1_I
+
+          ! Coupling with RAM/HEIDI grid requires accurate raytrace
+          ! that stops at the equator
+          UseAccurateTrace= .true.
+          DoMapEquatorRay = .true.
+       else
+          ! RCM uses a CoLat based grid, information is stored in 
+          ! module grid information.
+          IM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
+       end if
+       IM_lon = Grid_C(IM_)% Coord2_I * cRadToDeg
+    end if
+
+    allocate(NameVarIm_V(nVarIm-1)) 
+    call split_string(NameVarIm, NameVarIm_V)
+
+    !loop over GM fluid densities to find IM buffer variable location
+    !only on first call
+    if (IsFirstCall) then
+       ! Set array of density indexes:
+       ! 3 values for multispecies, nIons for multifluid
+       if(UseMultiSpecies)then
+          nDensity = nSpecies
+          allocate(iDens_I(nDensity))
+          do iDensity = 1,nDensity
+             iDens_I(iDensity) = SpeciesFirst_+iDensity-1
+          end do
+       else
+          nDensity = nFluid
+          allocate(iDens_I(nDensity))
+          iDens_I = iRho_I(1:nDensity)
+       end if
+
+       !allocate location bufffer
+       allocate(iRhoIm_I(nDensity))
+       allocate(iPIm_I(nFluid))
+       allocate(iPparIm_I(nFluid))
+
+       !Initialize values assuming not present
+       iRhoIm_I(:) = -1
+       IsImRho_I(:)=.false.
+       iPIm_I(:)=-1
+       IsImP_I(:)=.false.
+       iPparIm_I(:)=-1
+       IsImPpar_I(:)=.false.
+       
+       do iDensity = 1, nDensity
+          do iVarIm = 1,nVarIM-1
+             !get Density index for buffer
+             if(trim(string_to_lower(NameVar_V(iDens_I(iDensity)))) &
+                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+                !found a match. set im fluid index
+                iRhoIm_I(iDensity)  = iVarIm
+                IsImRho_I(iDensity) = .true.
+             elseif(iVarIm == nVarIm) then
+                !no match found.  
+                iRhoIm_I(iDensity)  = -1
+                IsImRho_I(iDensity) = .false.
+             endif
+          enddo
+       enddo
+
+       do iFluid = 1, nFluid
+          do iVarIm = 1,nVarIM-1             
+             !get Pressure index for Buffer
+             if(trim(string_to_lower(NameVar_V(iP_I(iFluid)))) &
+                  == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+                !found a match. set im fluid index
+                iPIm_I(iFluid)  = iVarIm
+                IsImP_I(iFluid) = .true.
+             elseif(iVarIm == nVarIm) then
+                !no match found.  
+                iPIm_I(iFluid)  = -1
+                IsImP_I(iFluid) = .false.
+             endif
+
+             
+             if (DoAnisoPressureIMCoupling) then
+                !get Par Pressure index for Buffer
+                if(trim(string_to_lower(NameVar_V(iPparIon_I(iFluid)))) &
+                     == trim(string_to_lower(NameVarIm_V(iVarIm)))) then
+                   !found a match. set im fluid index
+                   iPparIm_I(iFluid)  = iVarIm
+                   IsImPpar_I(iFluid) = .true.
+                elseif(iVarIm == nVarIm) then
+                   !no match found.  
+                   iPparIm_I(iFluid)  = -1
+                   IsImPpar_I(iFluid) = .false.
+                endif
+             else
+                iPparIm_I(iFluid)  = -1
+                IsImPpar_I(iFluid) = .false.
+             endif
+          enddo
+       enddo
+       IsFirstCall = .false.
+    endif
+
+    do iDensity=1,nDensity
+       if (IsImRho_I(iDensity)) then
+          ImRho_CV     (:,:,iDensity) = Buffer_IIV(:,:,iRhoIm_I(iDensity))
+       else
+          ImRho_CV     (:,:,iDensity) = -1.0
+       endif
+    enddo
+    
+    do iFluid=1,nFluid
+       if (IsImP_I(iFluid)) then
+          ImP_CV     (:,:,iFluid) = Buffer_IIV(:,:,iPIm_I(iFluid))
+          iNewPIm  = iNewPIm + 1
+       else
+          ImP_CV     (:,:,iFluid) = -1.0
+       endif
+
+       if (IsImPpar_I(iFluid) .and. DoAnisoPressureIMCoupling) then
+          ImPpar_CV     (:,:,iFluid) = Buffer_IIV(:,:,iPparIm_I(iFluid))
+       else
+          ImPpar_CV     (:,:,iFluid) = -1.0
+       endif
+
+    enddo
+    ! for anisotropic pressure
+    if(DoAnisoPressureIMCoupling)then
+       IM_bmin = Buffer_IIV(:,:,nVarIm)
+    end if
+!    write(*,*) 'GM max min ppar',maxval(ImPpar_CV),minval(ImPpar_CV)
+!    write(*,*) 'GM max min p',maxval(ImP_CV),minval(ImP_CV)
+    
+    
+    if(DoTest)call write_IMvars_tec  ! TecPlot output
+    if(DoTest)call write_IMvars_idl  ! IDL     output
+    
+  contains
+    function string_to_lower( string ) result (new) 
+      character(len=*)           :: string 
+      
+      character(len=len(string)) :: new 
+      
+      integer                    :: i 
+      integer                    :: k 
+      integer                    :: length
+      !------------------------------------------------------------------------
+      length = len(string) 
+      new    = string 
+      do i = 1,len(string) 
+         k = iachar(string(i:i)) 
+         if ( k >= iachar('A') .and. k <= iachar('Z') ) then 
+            k = k + iachar('a') - iachar('A') 
+            new(i:i) = achar(k) 
+         endif
+      enddo
+    end function string_to_lower
+
+    !===========================================================================
     subroutine write_IMvars_tec
       integer :: j2
       real :: lonShift
@@ -812,11 +1108,11 @@ contains
             lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
             if(DoMultiFluidIMCoupling)then
                write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
-                    IM_p(i,j),IM_dens(i,j), &
-                    IM_Hpp(i,j),IM_Hpdens(i,j),IM_Opp(i,j), IM_Opdens(i,j)
+                    ImP_CV(i,j,1),ImRho_CV(i,j,1), &
+                    ImP_CV(i,j,2),ImRho_CV(i,j,2),ImP_CV(i,j,3), ImRho_CV(i,j,3)
             else
                write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
-                    IM_p(i,j),IM_dens(i,j)
+                    ImP_CV(i,j,1),ImRho_CV(i,j,1)
             endif
          end do
       end do
@@ -845,11 +1141,11 @@ contains
          do j=1,jSizeIn
             if(DoMultiFluidIMCoupling)then
                write(UNITTMP_,'(100(1pe18.10))') &
-                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
-                    IM_Hpp(i,j), IM_Hpdens(i,j), IM_Opp(i,j), IM_Opdens(i,j)
+                    IM_lon(j),IM_lat(i),ImP_CV(i,j,1),ImRho_CV(i,j,1), &
+                    ImP_CV(i,j,2), ImRho_CV(i,j,2),ImP_CV(i,j,3),ImRho_CV(i,j,3)
             else
                write(UNITTMP_,'(100(1pe18.10))') &
-                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j)
+                    IM_lon(j),IM_lat(i),ImP_CV(i,j,1),ImRho_CV(i,j,1)
             endif
          end do
       end do
@@ -857,8 +1153,9 @@ contains
 
     end subroutine write_IMvars_idl
 
-  end subroutine GM_put_from_im
+  end subroutine GM_put_from_im_cimi
 
+  
   !============================================================================
 
   subroutine allocate_gm_im(iSizeIn,jSizeIn)
@@ -1279,5 +1576,30 @@ contains
     end if
 
   end subroutine process_integrated_data
+  !========================================================================================
+  subroutine set_buffer_indexes(nVarCheck, NameSub)
+
+    integer, optional, intent(in):: nVarCheck
+    character(len=*), optional, intent(in):: NameSub
+    
+    ! indexes of registered components
+    integer :: iGm, iIm
+    !------------------------------------------------------------------------------------
+    ! Store buffer variable indexes 
+    iGm = lComp_I(GM_)
+    iIm = lComp_I(IM_)
+    nVarCouple = nVarBuffer_CC(iGm,iIm)
+    if(present(nVarCheck))then
+       if(nVarCheck /= nVarCouple)then
+          if(iProc==0) call CON_stop(NameSub// &
+               ' ERROR, invalid nVarCheck, nVarCouple=', nVarCheck, nVarCouple)
+       end if
+    end if
+
+    ! Assume GM -> IM direction in CON_couple_gm_im.f90
+    allocate(iVarCouple_V(nVarCouple))
+    iVarCouple_V = iVarSource_VCC(1:nVarCouple,iGm,iIm)
+
+  end subroutine set_buffer_indexes
 
 end module GM_couple_im
