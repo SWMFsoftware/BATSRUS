@@ -62,6 +62,7 @@ module GM_wrapper
   public:: GM_satinit_for_im        ! initialize satellite
   public:: GM_get_sat_for_im        ! get satellite info
   public:: GM_put_from_im           ! from IM
+  public:: GM_put_from_im_cimi      ! from MI
   !^CMP END IM
 
   !^CMP IF PS BEGIN
