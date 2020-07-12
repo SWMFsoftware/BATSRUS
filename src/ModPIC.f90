@@ -1162,7 +1162,7 @@ contains
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: B0_DGB
-    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_
+    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_, UnitRho_
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
@@ -1193,6 +1193,9 @@ contains
 
     do iCriteria=1,nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
+       case('rho')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitRho_)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitRho_)
        case('j/b')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
@@ -1286,6 +1289,9 @@ contains
     if(allocated(Curvature_DGB)) call message_pass_cell(3, Curvature_DGB)
 
     do iBlock=1,nBlock
+       
+       if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
+       if(Unused_B(iBlock)) CYCLE
 
        if(allocated(Curvature_DGB)) call calc_divergence(iBlock, Curvature_DGB(:,:,:,:,iBlock), &
             0, DivCurvature_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
