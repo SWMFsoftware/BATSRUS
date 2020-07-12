@@ -64,8 +64,12 @@ contains
     real, intent(in) :: TeSi    ! Dimensionless
 
     real :: FractionSpitzer
-
+    character(LEN=*), parameter:: NameSub='extension factor'
     !--------------------------------------------------------------------------
+    if(TeSi<1.0e1)then
+       write(*,*)'TeSi input =', TeSi
+       call stop_mpi('Incorrect input temperature in '//NameSub)
+    end if
     FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
 
     extension_factor = FractionSpitzer + &

@@ -4811,15 +4811,21 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <parameter name="Radius" type="real" min="0" default="0" />
 	    <parameter name="aStretch" type="real" min="0" default="0" />
 	    <parameter name="ApexHeight" type="real" min="0" default="0" />
-	    <parameter name="ModulationRho" type="real" default="0" />
-	    <parameter name="ModulationP" type="real" default="0" />
 	</if>
 	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
 	    <parameter name="BcTubeDim" type="real" default="0" />
 	    <parameter name="RadiusMajor" type="real" min="0" default="0" />
 	    <parameter name="RadiusMinor" type="real" min="0" default="0" />
 	    <parameter name="Depth" type="real" min="0" default="0" />
-            <parameter name="Mass" type="real" min="0" default="0" />
+	    <parameter name="UsePlasmaBeta" type="logical" defailt="F"/>
+	    <if expr="$UsePlasmaBeta =~ /F/">
+	    	<parameter name="Mass" type="real" min="0" default="0" />
+	    </if>
+ 	    <if expr="$UsePlasmaBeta =~ /T/">
+	    	<parameter name="PlasmaBeta" type="real" min="0" default="0" />
+		<parameter name="EjectaTemperature" type="real" min="1e4" 
+			   			    	default="5e4" />
+            </if>
 	    <parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
 		<option name="" 	  />
@@ -4853,8 +4859,7 @@ GL			TypeCme    TD/TD14/GL
 1.03			Radius         [Rs]
 0.3			aStretch       [Rs]
 1.8			ApexHeight     [Rs]
-0.8			ModulationRho  [??]\
-0.8			ModulationP    [??]/Look redundant
+
 
 First five parameters are common for all types of EE generators. If UseCme is 
 .true. the generator may be applied permanently, usually via the boundary
@@ -4910,10 +4915,29 @@ TD			TypeCme  GL/TD/TD14
 0.5			RadiusMajor  [R_s]
 0.2			RadiusMinor  [R_s]
 0.2			Depth        [R_s]
+F			UsePlasmaBeta
 1.000E+16               Mass         [g]
 steady			TypeCharge  none/steady/moving/cancelflux
-5			BqFieldDim   [Gs]
-0.4			qDistance    [R_s]					
+5			BqStrapping  [Gs]
+0.4			qDistance    [R_s]
+
+Version with UsePlasmaBeta=.true.:
+...
+T			UsePlasmaBeta
+PlasmaBeta              0.1               [ ]
+5.0e4			EjectaTemperature [K]	
+steady			TypeCharge  none/steady/moving/cancelflux
+5			BStrapping        [Gs]
+0.4			qDistance         [R_s]	
+
+version with the flux cancelation
+...
+cancelflux		TypeCharge  none/steady/moving/cancelflux
+5			BqStrapping       [Gs]
+0.4			qDistance         [R_s]	
+5.0			ChargeUx          [km/s]
+
+				
 
 BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
 is created by the current inside the toroidal filament. RadiusMajor and 
