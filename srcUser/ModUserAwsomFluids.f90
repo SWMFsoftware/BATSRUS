@@ -19,7 +19,7 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_resistivity,            &
-       IMPLEMENTED8 => user_calc_sources,               &
+       IMPLEMENTED8 => user_calc_sources_impl,          &
        IMPLEMENTED9 => user_init_point_implicit,        &
        IMPLEMENTED10=> user_get_b0
 
@@ -612,7 +612,7 @@ contains
        end if
 
        call get_block_heating(iBlock)
-          
+
        if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
@@ -961,14 +961,13 @@ contains
   end subroutine user_set_resistivity
   !============================================================================
 
-  subroutine user_calc_sources(iBlock)
+  subroutine user_calc_sources_impl(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure, &
          UseAnisoPressure
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
          iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
     use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1
-    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes, ONLY: nVar, Energy_, Pe_, Bx_, Bz_
     use ModConst,      ONLY: cElectronMass, cProtonMass
     use ModB0,         ONLY: UseB0, B0_DGB
@@ -985,12 +984,9 @@ contains
     real :: State_V(nVar), Source_V(nVar+nFluid)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    ! Do not provide explicit source term when point-implicit scheme is used
-    ! IsPointImplSource is true only when called from ModPointImplicit
-    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     iIonFirst = 1
     if(UseElectronPressure) iIonFirst = 0
@@ -1103,9 +1099,8 @@ contains
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_calc_sources
+  end subroutine user_calc_sources_impl
   !============================================================================
-
   subroutine user_init_point_implicit
 
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure

@@ -114,7 +114,7 @@ contains
   subroutine read_part_impl_param(NameCommand)
 
     use ModReadParam,     ONLY: read_var
-    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit
     use ModLinearSolver,  ONLY: &
          BlockJacobi_, GaussSeidel_, Bilu_
     use ModAdvance,       ONLY: UseEfield
@@ -137,9 +137,8 @@ contains
        call read_var('UseFullImplicit',  UseFullImplicit)
 
        UseImplicit = UseFullImplicit .or. UsePartImplicit
-       if(allocated(UsePointImplicit_B)) UsePointImplicit_B = UsePointImplicit
 
-       if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
+       if(UsePartImplicit .and. UseFullImplicit) call stop_mpi(&
             'Only one of UsePartImplicit and UseFullImplicit can be true')
 
        if(UseImplicit)call read_var('CflImpl',CflImpl)
@@ -414,7 +413,7 @@ contains
     use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB, minval_grid
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
-    
+
     integer :: i, j, k, iVar, iBlock, iBlockImpl, iFluid
     integer :: nIterNewton
     integer :: iError, iError1
@@ -441,7 +440,7 @@ contains
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
 
     call timing_start(NameSub)
-    
+
     ! Initialize some variables in ModImplicit
     call implicit_init
 
@@ -461,7 +460,7 @@ contains
     end do
     call MPI_allreduce(NormLocal_V, Norm_V, nVar, MPI_REAL, MPI_SUM, &
          iComm,iError)
-    
+
     Norm_V = sqrt(Norm_V/(nImplTotal_r/nVar))
     where(Norm_V < SmallDouble) Norm_V =1.0
 
@@ -533,10 +532,10 @@ contains
        Unused_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
-    
+
        call timing_stop('part_expl')
     end if
-    
+
     !\
     ! Advance implicitly treated blocks
     !/
@@ -555,7 +554,7 @@ contains
     UseCoarseAxis      = .false.
     ! Use implicit time step
     if(.not.UseDtFixed) Cfl = CflImpl
-    
+
     if(UseDtFixed)then
        if(DoTest)write(*,*)NameSub,': call get_dt_courant'
        call get_dt_courant(DtExpl)
@@ -565,7 +564,7 @@ contains
        if(DoTest)write(*,*)NameSub,': no call of get_dt_courant'
        DtCoeff = CflImpl/0.5
     endif
-    
+
     if(UseBDF2.and.n_step==n_prev+1)then
        ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
        ImplCoeff = (dt+dt_prev)/(2*dt+dt_prev)
@@ -598,7 +597,7 @@ contains
 
     ! Initialize right hand side and x_I. Uses ImplOld_VCB for BDF2 scheme.
     call impl_newton_init
-    
+
     ! Save previous timestep for 3 level scheme
     if(UseBDF2)then
        n_prev  = n_step
@@ -638,7 +637,7 @@ contains
              call exchange_messages
              call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
           end if
-             
+
           call timing_start('impl_jacobian')
 
           ! Initialize variables for preconditioner calculation
@@ -749,7 +748,7 @@ contains
     if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
 
        ! Calculate the largest relative drop in density or pressure
-       !$omp parallel do 
+       !$omp parallel do
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           ! Check p and rho
@@ -781,7 +780,7 @@ contains
           ! Do not use previous step in BDF2 scheme
           n_prev = -1
           ! Reset the state variable, the energy and set time_BLK variable to 0
-          !$omp parallel do 
+          !$omp parallel do
           do iBlock = 1,nBlock
              if(Unused_B(iBlock)) CYCLE
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
@@ -838,7 +837,7 @@ contains
     use ModAdvance, ONLY : FluxType
     use ModMpi
     use ModRadDiffusion, ONLY: IsNewTimestepRadDiffusion
-    
+
     integer :: i, j, k, n, iVar, iBlockImpl, iBlock, iError
     real :: Coef1, Coef2, q1, q2, q3
 
@@ -849,15 +848,15 @@ contains
 
     ! Calculate high and low order residuals
     ! ResExpl_VCB= DtExpl * R
-    
+
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
-    
+
     !                not low,  dt,  subtract
     call get_residual(.false.,.true.,.true., &
          Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
-    
+
     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
-    
+
     if (nOrder==nOrderImpl .and. FluxType==FluxTypeImpl) then
        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
        ResImpl_VCB(:,:,:,:,1:nBlockImpl) = ResExpl_VCB(:,:,:,:,1:nBlockImpl)
@@ -1225,10 +1224,10 @@ contains
        enddo; enddo; enddo; enddo
     enddo
     !$omp end parallel do
-    
+
     ! Advance ImplEps_VCB:low order,  no dt, don't subtract
     call get_residual(.true., .false., .false., ImplEps_VCB, ImplEps_VCB)
-    
+
     ! Calculate y = L.x = (1 + beta*DtCoeff)*x
     !                       - beta*DtCoeff*(ImplEps_VCB' - Impl_VGB')/eps
     ! where ImplEps_VCB  = Impl_VGB + eps*x,
@@ -1244,7 +1243,7 @@ contains
 
     if(DoTest)write(*,*)'DtCoeff,ImplCoeff,Coef1,Coef2=', &
          DtCoeff, ImplCoeff, Coef1, Coef2
-       
+
     !$omp parallel do private( n )
     do iBlock=1,nBlockImpl
        n = (iBlock-1)*nIJK*nVar
@@ -1332,7 +1331,7 @@ contains
          set_hall_factor_cell
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
          FaceNormal_DDFB, CellSize_DB, CellVolume_GB
-    
+
     integer, intent(in) :: iBlockImpl
     real,    intent(out):: Jac_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
@@ -1358,7 +1357,7 @@ contains
     !--------------------------------------------------------------------------
     iBlock = iBlockFromImpl_B(iBlockImpl)
     call test_start(NameSub, DoTest, iBlock)
-    
+
     Eps = sqrt(JacobianEps)
 
     ! Extract state for this block
@@ -1407,10 +1406,10 @@ contains
 
     ! Initialize divB and sPowell_VC arrays
     if(UseB .and. UseDivBSource) call impl_divbsrc_init
-    
+
     ! Set s_VC=S(Impl_VC)
     if(UseImplSource) call get_impl_source(iBlock, Impl_VC, s_VC)
-    
+
     ! The w to be perturbed and jVar is the index for the perturbed variable
     ImplEps_VC = Impl_VC
 
@@ -1550,10 +1549,10 @@ contains
 
        ! Derivatives of local source terms
        if(UseImplSource)then
-          
+
           ! w2=S(Impl_VC+eps*W_jVar)
           call get_impl_source(iBlock, ImplEps_VC, sEps_VC)
-          
+
           Coeff = 1.0/(Eps*Norm_V(jVar))
           do iVar=1,nVar
              ! JAC(..1) += dS/dW_jVar
@@ -1566,7 +1565,7 @@ contains
     if(DoTest) &
          write(*,*)'After fluxes and sources:  Jac_VVCI(...,1):', &
          Jac_VVCI(1:nVar,1:nVar,iTest,jTest,kTest,1)
-         
+
     ! Contribution of middle to Powell's source terms
     if(UseB .and. UseDivBSource)then
        ! JAC(...1) += d(Q/divB)/dW*divB
@@ -1936,14 +1935,14 @@ contains
     end do
 
     IsImplCell_CB = .false.
-    
+
     !$omp parallel do private(iBlock)
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        do k=1,nK; do j=1,nJ; do i=1,nI
           IsImplCell_CB(i,j,k,iBlock) = true_cell(i,j,k,iBlock)
        enddo; enddo; enddo
-       
+
        if(UseResistivePlanet)then
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(r_BLK(i,j,k,iBlock) < 1.0) &
@@ -2121,7 +2120,7 @@ contains
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
-    
+
     logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
     real, intent(in)    :: Var_VCB(:,:,:,:,:)
     ! The actual Var_VCB and Res_VCB arguments may be the same array:
@@ -2167,7 +2166,7 @@ contains
        CflTmp = Cfl
        Cfl    = 0.5
     end if
-    
+
     ! Res_VCB = Var_VCB(t+dt)
     call implicit2explicit(Var_VCB)
 
@@ -2176,7 +2175,7 @@ contains
     call advance_explicit(DoCalcTimestep)
 
     call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
-    
+
     if(DoSubtract) Res_VCB(:,:,:,:,1:nBlockImpl) = &
          Res_VCB(:,:,:,:,1:nBlockImpl) - Var_VCB(:,:,:,:,1:nBlockImpl)
 
@@ -2214,7 +2213,7 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
-    
+
     integer, intent(in) :: iBlock
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
@@ -2229,18 +2228,18 @@ contains
 
     UseDivbSourceOrig = UseDivbSource
     UseDivbSource     = .false.
-    
+
     call impl2expl(Var_VC, iBlock)
-    
+
     call calc_source(iBlock)
 
     SourceImpl_VC = Source_VC(1:nVar,:,:,:)
-    
+
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
        SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
     end if
-    
+
     UseDivbSource = UseDivbSourceOrig
     call timing_stop(NameSub)
 
