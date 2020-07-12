@@ -194,16 +194,26 @@ contains
   end subroutine user_set_plot_var
   !============================================================================
 
-  subroutine user_calc_sources(iBlock)
+  subroutine user_calc_sources_expl(iBlock)
 
     integer, intent(in) :: iBlock
 
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
-  end subroutine user_calc_sources
+    
+  end subroutine user_calc_sources_expl
   !============================================================================
+  
+  subroutine user_calc_sources_impl(iBlock)
 
+    integer, intent(in) :: iBlock
+
+    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
+    !--------------------------------------------------------------------------
+    
+  end subroutine user_calc_sources_impl
+  !============================================================================
+  
   subroutine user_init_point_implicit
 
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'

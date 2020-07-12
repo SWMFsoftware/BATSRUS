@@ -20,7 +20,7 @@ module ModMultiIon
   use ModSize, ONLY: nI, nJ, nK
   use ModGeometry, ONLY: true_cell
 
-  use ModUserInterface ! user_calc_sources, user_init_point_implicit
+  use ModUserInterface ! user_calc_sources_impl, user_init_point_implicit
 
   implicit none
 
@@ -44,7 +44,7 @@ module ModMultiIon
   ! parameters for selecting the single ion region
   real :: MachNumberMultiIon = 0.0
   real :: ParabolaWidthMultiIon = 0.0
-  
+
   ! collision coefficient
   real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
@@ -212,7 +212,7 @@ contains
        DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_V = State_VGB(:,i,j,k,iBlock)
-       ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I) 
+       ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
        InvElectronDens = 1.0/sum(ChargeDens_I)
 
        if(UseBorisCorrection .or. UseBorisSimple)then
@@ -286,7 +286,7 @@ contains
     !
     ! 4. user source terms if required.
 
-    use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
+    use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
     use ModAdvance, ONLY: State_VGB, Source_VC
@@ -333,13 +333,14 @@ contains
     character(len=*), parameter:: NameSub = 'multi_ion_source_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     DoTestCell = .false.
 
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
-    if(UsePointImplicit .and. UseUserSource) call user_calc_sources(iBlock)
+    if(UsePointImplicit .and. UseUserSource)then
+       if(UseUserPointImplicit_B(iBlock)) call user_calc_sources_impl(iBlock)
+    end if
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms)
@@ -449,7 +450,7 @@ contains
              Force_D = 0
           else
              Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
-             
+
              if(DoTestCell)then
                 write(*,'(2a,i2)') NameSub,' iIon            =', iIon
                 write(*,'(2a,15es16.8)') NameSub,' uIon_D          =', uIon_D
@@ -458,7 +459,7 @@ contains
                 write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
                 write(*,'(2a,15es16.8)') NameSub,' Force_D         =', Force_D
              end if
-             
+
              ! Set corresponding matrix element
              if (IsAnalyticJacobian .and. UsePointImplicit) then
                 do kDim = 1, MaxDim
@@ -467,12 +468,12 @@ contains
                       if(kDim == iDim) CYCLE
                       jDim = 6 - kDim - iDim
                       SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
-                      
+
                       ! This Jacobian term occurs with respect to the same fluid
                       iUi = iUxIon_I(iIon) + iDim - 1
                       DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) &
                            + ForceCoeff*SignedB*InvRho_I(iIon)
-                      
+
                       Coeff = ForceCoeff*SignedB*InvElectronDens
                       ! This term is with respect to any fluid
                       do jIon = 1, nIonFluid

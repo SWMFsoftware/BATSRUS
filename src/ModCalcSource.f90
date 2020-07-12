@@ -33,7 +33,7 @@ contains
     use ModImplicit,      ONLY: UseFullImplicit
     use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
     use ModMultiFluid
-    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
@@ -56,7 +56,7 @@ contains
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
 
-    use ModUserInterface,   ONLY: user_calc_sources
+    use ModUserInterface, ONLY: user_calc_sources_expl, user_calc_sources_impl
 
     integer, intent(in):: iBlock
 
@@ -101,7 +101,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     Source_VC = 0.0; SourceMhd_VC = 0.0
-    
+
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid=1,nFluid
@@ -434,7 +434,7 @@ contains
        end do; end do; end do
        if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
     end if
-    
+
     if(IsRzGeometry)then
        ! The following geometrical source terms are added for the MHD equations
        ! Source[mr]  =(p+B^2/2-Bphi**2+mphi**2/rho)/radius
@@ -744,10 +744,7 @@ contains
 
        ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
        ! Explicit evaluation of these source terms is for code development only
-       if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) then
-          call multi_ion_source_impl(iBlock)
-          if(DoTest) call write_source('After MultiIon sources implicit')
-       end if
+       if(.not.UsePointImplicit) call multi_ion_source_impl(iBlock)
     end if
 
     if(UseEfield)then
@@ -774,7 +771,7 @@ contains
 
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
-    
+
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -791,12 +788,15 @@ contains
     end if
 
     if(UseUserSource)then
-       call user_calc_sources(iBlock)
-       if(DoTest) call write_source('After user sources')
+       call user_calc_sources_expl(iBlock)
+
+       if(.not.UsePointImplicit) call user_calc_sources_impl(iBlock)
+
+       if(DoTest) call write_source('After explicit user sources')
     end if
-    
+
     if(DoTest) call write_source('final')
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -952,7 +952,7 @@ contains
     !==========================================================================
     subroutine get_uPlus(StateIn_V, uPlus_D)
 
-      ! This subroutine gets the uPlus_D at the corresponding face 
+      ! This subroutine gets the uPlus_D at the corresponding face
       ! using the face state values StateIn_V
 
       use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, nIonFluid
@@ -963,7 +963,7 @@ contains
       real :: ChargeDens_I(nIonFluid)
 
       !------------------------------------------------------------------------
-      
+
       ChargeDens_I    = ChargeIon_I*StateIn_V(iRhoIon_I)/MassIon_I
       InvElectronDens = 1.0/sum(ChargeDens_I)
 
@@ -1047,8 +1047,8 @@ contains
          endif
 
          if(DoCorrectFace) then
-            ! Correct the face value so that the first order derivate is 
-            ! high-order accurate. 
+            ! Correct the face value so that the first order derivate is
+            ! high-order accurate.
 
             BCorrect0 = correct_face_value( &
                  0.5*(RightState_VX(Bx_,i,j,k) + LeftState_VX(Bx_,i,j,k)), &
@@ -1080,7 +1080,7 @@ contains
 
                BCorrect1 = correct_face_value( &
                     0.5*(LeftState_VZ(Bz_,i,j,k+1)+RightState_VZ(Bz_,i,j,k+1)),&
-                    State_VGB(Bz_,i,j,k-1:k+2,iBlock))               
+                    State_VGB(Bz_,i,j,k-1:k+2,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
                     2*DzInvHalf*(BCorrect1 - BCorrect0)
