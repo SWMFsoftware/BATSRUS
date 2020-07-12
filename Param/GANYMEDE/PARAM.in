@@ -54,7 +54,7 @@ T			UseBody
 #BODY
 F			
 
-#SOLARWIND
+SOLARWIND
 4.0			SwNDim   [/cc]
 5.7367e7		SwTDim   [K] (3.8nPa/(1.38e-23*2/cc))/1.2
 140.0			SwUxDim  [km/s]
@@ -67,7 +67,7 @@ F
 #PLASMA
 14.0			FluidMass [amu]
 1.0                     AverageIonCharge [e]
-1.0/5.0                 ElectronTemperatureRatio
+1.0/18.0                ElectronTemperatureRatio
 
 #MINIMUMPRESSURE
 0.001			pMinDim
@@ -107,6 +107,19 @@ float			TypeBcZmin
 float			TypeBcZmax
 
 #BOUNDARYSTATE
+coord1max xminbox xmaxbox         StringBoundary
+56.0                    BoundaryStateDim_V Rho
+140.0                   BoundaryStateDim_V Ux
+0.0                     BoundaryStateDim_V Uy
+0.0                     BoundaryStateDim_V Uz
+-10.0                   BoundaryStateDim_V Bx
+-6.0                    BoundaryStateDim_V By
+-86.0                   BoundaryStateDim_V Bz
+0.0                     BoundaryStateDim_V Hyp
+0.2                     BoundaryStateDim_V Pe
+3.6                     BoundaryStateDim_V p
+
+#BOUNDARYSTATE
 coord1min solid		StringBoundary
 550.0	  		BoundaryStateDim_V Rho
 0.0                     BoundaryStateDim_V Ux
@@ -116,8 +129,8 @@ coord1min solid		StringBoundary
 0.0                     BoundaryStateDim_V By
 0.0                     BoundaryStateDim_V Bz
 0.0                     BoundaryStateDim_V Hyp
-0.025			BoundaryStateDim_V Pe
-0.125			BoundaryStateDim_V p
+0.01			BoundaryStateDim_V Pe
+0.115			BoundaryStateDim_V p
 
 #SOLIDSTATE
 T                       UseSolidState
