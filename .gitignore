@@ -13,6 +13,7 @@
 *.toc
 *.xmltex
 *#
+.DS_Store
 Doc/Tex/*.log
 Doc/USERMANUAL.pdf 
 Doc/DESIGN.pdf

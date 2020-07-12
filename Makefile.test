@@ -1101,7 +1101,7 @@ test_marsfluids_start:
 	$(MAKE) test_marsfluids_check
 
 test_marsfluids_compile:
-	./Config.pl -${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
+	./Config.pl ${OPENMP} -u=MarsFluids -e=MhdMarsFluids -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1390,7 +1390,7 @@ test_cometfluids_start:
 	$(MAKE) test_cometfluids_check
 
 test_cometfluids_compile:
-	./Config.pl -noopenmp -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
+	./Config.pl ${OPENMP} -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1705,7 +1705,7 @@ test_europa2fluidspe:
 	$(MAKE) test_europa2fluidspe_check
 
 test_europa2fluidspe_compile:
-	./Config.pl -noopenmp -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
+	./Config.pl ${OPENMP} -u=Europa2FluidsPe -e=MhdEuropa2FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1738,7 +1738,7 @@ test_europa3fluidspe:
 
 # OpenMP randomly fails for nagfor NP=4 NTHREAD=2
 test_europa3fluidspe_compile:
-	./Config.pl -noopenmp -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
+	./Config.pl ${OPENMP} -u=Europa3FluidsPe -e=MhdEuropa3FluidsPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
