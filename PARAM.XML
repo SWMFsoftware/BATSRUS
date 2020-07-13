@@ -4854,7 +4854,7 @@ T			DoAddFluxRope
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
-GL			TypeCme    TD/TD14/GL
+GL			TypeCme    GL/GIBSON-LOW
 1.0			BStrength      [Gs]
 1.03			Radius         [Rs]
 0.3			aStretch       [Rs]
@@ -4899,10 +4899,17 @@ format as follows:
 4. The old line for reading Distance should be converted to the line for
    reading ApexHeight = Distance + Radius - aStretch - 1
 5. Line for reading pBackground should be removed
+!!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+FOR GL configuration, the field parameter, BStrength, may be both positive 
+and negative. In changing the sign for negative, the poloidal field 
+components change their sign, hence, the toroidal current too. However,
+the sign of toroidal magnetic field is fixed by the choice of active region 
+geometry and does not change the sign when BSthrength flips. hence, the 
+toroidal current-to-field ratio also changes sign and so does the helicity, if
+the negative BStrength is chosen.  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-The lines for reading ModulationRho and ModulationP are redundant and in the
-absence of these lines in the parameter file the code does not stop and does not
-complain.
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!TITOV-DEMOULIN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #CME
 T			UseCme
@@ -4910,22 +4917,25 @@ T			DoAddFluxRope
 180.0                   LongitudeCme  [deg]
 15.0                    LatitudeCme   [deg]
 30.0                    OrientationCme[deg]
-TD			TypeCme  GL/TD/TD14
+TD			TypeCme    TD/TITOV-DEMOULIN
 10.0			BcTubeDim    [Gs]
 0.5			RadiusMajor  [R_s]
 0.2			RadiusMinor  [R_s]
 0.2			Depth        [R_s]
 F			UsePlasmaBeta
 1.000E+16               Mass         [g]
+readbstrap		TypeBStrap readbstrap/getbstrap/none
+5			bStrapping  [Gs]
 steady			TypeCharge  none/steady/moving/cancelflux
-5			BqStrapping  [Gs]
-0.4			qDistance    [R_s]
+1.0			BqFraction  [ ]
+0.4			qDistance   [R_s]
 
 Version with UsePlasmaBeta=.true.:
 ...
 T			UsePlasmaBeta
 PlasmaBeta              0.1               [ ]
 5.0e4			EjectaTemperature [K]	
+...
 steady			TypeCharge  none/steady/moving/cancelflux
 5			BStrapping        [Gs]
 0.4			qDistance         [R_s]	
@@ -4955,23 +4965,18 @@ scales in [m], one can convert it to the standard format as follows:
 2. Convert all spatial scales (RadiusMajor, RadiusMinor, Depth) in meters 
    into those is R_S:
    Scale[R_s] = Scale[m]/6.96E+08
+   Or, if the scales are in megameters, the formulae are:
+   Scale[R_s] = Scale[Mm]/6.96E+02
+   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FOR GL configuration, the field parameter, BStrength, may be both positive 
-and negative. In changing the sign for negative, the poloidal field 
-components change their sign, hence, the toroidal current too. However,
-the sign of toroidal magnetic field is fixed by the choice of active region 
-geometry and does not change the sign when BSthrength flips. hence, the 
-toroidal current-to-field ratio also changes sign and so does the helicity, if
-the negative BStrength is chosen.  
-
 For TD configuration,  magnetic field at the center of configuration is 
-always positive,  starpping field is negative. Phi-conponent of the toroidal 
-current is positive. However, the sign of the field toroidal component may be
-both positive and negative, corresponding to the positive and negative 
-helicity. To set the negative helicity, the input parameter, BcTube, should 
-be negative. This choice affects only the sign of helicity, but not the 
-direction of the poloidal magnetic field components, including the nagnetic 
-field at the center of configuration.
+always parallel, while the starpping field is anti-parallel, to the x-axis. 
+Phi-conponent of the toroidal current is positive. However, the sign of 
+the field toroidal component may be both positive and negative, corresponding 
+to the positive and negative helicity. To set the negative helicity, the 
+input parameter, BcTube, should be negative. This choice affects only the 
+sign of helicity, but not the direction of the poloidal magnetic field 
+components, including the nagnetic field at the center of configuration.
   
 </command>
 </commandgroup>
