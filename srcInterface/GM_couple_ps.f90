@@ -96,39 +96,64 @@ contains
        UseAccurateTrace= .true.
        DoMapEquatorRay = .true.
     end if
+    
+    !initialize
+    IsImRho_I(:)  = .false.
+    IsImP_I(:)    = .false.
+    IsImPpar_I(:) = .false.
 
-    ! Store PS variables as IM for internal use.
-    IM_p    = Buffer_IIV(:,:,pres_)
-    IM_dens = Buffer_IIV(:,:,dens_)
+
+        ! Store IM variable for internal use
+    ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
+    ImRho_CV     (:,:,1) = Buffer_IIV(:,:,dens_)
+
     iNewPIm  = iNewPIm + 1
 
-    if(DoTestMe)then
-       write(*,*)NameSub//': Max/Min values received from PS:'
-       write(*,*)NameSub//': Negative values mean NO COUPLING.'
-       write(*,'(a,2e12.3)')'   Density [cm-3] = ', &
-            maxval(IM_dens)/1e6/cProtonMass, minval(IM_dens)/1e6/cProtonMass
-       write(*,'(a,2e12.3)')'   Pressure [Pa]  = ', &
-            maxval(IM_p), minval(IM_p)
-    end if
+    IsImRho_I(1)  = .true.
+    IsImP_I(1)    = .true.
+    IsImPpar_I(1) = .false.
+
+    ! Store PS variables as IM for internal use.
+!    IM_p    = Buffer_IIV(:,:,pres_)
+!    IM_dens = Buffer_IIV(:,:,dens_)
+!    iNewPIm  = iNewPIm + 1
+
+!    if(DoTestMe)then
+!       write(*,*)NameSub//': Max/Min values received from PS:'
+!       write(*,*)NameSub//': Negative values mean NO COUPLING.'
+!       write(*,'(a,2e12.3)')'   Density [cm-3] = ', &
+!            maxval(IM_dens)/1e6/cProtonMass, minval(IM_dens)/1e6/cProtonMass
+!       write(*,'(a,2e12.3)')'   Pressure [Pa]  = ', &
+!            maxval(IM_p), minval(IM_p)
+!    end if
     
     ! for multifluid                                               
-    if(DoMultiFluidPSCoupling)then
-       IM_Hpp    = Buffer_IIV(:,:,Hpres_)
-       IM_Opp    = Buffer_IIV(:,:,Opres_)
-       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
-       IM_Opdens = Buffer_IIV(:,:,Odens_)
-
+    if(DoMultiFluidPsCoupling)then
+       ImP_CV(:,:,2)= Buffer_IIV(:,:,Hpres_)
+!       IM_Hpp = Buffer_IIV(:,:,Hpres_)
+       ImP_CV(:,:,3)= Buffer_IIV(:,:,Opres_)
+!       IM_Opp = Buffer_IIV(:,:,Opres_)
+       ImRho_CV(:,:,2)= Buffer_IIV(:,:,Hdens_)
+!       IM_Hpdens = Buffer_IIV(:,:,Hdens_)
+       ImRho_CV(:,:,3)= Buffer_IIV(:,:,Odens_)
+!       IM_Opdens = Buffer_IIV(:,:,Odens_)
+       IsImRho_I(:)  = .true.
+       IsImP_I(:)    = .true.
+       IsImPpar_I(:) = .false.
+    
        if(DoTestMe) then
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Hp Density [cm-3] = ', &
-               maxval(IM_Hpdens)/1e6/cProtonMass, minval(IM_Hpdens)/1e6/cProtonMass
+               maxval(ImRho_CV(:,:,2))/1e6/cProtonMass, &
+               minval(ImRho_CV(:,:,2))/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Hp Pressure [Pa]  = ', &
-               maxval(IM_Hpp), minval(IM_Hpp)
+               maxval(ImP_CV(:,:,2)), minval(ImP_CV(:,:,2))
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Op Density [cm-3] = ', &
-               maxval(IM_Opdens)/1e6/cProtonMass, minval(IM_Opdens)/1e6/cProtonMass
+               maxval(ImRho_CV(:,:,3))/1e6/cProtonMass, &
+               minval(ImRho_CV(:,:,3))/1e6/cProtonMass
           write(*,'(a,2e12.3)')'   Op Pressure [Pa]  = ', &
-               maxval(IM_Opp), minval(IM_Opp)
+               maxval(ImP_CV(:,:,3)), minval(ImP_CV(:,:,3))
        end if
        
     endif
