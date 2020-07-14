@@ -320,13 +320,11 @@ T			DoAddFluxRope
 180.0			LongitudeCme
 15.0			LatitudeCme
 30.0			OrientationCme
-TD			TypeCme
+TD14			TypeCme
 1.79519580205131	BcTubeDim
 1.005747126436782	RadiusMajor
 0.431034482758621	RadiusMinor
 0.1436781609195402	Depth
-F			UsePlasmaBeta
-1.000E+16		Mass
 cancelflux
 100			BStrapping [Gs]
 0.4			qDistance
