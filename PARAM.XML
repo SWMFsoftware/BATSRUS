@@ -512,6 +512,30 @@ Where g and h are the Legendre coefficients in units of nT.
 !!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+<command name="USERSWITCH" alias="USERSWITCHES">
+  <parameter name="StringUserSwitch" type="string" length="200" case="lower"/>
+
+#USERSWITCH
++init +ic -perturb -B0 +Sexpl -Simpl +update           StringUserSwitch
+
+This command controls the use of user defined routines in src/ModUser.f90.
+The string contains a single-space separated list of switches starting
+with a + sign or a - sign for switching the routines on or off, respectively.
+This command can occur multiple times in the same session.
+Previous settings are preserved for the next session. The possible
+switches are (with alternative names):
+\begin{verbatim}
+init, init_session   : initialize user module before running session
+ic, initial_condition: set initial conditions
+perturb, perturbation: apply initial perturbation
+B0, get_b0           : get user defined B0 field
+Sexpl, source_expl   : add explicit user source terms
+Simpl, source_impl   : add point-implicit user source terms
+update, update_state : apply user defined state update
+\end{verbatim}
+Default is that all implemented user routines are on.
+</command>
+
 <command name="USERFLAGS" alias="USER_FLAGS">
 	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
 	<parameter name="UseUserSource"	           type="logical" default="F"/>
