@@ -1,0 +1,82 @@
+  Test input file for Spectrum2 code (spherical version).
+  The spherical Spectrum2 code uses the native BATSRUS grid: you will need to 
+save a "3d all idl" format file at the required time of your simulation, which 
+generates .out, .info, and .tree files. Indicate the file path without the
+suffixes with #DATAFILE.
+  Currently I assume the BATSRUS repository you run Spectrum2 is configured the
+same as the one you run (on remote machine), say, Awsom code. That is, the block
+cells (e.g., -g=6,4,4) needs to be the same (of course); and the equations used
+(e.g., -e=MhdWavesHypPe) are assumed to be the same. In the future the equation 
+restriction should be lifted.
+  You can specify the observer location in HGR coordinates. HCI coordinate and
+satellite names will be supported soon. The rotation of the camera field of view
+is currently not supported.
+  Doppler shift is tested to be not working properly at this time. Alfven wave
+option is not yet tested. Please leave the value of those two tags to be false.
+  This parameter file is based on the original Spectrum code's parameters, and
+shows the usage of the added options. No test input files are attached since 
+I still need to cross compare results between two versions of the code.
+
+#ECHO
+T				DoEcho
+
+#VERBOSE
+T				IsVerbose
+
+#DEBUG
+F
+
+#GRIDBLOCKALL
+160000
+
+#DATAFILE
+test/3d__all_1_n00000000     NameFileRoot
+
+#OUTFILE
+test/test.out        NameSpectrumOut
+
+#TABLEFILE
+SPECTRUM_chianti_tbl.dat      NameTableFile
+1000                          nMaxLine
+
+#LIMITRADIUS
+1.001					rInner
+2.5						rOuter
+
+#IMAGE
+20						nPixelA
+20						nPixelB
+-0.3					ImageCenterX [Rs]
+0.						ImageCenterY [Rs]
+0.384					ImageSizeX [Rs]
+0.384					ImageSizeY [Rs]
+
+#OBSERVER
+HGR						TypeObsCoord
+143.208					ObsPosX
+-164.266				ObsPosY
+15.865					ObsPosZ
+F 						DoObsRotate
+						DoObsRotTangent
+						ObsRotAngle
+
+#ONELINE
+284.163			fe15
+
+#WAVELENGTHINTERVAL
+1				nWavelengthInterval
+283.8
+284.4
+0.001
+
+#NOALFVEN
+T				IsNoAlfven
+
+#ISALLLINES
+F				IsAllLines
+
+#ISDOPPLER			
+F				IsDoppler
+
+#PROTONELECTRONRATIO
+1.0				ProtonElectronRatio

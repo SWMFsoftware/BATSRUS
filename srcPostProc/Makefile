@@ -4,12 +4,16 @@
 
 SHELL =/bin/sh
 
+default: SPECTRUM
+
 include ../Makefile.def
 include ../Makefile.conf
 -include Makefile.RULES
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
+LIBBATSRUS = ${LIBDIR}/libBATSRUS.a
+LIBTIMING = ${LIBDIR}/libTIMING.a
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 #
@@ -22,6 +26,19 @@ SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
 	rm -f ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
+
+# -------------------------------
+OBJECTS = ModSpectrumLos.o ModSpectrum.o 
+
+${OBJECTS} : ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS}
+
+OBJECTS_EXE = Spectrum2.o 
+
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
+
+SPECTRUM2: ${OBJECTS_EXE} 
+	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o ${Lflag1} 
+# -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
 	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag2}
