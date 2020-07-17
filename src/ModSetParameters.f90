@@ -1845,8 +1845,6 @@ contains
              select case(NameSwitch(2:len(NameSwitch)))
              case('all')
                 UseUserInitSession = DoSwitchOn
-             case('init', 'init_session')
-                UseUserInitSession   = DoSwitchOn
                 UseUserICs           = DoSwitchOn
                 UseUserPerturbation  = DoSwitchOn
                 UseUserB0            = DoSwitchOn
@@ -1854,6 +1852,8 @@ contains
                 UseUserSourceImpl    = DoSwitchOn
                 UseUserUpdateStates  = DoSwitchOn
                 UseUserWriteProgress = DoSwitchOn
+             case('init', 'init_session')
+                UseUserInitSession   = DoSwitchOn
              case('ic', 'ics', 'initial_condition')
                 UseUserICs = DoSwitchOn
              case('perturb', 'perturbation', 'initial_perturbation')
