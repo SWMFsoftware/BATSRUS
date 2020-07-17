@@ -146,13 +146,11 @@ contains
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
        case('#GEM')
-          UseUserICs  = .true.
           call read_var('Amplitude',Az)
        case('#GEMPERTURB')
           call read_var('GemEps',GemEps)
        case('#RT')
           UserProblem = 'RT'
-          UseUserICs  = .true.
           call read_var('X Velocity Amplitude', Amplitude)
           call read_var('X Perturbation Width', Width)
        case('#WAVESPEED')
@@ -166,7 +164,6 @@ contains
           ! a Gaussian profile multiplied by smoother:
           !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
           ! where d = k.(x-xCenter) and k = 1/lambda
-          UseUserICs  = .true.
           call read_var('NameVar',   NameVar)
           call get_iVar(NameVar, iVar)
           call read_var('Amplitude', Ampl_V(iVar))
@@ -195,10 +192,8 @@ contains
 
        case('#SHOCKRAMP')
           call read_var('DoShockramp', DoShockramp)
-          UseUserOuterBcs = DoShockramp
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
-          UseUserICs = .true.
           call read_var('NameVar',   NameVar)
           call get_iVar(NameVar, iVar)
           call read_var('Width', Width)
@@ -265,7 +260,6 @@ contains
        case('#POWERPROFILE')
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
-          UseUserICs  = .true.
           call read_var('NameVar',   NameVar)
           call get_iVar(NameVar, iVar)
           call read_var('CoeffX',  CoeffX_V(iVar))
@@ -286,8 +280,6 @@ contains
           if(DoPipeFlow) UserProblem = 'PipeFlow'
 
        case('#UPDATEVAR')
-          UseUserUpdateStates = .true.
-
           ! Only the states of the specified variables are updated
           call read_var('VarsUpdate', VarsUpdate)
 
@@ -1381,6 +1373,7 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
     use ModVarIndexes
@@ -1391,9 +1384,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
+    if(.not.allocated(iVarsUpdate_I))then
+       UseUserUpdateStates = .false.
+       RETURN
+    end if
+
     call test_start(NameSub, DoTest, iBlock)
-    !if(maxval(iVarsUpdate_I) == 0) &
-    !  call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
 
     do iVar=1,nVar
        if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then

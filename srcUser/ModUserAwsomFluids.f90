@@ -56,7 +56,7 @@ module ModUser
   ! Rotating boundary condition
   real    :: TbeginJet, TendJet
   logical :: IsRamping
-  logical :: IsPolarDipole, IsJetBC
+  logical :: IsPolarDipole=.false., IsJetBC
   real    :: DistMinJet
   real    :: DistMaxJet
   real    :: LocationMaxJet
@@ -73,7 +73,7 @@ contains
 
   subroutine user_read_inputs
 
-    use ModMain,       ONLY: UseUserInitSession, lVerbose
+    use ModMain,       ONLY: lVerbose
     use ModReadParam,  ONLY: read_line, read_command, read_var
     use ModIO,         ONLY: write_prefix, write_myname, iUnitOut
 
@@ -84,7 +84,6 @@ contains
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    UseUserInitSession = .true.
 
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
@@ -1161,7 +1160,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
-
+    if(.not.IsPolarDipole)then
+       UseUserB0 = .false.
+       RETURN
+    end if
+    
     ! Center of dipole shifted by UserDipoleDepth below RadiusMin
     call rlonlat_to_xyz( &
          (/RadiusMin-UserDipoleDepth, &
