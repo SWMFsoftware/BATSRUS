@@ -84,11 +84,9 @@ contains
        EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
     end if
 
-    if(UseUserUpdateStates)then
-       call user_update_states(iBlock)
-    else
-       call update_state_normal(iBlock)
-    end if
+    ! The first call may set UseUserUpdateStates to false
+    if(UseUserUpdateStates)       call user_update_states(iBlock)
+    if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
 
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
        call update_heatflux_collisionless(iBlock)
@@ -298,7 +296,7 @@ contains
              call update_point_implicit(iBlock, ion_electron_source_impl)
           elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
              call update_point_implicit(iBlock, multi_ion_source_impl)
-          elseif(UseUserSource) then
+          elseif(UseUserSourceImpl) then
              call update_point_implicit(iBlock, user_calc_sources_impl)
           end if
 

@@ -16,7 +16,7 @@ module ModMultiIon
   ! Allow for extra point-implicit sources in ModUser
 
   use ModMultiFluid
-  use ModMain, ONLY: UseUserSource
+  use ModMain, ONLY: UseUserSourceImpl
   use ModSize, ONLY: nI, nJ, nK
   use ModGeometry, ONLY: true_cell
 
@@ -338,7 +338,7 @@ contains
 
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
-    if(UsePointImplicit .and. UseUserSource)then
+    if(UsePointImplicit .and. UseUserSourceImpl)then
        if(UseUserPointImplicit_B(iBlock)) call user_calc_sources_impl(iBlock)
     end if
 
@@ -659,7 +659,7 @@ contains
     IsPointImpl_V = .false.
     IsPointImplMatrixSet = IsAnalyticJacobian
 
-    if(UseUserSource)then
+    if(UseUserSourceImpl)then
        call user_init_point_implicit
        if(allocated(iVarPointImpl_I)) then
           IsPointImpl_V(iVarPointImpl_I) = .true.
