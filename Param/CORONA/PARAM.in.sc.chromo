@@ -54,7 +54,10 @@ Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-#USER_FLAGS
+#USERSWITCH
+-perturb 
+
+USERFLAGS
 T			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
@@ -231,7 +234,10 @@ Begin session: 2
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#USER_FLAGS
+#USERSWITCH
++perturb
+
+USERFLAGS
 T			UseUserInnerBCs
 F			UseUserSource
 T			UseUserPerturbation
@@ -265,7 +271,7 @@ GL			TypeCme
 
 !#RUN #####################################################
 !begin session 3
-!#USER_FLAGS
+!USERFLAGS
 !T			UseUserInnerBCs
 !F			UseUserSource
 !T			UseUserPerturbation
@@ -299,7 +305,7 @@ GL			TypeCme
 !
 #RUN ########################################################################
 
-#USER_FLAGS
+USERFLAGS
 T			UseUserInnerBCs
 F			UseUserSource
 T			UseUserPerturbation

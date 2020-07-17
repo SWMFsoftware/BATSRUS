@@ -281,7 +281,7 @@ g rBody
 
 !!! USER DEFINED !!!!!!!!!!!!!!!!!!!!!!!
 
-#USERFLAGS
+USERFLAGS
 T                       UseUserInnerBcs
 T                       UseUserSource
 F                       UseUserPerturbation

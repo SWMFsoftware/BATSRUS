@@ -47,7 +47,7 @@ box			NameArea
 1			nLevelArea
 initial			NameArea
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

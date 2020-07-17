@@ -63,7 +63,7 @@ SAVEPLOTALL
 0.0                     ShockPosition
 4.0/3                     ShockSlope
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

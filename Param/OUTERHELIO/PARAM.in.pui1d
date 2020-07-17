@@ -64,7 +64,10 @@ y=0 VAR idl		StringPlot
 {MHD} fluid		NamePlotVar
 {default}		NamePlotParam
 
-#USERFLAGS
+#USERSWITCH
+-perturb -ic -update
+
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

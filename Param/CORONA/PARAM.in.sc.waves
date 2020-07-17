@@ -111,7 +111,7 @@ float                   TypeBc6
 6000                    DnRefine
 F 
 
-#USER_FLAGS
+USERFLAGS
 T              UseUserInnerBcs
 F              UseUserSource
 F              UseUserPerturbation

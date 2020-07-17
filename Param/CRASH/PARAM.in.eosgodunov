@@ -4,7 +4,7 @@ Param/CRASH/START.in
 #SAVEINITIAL
 F			DoSaveInitial
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

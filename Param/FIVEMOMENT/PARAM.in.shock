@@ -1,26 +1,8 @@
-#ECHO
-T                       DoEcho
-
-#TESTXYZ
-0.01
-0.0
-0.0
-
-#TESTVAR
-2			Ux
-
 #UPDATECHECK
-F
-
-TEST
-update_states update_states_mhd
+F			DoUpdateCheck
 
 #DESCRIPTION
 Five-moment test	StringDescription
-
-#USERMODULE
-Waves and GEM, Yingjuan Ma
-1.40			VersionUserModule
 
 #CHECKGRIDSIZE
      100                              nI

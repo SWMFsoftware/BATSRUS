@@ -71,7 +71,7 @@ brick0			NameArea
 3.0			P
 
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

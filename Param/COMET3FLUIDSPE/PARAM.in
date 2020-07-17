@@ -1,5 +1,3 @@
-!- PARAM.in:  Example input file for BATSRUS --
-
 #PLANET
 HALLEY
 
@@ -15,21 +13,6 @@ F			DoTimeAccurate
 0                       iSecond
 0.0			FracSecond
 
-TESTIJK
-1                       iTest           (cell index for testing)
-1                       jTest           (cell index for testing)
-1                       kTest           (cell index for testing)
-1                       iBlockTest      (block index for testing)
-0                       iProcTest       (processor index for testing)
-
-#TESTXYZ
-0.0005
-0.0005
-0.000
-
-#COORDSYSTEM
-GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
-
 #SOLARWIND
 8.0                     SW_rho_dim [n/cc]
 1.E5                    SW_T_dim [K]     
@@ -40,13 +23,13 @@ GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
 3.4                     SW_By_dim [nT]
 0.0                     SW_Bz_dim [nT]
 
-#OUTERBOUNDARY
-outflow                  TypeBc1
-user                     TypeBc2
-float                    TypeBc3
-float                    TypeBc4
-float                    TypeBc5
-float                    TypeBc6
+#BOXBOUNDARY
+outflow			TypeBc1
+user			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #EXTRABOUNDARY
 T                       UseExtraBoundary
@@ -133,8 +116,8 @@ F                         IsAsymetric
 T                         DoNormalizeCell 
 
 #SAVERESTART
-F		  	  DoSaveRestart Rest of parameters read if true
-60			  DnSaveRestart
+T		  	  DoSaveRestart Rest of parameters read if true
+30			  DnSaveRestart
 -1.			  DtSaveRestart [seconds]
 
 #NONCONSERVATIVE
@@ -143,7 +126,10 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERFLAGS
+#USERSWITCH
+-perturb
+
+USERFLAGS
 T                        UseUserInnerBcs
 T                        UseUserSource
 F                        UseUserPerturbation
@@ -157,9 +143,6 @@ F                        UseUserEchoInput
 F                        UseUserB0
 T                        UseUserInitSession
 T                        UseUserUpdateStates
-
-#SAVEPLOTSAMR
-F                       save_plots_amr to save plots before each AMR
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
@@ -199,6 +182,10 @@ rBody
 -1
 
 #RUN ######################################################################
+
+! For sake of testing restart 
+#SAVERESTART
+F			DoSaveRestart
 
 #MULTIIONSTATE
 F	 		UseSingleIonVelocity

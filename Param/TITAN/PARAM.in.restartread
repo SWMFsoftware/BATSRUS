@@ -26,7 +26,7 @@ F			DoTimeAccurate
 Linde                   TypeFlux
 minmod                  TypeLimiter
 
-#USERFLAGS
+USERFLAGS
 T			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

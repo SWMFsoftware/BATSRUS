@@ -1,6 +1,3 @@
-#STRICT
-T
-
 #DESCRIPTION
 Spherical test run based on May 4 1998 storm
 
@@ -82,21 +79,6 @@ float			TypeBc6
 
 #INNERBOUNDARY
 reflect                 TyepBcInner
-
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
 
 #SCHEME
 2			nOrder

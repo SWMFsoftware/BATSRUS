@@ -39,7 +39,7 @@ F			UseCurlB0
 #MONOPOLEB0
 5.6e-4			MonopoleStrengthSi
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

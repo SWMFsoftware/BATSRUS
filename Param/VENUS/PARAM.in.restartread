@@ -21,7 +21,7 @@ F			DoTimeAccurate
 2			nStage
 0.2			CflExpl
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation
