@@ -21,10 +21,9 @@ contains
 
   subroutine calc_source(iBlock)
 
-    use ModMain,          ONLY: &
-         UseB0,UseDivBsource,GravityDir,UseBody2,&
-         TypeCoordSystem,Useraddiffusion,&
-         DoThinCurrentSheet,UseUSerSource
+    use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
+         UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
+         UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
@@ -787,12 +786,15 @@ contains
        end do; end do; end do
     end if
 
-    if(UseUserSource)then
+    if(UseUserSourceExpl)then
        call user_calc_sources_expl(iBlock)
-
-       if(.not.UsePointImplicit) call user_calc_sources_impl(iBlock)
-
        if(DoTest) call write_source('After explicit user sources')
+    end if
+    
+    if(.not.UsePointImplicit .and. UseUserSourceImpl)then
+       call user_calc_sources_impl(iBlock)
+       if(DoTest) call write_source( &
+            'After implicit user source evaluated explicitly')
     end if
 
     if(DoTest) call write_source('final')
