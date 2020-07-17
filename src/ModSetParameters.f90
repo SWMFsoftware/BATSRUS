@@ -192,9 +192,15 @@ contains
     logical:: UseUniformAxis = .true.
 
     ! Variables for checking the user module
-    character (len=lStringLine) :: NameUserModuleRead='?'
-    real                        :: VersionUserModuleRead=0.0
+    character(len=lStringLine) :: NameUserModuleRead='?'
+    real                       :: VersionUserModuleRead=0.0
 
+    ! Variables for user switches
+    character(len=lStringLine) :: StringSwitch
+    integer                    :: iSwitch, nSwitch
+    character(len=25)          :: NameSwitch_I(10), NameSwitch
+    logical                    :: DoSwitchOn
+    
     ! Variables related to sessions
     logical :: IsFirstSession = .true.
     integer :: iSession, iSessionFirst = 0
@@ -385,7 +391,7 @@ contains
              call init_mod_point_impl(ion_electron_init_point_impl)
           elseif(UseMultiIon)then
              call init_mod_point_impl(multi_ion_init_point_impl)
-          elseif(UseUserSource)then
+          elseif(UseUserSourceImpl)then
              call init_mod_point_impl(user_init_point_implicit)
           else
              !call init_mod_point_impl
@@ -1822,20 +1828,59 @@ contains
 
        case("#RBSATCOUPLING")
           call read_var('DoRbSatTrace',DoRbSatTrace)
-       case("#USERFLAGS", "#USER_FLAGS")
-          call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
-          call read_var('UseUserSource'           ,UseUserSource)
-          call read_var('UseUserPerturbation'     ,UseUserPerturbation)
-          call read_var('UseUserOuterBcs'         ,UseUserOuterBcs)
-          call read_var('UseUserICs'              ,UseUserICs)
-          call read_var('UseUserSpecifyRefinement',UseUserSpecifyRefinement)
-          call read_var('UseUserLogFiles'         ,UseUserLogFiles)
-          call read_var('UseUserWritePlot'        ,UseUserWritePlot)
-          call read_var('UseUserAMR'              ,UseUserAMR)
-          call read_var('UseUserEchoInput'        ,UseUserEchoInput)
-          call read_var('UseUserB0'               ,UseUserB0)
-          call read_var('UseUserInitSession'      ,UseUserInitSession)
-          call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
+       case("#USERSWITCH", "#USERSWITCHES")
+          call read_var('StringUserSwitch', StringSwitch, IsLowerCase=.true.)
+          call split_string(StringSwitch, NameSwitch_I, nSwitch)
+          do iSwitch = 1, nSwitch
+             NameSwitch = NameSwitch_I(iSwitch)
+             select case(NameSwitch(1:1))
+             case('+')
+                DoSwitchOn = .true.
+             case('-')
+                DoSwitchOn = .false.
+             case default
+                call stop_mpi(NameSub//': user switch ='//trim(NameSwitch)// &
+                     ' should start with + or -')
+             end select
+             select case(NameSwitch(2:len(NameSwitch)))
+             case('all')
+                UseUserInitSession = DoSwitchOn
+             case('init', 'init_session')
+                UseUserInitSession   = DoSwitchOn
+                UseUserICs           = DoSwitchOn
+                UseUserPerturbation  = DoSwitchOn
+                UseUserB0            = DoSwitchOn
+                UseUserSourceExpl    = DoSwitchOn
+                UseUserSourceImpl    = DoSwitchOn
+                UseUserUpdateStates  = DoSwitchOn
+                UseUserWriteProgress = DoSwitchOn
+             case('ic', 'ics', 'initial_condition')
+                UseUserICs = DoSwitchOn
+             case('perturb', 'perturbation', 'initial_perturbation')
+                UseUserPerturbation = DoSwitchOn
+             case('b0', 'get_b0', 'set_b0', 'user_b0')
+                UseUserB0 = DoSwitchOn
+             case('source', 'calc_source', 'sources', 'calc_sources')
+                UseUserSourceExpl = DoSwitchOn
+                UseUserSourceImpl = DoSwitchOn
+             case('sexpl', 'source_expl', 'sources_expl', 'source_explicit')
+                UseUserSourceExpl = DoSwitchOn
+             case('simpl', 'source_impl', 'sources_impl', 'source_implicit')
+                UseUserSourceImpl = DoSwitchOn
+             case('update', 'update_state', 'update_states')
+                UseUserUpdateStates = DoSwitchOn
+             case('progress', 'write_progress')
+                UseUserWriteProgress = DoSwitchOn
+             case default
+                call stop_mpi(NameSub// &
+                     ': unknown user switch='//trim(NameSwitch))
+             end select
+          end do
+          if(iProc==0) write(*,*) &
+               'Switches: Init,IC,Perturb,B0,SExpl,SImpl,Update,Progress=', &
+               UseUserInitSession, UseUserICs, UseUserPerturbation, UseUserB0,&
+               UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates, &
+               UseUserWriteProgress
 
        case("#USERINPUTBEGIN")
           call user_read_inputs
