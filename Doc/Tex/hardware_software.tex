@@ -26,20 +26,15 @@ library which is included in the util/NOMPI utility
 While it is designed to run on massively parallel platforms, the
 code will run on any number of nodes from a single processor to as
 many as the user has access to. We have run \BATSRUS\ on up
-to 1400 nodes.  As described in the DESIGN document,
-blocks are distributed on different
+to half a million CPU cores using a hybrid MPI + OpenMP approach.
+As described in the DESIGN document, blocks are distributed on different
 processors and must communicate with each other through message passing.
 The communication time between processors, or latency, will have an 
-effect on the efficiency of the code.  Platforms like the Cray T3E, 
-the SGI Origin, and the Altix systems,
-where message passing is very well optimized, have very low latency and
-\BATSRUS\ spends very little time sending messages.  On a Beowulf cluster,
-using Ethernet, communication times are longer and there is a noticeable
-effect on speed.  That said, the code still performs exceptionally on
-all tested platforms.
+effect on the efficiency of the code.
 
-Two ways to measure a code's performance are to look at ``speed up'' and 
-``scaling''.  Speed up is measured by taking a fixed size problem and running
+Two ways to measure a code's performance are to look at ``speed up''
+or strong scaling and ``weak scaling''.
+Speed up is measured by taking a fixed size problem and running
 it on more processors.  If the code runs twice as fast when run on twice as 
 many processors then the code has perfect speed up.  Communication time is 
 likely a major part of the work load if more processors does not mean
@@ -48,27 +43,6 @@ Scalability is measured by doubling the size of the problem and the number
 of processors at the same time and asking if running the code takes the
 same amount of time as before.  
 Both are important measures of code performance.
-
-The speed up and scaling of \BATSRUS\ was
-one of the main drivers of the block based architecture.  It is this
-feature of the code that makes \BATSRUS\ have near perfect scalability
-on the CRAY T3E and SGI Origin and exceptional scalability on other
-communication dominated platforms like Beowulfs.  From a users standpoint,
-\BATSRUS, unlike other codes, can be run on any number of nodes without
-sacrificing speed to message passing.  Scalability statistics for \BATSRUS\
-are shown in
-Figure~\ref{fig:scalability}.
-\begin{figure}
-\begin{center}
-\includegraphics*[width=8.4cm]{NewScaling.eps}
-\end{center}
-\caption{Scaling of \BATSRUS\ is shown for several different
-platforms.  The near perfect scalability is show by the small
-deviations of the code performance from the theoretically perfect
-scaling curves.}
-\label{fig:scalability}
-\end{figure}
-
 
 \subsection{Memory and Disk Requirements \label{section:memory}}
 
