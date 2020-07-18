@@ -111,20 +111,8 @@ z=0 MHD idl_ascii       StringPlot
 -1.0                    DtSavePlot
 -1.0                    DxSavePlot
 
-USERFLAGS
-F                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates ! freeze neutrals !
+#USERSWITCH
+-all +init +ic          StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 
