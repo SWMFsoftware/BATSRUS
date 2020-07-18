@@ -50,7 +50,7 @@ T			UseNonConservative
 3.0			Ppar
 3.0			p
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

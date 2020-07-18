@@ -194,7 +194,10 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERFLAGS
+#USERSWITCH
+-source -update -perturb
+
+USERFLAGS
 T                        UseUserInnerBcs
 F                        UseUserSource
 F                        UseUserPerturbation
@@ -278,7 +281,11 @@ T                         UsePointImplicit
 T                         IsAsymetric
 T                         DoNormalizeCell
 
-#USERFLAGS
+
+#USERSWITCH
++source +update +perturb
+
+USERFLAGS
 T                        UseUserInnerBcs
 T                        UseUserSource
 T                        UseUserPerturbation
@@ -312,7 +319,7 @@ T                         UsePointImplicit
 F                         IsAsymetric
 T                         DoNormalizeCell
 
-#USERFLAGS
+USERFLAGS
 T                        UseUserInnerBcs
 T                        UseUserSource
 F                        UseUserPerturbation

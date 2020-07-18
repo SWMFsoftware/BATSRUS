@@ -1,10 +1,5 @@
-!- PARAM.in:  Example input file for BATSRUS --
-
-#ECHO
-T                       DoEcho
-
 #PLANET
-HALLEY
+HALLEY			NamePlanet
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -18,25 +13,6 @@ F			DoTimeAccurate
 0                       iSecond
 0.0			FracSecond
 
-#DEBUG
-T                       DoDebug         (use it as if(okdebug.and.oktest)...)
-T                       DoDebugGhost    (parameter for show_BLK in library.f90)
-
-TESTIJK
-1                       iTest           (cell index for testing)
-1                       jTest           (cell index for testing)
-1                       kTest           (cell index for testing)
-1                       iBlockTest      (block index for testing)
-0                       iProcTest       (processor index for testing)
-
-#TESTXYZ
-0.0005
-0.0005
-0.000
-
-#COORDSYSTEM
-GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
-
 #SOLARWIND
 8.0                     SW_rho_dim [n/cc]
 1.E5                    SW_T_dim [K]     
@@ -47,7 +23,7 @@ GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
 3.4                     SW_By_dim [nT]
 0.0                     SW_Bz_dim [nT]
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 outflow                  TypeBc1
 user                     TypeBc2
 float                    TypeBc3
@@ -58,10 +34,9 @@ float                    TypeBc6
 #EXTRABOUNDARY
 T                       UseExtraBoundary
 user                    TypeExtraBoundary
-F                       DoFixExtraboundary
 
 #INNERBOUNDARY
-ionosphere		TypeBc_In
+ionosphere		TypeBcInner
 
 #GRID
 2                        proc_dims(1)
@@ -73,6 +48,9 @@ ionosphere		TypeBc_In
  0.02                  y2
 -0.02                  z1
  0.02                  z2
+
+#GRIDBLOCKALL
+400			MaxBlock
 
 #BODY 
 F                         body1
@@ -148,7 +126,10 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERFLAGS
+#USERSWITCH
+-perturb
+
+USERFLAGS
 T                        UseUserInnerBcs
 T                        UseUserSource
 F                        UseUserPerturbation
@@ -162,35 +143,6 @@ F                        UseUserEchoInput
 F                        UseUserB0
 T                        UseUserInitSession
 T                        UseUserUpdateStates
-
-#SAVEPLOTSAMR
-F                       save_plots_amr to save plots before each AMR
-
-#SAVELOGFILE
-F                       DoSaveLogfile, rest of parameters read if true
-VAR step date time      StringLog
-1                       DnSaveLogfile
--1                      DtSaveLogfile [sec]
-Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
-
-#SAVEINITIAL
-F			DoSaveInitial
-
-#SAVEPLOT
-0                       nplotfiles
-z=0 VAR idl             plot_string
-10                      DnSavePlot
--1.                     DtSavePlot
--1.			DxSavePlot
-SwRho SwUx SwUy SwUz SwP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
-rBody
-z=0 VAR idl             plot_string
-10                      DnSavePlot
--1.                     DtSavePlot
--1.			DxSavePlot
-rho Ux Uy Uz P Pe Bx By Bz dt nn1 unx1 uny1 unz1 divb
-rBody
-
 
 #PROGRESS
 1                     dnProgress1 (frequency of short reports to STDOUT)

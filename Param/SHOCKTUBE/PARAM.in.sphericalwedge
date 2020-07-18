@@ -50,7 +50,7 @@ spherical                       TypeGeometry
 #MONOPOLEB0
 16.0			MonopoleStrengthSi
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

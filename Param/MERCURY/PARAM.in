@@ -241,7 +241,7 @@ float			TypeBcTop
 #INNERBOUNDARY
 reflect             	TyepBcInner		
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

@@ -50,7 +50,7 @@ user
 float
 float
 
-#USERFLAGS
+USERFLAGS
 F                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation

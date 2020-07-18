@@ -37,8 +37,7 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb,                                        &
-         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop
+         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, XyzMin_D
@@ -372,7 +371,7 @@ contains
           end if
        case default
           IsFound=.false.
-          if(UseUserOuterBcs .or. TypeBc(1:4) == 'user')then
+          if(TypeBc(1:4) == 'user')then
              if(present(IsLinear))then
                 if(IsLinear)then
                    ! Linear semi-implicit BC. Default is zero

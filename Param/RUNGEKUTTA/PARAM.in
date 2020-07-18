@@ -30,7 +30,7 @@ NONE
  1.				zMax
 
 ! Switch on friction with tau=5.0 decay rate
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

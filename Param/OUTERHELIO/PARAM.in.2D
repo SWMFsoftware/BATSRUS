@@ -111,7 +111,7 @@ z=0 MHD idl_ascii       StringPlot
 -1.0                    DtSavePlot
 -1.0                    DxSavePlot
 
-#USERFLAGS
+USERFLAGS
 F                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation

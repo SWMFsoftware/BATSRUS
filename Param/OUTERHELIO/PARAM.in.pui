@@ -201,7 +201,10 @@ F               	DoRestrictMultiIon
 T			DoAddRho
 T               	DoAddRhoU
 
-#USERFLAGS
+#USERSWITCH
++perturb -source -update
+
+USERFLAGS
 T                       UseUserInnerBcs
 F                       UseUserSource
 T                       UseUserPerturbation
@@ -305,7 +308,10 @@ minmod			TypeLimiter
 
 #RUN ####################################################################
 
-#USERFLAGS
+#USERSWITCH
++Sexpl -progress +perturb
+
+USERFLAGS
 T                       UseUserInnerBcs
 T                       UseUserSource
 T                       UseUserPerturbation

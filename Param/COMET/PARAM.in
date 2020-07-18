@@ -63,7 +63,7 @@ T			UseBody (rest of parameters read if true)
 500/28			BodyNDim COp
 200.0                 	BodyTDim (K) temperature for fixed BC
 
-#USERFLAGS
+USERFLAGS
 F            			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

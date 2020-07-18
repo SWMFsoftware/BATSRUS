@@ -331,11 +331,9 @@ contains
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
     use ModNumConst, ONLY: cPi
-    use ModMPI
-    use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
-         optimize_message_pass,x_,y_,&
+    use ModMain, ONLY: n_step, Dt, Cfl, optimize_message_pass, &
          UseRotatingFrame,UseB0, NameVarLower_V
-    use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
+    use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio
     use ModVarIndexes
     use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
@@ -348,7 +346,9 @@ contains
     use ModIO, ONLY: write_myname, lNameLogVar
     use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
-    use BATL_lib, ONLY: integrate_grid, maxval_grid, minval_grid
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
+         integrate_grid, maxval_grid, minval_grid
+    use ModMPI
 
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
@@ -983,25 +983,19 @@ contains
             LogVar_I(iVarTot) = StateIntegral_V(jVar)/DomainVolume
             RETURN
          end do
-         if (UseUserLogFiles) then
-            if (index(NameLogVar,'flx')>0)then
-               iVarTot = iVarTot - 1
-               do iR=1,nLogR
-                  iVarTot = iVarTot + 1
-                  r = LogR_I(iR)
-                  call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower, r)
-               end do
-            else
-               call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower)
-            end if
+
+         ! Check the user
+         if (index(NameLogVar,'flx')>0)then
+            iVarTot = iVarTot - 1
+            do iR=1,nLogR
+               iVarTot = iVarTot + 1
+               r = LogR_I(iR)
+               call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower, r)
+            end do
          else
-            if(iProc == 0)then
-               LogVar_I(iVarTot) = -7777.
-               call write_myname;
-               write(*,*) 'WARNING in set_logvar: unknown logvarname=', &
-                    NameLogVar
-            end if
+            call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower)
          end if
+
       end select
     end subroutine set_log_var
     !==========================================================================

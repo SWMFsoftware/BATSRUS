@@ -188,7 +188,7 @@ minmod                  TypeLimiter		LimiterType
 T                       boris_correction		UseBorisCorrection
 1.0                     boris_cLIGHT_factor		BorisClightFactor 
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs    		 
 T			UseUserSource
 F			UseUserPerturbation 

@@ -8,8 +8,10 @@ module ModUserEmpty
   ! does not wish to implement.
 
   ! These constants are provided for convenience
-  use ModSize, ONLY: x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-
+  use BATL_lib, ONLY: iProc, x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModMain, ONLY: &
+       UseUserInitSession, UseUserPerturbation, UseUserICs, UseUserB0, &
+       UseUserSourceExpl, UseUserSourceImpl, UseUserUpdateStates
   implicit none
 
   private :: stop_user
@@ -19,15 +21,22 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
+    ! Set "false" cells that are surrounded by the "extra" face boundary
+ 
     integer,intent(in)::iBlock
 
     character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !--------------------------------------------------------------------------
     call stop_user(NameSub)
+
+    ! where(....) iBoundary_GB(:,:,:,iBlock) = ExtraBc_
+    
   end subroutine user_set_boundary_cells
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
+
+    ! Apply user defined face boundary condition
 
     use ModAdvance, ONLY: nVar
 
@@ -43,6 +52,8 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
+    ! Apply user defined ghost cell boundary condition
+    
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
@@ -51,33 +62,44 @@ contains
     !--------------------------------------------------------------------------
     IsFound = .false.
     call stop_user(NameSub)
+    
   end subroutine user_set_cell_boundary
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nBlockMax
-    integer::iBlock
-    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
-    !--------------------------------------------------------------------------
+    
+    ! Apply initial perturbation. 
     ! The routine is called once and should be applied for all blocks, the
     ! do-loop should be present. Another distinction from user_set_ics is that
     ! user_initial_perturbation can be applied after restart, while
     ! user_set_ICs cannot.
 
-    do iBlock = 1, nBlockMax
+    use ModMain, ONLY: nBlockMax
+    integer::iBlock
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
 
-       call stop_user(NameSub)
-    end do
+    UseUserPerturbation = .false. ! if not implemented
+    
+    !do iBlock = 1, nBlockMax
+    !   State_VGB... = 
+    !end do
+
   end subroutine user_initial_perturbation
   !============================================================================
 
   subroutine user_set_ics(iBlock)
 
+    ! Set user defined initial state
+    
     integer, intent(in) :: iBlock
 
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+    UseUserICs = .false.  ! if not implemented
+
+    ! State_VGB(...,iBlock) = ...
+    
   end subroutine user_set_ics
   !============================================================================
 
@@ -85,19 +107,33 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+
+    UseUserInitSession = .false. ! if not implemented
+    
   end subroutine user_init_session
   !============================================================================
 
   subroutine user_action(NameAction)
 
+    ! This routine gets called multiple times during the run and provides
+    ! an opportunity to do something.
+    ! NameAction identifies where the call is from.
+
     character(len=*), intent(in):: NameAction
 
     ! select case(NameAction)
+    ! case('initialize module')
+    !
+    ! case('clean module')
+    !  
+    ! case('reading restart files')
+    !
     ! case('initial condition done')
-    !  ...
+    !
+    ! case('load balance done')
+    !
     ! case('write progress')
-    !  ...
+    !
     ! end select
 
     character(len=*), parameter:: NameSub = 'user_action'
@@ -107,7 +143,7 @@ contains
   subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
        IsInside, IsInside_I, Value_I)
 
-    ! geometric criteria
+    ! user specified geometric criteria
 
     integer,   intent(in):: iArea        ! area index in BATL_region
     integer,   intent(in):: iBlock       ! block index
@@ -127,6 +163,11 @@ contains
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
+    ! User defined AMR criteria. Set the value of UserCriteria for
+    ! for block iBlock. Multiple user criteria can implemented, distinguished
+    ! by TypeCriteria (starting with 'user'). IsFound should be set to .true.
+    ! if TypeCriteria is recognized.
+    
     integer, intent(in)          :: iBlock
     real, intent(out)            :: UserCriteria
     character(len=*), intent(in) :: TypeCriteria
@@ -155,13 +196,15 @@ contains
     real, intent(out)            :: VarValue
     character(len=*), intent(in) :: NameVar
     real, intent(in), optional   :: Radius
+    logical :: DoWarn = .true.
 
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
-    VarValue = 0.0
+    if(DoWarn .and. iProc==0) write(*,*) '!!! WARNING: ',NameSub, &
+         ' is not implemented. NameVar=', NameVar
+    DoWarn = .false.
+    VarValue = -7777.0
     
-    call stop_user(NameSub//'(NameVar='//NameVar//')')
-
   end subroutine user_get_log_var
   !============================================================================
 
@@ -200,6 +243,9 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
+
+    UseUserSourceExpl = .false. ! if not implemented
+    ! Source_VC(...,iBlock) = ...
     
   end subroutine user_calc_sources_expl
   !============================================================================
@@ -210,55 +256,98 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
+    UseUserSourceImpl = .false. ! if not implemented
+    ! Source_VC(...,iBlock) = ... 
     
   end subroutine user_calc_sources_impl
   !============================================================================
   
   subroutine user_init_point_implicit
 
+    ! Set list of point-implicit variables and initialize other parameters
+    ! for point-implicit evaluation of source terms in user_calc_sources_impl
+    
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+    UseUserSourceImpl = .false. ! if not implemented
+
+    ! allocate and set iVarPointImpl_I and IsPointImplMatrixSet
+    ! can also set UseUserPointImplicit_B and IsDynamicPointImplicit
 
   end subroutine user_init_point_implicit
   !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
 
+    ! Set or modify B0_D for location x, y, z
+    
     real, intent(in)   :: x, y, z
     real, intent(inout):: B0_D(3)
 
     character(len=*), parameter:: NameSub = 'user_get_b0'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+    UseUserB0 = .false. ! if not implemented
+
   end subroutine user_get_b0
   !============================================================================
 
   subroutine user_update_states(iBlock)
 
+    ! Update State_VGB with a user defined method.
+    ! It may call update_state_normal and add some extra steps
+    
     integer,intent(in):: iBlock
 
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    call stop_user(NameSub)
+
+    UseUserUpdateStates = .false. ! if not implemented
+
   end subroutine user_update_states
   !============================================================================
 
   subroutine user_normalization
+
+    ! Set user specific normalization. 
+    
     use ModPhysics
 
     character(len=*), parameter:: NameSub = 'user_normalization'
     !--------------------------------------------------------------------------
     call stop_user(NameSub)
+
+    ! No2Si_V(UnitX_)  = ...
+    ! No2Si_V(UnitU_)  = ...
+    ! No2Si_V(UnitRho_)= ...
+
   end subroutine user_normalization
   !============================================================================
 
   subroutine user_io_units
+
+    ! Set user defined I/O units
+
     use ModPhysics
 
     character(len=*), parameter:: NameSub = 'user_io_units'
     !--------------------------------------------------------------------------
     call stop_user(NameSub)
+
+    ! Io2Si_V(UnitX_)           = ...
+    ! Io2Si_V(UnitRho_)         = ...
+    ! Io2Si_V(UnitN_)           = ...
+    ! Io2Si_V(UnitU_)           = ...
+    ! Io2Si_V(UnitP_)           = ...
+    ! Io2Si_V(UnitB_)           = ...
+    ! Io2Si_V(UnitRhoU_)        = ...
+    ! Io2Si_V(UnitEnergydens_)  = ...
+    ! Io2Si_V(UnitJ_)           = ...
+    ! Io2Si_V(UnitDivB_)        = ...
+    ! Io2Si_V(UnitAngle_)       = ...
+    ! NameTecUnit_V(UnitX_)     = ...
+    ! ...
+    ! NameIdlUnit_V(UnitX_)     = ...
+
   end subroutine user_io_units
   !============================================================================
 
@@ -329,6 +418,9 @@ contains
   end subroutine user_material_properties
   !============================================================================
   integer function user_block_type(iBlock)
+
+    ! Define block type for load balancing
+
     integer, intent(in), optional:: iBlock
     !--------------------------------------------------------------------------
     user_block_type = 0

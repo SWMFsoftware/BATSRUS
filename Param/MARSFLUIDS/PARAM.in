@@ -80,7 +80,10 @@ minmod                  TypeLimiter
 2			nStage
 0.2			CflExpl
 
-#USERFLAGS
+#USERSWITCH
+-perturb -b0
+
+USERFLAGS
 T			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

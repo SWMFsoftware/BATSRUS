@@ -189,20 +189,9 @@ z=0 MHD idl		StringPlot
 -1.0			DtOuput
 -1.0			DxOutput
 
-#USERFLAGS
-T                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-T                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+
+#USERSWITCH
+-Sexpl -perturb		StringUserSwitch
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -272,20 +261,8 @@ minmod			TypeLimiter
 
 #RUN ###################################################################
 
-#USERFLAGS
-T                       UseUserInnerBcs
-T                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+#USERSWITCH
++Sexpl -progress	StringUserSwitch
 
 #SCHEME
 2                       nOrder

@@ -70,6 +70,8 @@ gradlogrho	TypeRefine
 1.0/6.0			ShockPosition
 -1.0/1.73205		ShockSlope
 
+#USERSWITCH
+-all
 
 #USERINPUTBEGIN ----------------
 

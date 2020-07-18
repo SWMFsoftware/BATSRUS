@@ -14,45 +14,38 @@ module ModMain
 
   implicit none
 
-  save
+  SAVE
 
-  !\
   ! Version of BATSRUS
-  !/
-  real, parameter :: CodeVersion = 9.20
+  real, parameter :: CodeVersion = 9.9
   real            :: CodeVersionRead = -1.0
 
-  !\
   ! Standalone and component information
-  !/
   ! In stand alone mode this variable is set to true
   logical             :: IsStandAlone = .false.
 
-  ! In the SWMF the BATSRUS may run as GM, SC or IH component
+  ! In the SWMF the BATSRUS may run as GM, EE, SC, IH, or OH component
   character (len=2)   :: NameThisComp='GM'
 
   ! In hydro equations B_ = U_ is set.
   logical, parameter:: UseB = B_ /= U_
 
-  !\
   ! Time stepping parameters and values.
-  !/
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
-  !\
+
   ! FLux-In-Cell scheme, if true. (Dt/2, Dt/2, Dt) update with a special
   ! procedure to get time-centered electromagnetic fields at half time-step
   ! Maintains the Mhd environment (electromagnetic field) for hybrid.
-  !/
   logical :: UseFlic     = .false.
 
-  real :: dt
+  real :: Dt
   real :: DtFixed
   real :: DtFixedOrig
   real :: DtFixedDim
   real :: Cfl
   real :: CflOrig
-  real, allocatable :: dt_BLK(:)
+  real, allocatable :: Dt_BLK(:)
   logical :: time_accurate = .true.,  time_loop = .false.
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
@@ -69,9 +62,7 @@ module ModMain
   logical:: UseLocalTimeStep    = .false.
   logical:: UseLocalTimeStepNew = .false. ! if just switched on
 
-  !\
   ! Model Coupling variables
-  !/
   ! Dimensions of the buffer grid between SC and IH
   logical :: UseBufferGrid    = .false.
   logical :: UseHelioBuffer3D = .false.
@@ -81,6 +72,7 @@ module ModMain
   real    :: BufferMax_D(3) = [ 21.0, cTwoPi, cPi]
 
   real, allocatable:: BufferState_VG(:,:,:,:)
+
   ! Named indexes for the spherical buffer (left handed coordinates!!! )
   integer, parameter :: BuffR_=1, BuffPhi_=2, BuffTheta_=3
 
@@ -110,20 +102,16 @@ module ModMain
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
 
-  !\
   ! Coronal magnetic field (magnetogram + EE generator)
-  !/
-
   logical :: UseMagnetogram=.false., UseNewMagnetogram = .false.
   real    :: tMagnetogram
   logical :: UseEmpiricalSW = .false.
 
-  !\
   ! Inner and outer boundaries
-  !/
+
   ! Indexes for boundaries
-  integer, parameter :: body1_   = -1
-  integer, parameter :: body2_   = -2
+  integer, parameter :: Body1_   = -1
+  integer, parameter :: Body2_   = -2
   integer, parameter :: ExtraBc_ =  0
   integer, parameter :: SolidBc_ = -3
   integer, parameter :: &
@@ -139,12 +127,10 @@ module ModMain
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
   ! Logicals for bodies
-  logical:: Body1    = .false.
+  logical:: Body1    = .false.  !!! -> UseBody1
   logical:: UseBody2 = .false.
 
-  !\
   ! Block AMR grid parameters
-  !/
 
   ! Identifiers for the grid and decomposition changes
   integer :: iNewGrid=0, iNewDecomposition=0
@@ -171,9 +157,7 @@ module ModMain
        jMinFace = 1, jMaxFace = nJ, jMinFace2 = 1, jMaxFace2 = nJ, &
        kMinFace = 1, kMaxFace = nK, kMinFace2 = 1, kMaxFace2 = nK
 
-  !\
-  ! How to deal with div B = 0
-  !/
+  ! div B control
   logical :: UseDivbSource    = UseB
   logical :: UseDivbDiffusion = .false.
   logical :: UseProjection    = .false.
@@ -182,18 +166,14 @@ module ModMain
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
 
-  !\
   ! More numerical scheme parameters
-  !/
   ! Prolongation order
   integer           :: nOrderProlong = 1
 
   ! Message passing mode ('all' or 'allopt' ...)
   character(len=10) :: optimize_message_pass = 'allopt'
 
-  !\
   ! Source terms
-  !/
 
   ! Logicals for adding radiation diffusion and heat conduction
   logical :: UseRadDiffusion = .false.
@@ -204,10 +184,6 @@ module ModMain
   logical :: UseGravity = .false.
   integer :: GravityDir = 0
   real    :: GravitySi = 0.0
-
-  !\
-  ! Rotation and coordinate system
-  !/
 
   ! Logical for rotating inner boundary
   logical          :: UseRotatingBc = .false.
@@ -221,9 +197,7 @@ module ModMain
   ! Transform initial condition between rotating and inertial frames
   integer:: iSignRotationIC = 0
 
-  !\
   ! Variables for debugging.
-  !/
 
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.
@@ -231,9 +205,7 @@ module ModMain
   ! Debug logicals
   logical :: okdebug=.false., ShowGhostCells=.true.
 
-  !\
   ! Time and timing variables
-  !/
   real :: Time_Simulation = 0.0
   real :: Time_SimulationOld = 0.0
 
@@ -241,9 +213,7 @@ module ModMain
   integer, dimension(7) :: iStartTime_I = [2000,3,21,10,45,0,0]
   real(Real8_)          :: StartTime
 
-  !\
   ! Time to end
-  !/
   logical :: UseEndTime = .false.
 
   integer,dimension(7)  :: iEndTime_I   = [2000,3,21,10,45,0,0]
@@ -259,57 +229,44 @@ module ModMain
   ! Optimize MPI variables
   logical :: UseOptimizeMpi = .false.
 
-  !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   ! The only exeption is t_Max. It may be also used in the SWMF mode to control
   ! evolving B0 field with the use of two magnetograms, one at tSimulation=0,
   ! the other at tSimulation=t_Max.
-  !/
+
   real    :: t_Max = -1.0, cputime_max = -1.0
   integer :: nIter = -1
   logical :: Check_Stopfile = .true.
   logical :: IsLastRead = .false.
 
-  !\
   ! Controling the use of the features implemented in user files
-  !/
-  logical:: UseUserInnerBcs          = .false.
-  logical:: UseUserSource            = .false.
-  logical:: UseUserPerturbation      = .false.
-  logical:: UseUserOuterBcs          = .false.
-  logical:: UseUserICs               = .false.
-  logical:: UseUserSpecifyRefinement = .false.
-  logical:: UseUserLogFiles          = .false.
-  logical:: UseUserWritePlot         = .false.
-  logical:: UseUserAMR               = .false.
-  logical:: UseUserEchoInput         = .false.
-  logical:: UseUserB0                = .false.
-  logical:: UseUserInitSession       = .false.
-  logical:: UseUserUpdateStates      = .false.
+  logical:: UseUserSourceExpl        = .true.
+  logical:: UseUserSourceImpl        = .true.
+  logical:: UseUserPerturbation      = .true.
+  logical:: UseUserICs               = .true.
+  logical:: UseUserB0                = .true.
+  logical:: UseUserInitSession       = .true.
+  logical:: UseUserUpdateStates      = .true.
+  logical:: UseUserWriteProgress     = .true.
+
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.
 
-  !\
   ! Logical controlling the use of the laser heating.
-  !/
   logical :: UseLaserHeating = .false.
 
-  !\
   ! Logical, controlling NLTE computations and determining if
   ! these computations use ERad values OR their ratios to the the equalibrium
   ! values (ERad over B) for all energy groups.
-  !/
   logical:: UseERadInput=.false.
 
   ! Logical for a thin heliospheric current sheet method similar to that
   ! in the ENLIL code of D. Odstril
   logical :: DoThinCurrentSheet = .false.
 
-  !\
   ! Logicals for the use of the boundary condition at the surface
   ! well above the transition region, which in connected by the
   ! magnetic field line threads with the photosphere boundary.
-  !/
   logical:: UseFieldLineThreads = .false., DoThreadRestart = .false.
   logical, public, allocatable :: DoThreads_B(:)
 
@@ -331,7 +288,6 @@ module ModMain
   ! The lower case names of the variables and the primitive var names
   character(len=len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
   character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
-
 
 contains
   !============================================================================

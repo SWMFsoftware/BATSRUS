@@ -42,10 +42,13 @@ periodic		TypeBc1
 periodic		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
-fixvalue	        TypeBc5
-no_inflow		TypeBc6	
+userfixvalue	        TypeBc5
+usernoinflow		TypeBc6	
 
-#USERFLAGS
+#USERSWITCH
++perturb
+
+USERFLAGS
 F                       UseUserInnerBcs
 T                       UseUserSource
 T                       UseUserPerturbation

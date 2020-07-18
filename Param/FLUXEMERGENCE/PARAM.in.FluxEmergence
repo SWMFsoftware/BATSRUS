@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #COMPONENT
 EE			NameComp
 
@@ -38,8 +35,8 @@ reflect			TypeBc1
 reflect			TypeBc2
 reflect			TypeBc3
 reflect			TypeBc4
-fixvalue   	 	TypeBc5
-no_inflow   		TypeBc6
+userfixvalue   	 	TypeBc5
+usernoinflow   		TypeBc6
 
 #NORMALIZATION
 READ			TypeNormalization
@@ -47,7 +44,10 @@ READ			TypeNormalization
 6.4E03			No2SiUnitU
 2.7E-4			No2SiUnitRho
 
-#USERFLAGS
+#USERSWITCH
++perturb
+
+USERFLAGS
 F                       UseUserInnerBcs
 T                       UseUserSource
 T                       UseUserPerturbation

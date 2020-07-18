@@ -19,7 +19,10 @@ F			DoTimeAccurate
 #COORDSYSTEM
 HGR                     TypeCoordSystem
 
-#USER_FLAGS
+#USERSWITCH
+-perturb -b0 
+
+USERFLAGS
 T			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
@@ -168,7 +171,10 @@ z=0 MHD idl		StringPlot
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#USER_FLAGS
+#USERSWITCH
++perturb +b0
+
+USERFLAGS
 T                       UseUserInnerBCs
 F                       UseUserSource
 T                       UseUserPerturbation
@@ -201,7 +207,11 @@ GL			TypeCme
 
 #RUN #############################################################
 
-#USER_FLAGS
+! Another CME is launched
+#USERSWITCH
++perturb
+
+USERFLAGS
 T                       UseUserInnerBCs
 F                       UseUserSource
 T                       UseUserPerturbation

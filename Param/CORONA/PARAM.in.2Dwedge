@@ -47,7 +47,7 @@ and activate the HELIODIPOLE command below
 2.8e-4                  HelioDipoleStrengthSi
 0.0                     HelioDipoleTiltDeg
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

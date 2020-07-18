@@ -352,7 +352,8 @@ contains
     call write_prefix
     write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', z1, z2
     call write_prefix; write(iUnitOut,*)
-    if(UseUserEchoInput) call user_action('write progress')
+
+    if(UseUserWriteProgress) call user_action('write progress')
 
     call test_stop(NameSub, DoTest)
   end subroutine write_runtime_values

@@ -526,7 +526,7 @@ contains
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
 
-      !DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest-1
+      !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest-1
       
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
       TypeBc = TypeFaceBc_I(iBoundary)
@@ -535,9 +535,7 @@ contains
            iBoundary, TypeBc
 
       ! User defined boundary conditions
-      if( index(TypeBc, 'user') > 0 .or. &
-           (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
-           (UseUserOuterBCs .and. iBoundary >= 1 ) )then
+      if( TypeBc(1:4)=='user' )then
          iFace = i; jFace = j; kFace = k
          call user_set_face_boundary(VarsGhostFace_V)
          RETURN

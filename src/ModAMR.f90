@@ -365,8 +365,7 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
-    use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B, &
-         DoThinCurrentSheet
+    use ModMain,       ONLY: nBlock, UseB0, Unused_B, DoThinCurrentSheet
     use ModGeometry,   ONLY: r_BLK, true_cell
     use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
@@ -584,12 +583,12 @@ contains
              end if
           case default
              ! WARNING if we do not find the criteria in the above list we
-             ! will search for it among 'transient' criteria
-             if (UseUserAMR .or. NameAmrCrit_I(iCrit) == 'user') then
+             ! will search for it among 'user' and 'transient' criteria
+             if (NameAmrCrit_I(iCrit) == 'user') then
                 IsFound=.false.
                 call user_amr_criteria(iBlock, &
                      UserCriteria, NameAmrCrit_I(iCrit), IsFound)
-                Crit_IB(iCrit,iBlock) = userCriteria
+                Crit_IB(iCrit,iBlock) = UserCriteria
              else
                 ! Use dynamic refinement if there is a transient event
                 call trace_transient( &
