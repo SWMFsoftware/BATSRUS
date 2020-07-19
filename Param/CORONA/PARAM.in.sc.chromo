@@ -57,21 +57,6 @@ T			UseCurlB0
 #USERSWITCH
 -b0 -update
 
-USERFLAGS
-T			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-T			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
-
 #POYNTINGFLUX
 0.55e6			PoyntingFluxPerBSi
 
@@ -235,22 +220,7 @@ Begin session: 2
 T			DoTimeAccurate
 
 #USERSWITCH
-+perturb
-
-USERFLAGS
-T			UseUserInnerBCs
-F			UseUserSource
-T			UseUserPerturbation
-T			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
++perturb		StringSwitch
 
 #CME
 T			UseCme
@@ -271,20 +241,9 @@ GL			TypeCme
 
 !#RUN #####################################################
 !begin session 3
-!USERFLAGS
-!T			UseUserInnerBCs
-!F			UseUserSource
-!T			UseUserPerturbation
-!T			UseUserOuterBcs
-!F			UseUserICs
-!F			UseUserSpecifyRefinement
-!F			UseUserLogFiles
-!F			UseUserWritePlot
-!F			UseUserAMR
-!F			UseUserEchoInput
-!F			UseUserB0
-!T			UseUserInitSession
-!F			UseUserUpdateStates
+
+!#USERSWITCH
+!+perturb		StringSwitch
 
 !#CME
 !T			UseCme
@@ -305,20 +264,8 @@ GL			TypeCme
 !
 #RUN ########################################################################
 
-USERFLAGS
-T			UseUserInnerBCs
-F			UseUserSource
-T			UseUserPerturbation
-T			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-T			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
+#USERSWITCH
++perturb		StringSwitch
 
 #CME
 T			UseCme

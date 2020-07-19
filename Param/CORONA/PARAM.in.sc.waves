@@ -111,21 +111,6 @@ float                   TypeBc6
 6000                    DnRefine
 F 
 
-USERFLAGS
-T              UseUserInnerBcs
-F              UseUserSource
-F              UseUserPerturbation
-F              UseUserOuterBcs
-T              UseUserICs
-T              UseUserSpecifyRefinement
-F              UseUserLogFiles
-F              UseUserWritePlot
-F              UseUserAMR
-F              UseUserEchoInput
-F              UseUserB0
-F              UseUserInitSession
-T              UseUSerUpdateStates
-
 #MAGNETOGRAM
 T
 1.0

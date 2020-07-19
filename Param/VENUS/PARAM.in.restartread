@@ -21,21 +21,6 @@ F			DoTimeAccurate
 2			nStage
 0.2			CflExpl
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-T                       UseUserSpecifyRefinement
-T                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
-
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step                StringLog

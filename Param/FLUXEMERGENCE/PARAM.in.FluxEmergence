@@ -45,22 +45,7 @@ READ			TypeNormalization
 2.7E-4			No2SiUnitRho
 
 #USERSWITCH
-+perturb
-
-USERFLAGS
-F                       UseUserInnerBcs
-T                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
++perturb		StringSwitch
 
 #USERINPUTBEGIN -------------------
 

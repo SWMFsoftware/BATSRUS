@@ -63,21 +63,6 @@ T			UseBody (rest of parameters read if true)
 500/28			BodyNDim COp
 200.0                 	BodyTDim (K) temperature for fixed BC
 
-USERFLAGS
-F            			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
-
 #USERINPUTBEGIN -----------------------------------------------------
 
 #COMETPARAM

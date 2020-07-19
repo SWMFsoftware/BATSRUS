@@ -39,21 +39,6 @@ F			UseCurlB0
 #MONOPOLEB0
 5.6e-4			MonopoleStrengthSi
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-T			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
-
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC

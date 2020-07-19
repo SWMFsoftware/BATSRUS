@@ -241,21 +241,6 @@ float			TypeBcTop
 #INNERBOUNDARY
 reflect             	TyepBcInner		
 
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F        	        UseUserOuterBcs
-T                   	UseUserICs
-F                   	UseUserSpecifyRefinement
-F                   	UseUserLogFiles
-F                   	UseUserWritePlot
-F                   	UseUserAMR
-F                  	UseUserEchoInput
-F                   	UseUserB0
-T                   	UseUserInitSession
-F                   	UseUserUpdateStates
-
 #RESTARTOUTFILE
 one			TypeRestartOutFile
 
