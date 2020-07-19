@@ -195,22 +195,7 @@ T                         UseNonConservative
 0
 
 #USERSWITCH
--source -update -perturb
-
-USERFLAGS
-T                        UseUserInnerBcs
-F                        UseUserSource
-F                        UseUserPerturbation
-F                        UseUserOuterBcs
-T                        UseUserICs
-F                        UseUserSpecifyRefinement
-T                        UseUserLogFiles
-T                        UseUserWritePlot
-F                        UseUserAMR
-F                        UseUserEchoInput
-F                        UseUserB0
-T                        UseUserInitSession
-F                        UseUserUpdateStates (T????)
+-source -update
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
@@ -285,21 +270,6 @@ T                         DoNormalizeCell
 #USERSWITCH
 +source +update +perturb
 
-USERFLAGS
-T                        UseUserInnerBcs
-T                        UseUserSource
-T                        UseUserPerturbation
-F                        UseUserOuterBcs
-T                        UseUserICs
-F                        UseUserSpecifyRefinement
-T                        UseUserLogFiles
-T                        UseUserWritePlot
-F                        UseUserAMR
-F                        UseUserEchoInput
-F                        UseUserB0
-T                        UseUserInitSession
-T                        UseUserUpdateStates (T????)
-
 #STOP
 100
 -1.0
@@ -318,21 +288,6 @@ T                         UsePointImplicit
 1.0                       BetaPointImpl
 F                         IsAsymetric
 T                         DoNormalizeCell
-
-USERFLAGS
-T                        UseUserInnerBcs
-T                        UseUserSource
-F                        UseUserPerturbation
-F                        UseUserOuterBcs
-T                        UseUserICs
-F                        UseUserSpecifyRefinement
-T                        UseUserLogFiles
-T                        UseUserWritePlot
-F                        UseUserAMR
-F                        UseUserEchoInput
-F                        UseUserB0
-T                        UseUserInitSession
-T                        UseUserUpdateStates
 
 #STOP
 150

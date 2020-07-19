@@ -65,22 +65,7 @@ y=0 VAR idl		StringPlot
 {default}		NamePlotParam
 
 #USERSWITCH
--perturb -ic -update
-
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
+-ic -update
 
 #UNIFORMSTATE
 0.01			Rho

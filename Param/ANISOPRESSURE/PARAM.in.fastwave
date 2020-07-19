@@ -50,21 +50,6 @@ T			UseNonConservative
 3.0			Ppar
 22.0			Pperp
 
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
-
 #USERINPUTBEGIN -----------------
 
 #WAVE

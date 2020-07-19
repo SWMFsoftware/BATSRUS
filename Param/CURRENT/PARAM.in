@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 VERBOSE
 100
 
@@ -69,22 +66,6 @@ brick0			NameArea
 0.0			By
 0.0			Bz
 3.0			P
-
-
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
 
 #USERINPUTBEGIN -----------------
 

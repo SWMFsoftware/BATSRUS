@@ -204,21 +204,6 @@ T               	DoAddRhoU
 #USERSWITCH
 +perturb -source -update
 
-USERFLAGS
-T                       UseUserInnerBcs
-F                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
-
 #OHBOUNDARY
 T			UseOhNeutralBc
 0.05			RhoNeuFactor
@@ -309,22 +294,7 @@ minmod			TypeLimiter
 #RUN ####################################################################
 
 #USERSWITCH
-+Sexpl -progress +perturb
-
-USERFLAGS
-T                       UseUserInnerBcs
-T                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
++source_expl -progress +perturb
 
 #TIMESTEPPING
 2                       nStage

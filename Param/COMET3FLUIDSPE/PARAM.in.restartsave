@@ -126,24 +126,6 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERSWITCH
--perturb
-
-USERFLAGS
-T                        UseUserInnerBcs
-T                        UseUserSource
-F                        UseUserPerturbation
-T                        UseUserOuterBcs
-T                        UseUserICs
-F                        UseUserSpecifyRefinement
-T                        UseUserLogFiles
-T                        UseUserWritePlot
-F                        UseUserAMR
-F                        UseUserEchoInput
-F                        UseUserB0
-T                        UseUserInitSession
-T                        UseUserUpdateStates
-
 #PROGRESS
 1                     dnProgress1 (frequency of short reports to STDOUT)
 10                    dnProgress2 (frequency of summaries to STDOUT)

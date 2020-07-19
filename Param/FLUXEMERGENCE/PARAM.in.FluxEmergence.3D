@@ -48,21 +48,6 @@ usernoinflow		TypeBc6
 #USERSWITCH
 +perturb
 
-USERFLAGS
-F                       UseUserInnerBcs
-T                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
-
 #USERINPUTBEGIN
 #RADMHD
 0.0                     z_photo

@@ -4,21 +4,6 @@ Param/CRASH/START.in
 #SAVEINITIAL
 F			DoSaveInitial
 
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-F			UseUserInitSession
-T			UseUserUpdateStates
-
 #CHECKGRIDSIZE
 10			nI
 1			nJ

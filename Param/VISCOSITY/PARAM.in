@@ -1,8 +1,5 @@
-#ECHO
-T
-
 #PLANET
-NONE
+NONE				NamePlanet
 
 #IOUNITS
 NONE
@@ -49,22 +46,6 @@ user
 user
 float
 float
-
-USERFLAGS
-F                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
-
 
 #TIMESTEPPING
 2		nStage

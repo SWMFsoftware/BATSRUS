@@ -1,6 +1,3 @@
-#ECHO
-T                       DoEcho
-
 #INCLUDE
 GM/restartIN/restart.H
 
@@ -36,21 +33,6 @@ F			DoTimeAccurate
 2                       nOrder
 Linde                   TypeF
 minmod                  TypeLimiter
-
-USERFLAGS
-T			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-T                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-T                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
 
 #NONCONSERVATIVE
 F			UseNonConservative

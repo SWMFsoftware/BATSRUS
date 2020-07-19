@@ -516,7 +516,7 @@ Where g and h are the Legendre coefficients in units of nT.
   <parameter name="StringSwitch" type="string" length="200" case="lower"/>
 
 #USERSWITCH
--all +init +ic +perturb +B0 +source +update +progress     StringSwitch
+-all +init +ic -perturb +B0 +source +update +progress     StringSwitch
 
 This command controls the use of user defined routines in src/ModUser.f90.
 The string contains a single-space separated list of switches starting
@@ -528,7 +528,7 @@ switches are (with alternative names):
 all                     : switch all routines on or off
 init, init_session      : initialize user module before running session
 ic, initial_condition   : initial conditions
-perturb, perturbation   : perturbation
+perturb, perturbation   : perturbation (default is false)
 B0, get_b0              : user defined B0 field
 source                  : user source terms (explicit and implicit)
 Sexpl, source_expl      : explicit user source terms
@@ -536,7 +536,10 @@ Simpl, source_impl      : point-implicit user source terms
 update, update_state    : user defined state update
 progress, write_progress: user progress report
 \end{verbatim}
-Default is that all implemented user routines are on.
+Default is that all implemented user routines are on except the user
+perturbation which is off. When the perturbation is switched on, it gets
+switched off after the perturbation is applied. Any of these values can be
+changed in the user module. 
 </command>
 
 <command name="USERINPUTBEGIN" multiple="T">

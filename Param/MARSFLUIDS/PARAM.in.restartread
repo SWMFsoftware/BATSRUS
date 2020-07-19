@@ -30,22 +30,7 @@ minmod                  TypeLimiter
 0.2			CflExpl
 
 #USERSWITCH
--perturb -b0
-
-USERFLAGS
-T			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+-b0
 
 #NONCONSERVATIVE
 T			UseNonConservative

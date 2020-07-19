@@ -1,6 +1,3 @@
-#ECHO
-T
-
 TEST
 newj 
 
@@ -65,21 +62,6 @@ Use this for a low IMF to test symmetric runs and fore-shock issues:
 
 #ROTATION
 F		UseRotation
-
-USERFLAGS
-T			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
 

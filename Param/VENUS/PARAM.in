@@ -41,21 +41,6 @@ F			DoTimeAccurate
 2		nStage
 0.2		CflExpl
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-T                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
-
 #TEST
 read_inputs amr 
 update_states calc_sources calc_facefluxes calc_timestep

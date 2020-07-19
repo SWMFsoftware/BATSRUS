@@ -268,26 +268,8 @@ g rBody
 nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
 g rBody
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!! USER DEFINED !!!!!!!!!!!!!!!!!!!!!!!
-
-USERFLAGS
-T                       UseUserInnerBcs
-T                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-T                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
-
-#USERINPUTBEGIN
+#USERINPUTBEGIN ------------------------------------------
 
 #EUROPA
 2.5E7                   Neutral surface density for the exponential falling-off component [1/cm^3]
@@ -318,12 +300,8 @@ outflowfix
 10.0                    O2p Downstream BodyNDim (1/ccm)
 600.0                   O2p Downstream BodyTDim (K) temperature for fixed BC for P_BLK
 
-#USERINPUTEND
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#USERINPUTEND ----------------------------------------
 
 #STOP
 10			MaxIteration
--1                     	tSimulationMax
-
-#END
+-1.0			tSimulationMax

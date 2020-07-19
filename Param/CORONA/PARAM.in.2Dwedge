@@ -2,11 +2,8 @@
 
 Begin session: 1
 
-#ECHO
-T			DoEcho
-
 #COMPONENT
-SC
+SC			NameComp
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
@@ -46,21 +43,6 @@ and activate the HELIODIPOLE command below
 #HELIODIPOLE
 2.8e-4                  HelioDipoleStrengthSi
 0.0                     HelioDipoleTiltDeg
-
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-T			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
 
