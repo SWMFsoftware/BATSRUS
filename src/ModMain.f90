@@ -242,7 +242,7 @@ module ModMain
   ! Controling the use of the features implemented in user files
   logical:: UseUserSourceExpl        = .true.
   logical:: UseUserSourceImpl        = .true.
-  logical:: UseUserPerturbation      = .true.
+  logical:: UseUserPerturbation      = .false.
   logical:: UseUserICs               = .true.
   logical:: UseUserB0                = .true.
   logical:: UseUserInitSession       = .true.
