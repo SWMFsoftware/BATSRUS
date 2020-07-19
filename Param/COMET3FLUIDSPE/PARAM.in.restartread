@@ -99,24 +99,6 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERSWITCH
--perturb
-
-USERFLAGS
-T                        UseUserInnerBcs
-T                        UseUserSource
-F                        UseUserPerturbation
-T                        UseUserOuterBcs
-T                        UseUserICs
-F                        UseUserSpecifyRefinement
-T                        UseUserLogFiles
-T                        UseUserWritePlot
-F                        UseUserAMR
-F                        UseUserEchoInput
-F                        UseUserB0
-T                        UseUserInitSession
-T                        UseUserUpdateStates
-
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog

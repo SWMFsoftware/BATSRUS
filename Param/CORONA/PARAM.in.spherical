@@ -20,7 +20,7 @@ F			DoTimeAccurate
 HGR                     TypeCoordSystem
 
 #USERSWITCH
--perturb -b0 
+-b0 
 
 USERFLAGS
 T			UseUserInnerBcs
@@ -207,7 +207,7 @@ GL			TypeCme
 
 #RUN #############################################################
 
-! Another CME is launched
+! Another CME is launched, perturb again
 #USERSWITCH
 +perturb
 

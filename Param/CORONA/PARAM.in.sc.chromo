@@ -55,7 +55,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USERSWITCH
--perturb 
+-b0 -update
 
 USERFLAGS
 T			UseUserInnerBcs
