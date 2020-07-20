@@ -55,7 +55,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USERSWITCH
--b0 -update
+-all +init +ic		StringSwitch
 
 #POYNTINGFLUX
 0.55e6			PoyntingFluxPerBSi
@@ -220,7 +220,7 @@ Begin session: 2
 T			DoTimeAccurate
 
 #USERSWITCH
-+perturb		StringSwitch
++perturb -ic		StringSwitch
 
 #CME
 T			UseCme
@@ -264,6 +264,7 @@ GL			TypeCme
 !
 #RUN ########################################################################
 
+! perturb again with new CME
 #USERSWITCH
 +perturb		StringSwitch
 
