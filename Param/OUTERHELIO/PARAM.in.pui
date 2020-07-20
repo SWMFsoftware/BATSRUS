@@ -202,7 +202,7 @@ T			DoAddRho
 T               	DoAddRhoU
 
 #USERSWITCH
-+perturb -source -update
+-all +init +ic +perturb	+progress	StringSwitch
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -294,7 +294,7 @@ minmod			TypeLimiter
 #RUN ####################################################################
 
 #USERSWITCH
-+source_expl -progress +perturb
++source_expl -progress +perturb		StringSwitch
 
 #TIMESTEPPING
 2                       nStage

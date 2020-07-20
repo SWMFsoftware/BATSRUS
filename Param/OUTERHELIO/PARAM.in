@@ -191,7 +191,7 @@ z=0 MHD idl		StringPlot
 
 
 #USERSWITCH
--source_expl		StringSwitch
+-all +init +ic +progress		StringSwitch
 
 #OHBOUNDARY
 T			UseOhNeutralBc
