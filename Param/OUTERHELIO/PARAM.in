@@ -262,7 +262,7 @@ minmod			TypeLimiter
 #RUN ###################################################################
 
 #USERSWITCH
-+source_expl -ic -progress	StringSwitch
++source_expl +perturb -ic -progress	StringSwitch
 
 #SCHEME
 2                       nOrder
