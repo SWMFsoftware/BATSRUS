@@ -191,7 +191,7 @@ z=0 MHD idl		StringPlot
 
 
 #USERSWITCH
--source_expl		StringSwitch
+-all +init +ic +progress		StringSwitch
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -262,7 +262,7 @@ minmod			TypeLimiter
 #RUN ###################################################################
 
 #USERSWITCH
-+source_expl -progress		StringSwitch
++source_expl +perturb -ic -progress	StringSwitch
 
 #SCHEME
 2                       nOrder
