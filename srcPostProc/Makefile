@@ -12,7 +12,7 @@ include ../Makefile.conf
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
-LIBBATSRUS = ${LIBDIR}/libBATSRUS.a
+LIBBATSRUS = ../src/libBATSRUS.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
@@ -20,7 +20,7 @@ SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 # Post processing executables
 #
 ${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
-	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${LflagMpi}
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
@@ -37,7 +37,7 @@ OBJECTS_EXE = Spectrum2.o
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
 
 SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o ${Lflag1} 
+	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o  ${LflagMpi}
 # -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
