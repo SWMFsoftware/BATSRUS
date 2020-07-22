@@ -2107,8 +2107,9 @@ contains
     call test_start(NameSub, DoTest)
     if(plot_type1(1:3) == 'box')then
        if (plot_dimensional(iFile)) then
-          StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
-               // '", "", "'
+          StringVarTec = 'VARIABLES ="x '// trim(NameTecUnit_V(UnitX_)) // &
+               '", " y '                // trim(NameTecUnit_V(UnitX_)) // &
+               '", " z '               // trim(NameTecUnit_V(UnitX_))
        else
           StringVarTec = 'VARIABLES ="x", "y", "z'
        end if
