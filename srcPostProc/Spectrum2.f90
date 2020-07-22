@@ -258,7 +258,7 @@ contains
         DoEcho = DoEcho .and. iProc==0
         if (iProc ==0) then
           write(*,'(A)') trim(NameCommand)
-          write(*,'(L)') DoEcho
+          write(*,'(L1)') DoEcho
           write(*,*)
         endif
 
@@ -700,7 +700,7 @@ contains
     enddo
 
     if (DoTest .and. iProc == 0) then
-      write(*,'(2A3,3A8,4A10)'),'i','j','x','y','z','ds','Rho','p','Pe'
+      write(*,'(2A3,3A8,4A10)') 'i','j','x','y','z','ds','Rho','p','Pe'
       do i = 1, nPixelAll
         do j = 1, nLosSegAll_I(i)
           write(*,'(I3,I3,3F8.4,4E10.3)') i, j, StatePixSegAll_VII((/LosX_,LosY_,LosZ_,Ds_,Rho_,p_,Pe_/),j,i)
