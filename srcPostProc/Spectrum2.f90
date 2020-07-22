@@ -14,9 +14,9 @@ program spectrum
 
   implicit none
 
+  !----------------------------------------------------------------------------
   character(len=200) NameFileRoot, NameSpectrumOut
   character(len=200) TypeDataFile, NameUnitInput
-
 
   integer :: nRootRead_D(3)
   character(len=20):: TypeGeometryBatl
@@ -27,15 +27,14 @@ program spectrum
   integer :: nSpectralLine = 0
   real :: ProtonElectronRatio
 
-
-  ! (1,:) For each pixel, the index of the processor that is going to store the 
-  ! state vectors and calculate spectrum flux along LOS. Because any one 
-  ! processor only stores a part of the image pixels (with corresponding LOS 
-  ! segments), it would be beneficial to know a pixel is going to be stored in 
-  ! which processor. Currently we are using cyclic parallelization, so this 
-  ! array seems redundant. But later if you decide to implement a better 
-  ! algorithm to redistribute work, this array would be useful. 
-  ! (2,:) Location of this pixel in the processor array (which stores only a 
+  ! (1,:) For each pixel, the index of the processor that is going to store the
+  ! state vectors and calculate spectrum flux along LOS. Because any one
+  ! processor only stores a part of the image pixels (with corresponding LOS
+  ! segments), it would be beneficial to know a pixel is going to be stored in
+  ! which processor. Currently we are using cyclic parallelization, so this
+  ! array seems redundant. But later if you decide to implement a better
+  ! algorithm to redistribute work, this array would be useful.
+  ! (2,:) Location of this pixel in the processor array (which stores only a
   ! part of the image). The interpolated state variables are then stored on
   ! iProc = Info(1,iPix), in sub-array State(:,:,Info(2,iPix))
   integer, allocatable :: iPixelProcInfo_II(:,:)    ! size is [2,nPixelA*nPixelB]
@@ -75,9 +74,7 @@ program spectrum
   call timing_report_style('tree')
   call timing_start('Spectrum')
 
-
   call init_program_spectrum
-
 
   if (iProc == 0) write(*,*) 'Init los.'
   allocate(iPixelProcInfo_II(2,nPixel_I(1)*nPixel_I(2)))
@@ -98,23 +95,19 @@ program spectrum
     call collect_los_segments('IO2/1.vtk',DoTestIn=.false.)
   endif
 
-
   if (iProc == 0) write(*,*) 'Init Spectrum.'
   call init_spectrum(StatePixelSegProc_VII, nLosSeg_I, nSpectralLine, ProtonElectronRatio)
 
   call clean_mod_nodes
   deallocate(State_VGB,iTypeAdvance_BP,iTypeAdvance_B)
 
-
   if (iProc == 0) write(*,*) 'Spectrum calculate flux.'
   call spectrum_calc_flux(StatePixelSegProc_VII, nLosSeg_I)
 
   deallocate(StatePixelSegProc_VII)
 
-
   if (iProc == 0) write(*,*) 'Collect Spectrum results.'
   call collect_save_spectrum(NameSpectrumOut)
-
 
   if (nProc>1) call mpi_barrier(iComm,iError)
   call timing_stop('Spectrum')
@@ -122,6 +115,7 @@ program spectrum
   call clean_mpi
 
 contains
+  !============================================================================
 
   subroutine init_defaults
     use ModVarIndexes, ONLY: NameVar_V, nVar, nFluid, nWave, WaveFirst_, WaveLast_, IonFirst_
@@ -134,6 +128,7 @@ contains
     character(len=3) :: NameWave
 
     ! Fix the NameVar_V string for waves
+    !--------------------------------------------------------------------------
     if(WaveLast_ > 1)then
       do iWave = 1, nWave
         write(NameWave,'(a,i2.2)') 'I',iWave
@@ -155,7 +150,7 @@ contains
     BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
   end subroutine init_defaults
-
+  !============================================================================
 
   subroutine init_program_spectrum
     use BATL_tree, ONLY: read_tree_file, get_tree_position, distribute_tree, show_tree, adapt_tree, iTree_IA, iNode_B, iStatusNew_A, Unset_, Unused_, Used_, Status_, Coarsen_
@@ -173,14 +168,15 @@ contains
 
     integer :: iBlock, iNode, iError
     real :: rMin, rMax, PositionMin_D(3), PositionMax_D(3), rSize
+    !--------------------------------------------------------------------------
     character(len=200) NameInfoFile, NameTreeFile, NameDataFile
 
     rInner = 1.001
     rOuter = 5.
-    ImageSize_I = (/2.6, 2.6/)
-    nPixel_I = (/0, 0/)
+    ImageSize_I = [2.6, 2.6]
+    nPixel_I = [0, 0]
 
-    ObsPos_D = (/218.5,0.001,0.001/)
+    ObsPos_D = [218.5,0.001,0.001]
     DoTestOutputLosSegments = .false.
 
     call read_param_file
@@ -231,7 +227,7 @@ contains
     call read_data_file(NameDataFile)
 
   end subroutine init_program_spectrum
-
+  !============================================================================
 
   subroutine read_param_file
     use ModReadParam, ONLY: lStringLine, read_file, read_init, read_line, read_command, read_echo_set
@@ -239,14 +235,14 @@ contains
     character(len=*), parameter :: NameParamFile = 'SPECTRUM.in'
     character(len=lStringLine) :: StringLine, NameCommand, NameFileHead, NameVarInput
     logical :: DoEcho = .true.
+    !--------------------------------------------------------------------------
     character(len=10) TypeObsCoord
     logical :: DoObsRotate, DoObsRotTangent
     real :: ObsRotAngle
 
-
     call read_file(NameParamFile,IsVerbose=.false.)
     call read_echo_set(.false.)
-    call read_init() 
+    call read_init()
 
     READPARAM: do
       if(.not.read_line(StringLine) ) EXIT READPARAM
@@ -340,8 +336,7 @@ contains
     endif
 
   end subroutine read_param_file
-
-
+  !============================================================================
 
   ! read in 3d idl file information, refer to ModSetParameters and PostIDL
   subroutine read_info_file(NameInfoFile)
@@ -352,18 +347,17 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, TypeGeometry
 
-
-    character(len=200), intent(in) :: NameInfoFile    
+    character(len=200), intent(in) :: NameInfoFile
 
     character(len=lStringLine) :: StringLine, NameCommand, NameFileHead, NameVarInput
     integer :: nProcOld, nDimSim, nIJKRead_D(3), i, nCellPlot, nPlotVar
     logical :: IsLogRadius, IsGenRadius
 
-    character(len=*), parameter :: NameSub='read_param'
-
+    character(len=*), parameter:: NameSub = 'read_info_file'
+    !--------------------------------------------------------------------------
     call read_file(NameInfoFile,IsVerbose=.false.)
     call read_echo_set(.false.)
-    call read_init() 
+    call read_init()
 
     READPARAM: do
       if(.not.read_line(StringLine) ) EXIT READPARAM
@@ -375,7 +369,7 @@ contains
         if (nDimSim /= 3) then
           call stop_mpi(NameSub//': Needs a 3D simulation data file')
         endif
-      
+
       case('#GRIDBLOCKSIZE')
         call read_var('BlockSize1', nIJKRead_D(1))
         call read_var('BlockSize2', nIJKRead_D(2))
@@ -406,7 +400,7 @@ contains
         call read_var('TimeSimulation', tStep)
 
       case('#PLOTRANGE')
-        XyzMin_D = 0; XyzMax_D = 0        
+        XyzMin_D = 0; XyzMax_D = 0
         do i = 1, nDimSim
            call read_var('CoordMin', XyzMin_D(i))
            call read_var('CoordMax', XyzMax_D(i))
@@ -467,13 +461,11 @@ contains
            TypeGeometryBatl = TypeGeometry
         endif
 
-
-
       ! case('#PERIODIC')
       !  do i = 1, nDimSim
       !    call read_var('IsPeriodic',IsPeriodic_D(i))
       !  enddo
-        
+
       ! case('#TECPLOTCONVERT')
       !  call read_var('DoReadTecplot', DoReadTecplot)
       !  call read_var('nHeaderTec', nHeaderTec)
@@ -499,9 +491,8 @@ contains
       call gen_to_radius(XyzMax_D(1))
     endif
 
-
   end subroutine read_info_file
-
+  !============================================================================
 
   ! read in 3d data file (.out), refer to select_snapshot
   subroutine read_data_file(NameDataFile)
@@ -528,9 +519,10 @@ contains
     integer :: iNode, iBlock, jBlock, jProc, iRec, iIjk, i, j, k, ii, iCell, iProcFound, iCell_D(3)
     real :: XyzDiff_D(3), rLonLat_D(3)
 
-    character(len=*), parameter :: NameSub = 'read_data_file'
     ! ---------------------------
 
+    character(len=*), parameter:: NameSub = 'read_data_file'
+    !--------------------------------------------------------------------------
     iUnit = io_unit_new()
 
     call read_plot_file(NameDataFile, iUnit, TypeDataFile, &
@@ -549,7 +541,7 @@ contains
     allocate( Coord_DI(nDimOld,n_D(1)), Var_II(nVarOld,n_D(1)))
 
     ! figure out the which of the input variables are the ones we use with state_vgb
-    iVar_I(1:nVar) = (/(i, i=1, nVar)/)
+    iVar_I(1:nVar) = [(i, i=1, nVar)]
 
     ! Read the coord and var arrays
     call read_plot_file(NameDataFile, iUnit, TypeDataFile, CoordOut_DI=Coord_DI, VarOut_VI=Var_II)
@@ -586,7 +578,7 @@ contains
     call message_pass_cell(nVar, State_VGB, nWidthIn=nG)
 
   end subroutine read_data_file
-
+  !============================================================================
 
   subroutine write_3d_plot()
     use ModIO, ONLY: nFile, nPlotFile, Plot_, TypeSatPos_I, plot_dx, plot_form, &
@@ -597,9 +589,9 @@ contains
     use BATL_lib, ONLY: CoordMin_D, CoordMax_D
     use BATL_test, ONLY: StringTest
 
-
     integer :: iFile
 
+    !--------------------------------------------------------------------------
     nPlotFile  = 1
     nFile = max(nFile, Plot_ + nPlotFile)
     TypeSatPos_I = 'none'
@@ -619,7 +611,7 @@ contains
     call write_plot(iFile)
 
   end subroutine write_3d_plot
-
+  !============================================================================
 
   ! Collectes los array from all processors, only useful for testing
   subroutine collect_los_segments(NameOutputFile, DoTestIn)
@@ -637,6 +629,7 @@ contains
     real, allocatable :: StatePixSegAll_VII(:,:,:)
     integer, allocatable :: nLosSegAll_I(:), nTmpLosSeg_I(:)
     character(1) :: c
+    !--------------------------------------------------------------------------
     character(len=200) NameTmp
     logical :: DoTest
     character(len=*), parameter :: NameSub = 'collect_los_segments'
@@ -703,7 +696,7 @@ contains
       write(*,'(2A3,3A8,4A10)') 'i','j','x','y','z','ds','Rho','p','Pe'
       do i = 1, nPixelAll
         do j = 1, nLosSegAll_I(i)
-          write(*,'(I3,I3,3F8.4,4E10.3)') i, j, StatePixSegAll_VII((/LosX_,LosY_,LosZ_,Ds_,Rho_,p_,Pe_/),j,i)
+          write(*,'(I3,I3,3F8.4,4E10.3)') i, j, StatePixSegAll_VII([LosX_,LosY_,LosZ_,Ds_,Rho_,p_,Pe_],j,i)
         enddo
       enddo
     endif
@@ -736,8 +729,8 @@ contains
       do i = 0, nPoint-1
         write(UnitTmp_) j
       enddo
-      ! Ideally I should output also the vectors. But these are unstructured 
-      ! points not even in correct order (with respect to los length), I will 
+      ! Ideally I should output also the vectors. But these are unstructured
+      ! points not even in correct order (with respect to los length), I will
       ! not be able to plot anything useful without first do a triangulation
       ! anyways. Can include it later if needed.
       close(UnitTmp_)
@@ -750,7 +743,7 @@ contains
 
     call timing_stop(NameSub)
   end subroutine collect_los_segments
-
+  !============================================================================
 
   subroutine convert_units
     use ModPhysics, ONLY: nIoUnit, No2Si_V, Io2Si_V, UnitX_, UnitRho_, UnitRhoU_, UnitB_, UnitP_, UnitEnergyDens_
@@ -758,6 +751,7 @@ contains
     use ModSpectrumLos, ONLY: Ds_
     real :: Input2Si_V(nIoUnit)
 
+    !--------------------------------------------------------------------------
     if (trim(NameUnitInput) == 'normalized variables') then
       Input2Si_V = No2Si_V
     else
@@ -777,6 +771,7 @@ contains
     StatePixelSegProc_VII(Ds_,:,:) = StatePixelSegProc_VII(Ds_,:,:)*Input2Si_V(UnitX_)
 
   end subroutine convert_units
+  !============================================================================
 
   subroutine collect_save_spectrum(NameOutputFile)
     use ModSpectrum, ONLY: SpectrumTable_I
@@ -790,8 +785,8 @@ contains
     integer :: iWvlIntv, nWvlIntv, iWave, nWaveBin, nWaveAll
     integer :: iPix, jPix, iPixelAll, iPixelProc, iProcSend
     integer :: iStatus_I(mpi_status_size)
-    character(len=*), parameter :: NameSub = 'collect_save_spectrum'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'collect_save_spectrum'
+    !--------------------------------------------------------------------------
 
     call timing_start(NameSub)
 
@@ -838,7 +833,6 @@ contains
       iWave = iWave + nWaveBin
     enddo
 
-
     if (iProc == 0) then
       call save_plot_file(NameFile = NameOutputFile, &
           TypeFileIn     = TypeFileSpectrum,      &
@@ -853,14 +847,13 @@ contains
 
     call timing_stop(NameSub)
   end subroutine collect_save_spectrum
-
+  !============================================================================
 
 end program spectrum
 !==============================================================================
 ! The following subroutines are here for compilation of the stand alone code.
 ! The subroutines and functions below are defined in srcInterface for SWMF,
 ! but they still need to get compiled in stand-alone mode.
-!==============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
   real,dimension(3),intent(in)::Xyz_D
