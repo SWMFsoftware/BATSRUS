@@ -41,13 +41,13 @@ SPECTRUM2: ${OBJECTS_EXE}
 # -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
-	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag2}
+	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag}
 
 SNAPSHOT:
 	make ${BINDIR}/SNAPSHOT.exe
 
 ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
-	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
+	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag}
 
 CRST:
 	make ${BINDIR}/ConvertRestart.exe
@@ -58,14 +58,14 @@ earth_traj.o:  ${LIBSHARE} ${OBJECTS1}
 
 EARTH_TRAJ: earth_traj.o
 	${LINK.f90} ${SEARCH} -o ${BINDIR}/EARTH_TRAJ.exe earth_traj.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 TIME_CONV:  ${OBJECTS1} time_convert.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_TOCRNO.exe time_to_cr_no.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 #
 # test for spectrum
