@@ -1346,6 +1346,11 @@ contains
               (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
          TiSi_I(1:nPoint-1) = TiSi_I(1:nPoint-1) + DCons_VI(Ti_,1:nPoint-1)
          !
+         ! Eliminate jump in ion temperature, to avoid an unphysical
+         ! jump in the alfven speed resulting in peak reflection
+         ! 
+         if(FluxConst>0.0)TiSi_I(nPoint) = TiSi_I(nPoint-1)
+         !
          ! Change in the internal energy (to correct the energy source
          ! for the time-accurate mode):
          !
