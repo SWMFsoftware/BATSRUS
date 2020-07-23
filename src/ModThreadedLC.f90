@@ -1013,8 +1013,8 @@ contains
       real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
       character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
       !--------------------------------------------------------------------------
-      AMajor_I(0:nPoint)  = 1.0
-      AMinor_I(0:nPoint)  = AMinorBC
+      AMajor_I(0)  = 1.0
+      AMinor_I(nPoint)  = AMinorBC
       if(present(nIterIn))then
          nIter=nIterIn
       else
