@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #PLANET
 NONE			NamePlanet
 
@@ -49,6 +46,9 @@ T			UseNonConservative
 0.0			Bz
 3.0			Ppar
 22.0			Pperp
+
+#USERSWITCH
++ic			StringSwitch
 
 #USERINPUTBEGIN -----------------
 

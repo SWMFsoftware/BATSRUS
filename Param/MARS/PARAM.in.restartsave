@@ -78,6 +78,9 @@ fixed                   TypeBc6
 2.4871                  SwByDim [nT]
 0.00                    SwBzDim [nT]
 
+#USERSWITCH
++init +ic +b0 +source		StringSwitch
+
 #USERINPUTBEGIN -----------------------------------------------------
 
 #UseHotO

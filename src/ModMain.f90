@@ -240,14 +240,14 @@ module ModMain
   logical :: IsLastRead = .false.
 
   ! Controling the use of the features implemented in user files
-  logical:: UseUserSourceExpl        = .true.
-  logical:: UseUserSourceImpl        = .true.
+  logical:: UseUserSourceExpl        = .false.
+  logical:: UseUserSourceImpl        = .false.
   logical:: UseUserPerturbation      = .false.
-  logical:: UseUserICs               = .true.
-  logical:: UseUserB0                = .true.
-  logical:: UseUserInitSession       = .true.
-  logical:: UseUserUpdateStates      = .true.
-  logical:: UseUserWriteProgress     = .true.
+  logical:: UseUserICs               = .false.
+  logical:: UseUserB0                = .false.
+  logical:: UseUserInitSession       = .false.
+  logical:: UseUserUpdateStates      = .false.
+  logical:: UseUserWriteProgress     = .false.
 
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.

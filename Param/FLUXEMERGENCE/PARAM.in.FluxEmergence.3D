@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #COMPONENT
 EE			NameComp
 
@@ -46,9 +43,10 @@ userfixvalue	        TypeBc5
 usernoinflow		TypeBc6	
 
 #USERSWITCH
-+perturb
++init +ic +perturb +source +update		StringSwitch
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN ---------------------------
+
 #RADMHD
 0.0                     z_photo
 40.                     UnsignedFluxHeight
@@ -69,7 +67,6 @@ F                       UseEnergyPert
 1.                      InitialBz
 6.e8                    NumberDensFloor
 
-
 #ROPE
 F                       UseRope
 0.                      x2c
@@ -79,7 +76,8 @@ F                       UseRope
 1.e1                    lamb
 1.			buoyancy
 1.e1                    b0_rope
-#USERINPUTEND
+
+#USERINPUTEND ----------------------------
 
 #LOOKUPTABLE
 RhoUzExtraEP(Z,Const)   NameTable

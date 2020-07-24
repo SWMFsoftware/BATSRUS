@@ -1829,7 +1829,7 @@ contains
        case("#RBSATCOUPLING")
           call read_var('DoRbSatTrace',DoRbSatTrace)
        case("#USERSWITCH", "#USERSWITCHES")
-          call read_var('StringUserSwitch', StringSwitch, IsLowerCase=.true.)
+          call read_var('StringSwitch', StringSwitch, IsLowerCase=.true.)
           call split_string(StringSwitch, NameSwitch_I, nSwitch)
           do iSwitch = 1, nSwitch
              NameSwitch = NameSwitch_I(iSwitch)

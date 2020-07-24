@@ -281,6 +281,9 @@ T			UseResistivity
 user			TypeResistivity
 0.0			Eta0Si
 
+#USERSWITCH
++init +ic		StringSwitch
+
 #USERINPUTBEGIN --------------------
 
 #RESISTIVEPLANET

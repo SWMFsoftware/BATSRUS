@@ -61,6 +61,9 @@ F                         body1
 0.1                       BodyRhoDim (1/ccm)
 600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
 
+#USERSWITCH
++init +ic +source +update	StringSwitch
+
 #USERINPUTBEGIN --------------------
 
 #COMET

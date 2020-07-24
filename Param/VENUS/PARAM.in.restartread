@@ -1,6 +1,3 @@
-#ECHO
-T                       DoEcho
-
 #INCLUDE
 GM/restartIN/restart.H
 
@@ -20,6 +17,9 @@ F			DoTimeAccurate
 #TIMESTEPPING
 2			nStage
 0.2			CflExpl
+
+#USERSWITCH
++init +ic +source		StringSwitch
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true

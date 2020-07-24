@@ -39,6 +39,9 @@ F			DoTimeAccurate
 2			nStage
 0.2			CflExpl
 
+#USERSWITCH
++init +ic +source		StringSwitch
+
 #SAVELOGFILE
 T                       DoSaveLogfile
 VAR step                StringLog

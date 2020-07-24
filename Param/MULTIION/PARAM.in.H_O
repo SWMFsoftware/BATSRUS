@@ -1,12 +1,3 @@
-TEST
-newj 
-
-update_states update_point_implicit
-
-update_states update_states_MHD
-
-update_point_implicit
-
 #TESTXYZ
 5.
 1.
@@ -22,11 +13,11 @@ T			IsAsymmetric
 F			DoNormalizeCell
 
 PLASMA
-1.0		MassH+
-1.0		MassO+
-1.0		ChargeH+
-1.0		ChargeO+
-0.0		eTemp
+1.0			MassH+
+1.0			MassO+
+1.0			ChargeH+
+1.0			ChargeO+
+0.0			eTemp
 
 UPDATECHECK
 F
@@ -61,7 +52,10 @@ Use this for a low IMF to test symmetric runs and fore-shock issues:
 ! align rotation and magnetic axes with z axis
 
 #ROTATION
-F		UseRotation
+F			UseRotation
+
+#USERSWITCH
++source			StringSwitch
 
 #USERINPUTBEGIN ------------------------
 
@@ -158,14 +152,12 @@ box                     NameArea
 
 
 #OUTERBOUNDARY
-outflow                 outerBCtype(east_)
-inflow                  outerBCtype(west_)
-float                   outerBCtype(south_)
-float                   outerBCtype(north_)
-float                   outerBCtype(bot_)
-float                   outerBCtype(top_)
-
-
+outflow                 TypeOuterBc1
+inflow                  TypeOuterBc2
+float                   TypeOuterBc3
+float                   TypeOuterBc4
+float                   TypeOuterBc5
+float                   TypeOuterBc6
 
 #INNERBOUNDARY
 user			innerBCtype 
@@ -220,8 +212,8 @@ mc			TypeLimiter
 0.8			Cfl
 
 #RESCHANGE
-T
+T			UseAccurateResChange
 
 #STOP
-2000
--1.0
+2000			MaxIteration
+-1.0			tSimulationMax

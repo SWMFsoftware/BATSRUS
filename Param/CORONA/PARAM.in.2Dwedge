@@ -44,6 +44,9 @@ and activate the HELIODIPOLE command below
 2.8e-4                  HelioDipoleStrengthSi
 0.0                     HelioDipoleTiltDeg
 
+#USERSWITCH
++init +ic		StringSwitch
+
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC

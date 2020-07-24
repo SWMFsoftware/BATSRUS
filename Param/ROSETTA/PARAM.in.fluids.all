@@ -1,16 +1,16 @@
 #PLANET
-NONE
+NONE			NamePlanet
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
 #STARTTIME
-2014                    iYear
-8                       iMonth
-23                       iDay
-16                       iHour
-0                       iMinute
-0                       iSecond
+2014			iYear
+8			iMonth
+23			iDay
+16			iHour
+0			iMinute
+0			iSecond
 0.0			FracSecond
 
 INCLUDE
@@ -60,10 +60,13 @@ T                         body1
 1.0e-9			  BodyRhoDim (1/ccm)
 180.0			  BodyTDim (K) temperature for fixed BC for P_BLK
 
+#USERSWITCH
++init +ic		StringSwitch
+
 #USERINPUTBEGIN -------------------------------------
 
 #SHAPEFILE
-CG_MOC.bdf               NameShapeFile
+CG_MOC.bdf		NameShapeFile
 
 #USECGSHAPE
 T			DoUseCGShape
@@ -194,9 +197,6 @@ T                         UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERSWITCH
--source -update
-
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog
@@ -230,10 +230,12 @@ z=0 MHD idl             plot_string
 80
 -1.0
 
-#RUN
+#RUN ####################################################################
 
 END
-===============================================================
+
+#USERSWITCH
++source +update +perturb	StringSwitch
 
 #USERINPUTBEGIN -------------------------------------
 
@@ -266,18 +268,13 @@ T                         UsePointImplicit
 T                         IsAsymetric
 T                         DoNormalizeCell
 
-
-#USERSWITCH
-+source +update +perturb
-
 #STOP
 100
 -1.0
 
-#RUN
+#RUN ####################################################################
 
 END
-==============================================================
 
 #MULTIIONSTATE
 F                         UseSingleIonVelocity
@@ -293,20 +290,13 @@ T                         DoNormalizeCell
 150
 -1.0
 
-#RUN
+#RUN ####################################################################
 
 END
 
-===============================================================
 #TIMEACCURATE
-T                       DoTimeAccurate
+T                       IsTimeAccurate
 
 #STOP
-180
--1.0
-
-#RUN
-
-#END
-
-===============================================================
+180			MaxIteration
+-1.0			tSimulationMax

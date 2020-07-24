@@ -67,6 +67,9 @@ brick0			NameArea
 0.0			Bz
 3.0			P
 
+#USERSWITCH
++ic			StringSwitch
+
 #USERINPUTBEGIN -----------------
 
 #WAVE

@@ -31,6 +31,9 @@ F
 T
 1.05
 
+#USERSWITCH
++ic			StringSwitch
+
 #USERINPUTBEGIN -----------------
 
 #PIPEFLOW
