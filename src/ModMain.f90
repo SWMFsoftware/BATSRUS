@@ -247,7 +247,7 @@ module ModMain
   logical:: UseUserB0                = .true.
   logical:: UseUserInitSession       = .true.
   logical:: UseUserUpdateStates      = .true.
-  logical:: UseUserWriteProgress     = .true.
+  logical:: UseUserWriteProgress     = .true. 
 
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.
