@@ -12,7 +12,7 @@ include ../Makefile.conf
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
-LIBBATSRUS = ${LIBDIR}/libBATSRUS.a
+LIBBATSRUS = ../src/libBATSRUS.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
@@ -20,7 +20,7 @@ SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 # Post processing executables
 #
 ${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
-	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${LflagMpi}
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
@@ -37,17 +37,17 @@ OBJECTS_EXE = Spectrum2.o
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
 
 SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o ${Lflag1} 
+	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o  ${LflagMpi}
 # -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
-	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag2}
+	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag}
 
 SNAPSHOT:
 	make ${BINDIR}/SNAPSHOT.exe
 
 ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
-	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
+	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag}
 
 CRST:
 	make ${BINDIR}/ConvertRestart.exe
@@ -58,14 +58,14 @@ earth_traj.o:  ${LIBSHARE} ${OBJECTS1}
 
 EARTH_TRAJ: earth_traj.o
 	${LINK.f90} ${SEARCH} -o ${BINDIR}/EARTH_TRAJ.exe earth_traj.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 TIME_CONV:  ${OBJECTS1} time_convert.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_TOCRNO.exe time_to_cr_no.o \
-		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag2}
+		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 #
 # test for spectrum

@@ -1,7 +1,7 @@
 program spectrum
 
-  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, &
-       cPi, rSun
+  use ModConst, ONLY: cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi, rSun
+  use ModUtilities, ONLY: CON_stop
 
   use ModMPI
 
@@ -682,7 +682,7 @@ contains
              
              Gint = bilinear(LineTable_I(iLine)%g_II(:,:), &
                   iNMin, iNMax, jTMin, jTMax, &
-                  (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
+                  [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
 
              ! When Gint becomes negative due to extrapolation -> move to next
              if(Gint<=0)CYCLE 
@@ -903,8 +903,8 @@ contains
                 write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
              else
                 allocate(WavelengthInterval_II(2,nWavelengthInterval))
-                WavelengthInterval_II(:,1) = (/ 170 ,210 /)
-                WavelengthInterval_II(:,2) = (/ 250 ,290 /)
+                WavelengthInterval_II(:,1) = [ 170 ,210 ]
+                WavelengthInterval_II(:,2) = [ 250 ,290 ]
              endif
           case default
              write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
@@ -1065,7 +1065,7 @@ contains
          NameSub//' could not read data from '//trim(NameDataFile))
 
     ! Assign angles of rotated box
-    Rot_DD = reshape(Param_I(:9), (/ 3, 3 /))
+    Rot_DD = reshape(Param_I(1:9), [ 3, 3 ])
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
@@ -1471,18 +1471,3 @@ contains
   end subroutine read_table
   !==========================================================================
 end program spectrum
-
-!============================================================================
-
-subroutine CON_stop(String)
-  use ModMpi, ONLY: MPI_abort, MPI_COMM_WORLD
-  implicit none
-  integer                       :: iError, nError
-  character (len=*), intent(in) :: String
-  !--------------------------------------------------------------------------
-  write(*,*)'CON_stop called on with String='
-  write(*,*) String
-
-  stop
-  
-end subroutine CON_stop
