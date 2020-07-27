@@ -47,6 +47,9 @@ box			NameArea
 1			nLevelArea
 initial			NameArea
 
+#USERSWITCH
++init +ic		StringSwitch
+
 #USERINPUTBEGIN ------------------------
 
 #LOWRIETEST

@@ -20,7 +20,7 @@ F			DoTimeAccurate
 HGR                     TypeCoordSystem
 
 #USERSWITCH
--b0 
++init +ic +update	StringSwitch
 
 #MAGNETOGRAM
 T			UseMagnetogram

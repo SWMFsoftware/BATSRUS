@@ -30,7 +30,7 @@ SAVEPLOTALL
 
 #PLASMA
 1.0			IonMass
-1.0/1000			ElectronMass
+1.0/1000		ElectronMass
 1.0			IonCharge
 -1.0			ElectronCharge
 1.0			ElectronTemperatureRatio
@@ -47,18 +47,21 @@ SAVEPLOTALL
 0.0			Ey
 0.0			Ez
 0.0			HypE
-4.5e-4/2			Ppar
-4.5e-4/2			P
-1.0/1000			ElRho
+4.5e-4/2		Ppar
+4.5e-4/2		P
+1.0/1000		ElRho
 0.0			ElUx
 0.0			ElUy
 0.0			ElUz
-4.5e-4/2			ElPpar
-4.5e-4/2			ElP
+4.5e-4/2		ElPpar
+4.5e-4/2		ElP
 
 #SHOCKPOSITION
-0.0                     ShockPosition
-4.0/3                     ShockSlope
+0.0			ShockPosition
+4.0/3             	ShockSlope
+
+#USERSWITCH
++source			StringSwitch
 
 #USERINPUTBEGIN -----------------
 
@@ -92,7 +95,7 @@ SAVEPLOTALL
 #WAVE
 12			Ppar
 300.0			Width
-4.5e-5/2			Amplitude
+4.5e-5/2		Amplitude
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
@@ -110,7 +113,7 @@ SAVEPLOTALL
 #WAVE
 18			ePpar
 300.0			Width
-4.5e-5/2			Amplitude
+4.5e-5/2		Amplitude
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
@@ -129,71 +132,71 @@ SAVEPLOTALL
 #USERINPUTEND ---------------------
 
 #CORRECTELECTRONFLUID
-T
+T			DoCorrectElfuid
 
 #CORRECTEFIELD
-T
+T			DoCorrectEfield
 
 CMAXDIFFUSION
 all
 
 #OUTERBOUNDARY
-periodic	xMinBc
-periodic	xMaxBc
-periodic	yMinBc
-periodic	yMaxBc
-float		zMinBc
-float		zMaxBc
+periodic		xMinBc
+periodic		xMaxBc
+periodic		yMinBc
+periodic		yMaxBc
+float			zMinBc
+float			zMaxBc
 
 TIMESTEPPING
-3		nStage
-0.8		CflExpl
+3			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaverestart
 
 #PLOTFILENAME
-second		NameMaxTimeUnit
+second			NameMaxTimeUnit
 
 #SAVEINITIAL
-T		DoSaveInitial
+T			DoSaveInitial
 
 #SAVEBINARY
-F
+F			DoSaveBinary
 
 #SAVEPLOT
-3		nPlotfil
-1d var idl	PlotString
--1              DnSavePlot
-1.0             DtSavePlot
-0.0             DxSavePlot
+3			nPlotfile
+1d var idl		PlotString
+-1              	DnSavePlot
+1.0             	DtSavePlot
+0.0             	DxSavePlot
 {mhd}
 {default}
-y=0 var idl	PlotString
--1              DnSavePlot
-1.0             DtSavePlot
-0.0             DxSavePlot
+y=0 var idl		PlotString
+-1              	DnSavePlot
+1.0             	DtSavePlot
+0.0             	DxSavePlot
 {mhd}
 {default}
-z=0 var idl	PlotString
--1              DnSavePlot
-1.0             DtSavePlot
-0.0		DxSavePlot
+z=0 var idl		PlotString
+-1              	DnSavePlot
+1.0			DtSavePlot
+0.0			DxSavePlot
 {mhd}
 {default}
 
 #STOP
-1		MaxIteration
-640.0		tSimulationMax
+1			MaxIteration
+640.0			tSimulationMax

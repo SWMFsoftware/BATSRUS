@@ -64,9 +64,6 @@ y=0 VAR idl		StringPlot
 {MHD} fluid		NamePlotVar
 {default}		NamePlotParam
 
-#USERSWITCH
--ic -update
-
 #UNIFORMSTATE
 0.01			Rho
 -100			Ux
@@ -101,6 +98,9 @@ y=0 VAR idl		StringPlot
 0			Ne4Uy 
 0			Ne4Uz 
 1.6E-13			Ne4P  
+
+#USERSWITCH
++init +source +progress		StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 

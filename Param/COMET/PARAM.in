@@ -7,10 +7,10 @@ SOLARWIND
 Comet test
 
 #PLANET
-Halley
+Halley			NamePlanet
 
 #IOUNITS
-PLANETARY
+PLANETARY		NameIoUnit
 
 #ROTATION 
 F
@@ -77,6 +77,9 @@ T			UseBody (rest of parameters read if true)
 #MultiSP
 6               nSpecies
 6               nNuSpecies
+
+#USERSWITCH
++init +ic +source +update	StringSwitch
 
 #USERINPUTEND ---------------------------------------------------------
 

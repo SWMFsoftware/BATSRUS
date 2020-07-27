@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #PLANET
 NONE			NamePlanet
 
@@ -79,54 +76,57 @@ T			UseNonConservative
 -1.0			LambdaZ
 0.0			Phase
 
+#USERSWITCH
++ic			StringSwitch
+
 #USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
-periodic	xMinBc
-periodic	xMaxBc
-float		yMinBc
-float		yMaxBc
-float		zMinBc
-float		zMaxBc
-
-#TIMESTEPPING
-2		nStage
-0.8		CflExpl
-
-#SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
-
-#SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
-
-#SAVERESTART
-F		DoSaverestart
-
-#PLOTFILENAME
-second		NameMaxTimeUnit
-
-#SAVEINITIAL
-T		DoSaveInitial
-
-#SAVEPLOT
-1		nPlotfile
-cut mhd idl	PlotString
--1              DnSavePlot
-0.1             DtSavePlot
--6.0		xMinCut
-+6.0		xMaxCut
--0.001		yMinCut
-+0.001		yMaxCut
--0.001		zMinCut
-+0.001		zMaxCut
-0.0             DxSavePlot
-
-#STOP
--1		MaxIteration
-6.0		tSimulationMax
+periodic		xMinBc
+periodic		xMaxBc
+float			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
+			
+#TIMESTEPPING		
+2			nStage
+0.8			CflExpl
+			
+#SCHEME			
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+			
+#SAVELOGFILE		
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+			
+#SAVERESTART		
+F			DoSaverestart
+			
+#PLOTFILENAME		
+second			NameMaxTimeUnit
+			
+#SAVEINITIAL		
+T			DoSaveInitial
+			
+#SAVEPLOT		
+1			nPlotfile
+cut mhd idl		PlotString
+-1              	DnSavePlot
+0.1             	DtSavePlot
+-6.0			xMinCut
++6.0			xMaxCut
+-0.001			yMinCut
++0.001			yMaxCut
+-0.001			zMinCut
++0.001			zMaxCut
+0.0             	DxSavePlot
+			
+#STOP			
+-1			MaxIteration
+6.0			tSimulationMax

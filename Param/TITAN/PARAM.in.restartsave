@@ -84,6 +84,9 @@ fixed                   TypeBc6
 0.0                     SW_By_dim [nT]      |
 -5.00                    SW_Bz_dim [nT]    /
 
+#USERSWITCH
++init +ic +source		StringSwitch
+
 #USERINPUTBEGIN -----------------------------------------------------
 
 ! for T9 flyby

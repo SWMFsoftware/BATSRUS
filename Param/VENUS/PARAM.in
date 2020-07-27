@@ -41,6 +41,9 @@ F			DoTimeAccurate
 2		nStage
 0.2		CflExpl
 
+#USERSWITCH
++init +ic +source		StringSwitch
+
 #TEST
 read_inputs amr 
 update_states calc_sources calc_facefluxes calc_timestep

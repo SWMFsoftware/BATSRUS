@@ -41,6 +41,9 @@ F			UseCurlB0
 #MONOPOLEB0
 5.6e-4			MonopoleStrengthSi
 
+#USERSWITCH
++init +ic		StringSwitch
+
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC

@@ -29,9 +29,6 @@ minmod                  TypeLimiter
 2			nStage
 0.2			CflExpl
 
-#USERSWITCH
--b0
-
 #NONCONSERVATIVE
 T			UseNonConservative
 
@@ -55,6 +52,9 @@ fixed			TypeBc3 MinY
 fixed			TypeBc4 MaxY
 fixed			TypeBc5 MinZ
 fixed			TypeBc6 MaxZ
+
+#USERSWITCH
++init +ic +source		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------------------------
 

@@ -201,9 +201,6 @@ F               	DoRestrictMultiIon
 T			DoAddRho
 T               	DoAddRhoU
 
-#USERSWITCH
--all +init +ic +perturb	+progress	StringSwitch
-
 #OHBOUNDARY
 T			UseOhNeutralBc
 0.05			RhoNeuFactor
@@ -222,6 +219,9 @@ T			UseOhNeutralBc
 0.3             	UyNeutralsISW_dim
 -2.3            	UzNeutralsISW_dim
 1.0             	mNeutralsmp
+
+#USERSWITCH
++init +ic +perturb +progress		StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 
@@ -293,9 +293,6 @@ minmod			TypeLimiter
 
 #RUN ####################################################################
 
-#USERSWITCH
-+source_expl -progress +perturb		StringSwitch
-
 #TIMESTEPPING
 2                       nStage
 0.6                     CflExpl
@@ -310,6 +307,9 @@ mc                      TypeLimiter
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
 #NONCONSERVATIVE
 F                       UseNonConservative
+
+#USERSWITCH
++source_expl -progress +perturb		StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 

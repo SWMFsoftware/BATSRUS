@@ -2,10 +2,10 @@
 Test for Saturn
 
 #PLANET
-SATURN		NamePlanet
+SATURN			NamePlanet
 
 #ROTATIONAXIS
-F               IsRotAxisPrimary
+F			IsRotAxisPrimary
 
 #MAGNETICAXIS
 T			IsMagAxisPrimary (rest of parameters read if true) 
@@ -13,13 +13,13 @@ T			IsMagAxisPrimary (rest of parameters read if true)
 180.0			MagAxisPhi   [degree] 
 
 #STARTTIME
-2007		year
-1		month
-12		day
-12		hour
-0		minute
-0		second 
-0.0 		FracSecond 
+2007			year
+1			month
+12			day
+12			hour
+0			minute
+0			second 
+0.0 			FracSecond 
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -31,15 +31,15 @@ F			DoSaveRestart (Rest of parameters read if true)
 SOLARWIND
 
 #GRID
-       7                    proc_dims(1)		nRootBlockX
-       4                    proc_dims(2)		nRootBlockY
-       4                    proc_dims(3)		nRootBlockZ
- -5.76000E+02                         x1		xMin
-  0.96000E+02                         x2		xMax
- -1.92000E+02                         y1		yMin
-  1.92000E+02                         y2		yMax
- -1.92000E+02                         z1		zMin
-  1.92000E+02                         z2		zMax
+       7		nRootBlockX
+       4		nRootBlockY
+       4		nRootBlockZ
+ -5.76000E+02          	xMin
+  0.96000E+02		xMax
+ -1.92000E+02		yMin
+  1.92000E+02		yMax
+ -1.92000E+02		zMin
+  1.92000E+02		zMax
 
 #GRIDBLOCKALL
 720			MaxBlock
@@ -123,31 +123,26 @@ cut MHD tec             StringPlot
  -9.99                  zMaxCut    
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)		TypeBc1 
-inflow			TypeBC_I(west_)		TypeBc2 
-float			TypeBC_I(south_)		TypeBc3
-float			TypeBC_I(north_)		TypeBc4
-float			TypeBC_I(bot_)		TypeBc5
-float			TypeBC_I(top_)		TypeBc6
-
-
-This may be needed for the jin jout etc. log variables ??
-#MESSAGEPASS
-all
+outflow			TypeBc1 
+inflow			TypeBc2 
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #TVDRESCHANGE
 T
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExlp		CflExpl  
+0.80			CflExpl  
 
 #INNERBOUNDARY
-ionosphere				TypeBcInner 
+ionosphere		TypeBcInner 
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux		FluxType 
+Rusanov			TypeFlux
 
 #DIVB
 T			UseDivbSource
@@ -161,39 +156,42 @@ T			UseHyperbolicDivB
 0.1			HypDecay
 
 #AMR
-20			DnRefine		dnRefine
-F			DoAutomaticRefinement 		DoAutoRefine 
+20			DnRefine
+F			DoAutomaticRefinement
 
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-25                    MaxIter		MaxIteration
--1.			TimeMax		tSimulationMax
+25			MaxIteration
+-1.			tSimulationMax
 
 #RUN   #######################################################################
 
 #AMR
--1			DnRefine		dnRefine
+-1			DnRefine
 
 #TIMESTEPPING
 2			nStage
-0.65			CflExlp		CflExpl  
+0.65			CflExpl  
 
 #SCHEME
-2			nORDER		nOrder
-Linde			TypeFlux		FluxType
-minmod                  TypeLimiter		LimiterType  
+2			nOrder
+Linde			TypeFlux
+minmod                  TypeLimiter
 
 #BORIS
-T                       boris_correction		UseBorisCorrection
-1.0                     boris_cLIGHT_factor		BorisClightFactor 
+T			UseBorisCorrection
+1.0                     BorisClightFactor 
+
+#USERSWITCH
++source			StringSwitch
 
 #USERINPUTBEGIN ---------------
 
 #MASSLOADING
 T			UseMassLoading
 3.16228E27              MassLoadingRate (#/s)
-F			AccelerateMassLoading		DoAccelerateMassLoading 
+F			DoAccelerateMassLoading 
 
 #USERINPUTEND -----------------
 
@@ -207,5 +205,5 @@ parabola		TypeConservCrit_I
 24.     	        yParabolaConserv
 
 #STOP
-50			MaxIter		MaxIteration
--1.			TimeMax		tSimulationMax  
+50			MaxIteration
+-1.			tSimulationMax  

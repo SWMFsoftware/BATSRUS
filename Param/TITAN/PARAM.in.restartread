@@ -1,6 +1,3 @@
-#ECHO
-T                       DoEcho
-
 #INCLUDE
 GM/restartIN/restart.H
 
@@ -49,6 +46,9 @@ fixed                   TypeBc3
 fixed                   TypeBc4
 fixed                   TypeBc5
 fixed                   TypeBc6
+
+#USERSWITCH
++init +ic +source		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------------------------
 

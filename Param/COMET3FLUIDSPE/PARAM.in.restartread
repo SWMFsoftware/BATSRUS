@@ -22,6 +22,9 @@ user                    TypeExtraBoundary
 #INNERBOUNDARY
 ionosphere		TypeBc_In
 
+#USERSWITCH
++init +source +update		StringSwitch
+
 #USERINPUTBEGIN --------------------
 
 #COMET

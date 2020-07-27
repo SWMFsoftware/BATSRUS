@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #COMPONENT
 EE			NameComp
 
@@ -50,7 +47,11 @@ READ                    TypeNormalization
 6.4E03                  No2SiUnitU 
 2.7E-4                  No2SiUnitRho
 
-#USERINPUTBEGIN
+#USERSWITCH
++init +ic +source +update		StringSwitch
+
+#USERINPUTBEGIN -------------------------
+
 #RADMHD
 0.0                     z_photo
 40.                     UnsignedFluxHeight
@@ -80,7 +81,8 @@ F                       UseRope
 1.e1                    lamb
 1.			buoyancy
 1.e1                    b0_rope
-#USERINPUTEND
+
+#USERINPUTEND ------------------------
 
 #LOOKUPTABLE
 RhoUzExtraEP(Z,Const)   NameTable

@@ -4,6 +4,9 @@ Param/CRASH/START.in
 #SAVEINITIAL
 F			DoSaveInitial
 
+#USERSWITCH
++update			StringSwitch
+
 #CHECKGRIDSIZE
 10			nI
 1			nJ

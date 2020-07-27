@@ -40,7 +40,7 @@ F			UseCurlB0
 5.6e-4			MonopoleStrengthSi
 
 #USERSWITCH
-+all -perturb		StringSwitch
++init +ic +source	StringSwitch
 
 #USERINPUTBEGIN ------------------------
 
