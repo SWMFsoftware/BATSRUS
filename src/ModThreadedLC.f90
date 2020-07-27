@@ -4,8 +4,8 @@
 module ModThreadedLC
 !  use ModUtilities, ONLY: norm2
   use BATL_lib,            ONLY: test_start, test_stop, iProc
-  use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
-       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
+  use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog,  &
+       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_,            &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        UseTriangulation, PSi_, TeSi_, TiSi_, AMajor_, AMinor_,           &
@@ -62,8 +62,8 @@ module ModThreadedLC
   ! Arrays for 1D distributions
   !
   real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I,            &
-       TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                  &
-       TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
+       TeSi_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                  &
+       TiSi_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
        ExchangeRate_I, EnthalpyFlux_I, Flux_I, DissipationMinus_I,       &
@@ -134,7 +134,7 @@ module ModThreadedLC
   !
   real :: cExchangeRateSi
   !
-  ! See above for the use of the latter constant
+  ! See above about usage of the latter constant
   !
   integer, parameter:: Impl_=3
 
@@ -166,10 +166,8 @@ contains
     allocate(  AMinor_I(0:nPointThreadMax));   AMinor_I = 0.0
 
     allocate(   TeSi_I(nPointThreadMax));     TeSi_I = 0.0
-    allocate(TeSiOld_I(nPointThreadMax));  TeSiOld_I = 0.0
     allocate(TeSiStart_I(nPointThreadMax));  TeSiStart_I = 0.0
     allocate(   TiSi_I(nPointThreadMax));     TiSi_I = 0.0
-    allocate(TiSiOld_I(nPointThreadMax));  TiSiOld_I = 0.0
     allocate(TiSiStart_I(nPointThreadMax));  TiSiStart_I = 0.0
     allocate(   Cons_I(nPointThreadMax));     Cons_I = 0.0
     allocate( PSi_I(nPointThreadMax));   PSi_I = 0.0
@@ -603,9 +601,9 @@ contains
        write(*,*)'BarometricFactor=',BarometricFactor
        write(*,*)'DeltaTeFactor=',DeltaTeFactor
        write(*,*)&
-            'iPoint TeSiOld TeSi TeSiStart PSi ResHeating ResEnthalpy'
+            'iPoint TeSi TeSiStart PSi ResHeating ResEnthalpy'
        do iPoint=1,nPoint
-          write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+          write(*,'(i4,6es15.6)')iPoint, TeSi_I(iPoint),&
                TeSiStart_I(iPoint),&
                PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
        end do
@@ -688,7 +686,8 @@ contains
          !
          Xi_I(1) = 0.50*DXi_I(1)
          do iPoint = 2, nPoint
-            Xi_I(iPoint) = Xi_I(iPoint) + 0.50*(DXi_I(iPoint-1) + DXi_I(iPoint))
+            Xi_I(iPoint) = Xi_I(iPoint-1) + &
+                 0.50*(DXi_I(iPoint-1) + DXi_I(iPoint))
          end do
          !
          ! Correct the end points by the half intervals
@@ -915,24 +914,220 @@ contains
     !============================================================================
     real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
-      !--------------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       dissipation_major = (-AMinor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor)*DeltaXi
     end function dissipation_major
-    !============================================================================
+    !===========================================================================
     real function dissipation_minor(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
-      !--------------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       dissipation_minor = ( AMajor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor)*DeltaXi
     end function dissipation_minor
-    !============================================================================
+    !===========================================================================
+    subroutine get_aw_dissipation(AMajor, AMinor, Reflection, DeltaXi, &
+         DissipationPlus, DissipationMinus, M_VV)
+      !Solves sources and Jacobian for solveng a system of equations:
+      ! dAMajor/d Xi = DissipationPlus
+      !-dAMinor/d Xi = DissipationMinus
+      !INPUTS:
+      ! Wave amplitudes
+      real, intent(in)  :: AMajor, AMinor
+      ! Reflection coefficient
+      real, intent(in)  :: Reflection
+      ! Dimensionless mesh size
+      real, intent(in)  :: DeltaXi
+      !OUTPUTS:
+      ! Sources
+      real, intent(out) :: DissipationPlus, DissipationMinus
+      ! Jacobian
+      real, intent(out) :: M_VV(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_)
+      !-------------------------------------------------------------------------
+      if(AMajor > MaxImbalance*AMinor)then
+         !AMajor is dominant. Figure out if the 
+         !reflection shoud be limited:
+         if(0.5*Reflection < AMajor)then
+            !
+            ! Unlimited reflection
+            !`
+            DissipationPlus = (&
+                 -AMinor*(1 - MaxImbalance*AMinor/AMajor)*0.5*Reflection &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationPlus/d amajor = aminor*&
+            ! (1 + 0.5*Reflection*MaxImbalance*aMinor/aMajor**2)*DeltaXi
+            !
+            M_VV(ConsAMajor_,ConsAMajor_) = 1 + AMinor*(1 +  &
+                 0.5*Reflection*MaxImbalance*aMinor/aMajor**2)*DeltaXi
+            !
+            !-dDissipationPlus/d aminor = ( (1 - 2*MaxImbalance*aMinor/aMajor)&
+            !      *0.5*Reflection + aMajor)*DeltaXi >0
+            !
+            M_VV(ConsAMajor_,ConsAMinor_) = ((1 - 2*MaxImbalance*aMinor/aMajor)&
+                 *0.5*Reflection + aMajor)*DeltaXi
+
+            DissipationMinus = (&
+                 (AMajor - MaxImbalance*AMinor)*0.5*Reflection &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationMinus/d aMinor = (AMajor + MaxImbalance  &
+            !    *0.5*Reflection)*DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMinor_) = 1 + (AMajor + MaxImbalance &
+                 *0.5*Reflection)*DeltaXi
+            !
+            !-dDissipationMinus/d aMajor = (aMinor - 0.5*Reflection)*DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMajor_) = (aMinor - 0.5*Reflection) &
+                 *DeltaXi
+         else
+            !
+            ! Limited reflection
+            !
+            DissipationPlus = (&
+                 -AMinor*(AMajor - MaxImbalance*AMinor) &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationPlus/d amajor = 2*aminor*DeltaXi
+            !
+            M_VV(ConsAMajor_,ConsAMajor_) = 1 + 2*aminor*DeltaXi
+            !
+            !-dDissipationPlus/d aminor = 2*(AMajor - MaxImbalance*AMinor)&
+            !     *DeltaXi  >0
+            !
+            M_VV(ConsAMajor_,ConsAMinor_) = 2*(AMajor - MaxImbalance*AMinor) &
+                 *DeltaXi
+
+            DissipationMinus = (&
+                 AMajor*(AMajor - MaxImbalance*AMinor) &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationMinus/d aMinor = AMajor*(1 + MaxImbalance) &
+            !   *DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*(1 + MaxImbalance) &
+                 *DeltaXi
+            !
+            !-dDissipationMinus/d aMajor = (AMinor*(1 + MaxImbalance) - &
+            !       2*AMajor)*DeltaXi < 0
+            !
+            M_VV(ConsAMinor_,ConsAMajor_) = (AMinor*(1 + MaxImbalance)  &
+                 -2*AMajor)*DeltaXi
+         end if
+      elseif(AMinor > MaxImbalance*AMajor)then
+         !AMinor is dominant. Figure out if the 
+         !reflection shoud be limited:
+         if(0.5*Reflection < AMinor)then
+            !
+            ! Unlimited reflection
+            !`
+            DissipationPlus = (&
+                 (AMinor - MaxImbalance*AMajor)*0.5*Reflection &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationPlus/d amajor = 1 (aMinor + MaxImbalance &
+            !      *0.5*Reflection)*DeltaXi
+            !
+            M_VV(ConsAMajor_,ConsAMajor_) = 1 + (aMinor + MaxImbalance &
+                 *0.5*Reflection)*DeltaXi
+            !
+            !-dDissipationPlus/d aminor = (amajor - 0.5*Reflection)
+            !       *DeltaXi
+            !
+            M_VV(ConsAMajor_,ConsAMinor_) = (amajor - 0.5*Reflection) &
+                 *DeltaXi
+
+            DissipationMinus = (&
+                 -AMajor*(1 - MaxImbalance*AMajor/AMinor)*0.5*Reflection &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-d DissipationMinus/d aMinor = AMajor*(1 + 0.5*Reflection &
+            !    *MaxImbalance*AMajor/AMinor**2)*DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*(1 + 0.5*Reflection &
+                 *MaxImbalance*AMajor/AMinor**2)*DeltaXi
+            !
+            !-d DissipationMinus/d aMajor = (AMinor + (1 - 2*MaxImbalance &
+            !    *AMajor/AMinor)*0.5*Reflection)*DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMajor_) = (AMinor + (1 - 2*MaxImbalance &
+                 *AMajor/AMinor)*0.5*Reflection)*DeltaXi
+         else
+            !
+            ! Limited reflection
+            !
+            DissipationPlus = (&
+                 AMinor*(AMinor - MaxImbalance*AMajor) &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationPlus/d amajor = aMinor*(1 + MaxImbalance)*DeltaXi
+            !
+            M_VV(ConsAMajor_,ConsAMajor_) = 1 + aMinor*(1 + MaxImbalance) &
+                 *DeltaXi
+            !
+            !-dDissipationPlus/d aminor = (aMajor*(1 +  MaxImbalance) &
+            ! -2*AMinor)*DeltaXi < 0
+            !
+            M_VV(ConsAMajor_,ConsAMinor_) = (aMajor*(1 +  MaxImbalance) &
+                 -2*AMinor)*DeltaXi
+            
+            DissipationMinus = (&
+                 -AMajor*(AMinor - MaxImbalance*AMajor)  &
+                 - AMinor*AMajor)*DeltaXi
+            !
+            !-dDissipationMinus/d aMinor = 2*AMajor*DeltaXi
+            !
+            M_VV(ConsAMinor_,ConsAMinor_) = 1 + 2*AMajor*DeltaXi
+            !
+            !-d/d aMajor = 2*(aMinor - MaxImbalance*AMajor)*DeltaXi >0
+            !
+            M_VV(ConsAMinor_,ConsAMajor_) = 2*(aMinor - MaxImbalance*AMajor)&
+               *DeltaXi  
+         end if
+      else
+         !
+         ! No reflection
+         !
+         DissipationPlus = - AMinor*AMajor*DeltaXi
+         !
+         !-dDissipationPlus/d amajor = aMinor*DeltaXi
+         !
+         M_VV(ConsAMajor_,ConsAMajor_) = 1 + aMinor*DeltaXi
+         !
+         !-dDissipationPlus/d aminor = aMajor*DeltaXi
+         !
+         M_VV(ConsAMajor_,ConsAMinor_) = aMajor*DeltaXi
+
+         DissipationMinus = -AMinor*AMajor*DeltaXi
+         !
+         !-dDissipationMinus /d aMinor = AMajor*DeltaXi
+         !
+         M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*DeltaXi
+         !
+         !-dDissipationMinus /d aMajor = aMinor*DeltaXi
+         !
+         M_VV(ConsAMinor_,ConsAMajor_) = aMinor*DeltaXi
+      end if
+      ! dissipation_major = (-AMinor*&
+      !      (max(0.0,AMajor - MaxImbalance*AMinor)      &
+      !      -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+      !      min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+      !      - AMinor*AMajor)*DeltaXi
+      
+      !dissipation_minor = ( AMajor*&
+      !     (max(0.0,AMajor - MaxImbalance*AMinor)      &
+      !     -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
+      !     min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
+      !     - AMinor*AMajor)*DeltaXi
+    end subroutine get_aw_dissipation
+    !===========================================================================
     subroutine get_res_heating
       real    :: DeltaXi, AMajor, AMinor, ReflCoef
       integer :: iPoint
@@ -944,12 +1139,9 @@ contains
       !
       L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
       L_VVI(ConsAMajor_,ConsAMAjor_,1:nPoint) = -1
-      call lin_advection_source_plus(&
-           nX=nPoint,                &
-           nGCLeft=0,                &
-           nGCRight=0,               &
-           FIn_I=AMajor_I(1:nPoint), &
-           Source_I = Res_VI(ConsAMajor_,1:nPoint), BetaIn = 1.3)
+      Res_VI(ConsAMajor_,2:nPoint) = &
+           AMajor_I(1:nPoint-1) - AMajor_I(2:nPoint)
+      Res_VI(ConsAMajor_,1) = 0.0
       !
       ! Go backward, integrate AMinor_I with given AMajor_I
       ! We integrate equation,
@@ -960,12 +1152,9 @@ contains
       !
       U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
       U_VVI(ConsAMinor_,ConsAMinor_,1:nPoint) = -1
-      call lin_advection_source_minus(&
-           nX=nPoint,                &
-           nGCLeft=0,                &
-           nGCRight=0,               &
-           FIn_I=AMinor_I(1:nPoint), &
-           Source_I = Res_VI(ConsAMinor_,1:nPoint), BetaIn = 1.3)
+      Res_VI(ConsAMinor_,1:nPoint-1) = &
+           AMinor_I(2:nPoint) - AMinor_I(1:nPoint-1)
+      Res_VI(ConsAMinor_,nPoint) = 0.0
       !
       !Account for reflection and dissipation:
       !
@@ -975,30 +1164,30 @@ contains
          DeltaXi = DXi_I(iPoint)
          ReflCoef = 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint))
          !
-         ! Sources
+         ! Sources and Jacobian
          !
-         DissipationPlus_I( iPoint) = dissipation_major(AMajor, AMinor,&
-              ReflCoef, DeltaXi)
-         DissipationMinus_I(iPoint) = dissipation_minor(AMajor, AMinor,&
-              ReflCoef, DeltaXi)
-         Res_VI(ConsAMajor_,iPoint) = Res_VI(ConsAMajor_,iPoint) +     &
+         call get_aw_dissipation(AMajor, AMinor, ReflCoef, DeltaXi, &
+              DissipationPlus_I(iPoint), DissipationMinus_I(iPoint),&
+              M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,iPoint))
+         Res_VI(ConsAMajor_,iPoint) = Res_VI(ConsAMajor_,iPoint) +  &
               DissipationPlus_I( iPoint) 
-         Res_VI(ConsAMinor_,iPoint) = Res_VI(ConsAMinor_,iPoint) +     &
+         Res_VI(ConsAMinor_,iPoint) = Res_VI(ConsAMinor_,iPoint) +  &
               DissipationMinus_I( iPoint) 
-         ResHeating_I(iPoint) = -2*AMajor*DissipationPlus_I(iPoint) -  &
-           2*AMinor*DissipationMinus_I(iPoint)
-         !
-         ! Jacobian
-         !
-         M_VVI(ConsAMajor_,ConsAMajor_,iPoint) = 1 + AMinor*DeltaXi
-         M_VVI(ConsAMajor_,ConsAMinor_,iPoint) = - DissipationPlus_I(iPoint)/&
-              AMinor
-         M_VVI(ConsAMinor_,ConsAMinor_,iPoint) = 1 + AMajor*DeltaXi
-         M_VVI(ConsAMinor_,ConsAMajor_,iPoint) = - DissipationMinus_I(iPoint)/&
-              AMajor
+         ResHeating_I(iPoint) = -2*AMajor*DissipationPlus_I(iPoint) &
+              -2*AMinor*DissipationMinus_I(iPoint)
       end do
+      !
+      !  Particular cases
+      !
+      Res_VI(ConsAMajor_,1) = 0
+      M_VVI(ConsAMajor_,ConsAMajor_:ConsAMinor_,     1) = [1.0, 0.0]
+      !
+      !
+      Res_VI(ConsAMinor_,nPoint) = 0
+      M_VVI(ConsAMinor_,ConsAMajor_:ConsAMinor_,nPoint) = [0.0, 1.0]
+      !
     end subroutine get_res_heating
-    !============================================================================
+    !===========================================================================
     subroutine solve_a_plus_minus(AMinorBC,&
          AMajorBC, nIterIn)
       ! INPUT
@@ -1012,8 +1201,12 @@ contains
       integer:: nIter
       real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
       character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
-      !--------------------------------------------------------------------------
-      AMajor_I(0)  = 1.0
+      !-------------------------------------------------------------------------
+      if(UseThomasAlg4Waves)then
+         AMajor_I(1) = 1.0
+      else
+         AMajor_I(0) = 1.0
+      end if
       AMinor_I(nPoint)  = AMinorBC
       if(present(nIterIn))then
          nIter=nIterIn
@@ -1023,30 +1216,32 @@ contains
       DissipationMinus_I = 0.0
       DissipationPlus_I  = 0.0
       do iIter=1,nIter
-         !\
-         ! Go forward, integrate AMajor_I with given AMinor_I
-         !/
          ADiffMax = 0.0
-         do iPoint=1, nPoint
-            ! Predictor
-            AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
-            AOld = AMajor_I(iPoint)
-            DeltaXi = DXi_I(iPoint)
-            
-            ! Corrector
-            AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
-            APMid = AP + 0.50*dissipation_major(AP, AM, &
-                 ReflCoef_I(iPoint-1),DeltaXi)
-            
-            DissipationPlus_I(iPoint) = dissipation_major(&
-                 APMid, AMMid, &
-                 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
-            
-            AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
-            ADiffMax = max(ADiffMax, &
-                 abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
-            !ADiffMax = max(ADiffMax, abs(AOld - AMajor_I(iPoint)))
-         end do
+       if(UseThomasAlg4Waves)then
+          call thomas_alg( ADiffMax)
+       else
+          call runge_kutta(ADiffMax)
+       end if
+        ! do iPoint=1, nPoint
+        !    ! Predictor
+        !    AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
+        !    AOld = AMajor_I(iPoint)
+        !    DeltaXi = DXi_I(iPoint)
+        !    
+        !    ! Corrector
+        !    AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
+        !    APMid = AP + 0.50*dissipation_major(AP, AM, &
+        !         ReflCoef_I(iPoint-1),DeltaXi)
+        !    
+        !    DissipationPlus_I(iPoint) = dissipation_major(&
+        !         APMid, AMMid, &
+        !         0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
+        !    
+        !!    AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
+        !    ADiffMax = max(ADiffMax, &
+        !         abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
+        !    !ADiffMax = max(ADiffMax, abs(AOld - AMajor_I(iPoint)))
+        ! end do
          ! Go backward, integrate AMinor_I with given AMajor_I
          ! We integrate equation,
          !
@@ -1055,40 +1250,139 @@ contains
          ! *min(ReflCoef,2max(a_,a_+))-
          ! -2a_-a_+
          !
-         do iPoint = nPoint - 1, 0, -1
-            ! Predictor
-            AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
-            AOld = AMinor_I(iPoint)
-            DeltaXi = DXi_I(iPoint+1)
-            
-            ! Corrector
-            APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
-            AMMid = AM + 0.5*dissipation_minor(AP, AM, &
-                 ReflCoef_I(iPoint+1),DeltaXi)
-            DissipationMinus_I(iPoint+1) = dissipation_minor(&
-                 APMid, AMMid, &
-                 0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
-            AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
-            ADiffMax = max(ADiffMax,&
-                 abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
-            !ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
-         end do
+        ! do iPoint = nPoint - 1, 0, -1
+        !    ! Predictor
+        !    AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
+        !    AOld = AMinor_I(iPoint)
+        !    DeltaXi = DXi_I(iPoint+1)
+        !    
+        !    ! Corrector
+        !    APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
+        !    AMMid = AM + 0.5*dissipation_minor(AP, AM, &
+        !         ReflCoef_I(iPoint+1),DeltaXi)
+        !    DissipationMinus_I(iPoint+1) = dissipation_minor(&
+        !         APMid, AMMid, &
+        !         0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
+        !    AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
+!            ADiffMax = max(ADiffMax,&
+ !                abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
+ !           !ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
+ !        end do
          if(ADiffMax<cTol)EXIT
          if(DoConvergenceCheck.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
                  ' AMinorBC=',AMinorBC
+            write(*,*)'iPoint AMajor Res_VI DCons_VI Error TeSi TiSi PSi'
+            do iPoint = 1, nPoint
+               write(*,*)iPoint, AMajor_I(iPoint), Res_VI(ConsAMajor_,iPoint)&
+                    ,Res_VI(ConsAMajor_,iPoint)-DissipationPlus_I(iPoint),&
+                    DissipationPlus_I(iPoint),DCons_VI(ConsAMajor_,iPoint),&
+                    TeSi_I(iPoint), TiSi_I(iPoint), PSi_I(iPoint)
+            end do
+            write(*,*)'iPoint AMinor Res_VI DCons_VI Error ReflCoef VaLog dXi'
+            do iPoint = 1, nPoint
+               write(*,*)iPoint, AMinor_I(iPoint), Res_VI(ConsAMinor_,iPoint)&
+                    ,Res_VI(ConsAMinor_,iPoint)-DissipationMinus_I(iPoint),  &
+                    DissipationMinus_I(iPoint), DCons_VI(ConsAMinor_,iPoint),&
+                    ReflCoef_I(iPoint), VaLog_I(iPoint), DXi_I(iPoint)
+            end do
             call stop_mpi('Did not reach convergence in solve_a_plus_minus')
          end if
       end do
       AMajorBC = AMajor_I(nPoint)
-      ResHeating_I = 0.0
-      ResHeating_I(1:nPoint-1) = &
-           -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
-           DissipationPlus_I(1:nPoint-1) -&
-           (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
-           DissipationMinus_I(1:nPoint-1)
+      if(.not.UseThomasAlg4Waves)then
+         ResHeating_I = 0.0
+         ResHeating_I(1:nPoint-1) = &
+              -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
+              DissipationPlus_I(1:nPoint-1) -&
+              (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
+              DissipationMinus_I(1:nPoint-1)
+      end if
     end subroutine solve_a_plus_minus
-    !==========================================================================
+    !===========================================================================
+    subroutine thomas_alg(ADiffMax)
+      real, intent(inout) :: ADiffMax
+      real    :: AOld
+      integer :: iPoint
+      !-------------------------------------------------------------------------
+      !
+      ! Calculate sources and Jacobians:
+      !
+      call get_res_heating
+      call tridiag_block_matrix(nDim=2, nI=nPoint,  &
+           L_VVI=L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
+           1:nPoint),&
+           M_VVI=M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
+           1:nPoint),&
+           U_VVI=U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
+           1:nPoint),&
+           R_VI=Res_VI(ConsAMajor_:ConsAMinor_,1:nPoint),            &
+           W_VI=DCons_VI(ConsAMajor_:ConsAMinor_,1:nPoint))              
+      do iPoint=2, nPoint
+         AOld = AMajor_I(iPoint)         
+         AMajor_I(iPoint) = AMajor_I(iPoint) + DCons_VI(ConsAMajor_,iPoint)
+         ADiffMax = max(ADiffMax,abs(DCons_VI(ConsAMajor_,iPoint)))
+      end do
+      do iPoint = nPoint - 1, 1, -1
+         AOld = AMinor_I(iPoint)
+         AMinor_I(iPoint) = AMinor_I(iPoint) + DCons_VI(ConsAMinor_,iPoint)
+         ADiffMax = max(ADiffMax,abs(DCons_VI(ConsAMinor_,iPoint)))
+      end do
+    end subroutine thomas_alg
+    !===========================================================================
+    subroutine runge_kutta(ADiffMax)
+      real, intent(inout) :: ADiffMax
+      integer:: iPoint
+      real   :: DeltaXi, AP, AM, APMid, AMMid, AOld
+      !-----------------------------------------------------------------------
+      do iPoint=1, nPoint
+         ! Predictor
+         AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
+         AOld = AMajor_I(iPoint)
+         DeltaXi = DXi_I(iPoint)
+         
+         ! Corrector
+         AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
+         APMid = AP + 0.50*dissipation_major(AP, AM, &
+              ReflCoef_I(iPoint-1),DeltaXi)
+         
+         DissipationPlus_I(iPoint) = dissipation_major(&
+              APMid, AMMid, &
+              0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
+         
+         AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
+         ADiffMax = max(ADiffMax, &
+              abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
+         !ADiffMax = max(ADiffMax, abs(AOld - AMajor_I(iPoint)))
+      end do
+      ! Go backward, integrate AMinor_I with given AMajor_I
+      ! We integrate equation,
+      !
+      ! 2da_-/d\xi=
+      !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+      ! *min(ReflCoef,2max(a_,a_+))-
+      ! -2a_-a_+
+      !
+      do iPoint = nPoint - 1, 0, -1
+         ! Predictor
+         AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
+         AOld = AMinor_I(iPoint)
+         DeltaXi = DXi_I(iPoint+1)
+         
+         ! Corrector
+         APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
+         AMMid = AM + 0.5*dissipation_minor(AP, AM, &
+              ReflCoef_I(iPoint+1),DeltaXi)
+         DissipationMinus_I(iPoint+1) = dissipation_minor(&
+              APMid, AMMid, &
+              0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
+         AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
+         ADiffMax = max(ADiffMax,&
+              abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
+         !ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
+      end do
+    end subroutine runge_kutta
+    !===========================================================================
     subroutine advance_thread(IsTimeAccurate)
       use ModMain,     ONLY: cfl, Dt, time_accurate
       use ModAdvance,  ONLY: time_BLK, nJ, nK
@@ -1180,8 +1474,6 @@ contains
          !
          ! Iterations
          !
-         TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
-         TiSiOld_I(1:nPoint) = TiSi_I(1:nPoint)
          !
          ! Shape the source.
          !
@@ -1380,9 +1672,9 @@ contains
       end do
       if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
            .and.DoConvergenceCheck)then
-         write(*,'(a)')'TeOld Te TeMin PSi_I Heating Enthalpy'
+         write(*,'(a)')'Te TeMin PSi_I Heating Enthalpy'
          do iPoint=1,nPoint
-            write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+            write(*,'(i4,6es15.6)')iPoint, TeSi_I(iPoint),&
                  BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
                  PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
          end do
