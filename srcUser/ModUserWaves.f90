@@ -131,7 +131,9 @@ contains
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
+    
+    UseUserIcs = .true.
+    
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
