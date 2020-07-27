@@ -4,8 +4,8 @@
 module ModThreadedLC
 !  use ModUtilities, ONLY: norm2
   use BATL_lib,            ONLY: test_start, test_stop, iProc
-  use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog,  &
-       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_,            &
+  use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
+       HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        UseTriangulation, PSi_, TeSi_, TiSi_, AMajor_, AMinor_,           &
@@ -781,8 +781,7 @@ contains
          ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
       end if
     end subroutine get_reflection
-    !==========================================================================
-    !==========================================================================
+    !===========================================================================
     subroutine get_heat_cond
       !------------------------------------------------------------------------
       M_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0 
@@ -857,7 +856,25 @@ contains
       ! Cooling
       ! 1. Source term:
       ! 
-      call get_cooling
+      ResCooling_I = 0.0;
+      do iPoint = 1, nPoint-1
+         if(TeSi_I(iPoint)>1.0e8)then
+            write(*,*)'Failure in heat condusction setting'
+            write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+            write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
+            write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
+            call stop_mpi('Stop!!!')
+         end if
+         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), &
+              Value_V, &
+              DoExtrapolate=.false.)
+         ResCooling_I(iPoint) = &
+              -BoundaryThreads_B(iBlock)%DsCellOverBSi_III(iPoint-nPoint,j,k)&
+              *Value_V(LambdaSI_)*Z*&
+              (PSi_I(iPoint)/(Z*TeSi_I(iPoint) + TiSi_I(iPoint)))**2
+         DResCoolingOverDLogT_I(iPoint) = &
+              ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
+      end do
       !
       ! 2. Source term derivatives:
       !
@@ -870,48 +887,21 @@ contains
       M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
            2*ResCooling_I(1:nPoint-1)/&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
-
     end subroutine get_heat_cond
-    !==========================================================================
-    subroutine get_cooling
-      integer ::  iPoint
-
-      !------------------------------------------------------------------------
-      ResCooling_I = 0.0;
-      do iPoint = 1, nPoint-1
-         if(TeSi_I(iPoint)>1.0e8)then
-            write(*,*)'Failure in heat condusction setting'
-            write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-            write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
-            write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
-            call stop_mpi('Stop!!!')
-         end if
-         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), &
-              Value_V, &
-           DoExtrapolate=.false.)
-         ResCooling_I(iPoint) = &
-              -BoundaryThreads_B(iBlock)%DsCellOverBSi_III(iPoint-nPoint,j,k)&
-              *Value_V(LambdaSI_)*Z*&
-              (PSi_I(iPoint)/(Z*TeSi_I(iPoint) + TiSi_I(iPoint)))**2
-         DResCoolingOverDLogT_I(iPoint) = &
-              ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
-      end do
-    end subroutine get_cooling
-    !==========================================================================
+    !===========================================================================
     subroutine solve_heating(nIterIn)
       use ModCoronalHeating,  ONLY: rMinWaveReflection
       integer, intent(in)::nIterIn
       integer:: iPoint 
       !------------------------------------------------------------------------
       call get_dxi_and_xi
-      !call analytical_wave
       call get_reflection
       call solve_a_plus_minus(&
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
     end subroutine solve_heating
-    !============================================================================
+    !===========================================================================
     real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
       !-------------------------------------------------------------------------
@@ -1185,7 +1175,6 @@ contains
       !
       Res_VI(ConsAMinor_,nPoint) = 0
       M_VVI(ConsAMinor_,ConsAMajor_:ConsAMinor_,nPoint) = [0.0, 1.0]
-      !
     end subroutine get_res_heating
     !===========================================================================
     subroutine solve_a_plus_minus(AMinorBC,&
@@ -1217,57 +1206,11 @@ contains
       DissipationPlus_I  = 0.0
       do iIter=1,nIter
          ADiffMax = 0.0
-       if(UseThomasAlg4Waves)then
-          call thomas_alg( ADiffMax)
-       else
-          call runge_kutta(ADiffMax)
-       end if
-        ! do iPoint=1, nPoint
-        !    ! Predictor
-        !    AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
-        !    AOld = AMajor_I(iPoint)
-        !    DeltaXi = DXi_I(iPoint)
-        !    
-        !    ! Corrector
-        !    AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
-        !    APMid = AP + 0.50*dissipation_major(AP, AM, &
-        !         ReflCoef_I(iPoint-1),DeltaXi)
-        !    
-        !    DissipationPlus_I(iPoint) = dissipation_major(&
-        !         APMid, AMMid, &
-        !         0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
-        !    
-        !!    AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
-        !    ADiffMax = max(ADiffMax, &
-        !         abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
-        !    !ADiffMax = max(ADiffMax, abs(AOld - AMajor_I(iPoint)))
-        ! end do
-         ! Go backward, integrate AMinor_I with given AMajor_I
-         ! We integrate equation,
-         !
-         ! 2da_-/d\xi=
-         !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
-         ! *min(ReflCoef,2max(a_,a_+))-
-         ! -2a_-a_+
-         !
-        ! do iPoint = nPoint - 1, 0, -1
-        !    ! Predictor
-        !    AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
-        !    AOld = AMinor_I(iPoint)
-        !    DeltaXi = DXi_I(iPoint+1)
-        !    
-        !    ! Corrector
-        !    APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
-        !    AMMid = AM + 0.5*dissipation_minor(AP, AM, &
-        !         ReflCoef_I(iPoint+1),DeltaXi)
-        !    DissipationMinus_I(iPoint+1) = dissipation_minor(&
-        !         APMid, AMMid, &
-        !         0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
-        !    AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
-!            ADiffMax = max(ADiffMax,&
- !                abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
- !           !ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
- !        end do
+         if(UseThomasAlg4Waves)then
+            call thomas_alg( ADiffMax)
+         else
+            call runge_kutta(ADiffMax)
+         end if
          if(ADiffMax<cTol)EXIT
          if(DoConvergenceCheck.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
