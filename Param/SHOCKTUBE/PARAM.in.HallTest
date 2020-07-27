@@ -65,6 +65,9 @@ periodic                TypeBc4
 periodic                TypeBc5
 periodic                TypeBc6
 
+#USERSWITCH
++ic			StringSwitch
+
 #USERINPUTBEGIN ----------------
 
 Right Alfven (no Hall)

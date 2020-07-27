@@ -25,6 +25,9 @@ GMRES			TypeKrylov
 T			DoPrecond
 HYPRE			TypePrecond
 
+#USERSWITCH
++all			StringSwitch
+
 #USERINPUTBEGIN ------------------------
 
 LEVELSET
