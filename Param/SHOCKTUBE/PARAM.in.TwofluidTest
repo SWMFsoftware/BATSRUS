@@ -70,9 +70,6 @@ float                   TypeBc4
 float                   TypeBc5
 float                   TypeBc6
 
-#USERSWITCH
-+ics			StringSwitch
-
 #USERINPUTBEGIN ----------------
 
 #WAVE

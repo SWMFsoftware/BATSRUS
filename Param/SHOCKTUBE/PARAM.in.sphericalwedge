@@ -47,9 +47,6 @@ spherical                       TypeGeometry
 #MONOPOLEB0
 16.0			MonopoleStrengthSi
 
-#USERSWITCH
-+ic			StringSwitch
-
 #USERINPUTBEGIN -----------------
 
 TOPHAT

@@ -77,9 +77,6 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-#USERSWITCH
-+ic			StringSwitch
-
 #USERINPUTBEGIN ----------------
 
 Bx  = 1

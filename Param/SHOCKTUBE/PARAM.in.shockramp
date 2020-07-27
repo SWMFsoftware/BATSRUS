@@ -70,15 +70,16 @@ gradlogrho	TypeRefine
 1.0/6.0			ShockPosition
 -1.0/1.73205		ShockSlope
 
-#USERSWITCH
--all
-
 #USERINPUTBEGIN ----------------
 
 #SHOCKRAMP
 T			DoShockRamp
 
 #USERINPUTEND   ----------------
+
+! No need for user initial conditions
+#USERSWITCH
+-ic			StringSwitch
 
 #OUTERBOUNDARY
 user			xMinBc

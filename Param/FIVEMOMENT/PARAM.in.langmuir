@@ -71,9 +71,6 @@ F			DoNormalizeCell
 0.0			ShockPosition
 1.0			ShockSlope
 
-#USERSWITCH
-+ic			StringSwitch
-
 #USERINPUTBEGIN ----------------
 
 #WAVE

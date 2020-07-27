@@ -47,9 +47,6 @@ pepar
 14.0			Ppar
 16.0			P
 
-#USERSWITCH
-+ic			StringSwitch
-
 #USERINPUTBEGIN -----------------
 
 #WAVE

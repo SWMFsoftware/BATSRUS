@@ -76,9 +76,6 @@ T			UseNonConservative
 -1.0			LambdaZ
 0.0			Phase
 
-#USERSWITCH
-+ic			StringSwitch
-
 #USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
