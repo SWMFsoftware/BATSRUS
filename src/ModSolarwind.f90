@@ -94,7 +94,7 @@ contains
   subroutine read_solar_wind_file
 
     use ModMain, ONLY: StartTime, Time_Simulation, &
-         iStartTime_I, UseStrict, TypeCoordSystem, NameVarLower_V
+         UseStrict, TypeCoordSystem, NameVarLower_V
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
          nVectorVar, iVectorVar_I
@@ -107,9 +107,8 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModUtilities, ONLY: upper_case, lower_case, split_string, &
-         open_file, close_file, CON_stop
+         open_file, close_file
     use ModMPI
-    use ModPlotFile, ONLY: save_plot_file
 
     character(len=500):: StringInputVar
 
@@ -135,7 +134,6 @@ contains
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call MPI_comm_rank(MPI_COMM_WORLD,iProc,iError)
     
     ! Set defaults
     UseZeroBx = .false.
@@ -427,8 +425,6 @@ contains
          iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
     use ModMPI
-    use BATL_Lib, ONLY: iComm
-    use ModPlotFile, ONLY: save_plot_file
     
     integer:: iData, iFluid
     integer:: T_= p_
