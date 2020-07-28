@@ -1030,7 +1030,7 @@ test_mars_start:
 	$(MAKE) test_mars_check
 
 test_mars_compile:
-	./Config.pl -${OPENMP} -u=Mars -e=MhdMars -g=6,6,6
+	./Config.pl ${OPENMP} -u=Mars -e=MhdMars -g=6,6,6
 	$(MAKE) BATSRUS
 	make PIDL
 
