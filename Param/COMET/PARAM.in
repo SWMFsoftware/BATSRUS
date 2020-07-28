@@ -63,6 +63,9 @@ T			UseBody (rest of parameters read if true)
 500/28			BodyNDim COp
 200.0                 	BodyTDim (K) temperature for fixed BC
 
+#USERSWITCH
++init +ic +source +update	StringSwitch
+
 #USERINPUTBEGIN -----------------------------------------------------
 
 #COMETPARAM
@@ -77,9 +80,6 @@ T			UseBody (rest of parameters read if true)
 #MultiSP
 6               nSpecies
 6               nNuSpecies
-
-#USERSWITCH
-+init +ic +source +update	StringSwitch
 
 #USERINPUTEND ---------------------------------------------------------
 

@@ -54,6 +54,9 @@ shell0
 1
 all
 
+#USERSWITCH
++all			StringSwitch
+
 #USERINPUTBEGIN -------------------------------------
 
 #SHAPEFILE
