@@ -268,6 +268,8 @@ g rBody
 nn1 te mlop ionop eionop recop chxop mlo2p iono2p eiono2p reco2p chxo2p
 g rBody
 
+#USERSWITCH
++all			StringSwitch
 
 #USERINPUTBEGIN ------------------------------------------
 
