@@ -9657,7 +9657,7 @@ if the logical, UsePlanarTriangles  is set to .true.
 	 </parameter>
 	 <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
 	 <parameter name="MaxIter" type="integer" min="1" default="20"/>
-	 <<parameter name="UseThomasAlg" type="logical" default="F"/>
+	 <parameter name="UseThomasAlg" type="logical" default="F"/>
 	 
 #THREADEDBC
 T	  UseAlignedVelocity
