@@ -9654,11 +9654,22 @@ if the logical, UsePlanarTriangles  is set to .true.
 			<option name="first" />
 			<option name="second"/>
 			<option name="limited"  default="T"/>
-			</parameter>
+	 </parameter>
+	 <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
+	 <parameter name="MaxIter" type="integer" min="1" default="20"/>
+	 <<parameter name="UseThomasAlg" type="logical" default="F"/>
+	 
 #THREADEDBC
 T	  UseAlignedVelocity
 F         DoConvergenceCheck
-limited   TypeBc
+limited   TypeBc             first/second/limited
+1e-6      Tolerance          (optional)
+20        MaxIteration       (optional)
+F         UseThomasAlgorithm (optional)
+
+This command sets things for the threaded field line algorithm.
+Ask Igor Sokolov if you want to learn more.
+Default values are shown.
 
 </command>
 
