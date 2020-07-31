@@ -13,6 +13,7 @@ module GM_wrapper
   use GM_couple_rb          !^CMP IF RB
   use GM_couple_pw          !^CMP IF PW
   use GM_couple_pc          !^CMP IF PC
+  use GM_couple_ua          !^CMP IF UA
 
   use BATL_lib, ONLY: iProc, nProc, iComm
   use ModBatsrusMethods, ONLY: &
@@ -92,6 +93,11 @@ module GM_wrapper
   public:: GM_satinit_for_rb
   public:: GM_get_sat_for_rb
   !^CMP END RB
+
+  !^CMP IF UA BEGIN
+  public:: GM_get_for_ua
+  public:: GM_put_from_ua
+  !^CMP END UA
 
 contains
   !==========================================================================

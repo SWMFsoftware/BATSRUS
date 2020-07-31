@@ -17,12 +17,13 @@ OBJ_IE = GM_couple_ie.o                                     #^CMP IF IE
 OBJ_PT = GM_couple_pt.o                                     #^CMP IF PT
 OBJ_PC = GM_couple_pc.o                                     #^CMP IF PC
 OBJ_PW = GM_couple_pw.o read_pw_buffer.o                    #^CMP IF PW
+OBJ_UA = GM_couple_ua.o					    #^CMP IF UA
 
 OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
 	GM_wrapper.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC) $(OBJ_PS)
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC) $(OBJ_PS) $(OBJ_UA)
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I../src -I../srcBATL -I${CRASHDIR}
