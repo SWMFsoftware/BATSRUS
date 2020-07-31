@@ -376,6 +376,9 @@ contains
     ! Electron heat condution flux from Low Corona to TR:
     !
     real :: HeatFlux2TR
+    
+    integer :: nIterHere
+    logical :: DoCheckConvHere
 
     character(len=*), parameter:: NameSub = 'solve_thread'
     character(len=12) :: NameTiming
@@ -426,8 +429,13 @@ contains
           TeSi_I(nPoint)   = TeSiIn
           TiSi_I(nPoint)   = TiSiIn
        end if
-       AMinor_I(nPoint)    = AMinorIn
+       DoCheckConvHere = .false.
+       nIterHere       = 1
+    else
+       DoCheckConvHere = DoConvergenceCheck
+       nIterHere       = nIter
     end if
+    AMinor_I(nPoint)    = AMinorIn
     select case(iAction)
     case(DoInit_)
        !
@@ -444,7 +452,7 @@ contains
        call get_dxi_and_xi
        call analytical_waves
        call advance_thread(IsTimeAccurate=.false.)
-       call solve_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
@@ -456,7 +464,7 @@ contains
           BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
        end if
     case(Enthalpy_)
-       call solve_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIterHere)
        !
        ! Do not store temperature
        !
@@ -479,7 +487,7 @@ contains
        !\
        ! Calculate AWaves and store pressure and temperature
        !/
-       call solve_heating(nIterIn=nIter)
+       call solve_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
@@ -1212,7 +1220,7 @@ contains
             call runge_kutta(ADiffMax)
          end if
          if(ADiffMax<cTol)EXIT
-         if(DoConvergenceCheck.and.iIter==nIter)then
+         if(DoCheckConvHere.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
                  ' AMinorBC=',AMinorBC
             write(*,*)'iPoint AMajor Res_VI DCons_VI Error TeSi TiSi PSi'
@@ -1251,8 +1259,9 @@ contains
       !
       ! Calculate sources and Jacobians:
       !
+      call timing_start('thomas_alg')
       call get_res_heating
-      call tridiag_block_matrix(nDim=2, nI=nPoint,  &
+      call tridiag_block_matrix2(nI=nPoint,  &
            L_VVI=L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
            1:nPoint),&
            M_VVI=M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
@@ -1271,6 +1280,7 @@ contains
          AMinor_I(iPoint) = AMinor_I(iPoint) + DCons_VI(ConsAMinor_,iPoint)
          ADiffMax = max(ADiffMax,abs(DCons_VI(ConsAMinor_,iPoint)))
       end do
+      call timing_stop('thomas_alg')
     end subroutine thomas_alg
     !===========================================================================
     subroutine runge_kutta(ADiffMax)
@@ -1278,6 +1288,7 @@ contains
       integer:: iPoint
       real   :: DeltaXi, AP, AM, APMid, AMMid, AOld
       !-----------------------------------------------------------------------
+      call timing_start('runge_kutta')
       do iPoint=1, nPoint
          ! Predictor
          AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
@@ -1324,6 +1335,7 @@ contains
               abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
          !ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
       end do
+      call timing_stop('runge_kutta')
     end subroutine runge_kutta
     !===========================================================================
     subroutine advance_thread(IsTimeAccurate)
@@ -1392,7 +1404,7 @@ contains
       !
       !
       !
-      call solve_heating(nIterIn=nIter)
+      call solve_heating(nIterIn=nIterHere)
       if(USi>0)then
          FluxConst    = USi * PSi_I(nPoint)/&
               ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
@@ -1413,7 +1425,7 @@ contains
       call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
            DoExtrapolate=.false.)
 
-      do iIter = 1,nIter
+      do iIter = 1,nIterHere
          !
          ! Iterations
          !
@@ -1555,7 +1567,7 @@ contains
          !M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
          !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
          !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
-         call tridiag_block_matrix(nDim=LogP_, nI=nPoint-1,     &
+         call tridiag_block_matrix3(nI=nPoint-1,     &
               L_VVI=L_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
               M_VVI=M_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
               U_VVI=U_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
@@ -1605,7 +1617,7 @@ contains
          !
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
-         call solve_heating(nIterIn=nIter)
+         call solve_heating(nIterIn=nIterHere)
          ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
               BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
               PSi_I(1:nPoint-1)**2/(&
@@ -1614,7 +1626,7 @@ contains
          if(all(abs(DCons_VI(Cons_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
       end do
       if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
-           .and.DoConvergenceCheck)then
+           .and.DoCheckConvHere)then
          write(*,'(a)')'Te TeMin PSi_I Heating Enthalpy'
          do iPoint=1,nPoint
             write(*,'(i4,6es15.6)')iPoint, TeSi_I(iPoint),&
@@ -1641,9 +1653,9 @@ contains
   !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                                !
   ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
   ! Here each of the compenets w_i and r_i are nDim-component states and
-  ! m_i, l_i, u_i are nDim*nDim matrices                                             !
-  subroutine tridiag_block_matrix(nDim,nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-    integer, intent(in):: nDim
+  ! m_i, l_i, u_i are nDim*nDim matrices                                       !
+  subroutine tridiag_block_matrix3(nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
+    integer, parameter:: nDim = 3
     integer, intent(in):: nI
     real, intent(in)   :: L_VVI(nDim,nDim,nI)
     real, intent(in)   :: M_VVI(nDim,nDim,nI)
@@ -1662,12 +1674,14 @@ contains
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
     !/
     character(len=*), parameter:: NameSub = 'tridiag_block_matrix'
+    character(len=*), parameter :: NameTiming = 'tridiag3'
     !--------------------------------------------------------------------------
-    if (determinant(M_VVI(:,:,1),nDim) == 0.0) then
+    call timing_start(NameTiming)
+    if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
-    TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
+    TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
     !\
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
@@ -1683,7 +1697,7 @@ contains
        !/
        TildeM_VV = M_VVI(:,:,j) - &
             matmul(L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j))
-       if (determinant(TildeM_VV, nDim) == 0.0) then
+       if (determinant(TildeM_VV) == 0.0) then
           write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
                M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
           call stop_mpi('3*3 block Tridiag failed')
@@ -1691,13 +1705,13 @@ contains
        !\
        ! Next element of inverted(Tilde(M))
        !/
-       TildeMInv_VV = inverse_matrix(nDim,TildeM_VV,DoIgnoreSingular=.true.)
+       TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
        !\
        ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
        ! satisfying the eq. (tilde(M) + L).W = R
        !/
-       W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j)) - &
-            matmul(TildeMInv_VV,matmul(L_VVI(:,:,j),W_VI(:,j-1)))
+       W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j) - &
+            matmul(L_VVI(:,:,j),W_VI(:,j-1)))
     end do
     do j = nI - 1, 1, -1
        !\
@@ -1706,8 +1720,95 @@ contains
        !/
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-  end subroutine tridiag_block_matrix
+    call timing_stop(NameTiming)
+  end subroutine tridiag_block_matrix3
   !============================================================================
+  subroutine tridiag_block_matrix2(nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
+    integer, parameter:: nDim = 2
+    integer, intent(in):: nI
+    real, intent(in)   :: L_VVI(nDim,nDim,nI)
+    real, intent(in)   :: M_VVI(nDim,nDim,nI)
+    real, intent(in)   :: U_VVI(nDim,nDim,nI)
+    real, intent(in)   :: R_VI(nDim,nI)
+    real, intent(out)  :: W_VI(nDim,nI)
+
+    integer:: j
+    real   :: TildeM_VV(nDim,nDim), TildeMInv_VV(nDim,nDim) 
+    real   :: TildeMInvDotU_VVI(nDim,nDim,2:nI)
+
+    !\
+    ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation
+    !      (M+L+U)W = R
+    ! may be equivalently written as
+    ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
+    !/
+    character(len=*), parameter:: NameSub = 'tridiag_block_matrix'
+    character(len=*), parameter :: NameTiming = 'tridiag2'
+    !--------------------------------------------------------------------------
+    call timing_start(NameTiming)
+    if (determinant_2(M_VVI(:,:,1)) == 0.0) then
+       call stop_mpi('Error in tridiag: M_I(1)=0')
+    end if
+    TildeM_VV = M_VVI(:,:,1)
+    TildeMInv_VV = inverse_matrix_2(TildeM_VV)
+    !\
+    ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
+    !/
+    W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
+    do j=2, nI
+       !\
+       ! Next 3*3 blok element of the matrix, Inverted(Tilde(M)).U
+       !/
+       TildeMInvDotU_VVI(:,:,j) = matmul(TildeMInv_VV,U_VVI(:,:,j-1))
+       !\
+       ! Next 3*3 block element of matrix tilde(M), obeying the eq.
+       ! tilde(M)+L.Inverted(\tilde(M))\dot.U = M
+       !/
+       TildeM_VV = M_VVI(:,:,j) - &
+            matmul(L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j))
+       if (determinant_2(TildeM_VV) == 0.0) then
+          write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
+               M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
+          call stop_mpi('2*2 block Tridiag failed')
+       end if
+       !\
+       ! Next element of inverted(Tilde(M))
+       !/
+       TildeMInv_VV = inverse_matrix_2(TildeM_VV)
+       !\
+       ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
+       ! satisfying the eq. (tilde(M) + L).W = R
+       !/
+       !W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j)) - &
+       !     matmul(TildeMInv_VV,matmul(L_VVI(:,:,j),W_VI(:,j-1)))
+       W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j) - &
+            matmul(L_VVI(:,:,j),W_VI(:,j-1)))
+    end do
+    do j = nI - 1, 1, -1
+       !\
+       ! Finally we solve equation
+       ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
+       !/
+       W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
+    end do
+    call timing_stop(NameTiming)
+  end subroutine tridiag_block_matrix2
+  !=============================================================================
+  real function determinant_2(a_II)
+    real, intent(in) :: a_II(2,2)
+    !---------------------------------------------------------------------------
+    determinant_2 = a_II(1,1)*a_II(2,2) - a_II(1,2)*a_II(2,1)
+  end function determinant_2
+  !=============================================================================
+  function inverse_matrix_2(a_II) result(b_II)
+    real :: b_II(2,2)
+    real, intent(in) :: a_II(2,2)
+    !---------------------------------------------------------------------------
+    b_II(1,1) =  a_II(2,2); b_II(2,2) =  a_II(1,1)
+    b_II(1,2) = -a_II(1,2); b_II(2,1) = -a_II(2,1)
+    b_II = b_II/determinant_2(a_II)
+  end function inverse_matrix_2
+  !=============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock)
 
