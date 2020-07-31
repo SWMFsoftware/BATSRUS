@@ -104,6 +104,7 @@ OBJECTS = \
 	ModTransitionRegion.o\
 	ModThreadedLC.o \
 	ModTimeStepControl.o \
+	ModUaCoupling.o \
 	ModUserEmpty.o \
 	ModUserInterface.o \
 	ModUser.o \
