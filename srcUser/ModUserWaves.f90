@@ -283,6 +283,8 @@ contains
 
        case('#UPDATEVAR')
           ! Only the states of the specified variables are updated
+          UseUserUpdateStates = .true.
+          
           call read_var('VarsUpdate', VarsUpdate)
 
           call split_string(VarsUpdate, nVarsUpdateMax, VarsUpdate_I, &
