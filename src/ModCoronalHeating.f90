@@ -71,6 +71,7 @@ module ModCoronalHeating
 
   logical,public :: UseTurbulentCascade = .false.
   logical,public :: UseWaveReflection = .true.
+  logical        :: UseSurfaceWaveRefl= .false.
   real,   public :: rMinWaveReflection = 0.0
 
   logical,public :: IsNewBlockAlfven = .true.
@@ -465,7 +466,12 @@ contains
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
              call read_var('rMinWaveReflection', rMinWaveReflection, iError)
-             if(iError/=0)rMinWaveReflection = 0.0
+             if(iError/=0)then
+                rMinWaveReflection = 0.0
+                RETURN
+             end if
+             call read_var('UseSurfaceWaveRefl', UseSurfaceWaveRefl, iError)
+             if(iError/=0)UseSurfaceWaveRefl = .false.
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -894,7 +900,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
@@ -909,8 +915,8 @@ contains
        if( (.not.true_cell(i,j,k,iBlock)).or.&
             R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
-       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
-
+       call get_grad_log_alfven_speed(i, j, k, iBlock, &
+            GradLogAlfven_D(:nDim), GradLogRho_D(:nDim))
        call get_curl_u(i, j, k, iBlock, CurlU_D)
 
        if(UseB0)then
@@ -933,18 +939,23 @@ contains
             DissipationRateMax/extension_factor(TeSi_C(i,j,k))
 
        AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
+       
+       if(UseSurfaceWaveRefl)then
+          !
+          ! Calculate perpendicular gradient of log(sqrt(Rho))
+          !
+          GradLogRho_D = GradLogRho_D - b_D*sum(b_D*GradLogRho_D)
+          !
+          ! Account for max(EWave)/Rho*GradLogRho_D**2 in the reflection
+          ! coefficient:
+          !
+          ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl +&
+             max(EwavePlus,EwaveMinus)*sum(GradLogRho_D**2)/Rho)
+       else
 
-       ! Reflection rate driven by Alfven speed gradient and
-       ! vorticity along the field lines
-       ! if(R_BLK(i,j,k,iBlock)<2.5)then
-       ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
+          ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
+       end if
 
-       ! else
-       !   ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 &
-       !        + min((sum(FullB_D(1:nDim)*GradLogAlfven_D))**2,&
-       !        (sum(FullB_D(1:nDim)*Xyz_DGB(1:nDim,i,j,k,iBlock))/&
-       !        R_BLK(i,j,k,iBlock)**2)**2)/Rho )
-       ! end if
        ! Clip the reflection rate from above with maximum dissipation rate
        ReflectionRate = min(ReflectionRateImb, DissipationRateMax)
 
@@ -976,7 +987,8 @@ contains
   end subroutine get_wave_reflection
   !============================================================================
 
-  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
+  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, &
+       GradLogAlfven_D, GradLogRho_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, &
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB, &
@@ -984,10 +996,11 @@ contains
     use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: GradLogAlfven_D(nDim)
+    real, intent(out) :: GradLogAlfven_D(nDim), GradLogRho_D(nDim)
 
-    real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
-    !$omp threadprivate(LogAlfven_FD)
+    real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim),&
+         LogRho_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    !$omp threadprivate(LogAlfven_FD,LogRho_FD)
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
     if(IsNewBlockAlfven)then
@@ -999,22 +1012,46 @@ contains
     if(IsCartesianGrid)then
        GradLogAlfven_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
             *(LogAlfven_FD(i+1,j,k,Dim1_) - LogAlfven_FD(i,j,k,Dim1_))
-       if(nJ > 1) GradLogAlfven_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
-            *(LogAlfven_FD(i,j+1,k,Dim2_) - LogAlfven_FD(i,j,k,Dim2_))
-       if(nK > 1) GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
+       GradLogRho_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(LogRho_FD(i+1,j,k,Dim1_) - LogRho_FD(i,j,k,Dim1_))
+       if(nJ > 1) then
+          GradLogAlfven_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
+               *(LogAlfven_FD(i,j+1,k,Dim2_) - LogAlfven_FD(i,j,k,Dim2_))
+          GradLogRho_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
+               *(LogRho_FD(i,j+1,k,Dim2_) - LogRho_FD(i,j,k,Dim2_))
+       end if
+       if(nK > 1) then
+          GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
             *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
+          GradLogRho_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
+            *(LogRho_FD(i,j,k+1,Dim3_) - LogRho_FD(i,j,k,Dim3_))
+       end if
     else
        GradLogAlfven_D = &
             LogAlfven_FD(i+1,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
             - LogAlfven_FD(i,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
-       if(nJ > 1) GradLogAlfven_D = GradLogAlfven_D + &
-            LogAlfven_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
-            - LogAlfven_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
-       if(nK > 1) GradLogAlfven_D = GradLogAlfven_D + &
-            LogAlfven_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
-            - LogAlfven_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+       GradLogRho_D = &
+            LogRho_FD(i+1,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+            - LogRho_FD(i,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
+       if(nJ > 1)then
+          GradLogAlfven_D = GradLogAlfven_D + &
+               LogAlfven_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+          GradLogRho_D = GradLogRho_D + &
+               LogRho_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+               - LogRho_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
+       end if
+       if(nK > 1) then
+          GradLogAlfven_D = GradLogAlfven_D + &
+               LogAlfven_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+               - LogAlfven_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+          GradLogRho_D = GradLogRho_D + &
+               LogRho_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+               - LogRho_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
+       end if
 
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
+       GradLogRho_D = GradLogRho_D/CellVolume_GB(i,j,k,iBlock)
     end if
 
   contains
@@ -1039,7 +1076,8 @@ contains
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
          Rho = 0.5*(LeftState_VX(iRho_I(IonFirst_),i,j,k) &
               +     RightState_VX(iRho_I(IonFirst_),i,j,k))
-         LogAlfven_FD(i,j,k,x_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
+         LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+         LogRho_FD(i,j,k,x_) = 0.50*log(Rho)
       end do; end do; end do
 
       if(nJ > 1)then
@@ -1050,7 +1088,8 @@ contains
             Rho = 0.5*(LeftState_VY(iRho_I(IonFirst_),i,j,k) &
                  +     RightState_VY(iRho_I(IonFirst_),i,j,k))
             LogAlfven_FD(i,j,k,Dim2_) = &
-                 log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+            LogRho_FD(i,j,k,Dim2_) = 0.50*log(Rho)
          end do; end do; end do
       end if
 
@@ -1062,7 +1101,8 @@ contains
             Rho = 0.5*(LeftState_VZ(iRho_I(IonFirst_),i,j,k) &
                  +     RightState_VZ(iRho_I(IonFirst_),i,j,k))
             LogAlfven_FD(i,j,k,Dim3_) = &
-                 log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
+                 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
+            LogRho_FD(i,j,k,Dim3_) = 0.50*log(Rho)
          end do; end do; end do
       end if
 
