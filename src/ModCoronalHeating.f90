@@ -900,7 +900,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(3)
+    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(nDim)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
@@ -916,7 +916,7 @@ contains
             R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, &
-            GradLogAlfven_D(:nDim), GradLogRho_D(:nDim))
+            GradLogAlfven_D, GradLogRho_D)
        call get_curl_u(i, j, k, iBlock, CurlU_D)
 
        if(UseB0)then
@@ -944,7 +944,7 @@ contains
           !
           ! Calculate perpendicular gradient of log(sqrt(Rho))
           !
-          GradLogRho_D = GradLogRho_D - b_D*sum(b_D*GradLogRho_D)
+          GradLogRho_D = GradLogRho_D - b_D(:nDim)*sum(b_D(:nDim)*GradLogRho_D)
           !
           ! Account for max(EWave)/Rho*GradLogRho_D**2 in the reflection
           ! coefficient:
