@@ -1389,8 +1389,9 @@ test_cometfluids_start:
 	@echo "test_cometfluids_check..." >> test_cometfluids.diff
 	$(MAKE) test_cometfluids_check
 
+# OpenMP run fails for NAGFOR on 4 cores * 2 threads
 test_cometfluids_compile:
-	./Config.pl ${OPENMP} -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
+	./Config.pl -noopenmp -u=Comet3FluidsPe -e=MhdComet3FluidsPe -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
