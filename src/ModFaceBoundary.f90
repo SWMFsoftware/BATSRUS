@@ -29,7 +29,8 @@ module ModFaceBoundary
 
   ! Type of the boundary
   character(len=20) :: TypeBc
-
+  !$omp threadprivate( TypeBc )
+  
   ! Index of the boundary
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
