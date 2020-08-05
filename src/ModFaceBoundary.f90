@@ -26,10 +26,6 @@ module ModFaceBoundary
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
   !$omp threadprivate( DoResChangeOnly )
-
-  ! The type and index of the boundary
-  character(len=20), public :: TypeBc
-  !$omp threadprivate( TypeBc )
   
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
@@ -151,13 +147,11 @@ contains
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
-    logical, allocatable :: IsBodyCell_G(:,:,:)
+    logical :: IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_boundary'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(.not.allocated(IsBodyCell_G))&
-         allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     call timing_start(NameSub)
 
@@ -500,6 +494,9 @@ contains
 
       real, parameter:: DensityJumpLimit=0.1
       real, parameter:: LatitudeCap = 55.0
+
+      ! The type of the boundary
+      character(len=20) :: TypeBc
 
       real:: uRot_D(MaxDim), uIono_D(MaxDim)
       real:: FaceState_V(nVar), State_V(Bx_:nVar+3)
