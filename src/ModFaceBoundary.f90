@@ -26,7 +26,11 @@ module ModFaceBoundary
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
   !$omp threadprivate( DoResChangeOnly )
-  
+
+  ! Type of the boundary
+  character(len=20) :: TypeBc
+
+  ! Index of the boundary
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
   ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
@@ -494,9 +498,6 @@ contains
 
       real, parameter:: DensityJumpLimit=0.1
       real, parameter:: LatitudeCap = 55.0
-
-      ! The type of the boundary
-      character(len=20) :: TypeBc
 
       real:: uRot_D(MaxDim), uIono_D(MaxDim)
       real:: FaceState_V(nVar), State_V(Bx_:nVar+3)
