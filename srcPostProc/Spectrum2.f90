@@ -360,135 +360,135 @@ contains
     call read_init()
 
     READPARAM: do
-      if(.not.read_line(StringLine) ) EXIT READPARAM
-      if(.not.read_command(NameCommand)) CYCLE READPARAM
+       if(.not.read_line(StringLine) ) EXIT READPARAM
+       if(.not.read_command(NameCommand)) CYCLE READPARAM
 
-      select case(NameCommand)
-      case('#NDIM')
-        call read_var('nDimSim', nDimSim)
-        if (nDimSim /= 3) then
-          call stop_mpi(NameSub//': Needs a 3D simulation data file')
-        endif
+       select case(NameCommand)
+       case('#NDIM')
+          call read_var('nDimSim', nDimSim)
+          if (nDimSim /= 3) then
+             call stop_mpi(NameSub//': Needs a 3D simulation data file')
+          endif
 
-      case('#GRIDBLOCKSIZE')
-        call read_var('BlockSize1', nIJKRead_D(1))
-        call read_var('BlockSize2', nIJKRead_D(2))
-        call read_var('BlockSize3', nIJKRead_D(3))
-        if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
-          write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
-          call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
-        end if
+       case('#GRIDBLOCKSIZE')
+          call read_var('BlockSize1', nIJKRead_D(1))
+          call read_var('BlockSize2', nIJKRead_D(2))
+          call read_var('BlockSize3', nIJKRead_D(3))
+          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
+             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
+             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
+          end if
 
-      ! case('#ROOTBLOCK')
-      !   call read_var('nRootBlock1', nRootRead_D(1))
-      !   call read_var('nRootBlock2', nRootRead_D(2))
-      !   call read_var('nRootBlock3', nRootRead_D(3))
-      !   if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
-      !     write(*,*)'Not enough grid blocks allocated for root blocks'
-      !     write(*,*)'Number of root blocks=',product(nRootRead_D)
-      !     write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
-      !     call stop_mpi(NameSub//': insufficient number of grid blocks')
-      !   endif
+       case('#ROOTBLOCK')
+          call read_var('nRootBlock1', nRootRead_D(1))
+          call read_var('nRootBlock2', nRootRead_D(2))
+          call read_var('nRootBlock3', nRootRead_D(3))
+          !   if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
+          !     write(*,*)'Not enough grid blocks allocated for root blocks'
+          !     write(*,*)'Number of root blocks=',product(nRootRead_D)
+          !     write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
+          !     call stop_mpi(NameSub//': insufficient number of grid blocks')
+          !   endif
 
-      case('#OUTPUTFORMAT')
-       call read_var('TypeOutPutFormat', TypeDataFile)
+       case('#OUTPUTFORMAT')
+          call read_var('TypeOutPutFormat', TypeDataFile)
 
-      case('#NSTEP')
-        call read_var('nStep', nStep)
+       case('#NSTEP')
+          call read_var('nStep', nStep)
 
-      case('#TIMESIMULATION')
-        call read_var('TimeSimulation', tStep)
+       case('#TIMESIMULATION')
+          call read_var('TimeSimulation', tStep)
 
-      case('#PLOTRANGE')
-        XyzMin_D = 0; XyzMax_D = 0
-        do i = 1, nDimSim
-           call read_var('CoordMin', XyzMin_D(i))
-           call read_var('CoordMax', XyzMax_D(i))
-        enddo
+       case('#PLOTRANGE')
+          XyzMin_D = 0; XyzMax_D = 0
+          do i = 1, nDimSim
+             call read_var('CoordMin', XyzMin_D(i))
+             call read_var('CoordMax', XyzMax_D(i))
+          enddo
 
-      ! case('#PLOTRESOLUTION')
-      !   CellSizePlot_D = 1
-      !   do i = 1, nDimSim
-      !      call read_var('CellSizePlot', CellSizePlot_D(i))
-      !   enddo
+          ! case('#PLOTRESOLUTION')
+          !   CellSizePlot_D = 1
+          !   do i = 1, nDimSim
+          !      call read_var('CellSizePlot', CellSizePlot_D(i))
+          !   enddo
 
-      ! case('#CELLSIZE')
-      !   dCoordMin_D = 1
-      !   do i = 1, nDimSim
-      !      call read_var('CellSizeMin', dCoordMin_D(i))
-      !   enddo
+          ! case('#CELLSIZE')
+          !   dCoordMin_D = 1
+          !   do i = 1, nDimSim
+          !      call read_var('CellSizeMin', dCoordMin_D(i))
+          !   enddo
 
-      case('#NCELL')
-        call read_var('nCellPlot', nCellPlot)
-        if(nCellPlot/nIJK > MaxBlock*nProc .and. iProc==0)then
-          write(*,*)'Not enough grid blocks allocated for root blocks'
-          write(*,*)'nCellPlot, nIJK, nBlock =', nCellPlot, nIJK, nCellPlot/nIJK
-          write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
-          call stop_mpi(NameSub//': insufficient number of grid blocks')
-        end if
+       case('#NCELL')
+          call read_var('nCellPlot', nCellPlot)
+          if(nCellPlot/nIJK > MaxBlock*nProc .and. iProc==0)then
+             write(*,*)'Not enough grid blocks allocated for root blocks'
+             write(*,*)'nCellPlot, nIJK, nBlock =', nCellPlot, nIJK, nCellPlot/nIJK
+             write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
+             call stop_mpi(NameSub//': insufficient number of grid blocks')
+          end if
 
-      ! case('#PLOTVARIABLE')
-      !   call read_var('nPlotVar', nPlotVar)
-      !   call read_var('NameVar',  NameVar)
-      !   call read_var('NameUnit', NameUnit)
+          ! case('#PLOTVARIABLE')
+          !   call read_var('nPlotVar', nPlotVar)
+          !   call read_var('NameVar',  NameVar)
+          !   call read_var('NameUnit', NameUnit)
 
-      ! case('#SCALARPARAM')
-      !   call read_var('nParam', nParamPlot)
-      !   allocate(PlotParam_I(nParamPlot))
-      !   do i = 1, nParamPlot
-      !      call read_var('Param',PlotParam_I(i))
-      !   enddo
+          ! case('#SCALARPARAM')
+          !   call read_var('nParam', nParamPlot)
+          !   allocate(PlotParam_I(nParamPlot))
+          !   do i = 1, nParamPlot
+          !      call read_var('Param',PlotParam_I(i))
+          !   enddo
 
-      case('#GRIDGEOMETRYLIMIT')
-        call read_var('TypeGeometry', TypeGeometry)
-        IsLogRadius = index(TypeGeometry,'lnr')  > 0
-        IsGenRadius = index(TypeGeometry,'genr') > 0
-        if(IsGenRadius)then
-          call read_var('nRgen', nRGen)
-          allocate(LogRgen_I(nRgen))
-          do i = 1, nRgen
-            call read_var('LogRGen', LogRgen_I(i))
-          end do
-        end if
-        ! if(TypeGeometry == 'roundcube')then
-        !   call read_var('rRound0', rRound0)
-        !   call read_var('rRound1', rRound1)
-        !   call read_var('SqrtNDim',SqrtNDim)
-        ! endif
-        if(TypeGeometry(1:9)=='spherical') then
-           TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
-        else
-           TypeGeometryBatl = TypeGeometry
-        endif
+       case('#GRIDGEOMETRYLIMIT')
+          call read_var('TypeGeometry', TypeGeometry)
+          IsLogRadius = index(TypeGeometry,'lnr')  > 0
+          IsGenRadius = index(TypeGeometry,'genr') > 0
+          if(IsGenRadius)then
+             call read_var('nRgen', nRGen)
+             allocate(LogRgen_I(nRgen))
+             do i = 1, nRgen
+                call read_var('LogRGen', LogRgen_I(i))
+             end do
+          end if
+          ! if(TypeGeometry == 'roundcube')then
+          !   call read_var('rRound0', rRound0)
+          !   call read_var('rRound1', rRound1)
+          !   call read_var('SqrtNDim',SqrtNDim)
+          ! endif
+          if(TypeGeometry(1:9)=='spherical') then
+             TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
+          else
+             TypeGeometryBatl = TypeGeometry
+          endif
 
-      ! case('#PERIODIC')
-      !  do i = 1, nDimSim
-      !    call read_var('IsPeriodic',IsPeriodic_D(i))
-      !  enddo
+          ! case('#PERIODIC')
+          !  do i = 1, nDimSim
+          !    call read_var('IsPeriodic',IsPeriodic_D(i))
+          !  enddo
 
-      ! case('#TECPLOTCONVERT')
-      !  call read_var('DoReadTecplot', DoReadTecplot)
-      !  call read_var('nHeaderTec', nHeaderTec)
-      !  call read_var('nNodeTec',  nNodeTec)
-      !  call read_var('nCellTec',  nCellTec)
+          ! case('#TECPLOTCONVERT')
+          !  call read_var('DoReadTecplot', DoReadTecplot)
+          !  call read_var('nHeaderTec', nHeaderTec)
+          !  call read_var('nNodeTec',  nNodeTec)
+          !  call read_var('nCellTec',  nCellTec)
 
-      case('#PLOTVARIABLE')
-        call read_var('nPlotVar', nPlotVar)
-        if (nPlotVar /= nVar) then
-          call stop_mpi(NameSub//': number of plot variables not correct; ' // &
-            'configure Spectrum encironment the same as Batsrus/Awsom.')
-        endif
-        call read_var('',NameVarInput)
-        call read_var('',NameUnitInput)
+       case('#PLOTVARIABLE')
+          call read_var('nPlotVar', nPlotVar)
+          if (nPlotVar /= nVar) then
+             call stop_mpi(NameSub//': number of plot variables not correct; ' // &
+                  'configure Spectrum encironment the same as Batsrus/Awsom.')
+          endif
+          call read_var('',NameVarInput)
+          call read_var('',NameUnitInput)
 
-      case default
-        ! write(*,*) 'Ignored command'
-      end select
+       case default
+          ! write(*,*) 'Ignored command'
+       end select
     end do READPARAM
 
     if (index(TypeGeometry,'genr') > 0) then
-      call gen_to_radius(XyzMin_D(1))
-      call gen_to_radius(XyzMax_D(1))
+       call gen_to_radius(XyzMin_D(1))
+       call gen_to_radius(XyzMax_D(1))
     endif
 
   end subroutine read_info_file
@@ -779,7 +779,7 @@ contains
 
     character(len=*), intent(in) :: NameOutputFile
 
-    character(len=5) :: TypeFileSpectrum = 'real4'
+    character(len=5) :: TypeFileSpectrum = 'ascii' ! changed from real4 for testing purposes
     character(len=200) :: StringHeaderSpectrum = '[A] [erg sr^-1 cm^-2 A^-1]'
     real, allocatable :: Intensity_III(:,:,:), CoordWave_I(:)
     integer :: iWvlIntv, nWvlIntv, iWave, nWaveBin, nWaveAll
@@ -794,55 +794,66 @@ contains
 
     ! allocate array for all pixels
     if (iProc == 0) then
-      nWaveAll = 0
-      do iWvlIntv = 1,nWvlIntv
-         nWaveAll = nWaveAll + SpectrumTable_I(iWvlIntv)%nBin
-      end do
-      allocate(Intensity_III(nWaveAll,nPixel_I(1),nPixel_I(2)), CoordWave_I(nWaveAll))
+       nWaveAll = 0
+       do iWvlIntv = 1,nWvlIntv
+          nWaveAll = nWaveAll + SpectrumTable_I(iWvlIntv)%nBin
+       end do
+       allocate(Intensity_III(nWaveAll,nPixel_I(1),nPixel_I(2)), CoordWave_I(nWaveAll))
     endif
 
     ! message pass to collect Spectrum results
     iWave = 0
     do iWvlIntv = 1, nWvlIntv
-      nWaveBin = SpectrumTable_I(iWvlIntv)%nBin
-      if (iProc == 0) then
-        CoordWave_I(iWave+1:iWave+nWaveBin) = SpectrumTable_I(iWvlIntv)%SpectrumGrid_I(1:nWaveBin)
-      endif
+       nWaveBin = SpectrumTable_I(iWvlIntv)%nBin
+       if (iProc == 0) then
+          CoordWave_I(iWave+1:iWave+nWaveBin) = SpectrumTable_I(iWvlIntv)%SpectrumGrid_I(1:nWaveBin)
+       endif
 
-      iPixelAll = 0
-      do jPix = 1, nPixel_I(2); do iPix = 1, nPixel_I(1)
-        iPixelAll = iPixelAll + 1
-        iProcSend = iPixelProcInfo_II(1,iPixelAll)
-        iPixelProc = iPixelProcInfo_II(2,iPixelAll)
+       iPixelAll = 0
+       do jPix = 1, nPixel_I(2); do iPix = 1, nPixel_I(1)
+          iPixelAll = iPixelAll + 1
+          iProcSend = iPixelProcInfo_II(1,iPixelAll)
+          iPixelProc = iPixelProcInfo_II(2,iPixelAll)
 
-        if (iProc == 0) then
-          if (iProcSend == 0) then
-            Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix) = &
-                SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:)
+          if (iProc == 0) then
+             if (iProcSend == 0) then
+                Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix) = &
+                     SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:)
+             else
+                call mpi_recv(Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix), nWaveBin, &
+                     MPI_REAL, iProcSend, 0, iComm, iStatus_I, iError)
+             endif
           else
-            call mpi_recv(Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix), nWaveBin, &
-                MPI_REAL, iProcSend, 0, iComm, iStatus_I, iError)
+             if (iProcSend /= iProc) CYCLE
+             call mpi_send(SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:), &
+                  nWaveBin, MPI_REAL, 0, 0, iComm, iError)
           endif
-        else
-          if (iProcSend /= iProc) CYCLE
-          call mpi_send(SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:), &
-              nWaveBin, MPI_REAL, 0, 0, iComm, iError)
-        endif
-      enddo; enddo
+       enddo; enddo
 
-      iWave = iWave + nWaveBin
+       iWave = iWave + nWaveBin
     enddo
 
     if (iProc == 0) then
-      call save_plot_file(NameFile = NameOutputFile, &
-          TypeFileIn     = TypeFileSpectrum,      &
-          StringHeaderIn = StringHeaderSpectrum,  &
-          NameVarIn      = "wavelength x y flux", &
-          Coord1In_I     = CoordWave_I,           &
-          Coord2In_I     = PixelPosA_I,           &
-          Coord3In_I     = PixelPosB_I,           &
-          VarIn_III      = Intensity_III)
-      deallocate(Intensity_III, CoordWave_I)
+       ! for testing purpose create 1d output
+       if (nPixel_I(1)*nPixel_I(2) == 1) then
+          call save_plot_file(NameFile = NameOutputFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength flux", &
+               Coord1In_I     = CoordWave_I,           &
+               VarIn_I        = Intensity_III(:,1,1))
+          deallocate(Intensity_III, CoordWave_I)
+       else
+          call save_plot_file(NameFile = NameOutputFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength x y flux", &
+               Coord1In_I     = CoordWave_I,           &
+               Coord2In_I     = PixelPosA_I,           &
+               Coord3In_I     = PixelPosB_I,           &
+               VarIn_III      = Intensity_III)
+          deallocate(Intensity_III, CoordWave_I)
+       endif
     endif
 
     call timing_stop(NameSub)

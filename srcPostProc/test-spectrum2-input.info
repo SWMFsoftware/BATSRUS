@@ -1,0 +1,275 @@
+#HEADFILE
+SC/IO2/3d__all_1_n00000000.h                                                    
+    2160                nProc
+       T                IsBinary
+       8                nByteReal
+ 
+#NDIM
+       3                nDim
+ 
+#GRIDBLOCKSIZE
+       6                BlockSize1
+       8                BlockSize2
+       8                BlockSize3
+ 
+#ROOTBLOCK
+       2                nRootBlock1
+       2                nRootBlock2
+       1                nRootBlock3
+ 
+#GRIDGEOMETRYLIMIT
+spherical_genr          TypeGeometry
+     193                nRgen
+  0.00000E+00           LogRgen
+  4.30942E-04           LogRgen
+  8.61790E-04           LogRgen
+  1.29245E-03           LogRgen
+  1.72293E-03           LogRgen
+  2.15322E-03           LogRgen
+  2.58333E-03           LogRgen
+  3.01325E-03           LogRgen
+  3.44299E-03           LogRgen
+  3.87254E-03           LogRgen
+  4.30191E-03           LogRgen
+  4.73110E-03           LogRgen
+  5.16010E-03           LogRgen
+  5.58891E-03           LogRgen
+  6.01755E-03           LogRgen
+  6.44599E-03           LogRgen
+  6.87426E-03           LogRgen
+  7.30234E-03           LogRgen
+  7.73024E-03           LogRgen
+  8.15795E-03           LogRgen
+  8.58549E-03           LogRgen
+  9.01284E-03           LogRgen
+  9.44000E-03           LogRgen
+  9.86699E-03           LogRgen
+  1.02938E-02           LogRgen
+  1.07204E-02           LogRgen
+  1.11468E-02           LogRgen
+  1.15731E-02           LogRgen
+  1.19992E-02           LogRgen
+  1.24251E-02           LogRgen
+  1.28508E-02           LogRgen
+  1.32763E-02           LogRgen
+  1.37017E-02           LogRgen
+  1.41268E-02           LogRgen
+  1.45518E-02           LogRgen
+  1.49766E-02           LogRgen
+  1.54013E-02           LogRgen
+  1.58257E-02           LogRgen
+  1.62500E-02           LogRgen
+  1.66741E-02           LogRgen
+  1.70980E-02           LogRgen
+  1.75217E-02           LogRgen
+  1.79452E-02           LogRgen
+  1.83686E-02           LogRgen
+  1.87918E-02           LogRgen
+  1.92148E-02           LogRgen
+  1.96376E-02           LogRgen
+  2.00603E-02           LogRgen
+  2.05377E-02           LogRgen
+  2.10769E-02           LogRgen
+  2.16859E-02           LogRgen
+  2.23736E-02           LogRgen
+  2.31501E-02           LogRgen
+  2.40270E-02           LogRgen
+  2.50170E-02           LogRgen
+  2.61346E-02           LogRgen
+  2.73960E-02           LogRgen
+  2.88196E-02           LogRgen
+  3.04261E-02           LogRgen
+  3.22384E-02           LogRgen
+  3.42826E-02           LogRgen
+  3.65879E-02           LogRgen
+  3.91869E-02           LogRgen
+  4.21160E-02           LogRgen
+  4.54164E-02           LogRgen
+  4.91334E-02           LogRgen
+  5.33181E-02           LogRgen
+  5.80271E-02           LogRgen
+  6.33232E-02           LogRgen
+  6.92762E-02           LogRgen
+  7.59632E-02           LogRgen
+  8.34691E-02           LogRgen
+  9.18874E-02           LogRgen
+  1.01320E-01           LogRgen
+  1.11879E-01           LogRgen
+  1.23686E-01           LogRgen
+  1.36871E-01           LogRgen
+  1.51574E-01           LogRgen
+  1.67947E-01           LogRgen
+  1.86147E-01           LogRgen
+  2.06343E-01           LogRgen
+  2.28708E-01           LogRgen
+  2.53421E-01           LogRgen
+  2.80665E-01           LogRgen
+  3.10624E-01           LogRgen
+  3.37174E-01           LogRgen
+  3.63725E-01           LogRgen
+  3.90275E-01           LogRgen
+  4.16825E-01           LogRgen
+  4.43375E-01           LogRgen
+  4.69926E-01           LogRgen
+  4.96476E-01           LogRgen
+  5.23026E-01           LogRgen
+  5.49577E-01           LogRgen
+  5.76127E-01           LogRgen
+  6.02677E-01           LogRgen
+  6.29227E-01           LogRgen
+  6.55778E-01           LogRgen
+  6.82328E-01           LogRgen
+  7.08878E-01           LogRgen
+  7.35428E-01           LogRgen
+  7.61979E-01           LogRgen
+  7.88529E-01           LogRgen
+  8.15079E-01           LogRgen
+  8.41630E-01           LogRgen
+  8.68180E-01           LogRgen
+  8.94730E-01           LogRgen
+  9.21280E-01           LogRgen
+  9.47831E-01           LogRgen
+  9.74381E-01           LogRgen
+  1.00093E+00           LogRgen
+  1.02748E+00           LogRgen
+  1.05403E+00           LogRgen
+  1.08058E+00           LogRgen
+  1.10713E+00           LogRgen
+  1.13368E+00           LogRgen
+  1.16023E+00           LogRgen
+  1.18678E+00           LogRgen
+  1.21333E+00           LogRgen
+  1.23988E+00           LogRgen
+  1.26643E+00           LogRgen
+  1.29298E+00           LogRgen
+  1.31953E+00           LogRgen
+  1.34608E+00           LogRgen
+  1.37264E+00           LogRgen
+  1.39919E+00           LogRgen
+  1.42574E+00           LogRgen
+  1.45229E+00           LogRgen
+  1.47884E+00           LogRgen
+  1.50539E+00           LogRgen
+  1.53194E+00           LogRgen
+  1.55849E+00           LogRgen
+  1.58504E+00           LogRgen
+  1.61159E+00           LogRgen
+  1.63814E+00           LogRgen
+  1.66469E+00           LogRgen
+  1.69124E+00           LogRgen
+  1.71779E+00           LogRgen
+  1.74434E+00           LogRgen
+  1.77089E+00           LogRgen
+  1.79744E+00           LogRgen
+  1.82399E+00           LogRgen
+  1.85054E+00           LogRgen
+  1.87709E+00           LogRgen
+  1.90364E+00           LogRgen
+  1.93019E+00           LogRgen
+  1.95674E+00           LogRgen
+  1.98329E+00           LogRgen
+  2.00984E+00           LogRgen
+  2.03639E+00           LogRgen
+  2.06294E+00           LogRgen
+  2.08949E+00           LogRgen
+  2.11604E+00           LogRgen
+  2.14259E+00           LogRgen
+  2.16914E+00           LogRgen
+  2.19569E+00           LogRgen
+  2.22224E+00           LogRgen
+  2.24879E+00           LogRgen
+  2.27534E+00           LogRgen
+  2.30189E+00           LogRgen
+  2.32844E+00           LogRgen
+  2.35500E+00           LogRgen
+  2.38155E+00           LogRgen
+  2.40810E+00           LogRgen
+  2.43465E+00           LogRgen
+  2.46120E+00           LogRgen
+  2.48775E+00           LogRgen
+  2.51430E+00           LogRgen
+  2.54085E+00           LogRgen
+  2.56740E+00           LogRgen
+  2.59395E+00           LogRgen
+  2.62050E+00           LogRgen
+  2.64705E+00           LogRgen
+  2.67360E+00           LogRgen
+  2.70015E+00           LogRgen
+  2.72670E+00           LogRgen
+  2.75325E+00           LogRgen
+  2.77980E+00           LogRgen
+  2.80635E+00           LogRgen
+  2.83290E+00           LogRgen
+  2.85945E+00           LogRgen
+  2.88600E+00           LogRgen
+  2.91255E+00           LogRgen
+  2.93910E+00           LogRgen
+  2.96565E+00           LogRgen
+  2.99220E+00           LogRgen
+  3.01875E+00           LogRgen
+  3.04530E+00           LogRgen
+  3.07185E+00           LogRgen
+  3.09840E+00           LogRgen
+  3.12495E+00           LogRgen
+  3.15150E+00           LogRgen
+  3.17805E+00           LogRgen
+  0.00000E+00           XyzMin1
+  5.92079E-01           XyzMax1
+  0.00000E+00           XyzMin2
+  6.28319E+00           XyzMax2
+ -1.57080E+00           XyzMin3
+  1.57080E+00           XyzMax3
+ 
+#PERIODIC
+       F                IsPeriodic1
+       T                IsPeriodic2
+       F                IsPeriodic3
+ 
+#NSTEP
+       0                nStep
+ 
+#TIMESIMULATION
+  0.0000000000E+00      TimeSimulation
+ 
+#NCELL
+      1536              nCellPlot
+ 
+#CELLSIZE
+  4.9339922850E-02      CellSizeMin1
+  3.9269908170E-01      CellSizeMin2
+  3.9269908170E-01      CellSizeMin3
+ 
+#PLOTRANGE
+  0.0000000000E+00      CoordMin1
+  5.9207907421E-01      CoordMax1
+  0.0000000000E+00      CoordMin2
+  6.2831853072E+00      CoordMax2
+ -1.5707963268E+00      CoordMin3
+  1.5707963268E+00      CoordMax3
+ 
+#PLOTRESOLUTION
+ -1.0000000000E+00      DxSavePlot1
+ -1.0000000000E+00      DxSavePlot2
+ -1.0000000000E+00      DxSavePlot3
+ 
+#SCALARPARAM
+      10                nParam
+  1.66667E+00           g         
+  2.08686E+03           c         
+  0.00000E+00           th        
+  2.00000E+00           p1        
+  2.00000E+00           p2        
+  1.00000E+00           p3        
+  6.00000E+00           nx        
+  8.00000E+00           ny        
+  8.00000E+00           nz        
+  1.00000E+00           r         
+ 
+#PLOTVARIABLE
+      12                nPlotVar
+Rho Mx My Mz Bx By Bz Ehot I01 I02 Pe p g c th p1 p2 p3 NX NY NZ R
+normalized variables
+ 
+#OUTPUTFORMAT
+ascii     
+ 

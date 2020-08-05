@@ -864,7 +864,7 @@ contains
         ! Calculate thermal broadening
         Uth2  = cBoltzmann * Tlos/(cProtonMass * Aion)  
 
-        if (UseAlfven) then
+        if (UseAlfven .and. .not.IsNoAlfven) then
           ! Calculate Elzasser variables
           Zplus2   = Var_I(I01_) * 4.0 / Rho
           Zminus2  = Var_I(I02_) * 4.0 / Rho
@@ -904,7 +904,7 @@ contains
 
         ! dVperd2/dOmega = dx * 1e2 or dx in CGS
 
-        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dLosLength
+        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dLosLength * 1e2
 
         if (DoExtendTransitionRegion) then
           FluxMono = FluxMono / extension_factor(Var_I(te_))

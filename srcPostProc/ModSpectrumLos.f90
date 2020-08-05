@@ -146,6 +146,9 @@ contains
     if (allocated(StatePixelSegProc_VII)) deallocate(StatePixelSegProc_VII)
     allocate(StatePixelSegProc_VII(Ds_,MaxLosSeg,nPixelProc))
 
+    ! initialize to 0
+    StatePixelSegProc_VII = 0.0
+    
   end subroutine init_los_spectrum
 
   !============================================================================

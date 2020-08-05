@@ -98,6 +98,32 @@ test_spectrum_check:
 	@ls -l ../test_spectrum.diff
 
 #
+# test for spectrum2
+#
+test_spectrum2:
+	@echo "test_spectrum2_compile..." > ../test_spectrum2.diff
+	$(MAKE) test_spectrum2_compile
+	@echo "test_spectrum2_run..." >> ../test_spectrum2.diff
+	$(MAKE) test_spectrum2_run
+	@echo "test_spectrum2_check..." >> ../test_spectrum2.diff
+	$(MAKE) test_spectrum2_check
+
+test_spectrum2_compile: SPECTRUM_chianti_tbl.dat
+	rm -f SPECTRUM.in ../test_spectrum2.diff \
+		test-spectrum2.log test-spectrum2.out test-spectrum2.eps
+	cp test-SPECTRUM2.in SPECTRUM.in
+	make SPECTRUM2
+
+test_spectrum2_run:
+	${MPIRUN} ./SPECTRUM.exe > test-spectrum2.log
+
+test_spectrum2_check:
+	${SCRIPTDIR}/DiffNum.pl -t  \
+		test-spectrum2.out \
+		test-spectrum.ref > ../test_spectrum2.diff
+	@ls -l ../test_spectrum2.diff
+
+#
 #	cleaning
 #
 clean: cleanfiles

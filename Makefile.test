@@ -12,6 +12,7 @@ DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
 test: 
 	@rm -f *.diff
+	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
@@ -133,6 +134,7 @@ test_help:
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
+	@echo "    test_spectrum2             (run spectrum2 post-processing test)"		
 	@echo "    test_titan                 (run Titan tests)"
 	@echo "    test_titan_start           (run first Titan test)"
 	@echo "    test_titan_restart         (run titan restart test)"
@@ -1935,3 +1937,10 @@ test_L1toBC_check:
 test_spectrum:
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd srcPostProc; $(MAKE) test_spectrum
+
+### TEST FOR POST-PROCESSING SPECTRUM2 CODE#####################################
+
+test_spectrum2:
+	./Config.pl -e=MhdWavesPe -u=AwsomFluids -g=6,8,8 -ng=2
+	$(MAKE) BATSRUS	 
+	cd srcPostProc; $(MAKE) test_spectrum2
