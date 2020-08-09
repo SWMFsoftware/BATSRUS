@@ -37,7 +37,7 @@ OBJECTS_EXE = Spectrum2.o
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
 
 SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o  ${LflagMpi}
+	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o  ${LflagMpi}
 # -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
@@ -83,12 +83,11 @@ SPECTRUM_chianti_tbl.dat: ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz
 	> SPECTRUM_chianti_tbl.dat
 
 test_spectrum_compile: SPECTRUM_chianti_tbl.dat
-	rm -f SPECTRUM.in ../test_spectrum.diff \
-		test-spectrum.log test-spectrum.out test-spectrum.eps
-	cp test-SPECTRUM.in SPECTRUM.in
 	make SPECTRUM
 
 test_spectrum_run:
+	rm -f test-spectrum.out test-spectrum.eps
+	cp -f test-SPECTRUM.in SPECTRUM.in
 	${MPIRUN} ./SPECTRUM.exe > test-spectrum.log
 
 test_spectrum_check:
@@ -101,6 +100,7 @@ test_spectrum_check:
 # test for spectrum2
 #
 test_spectrum2:
+	@echo "test_spectrum2 started"
 	@echo "test_spectrum2_compile..." > ../test_spectrum2.diff
 	$(MAKE) test_spectrum2_compile
 	@echo "test_spectrum2_run..." >> ../test_spectrum2.diff
@@ -109,13 +109,12 @@ test_spectrum2:
 	$(MAKE) test_spectrum2_check
 
 test_spectrum2_compile: SPECTRUM_chianti_tbl.dat
-	rm -f SPECTRUM.in ../test_spectrum2.diff \
-		test-spectrum2.log test-spectrum2.out test-spectrum2.eps
-	cp test-SPECTRUM2.in SPECTRUM.in
 	make SPECTRUM2
 
 test_spectrum2_run:
-	${MPIRUN} ./SPECTRUM.exe > test-spectrum2.log
+	rm -f test-spectrum.out test-spectrum.eps
+	cp -f test-SPECTRUM2.in SPECTRUM.in
+	${MPIRUN} ./SPECTRUM2.exe > test-spectrum2.log
 
 test_spectrum2_check:
 	${SCRIPTDIR}/DiffNum.pl -t  \
@@ -129,6 +128,6 @@ test_spectrum2_check:
 clean: cleanfiles
 
 distclean: clean
-	rm -f SPECTRUM.exe SPECTRUM.in test-spectrum.log \
+	rm -f SPECTRUM*.exe SPECTRUM.in test-spectrum*.log \
 		test-spectrum.out test-label.out SPECTRUM_chianti_tbl.dat
 
