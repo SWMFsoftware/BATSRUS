@@ -212,7 +212,8 @@ contains
 
         if (DoTest) then
           write(*,'(A,I0,2(A,I0),A,I0)') '----------', iPixelTotal, '  i:', iPix, ' j:', jPix, '  recv:', iProcRecv
-          write(*,'(A12,4A8,A2,5A10,A2,7A10)') 'StartLen','blk','size1','size2','size3','','step','ds','move1','move2','move3','','coordI','coordJ','coordK','ds','move1','move2','move3'
+          write(*,'(A12,4A8,A2,5A10,A2,7A10)') 'StartLen','blk','size1','size2','size3',' ', &
+               'step','ds','move1','move2','move3',' ','coordI','coordJ','coordK','ds','move1','move2','move3'
         endif
 
         if (Discriminant > 0) then
