@@ -28,6 +28,7 @@ test:
 	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
 	./Config.pl -nohdf5
 	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
+	./Config.pl -nohypre
 	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
 	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
