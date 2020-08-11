@@ -1,0 +1,24 @@
+image: ubuntu:latest
+
+variables:
+  GCC_V: 9
+  OMPI_ALLOW_RUN_AS_ROOT: 1
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+
+before_script:
+  - apt-get update
+  - apt-get install -y make git
+  - apt-get install --yes gcc gfortran g++
+  - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
+
+install:
+  stage: build
+  script:
+    - ./Config.pl -compiler=gfortran -install -O0
+
+# run tests using the binary built before
+test:
+  stage: test
+  script:
+    - ./Config.pl -compiler=gfortran -install -O0
+    - make -j test_hallmhd
