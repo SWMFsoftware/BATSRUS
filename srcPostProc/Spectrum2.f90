@@ -152,7 +152,7 @@ contains
   subroutine init_program_spectrum
     use BATL_tree, ONLY: read_tree_file, get_tree_position, distribute_tree, &
         show_tree, adapt_tree, iTree_IA, iNode_B, iStatusNew_A, Unset_, Unused_, Used_, Status_, Coarsen_
-    use BATL_lib, ONLY: init_grid_batl, init_batl, CoordMin_D, CoordMax_D, Unused_B, Xyz_DGB, CoordMin_DB, CoordMax_DB, IsNewDecomposition, IsNewTree
+    use BATL_lib, ONLY: init_grid_batl, init_batl, CoordMin_D, CoordMax_D, Unused_B, Xyz_DGB, CoordMin_DB, CoordMax_DB
     use BATL_geometry, ONLY: gen_to_radius, LogRgen_I, IsLogRadius, IsGenRadius, IsSpherical, IsRLonLat, UseHighFDGeometry
     use ModBatlInterface, ONLY: set_batsrus_grid
     use ModParallel, ONLY: init_mod_parallel
@@ -219,7 +219,6 @@ contains
     NameTreeFile = trim(NameFileRoot)//'.tree'
     call read_tree_file(NameTreeFile)
     call init_grid_batl
-    IsNewDecomposition = .true.
     call set_batsrus_grid
 
     if (iProc == 0) write(*,*) 'Read data.'
