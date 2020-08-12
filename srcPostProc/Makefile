@@ -12,33 +12,25 @@ include ../Makefile.conf
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
-
-${LIBDIR}/libSHARE.a:
-	cd ${SHAREDIR}; $(MAKE) LIB
-
-LIBBATSRUS = ${LIBDIR}/libBATSRUS.a
-
-${LIBDIR}/libBATSRUS.a:
-	cd ${MYDIR}; $(MAKE) BATSRUS
-
+LIBBATSRUS = ../src/libBATSRUS.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
-
-${LIBDIR}/libTIMING.a:
-	cd ${TIMINGDIR}; $(MAKE) LIB
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 #
 # Post processing executables
 #
+
+# ------------------------------- SPECTRUM -----------------
 ${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
-	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${LflagMpi}
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o \
+		-L${LIBDIR} -lSHARE ${LflagMpi}
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
 	rm -f ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
 
-# -------------------------------
+# ------------------------------- SPECTRUM2 ---------------
 OBJECTS = ModSpectrumLos.o ModSpectrum.o 
 
 ${OBJECTS} : ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS}
@@ -48,11 +40,16 @@ OBJECTS_EXE = Spectrum2.o
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
 
 SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} ${LIBDIR}/Tmp_/*.o  ${LflagMpi}
-# -------------------------------
+	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} \
+		-L../src -lBATSRUS \
+		-L${LIBDIR} -lMAGNETOGRAM -lDEMT -lEMPIRICALEE \
+		-lTIMING -lSHARE ${LflagMpi}
+
+# ------------------------------- SNAPSHOT ----------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
-	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag}
+	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o \
+		-L${LIBDIR} -lSHARE ${Lflag}
 
 SNAPSHOT:
 	make ${BINDIR}/SNAPSHOT.exe
@@ -60,8 +57,12 @@ SNAPSHOT:
 ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag}
 
+# ------------------------------- CRST --------------------
+
 CRST:
 	make ${BINDIR}/ConvertRestart.exe
+
+# ------------------------------- EARTH_TRAJ --------------
 
 OBJECTS1 = CON_geopack_internal.o ModUT.o
 
@@ -70,16 +71,17 @@ earth_traj.o:  ${LIBSHARE} ${OBJECTS1}
 EARTH_TRAJ: earth_traj.o
 	${LINK.f90} ${SEARCH} -o ${BINDIR}/EARTH_TRAJ.exe earth_traj.o \
 		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
+
 TIME_CONV:  ${OBJECTS1} time_convert.o
-	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
+	${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_CONV.exe time_convert.o \
 		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
-	    ${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_TOCRNO.exe time_to_cr_no.o \
+	${LINK.f90} ${SEARCH} -o ${BINDIR}/TIME_TOCRNO.exe time_to_cr_no.o \
 		${OBJECTS1} -L${LIBDIR} -lSHARE ${Lflag}
 
 #
-# test for spectrum
+# test for SPECTRUM
 #
 test_spectrum:
 	@echo "test_spectrum_compile..." > ../test_spectrum.diff
@@ -108,7 +110,7 @@ test_spectrum_check:
 	@ls -l ../test_spectrum.diff
 
 #
-# test for spectrum2
+# test for SPECTRUM2
 #
 test_spectrum2:
 	@echo "test_spectrum2 started"
@@ -120,7 +122,6 @@ test_spectrum2:
 	$(MAKE) test_spectrum2_check
 
 test_spectrum2_compile: SPECTRUM_chianti_tbl.dat
-	cd ${MYDIR}; ./Config.pl -u=AwsomFluids -e=MhdWavesPe -g=6,8,8
 	make SPECTRUM2
 
 test_spectrum2_run:
