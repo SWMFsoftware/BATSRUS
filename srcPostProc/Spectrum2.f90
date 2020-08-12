@@ -55,7 +55,7 @@ program spectrum
 
   integer :: iError
 
-  logical :: DoTestOutputLosSegments = .true.
+  logical :: DoTestOutputLosSegments = .false.
 
   ! ------------------------------
 

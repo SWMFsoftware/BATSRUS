@@ -12,8 +12,19 @@ include ../Makefile.conf
 
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
-LIBBATSRUS = ../src/libBATSRUS.a
+
+${LIBDIR}/libSHARE.a:
+	cd ${SHAREDIR}; $(MAKE) LIB
+
+LIBBATSRUS = ${LIBDIR}/libBATSRUS.a
+
+${LIBDIR}/libBATSRUS.a:
+	cd ${MYDIR}; $(MAKE) BATSRUS
+
 LIBTIMING = ${LIBDIR}/libTIMING.a
+
+${LIBDIR}/libTIMING.a:
+	cd ${TIMINGDIR}; $(MAKE) LIB
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 #
@@ -37,7 +48,7 @@ OBJECTS_EXE = Spectrum2.o
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBBATSRUS} ${OBJECTS}
 
 SPECTRUM2: ${OBJECTS_EXE} 
-	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} ../src/Tmp_/*.o  ${LflagMpi}
+	${LINK.f90} -o SPECTRUM2.exe ${OBJECTS_EXE} ${OBJECTS} ${LIBDIR}/Tmp_/*.o  ${LflagMpi}
 # -------------------------------
 
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
@@ -109,6 +120,7 @@ test_spectrum2:
 	$(MAKE) test_spectrum2_check
 
 test_spectrum2_compile: SPECTRUM_chianti_tbl.dat
+	cd ${MYDIR}; ./Config.pl -u=AwsomFluids -e=MhdWavesPe -g=6,8,8
 	make SPECTRUM2
 
 test_spectrum2_run:
