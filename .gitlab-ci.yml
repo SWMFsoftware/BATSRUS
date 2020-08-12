@@ -37,4 +37,6 @@ test:
     - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
   script:
     - ./Config.pl -O0 -compiler=gfortran -install
-    - make -j test_hallmhd
+     - make -j test_hallmhd NP=1
+    - ./share/Scripts/CheckEmptyFile.sh test_hallmhd.diff
+
