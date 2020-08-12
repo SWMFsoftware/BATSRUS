@@ -146,20 +146,16 @@ contains
     if (allocated(StatePixelSegProc_VII)) deallocate(StatePixelSegProc_VII)
     allocate(StatePixelSegProc_VII(Ds_,MaxLosSeg,nPixelProc))
 
-    ! initialize to 0
-    StatePixelSegProc_VII = 0.0
-    
   end subroutine init_los_spectrum
 
   !============================================================================
-  subroutine get_los_data_cube(iPixelProcInfo_II, StatePixelSegProc_VII, nLosSeg_I, State_VGB)
+  subroutine get_los_data_cube(iPixelProcInfo_II, StatePixelSegProc_VII, nLosSeg_I)
     use ModNumConst, ONLY : cTiny, cHuge
     use ModCoordTransform, ONLY : cross_product
 
     integer, intent(in) :: iPixelProcInfo_II(:,:)
     real, allocatable, intent(inout) :: StatePixelSegProc_VII(:,:,:)
     integer, intent(inout) :: nLosSeg_I(:)
-    real, intent(in) :: State_VGB(:,:,:,:,:)
 
     integer :: iError
     integer :: iPix, jPix             ! indexes of the pixel 
@@ -212,22 +208,23 @@ contains
 
         if (DoTest) then
           write(*,'(A,I0,2(A,I0),A,I0)') '----------', iPixelTotal, '  i:', iPix, ' j:', jPix, '  recv:', iProcRecv
-          write(*,'(A12,4A8,A2,5A10,A2,7A10)') 'StartLen','blk','size1','size2','size3',' ', &
-               'step','ds','move1','move2','move3',' ','coordI','coordJ','coordK','ds','move1','move2','move3'
+          write(*,'(A12,4A8,A2,5A10,A2,7A10)') &
+              'StartLen','blk','size1','size2','size3','','step','ds', &
+              'move1','move2','move3','','coordI','coordJ','coordK','ds','move1','move2','move3'
         endif
 
         if (Discriminant > 0) then
           IntersectD = - PixPosDotPixLos + sqrt(Discriminant) 
           IntersectPos_D = PixelPos_D + IntersectD*LosUnit_D
           call get_los_segments(IntersectPos_D, LosUnit_D, ObsDistance-IntersectD, &
-              iProcRecv, iPixelProcLoc, State_VGB, StatePixelSegProc_VII, nLosSeg_I, &
+              iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, nLosSeg_I, &
               DoTestIn=DoTest)
         else
           call get_los_segments(PixelPos_D, LosUnit_D, ObsDistance, &
-              iProcRecv, iPixelProcLoc, State_VGB, StatePixelSegProc_VII, nLosSeg_I, &
+              iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, nLosSeg_I, &
               DoTestIn=DoTest)
           call get_los_segments(PixelPos_D, -LosUnit_D, cHuge, &
-              iProcRecv, iPixelProcLoc, State_VGB, StatePixelSegProc_VII, nLosSeg_I, &
+              iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, nLosSeg_I, &
               DoTestIn=DoTest)
         end if
 
@@ -245,7 +242,7 @@ contains
   !     not very likely LengthMax < rOuter, but include it here just in case 
   !     future mission has spacecraft inside corona (solar orbiter?)
   subroutine get_los_segments(XyzStartIn_D, ObsDirUnit_D, LengthMax, &
-      iProcRecv, iPixelProcLoc, State_VGB, StatePixelSegProc_VII, &
+      iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, &
       nLosSeg_I, DoTestIn)
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
     use BATL_size,ONLY: nDim, nIJK_D, MaxDim, MinIJK_D, MaxIJK_D
@@ -255,10 +252,10 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_
     use ModInterpolate, ONLY: interpolate_vector
     use ModConst, ONLY: cTiny
+    use ModAdvance, ONLY: State_VGB
 
     real, intent(in) :: XyzStartIn_D(3), ObsDirUnit_D(3), LengthMax
     integer, intent(in) :: iProcRecv, iPixelProcLoc
-    real, intent(in) :: State_VGB(:,:,:,:,:)
     real, allocatable, intent(inout) :: StatePixelSegProc_VII(:,:,:)
     integer, intent(inout) :: nLosSeg_I(:)
     logical, intent(in), optional :: DoTestIn
@@ -435,7 +432,7 @@ contains
 
       if (DoTest) then
         if (iProc==iProcSend) then
-          write(*,'(3F10.3)',advance='no') CoordNorm_D
+          write(*,'(I5,3F10.3)',advance='no') iPixelProcLoc, CoordNorm_D
           if (DoAdjStep) write(*,'(4F10.5)',advance='no') Ds, (CoordLosNew_D-CoordLos_D)/CellSize_D
         endif
         write(*,*)

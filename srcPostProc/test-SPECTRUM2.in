@@ -10,6 +10,9 @@ F
 #GRIDBLOCKALL
 100
 
+#TESTNORMALIZELOS
+T
+
 #DATAFILE
 test-spectrum2-input			NameFileRoot
 

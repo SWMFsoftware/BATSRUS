@@ -39,7 +39,7 @@ module ModSpectrum
   implicit none
   private
   save
-  public:: init_spectrum, spectrum_calc_flux, spectrum_interpolate_lgg
+  public:: init_spectrum, spectrum_calc_flux
 
   ! Variables for DEM and EM calculation
   logical                     :: DoDEM = .false., DoSpectrum = .false.
@@ -69,6 +69,14 @@ module ModSpectrum
   logical                     :: IsOneLine = .false.
   real                        :: OneLineWavelength
 
+  ! now user can select multiple lines of interest
+  ! (without calculating all possible lines in the wavelength range)
+  integer :: nSelectLines = 0
+  real :: SelectLinesWvlnthRange = 0.6, SelectLinesWvlnthResolution = 0.005
+  logical :: DoSelectLinesDopplerRange = .true.
+  character(len=6), allocatable :: NameSelectLines_I(:)
+  real, allocatable :: WvlnthSelectLines_I(:)
+
   ! Variables for output file
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
 
@@ -89,7 +97,6 @@ module ModSpectrum
   logical                     :: IsOnePixel = .false. ! Select one pixel only
   logical                     :: IsPe = .false.
   logical                     :: IsPpar = .false., IsPperp = .false.
-  logical                     :: IsNoAlfven = .false. ! Ignore Alfven waves
   logical                     :: IsDoppler = .false. ! Calculate Doppler shift
   integer                     :: n1Block, n2Block, n3Block ! Define data size
   integer                     :: iOnePixel, jOnePixel, kOnePixel
@@ -144,7 +151,7 @@ module ModSpectrum
 
   ! Variables for the wavelengths of interest
   logical                     :: IsAllLines = .false. ! Ignore unobserved lines
-  integer                     :: iWavelengthInterval, nWavelengthInterval
+  integer                     :: iWavelengthInterval, nWavelengthInterval = 0
   integer                     :: nMaxLine, nLineFound
   real, allocatable           :: WavelengthInterval_II(:,:) 
 
@@ -194,25 +201,22 @@ module ModSpectrum
 
 contains
 
-  subroutine init_spectrum(StatePixelSegProc_VII, nLosSeg_I, nSpectralLine, ProtonElectronRatioOut)
+  subroutine init_spectrum(StatePixelSegProc_VII, nLosSeg_I)
     use ModVarIndexes, ONLY: NameVar_V, MhdRho_=>Rho_, MhdRhoU_=>RhoU_, &
         MhdB_=>B_, WaveFirst_, MhdPe_=>Pe_, MhdP_=>p_, MhdPpar_=>Ppar_
     use ModConst, ONLY: cLightSpeed
 
     real, intent(inout):: StatePixelSegProc_VII(:,:,:)
     integer, intent(in):: nLosSeg_I(:)
-    integer, intent(out) :: nSpectralLine
-    real, intent(out) :: ProtonElectronRatioOut
-
     real :: MinWavelength, MaxWavelength, u, uMax, uMin
     logical :: UsePe = .false.
-    integer :: iPixel, jLos
+    integer :: iPixel, jLos, i, j
+    real :: TmpWvlnthSwap_I(2)
+    real, allocatable :: TmpWvlnthIntvl_I(:,:)
 
     character(len=*), parameter :: NameSub = 'init_spectrum'
 
     call timing_start(NameSub)
-
-    call read_param
 
     nPixelProc = size(nLosSeg_I)
     ! We should already have all the interpolated and rotated state variables.
@@ -221,15 +225,110 @@ contains
     if (trim(NameVar_V(MhdPpar_)) == 'Ppar') UseTAnisotropy = .true.
     if (trim(NameVar_V(WaveFirst_)) == 'I01') UseAlfven = .true.
 
+    call read_param
+
     ! make connections between Mhdrus state variables and Spectrum variables
     iVarMhd2Spec_I(Rho_) = MhdRho_
-    iVarMhd2Spec_I(Ux_:Uz_) = MhdRhoU_ + (/1,2,3/)
-    iVarMhd2Spec_I(Bx_:Bz_) = MhdB_ + (/1,2,3/)
+    iVarMhd2Spec_I(Ux_:Uz_) = MhdRhoU_ + [1,2,3]
+    iVarMhd2Spec_I(Bx_:Bz_) = MhdB_ + [1,2,3]
     iVarMhd2Spec_I(Tpar_) = merge(MhdPpar_,MhdP_,UseTAnisotropy)
     iVarMhd2Spec_I(Tperp_) = 1
     iVarMhd2Spec_I(Te_) = merge(MhdPe_,MhdP_,UsePe)
     iVarMhd2Spec_I(T_) = MhdP_
-    iVarMhd2Spec_I(I01_:I02_) = WaveFirst_ + (/0,1/)
+    iVarMhd2Spec_I(I01_:I02_) = WaveFirst_ + [0,1]
+
+    ! In case of Doppler shift applied some lines might appear that would not
+    ! otherwise. We introduce the extended WaveLengthIntervals for the sake of 
+    ! searching of lines of interest, estimate with largest los velocity.
+    uMin = 0.
+    uMax = 0.
+    if (IsDoppler) then
+      do iPixel = 1, nPixelProc; do jLos = 1, nLosSeg_I(iPixel)
+        u = StatePixelSegProc_VII(MhdRhoU_+1,jLos,iPixel)/StatePixelSegProc_VII(MhdRho_,jLos,iPixel)
+        if (u > uMax) uMax = u
+        if (u < uMin) uMin = u
+      enddo; enddo
+    endif
+    if (nWavelengthInterval>0) then
+      allocate(WavelengthIntervalShifted_II(2,nWavelengthInterval))
+      WavelengthIntervalShifted_II(1,:) = WavelengthInterval_II(1,:) * (1-uMax/cLightSpeed)
+      WavelengthIntervalShifted_II(2,:) = WavelengthInterval_II(2,:) * (1-uMin/cLightSpeed)
+    endif
+
+    ! The response function thing seems to be similar to what is currently
+    ! available in WritePlotLos for the EUV images. Need to check later what
+    ! it actually does.
+    if(IsResponseFunction)then
+       call read_responsefunction
+    endif
+
+    call read_table
+    ! This is only useful when reading Chianti table, not needed after here
+    if (allocated(WavelengthIntervalShifted_II)) deallocate(WavelengthIntervalShifted_II)
+
+    ! Currently nLineFound is always less than nMaxLine
+    ! Potentially in future can automatically pick only the strongest nMaxLine lines
+    nLineAll = min(nMaxLine,nLineFound)
+    if (nLineAll==0) call stop_mpi('No Chianti lines found.')
+    if (iProc==0) write(*,'(A,I0,A)') 'A total of ', nLineAll, ' Chianti lines found.'
+
+    ! automatic wavelength interval selection based on selected lines
+    if (nWavelengthinterval==0) then
+      allocate(TmpWvlnthIntvl_I(2,nLineAll))
+      do i = 1, nLineAll
+        TmpWvlnthIntvl_I(1,i) = LineTable_I(i)%LineWavelength - SelectLinesWvlnthRange/2.
+        TmpWvlnthIntvl_I(2,i) = LineTable_I(i)%LineWavelength + SelectLinesWvlnthRange/2.
+        if (IsDoppler .and. DoSelectLinesDopplerRange) then
+          TmpWvlnthIntvl_I(1,i) = TmpWvlnthIntvl_I(1,i) * (1-uMax/cLightSpeed)
+          TmpWvlnthIntvl_I(2,i) = TmpWvlnthIntvl_I(2,i) * (1-uMin/cLightSpeed)
+        endif
+      enddo
+      do i = 2, nLineAll
+        do j = nLineAll, i, -1
+          if (TmpWvlnthIntvl_I(1,j)<TmpWvlnthIntvl_I(1,j-1)) then
+            TmpWvlnthSwap_I = TmpWvlnthIntvl_I(:,j)
+            TmpWvlnthIntvl_I(:,j) = TmpWvlnthIntvl_I(:,j-1)
+            TmpWvlnthIntvl_I(:,j-1) = TmpWvlnthSwap_I
+          endif
+        enddo
+      enddo
+      i = 1
+      j = 2
+      nWavelengthInterval = 1
+      do while(j<=nLineAll)
+        if (TmpWvlnthIntvl_I(2,i)+SelectLinesWvlnthResolution>=TmpWvlnthIntvl_I(1,j)) then
+          TmpWvlnthIntvl_I(2,i) = max(TmpWvlnthIntvl_I(2,i),TmpWvlnthIntvl_I(2,j))
+          TmpWvlnthIntvl_I(:,j) = -1
+        else
+          nWavelengthinterval = nWavelengthinterval + 1
+          i = j
+        endif
+        j = j + 1
+      enddo
+      if (allocated(WavelengthInterval_II)) deallocate(WavelengthInterval_II)
+      allocate(WavelengthInterval_II(2,nWavelengthInterval))
+      j = 0
+      do i = 1, nLineAll
+        if (TmpWvlnthIntvl_I(1,i)<0) CYCLE
+        j = j + 1
+        WavelengthInterval_II(:,j) = TmpWvlnthIntvl_I(:,i)
+      enddo
+      deallocate(TmpWvlnthIntvl_I)
+      SizeWavelengthBin = SelectLinesWvlnthResolution
+      if (IsVerbose) then
+        write(*,*)
+        write(*,*) 'Automatically selected wavelength interval:'
+        write(*,*)
+        write(*,'(A)') '#WAVELENGTHINTERVAL'
+        write(*,'(I12,A)') nWavelengthInterval, achar(9)//achar(9)//'nWavelengthInterval'
+        do i = 1, nWavelengthInterval
+          write(*,'(F12.4,A)') WavelengthInterval_II(1,i), achar(9)//achar(9)//'IntervalMin'
+          write(*,'(F12.4,A)') WavelengthInterval_II(2,i), achar(9)//achar(9)//'IntervalMax'
+        enddo
+        write(*,'(F12.4,A)') SizeWavelengthBin, achar(9)//achar(9)//'SizeWavelengthBin'
+        write(*,*)
+      endif
+    endif
 
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
@@ -255,79 +354,16 @@ contains
        end do
     end do
 
-    ! In case of Doppler shift applied some lines might appear that would not
-    ! otherwise. We introduce the extended WaveLengthIntervals for the sake of 
-    ! searching of lines of interest, estimate with largest los velocity.
-    if (IsDoppler) then
-      uMin = 0.
-      uMax = 0.
-      do iPixel = 1, nPixelProc; do jLos = 1, nLosSeg_I(iPixel)
-        u = StatePixelSegProc_VII(MhdRhoU_+1,jLos,iPixel)/StatePixelSegProc_VII(MhdRho_,jLos,iPixel)
-        if (u > uMax) uMax = u
-        if (u < uMin) uMin = u
-      enddo; enddo
-      allocate(WavelengthIntervalShifted_II(2,nWavelengthInterval))
-      WavelengthIntervalShifted_II(1,:) = WavelengthInterval_II(1,:) * (1-uMax/cLightSpeed)
-      WavelengthIntervalShifted_II(2,:) = WavelengthInterval_II(2,:) * (1-uMin/cLightSpeed)
-    endif
-
-    ! The response function thing seems to be similar to what is currently
-    ! available in WritePlotLos for the EUV images. Need to check later what
-    ! it actually does.
-    if(IsResponseFunction)then
-       call read_responsefunction
-    endif
-
-    call read_table
-
-    ! This is only useful when reading Chianti table, not needed any more
-    if(IsDoppler) deallocate(WavelengthIntervalShifted_II)
-
-    ! Currently nLineFound is always less than nMaxLine
-    ! Potentially in future can automatically pick only the strongest nMaxLine lines
-    nLineAll = min(nMaxLine,nLineFound)
-
-    if (iProc==0) write(*,'(A,I0,A)') 'A total of ', nLineAll, ' Chianti lines found.'
-
-    nSpectralLine = nLineAll
-    ProtonElectronRatioOut = ProtonElectronRatio
-
     call timing_stop(NameSub)
 
   end subroutine init_spectrum
-
-
-  ! subroutine save_spectrum
-  !   use ModMpi
-
-  !   deallocate(Var_VIII, LineTable_I)
-
-  !   if(IsResponseFunction)then
-  !      call mpi_reduce(LOSimage_II, size(LOSimage_II), MPI_SUM, 0, iComm, iError)
-  !   else
-  !      do iInterval = 1, nWavelengthinterval
-  !         call mpi_reduce(SpectrumTable_I(iInterval)%Spectrum_III, &
-  !              size(SpectrumTable_I(iInterval)%Spectrum_III), MPI_SUM, 0, &
-  !              iComm, iError)
-  !      end do
-  !   end if
-
-  !   if(iProc==0)then 
-  !      call save_all
-  !      if(IsVerbose) write(*,*)'done with save_all'
-  !   end if
-
-  !   deallocate(WavelengthInterval_II, SpectrumTable_I)
-
-
-  ! end subroutine save_spectrum
-
 
   subroutine read_param
     use ModReadParam
 
     character(len=200)      :: NameCommand
     logical                     :: IsNoInstrument = .false., DoEcho = .false.
+    logical :: UseAlfven2
     integer                     :: iPixel
     character(len=*), parameter :: NameSub='read_param'
     !------------------------------------------------------------------------
@@ -337,160 +373,218 @@ contains
 
     ! Read SPECTRUM.in
     READPARAM: do
-       if(.not.read_line(StringLine) ) EXIT READPARAM
-       if(.not.read_command(NameCommand)) CYCLE READPARAM
+      if(.not.read_line(StringLine) ) EXIT READPARAM
+      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
-       select case(NameCommand)
-       case("#ECHO")
-          call read_var('DoEcho',DoEcho)
-          call read_echo_set(DoEcho .and. iProc==0)
+      select case(NameCommand)
+      case("#ECHO")
+        call read_var('DoEcho',DoEcho)
+        call read_echo_set(DoEcho .and. iProc==0)
 
-       case("#VERBOSE")
-          call read_var('IsVerbose', IsVerbose)
-          IsVerbose = (iProc == 0) .and. IsVerbose
+      case("#VERBOSE")
+        call read_var('IsVerbose', IsVerbose)
+        IsVerbose = (iProc == 0) .and. IsVerbose
 
-       case("#DEBUG")
-          call read_var('IsDebug', IsDebug)
-          IsDebug = IsDebug .and. (iProc == 0)
+      case("#DEBUG")
+        call read_var('IsDebug', IsDebug)
+        IsDebug = IsDebug .and. (iProc == 0)
 
-       case("#TABLEFILE")
-          call read_var('NameTableFile',NameTableFile)
-          call read_var('nMaxLine',nMaxLine)
+      case("#TABLEFILE")
+        call read_var('NameTableFile',NameTableFile)
+        call read_var('nMaxLine',nMaxLine)
 
-       case("#WAVELENGTHINTERVAL")
-          IsNoInstrument = .true.
+      case("#WAVELENGTHINTERVAL")
+        IsNoInstrument = .true.
 
-          call read_var('nWavelengthInterval',nWavelengthInterval)
-          if(IsInstrument)then
-             deallocate(WavelengthInterval_II)
-             write(*,*)'INSTRUMENT intervals changed to WAVELENGTHINTERVALS'
-          endif
-          allocate(WavelengthInterval_II(2,nWavelengthInterval))
-          do iWavelengthInterval=1, nWavelengthInterval
-             call read_var('IntervalMin', &
-                  WavelengthInterval_II(1,iWavelengthInterval))
-             call read_var('IntervalMax', &
-                  WavelengthInterval_II(2,iWavelengthInterval))
-          end do
-          call read_var('SizeWavelengthBin',SizeWavelengthBin)
+        call read_var('nWavelengthInterval',nWavelengthInterval)
+        if (nWavelengthInterval<=0) then
+          call stop_mpi('Error: Please specify a wavelength interval; or use #INSTRUMENT; ' &
+              // 'or use #SELECTLINES and drop this tag to automatically select interval.')
+        endif
+        if(IsInstrument)then
+           deallocate(WavelengthInterval_II)
+           write(*,*)'INSTRUMENT intervals changed to WAVELENGTHINTERVALS'
+        endif
+        allocate(WavelengthInterval_II(2,nWavelengthInterval))
+        do iWavelengthInterval=1, nWavelengthInterval
+           call read_var('IntervalMin', &
+                WavelengthInterval_II(1,iWavelengthInterval))
+           call read_var('IntervalMax', &
+                WavelengthInterval_II(2,iWavelengthInterval))
+        end do
+        call read_var('SizeWavelengthBin',SizeWavelengthBin)
 
-       case("#DATABLOCK")
-          IsDataBlock = .true.
-          call read_var('n1',n1Block)
-          call read_var('nImagePixelJ',n2Block)
-          call read_var('nImagePixelK',n3Block)
+      case("#DATABLOCK")
+        IsDataBlock = .true.
+        call read_var('n1',n1Block)
+        call read_var('nImagePixelJ',n2Block)
+        call read_var('nImagePixelK',n3Block)
 
-       case("#INSTRUMENT")
-          IsInstrument = .true.
-          iPixel = 0
-          nPixel = 0
-          call read_var('NameInstrument',NameInstrument)
+      case("#INSTRUMENT")
+        IsInstrument = .true.
+        iPixel = 0
+        nPixel = 0
+        call read_var('NameInstrument',NameInstrument)
 
-          select case(NameInstrument)
-          case("EIS")
-             IsEIS = .true.
-             nWavelengthInterval = 2
-             nPixel = 512
+        select case(NameInstrument)
+        case("EIS")
+           IsEIS = .true.
+           nWavelengthInterval = 2
+           nPixel = 512
 
-             SizeWavelengthBin = 0.0223
-             if(IsNoInstrument)then
-                write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
-             else
-                allocate(WavelengthInterval_II(2,nWavelengthInterval))
-                WavelengthInterval_II(:,1) = (/ 170 ,210 /)
-                WavelengthInterval_II(:,2) = (/ 250 ,290 /)
-             endif
-          case default
-             write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
-          end select
+           SizeWavelengthBin = 0.0223
+           if(IsNoInstrument)then
+              write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
+           else
+              allocate(WavelengthInterval_II(2,nWavelengthInterval))
+              WavelengthInterval_II(:,1) = (/ 170 ,210 /)
+              WavelengthInterval_II(:,2) = (/ 250 ,290 /)
+           endif
+        case default
+           write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
+        end select
 
-       case("#UNIFORMDATA")
-          IsUniData = .true.
-          call read_var('IsPpar',IsPpar)
-          call read_var('IsPe',IsPe)
-          call read_var('RhoUni',RhoUni)
-          call read_var('UxUni',UxUni)
-          call read_var('UyUni',UyUni)
-          call read_var('UzUni',UzUni)
-          call read_var('BxUni',BxUni)
-          call read_var('ByUni',ByUni)
-          call read_var('BzUni',BzUni)
-          ! One temperature
-          if(.not. IsPe .and. .not. IsPpar)then
-             call read_var('TparUni',TparUni)
-             TperpUni = TparUni
-             TeUni = TparUni
-             ! Proton +  electron temperatures
-          elseif(IsPe .and. .not. IsPpar)then
-             call read_var('TparUni',TparUni)
-             TperpUni = TparUni
-             call read_var('TeUni',TeUni)
-             ! Electron + anisotropic proton temperatures
-          elseif(IsPe .and. IsPpar)then
-             IsPperp = .true.
-             call read_var('TparUni',TparUni)
-             call read_var('TperpUni',TperpUni)
-             call read_var('TeUni',TeUni)
-          else 
-             write(*,*) NameSub // ' WARNING: check temperature setting' // &
-                  'Select 1, 2 (proton+electron), or 3 temperature' // & 
-                  '(electron+anisotropic proton) model!' 
-          endif
-          call read_var('I01Uni',I01Uni)
-          call read_var('I02Uni',I02Uni)
+      ! case("#UNIFORMDATA")
+      !   IsUniData = .true.
+      !   call read_var('IsPpar',IsPpar)
+      !   call read_var('IsPe',IsPe)
+      !   call read_var('RhoUni',RhoUni)
+      !   call read_var('UxUni',UxUni)
+      !   call read_var('UyUni',UyUni)
+      !   call read_var('UzUni',UzUni)
+      !   call read_var('BxUni',BxUni)
+      !   call read_var('ByUni',ByUni)
+      !   call read_var('BzUni',BzUni)
+      !   ! One temperature
+      !   if(.not. IsPe .and. .not. IsPpar)then
+      !     call read_var('TparUni',TparUni)
+      !     TperpUni = TparUni
+      !     TeUni = TparUni
+      !     ! Proton +  electron temperatures
+      !   elseif(IsPe .and. .not. IsPpar)then
+      !     call read_var('TparUni',TparUni)
+      !     TperpUni = TparUni
+      !     call read_var('TeUni',TeUni)
+      !     ! Electron + anisotropic proton temperatures
+      !   elseif(IsPe .and. IsPpar)then
+      !     IsPperp = .true.
+      !     call read_var('TparUni',TparUni)
+      !     call read_var('TperpUni',TperpUni)
+      !     call read_var('TeUni',TeUni)
+      !   else 
+      !     write(*,*) NameSub // ' WARNING: check temperature setting' // &
+      !         'Select 1, 2 (proton+electron), or 3 temperature' // & 
+      !         '(electron+anisotropic proton) model!' 
+      !   endif
+      !   call read_var('I01Uni',I01Uni)
+      !   call read_var('I02Uni',I02Uni)
 
-       case("#NOALFVEN")
-          call read_var('IsNoAlfven',IsNoAlfven)
+      case("#ALFVEN")
+        call read_var('UseAlfven',UseAlfven2)
+        if (.not.UseAlfven .and. UseAlfven2) then
+          write(*,*) 'Warning: no IO1 variable in equation, switching off Alfven'
+        endif
+        UseAlfven = UseAlfven .and. UseAlfven2
 
-       case("#ISONEPIXEL")
-          call read_var('IsOnePixel',IsOnePixel)
-          call read_var('iOnePixel',iOnePixel)
-          call read_var('jOnePixel',jOnePixel)
-          call read_var('kOnePixel',kOnePixel)
+      case("#ISONEPIXEL")
+        call read_var('IsOnePixel',IsOnePixel)
+        call read_var('iOnePixel',iOnePixel)
+        call read_var('jOnePixel',jOnePixel)
+        call read_var('kOnePixel',kOnePixel)
 
-       case("#ISALLLINES")
-          call read_var('IsAllLines',IsAllLines) ! Unobserved lines included
+      case("#ISALLLINES")
+        call read_var('IsAllLines',IsAllLines) ! Unobserved lines included
 
-       case("#ISDOPPLER")
-          call read_var('IsDoppler',IsDoppler)
+      case("#ISDOPPLER")
+        call read_var('IsDoppler',IsDoppler)
 
-       case("#ONELINE")
-          IsOneLine = .true.
-          call read_var('OneLineWavelength',OneLineWavelength)
+      ! case("#ONELINE")
+      !   IsOneLine = .true.
+      !   call read_var('OneLineWavelength',OneLineWavelength)
 
-       case("#LOGTEMIN")
-          IsLogTeMin = .true.
-          call read_var('LogTeMin',LogTeMin)
+      case("#SELECTLINES")
+        call read_var('nSelectLines',nSelectLines)
+        if (nSelectLines > 0) then
+          call read_process_select_lines
+        endif
 
-       case("#TRANSITIONREGION")
-          call read_var('DoExtendTransitionRegion',DoExtendTransitionRegion)
-          if(DoExtendTransitionRegion)then
-             call read_var('TeModSi',TeModSi)
-             call read_var('DeltaTeModSi',DeltaTeModSi)
-          end if
+      case("#SELECTLINESOPTION")
+        call read_var('SelectLinesWvlnthRange',SelectLinesWvlnthRange)
+        call read_var('SelectLinesWvlnthResolution',SelectLinesWvlnthResolution)
+        call read_var('DoSelectLinesDopplerRange',DoSelectLinesDopplerRange)
 
-       case("#DEM")
-          DoDEM = .true.
-          DoEM = .true.
-          call read_var('NameDEMFile',NameDEMFile)
-          call read_var('NameEMFile',NameEMFile)
-          call read_var('DoSpectrum',DoSpectrum)
-          call read_var('LogTeMinDEM',LogTeMinDEM)
-          call read_var('LogTeMaxDEM',LogTeMaxDEM)
-          call read_var('DLogTeDEM',DLogTeDEM)
+      case("#LOGTEMIN")
+        IsLogTeMin = .true.
+        call read_var('LogTeMin',LogTeMin)
 
-       case("#RESPONSEFUNCTION")
-          IsResponseFunction = .true.
-          call read_var('NameResponseFunctionFile', NameResponseFunctionFile)
+      case("#TRANSITIONREGION")
+        call read_var('DoExtendTransitionRegion',DoExtendTransitionRegion)
+        if(DoExtendTransitionRegion)then
+           call read_var('TeModSi',TeModSi)
+           call read_var('DeltaTeModSi',DeltaTeModSi)
+        end if
 
-       case("#PROTONELECTRONRATIO")
-          call read_var('ProtonElectronRatio',ProtonElectronRatio)
+      ! case("#DEM")
+      !   DoDEM = .true.
+      !   DoEM = .true.
+      !   call read_var('NameDEMFile',NameDEMFile)
+      !   call read_var('NameEMFile',NameEMFile)
+      !   call read_var('DoSpectrum',DoSpectrum)
+      !   call read_var('LogTeMinDEM',LogTeMinDEM)
+      !   call read_var('LogTeMaxDEM',LogTeMaxDEM)
+      !   call read_var('DLogTeDEM',DLogTeDEM)
 
-       case default
-          ! write(*,*) NameSub // ' WARNING: unknown #COMMAND '
+      ! case("#RESPONSEFUNCTION")
+      !   IsResponseFunction = .true.
+      !   call read_var('NameResponseFunctionFile', NameResponseFunctionFile)
 
-       end select
+      case("#PROTONELECTRONRATIO")
+        call read_var('ProtonElectronRatio',ProtonElectronRatio)
+
+      case default
+        ! write(*,*) NameSub // ' WARNING: unknown #COMMAND '
+
+      end select
     end do READPARAM
+
+  contains
+    subroutine read_process_select_lines
+      use ModUtilities, ONLY: split_string, lower_case
+      integer :: i, j, nStrParts, iC, nStrLen
+      logical :: IsUnderScore
+      character(len=20) :: NameSelectLine, NameSelectLineTmp_I(2)
+      allocate(NameSelectLines_I(nSelectLines))
+      allocate(WvlnthSelectLines_I(nSelectLines))
+      do i = 1, nSelectLines
+        call read_var('NameSelectLine',NameSelectLine)
+        call split_string(NameSelectLine,NameSelectLineTmp_I,nStrParts,' ')
+        if (nStrParts<2) then
+          call stop_mpi("Error: wrong input for select line: use format e.g., fe_8 186.598")
+        endif
+        call lower_case(NameSelectLineTmp_I(1))
+        IsUnderScore = .false.
+        nStrLen = len_trim(NameSelectLineTmp_I(1))
+        do j = 1, nStrLen
+          ! very basic processing, accepts input of ion name without underscore
+          iC = ichar(NameSelectLineTmp_I(1)(j:j))
+          if (iC==ichar('_')) then
+            IsUnderScore = .true.
+          else if (iC>=ichar('0') .and. iC<=ichar('9')) then
+            if (j==1) then
+              call stop_mpi("Error: need ion name in front of wavelength: use format e.g., fe_8 186.598")
+            endif
+            if (.not.IsUnderScore) then
+              NameSelectLineTmp_I(1)(j+1:nStrLen+1) = NameSelectLineTmp_I(1)(j:nStrLen)
+              NameSelectLineTmp_I(1)(j:j) = '_'
+              EXIT
+            endif
+          endif
+        enddo
+        NameSelectLines_I(i) = trim(NameSelectLineTmp_I(1))
+        read(NameSelectLineTmp_I(2), *) WvlnthSelectLines_I(i)
+      enddo
+
+    end subroutine read_process_select_lines
 
   end subroutine read_param
 
@@ -547,10 +641,10 @@ contains
     integer                     :: iMin, jMin, iMax, jMax
 
     ! Density, temperature and wave indexes
-    integer                     :: iN, iT, iLine
+    integer                     :: iN, iT, iLine, k
 
     ! Switches for header and information for a wavelength of interest
-    logical                     :: IsHeader
+    logical                     :: IsHeader, IsFound, IsMatch
     logical                     :: DoStore  
 
     character(len=*), parameter :: NameSub='read_table'
@@ -597,11 +691,12 @@ contains
     allocate(g_II(iNMin:iNMax,jTMin:jTMax))
 
     if (IsVerbose) then
-      write(*,*) 'Wavelength range (shifted if Doppler):'
+      if (nWavelengthInterval>0) &
+        write(*,*) 'Wavelength range (shifted if Doppler):'
       do iWavelengthInterval = 1, nWavelengthInterval
         write(*,'(2F12.3)',advance='no') WavelengthInterval_II(:,iWavelengthinterval)
         if (IsDoppler) then
-          write(*,'(2F12.3)') WavelengthIntervalShifted_II(:,iWavelengthinterval)
+          write(*,'(A,2F12.3)') '  =>  ', WavelengthIntervalShifted_II(:,iWavelengthinterval)
         else
           write(*,*)
         endif
@@ -676,26 +771,37 @@ contains
        ! When reached end of file, exit loop
        if(iError /= 0) EXIT READLOOP
 
-       ! If wavelength is different than previous line
-       ! pass only if wavelength is inside of wavelengthintervals of interest
-       do iWavelengthInterval = 1, nWavelengthInterval
-          if(IsDoppler)then
-             ! If Doppler shift is calculated, use shifted intervals
-             if(LineWavelength < &
-                  WavelengthIntervalShifted_II(1,iWavelengthInterval))&
-                  CYCLE
-             if(LineWavelength > &
-                  WavelengthIntervalShifted_II(2,iWavelengthInterval))&
-                  CYCLE
-          else
-             ! If no Doppler shift is calculated, use original intervals
-             if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
-                  CYCLE
-             if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
-                  CYCLE
-          endif
-          if (IsOneLine .and. LineWavelength /= OneLineWavelength) CYCLE
+       IsFound = .false.
+       if (nWavelengthInterval>0) then
+         ! If wavelength is different than previous line
+         ! pass only if wavelength is inside of wavelengthintervals of interest
+         do iWavelengthInterval = 1, nWavelengthInterval
+            if (LineWavelength<WavelengthIntervalShifted_II(1,iWavelengthInterval)) CYCLE
+            if (LineWavelength>WavelengthIntervalShifted_II(2,iWavelengthInterval)) CYCLE
+            ! if (IsOneLine .and. LineWavelength /= OneLineWavelength) CYCLE
+            if (nSelectLines>0) then
+              IsMatch = .false.
+              do k = 1, nSelectLines
+                if (trim(NameSelectLines_I(k))==trim(NameIon) .and. WvlnthSelectLines_I(k)==LineWavelength) then
+                  IsMatch = .true.
+                  EXIT
+                endif
+              enddo
+              if (.not. IsMatch) CYCLE
+            endif
+            IsFound = .true.
+            EXIT
+         end do
+       else
+         do k = 1, nSelectLines
+           if (trim(NameSelectLines_I(k))==trim(NameIon) .and. WvlnthSelectLines_I(k)==LineWavelength) then
+             IsFound = .true.
+             EXIT
+           endif
+         enddo
+       endif
 
+       if (IsFound) then
           ! New line of interest found, decide to store it
           iLine      = iLine + 1
           if (IsVerbose) write(*,'(I5,A7,F12.3)')iLine,NameIon,LineWavelength
@@ -730,10 +836,7 @@ contains
           ! Store first element
           g_II(iN,iT) = 10.0**LogG
 
-          ! Go on reading the lines corresponding to the wavelength above
-          EXIT
-
-       end do
+       endif
 
     end do READLOOP
     call close_file
@@ -789,7 +892,7 @@ contains
         write(*,*)'DLogN, DLogT = ', DLogN, DLogT
         write(*,*) '+=-----------------------+'
         write(*,'(2A5,A8,2A12,3A7,5A10,A12)') 'i', 'j', 'lgG', 'Flux*ds', 'ds', 'LgNe', &
-            'LgTe', 'lgTls', 'Uth_kms', 'Unth_kms', 'DLambda', 'V_kms', 'B_G', 'Rs'
+            'LgTe', 'lgTls', 'Uth_kms', 'Unth_kms', 'DLambda', 'Vx_kms', '|B|_G', 'Rs'
       endif
 
       do iPixel = 1, nPixelProc; do jLos = 1, nLosSeg_I(iPixel)
@@ -846,7 +949,8 @@ contains
         if(IsLogTeMin .and. (LogTe < LogTeMin)) CYCLE
 
         ! Get the contribution function
-        Gint = 10.**spectrum_interpolate_lgg(iLine,LogNe,LogTe)
+        Gint = bilinear(LineTable_I(iLine)%g_II(:,:), iNMin, iNMax, jTMin, jTMax, &
+            [LogNe/DLogN,LogTe/DLogT], DoExtrapolate=.false.)
         ! When Gint becomes negative due to extrapolation -> move to next
         if (Gint<=0) CYCLE 
 
@@ -864,7 +968,7 @@ contains
         ! Calculate thermal broadening
         Uth2  = cBoltzmann * Tlos/(cProtonMass * Aion)  
 
-        if (UseAlfven .and. .not.IsNoAlfven) then
+        if (UseAlfven) then
           ! Calculate Elzasser variables
           Zplus2   = Var_I(I01_) * 4.0 / Rho
           Zminus2  = Var_I(I02_) * 4.0 / Rho
@@ -904,14 +1008,17 @@ contains
 
         ! dVperd2/dOmega = dx * 1e2 or dx in CGS
 
-        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dLosLength * 1e2
+        FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dLosLength*1e2
 
         if (DoExtendTransitionRegion) then
           FluxMono = FluxMono / extension_factor(Var_I(te_))
         endif
 
         if(IsDebug)then
-          write(*,'(2I5,F8.2,2E12.3,3F7.3,2F10.3,F10.5,2F10.3,F12.4)') iPixel, jLos, log10(Gint), FluxMono, dLosLength, LogNe, LogTe, log10(Tlos), sqrt(Uth2)/1e3, sqrt(Unth2)/1e3, DLambda, norm2(Var_I(Ux_:Uz_))/1e3, norm2(Var_I(Bx_:Bz_))*1e4, norm2(XyzSeg_D)
+          write(*,'(2I5,F8.2,2E12.3,3F7.3,2F10.3,F10.5,2F10.3,F12.4)') &
+              iPixel, jLos, log10(Gint), FluxMono, dLosLength, LogNe, LogTe, &
+              log10(Tlos), sqrt(Uth2)/1e3, sqrt(Unth2)/1e3, DLambda, Var_I(Ux_)/1e3, &
+              norm2(Var_I(Bx_:Bz_))*1e4, norm2(XyzSeg_D)
         endif
 
         ! disperse line and save to spectrum array
@@ -982,22 +1089,6 @@ contains
     !==========================================================================
 
   end subroutine spectrum_calc_flux
-
-
-  function spectrum_interpolate_lgg(iLine, LgNe, LgTe) result(LgG)
-    use ModInterpolate, ONLY: bilinear
-    integer, intent(in) :: iLine
-    real, intent(in) :: LgNe, LgTe
-    real :: LgG
-    character(len=*), parameter :: NameSub = 'spectrum_interpolate_lgg'
-
-    ! call timing_start(NameSub)
-    LgG = log10(bilinear(LineTable_I(iLine)%g_II(:,:), iNMin, iNMax, jTMin, jTMax, &
-            (/ LgNe/DLogN , LgTe/DLogT /), DoExtrapolate=.false.))
-    ! call timing_stop(NameSub)
-
-  end function spectrum_interpolate_lgg
-
 
 end module ModSpectrum
 

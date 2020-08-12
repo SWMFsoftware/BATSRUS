@@ -1,10 +1,8 @@
 ! This as a testing and stand alone Spectrum main program.
 program spectrum
-  use BATL_size, ONLY: &
-       nDim, MaxBlock, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iProc, nProc, iComm, init_mpi, clean_mpi
-  use BATL_test, ONLY: StringTest
+  use BATL_size, ONLY: nDim, MaxBlock, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use BATL_lib, ONLY: test_start, test_stop, iProc, nProc, iComm, init_mpi, clean_mpi
+  use BATL_test, ONLY: StringTest, iBlockTest
   use ModReadParam
   use ModNodes, ONLY: clean_mod_nodes
   use ModMpi
@@ -16,7 +14,7 @@ program spectrum
 
   implicit none
 
-  !----------------------------------------------------------------------------
+  !--------------------------------------------------------
   character(len=200) NameFileRoot, NameSpectrumOut
   character(len=200) TypeDataFile, NameUnitInput
 
@@ -25,9 +23,6 @@ program spectrum
   character(len=20) :: TypeCellBc_I(6) = 'none'
   integer :: nStep
   real :: tStep
-
-  integer :: nSpectralLine = 0
-  real :: ProtonElectronRatio
 
   ! (1,:) For each pixel, the index of the processor that is going to store the
   ! state vectors and calculate spectrum flux along LOS. Because any one
@@ -39,7 +34,7 @@ program spectrum
   ! (2,:) Location of this pixel in the processor array (which stores only a
   ! part of the image). The interpolated state variables are then stored on
   ! iProc = Info(1,iPix), in sub-array State(:,:,Info(2,iPix))
-  integer, allocatable :: iPixelProcInfo_II(:,:)  ! size is [2,nPixelA*nPixelB]
+  integer, allocatable :: iPixelProcInfo_II(:,:)    ! size is [2,nPixelA*nPixelB]
 
   ! Number of pixels stored in this processor, approx nPixelA*nPIxelB/nProc
   integer :: nPixelProc
@@ -47,24 +42,25 @@ program spectrum
   integer :: nLosSegInc   ! increment of array size if nLOS is too small
   ! Number of LOS segments at a pixel, size is nPixelProc
   integer, allocatable :: nLosSeg_I(:)
-  ! State variables stored on this processor. [nVar+1, MaxLosSeg, nPixelProc]
+  ! State variables stored on this processor. Size: [nVar+1, MaxLosSeg, nPixelProc]
   real, allocatable :: StatePixelSegProc_VII(:,:,:)
-  real, allocatable :: Emis_IGB(:,:,:,:,:), EmisPixelSegProc_III(:,:,:)
 
   integer :: nPixel_I(2)
   real :: ImageCenter_I(2), ImageSize_I(2), ObsPos_D(3)
   real, allocatable :: PixelPosA_I(:), PixelPosB_I(:)
   real :: rInner, rOuter
 
-  logical, allocatable :: UsedBatl_B(:)
+  logical :: DoTestNormalizeLos = .false.
+  real, allocatable :: TestLengthLos_I(:)
 
   integer :: iError
 
-  logical :: DoTestOutputLosSegments
+  logical :: DoTestOutputLosSegments = .true.
 
   ! ------------------------------
 
-  ! StringTest = 'get_los_data_cube'
+  ! StringTest = 'set_batsrus_grid fix_block_geometry'
+  ! iBlockTest = 100
 
   call init_mpi
   call init_defaults
@@ -82,23 +78,22 @@ program spectrum
   allocate(iPixelProcInfo_II(2,nPixel_I(1)*nPixel_I(2)))
   allocate(PixelPosA_I(nPixel_I(1)),PixelPosB_I(nPixel_I(2)))
   call init_los_spectrum(rInner, rOuter, nPixel_I, ImageCenter_I, ImageSize_I, &
-       ObsPos_D, PixelPosA_I, PixelPosB_I, nPixelProc, iPixelProcInfo_II, &
-       nLosSeg_I, StatePixelSegProc_VII)
+      ObsPos_D, PixelPosA_I, PixelPosB_I, nPixelProc, iPixelProcInfo_II, &
+      nLosSeg_I, StatePixelSegProc_VII)
 
   if (iProc == 0) write(*,*) 'Get Los data cube.'
-  call get_los_data_cube(iPixelProcInfo_II, StatePixelSegProc_VII, nLosSeg_I, State_VGB)
+  call get_los_data_cube(iPixelProcInfo_II, StatePixelSegProc_VII, nLosSeg_I)
 
   ! convert unit from normalized to SI
-  if (iProc == 0) write(*,*) 'Get Los data cube for Mhd variables.'
   call convert_units
 
   if (DoTestOutputLosSegments) then
-     if (iProc == 0) write(*,*) 'Collect Los segments.'
-     call collect_los_segments('IO2/1.vtk',DoTestIn=.false.)
+    if (iProc == 0) write(*,*) 'Collect Los segments.'
+    call collect_los_segments(DoTestIn=.true.)
   endif
 
   if (iProc == 0) write(*,*) 'Init Spectrum.'
-  call init_spectrum(StatePixelSegProc_VII, nLosSeg_I, nSpectralLine, ProtonElectronRatio)
+  call init_spectrum(StatePixelSegProc_VII, nLosSeg_I)
 
   call clean_mod_nodes
   deallocate(State_VGB,iTypeAdvance_BP,iTypeAdvance_B)
@@ -117,12 +112,10 @@ program spectrum
   call clean_mpi
 
 contains
-  !============================================================================
+  !==========================================================
 
   subroutine init_defaults
-
-    use ModVarIndexes, ONLY: &
-         NameVar_V, nVar, nFluid, nWave, WaveFirst_, WaveLast_, IonFirst_
+    use ModVarIndexes, ONLY: NameVar_V, nVar, nFluid, nWave, WaveFirst_, WaveLast_, IonFirst_
     use ModMain, ONLY: NameThisComp, NameVarLower_V
     use ModUtilities, ONLY: lower_case
     use ModPhysics, ONLY: TypeNormalization, TypeIoUnit, BodyTDim_I, BodyNDim_I
@@ -132,17 +125,17 @@ contains
     character(len=3) :: NameWave
 
     ! Fix the NameVar_V string for waves
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     if(WaveLast_ > 1)then
-       do iWave = 1, nWave
-          write(NameWave,'(a,i2.2)') 'I',iWave
-          NameVar_V(WaveFirst_+iWave-1) = NameWave
-       enddo
+      do iWave = 1, nWave
+        write(NameWave,'(a,i2.2)') 'I',iWave
+        NameVar_V(WaveFirst_+iWave-1) = NameWave
+      enddo
     endif
 
     do iVar = 1, nVar+nFluid
-       NameVarLower_V(iVar) = NameVar_V(iVar)
-       call lower_case(NameVarLower_V(iVar))
+      NameVarLower_V(iVar) = NameVar_V(iVar)
+      call lower_case(NameVarLower_V(iVar))
     end do
 
     NameThisComp = 'SC'
@@ -154,34 +147,31 @@ contains
     BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
   end subroutine init_defaults
-  !============================================================================
+  !==========================================================
 
   subroutine init_program_spectrum
-
     use BATL_tree, ONLY: read_tree_file, get_tree_position, distribute_tree, &
-         show_tree, adapt_tree, iTree_IA, iNode_B, iStatusNew_A, &
-         Unset_, Unused_, Used_, Status_, Coarsen_
-    use BATL_lib, ONLY: init_grid_batl, init_batl, CoordMin_D, CoordMax_D, &
-         Unused_B, Xyz_DGB
-    use BATL_geometry, ONLY: gen_to_radius, LogRgen_I, IsLogRadius, &
-         IsGenRadius, IsSpherical, IsRLonLat
+        show_tree, adapt_tree, iTree_IA, iNode_B, iStatusNew_A, Unset_, Unused_, Used_, Status_, Coarsen_
+    use BATL_lib, ONLY: init_grid_batl, init_batl, CoordMin_D, CoordMax_D, Unused_B, Xyz_DGB, CoordMin_DB, CoordMax_DB, IsNewDecomposition, IsNewTree
+    use BATL_geometry, ONLY: gen_to_radius, LogRgen_I, IsLogRadius, IsGenRadius, IsSpherical, IsRLonLat, UseHighFDGeometry
     use ModBatlInterface, ONLY: set_batsrus_grid
     use ModParallel, ONLY: init_mod_parallel
-    use ModPhysics, ONLY: &
-         init_vector_variables, set_physics_constants, iVectorVar_I
-    use ModMain, ONLY: init_mod_main
-    use ModAdvance, ONLY: &
-         init_mod_advance, clean_mod_advance, State_VGB, iTypeAdvance_BP, &
-         iTypeAdvance_B
+    use ModPhysics, ONLY: init_vector_variables, set_physics_constants, iVectorVar_I
+    use ModMain, ONLY: init_mod_main, TypeCellBc_I
+    use ModAdvance, ONLY: init_mod_advance, clean_mod_advance, State_VGB, iTypeAdvance_BP, iTypeAdvance_B
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells
-    use ModVarIndexes, ONLY: NameVar_V, nVar
+    use ModVarIndexes, ONLY: NameVar_V, nVar, nFluid
     use ModNodes, ONLY: init_mod_nodes
     use ModGeometry, ONLY: init_mod_geometry, XyzMin_D, XyzMax_D, TypeGeometry
 
-    integer :: iBlock, iNode, iError
+
+    integer :: iBlock, iNode, iError, i
     real :: rMin, rMax, PositionMin_D(3), PositionMax_D(3), rSize
-    !--------------------------------------------------------------------------
+
+    integer :: UnitTmp_, nDimIn, nInfoIn, nNodeIn, iRatioIn_D(3), nRootIn_D(3)
+
     character(len=200) NameInfoFile, NameTreeFile, NameDataFile
+    !--------------------------------------------------------
 
     rInner = 1.001
     rOuter = 5.
@@ -189,7 +179,6 @@ contains
     nPixel_I = [0, 0]
 
     ObsPos_D = [218.5,0.001,0.001]
-    DoTestOutputLosSegments = .false.
 
     call read_param_file
 
@@ -199,6 +188,8 @@ contains
     ! from set_parameters
     call init_vector_variables
 
+    UseHighFDGeometry = .false.
+    TypeCellBc_I = ['float','float','float','float','float','float']
     call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
          TypeGeometryBatl, TypeCellBc_I(1:2*nDim-1:2) == 'periodic', &
          nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
@@ -211,16 +202,12 @@ contains
 
     ! from BatsrusMethods
     call init_mod_parallel
-    call init_grid_batl
-    call set_batsrus_grid
-
     call init_mod_main
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
     allocate(iTypeAdvance_B(MaxBlock))
     iTypeAdvance_BP = 0
     iTypeAdvance_B = 0
-
     call init_mod_geometry
     call init_mod_boundary_cells
     call init_mod_nodes
@@ -232,6 +219,7 @@ contains
     NameTreeFile = trim(NameFileRoot)//'.tree'
     call read_tree_file(NameTreeFile)
     call init_grid_batl
+    IsNewDecomposition = .true.
     call set_batsrus_grid
 
     if (iProc == 0) write(*,*) 'Read data.'
@@ -239,18 +227,15 @@ contains
     call read_data_file(NameDataFile)
 
   end subroutine init_program_spectrum
-  !============================================================================
+  !==========================================================
 
   subroutine read_param_file
-    use ModReadParam, ONLY: &
-         lStringLine, read_file, read_init, read_line, read_command, &
-         read_echo_set
+    use ModReadParam, ONLY: lStringLine, read_file, read_init, read_line, read_command, read_echo_set
 
     character(len=*), parameter :: NameParamFile = 'SPECTRUM.in'
-    character(len=lStringLine) :: &
-         StringLine, NameCommand, NameFileHead, NameVarInput
+    character(len=lStringLine) :: StringLine, NameCommand, NameFileHead, NameVarInput
     logical :: DoEcho = .true.
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     character(len=10) TypeObsCoord
     logical :: DoObsRotate, DoObsRotTangent
     real :: ObsRotAngle
@@ -260,260 +245,267 @@ contains
     call read_init()
 
     READPARAM: do
-       if(.not.read_line(StringLine) ) EXIT READPARAM
-       if(.not.read_command(NameCommand)) CYCLE READPARAM
+      if(.not.read_line(StringLine) ) EXIT READPARAM
+      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
-       select case(NameCommand)
-       case("#ECHO")
-          call read_var('DoEcho',DoEcho)
-          DoEcho = DoEcho .and. iProc==0
-          if (iProc ==0) then
-             write(*,'(A)') trim(NameCommand)
-             write(*,'(L1)') DoEcho
-             write(*,*)
+      select case(NameCommand)
+      case("#ECHO")
+        call read_var('DoEcho',DoEcho)
+        DoEcho = DoEcho .and. iProc==0
+        if (iProc ==0) then
+          write(*,'(A)') trim(NameCommand)
+          write(*,'(L1)') DoEcho
+          write(*,*)
+        endif
+
+      case("#GRIDBLOCK", "#GRIDBLOCKALL")
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('MaxBlock', MaxBlock)
+        if(NameCommand == "#GRIDBLOCKALL") MaxBlock = 1 + (MaxBlock-1)/nProc
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
+
+      case('#DATAFILE')
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('NameFileRoot', NameFileRoot)
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
+
+      case('#OUTFILE')
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('NameSpectrumOut', NameSpectrumOut)
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
+
+      case('#LIMITRADIUS')
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('rInner', rInner)
+        call read_var('rOuter', rOuter)
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
+
+      case('#IMAGE')
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('nPixelA',nPixel_I(1))
+        call read_var('nPixelB',nPixel_I(2))
+        call read_var('ImageCenterX',ImageCenter_I(1))
+        call read_var('ImageCenterY',ImageCenter_I(2))
+        call read_var('ImageSizeX',ImageSize_I(1))
+        call read_var('ImageSizeY',ImageSize_I(2))
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
+
+      case('#OBSERVER')
+        if (DoEcho) write(*,'(A)') trim(NameCommand)
+        call read_echo_set(DoEcho)
+        call read_var('TypeObsCoord', TypeObsCoord)
+        select case(TypeObsCoord)
+        case('HGR')
+          call read_var('ObsPosX', ObsPos_D(1))
+          call read_var('ObsPosY', ObsPos_D(2))
+          call read_var('ObsPosZ', ObsPos_D(3))
+        case('HGI')
+        case('SAT')
+        case default
+          call stop_mpi('Observer coordinate system '//trim(TypeObsCoord)//' not supported.')
+        end select
+        call read_var('DoObsRotate', DoObsRotate)
+        if (DoObsRotate) then
+          call read_var('DoObsRotTangent', DoObsRotTangent)
+          if (.not. DoObsRotTangent) then
+            call read_var('ObsRotAngle', ObsRotAngle)
           endif
+        endif
+        call read_echo_set(.false.)
+        if (DoEcho) write(*,*)
 
-       case("#GRIDBLOCK", "#GRIDBLOCKALL")
+      case('#TESTNORMALIZELOS')
           if (DoEcho) write(*,'(A)') trim(NameCommand)
           call read_echo_set(DoEcho)
-          call read_var('MaxBlock', MaxBlock)
-          if(NameCommand == "#GRIDBLOCKALL") MaxBlock = 1 + (MaxBlock-1)/nProc
+          call read_var('DoTestNormalizeLos',DoTestNormalizeLos)
           call read_echo_set(.false.)
           if (DoEcho) write(*,*)
 
-       case('#DATAFILE')
-          if (DoEcho) write(*,'(A)') trim(NameCommand)
-          call read_echo_set(DoEcho)
-          call read_var('NameFileRoot', NameFileRoot)
-          call read_echo_set(.false.)
-          if (DoEcho) write(*,*)
 
-       case('#OUTFILE')
-          if (DoEcho) write(*,'(A)') trim(NameCommand)
-          call read_echo_set(DoEcho)
-          call read_var('NameSpectrumOut', NameSpectrumOut)
-          call read_echo_set(.false.)
-          if (DoEcho) write(*,*)
-
-       case('#LIMITRADIUS')
-          if (DoEcho) write(*,'(A)') trim(NameCommand)
-          call read_echo_set(DoEcho)
-          call read_var('rInner', rInner)
-          call read_var('rOuter', rOuter)
-          call read_echo_set(.false.)
-          if (DoEcho) write(*,*)
-
-       case('#IMAGE')
-          if (DoEcho) write(*,'(A)') trim(NameCommand)
-          call read_echo_set(DoEcho)
-          call read_var('nPixelA',nPixel_I(1))
-          call read_var('nPixelB',nPixel_I(2))
-          call read_var('ImageCenterX',ImageCenter_I(1))
-          call read_var('ImageCenterY',ImageCenter_I(2))
-          call read_var('ImageSizeX',ImageSize_I(1))
-          call read_var('ImageSizeY',ImageSize_I(2))
-          call read_echo_set(.false.)
-          if (DoEcho) write(*,*)
-
-       case('#OBSERVER')
-          if (DoEcho) write(*,'(A)') trim(NameCommand)
-          call read_echo_set(DoEcho)
-          call read_var('TypeObsCoord', TypeObsCoord)
-          select case(TypeObsCoord)
-          case('HGR')
-             call read_var('ObsPosX', ObsPos_D(1))
-             call read_var('ObsPosY', ObsPos_D(2))
-             call read_var('ObsPosZ', ObsPos_D(3))
-          case('HGI')
-          case('SAT')
-          case default
-             call stop_mpi('Observer coordinate system '//trim(TypeObsCoord)//&
-                  ' not supported.')
-          end select
-          call read_var('DoObsRotate', DoObsRotate)
-          if (DoObsRotate) then
-             call read_var('DoObsRotTangent', DoObsRotTangent)
-             if (.not. DoObsRotTangent) then
-                call read_var('ObsRotAngle', ObsRotAngle)
-             endif
-          endif
-          call read_echo_set(.false.)
-          if (DoEcho) write(*,*)
-
-       case default
-       end select
+      case default
+      end select
     end do READPARAM
 
     if (any(nPixel_I <= 0)) then
-       call stop_mpi('Number of image pixels less than zero!')
+      call stop_mpi('Number of image pixels less than zero!')
     endif
     if (any(ImageSize_I <= 0)) then
-       call stop_mpi('Size of image less than zero!')
+      call stop_mpi('Size of image less than zero!')
     endif
 
   end subroutine read_param_file
-  !============================================================================
+  !==========================================================
 
-  ! read in 3D idl file information, refer to ModSetParameters and PostIDL
+  ! read in 3d idl file information, refer to ModSetParameters and PostIDL
   subroutine read_info_file(NameInfoFile)
     use BATL_geometry, ONLY: nRgen, LogRgen_I
     use BATL_size, ONLY: nIJK, nIJK_D, MaxBlock
     use BATL_geometry, ONLY: gen_to_radius
-    use ModReadParam, ONLY: &
-         lStringLine, read_file, read_init, read_line, read_command, &
-         read_echo_set
+    use ModReadParam, ONLY: lStringLine, read_file, read_init, read_line, read_command, read_echo_set
     use ModVarIndexes, ONLY: nVar
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, TypeGeometry
 
     character(len=200), intent(in) :: NameInfoFile
 
-    character(len=lStringLine) :: &
-         StringLine, NameCommand, NameFileHead, NameVarInput
+    character(len=lStringLine) :: StringLine, NameCommand, NameFileHead, NameVarInput
     integer :: nProcOld, nDimSim, nIJKRead_D(3), i, nCellPlot, nPlotVar
     logical :: IsLogRadius, IsGenRadius
 
     character(len=*), parameter:: NameSub = 'read_info_file'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     call read_file(NameInfoFile,IsVerbose=.false.)
     call read_echo_set(.false.)
     call read_init()
 
     READPARAM: do
-       if(.not.read_line(StringLine) ) EXIT READPARAM
-       if(.not.read_command(NameCommand)) CYCLE READPARAM
+      if(.not.read_line(StringLine) ) EXIT READPARAM
+      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
-       select case(NameCommand)
-       case('#NDIM')
-          call read_var('nDimSim', nDimSim)
-          if (nDimSim /= 3) then
-             call stop_mpi(NameSub//': Needs a 3D simulation data file')
+      select case(NameCommand)
+      case('#NDIM')
+        call read_var('nDimSim', nDimSim)
+        if (nDimSim /= 3) then
+          call stop_mpi(NameSub//': Needs a 3D simulation data file')
+        endif
+
+      case('#GRIDBLOCKSIZE')
+        call read_var('BlockSize1', nIJKRead_D(1))
+        call read_var('BlockSize2', nIJKRead_D(2))
+        call read_var('BlockSize3', nIJKRead_D(3))
+        if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
+          write(*,'(A,3I3)')'Code  compiled with nI,nJ,nK =', nIJK_D
+          write(*,'(A,3I3)')'Data generated with nI,nJ,nK =', nIJKRead_D
+          call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
+        end if
+
+      case('#ROOTBLOCK')
+        call read_var('nRootBlock1', nRootRead_D(1))
+        call read_var('nRootBlock2', nRootRead_D(2))
+        call read_var('nRootBlock3', nRootRead_D(3))
+
+      case('#OUTPUTFORMAT')
+       call read_var('TypeOutPutFormat', TypeDataFile)
+
+      case('#NSTEP')
+        call read_var('nStep', nStep)
+
+      case('#TIMESIMULATION')
+        call read_var('TimeSimulation', tStep)
+
+      case('#PLOTRANGE')
+        XyzMin_D = 0; XyzMax_D = 0
+        do i = 1, nDimSim
+           call read_var('CoordMin', XyzMin_D(i))
+           call read_var('CoordMax', XyzMax_D(i))
+        enddo
+
+      ! case('#PLOTRESOLUTION')
+      !   CellSizePlot_D = 1
+      !   do i = 1, nDimSim
+      !      call read_var('CellSizePlot', CellSizePlot_D(i))
+      !   enddo
+
+      ! case('#CELLSIZE')
+      !   dCoordMin_D = 1
+      !   do i = 1, nDimSim
+      !      call read_var('CellSizeMin', dCoordMin_D(i))
+      !   enddo
+
+      case('#NCELL')
+        call read_var('nCellPlot', nCellPlot)
+        if(nCellPlot/nIJK > MaxBlock*nProc .and. iProc==0)then
+          write(*,'(A)')'Not enough grid blocks allocated for root blocks'
+          write(*,'(A,3I8)') 'nCellPlot, nIJK, nBlockPlot =', nCellPlot, nIJK, nCellPlot/nIJK
+          write(*,'(A,3I8)')'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
+          call stop_mpi(NameSub//': insufficient number of grid blocks')
+        end if
+        if (MaxBlock>100 .and. nCellPlot/nIJK*1.1<MaxBlock*nProc) then
+          if (iProc==0) then
+            write(*,'(A)') 'ATTENTION: maximum number of block needed less than #GRIDBLOCK'
+            write(*,'(A,3I8)') 'MaxBlock*nProc, nBlockPlot =', MaxBlock*nProc, nCellPlot/nIJK
           endif
-
-       case('#GRIDBLOCKSIZE')
-          call read_var('BlockSize1', nIJKRead_D(1))
-          call read_var('BlockSize2', nIJKRead_D(2))
-          call read_var('BlockSize3', nIJKRead_D(3))
-          if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
-             write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
-             call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
-          end if
-
-       case('#ROOTBLOCK')
-          call read_var('nRootBlock1', nRootRead_D(1))
-          call read_var('nRootBlock2', nRootRead_D(2))
-          call read_var('nRootBlock3', nRootRead_D(3))
-          !   if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
-          !     write(*,*)'Not enough grid blocks allocated for root blocks'
-          !     write(*,*)'Number of root blocks=',product(nRootRead_D)
-          !     write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', MaxBlock, nProc, MaxBlock*nProc
-          !     call stop_mpi(NameSub//': insufficient number of grid blocks')
-          !   endif
-
-       case('#OUTPUTFORMAT')
-          call read_var('TypeOutPutFormat', TypeDataFile)
-
-       case('#NSTEP')
-          call read_var('nStep', nStep)
-
-       case('#TIMESIMULATION')
-          call read_var('TimeSimulation', tStep)
-
-       case('#PLOTRANGE')
-          XyzMin_D = 0; XyzMax_D = 0
-          do i = 1, nDimSim
-             call read_var('CoordMin', XyzMin_D(i))
-             call read_var('CoordMax', XyzMax_D(i))
-          enddo
-
-          ! case('#PLOTRESOLUTION')
-          !   CellSizePlot_D = 1
-          !   do i = 1, nDimSim
-          !      call read_var('CellSizePlot', CellSizePlot_D(i))
-          !   enddo
-
-          ! case('#CELLSIZE')
-          !   dCoordMin_D = 1
-          !   do i = 1, nDimSim
-          !      call read_var('CellSizeMin', dCoordMin_D(i))
-          !   enddo
-
-       case('#NCELL')
-          call read_var('nCellPlot', nCellPlot)
-          if(nCellPlot/nIJK > MaxBlock*nProc .and. iProc==0)then
-             write(*,*)'Not enough grid blocks allocated for root blocks'
-             write(*,*)'nCellPlot, nIJK, nBlock =', &
-                  nCellPlot, nIJK, nCellPlot/nIJK
-             write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', &
-                  MaxBlock, nProc, MaxBlock*nProc
-             call stop_mpi(NameSub//': insufficient number of grid blocks')
-          end if
-
-          ! case('#PLOTVARIABLE')
-          !   call read_var('nPlotVar', nPlotVar)
-          !   call read_var('NameVar',  NameVar)
-          !   call read_var('NameUnit', NameUnit)
-
-          ! case('#SCALARPARAM')
-          !   call read_var('nParam', nParamPlot)
-          !   allocate(PlotParam_I(nParamPlot))
-          !   do i = 1, nParamPlot
-          !      call read_var('Param',PlotParam_I(i))
-          !   enddo
-
-       case('#GRIDGEOMETRYLIMIT')
-          call read_var('TypeGeometry', TypeGeometry)
-          IsLogRadius = index(TypeGeometry,'lnr')  > 0
-          IsGenRadius = index(TypeGeometry,'genr') > 0
-          if(IsGenRadius)then
-             call read_var('nRgen', nRGen)
-             allocate(LogRgen_I(nRgen))
-             do i = 1, nRgen
-                call read_var('LogRGen', LogRgen_I(i))
-             end do
-          end if
-          ! if(TypeGeometry == 'roundcube')then
-          !   call read_var('rRound0', rRound0)
-          !   call read_var('rRound1', rRound1)
-          !   call read_var('SqrtNDim',SqrtNDim)
-          ! endif
-          if(TypeGeometry(1:9)=='spherical') then
-             TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
-          else
-             TypeGeometryBatl = TypeGeometry
+          MaxBlock = max(1 + (floor(nCellPlot/nIJK*1.1)-1)/nProc, 10)
+          if (iProc==0) then
+            write(*,'(A,I8)') 'Changing MaxBlock to ', MaxBlock
           endif
+        endif
 
-          ! case('#PERIODIC')
-          !  do i = 1, nDimSim
-          !    call read_var('IsPeriodic',IsPeriodic_D(i))
-          !  enddo
+      ! case('#PLOTVARIABLE')
+      !   call read_var('nPlotVar', nPlotVar)
+      !   call read_var('NameVar',  NameVar)
+      !   call read_var('NameUnit', NameUnit)
 
-          ! case('#TECPLOTCONVERT')
-          !  call read_var('DoReadTecplot', DoReadTecplot)
-          !  call read_var('nHeaderTec', nHeaderTec)
-          !  call read_var('nNodeTec',  nNodeTec)
-          !  call read_var('nCellTec',  nCellTec)
+      ! case('#SCALARPARAM')
+      !   call read_var('nParam', nParamPlot)
+      !   allocate(PlotParam_I(nParamPlot))
+      !   do i = 1, nParamPlot
+      !      call read_var('Param',PlotParam_I(i))
+      !   enddo
 
-       case('#PLOTVARIABLE')
-          call read_var('nPlotVar', nPlotVar)
-          if (nPlotVar /= nVar) then
-             call stop_mpi(NameSub//': number of plot variables incorrect;'// &
-                  ' configure SPECTRUM environment the same as BATSRUS/AWSOM.')
-          endif
-          call read_var('',NameVarInput)
-          call read_var('',NameUnitInput)
+      case('#GRIDGEOMETRYLIMIT')
+        call read_var('TypeGeometry', TypeGeometry)
+        IsLogRadius = index(TypeGeometry,'lnr')  > 0
+        IsGenRadius = index(TypeGeometry,'genr') > 0
+        if(IsGenRadius)then
+          call read_var('nRgen', nRGen)
+          allocate(LogRgen_I(nRgen))
+          do i = 1, nRgen
+            call read_var('LogRGen', LogRgen_I(i))
+          end do
+        end if
+        ! if(TypeGeometry == 'roundcube')then
+        !   call read_var('rRound0', rRound0)
+        !   call read_var('rRound1', rRound1)
+        !   call read_var('SqrtNDim',SqrtNDim)
+        ! endif
+        if(TypeGeometry(1:9)=='spherical') then
+           TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
+        else
+           TypeGeometryBatl = TypeGeometry
+        endif
 
-       case default
-          ! write(*,*) 'Ignored command'
-       end select
+      ! case('#PERIODIC')
+      !  do i = 1, nDimSim
+      !    call read_var('IsPeriodic',IsPeriodic_D(i))
+      !  enddo
+
+      ! case('#TECPLOTCONVERT')
+      !  call read_var('DoReadTecplot', DoReadTecplot)
+      !  call read_var('nHeaderTec', nHeaderTec)
+      !  call read_var('nNodeTec',  nNodeTec)
+      !  call read_var('nCellTec',  nCellTec)
+
+      case('#PLOTVARIABLE')
+        call read_var('nPlotVar', nPlotVar)
+        if (nPlotVar /= nVar) then
+          call stop_mpi(NameSub//': number of plot variables not correct; ' // &
+            'configure Spectrum encironment the same as Batsrus/Awsom.')
+        endif
+        call read_var('',NameVarInput)
+        call read_var('',NameUnitInput)
+
+      case default
+        ! write(*,*) 'Ignored command'
+      end select
     end do READPARAM
 
     if (index(TypeGeometry,'genr') > 0) then
-       call gen_to_radius(XyzMin_D(1))
-       call gen_to_radius(XyzMax_D(1))
+      call gen_to_radius(XyzMin_D(1))
+      call gen_to_radius(XyzMax_D(1))
     endif
 
   end subroutine read_info_file
-  !============================================================================
+  !==========================================================
 
   ! read in 3d data file (.out), refer to select_snapshot
   subroutine read_data_file(NameDataFile)
@@ -528,29 +520,33 @@ contains
     use ModPlotFile, ONLY: read_plot_file
     use ModIoUnit, ONLY: io_unit_new
     use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: far_field_BCs_BLK
+    use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
+    use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
 
     character(len=200), intent(in) :: NameDataFile
-
     integer :: iUnit, nDimOld, nVarOld, nParam, n_D(5), nStep
     real :: Time, Param_I(100)
     real, allocatable :: Coord_DI(:,:), Var_II(:,:)
     integer, allocatable :: iVar_I(:)
     real :: State_V(nVar), Xyz_D(3)
     character(len=200) :: StringHeader, NameVar
-    integer :: iNode, iBlock, jBlock, jProc, iRec, iIjk, i, j, k, &
-         ii, iCell, iProcFound, iCell_D(3)
+    integer :: iNode, iBlock, jBlock, jProc, iRec, iIjk, i, j, k, ii, iCell, iProcFound, iCell_D(3)
     real :: XyzDiff_D(3), rLonLat_D(3)
 
+    ! ---------------------------
+
     character(len=*), parameter:: NameSub = 'read_data_file'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     iUnit = io_unit_new()
 
     call read_plot_file(NameDataFile, iUnit, TypeDataFile, &
-         StringHeader, nStep, Time, nDimOld, nParamOut=nParam, &
-         nVarOut=nVarOld, nOut_D=n_D, ParamOut_I=Param_I, NameVarOut=NameVar)
+        StringHeader, nStep, Time, nDimOld, nParamOut = nParam, nVarOut = nVarOld, &
+        nOut_D = n_D, ParamOut_I = Param_I, NameVarOut = NameVar)
 
-    if (nDimOld /= 3 .or. n_D(2) /= 1 .or. n_D(3) /= 1) &
-         call stop_mpi('Currently only support 3d unstructured grid.')
+    if (nDimOld /= 3 .or. n_D(2) /= 1 .or. n_D(3) /= 1) then
+      call stop_mpi('Currently only support 3d unstructured grid. Write data with dx=-1')
+    endif
 
     allocate(iVar_I(nVar))
 
@@ -559,86 +555,62 @@ contains
     if (allocated(Var_II)) deallocate(Var_II)
     allocate( Coord_DI(nDimOld,n_D(1)), Var_II(nVarOld,n_D(1)))
 
-    ! figure out which input variables are the ones we use from State_VGB
+    ! figure out the which of the input variables are the ones we use with state_vgb
     iVar_I(1:nVar) = [(i, i=1, nVar)]
 
     ! Read the coord and var arrays
-    call read_plot_file(NameDataFile, iUnit, TypeDataFile, &
-         CoordOut_DI=Coord_DI, VarOut_VI=Var_II)
+    call read_plot_file(NameDataFile, iUnit, TypeDataFile, CoordOut_DI=Coord_DI, VarOut_VI=Var_II)
 
     ! from BATL/ModReadAmr
     do iCell = 1, n_D(1)
-       Xyz_D = Coord_DI(:,iCell)
-       State_V = 0.
-       do ii = 1, nVar
-          if (iVar_I(ii) > 0) State_V(ii) = Var_II(iVar_I(ii),iCell)
-       enddo
-       call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D)
-       if(iBlock <= 0)then
-          CYCLE
-          write(*,*) 'ERROR for iCell, Xyz_D=', iCell, Xyz_D
-          call stop_mpi(NameSub//': could not find cell on the grid')
-       end if
-       if (iProcFound /= iProc) CYCLE
-       i = iCell_D(1)
-       j = iCell_D(2)
-       k = iCell_D(3)
-       if (any(abs(Xyz_DGB(:,i,j,k,iBlock)-Xyz_D) > 1e-5)) then
-          write(*,*)NameSub,' ERROR at iCell,i,j,k,iBlock,iProc=', &
-               iCell, i, j, k, iBlock, iProc
-          write(*,*)NameSub,' Xyz_D  =', Xyz_D
-          write(*,*)NameSub,' Xyz_DGB=', Xyz_DGB(:,i,j,k,iBlock)
-          call stop_mpi(NameSub//': incorrect coordinates')
-       endif
-       State_VGB(:,i,j,k,iBlock) = State_V
+      Xyz_D = Coord_DI(:,iCell)
+      State_V = 0.
+      do ii = 1, nVar
+        if (iVar_I(ii) > 0) State_V(ii) = Var_II(iVar_I(ii),iCell)
+      enddo
+      call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D)
+      if(iBlock <= 0)then
+        CYCLE
+        write(*,*) 'ERROR for iCell, Xyz_D=', iCell, Xyz_D
+        call stop_mpi(NameSub//': could not find cell on the grid')
+      end if
+      if (iProcFound /= iProc) CYCLE
+      i = iCell_D(1)
+      j = iCell_D(2)
+      k = iCell_D(3)
+      if (any(abs(Xyz_DGB(:,i,j,k,iBlock)-Xyz_D) > 1e-5)) then
+        write(*,*)NameSub,' ERROR at iCell,i,j,k,iBlock,iProc=', iCell, i, j, k, iBlock, iProc
+        write(*,*)NameSub,' Xyz_D  =', Xyz_D
+        write(*,*)NameSub,' Xyz_DGB=', Xyz_DGB(:,i,j,k,iBlock)
+        call stop_mpi(NameSub//': incorrect coordinates')
+      endif
+      State_VGB(:,i,j,k,iBlock) = State_V
     enddo
 
     deallocate(Coord_DI, Var_II)
     close(iUnit)
 
-    call message_pass_cell(nVar, State_VGB, nWidthIn=nG)
+    do iBlock = 1, nBlock
+      if (Unused_B(iBlock)) CYCLE
+      if (far_field_BCs_BLK(iBlock)) then
+        call set_cell_boundary(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+      endif
+    enddo
+    call message_pass_cell(nVar, nG, State_VGB)
+    call fix_boundary_ghost_cells
+    do iBlock = 1, nBlock
+      if (Unused_B(iBlock)) CYCLE
+      if (far_field_BCs_BLK(iBlock)) then
+        call set_cell_boundary(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+        ! call set_edge_corner_ghost(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+      endif
+    enddo
 
   end subroutine read_data_file
-  !============================================================================
-
-  subroutine write_3d_plot()
-
-    use ModIO, ONLY: &
-         nFile, nPlotFile, Plot_, TypeSatPos_I, plot_dx, plot_form, &
-         TypeFile_I, plot_vars, plot_dimensional, plot_pars, plot_type, &
-         plot_range
-    use ModVarIndexes, ONLY: nVar, NameVar_V
-    use ModUtilities, ONLY: join_string
-    use ModWritePlot, ONLY: write_plot
-    use BATL_lib, ONLY: CoordMin_D, CoordMax_D
-    use BATL_test, ONLY: StringTest
-
-    integer :: iFile
-    !--------------------------------------------------------------------------
-    nPlotFile  = 1
-    nFile = max(nFile, Plot_ + nPlotFile)
-    TypeSatPos_I = 'none'
-    iFile = Plot_ + 1
-    plot_form(iFile) = 'idl'
-    plot_dx(:,iFile) = -1.
-    TypeFile_I(iFile) = 'real4'
-    plot_dimensional(iFile) = .false.
-    call join_string(nVar, NameVar_V(1:nVar), plot_vars(iFile))
-    plot_pars(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
-    plot_type(iFile) = '3d_out'
-    plot_range(1:5:2, iFile) = CoordMin_D
-    plot_range(2:6:2, iFile) = CoordMax_D
-
-    StringTest = 'write_plot write_plot_idl'
-
-    call write_plot(iFile)
-
-  end subroutine write_3d_plot
-  !============================================================================
+  !==========================================================
 
   ! Collectes los array from all processors, only useful for testing
   subroutine collect_los_segments(NameOutputFile, DoTestIn)
-
     use ModIoUnit, ONLY: UnitTmp_
     use ModSpectrumLos, ONLY: LosX_, LosY_, LosZ_, Ds_
     use ModVarIndexes, ONLY: NameVar_V, nVar, Rho_, p_, Pe_
@@ -649,12 +621,11 @@ contains
 
     integer :: nState, nPixelAll, nPixelProc_P(0:nProc-1)
     integer :: i, j, iPixelProc, nSeg, iError
-    ! only useful on proc 0
-    integer :: nLosSegMax, nPoint, iStatus_I(mpi_status_size) 
+    integer :: nLosSegMax, nPoint, iStatus_I(mpi_status_size)    ! only useful on proc 0
     real, allocatable :: StatePixSegAll_VII(:,:,:)
     integer, allocatable :: nLosSegAll_I(:), nTmpLosSeg_I(:)
     character(1) :: c
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     character(len=200) NameTmp
     logical :: DoTest
     character(len=*), parameter :: NameSub = 'collect_los_segments'
@@ -662,155 +633,156 @@ contains
     call timing_start(NameSub)
 
     if (present(DoTestIn)) then
-       DoTest = DoTestIn
+      DoTest = DoTestIn
     else
-       DoTest = .false.
+      DoTest = .false.
     endif
 
     ! get number of pixels stored on other processors
     nState = size(StatePixelSegProc_VII,1)
     nPixelAll = size(iPixelProcInfo_II,2)
     do i = 0, nProc-1
-       nPixelProc_P(i) = count(iPixelProcInfo_II(1,:) == i)
+      nPixelProc_P(i) = count(iPixelProcInfo_II(1,:) == i)
     enddo
 
     ! collect number of los segments on other processors
     if (iProc == 0) then
-       allocate(nLosSegAll_I(nPixelAll))
-       do i = 0, nProc-1
-          allocate(nTmpLosSeg_I(nPixelProc_P(i)))
-          if (i /= 0) then
-             call mpi_recv(nTmpLosSeg_I, nPixelProc_P(i), MPI_INTEGER, i, &
-                  0, iComm, iStatus_I, iError)
-          else
-             nTmpLosSeg_I = nLosSeg_I
-          endif
-          do j = 1, nPixelAll
-             if (iPixelProcInfo_II(1,j) /= i) CYCLE
-             nLosSegAll_I(j) = nTmpLosSeg_I(iPixelProcInfo_II(2,j))
-          enddo
-          deallocate(nTmpLosSeg_I)
-       enddo
+      allocate(nLosSegAll_I(nPixelAll))
+      do i = 0, nProc-1
+        allocate(nTmpLosSeg_I(nPixelProc_P(i)))
+        if (i /= 0) then
+          call mpi_recv(nTmpLosSeg_I,nPixelProc_P(i),MPI_INTEGER,i,0,iComm,iStatus_I,iError)
+        else
+          nTmpLosSeg_I = nLosSeg_I
+        endif
+        do j = 1, nPixelAll
+          if (iPixelProcInfo_II(1,j) /= i) CYCLE
+          nLosSegAll_I(j) = nTmpLosSeg_I(iPixelProcInfo_II(2,j))
+        enddo
+        deallocate(nTmpLosSeg_I)
+      enddo
     else
-       call mpi_send(nLosSeg_I,nPixelProc,MPI_INTEGER,0,0,iComm,iError)
+      call mpi_send(nLosSeg_I,nPixelProc,MPI_INTEGER,0,0,iComm,iError)
     endif
 
     ! collect data cube stored on other processors
     if (iProc == 0) then
-       nLosSegMax = maxval(nLosSegAll_I)
-       allocate(StatePixSegAll_VII(nState,nLosSegMax,nPixelAll))
+      nLosSegMax = maxval(nLosSegAll_I)
+      allocate(StatePixSegAll_VII(nState,nLosSegMax,nPixelAll))
     endif
     do i = 1, nPixelAll
-       ! local pixel position within processor
-       iPixelProc = iPixelProcInfo_II(2,i)   
-       if (iProc == 0) then
-          nSeg = nLosSegAll_I(i)
-          if (iPixelProcInfo_II(1,i) == 0) then
-             StatePixSegAll_VII(:,1:nSeg,i) = &
-                  StatePixelSegProc_VII(:,1:nSeg,iPixelProc)
-          else
-             call mpi_recv(StatePixSegAll_VII(:,1:nSeg,i), nState*nSeg, &
-                  MPI_REAL, iPixelProcInfo_II(1,i), 0, iComm, &
-                  iStatus_I, iError)
-          endif
-       else
-          if (iPixelProcInfo_II(1,i) /= iProc) CYCLE
-          nSeg = nLosSeg_I(iPixelProc)
-          call mpi_send(StatePixelSegProc_VII(:,1:nSeg,iPixelProc), &
-               nState*nSeg, MPI_REAL, 0, 0, iComm, iError)
-       endif
+      iPixelProc = iPixelProcInfo_II(2,i)   ! local pixel position within processor
+      if (iProc == 0) then
+        nSeg = nLosSegAll_I(i)
+        if (iPixelProcInfo_II(1,i) == 0) then
+          StatePixSegAll_VII(:,1:nSeg,i) = StatePixelSegProc_VII(:,1:nSeg,iPixelProc)
+        else
+          call mpi_recv(StatePixSegAll_VII(:,1:nSeg,i), nState*nSeg, &
+              MPI_REAL, iPixelProcInfo_II(1,i), 0, iComm, iStatus_I, iError)
+        endif
+      else
+        if (iPixelProcInfo_II(1,i) /= iProc) CYCLE
+        nSeg = nLosSeg_I(iPixelProc)
+        call mpi_send(StatePixelSegProc_VII(:,1:nSeg,iPixelProc), &
+            nState*nSeg, MPI_REAL, 0, 0, iComm, iError)
+      endif
     enddo
 
     if (DoTest .and. iProc == 0) then
-       write(*,'(2A3,3A8,4A10)') 'i','j','x','y','z','ds','Rho','p','Pe'
-       do i = 1, nPixelAll; do j = 1, nLosSegAll_I(i)
-          write(*,'(2I3,3F8.4,4E10.3)') i, j, &
-               StatePixSegAll_VII([LosX_,LosY_,LosZ_,Ds_,Rho_,p_,Pe_],j,i)
-       enddo; enddo
+      write(*,'(2A3,3A8,4A10)') 'i','j','x','y','z','ds','Rho','p','Pe'
+      do i = 1, nPixelAll
+        do j = 1, nLosSegAll_I(i)
+          write(*,'(I3,I3,3F8.4,4E10.3)') i, j, StatePixSegAll_VII([LosX_,LosY_,LosZ_,Ds_,Rho_,p_,Pe_],j,i)
+        enddo
+      enddo
     endif
 
     ! output los segments for testing
-    ! Binary VTK file, about half the of ASCII and faster to read
+    ! Binary vtk file, about half the size compare to ascii, and faster to read
     if (iProc == 0 .and. present(NameOutputFile)) then
-       nPoint = sum(nLosSegAll_I)
-       open(unit=UnitTmp_, file=NameOutputFile, status='replace', &
-            access='stream', form='unformatted', convert='big_endian')
-       write(UnitTmp_) '# vtk DataFile Version 2.0', new_line(c)
-       write(UnitTmp_) 'LOS segments', new_line(c)
-       write(UnitTmp_) 'BINARY', new_line(c)
-       write(UnitTmp_) 'DATASET UNSTRUCTURED_GRID', new_line(c)
-       write(NameTmp,'(A,I0,A)') 'POINTS ',nPoint,' double'
-       write(UnitTmp_) trim(NameTmp), new_line(c)
-       do i = 1, nPixelAll
-          do j = 1, nLosSegAll_I(i)
-             write(UnitTmp_) StatePixSegAll_VII(LosX_:LosZ_,j,i)
-          enddo
-       enddo
-       write(NameTmp,'(A,I0," ",I0)') 'CELLS ',nPoint,2*nPoint
-       write(UnitTmp_) NameTmp, new_line(c)
-       j = 1
-       do i = 0, nPoint-1
-          write(UnitTmp_) j, i
-       enddo
-       write(NameTmp,'(A,I0)') 'CELL_TYPES ',nPoint
-       write(UnitTmp_) NameTmp, new_line(c)
-       do i = 0, nPoint-1
-          write(UnitTmp_) j
-       enddo
-       ! Ideally I should output also the vectors. But these are unstructured
-       ! points not even in correct order (with respect to los length), I will
-       ! not be able to plot anything useful without first do a triangulation
-       ! anyways. Can include it later if needed.
-       close(UnitTmp_)
+      nPoint = sum(nLosSegAll_I)
+      open(unit=UnitTmp_, file=NameOutputFile, status='replace', &
+          access='stream', form='unformatted', convert='big_endian')
+      write(UnitTmp_) '# vtk DataFile Version 2.0', new_line(c)
+      write(UnitTmp_) 'LOS segments', new_line(c)
+      write(UnitTmp_) 'BINARY', new_line(c)
+      write(UnitTmp_) 'DATASET UNSTRUCTURED_GRID', new_line(c)
+      write(NameTmp,'(A,I0,A)') 'POINTS ',nPoint,' double'
+      write(UnitTmp_) trim(NameTmp), new_line(c)
+      do i = 1, nPixelAll
+        do j = 1, nLosSegAll_I(i)
+          write(UnitTmp_) StatePixSegAll_VII(LosX_:LosZ_,j,i)
+        enddo
+      enddo
+      write(NameTmp,'(A,I0," ",I0)') 'CELLS ',nPoint,2*nPoint
+      write(UnitTmp_) NameTmp, new_line(c)
+      j = 1
+      do i = 0, nPoint-1
+        write(UnitTmp_) j, i
+      enddo
+      write(NameTmp,'(A,I0)') 'CELL_TYPES ',nPoint
+      write(UnitTmp_) NameTmp, new_line(c)
+      do i = 0, nPoint-1
+        write(UnitTmp_) j
+      enddo
+      ! Ideally I should output also the vectors. But these are unstructured
+      ! points not even in correct order (with respect to los length), I will
+      ! not be able to plot anything useful without first do a triangulation
+      ! anyways. Can include it later if needed.
+      close(UnitTmp_)
     endif
 
     ! clean up
     if (iProc == 0) then
-       deallocate(nLosSegAll_I, StatePixSegAll_VII)
+      deallocate(nLosSegAll_I, StatePixSegAll_VII)
     endif
 
     call timing_stop(NameSub)
   end subroutine collect_los_segments
-  !============================================================================
+  !==========================================================
 
   subroutine convert_units
-    use ModPhysics, ONLY: nIoUnit, No2Si_V, Io2Si_V, &
-         UnitX_, UnitRho_, UnitRhoU_, UnitB_, UnitP_, UnitEnergyDens_
-    use ModVarIndexes, ONLY: NameVar_V, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, &
-         p_, Pe_, Ppar_, WaveFirst_, WaveLast_
+    use ModPhysics, ONLY: nIoUnit, No2Si_V, Io2Si_V, UnitX_, UnitRho_, UnitRhoU_, UnitB_, UnitP_, UnitEnergyDens_
+    use ModVarIndexes, ONLY: NameVar_V, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, Pe_, Ppar_, WaveFirst_, WaveLast_
     use ModSpectrumLos, ONLY: Ds_
     real :: Input2Si_V(nIoUnit)
+    integer :: i, j
 
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
     if (trim(NameUnitInput) == 'normalized variables') then
-       Input2Si_V = No2Si_V
+      Input2Si_V = No2Si_V
     else
-       Input2Si_V = Io2Si_V
+      Input2Si_V = Io2Si_V
     endif
 
-    StatePixelSegProc_VII(Rho_,:,:) = &
-         StatePixelSegProc_VII(Rho_,:,:)*Input2Si_V(UnitRho_)
-    StatePixelSegProc_VII(RhoUx_:RhoUz_,:,:) = &
-         StatePixelSegProc_VII(RhoUx_:RhoUz_,:,:)*Input2Si_V(UnitRhoU_)
-    StatePixelSegProc_VII(Bx_:Bz_,:,:) = &
-         StatePixelSegProc_VII(Bx_:Bz_,:,:)*Input2Si_V(UnitB_)
-    StatePixelSegProc_VII(p_,:,:) = &
-         StatePixelSegProc_VII(p_,:,:)*Input2Si_V(UnitP_)
-    if (NameVar_V(Pe_) == 'Pe') &
-         StatePixelSegProc_VII(Pe_,:,:) = &
-         StatePixelSegProc_VII(Pe_,:,:)*Input2Si_V(UnitP_)
-    if (NameVar_V(Ppar_) == 'Ppar') &
-         StatePixelSegProc_VII(Ppar_,:,:) = &
-         StatePixelSegProc_VII(Ppar_,:,:)*Input2Si_V(UnitP_)
-    if (NameVar_V(WaveFirst_) == 'I01') &
-         StatePixelSegProc_VII(WaveFirst_:WaveLast_,:,:) = &
-         StatePixelSegProc_VII(WaveFirst_:WaveLast_,:,:) &
-         *Input2Si_V(UnitEnergyDens_)
-    StatePixelSegProc_VII(Ds_,:,:) = &
-         StatePixelSegProc_VII(Ds_,:,:)*Input2Si_V(UnitX_)
+    if (DoTestNormalizeLos) then
+      allocate(TestLengthLos_I(nPixelProc))
+      TestLengthLos_I = 0.
+      do i = 1, nPixelProc; do j = 1, nLosSeg_I(i)
+        TestLengthLos_I(i) = TestLengthLos_I(i) + StatePixelSegProc_VII(Ds_,j,i)
+      enddo; enddo
+    endif
+
+    do i = 1, nPixelProc; do j = 1, nLosSeg_I(i)
+      StatePixelSegProc_VII(Rho_,j,i) = StatePixelSegProc_VII(Rho_,j,i)*Input2Si_V(UnitRho_)
+      StatePixelSegProc_VII(RhoUx_:RhoUz_,j,i) = StatePixelSegProc_VII(RhoUx_:RhoUz_,j,i)*Input2Si_V(UnitRhoU_)
+      StatePixelSegProc_VII(Bx_:Bz_,j,i) = StatePixelSegProc_VII(Bx_:Bz_,j,i)*Input2Si_V(UnitB_)
+      StatePixelSegProc_VII(p_,j,i) = StatePixelSegProc_VII(p_,j,i)*Input2Si_V(UnitP_)
+      if (trim(NameVar_V(Pe_)) == 'Pe') &
+        StatePixelSegProc_VII(Pe_,j,i) = StatePixelSegProc_VII(Pe_,j,i)*Input2Si_V(UnitP_)
+      if (trim(NameVar_V(Ppar_)) == 'Ppar') &
+        StatePixelSegProc_VII(Ppar_,j,i) = StatePixelSegProc_VII(Ppar_,j,i)*Input2Si_V(UnitP_)
+      if (trim(NameVar_V(WaveFirst_)) == 'I01') StatePixelSegProc_VII(WaveFirst_:WaveLast_,j,i) = &
+          StatePixelSegProc_VII(WaveFirst_:WaveLast_,j,i)*Input2Si_V(UnitEnergyDens_)
+      if (.not. DoTestNormalizeLos) then
+        StatePixelSegProc_VII(Ds_,j,i) = StatePixelSegProc_VII(Ds_,j,i)*Input2Si_V(UnitX_)
+      else
+        StatePixelSegProc_VII(Ds_,j,i) = StatePixelSegProc_VII(Ds_,j,i)/TestLengthLos_I(i)*1e-2
+      endif
+    enddo; enddo
 
   end subroutine convert_units
-  !============================================================================
+  !==========================================================
 
   subroutine collect_save_spectrum(NameOutputFile)
     use ModSpectrum, ONLY: SpectrumTable_I
@@ -818,15 +790,14 @@ contains
 
     character(len=*), intent(in) :: NameOutputFile
 
-    ! changed from real4 for testing purposes
-    character(len=5) :: TypeFileSpectrum = 'ascii' 
+    character(len=5) :: TypeFileSpectrum = 'ascii'
     character(len=200) :: StringHeaderSpectrum = '[A] [erg sr^-1 cm^-2 A^-1]'
     real, allocatable :: Intensity_III(:,:,:), CoordWave_I(:)
     integer :: iWvlIntv, nWvlIntv, iWave, nWaveBin, nWaveAll
     integer :: iPix, jPix, iPixelAll, iPixelProc, iProcSend
     integer :: iStatus_I(mpi_status_size)
     character(len=*), parameter:: NameSub = 'collect_save_spectrum'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------
 
     call timing_start(NameSub)
 
@@ -834,76 +805,70 @@ contains
 
     ! allocate array for all pixels
     if (iProc == 0) then
-       nWaveAll = 0
-       do iWvlIntv = 1,nWvlIntv
-          nWaveAll = nWaveAll + SpectrumTable_I(iWvlIntv)%nBin
-       end do
-       allocate( &
-            Intensity_III(nWaveAll,nPixel_I(1),nPixel_I(2)), &
-            CoordWave_I(nWaveAll))
+      nWaveAll = 0
+      do iWvlIntv = 1,nWvlIntv
+         nWaveAll = nWaveAll + SpectrumTable_I(iWvlIntv)%nBin
+      end do
+      allocate(Intensity_III(nWaveAll,nPixel_I(1),nPixel_I(2)), CoordWave_I(nWaveAll))
     endif
 
     ! message pass to collect Spectrum results
     iWave = 0
     do iWvlIntv = 1, nWvlIntv
-       nWaveBin = SpectrumTable_I(iWvlIntv)%nBin
-       if (iProc == 0) then
-          CoordWave_I(iWave+1:iWave+nWaveBin) = &
-               SpectrumTable_I(iWvlIntv)%SpectrumGrid_I(1:nWaveBin)
-       endif
+      nWaveBin = SpectrumTable_I(iWvlIntv)%nBin
+      if (iProc == 0) then
+        CoordWave_I(iWave+1:iWave+nWaveBin) = SpectrumTable_I(iWvlIntv)%SpectrumGrid_I(1:nWaveBin)
+      endif
 
-       iPixelAll = 0
-       do jPix = 1, nPixel_I(2); do iPix = 1, nPixel_I(1)
-          iPixelAll = iPixelAll + 1
-          iProcSend = iPixelProcInfo_II(1,iPixelAll)
-          iPixelProc = iPixelProcInfo_II(2,iPixelAll)
+      iPixelAll = 0
+      do jPix = 1, nPixel_I(2); do iPix = 1, nPixel_I(1)
+        iPixelAll = iPixelAll + 1
+        iProcSend = iPixelProcInfo_II(1,iPixelAll)
+        iPixelProc = iPixelProcInfo_II(2,iPixelAll)
 
-          if (iProc == 0) then
-             if (iProcSend == 0) then
-                Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix) = &
-                     SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:)
-             else
-                call mpi_recv(Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix),&
-                     nWaveBin, MPI_REAL, iProcSend, 0, iComm, &
-                     iStatus_I, iError)
-             endif
+        if (iProc == 0) then
+          if (iProcSend == 0) then
+            Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix) = &
+                SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:)
           else
-             if (iProcSend /= iProc) CYCLE
-             call mpi_send( &
-                  SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:), &
-                  nWaveBin, MPI_REAL, 0, 0, iComm, iError)
+            call mpi_recv(Intensity_III(iWave+1:iWave+nWaveBin,iPix,jPix), nWaveBin, &
+                MPI_REAL, iProcSend, 0, iComm, iStatus_I, iError)
           endif
-       enddo; enddo
+        else
+          if (iProcSend /= iProc) CYCLE
+          call mpi_send(SpectrumTable_I(iWvlIntv)%Spectrum_II(iPixelProc,:), &
+              nWaveBin, MPI_REAL, 0, 0, iComm, iError)
+        endif
+      enddo; enddo
 
-       iWave = iWave + nWaveBin
+      iWave = iWave + nWaveBin
     enddo
 
     if (iProc == 0) then
-       ! for testing purpose create 1d output
-       if (nPixel_I(1)*nPixel_I(2) == 1) then
-          call save_plot_file(NameFile = NameOutputFile, &
-               TypeFileIn     = TypeFileSpectrum,        &
-               StringHeaderIn = StringHeaderSpectrum,    &
-               NameVarIn      = "wavelength flux",       &
-               Coord1In_I     = CoordWave_I,             &
-               VarIn_I        = Intensity_III(:,1,1))
-          deallocate(Intensity_III, CoordWave_I)
-       else
-          call save_plot_file(NameFile = NameOutputFile, &
-               TypeFileIn     = TypeFileSpectrum,        &
-               StringHeaderIn = StringHeaderSpectrum,    &
-               NameVarIn      = "wavelength x y flux",   &
-               Coord1In_I     = CoordWave_I,             &
-               Coord2In_I     = PixelPosA_I,             &
-               Coord3In_I     = PixelPosB_I,             &
-               VarIn_III      = Intensity_III)
-          deallocate(Intensity_III, CoordWave_I)
-       endif
+      if (nPixel_I(1)*nPixel_I(2) == 1) then
+         call save_plot_file(NameFile = NameOutputFile, &
+              TypeFileIn     = TypeFileSpectrum,      &
+              StringHeaderIn = StringHeaderSpectrum,  &
+              NameVarIn      = "wavelength flux", &
+              Coord1In_I     = CoordWave_I,           &
+              VarIn_I        = Intensity_III(:,1,1))
+         deallocate(Intensity_III, CoordWave_I)
+      else
+        call save_plot_file(NameFile = NameOutputFile, &
+            TypeFileIn     = TypeFileSpectrum,      &
+            StringHeaderIn = StringHeaderSpectrum,  &
+            NameVarIn      = "wavelength x y flux", &
+            Coord1In_I     = CoordWave_I,           &
+            Coord2In_I     = PixelPosA_I,           &
+            Coord3In_I     = PixelPosB_I,           &
+            VarIn_III      = Intensity_III)
+        deallocate(Intensity_III, CoordWave_I)
+      endif
     endif
 
     call timing_stop(NameSub)
   end subroutine collect_save_spectrum
-  !============================================================================
+  !==========================================================
 
 end program spectrum
 !==============================================================================
