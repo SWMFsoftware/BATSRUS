@@ -38,6 +38,6 @@ test:
     - chmod +x share/Scripts/CheckEmptyFile.sh
   script:
     - ./Config.pl -O0 -compiler=gfortran -install
-     - make -j test_hallmhd NP=1
+    - make -j test_hallmhd NP=1
     - ./share/Scripts/CheckEmptyFile.sh test_hallmhd.diff
 
