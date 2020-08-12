@@ -35,6 +35,7 @@ test:
   before_script:
     - apt-get update -y && apt-get install --yes gcc gfortran g++ make
     - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
+    - chmod +x share/Scripts/CheckEmptyFile.sh
   script:
     - ./Config.pl -O0 -compiler=gfortran -install
      - make -j test_hallmhd NP=1
