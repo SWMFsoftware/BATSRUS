@@ -1942,6 +1942,7 @@ test_spectrum:
 ### TEST FOR POST-PROCESSING SPECTRUM2 CODE#####################################
 
 test_spectrum2:
+	./Config.pl -nohypre -noamrex -nohdf5 -nospice -noopenmp -mpi
 	./Config.pl -e=MhdWavesPe -u=AwsomFluids -g=6,8,8 -ng=2
 	$(MAKE) BATSRUS	 
 	cd srcPostProc; $(MAKE) test_spectrum2
