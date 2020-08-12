@@ -5,26 +5,36 @@ variables:
   OMPI_ALLOW_RUN_AS_ROOT: 1
   OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
 
-before_script:
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
-  - eval $(ssh-agent -s)
-  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-  - mkdir -p ~/.ssh
-  - chmod 700 ~/.ssh
-  - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
-  - chmod 644 ~/.ssh/known_hosts
-  - apt-get install -y make
-  - apt-get install --yes gcc gfortran g++
-  - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
+stages:
+  - build
+  - test
 
 install:
   stage: build
+  before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
+    - apt-get install -y make
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
   script:
-    - ./Config.pl -compiler=gfortran -install -O0
+    - ./Config.pl -compiler=gfortran -install
+  artifacts:
+    paths:
+      - share
+      - util
+      - srcBATL
 
-# run tests using the binary built before
 test:
   stage: test
+  before_script:
+    - apt-get update -y && apt-get install --yes gcc gfortran g++ make
+    - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
   script:
-    - ./Config.pl -compiler=gfortran -install -O0
+    - ./Config.pl -O0 -compiler=gfortran -install
     - make -j test_hallmhd
