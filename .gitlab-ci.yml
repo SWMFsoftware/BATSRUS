@@ -8,12 +8,12 @@ variables:
 before_script:
   - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
   - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
-  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-  - apt-get update
-  - apt-get install -y make git
+  - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+  - apt-get install -y make
   - apt-get install --yes gcc gfortran g++
   - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
 
