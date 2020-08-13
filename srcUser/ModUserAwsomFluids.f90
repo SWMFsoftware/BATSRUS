@@ -685,7 +685,7 @@ contains
   end subroutine user_set_plot_var
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
@@ -706,12 +706,12 @@ contains
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,      ONLY: UseWavePressureLtd
     ! Below is for jet only
-    use ModMain,       ONLY: time_simulation, time_accurate
+    use ModMain,       ONLY: time_simulation, time_accurate, CellBC
     use ModConst,      ONLY: cPi
     use ModCoordTransform, ONLY: rlonlat_to_xyz, cross_product
     ! Above is for jet only
     integer,          intent(in)  :: iBlock, iSide
-    character(len=*), intent(in)  :: TypeBc
+    type(CellBC),     intent(in)  :: CBC
     logical,          intent(out) :: IsFound
 
     integer :: Minor_, Major_
@@ -740,7 +740,7 @@ contains
 
     IsFound = .true.
 
-    select case(TypeBc)
+    select case(CBC%TypeBc)
     case('usersemi','user_semi')
        IsFound = .true.
        StateSemi_VGB(iTeImpl,0,:,:,iBlock) = Tchromo

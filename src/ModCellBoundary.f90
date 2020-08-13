@@ -14,15 +14,7 @@ module ModCellBoundary
 
   ! Public methods
   public :: set_cell_boundary, set_edge_corner_ghost
-
-  ! Index range for the ghost cell region (for ModUser::user_set_cell_boundary)
-  integer, public:: iMin, iMax, jMin, jMax, kMin, kMax
-  !$omp threadprivate( iMin,iMax,jMin,jMax,kMin,kMax )
   
-  ! Local variables
-  integer:: iSide, iSideMin, iSideMax
-  !$omp threadprivate( iSide, iSideMin, iSideMax )
- 
 contains
   !============================================================================
 
@@ -37,7 +29,7 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop
+         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop, CellBC
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, XyzMin_D
@@ -66,10 +58,8 @@ contains
     character(len=*), optional, intent(in):: TypeBcIn
     integer,          optional, intent(in):: iSideIn
 
-    ! Type of boundary for one side
-    character(len=30):: TypeBc
-
-    integer:: iVar, iFluid
+    integer:: iVar, iFluid, iSide, iSideMin, iSideMax
+    type(CellBC) :: CBC
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
     real, allocatable:: SymmCoeff_V(:)
@@ -145,6 +135,11 @@ contains
        iSideMax = 2*nDim
     end if
 
+    associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+         jMin => CBC%jMin, jMax => CBC%jMax, &
+         kMin => CBC%kMin, kMax => CBC%kMax, &
+         TypeBc => CBC%TypeBc)
+    
     ! Loop through all sides
     do iSide = iSideMin, iSideMax
 
@@ -361,11 +356,12 @@ contains
        case('user_semi')
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-             call user_set_cell_boundary(iBlock, iSide, 'usersemilinear', &
-                  IsFound)
+             TypeBc = 'usersemilinear'
+             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           else
              IsFound = .false.
-             call user_set_cell_boundary(iBlock, iSide, 'usersemi', IsFound)
+             TypeBc = 'usersemi'
+             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
              if(.not.IsFound) call stop_mpi(NameSub// &
                   ': usersemi boundary condition is not found in user module')
           end if
@@ -379,7 +375,7 @@ contains
                    State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
                 end if
              end if
-             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
        end select
@@ -402,6 +398,8 @@ contains
        end do
     end if
 
+    end associate
+    
     deallocate(SymmCoeff_V)
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -418,6 +416,10 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -457,6 +459,8 @@ contains
          end do; end do; end do
       end select
 
+      end associate
+      
     end subroutine set_gradpot_bc
     !==========================================================================
 
@@ -466,8 +470,11 @@ contains
       integer, intent(in) :: iVarMin, iVarMax
 
       integer:: i, j, k
-
       !------------------------------------------------------------------------
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -501,6 +508,8 @@ contains
          end do; end do; end do
       end select
 
+      end associate
+      
     end subroutine set_float_bc
     !==========================================================================
 
@@ -540,6 +549,11 @@ contains
          if(abs(Dj - 1/ShockSlope) > 1e-6)call stop_mpi( &
               'ShockSlope < 1 should be the inverse of a round number!')
       end if
+
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       select case(iSide)
       case(1)
          ! Shift by +Di,-Dj
@@ -563,6 +577,8 @@ contains
          end do; end do; end do
       end select
 
+      end associate
+      
     end subroutine set_shear_bc
     !==========================================================================
     subroutine set_symm_bc(iVarMin, iVarMax, Coeff_V)
@@ -574,6 +590,10 @@ contains
 
       integer:: i, j, k
       !------------------------------------------------------------------------
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -607,6 +627,8 @@ contains
          end do; end do; end do
       end select
 
+      end associate
+      
     end subroutine set_symm_bc
     !==========================================================================
 
@@ -628,6 +650,10 @@ contains
       SymmCoeff_V = 1.0
       call set_symm_bc(1, nVarState, SymmCoeff_V)
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       select case(iSide)
       case(1,2)
          if(iSide == 1)then
@@ -694,6 +720,8 @@ contains
          end do; end do
       end select
 
+      end associate
+      
     end subroutine set_reflect_bc
     !==========================================================================
     subroutine set_fixed_bc(iVarMin, iVarMax, State_V)
@@ -706,10 +734,16 @@ contains
       integer:: i, j, k
       !------------------------------------------------------------------------
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) = State_V
       end do; end do; end do
 
+      end associate
+      
     end subroutine set_fixed_bc
     !==========================================================================
     subroutine set_fixed_semi_bc
@@ -727,6 +761,10 @@ contains
       character(len=*), parameter:: NameSub = 'set_fixed_semi_bc'
       !------------------------------------------------------------------------
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       if(UseSemiHallResist .or. UseSemiResistivity)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
@@ -758,6 +796,8 @@ contains
               ': not working for TypeSemiImplicit='//TypeSemiImplicit)
       end if
 
+      end associate
+      
     end subroutine set_fixed_semi_bc
     !==========================================================================
     subroutine fix_b0(iVarMin, iVarMax)
@@ -770,11 +810,18 @@ contains
 
       integer:: i, j, k
       !------------------------------------------------------------------------
+
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+         jMin => CBC%jMin, jMax => CBC%jMax, &
+         kMin => CBC%kMin, kMax => CBC%kMax)
+      
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) =  &
               State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
+      end associate
+      
     end subroutine fix_b0
     !==========================================================================
 
@@ -806,6 +853,10 @@ contains
       !------------------------------------------------------------------------
       ! call set_oktest(NameSub, DoTest, DoTestMe)
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
          if(IsCartesianGrid)then
@@ -869,6 +920,8 @@ contains
          end if
       end do; end do; end do
 
+      end associate
+      
     end subroutine set_solar_wind_bc
     !==========================================================================
 
@@ -881,8 +934,12 @@ contains
       ! index and location of a single point
       integer :: i, j, k
       real    :: y, z
-
       !------------------------------------------------------------------------
+
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       do k = kMin, kMax
          z = Xyz_DGB(z_,1,1,k,iBlock)
          do j = jMin, jMax
@@ -896,6 +953,8 @@ contains
          end do
       end do
 
+      end associate
+      
     end subroutine set_solar_wind_bc_buffer
     !==========================================================================
 
@@ -919,6 +978,10 @@ contains
       real   :: OpacityRosselandSi_W(nWave), Coef
       !------------------------------------------------------------------------
 
+      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
+           jMin => CBC%jMin, jMax => CBC%jMax, &
+           kMin => CBC%kMin, kMax => CBC%kMax)
+      
       select case(iSide)
       case(1, 2)
          if(iSide == 1)then
@@ -1005,9 +1068,11 @@ contains
          end do; end do
       end select
 
+      end associate
+      
     end subroutine set_radiation_outflow_bc
     !==========================================================================
-
+    
   end subroutine set_cell_boundary
   !============================================================================
 

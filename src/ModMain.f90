@@ -126,6 +126,14 @@ module ModMain
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
+  type :: CellBC
+     ! Index range for the ghost cell region
+     ! for ModUser::user_set_cell_boundary
+     integer :: iMin, iMax, jMin, jMax, kMin, kMax
+     ! Type of boundary for one side
+     character(len=30):: TypeBc
+  end type CellBC
+
   ! Logicals for bodies
   logical:: Body1    = .false.  !!! -> UseBody1
   logical:: UseBody2 = .false.

@@ -1081,7 +1081,7 @@ contains
   end subroutine user_set_face_boundary
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
 
     use ModImplicit, ONLY: StateSemi_VGB
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
@@ -1091,9 +1091,7 @@ contains
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
-
-    use ModMain,     ONLY: Time_Simulation, &
-         TypeCoordSystem
+    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem, CellBC
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
@@ -1102,14 +1100,13 @@ contains
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
+    type(CellBC), intent(in) :: CBC
     logical, intent(out) :: IsFound
-    character (len=*), intent(in) :: TypeBc
 
     integer :: i,j,k,iVar
     real    :: Dx,x,y,z,r,rMin,rMax
     real    :: OmegaSun, phi, UxAligned, UyAligned
     real    :: ViscoCoeff
-    character (len=*), parameter :: Name='user_set_cell_boundary'
 
     ! variables for shockramp
     real   :: x0
@@ -1180,7 +1177,7 @@ contains
     end if
 
     if(DoResistivityGaussian)then
-       select case(TypeBc)
+       select case(CBC%TypeBc)
        case('usersemi')
           select case(iSide)
           case(2)
@@ -1281,7 +1278,7 @@ contains
           State_VGB(RhoUx_:RhoUz_,:,:,nK+1:MaxK,iBlock) = 0.0
        case default
           if(iProc==0) call stop_mpi( &
-               'read_inputs: unrecognized command: '//Name)
+               'read_inputs: unrecognized command: '//NameSub)
        end select
     end if
 

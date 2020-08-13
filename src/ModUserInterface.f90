@@ -4,6 +4,8 @@
 
 module ModUserInterface
 
+  implicit none
+
   ! Provide the interface information for user routines in user_interface.f90
   ! This is required if the routine has optional arguments.
   ! The external can be called instead of calling the routines directly
@@ -16,56 +18,50 @@ module ModUserInterface
 
      subroutine user_set_boundary_cells(iBlock)
 
-       implicit none
        integer,intent(in)::iBlock
 
      end subroutine user_set_boundary_cells
+
      subroutine user_set_face_boundary(VarsGhostFace_V)
 
        use ModAdvance, ONLY: nVar
-       implicit none
+
        real, intent(out):: VarsGhostFace_V(nVar)
 
      end subroutine user_set_face_boundary
 
-     subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+     subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
 
-       implicit none
+       use ModMain, ONLY: CellBC
+
        integer,          intent(in)  :: iBlock, iSide
-       character(len=*), intent(in)  :: TypeBc
+       type(CellBC),     intent(in)  :: CBC
        logical,          intent(out) :: IsFound
 
      end subroutine user_set_cell_boundary
 
      subroutine user_initial_perturbation
 
-       implicit none
-
      end subroutine user_initial_perturbation
+
      subroutine user_set_ics(iBlock)
 
-       implicit none
        integer, intent(in) :: iBlock
 
      end subroutine user_set_ics
 
      subroutine user_init_session
 
-       implicit none
-
      end subroutine user_init_session
 
      subroutine user_action(NameAction)
 
-       implicit none
        character(len=*), intent(in):: NameAction
 
      end subroutine user_action
 
      subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
           IsInside, IsInside_I, Value_I)
-
-       implicit none
 
        integer,   intent(in):: iArea        ! area index in BATL_region
        integer,   intent(in):: iBlock       ! block index
@@ -80,7 +76,6 @@ module ModUserInterface
 
      subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
-       implicit none
        integer, intent(in)          :: iBlock
        real, intent(out)            :: UserCriteria
        character(len=*), intent(in) :: TypeCriteria
@@ -90,13 +85,10 @@ module ModUserInterface
 
      subroutine user_read_inputs
 
-       implicit none
-
      end subroutine user_read_inputs
 
      subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-       implicit none
        real, intent(out)           :: VarValue
        character(len=*), intent(in):: TypeVar
        real, optional, intent(in)  :: Radius
@@ -108,7 +100,7 @@ module ModUserInterface
           NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
        use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-       implicit none
+
        integer,          intent(in)   :: iBlock
        character(len=*), intent(in)   :: NameVar
        logical,          intent(in)   :: IsDimensional
@@ -125,27 +117,22 @@ module ModUserInterface
 
      subroutine user_calc_sources_expl(iBlock)
 
-       implicit none
        integer, intent(in) :: iBlock
        ! Change Source_VC here
      end subroutine user_calc_sources_expl
 
      subroutine user_calc_sources_impl(iBlock)
 
-       implicit none
        integer, intent(in) :: iBlock
        ! Change Source_VC here
      end subroutine user_calc_sources_impl
      
      subroutine user_init_point_implicit
 
-       implicit none
-
      end subroutine user_init_point_implicit
 
      subroutine user_get_b0(x, y, z, B0_D)
 
-       implicit none
        real, intent(in)   :: x, y, z
        real, intent(inout):: B0_D(3)
 
@@ -153,31 +140,27 @@ module ModUserInterface
 
      subroutine user_update_states(iBlock)
 
-       implicit none
        integer,intent(in):: iBlock
 
      end subroutine user_update_states
 
      subroutine user_normalization
 
-       implicit none
-
      end subroutine user_normalization
 
      subroutine user_io_units
-
-       implicit none
 
      end subroutine user_io_units
 
      subroutine user_set_resistivity(iBlock, Eta_G)
 
        use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-       implicit none
+
        integer, intent(in) :: iBlock
        real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
      end subroutine user_set_resistivity
+
      subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
           EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
           EinternalOut, TeOut, PressureOut, &
@@ -211,8 +194,9 @@ module ModUserInterface
        real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
      end subroutine user_material_properties
+
      integer function user_block_type(iBlock)
-       implicit none
+
        integer, intent(in), optional:: iBlock
      end function user_block_type
 

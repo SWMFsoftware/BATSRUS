@@ -37,7 +37,7 @@ contains
          time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
-         UseHighResChange, UseBufferGrid, UseResistivePlanet
+         UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBC
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK
@@ -69,6 +69,8 @@ contains
     logical :: UseHighResChangeNow
 
     logical :: IsFound
+
+    type(CellBC) :: CBC
 
     !!! TO BE GENERALIZED
     logical:: IsPeriodicWedge = .false.
@@ -222,8 +224,10 @@ contains
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
 
-       if(UseResistivePlanet) &
-            call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
+       if(UseResistivePlanet) then
+          CBC%TypeBc = 'ResistivePlanet'
+          call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
+       end if
 
     end do
     !$omp end parallel do
