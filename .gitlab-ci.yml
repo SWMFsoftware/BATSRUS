@@ -29,8 +29,9 @@ install:
       - share
       - util
       - srcBATL
+    expire_in: 1 hour
 
-test:
+validity:
   stage: test
   before_script:
     - apt-get update -y && apt-get install --yes gcc gfortran g++ make
@@ -40,4 +41,15 @@ test:
     - ./Config.pl -O0 -compiler=gfortran -install
     - make -j test_hallmhd NP=1
     - ./share/Scripts/CheckEmptyFile.sh test_hallmhd.diff
-
+    
+performance:
+  stage: test
+  before_script:
+    - apt-get update -y && apt-get install --yes gcc gfortran g++ make
+    - DEBIAN_FRONTEND=noninteractive apt-get install --yes openmpi-bin libopenmpi-dev
+    - chmod +x share/Scripts/CheckEmptyFile.sh
+  script:
+   - ./Config.pl -O4 -compiler=gfortran -install
+   - make -j test_hallmhd NP=1
+  rules:
+    - allow_failure: true
