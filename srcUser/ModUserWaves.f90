@@ -1040,29 +1040,25 @@ contains
   end subroutine user_get_b0
   !============================================================================
 
-  subroutine user_set_face_boundary(VarsGhostFace_V)
+  subroutine user_set_face_boundary(FBC)
 
-    use ModMain,    ONLY: x_, y_, z_
-    use ModFaceBoundary,  ONLY: FaceCoords_D, TimeBc, &
-         iBlockBc
+    use ModMain,    ONLY: x_, y_, z_, FaceBC
 
-    real, intent(out):: VarsGhostFace_V(nVar)
+    type(FaceBC) :: FBC
 
     integer :: iVar
     real :: Dx
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    associate( TimeBc => FBC%TimeBc, &
+               VarsGhostFace_V => FBC%VarsGhostFace_V, &
+               FaceCoords_D => FBC%FaceCoords_D, &
+               iBlockBc => FBC%iBlockBc )
+
     call test_start(NameSub, DoTest, iBlockBc)
 
-    !     if(DoTest)write(*,*)'face: iFace,jFace,kFace,iSide=',&
-    !          iFace,jFace,kFace,iSide
-    !     DoTest = .false.
-
     Dx = Velocity*TimeBc
-
-    !    if(DoTest) write(*,*)'Velocity, TimeBc, tSim, Dx=',&
-    !         Velocity, TimeBc, Dx
 
     do iVar=1,nVar
        ! Both of these are primitive variables
@@ -1071,13 +1067,11 @@ contains
             + KxWave_V(iVar)*(FaceCoords_D(x_) - Dx)    &
             + KyWave_V(iVar)*FaceCoords_D(y_)           &
             + KzWave_V(iVar)*FaceCoords_D(z_))
-
-       !       if(DoTest)write(*,*)'iVar, True, Ghost=',&
-       !            iVar, VarsTrueFace_V(iVar), VarsGhostFace_V(iVar)
-
     end do
 
     call test_stop(NameSub, DoTest, iBlockBc)
+    
+    end associate
   end subroutine user_set_face_boundary
   !============================================================================
 

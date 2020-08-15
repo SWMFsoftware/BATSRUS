@@ -22,11 +22,10 @@ module ModUserInterface
 
      end subroutine user_set_boundary_cells
 
-     subroutine user_set_face_boundary(VarsGhostFace_V)
+     subroutine user_set_face_boundary(FBC)
 
-       use ModAdvance, ONLY: nVar
-
-       real, intent(out):: VarsGhostFace_V(nVar)
+       use ModMain, ONLY: FaceBC
+       type(FaceBC) :: FBC
 
      end subroutine user_set_face_boundary
 

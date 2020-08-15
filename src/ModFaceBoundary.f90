@@ -12,6 +12,7 @@ module ModFaceBoundary
   use ModNumConst,   ONLY: cDegToRad
   use ModIeCoupling, ONLY: UseCpcpBc, Rho0Cpcp_I, RhoPerCpcp_I, RhoCpcp_I, &
        nIonDensity
+  use ModMain
 
   implicit none
 
@@ -22,42 +23,6 @@ module ModFaceBoundary
   ! Public methods
   public :: set_face_boundary
   public :: read_face_boundary_param
-
-  ! True if only boundaries at resolution changes are updated
-  logical, public :: DoResChangeOnly
-  !$omp threadprivate( DoResChangeOnly )
-
-  ! Type of the boundary
-  character(len=20) :: TypeBc
-  !$omp threadprivate( TypeBc )
-  
-  ! Index of the boundary
-  ! Negative iBoundary indicates which body we are computing for.
-  ! Zero corresponds to the user defined extra boundary.
-  ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
-  ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY
-  integer, public :: iBoundary
-  !$omp threadprivate( iBoundary )
-
-  ! Index of the face
-  integer, public :: iFace, jFace, kFace, iBlockBc
-  !$omp threadprivate( iFace,jFace,kFace,iBlockBc )
-  
-  ! The side of the cell defined with respect to the cell inside the domain
-  integer, public :: iSide
-  !$omp threadprivate( iSide )
-  
-  ! The values on the physical side and the ghost cell side of the boundary
-  real, public :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
-  !$omp threadprivate( VarsTrueFace_V, VarsGhostFace_V )
-  
-  ! The coordinates of the face center and the B0 field at that point
-  real, public :: FaceCoords_D(3), B0Face_D(3)
-  !$omp threadprivate( FaceCoords_D, B0Face_D )
-  
-  ! The time at which the (time dependent) boundary condition is calculated
-  real, public :: TimeBc
-  !$omp threadprivate( TimeBc )
   
   ! Local variables
 
@@ -152,6 +117,8 @@ contains
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
+    type(FaceBC) :: FBC
+
     logical :: IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_boundary'
@@ -161,9 +128,9 @@ contains
     call timing_start(NameSub)
 
     ! set variables in module
-    TimeBc          = TimeBcIn
-    DoResChangeOnly = DoResChangeOnlyIn
-    iBlockBc        = iBlock
+    FBC%TimeBc          = TimeBcIn
+    FBC%DoResChangeOnly = DoResChangeOnlyIn
+    FBC%iBlockBc        = iBlock
 
     if(DoTest)call write_face_state('Initial')
 
@@ -171,9 +138,9 @@ contains
     ! !! call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
-         .not.(iBoundary_GB(:,:,:,iBlockBc) == domain_)
+         .not.(iBoundary_GB(:,:,:,FBC%iBlockBc) == domain_)
 
-    call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
+    call set_face_bc(FBC, IsBodyCell_G, true_cell(:,:,:,FBC%iBlockBc) )
 
     if(DoTest)call write_face_state('Final')
 
@@ -213,9 +180,8 @@ contains
   end subroutine set_face_boundary
   !============================================================================
 
-  subroutine set_face_bc(IsBodyCell_G, IsTrueCell_G)
+  subroutine set_face_bc(FBC, IsBodyCell_G, IsTrueCell_G)
 
-    use ModMain
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ,    &
@@ -233,6 +199,7 @@ contains
     use BATL_lib,      ONLY: Xyz_DGB, iProc
     use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
     
+    type(FaceBC), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
 
@@ -247,6 +214,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
+    associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &
+               VarsTrueFace_V => FBC%VarsTrueFace_V, &
+               VarsGhostFace_V => FBC%VarsGhostFace_V, &
+               B0Face_D => FBC%B0Face_D, FaceCoords_D => FBC%FaceCoords_D, &
+               iBlockBc => FBC%iBlockBc )    
+    
     call test_start(NameSub, DoTest, iBlockBc)
 
     if(TypeFaceBc_I(body1_) == 'polarwind') then
@@ -278,7 +251,6 @@ contains
           else
              ! assuming the first species/fluid is H+ and determined by #BODY
              RhoCpcp_I(1) = Io2No_V(UnitRho_)*BodyNSpeciesDim_I(1)
-
 
              ! assuming the second species/fluid is O+, Mass is taken to be 16
              ! use nIonDensity instead of 2 to avoid index out of range
@@ -473,6 +445,7 @@ contains
     end do ! end k loop
 
     call test_stop(NameSub, DoTest, iBlockBc)
+    end associate
   contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
@@ -520,23 +493,24 @@ contains
       integer:: iDir
       real:: Normal_D(MaxDim)
 
-      !logical:: DoTestCell
-      logical, parameter:: DoTestCell = .false.
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
-
-      !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest-1
       
+      associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
+                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
+                 VarsTrueFace_V => FBC%VarsTrueFace_V, &
+                 VarsGhostFace_V => FBC%VarsGhostFace_V, &
+                 B0Face_D => FBC%B0Face_D, FaceCoords_D => FBC%FaceCoords_D, &
+                 TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
+                 iSide => FBC%iSide)
+
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
       TypeBc = TypeFaceBc_I(iBoundary)
-
-      if(DoTestCell)write(*,*) NameSubSub,' iBoundary, TypeBc=', &
-           iBoundary, TypeBc
 
       ! User defined boundary conditions
       if( TypeBc(1:4)=='user' )then
          iFace = i; jFace = j; kFace = k
-         call user_set_face_boundary(VarsGhostFace_V)
+         call user_set_face_boundary(FBC)
          RETURN
       end if
 
@@ -1071,6 +1045,8 @@ contains
                  //TypeBc)
          end select
       end if
+
+      end associate
     end subroutine set_face
     !==========================================================================
 

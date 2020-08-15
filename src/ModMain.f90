@@ -134,6 +134,31 @@ module ModMain
      character(len=30):: TypeBc
   end type CellBC
 
+  type :: FaceBC
+     ! True if only boundaries at resolution changes are updated                 
+     logical :: DoResChangeOnly
+     ! Type of the boundary                                                      
+     character(len=20) :: TypeBc
+     ! Index of the boundary                                                     
+     ! Negative iBoundary indicates which body we are computing for.             
+     ! Zero corresponds to the user defined extra boundary.                      
+     ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY                  
+     ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY                    
+     integer :: iBoundary
+     ! Index of the face                                                         
+     integer :: iFace, jFace, kFace
+     ! The side of the cell defined with respect to the cell inside the domain   
+     integer :: iSide
+     ! Boundary block index                                                      
+     integer :: iBlockBc
+     ! Simulation time                                                           
+     real :: TimeBc
+     ! The coordinates of the face center and the B0 field at that point         
+     real :: FaceCoords_D(3), B0Face_D(3)
+     ! The values on the physical side and the ghost cell side of the boundary   
+     real :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
+  end type FaceBC
+
   ! Logicals for bodies
   logical:: Body1    = .false.  !!! -> UseBody1
   logical:: UseBody2 = .false.

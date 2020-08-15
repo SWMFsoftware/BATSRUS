@@ -18,15 +18,15 @@ subroutine user_set_boundary_cells(iBlock)
 end subroutine user_set_boundary_cells
 
 !=====================================================================
-subroutine user_set_face_boundary(VarsGhostFace_V)
+subroutine user_set_face_boundary(FBC)
 
-  use ModAdvance, ONLY: nVar
+  use ModMain, ONLY: FaceBC
   use ModUser, ONLY: user_sub => user_set_face_boundary
   implicit none
 
-  real, intent(out):: VarsGhostFace_V(nVar)
+  type(FaceBC) :: FBC
   !-------------------------------------------------------------------
-  call user_sub(VarsGhostFace_V)
+  call user_sub(FBC)
 
 end subroutine user_set_face_boundary
 

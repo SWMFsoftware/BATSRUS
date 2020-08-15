@@ -34,17 +34,16 @@ contains
   end subroutine user_set_boundary_cells
   !============================================================================
 
-  subroutine user_set_face_boundary(VarsGhostFace_V)
+  subroutine user_set_face_boundary(FBC)
 
     ! Apply user defined face boundary condition
 
-    use ModAdvance, ONLY: nVar
-
-    real, intent(out):: VarsGhostFace_V(nVar)
+    use ModMain, ONLY: FaceBC
+    type(FaceBC) :: FBC
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    VarsGhostFace_V = 0.0
+    FBC%VarsGhostFace_V = 0.0
 
     call stop_user(NameSub)
   end subroutine user_set_face_boundary
