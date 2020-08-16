@@ -508,7 +508,7 @@ contains
       TypeBc = TypeFaceBc_I(iBoundary)
 
       ! User defined boundary conditions
-      if( TypeBc(1:4)=='user' )then
+      if( FBC%TypeBc(1:4)=='user' )then
          iFace = i; jFace = j; kFace = k
          call user_set_face_boundary(FBC)
          RETURN

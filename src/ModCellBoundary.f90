@@ -367,7 +367,7 @@ contains
           end if
        case default
           IsFound=.false.
-          if(TypeBc(1:4) == 'user')then
+          if(CBC%TypeBc(1:4) == 'user')then
              if(present(IsLinear))then
                 if(IsLinear)then
                    ! Linear semi-implicit BC. Default is zero
