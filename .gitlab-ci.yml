@@ -12,7 +12,7 @@ stages:
 install:
   stage: build
   before_script:
-    - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit: $a\n" if $a'
+    - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit: $a\n" if $a; exit 0'
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
     - apt-get install -y make
     - eval $(ssh-agent -s)
