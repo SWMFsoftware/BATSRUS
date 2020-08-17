@@ -664,7 +664,7 @@ test_graydiffusion_compile:
 
 test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
-	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie3.dat .
+	cd ${TESTDIR}; gunzip -c Param/CRASH/initial_lowrie3.dat.gz > initial_lowrie3.dat
 
 test_graydiffusion_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1300,7 +1300,7 @@ test_mercurysph_check:
 		> test_mercurysph.diff)
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6 -p="sort -k1 -k2 -k3 -g | grep -v AUXDATA" \
 		${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz \
-		Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz \
+		data/MERCURY/REF3d__var_2_n0000100.dat.gz \
 		>> test_mercurysph.diff)
 	ls -l test_mercurysph.diff
 
@@ -1339,7 +1339,7 @@ test_ganymede_check:
 		> test_ganymede.diff)
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-6\
 	   ${TESTDIR}/RESULTS/GM/y=0_var_1_n00000005.out \
-	   Param/GANYMEDE/TestOutput/REFy=0.out.gz > \
+	   data/GANYMEDE/REFy=0.out.gz > \
 	   	>> test_ganymede.diff)
 	ls -l test_ganymede.diff
 
