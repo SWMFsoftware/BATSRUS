@@ -106,7 +106,7 @@ test_spectrum_run:
 test_spectrum_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		test-spectrum.out \
-		test-spectrum.ref > ../test_spectrum.diff
+		test-spectrum.ref.gz > ../test_spectrum.diff
 	@ls -l ../test_spectrum.diff
 
 #
