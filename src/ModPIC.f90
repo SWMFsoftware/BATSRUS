@@ -496,7 +496,7 @@ contains
 
           if(iProc == 0 .and. iProcPic == Unset_) call stop_mpi(&
                'Error: can not get the scaling factor for the PIC grid!')
-          
+
           if(iProcPic == iProc) then
              call set_hall_factor_cell(iBlockPic, .false.)
              ScalingFactor_I(iRegion) = HallFactor_C( & 
@@ -506,7 +506,7 @@ contains
              if(ScalingFactor_I(iRegion) == 0) &
                   ScalingFactor_I(iRegion) = HallFactorMax
           endif
-          
+
           call MPI_Bcast(ScalingFactor_I(iRegion),1,MPI_REAL, &
                iProcPic,iComm,iError)
        endif
@@ -667,7 +667,7 @@ contains
           call pic_to_mhd_vec(iRegion, XyzPic_D, XyzMhd_D)
           call find_grid_block(XyzMhd_D, iProcFound, iBlock, iNodeOut=iNode)
           if(iProcFound /= Unset_) IsPicNode_A(iNode) = .true.
-             
+
        enddo; enddo; enddo
 
     enddo
@@ -701,7 +701,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
-    
+
     call set_status_all(iPicOff_)
 
     do iRegion = 1, nRegionPic
@@ -1155,7 +1155,7 @@ contains
     use BATL_lib,        ONLY: nDim, nI, nJ, nK, nG, nBlock, MaxBlock, &
          x_, y_, z_, iNode_B, Unused_B, iProc, MaxNode, &
          block_inside_regions, get_region_indexes, Xyz_DGB, &
-         message_pass_cell
+         message_pass_cell, CellSize_DB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
          x_, y_, z_, Ux_, Uy_, Uz_
@@ -1197,8 +1197,8 @@ contains
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitRho_)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitRho_)
        case('j/b')
-          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
-          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitJ_)/Io2No_V(UnitB_)
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        case('divu')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
@@ -1289,7 +1289,7 @@ contains
     if(allocated(Curvature_DGB)) call message_pass_cell(3, Curvature_DGB)
 
     do iBlock=1,nBlock
-       
+
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
        if(Unused_B(iBlock)) CYCLE
 
@@ -1305,7 +1305,7 @@ contains
                 b = sqrt(FullBfield_DGB(x_,i,j,k,iBlock)**2+&
                      FullBfield_DGB(y_,i,j,k,iBlock)**2+&
                      FullBfield_DGB(z_,i,j,k,iBlock)**2)
-                CriteriaValue = current / b
+                CriteriaValue = (current / b)*CellSize_DB(1, iBlock)
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
