@@ -125,17 +125,13 @@ module ModFaceFlux
   real :: MhdFluxLeft_V( RhoUx_:RhoUz_)     = 0.0 
   real :: MhdFluxRight_V(RhoUx_:RhoUz_)     = 0.0 
   
-  real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
-  real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
   real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL = 0.0, DeltaBnR = 0.0
   real, public:: Area = 0.0
   real :: Area2 = 0.0, AreaX, AreaY, AreaZ
   !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
-  !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
   !$omp threadprivate( MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V)
-  !$omp threadprivate( DissipationFlux_V )
   !$omp threadprivate( B0x, B0y, B0z )
   !$omp threadprivate( DiffBb )
   !$omp threadprivate( DeltaBnL, DeltaBnR )
@@ -1252,7 +1248,10 @@ contains
     real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
     real :: B0_D(3), dB0_D(3), Current_D(3)
-
+    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
+    real :: DissipationFlux_V(nFlux)
+    real :: Pe                      ! electron pressure -> grad Pe
+    real :: Pwave
     real :: GradPe_D(3)
     real :: InvElectronDens
     integer :: i, j, k, iFluid
@@ -1488,7 +1487,7 @@ contains
        elseif(DoAw)then
           call artificial_wind
        elseif(DoRoeOld)then
-          call roe_solver(Flux_V)
+          call roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
        elseif(DoRoe)then
           call roe_solver_new
        else
@@ -4385,11 +4384,13 @@ contains
 
   end subroutine correct_u_normal
   !============================================================================
-  subroutine roe_solver(Flux_V)
+  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
 
     use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
 
     real, intent(out):: Flux_V(nFlux)
+    real, intent(in):: StateLeftCons_V(:)
+    real, intent(in):: StateRightCons_V(:)
 
     ! Number of MHD waves including the divB wave
     integer, parameter :: nWaveMhd=8
