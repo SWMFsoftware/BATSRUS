@@ -23,7 +23,9 @@ install:
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    - which perl
     - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit $a\n" if $a; exit 0'
+    - exit 1
     - ./Config.pl -compiler=gfortran -install
   artifacts:
     paths:
