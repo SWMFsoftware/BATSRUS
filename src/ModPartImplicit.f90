@@ -2255,9 +2255,8 @@ contains
 
     use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
-         set_block_values, set_cell_values, get_physical_flux, &
-         HallJx, HallJy, HallJz, UseHallGradPe, DoTestCell
+    use ModFaceFlux, ONLY: nFlux, TmpVars, &
+         set_block_values, set_cell_values, get_physical_flux, DoTestCell
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
     use ModMultiFluid, ONLY: nFluid, iP_I
 
@@ -2267,6 +2266,7 @@ contains
     real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
+    type(TmpVars) :: vars
 
     real :: Un_I(nFluid+1), En, Pe, Pwave
     integer :: i, j, k
@@ -2274,9 +2274,15 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_flux'
     !--------------------------------------------------------------------------
+    associate(B0x => vars%B0x, B0y => vars%B0y, B0z => vars%B0z, &
+      HallJx => vars%HallJx, HallJy => vars%HallJy, HallJz => vars%HallJz, &
+      Area => vars%Area, &
+      iFace => vars%iFace, jFace => vars%jFace, kFace => vars%kFace, &
+      UseHallGradPe => vars%UseHallGradPe )
+
     call test_start(NameSub, DoTest, iBlock)
 
-    call set_block_values(iBlock, iDim)
+    call set_block_values(iBlock, iDim, vars)
     ! Set iFace=i, jFace=j, kFace=k so that
     ! call set_cell_values and call get_physical_flux work
     ! This is not quite right but good enough for the preconditioner
@@ -2294,15 +2300,16 @@ contains
           HallJz = HallJ_CD(i, j, k, z_)
        end if
 
-       call set_cell_values
+       call set_cell_values(vars)
 
        ! Ignore gradient of electron pressure in the preconditioner
        UseHallGradPe = .false.
 
-       call get_physical_flux(Primitive_V, &
-            B0_DC(x_, i, j, k), &
-            B0_DC(y_, i, j, k), &
-            B0_DC(z_, i, j, k), &
+       B0x = B0_DC(x_, i, j, k)
+       B0y = B0_DC(y_, i, j, k)
+       B0z = B0_DC(z_, i, j, k)
+
+       call get_physical_flux(Primitive_V, vars, &
             Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
        Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
@@ -2315,6 +2322,8 @@ contains
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
+
+    end associate
   end subroutine get_face_flux
   !============================================================================
 
@@ -2322,9 +2331,8 @@ contains
        iDim, iBlock,Cmax_F)
 
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
-         set_block_values, set_cell_values, get_speed_max, &
-         UnLeft_I, UnRight_I
+    use ModFaceFlux, ONLY: DoTestCell, TmpVars, &
+         set_block_values, set_cell_values, get_speed_max
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
 
@@ -2334,17 +2342,24 @@ contains
     real, intent(out):: Cmax_F(:,:,:)   ! dimension(nFaceI,nFaceJ,nFaceK)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
+    type(TmpVars) :: vars
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
+    associate( B0x => vars%B0x, B0y => vars%B0y, B0z => vars%B0z, &
+      UnLeft_I => vars%UnLeft_I, UnRight_I => vars%UnRight_I, &
+      Area => vars%Area, &
+      iFace => vars%iFace, jFace => vars%jFace, kFace => vars%kFace )
+
     call test_start(NameSub, DoTest, iBlock)
 
     ! The electron speed is set to zero (I can't remember why)
     UnLeft_I(eFluid_)  = 0.0
     UnRight_I(eFluid_) = 0.0
 
-    call set_block_values(iBlock, iDim)
+    call set_block_values(iBlock, iDim, vars)
+
     do kFace=1,nFaceK; do jFace=1,nFaceJ; do iFace=1,nFaceI
 
        DoTestCell = DoTest .and. &
@@ -2354,15 +2369,15 @@ contains
 
        call conservative_to_primitive(Primitive_V)
 
-       call set_cell_values
+       call set_cell_values(vars)
 
        ! This is inconsistent for hd with Sokolov scheme,
        ! because originally the maximum speed from Rusanov scheme is applied!
-       call get_speed_max(Primitive_V, &
-            B0_DF( x_,iFace, jFace, kFace), &
-            B0_DF( y_,iFace, jFace, kFace), &
-            B0_DF( z_,iFace, jFace, kFace), &
-            cmax_I = Cmax_I)
+       B0x = B0_DF( x_,iFace, jFace, kFace)
+       B0y = B0_DF( y_,iFace, jFace, kFace)
+       B0z = B0_DF( z_,iFace, jFace, kFace)
+
+       call get_speed_max(Primitive_V, vars, cmax_I = Cmax_I)
 
        Cmax_F(iFace, jFace, kFace) = maxval(Cmax_I)*Area
 
@@ -2372,6 +2387,8 @@ contains
          Area, Cmax_F(iTest, jTest, kTest)
 
     call test_stop(NameSub, DoTest, iBlock)
+
+    end associate
   end subroutine get_cmax_face
   !============================================================================
 
