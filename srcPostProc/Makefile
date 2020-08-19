@@ -132,7 +132,7 @@ test_spectrum2_run:
 test_spectrum2_check:
 	${SCRIPTDIR}/DiffNum.pl -t  \
 		test-spectrum2.out \
-		test-spectrum.ref > ../test_spectrum2.diff
+		test-spectrum.ref.gz > ../test_spectrum2.diff
 	@ls -l ../test_spectrum2.diff
 
 #
