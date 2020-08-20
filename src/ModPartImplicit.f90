@@ -2256,7 +2256,7 @@ contains
     use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: nFlux, FaceFluxVarType, &
-         set_block_values, set_cell_values, get_physical_flux, DoTestCell
+         set_block_values, set_cell_values, get_physical_flux
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
     use ModMultiFluid, ONLY: nFluid, iP_I
 
@@ -2276,7 +2276,7 @@ contains
     !--------------------------------------------------------------------------
     associate(B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
-      Area => FFV%Area, &
+      Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       UseHallGradPe => FFV%UseHallGradPe )
 
@@ -2331,7 +2331,7 @@ contains
        iDim, iBlock,Cmax_F)
 
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: DoTestCell, FaceFluxVarType, &
+    use ModFaceFlux, ONLY: FaceFluxVarType, &
          set_block_values, set_cell_values, get_speed_max
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
@@ -2349,7 +2349,7 @@ contains
     !--------------------------------------------------------------------------
     associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-      Area => FFV%Area, &
+      Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
     call test_start(NameSub, DoTest, iBlock)

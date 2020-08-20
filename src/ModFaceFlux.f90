@@ -81,7 +81,7 @@ module ModFaceFlux
      integer :: iFace, jFace, kFace   
      ! Maximum speed for the Courant condition
      real :: CmaxDt
-     real :: Area2, AreaX, AreaY, AreaZ, Area 
+     real :: Area2, AreaX, AreaY, AreaZ, Area = 0.0
      real :: DeltaBnL, DeltaBnR
      real :: DiffBb ! (1/4)(BnL-BnR)^2
      real :: StateLeft_V(nVar)
@@ -118,13 +118,14 @@ module ModFaceFlux
      real :: DiffCoef, EradFlux, RadDiffCoef
      real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal     
      ! B x Area for current -> BxJ
-     real :: bCrossArea_D(3)
+     real :: bCrossArea_D(3) = 0.0
      real :: B0x=0.0, B0y=0.0, B0z=0.0
      ! Variables needed by viscosity
      real :: ViscoCoeff
      logical :: IsBoundary
      ! Variables introduced for regional Boris correction
-     real :: InvClightFace, InvClight2Face   
+     real :: InvClightFace, InvClight2Face
+     logical :: DoTestCell = .false.
   end type FaceFluxVarType
   
   ! Neutral fluids may use different flux function
@@ -141,12 +142,10 @@ module ModFaceFlux
   logical, public:: DoBurgers = .false.
 
   logical :: UseLindeFix
-  logical, public:: DoTestCell
-  !$omp threadprivate( DoTestCell )
   
   ! Variables needed for Biermann battery term
   logical :: IsNewBlockGradPe = .true.
-  real, allocatable, public:: Pe_G(:,:,:)
+  real, allocatable, protected, public:: Pe_G(:,:,:)
   !$omp threadprivate( IsNewBlockGradPe )
   !$omp threadprivate( Pe_G )
   
@@ -543,6 +542,7 @@ contains
          MhdFlux_V => FFV%MhdFlux_V, &
          Normal_D => FFV%Normal_D, &
          Area => FFV%Area, &
+         DoTestCell => FFV%DoTestCell, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
       call set_block_values(iBlock, y_, FFV)
@@ -651,6 +651,7 @@ contains
          MhdFlux_V => FFV%MhdFlux_V, &
          Normal_D => FFV%Normal_D, &
          Area => FFV%Area, &
+         DoTestCell => FFV%DoTestCell, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
       call set_block_values(iBlock, z_, FFV)
@@ -1005,7 +1006,8 @@ contains
       NormalY => FFV%NormalY, &
       NormalZ => FFV%NormalZ, &
       InvClightFace => FFV%InvClightFace, &
-      InvClight2Face => FFV%InvClight2Face )
+      InvClight2Face => FFV%InvClight2Face, &
+      DoTestCell => FFV%DoTestCell )
 
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
@@ -1173,7 +1175,8 @@ contains
       EradFlux => FFV%EradFlux, &
       HeatFlux => FFV%HeatFlux, &
       IonHeatFlux => FFV%IonHeatFlux, &
-      HeatCondCoefNormal => FFV%HeatCondCoefNormal )
+      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
+      DoTestCell => FFV%DoTestCell )
 
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
@@ -1534,7 +1537,8 @@ contains
          FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
          MhdFlux_V => FFV%MhdFlux_V, &
          MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-         MhdFluxRight_V => FFV%MhdFluxRight_V )
+         MhdFluxRight_V => FFV%MhdFluxRight_V, &
+         DoTestCell => FFV%DoTestCell )
 
       call get_speed_max(State_V, FFV, Cmax_I = Cmax_I)
 
@@ -1920,7 +1924,8 @@ contains
          UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
          B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
          UnR => FFV%UnR, Ut1R => FFV%Ut1R, Ut2R => FFV%Ut2R, &
-         B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R )
+         B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R, &
+         DoTestCell => FFV%DoTestCell )
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
       call get_speed_max(StateLeft_V,  FFV, &
@@ -2926,7 +2931,8 @@ contains
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
-         InvClight2Face => FFV%InvClight2Face )
+         InvClight2Face => FFV%InvClight2Face, &
+         DoTestCell => FFV%DoTestCell )
 
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
@@ -3145,7 +3151,8 @@ contains
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z )
+         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
+         DoTestCell => FFV%DoTestCell )
 
       if(UseMultiIon)then
          ! calculate number densities
@@ -3210,7 +3217,8 @@ contains
          Normal_D => FFV%Normal_D, &
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ )
+         NormalZ => FFV%NormalZ, &
+         DoTestCell => FFV%DoTestCell )
 
       Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
 
@@ -3263,7 +3271,7 @@ contains
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
-         Area => FFV%Area )
+         Area => FFV%Area, DoTestCell => FFV%DoTestCell )
 
       Rho = State_V(iRho)
       Ux  = State_V(iUx)
@@ -3401,7 +3409,8 @@ contains
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       Area => FFV%Area, &
-      UseHallGradPe => FFV%UseHallGradPe )
+      UseHallGradPe => FFV%UseHallGradPe, &
+      DoTestCell => FFV%DoTestCell )
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -3514,7 +3523,8 @@ contains
       HallCoeff => FFV%HallCoeff, &
       BiermannCoeff => FFV%BiermannCoeff, &
       Area => FFV%Area, &
-      UseHallGradPe => FFV%UseHallGradPe )
+      UseHallGradPe => FFV%UseHallGradPe, &
+      DoTestCell => FFV%DoTestCell )
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -4278,7 +4288,8 @@ contains
          iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
          iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-         Normal_D => FFV%Normal_D )
+         Normal_D => FFV%Normal_D, &
+         DoTestCell => FFV%DoTestCell )
 
       if(DoTestCell) then
          write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
