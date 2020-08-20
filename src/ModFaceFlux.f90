@@ -3955,29 +3955,31 @@ contains
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
 
       integer:: jFluid, iVar
+
+      integer :: iLeft, jLeft, kLeft, iRight, jRight, kRight
+      integer :: iFace, jFace, kFace, iBlockFace, iDimFace
+      real :: CmaxDt, B0x, B0y, B0z, DiffBb
+      real :: StateLeft_V(nVar), StateRight_V(nVar)
+      real :: UnLeft_I(nFluid+1), UnRight_I(nFluid+1)
+      real :: Normal_D(3), NormalX, NormalY, NormalZ
+      real :: HallCoeff, InvDxyz, InvClight2Face
       !------------------------------------------------------------------------
-      ! gfortran cannot compile due to incorrect heuristics!
-      !associate( &
-      !   iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
-      !   iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
-      !   iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      !   iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
-      !   CmaxDt => FFV%CmaxDt, &
-      !   B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      !   StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-      !   DiffBb => FFV%DiffBb, &
-      !   Normal_D => FFV%Normal_D, &
-      !   NormalX => FFV%NormalX, &
-      !   NormalY => FFV%NormalY, &
-      !   NormalZ => FFV%NormalZ, &
-      !   HallCoeff => FFV%HallCoeff, &
-      !   UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-      !   InvDxyz => FFV%InvDxyz, &
-      !   InvClight2Face => FFV%InvClight2Face )
+      iLeft = FFV%iLeft;   jLeft = FFV%jLeft;   kLeft = FFV%jLeft
+      iRight = FFV%iRight; jRight = FFV%jRight; kRight = FFV%kRight
+      iBlockFace = FFV%iBlockFace; iDimFace = FFV%iDimFace
+      CmaxDt = FFV%CmaxDt
+      B0x = FFV%B0x; B0y = FFV%B0y; B0z = FFV%B0z; DiffBb = FFV%DiffBb
+      StateLeft_V = FFV%StateLeft_V; StateRight_V = FFV%StateRight_V
+      Normal_D = FFV%Normal_D
+      NormalX = FFV%NormalX; NormalY = FFV%NormalY; NormalZ = FFV%NormalZ
+      HallCoeff = FFV%HallCoeff
+      UnLeft_I = FFV%UnLeft_I; UnRight_I = FFV%UnRight_I
+      InvDxyz = FFV%InvDxyz
+      InvClight2Face = FFV%InvClight2Face
 
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
-      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*FFV%Normal_D )
+      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       UnMin = Un
       UnMax = Un
 
@@ -3987,7 +3989,7 @@ contains
          ! The (approximate) fast speed fromula for multi-ion MHD
          ! contains the maximum of ion sound speeds squared
          Sound2 = max(Sound2, State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1)
-         Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*FFV%Normal_D )
+         Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
          ! A reliable upper and lower estimate for wave speeds
          ! uses the max and min of all ion bulk velocities.
          UnMin = min(Un, UnMin)
@@ -4044,23 +4046,23 @@ contains
          end if
       end if
 
-      if(UseRS7) Sound2 = Sound2 + GammaMinus1*FFV%DiffBb*InvRho
+      if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
             Sound2 = Sound2 + &
                  GammaWave * (GammaWave - 1)*&
-                 max(FFV%StateLeft_V(Ew_)/FFV%StateLeft_V(Rho_),&
-                 FFV%StateRight_V(Ew_)/FFV%StateRight_V(Rho_))
+                 max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
+                 StateRight_V(Ew_)/StateRight_V(Rho_))
          else
             Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
             Sound2 = Sound2 + GammaWave*Pw*InvRho
          end if
       end if
 
-      FullBx = State_V(Bx_) + FFV%B0x
-      FullBy = State_V(By_) + FFV%B0y
-      FullBz = State_V(Bz_) + FFV%B0z
+      FullBx = State_V(Bx_) + B0x
+      FullBy = State_V(By_) + B0y
+      FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results in
@@ -4070,22 +4072,22 @@ contains
          ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
          ! this is clearly not true.
          !
-         dB1dB1 = 0.25*sum((FFV%StateRight_V(Bx_:Bz_)-FFV%StateLeft_V(Bx_:Bz_))**2)
+         dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_)-StateLeft_V(Bx_:Bz_))**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
       if(UseCurlB0)then
-         B1B0L = FFV%StateLeft_V(Bx_)*FFV%B0x &
-              +  FFV%StateLeft_V(By_)*FFV%B0y &
-              +  FFV%StateLeft_V(Bz_)*FFV%B0z
-         B1B0R = FFV%StateRight_V(Bx_)*FFV%B0x &
-              +  FFV%StateRight_V(By_)*FFV%B0y &
-              +  FFV%StateRight_V(Bz_)*FFV%B0z
+         B1B0L = StateLeft_V(Bx_)*B0x &
+              +  StateLeft_V(By_)*B0y &
+              +  StateLeft_V(Bz_)*B0z
+         B1B0R = StateRight_V(Bx_)*B0x &
+              +  StateRight_V(By_)*B0y &
+              +  StateRight_V(Bz_)*B0z
          Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
       end if
 
-      FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
+      FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
       Alfven2Normal = InvRho*FullBn**2
 
       if(UseMultiIon .or. UseEfield)then
@@ -4174,52 +4176,52 @@ contains
               ' FullBx, FullBy, FullBz=', FullBx, FullBy, FullBz
          write(*,*) &
               ' State_VGB(left)       =', &
-              State_VGB(:,FFV%iLeft,FFV%jLeft,FFV%kLeft,FFV%iBlockFace)
+              State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
          write(*,*) &
               ' State_VGB(right)      =', &
-              State_VGB(:,FFV%iRight,FFV%jRight,FFV%kRight,FFV%iBlockFace)
+              State_VGB(:,iRight,jRight,kRight,iBlockFace)
          write(*,*) &
               ' Xyz_DGB(right)        =', &
-              Xyz_DGB(:,FFV%iFace,FFV%jFace,FFV%kFace,FFV%iBlockFace)
+              Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
 
          write(*,*) &
               ' iDim,i,j,k,BlockFace=', &
-              FFV%iDimFace, FFV%iFace,FFV%jFace,FFV%kFace, FFV%iBlockFace
+              iDimFace, iFace,jFace,kFace, iBlockFace
 
          call stop_mpi('negative fast speed squared')
       end if
 
       ! Fast speed multiplied by the face area
       if(UseBorisSimple .or. (UseEfield))then
-         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*FFV%InvClight2Face) )
+         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if
       FastDt = Fast
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(FFV%HallCoeff > 0.0 .and. DoHallInduction) then
+      if(HallCoeff > 0.0 .and. DoHallInduction) then
          ! Tangential component of B
          FullBt = sqrt(max(0.0, &
               (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
 
          ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
-         Rho1 = sum(State_VGB(iRhoIon_I,FFV%iLeft,FFV%jLeft,FFV%kLeft,FFV%iBlockFace))
+         Rho1 = sum(State_VGB(iRhoIon_I,iLeft,jLeft,kLeft,iBlockFace))
 
          ! Calculate drift speed and whistler speed
          cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
          cWhistler = cPi*abs(FullBn)
 
          ! Take the faster speed
-         cHall     = FFV%HallCoeff*FFV%InvDxyz*InvRho*max(cWhistler, cDrift)
+         cHall     = HallCoeff*InvDxyz*InvRho*max(cWhistler, cDrift)
 
          ! cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
       end if
 
-      HallUnLeft  = FFV%UnLeft_I(eFluid_)
-      HallUnRight = FFV%UnRight_I(eFluid_)
+      HallUnLeft  = UnLeft_I(eFluid_)
+      HallUnRight = UnRight_I(eFluid_)
 
       if(UseAlfvenWaves.and.UseAwSpeed) then
          !\
@@ -4228,21 +4230,21 @@ contains
          ! may happen to be larger that the fast wave
          ! speed in the "hat" state
          !/
-         FullBx = FFV%StateLeft_V(Bx_) + FFV%B0x
-         FullBy = FFV%StateLeft_V(By_) + FFV%B0y
-         FullBz = FFV%StateLeft_V(Bz_) + FFV%B0z
-         FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
-         Fast = max(Fast, sqrt( FullBn*FullBn / FFV%StateLeft_V(iRhoIon_I(1)) ))
+         FullBx = StateLeft_V(Bx_) + B0x
+         FullBy = StateLeft_V(By_) + B0y
+         FullBz = StateLeft_V(Bz_) + B0z
+         FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateLeft_V(iRhoIon_I(1)) ))
 
-         FullBx = FFV%StateRight_V(Bx_) + FFV%B0x
-         FullBy = FFV%StateRight_V(By_) + FFV%B0y
-         FullBz = FFV%StateRight_V(Bz_) + FFV%B0z
-         FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
-         Fast = max(Fast, sqrt( FullBn*FullBn / FFV%StateRight_V(iRhoIon_I(1)) ))
+         FullBx = StateRight_V(Bx_) + B0x
+         FullBy = StateRight_V(By_) + B0y
+         FullBz = StateRight_V(Bz_) + B0z
+         FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(iRhoIon_I(1)) ))
       end if
 
       if(UseAwSpeed)then
-         if(FFV%HallCoeff > 0.0)then
+         if(HallCoeff > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
             Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
             CmaxDt_I(1)  = max(Cright_I(1) + FastDt, - Cleft_I(1) - FastDt)
@@ -4257,7 +4259,7 @@ contains
          end if
       else
          if(present(Cmax_I))then
-            if(FFV%HallCoeff > 0.0)then
+            if(HallCoeff > 0.0)then
                Cmax_I(1)   = max(abs(UnMin), abs(UnMax), &
                     abs(HallUnLeft), abs(HallUnRight))
                CmaxDt_I(1) = Cmax_I(1) + FastDt
@@ -4271,7 +4273,6 @@ contains
          if(present(Cright_I)) Cright_I(1) = UnMax + Fast
       end if
 
-      !end associate
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_hd_speed
