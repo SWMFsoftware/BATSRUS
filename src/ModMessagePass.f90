@@ -37,7 +37,7 @@ contains
          time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
-         UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBC
+         UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBCType
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK
@@ -70,7 +70,7 @@ contains
 
     logical :: IsFound
 
-    type(CellBC) :: CBC
+    type(CellBCType) :: CBC
 
     !!! TO BE GENERALIZED
     logical:: IsPeriodicWedge = .false.

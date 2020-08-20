@@ -29,7 +29,7 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop, CellBC
+         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop, CellBCType
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, XyzMin_D
@@ -59,7 +59,7 @@ contains
     integer,          optional, intent(in):: iSideIn
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
-    type(CellBC) :: CBC
+    type(CellBCType) :: CBC
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
     real, allocatable:: SymmCoeff_V(:)

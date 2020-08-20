@@ -1035,16 +1035,16 @@ contains
     real, intent(out):: B0_D(3)
 
     !--------------------------------------------------------------------------
-    B0_D = (/0.2, 0.3, 0.4/)
+    B0_D = [0.2, 0.3, 0.4]
 
   end subroutine user_get_b0
   !============================================================================
 
   subroutine user_set_face_boundary(FBC)
 
-    use ModMain,    ONLY: x_, y_, z_, FaceBC
+    use ModMain,    ONLY: x_, y_, z_, FaceBCType
 
-    type(FaceBC) :: FBC
+    type(FaceBCType) :: FBC
 
     integer :: iVar
     real :: Dx
@@ -1085,7 +1085,7 @@ contains
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
-    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem, CellBC
+    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem, CellBCType
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
@@ -1094,7 +1094,7 @@ contains
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
-    type(CellBC), intent(in) :: CBC
+    type(CellBCType), intent(in) :: CBC
     logical, intent(out) :: IsFound
 
     integer :: i,j,k,iVar

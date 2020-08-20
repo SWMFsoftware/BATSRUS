@@ -38,8 +38,8 @@ contains
 
     ! Apply user defined face boundary condition
 
-    use ModMain, ONLY: FaceBC
-    type(FaceBC) :: FBC
+    use ModMain, ONLY: FaceBCType
+    type(FaceBCType) :: FBC
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
@@ -51,12 +51,12 @@ contains
 
   subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
 
-    use ModMain, ONLY: CellBC
+    use ModMain, ONLY: CellBCType
 
     ! Apply user defined ghost cell boundary condition
     
     integer,          intent(in)  :: iBlock, iSide
-    type(CellBC),     intent(in)  :: CBC
+    type(CellBCType), intent(in)  :: CBC
     logical,          intent(out) :: IsFound
 
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'

@@ -126,15 +126,15 @@ module ModMain
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
-  type :: CellBC
+  type :: CellBCType
      ! Index range for the ghost cell region
      ! for ModUser::user_set_cell_boundary
      integer :: iMin, iMax, jMin, jMax, kMin, kMax
      ! Type of boundary for one side
      character(len=30):: TypeBc
-  end type CellBC
+  end type CellBCType
 
-  type :: FaceBC
+  type :: FaceBCType
      ! True if only boundaries at resolution changes are updated                 
      logical :: DoResChangeOnly
      ! Type of the boundary                                                      
@@ -157,7 +157,7 @@ module ModMain
      real :: FaceCoords_D(3), B0Face_D(3)
      ! The values on the physical side and the ghost cell side of the boundary   
      real :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
-  end type FaceBC
+  end type FaceBCType
 
   ! Logicals for bodies
   logical:: Body1    = .false.  !!! -> UseBody1

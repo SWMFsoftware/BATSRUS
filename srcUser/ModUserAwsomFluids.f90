@@ -706,12 +706,12 @@ contains
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,      ONLY: UseWavePressureLtd
     ! Below is for jet only
-    use ModMain,       ONLY: time_simulation, time_accurate, CellBC
+    use ModMain,       ONLY: time_simulation, time_accurate, CellBCType
     use ModConst,      ONLY: cPi
     use ModCoordTransform, ONLY: rlonlat_to_xyz, cross_product
     ! Above is for jet only
     integer,          intent(in)  :: iBlock, iSide
-    type(CellBC),     intent(in)  :: CBC
+    type(CellBCType), intent(in)  :: CBC
     logical,          intent(out) :: IsFound
 
     integer :: Minor_, Major_

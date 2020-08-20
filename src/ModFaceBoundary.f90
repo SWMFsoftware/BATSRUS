@@ -117,7 +117,7 @@ contains
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
-    type(FaceBC) :: FBC
+    type(FaceBCType) :: FBC
 
     logical :: IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical:: DoTest
@@ -199,7 +199,7 @@ contains
     use BATL_lib,      ONLY: Xyz_DGB, iProc
     use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
     
-    type(FaceBC), intent(inout):: FBC
+    type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
 
