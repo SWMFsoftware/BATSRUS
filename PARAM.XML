@@ -467,6 +467,14 @@ but much shorter.
 	<parameter name="MaxHarmonicDegree" type="integer" default="-1" />
 	<parameter name="NamePlanetHarmonicsFile" type="string" default="0.0" />
 
+#MULTIPOLEB0
+T                        UseMultipoleB0
+10                       MaxHarmonicDegree
+planetharmonics.txt      NamePlanetaryHarmonicsFile
+
+#COORDSYSTEM
+GSE             (GSM could work too since GSE==GSM if axes are aligned)
+
 Using this command, you can specify the
 planetary magnetic field (B0) using the Spherical Harmonics
 expansion. This is useful for e.g. to model the IGRF or complicated
@@ -481,14 +489,6 @@ GEO coordinate system.
 As of now this feature cannot be used with the IE solver, and 
 should be used in standalone GM/BATSRUS only. Secular variation 
 has not been implemented yet. 
-
-#COORDSYSTEM
-GSE             (GSM could work too since GSE==GSM if axes are aligned)
-
-#MULTIPOLEB0
-T                        UseMultipoleB0
-10                       MaxHarmonicDegree
-planetharmonics.txt      NamePlanetaryHarmonicsFile
 
 The planetharmonics.txt file should be of the form -
 
