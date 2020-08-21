@@ -1,11 +1,13 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 my $Verbose     = $v; undef $v;
 my $Help        = $h; undef $h;
 my $HelpXmlParam= $H; undef $H;
 my $HelpXml     = $X; undef $X;
+my $Format      = $F; undef $F;
 
 use strict;
 
@@ -75,6 +77,7 @@ if(-x $ConfigScript){
 my @command = (
 	       $CheckParamScript,
 	       "-S",
+               "-F=$Format",
 	       "-c=$NameComp",
 	       "-v=$Verbose",
 	       "-g=$GridSize",
