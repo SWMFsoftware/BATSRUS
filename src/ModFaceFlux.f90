@@ -145,7 +145,7 @@ module ModFaceFlux
   
   ! Variables needed for Biermann battery term
   logical :: IsNewBlockGradPe = .true.
-  real, allocatable, protected, public:: Pe_G(:,:,:)
+  real, allocatable, public:: Pe_G(:,:,:)
   !$omp threadprivate( IsNewBlockGradPe )
   !$omp threadprivate( Pe_G )
   
