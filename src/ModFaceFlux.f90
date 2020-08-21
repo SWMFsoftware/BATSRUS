@@ -103,7 +103,7 @@ module ModFaceFlux
      ! normal electric field -> divE
      real :: Enormal
      ! Normal velocities for all fluids plus electrons
-     real :: Unormal_I(nFluid+1)
+     real :: Unormal_I(nFluid+1) = 0.0
      real :: UnLeft_I(nFluid+1)
      real :: UnRight_I(nFluid+1)
      ! Variables for normal resistivity
