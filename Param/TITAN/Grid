@@ -2,25 +2,25 @@
 spherical_lnr		TypeGeometry
 
 #GRID
-4                       nRootBlockX
-2                       nRootBlockY
-1                       nRootBlockZ
--32.                    x1
- 96.                    x2
--64.                    y1
- 64.                    y2
--64.                    z1
- 64.                    z2
+4			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-32.			xMin
+ 96.			xMax
+-64.			yMin
+ 64.			yMax
+-64.			zMin
+ 64.			zMax
 
 #LIMITRADIUS
-1.2815534821		RadiusMin
-131.9390403		RadiusMax
+1.2815534821		rMin
+131.9390403		rMax
 
 #GRIDLEVEL
-1			nLevelArea
-all			NameArea
+1			nLevel
+all			StringShape
 
 #GRIDLEVEL
-10			nLevelArea
-sphere0			NameArea
+10			nLevel
+sphere0			StringShape
 1.9223			Radius = 1.5*rBody
