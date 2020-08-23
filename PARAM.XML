@@ -96,15 +96,15 @@ stand alone mode. These are the defaults. Set -1-s for no progress reports.
 </command>
 
 <command name="TIMEACCURATE" if="$_IsStandAlone">
-        <parameter name="DoTimeAccurate" type="logical" default="T" />
+        <parameter name="IsTimeAccurate" type="logical" default="T" />
 
 #TIMEACCURATE
-F               DoTimeAccurate
+F               IsTimeAccurate
 
 This command is only used in stand alone mode.
 
-If DoTimeAccurate is set to true, BATSRUS solves
-a time dependent problem. If DoTimeAccurate is false, a steady-state
+If IsTimeAccurate is set to true, BATSRUS solves
+a time dependent problem. If IsTimeAccurate is false, a steady-state
 solution is sought for. It is possible to use steady-state mode
 in the first few sessions to obtain a steady state solution,
 and then to switch to time accurate mode in the following sessions.
