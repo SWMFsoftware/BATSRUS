@@ -47,9 +47,6 @@ module ModRadDiffusion
   public :: update_impl_rad_diff
   public :: set_rad_diff_range
 
-  ! Logical for adding radiation diffusion
-  logical, public :: IsNewBlockRadDiffusion = .true.
-  !$omp threadprivate( IsNewBlockRadDiffusion )
 
   logical, public :: IsNewTimestepRadDiffusion = .true.
   
@@ -320,11 +317,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    if(IsNewBlockRadDiffusion) &
+    if(i == 1 .and. j == 1 .and. k == 1) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 
-    call get_face_gradient(iDir, i, j, k, iBlock, &
-         IsNewBlockRadDiffusion, Erad_WG, FaceGrad_D)
+    call get_face_gradient(iDir, i, j, k, iBlock, Erad_WG, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
        call get_diffusion_coef(StateLeft_V, DiffCoefL)
@@ -515,7 +511,6 @@ contains
 
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
-       IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
 
        if(DoCalcDelta) then
@@ -920,11 +915,9 @@ contains
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
 
-            if(IsNewBlockRadDiffusion)then
+            if(i == 1 .and. j == 1 .and. k == 1)then
                Erad_WG = State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)
                call set_block_field3(iBlock, nWave, Erad1_WG, Erad_WG)
-
-               IsNewBlockRadDiffusion = .false.
             end if
 
             Grad2ByErad2_W = &

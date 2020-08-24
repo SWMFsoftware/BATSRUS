@@ -27,10 +27,6 @@ module ModHeatConduction
   public :: add_jacobian_heat_cond
   public :: update_impl_heat_cond
 
-  ! Logical for adding field-aligned heat conduction
-  logical, public :: IsNewBlockHeatCond = .true.
-  logical, public :: IsNewBlockIonHeatCond = .true.
-  !$omp threadprivate( IsNewBlockHeatCond, IsNewBlockIonHeatCond )
   
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'spitzer'
@@ -386,7 +382,7 @@ contains
        UseLeftStateOnly  = .false.
     end if
 
-    if(IsNewBlockHeatCond)then
+    if(iFace == 1 .and. jFace == 1 .and. kFace == 1)then
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -410,8 +406,8 @@ contains
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockHeatCond, Te_G, FaceGrad_D, &
-         UseFirstOrderBcIn=UseFirstOrderBc)
+         Te_G, FaceGrad_D, UseFirstOrderBcIn=UseFirstOrderBc)
+
     if(UseLeftStateOnly)then
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
             StateLeft_V, Normal_D, HeatCond_D)
@@ -609,7 +605,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    if(IsNewBlockIonHeatCond)then
+    if(iFace == 1 .and. jFace == 1 .and. kFace == 1)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Ti_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
@@ -622,7 +618,7 @@ contains
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockIonHeatCond, Ti_G, FaceGrad_D)
+         Ti_G, FaceGrad_D)
 
     call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
          StateLeft_V, Normal_D, HeatCondL_D)
@@ -885,7 +881,6 @@ contains
     real, parameter:: TeEpsilonSi = 1.0
     real :: TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     real :: bb_DD(nDim,nDim)
-    logical :: IsNewBlockTe
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
@@ -903,8 +898,6 @@ contains
 
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
-
-       IsNewBlockTe = .true.
 
        if(DoCalcDelta) then
           ! For the electron flux limiter, we need Te in the ghostcells
@@ -1092,8 +1085,7 @@ contains
              HeatCoef = 0.5*(HeatCoef_G(i,j,k) + HeatCoef_G(i-Di,j-Dj,k-Dk))
 
              if(UseHeatFluxLimiter)then
-                call get_face_gradient(iDim, i, j, k, iBlock, &
-                     IsNewBlockTe, Te_G, GradTe_D)
+                call get_face_gradient(iDim, i, j, k, iBlock, Te_G, GradTe_D)
 
                 GradTe = 0.0
                 do iDir = 1, nDim
@@ -1294,13 +1286,12 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk
     real :: FaceGrad_D(MaxDim)
-    logical :: IsNewBlockHeatCond, UseFirstOrderBc
+    logical :: UseFirstOrderBc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    IsNewBlockHeatCond = .true.
     UseFirstOrderBc = UseFieldLineThreads.and.far_field_BCs_BLK(iBlock)
 
     ! Calculate the electron thermal heat flux
@@ -1310,7 +1301,7 @@ contains
 
           ! Second-order accurate electron temperature gradient
           call get_face_gradient(iDim, i, j, k, iBlock, &
-               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D,&
+               StateImpl_VG, FaceGrad_D,&
                UseFirstOrderBcIn=UseFirstOrderBC)
           
           FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &

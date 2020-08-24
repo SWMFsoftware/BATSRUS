@@ -27,10 +27,6 @@ module ModViscosity
   real, public, allocatable:: Visco_DDI(:,:,:)
   !$omp threadprivate( Visco_DDI )
   
-  ! Logical needed to fill up ghost cells only once per block
-  logical, public :: IsNewBlockViscosity = .true.
-  !$omp threadprivate( IsNewBlockViscosity )
-  
   ! Viscosity factor on the faces and in the cell centers
   real, public, allocatable:: ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
   !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
@@ -238,7 +234,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
     ! Get velocity vector for the block, only done ones per block
-    if(IsNewBlockViscosity) then
+    if(iFace == 1 .and. jFace == 1 .and. kFace == 1) then
        do iFluid = iFluidMin, iFluidMax
           if(nFluid>1) call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -253,17 +249,10 @@ contains
        end do
     end if
 
-    ! Get the velocity gradient on the faces.
-    ! Fill in ghost cells for the block for each fluid once.
-    IsNewBlock = IsNewBlockViscosity
     do iFluid = iFluidMin, iFluidMax
        call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, nDim,  &
-            IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
-       ! so ghost cell for all fluids are updated
-       IsNewBlock = IsNewBlockViscosity
+            iBlockFace, nDim,  u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
     end do
-    IsNewBlockViscosity = .false.
 
     ! Get the viscosity tensor
     do iFluid = 1, nFluid

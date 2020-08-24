@@ -24,6 +24,10 @@ module ModFaceGradient
   public :: get_face_curl
   public :: set_block_jacobian_face
 
+  interface get_face_curl
+    module procedure get_face_curl_old, get_face_curl_new
+  end interface
+
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
   !$omp threadprivate( DcoordDxyz_DDFD )
@@ -768,51 +772,48 @@ contains
   !============================================================================
 
   subroutine get_face_gradient_field(iDir, i, j, k, iBlock, nField, &
-       IsNewBlock, Var_IG, FaceGrad_DI)
+    Var_IG, FaceGrad_DI)
 
     ! calculate the gradient FaceGrad_DI of field Var_IG
     ! on face iDir of cell i, j, k of block iBlock
-
+    
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
          CellSize_DB, DiLevelNei_IIIB, x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-
+    
     integer, intent(in) :: iDir, i, j, k, iBlock, nField
-    logical, intent(inout) :: IsNewBlock
     real, intent(inout) :: Var_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_DI(nDim,nField)
-
+    
     integer :: iL, iR, jL, jR, kL, kR, iField
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
-
+    
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
-
-    if(IsNewBlock)then
+    
+    if(i == 1 .and. j == 1 .and. k == 1)then
        allocate(Var1_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        call set_block_field3(iBlock, nField, Var1_IG, Var_IG)
        deallocate(Var1_IG)
        if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
-
-       IsNewBlock = .false.
     end if
-
+    
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1;
     jR = j+1; jL = j-1;
     kR = k+1; kL = k-1;
-
+    
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
-
+    
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -834,7 +835,7 @@ contains
          )then
        iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
     end if
-
+    
     if(j==1)then
        if(NeiLsouth(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -856,7 +857,7 @@ contains
          )then
        jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
     end if
-
+    
     if(k==1)then
        if(NeiLbot(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -878,19 +879,19 @@ contains
          )then
        kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
     end if
-
+    
     do iField = 1, nField
        ! Use central difference to get gradient at face
        select case(iDir)
        case(1)
           FaceGrad_DI(Dim1_,iField) = &
                InvDx*(Var_IG(iField,i,j,k) - Var_IG(iField,i-1,j,k))
-
+    
           if(nJ > 1) FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i-1,jL,k) + Var_IG(iField,i,jL,k)) &
                + By*(Var_IG(iField,i-1,j ,k) + Var_IG(iField,i,j ,k)) &
                + Cy*(Var_IG(iField,i-1,jR,k) + Var_IG(iField,i,jR,k))
-
+    
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                + Az*(Var_IG(iField,i-1,j,kL) + Var_IG(iField,i,j,kL)) &
                + Bz*(Var_IG(iField,i-1,j,k ) + Var_IG(iField,i,j,k )) &
@@ -900,10 +901,10 @@ contains
                + Ax*(Var_IG(iField,iL,j-1,k) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j-1,k) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j-1,k) + Var_IG(iField,iR,j,k))
-
+    
           FaceGrad_DI(Dim2_,iField) = &
                InvDy*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j-1,k))
-
+    
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                + Az*(Var_IG(iField,i,j-1,kL) + Var_IG(iField,i,j,kL)) &
                + Bz*(Var_IG(iField,i,j-1,k ) + Var_IG(iField,i,j,k )) &
@@ -913,43 +914,42 @@ contains
                + Ax*(Var_IG(iField,iL,j,k-1) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j,k-1) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j,k-1) + Var_IG(iField,iR,j,k))
-
+    
           FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i,jL,k-1) + Var_IG(iField,i,jL,k))  &
                + By*(Var_IG(iField,i,j ,k-1) + Var_IG(iField,i,j ,k))  &
                + Cy*(Var_IG(iField,i,jR,k-1) + Var_IG(iField,i,jR,k))
-
+    
           FaceGrad_DI(Dim3_,iField) = &
                InvDz*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j,k-1))
        case default
           write(*,*)'Error face index iDir=',iDir
           call stop_mpi(NameSub)
        end select
-
+    
        ! multiply by the coordinate transformation matrix to obtain the
        ! cartesian gradient from the partial derivatives dScalar/dGencoord
        if(.not.IsCartesianGrid) FaceGrad_DI(:,iField) = &
             matmul(FaceGrad_DI(:,iField), &
             DcoordDxyz_DDFD(1:nDim,1:nDim,i,j,k,iDir))
-
+    
     end do
-
+    
   end subroutine get_face_gradient_field
   !============================================================================
 
-  subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G, &
-       FaceGrad_D, UseFirstOrderBcIn)
+  subroutine get_face_gradient(iDir, i, j, k, iBlock, Scalar_G, &
+   FaceGrad_D, UseFirstOrderBcIn)
 
     ! calculate the cell face gradient of Scalar_G
-
+    
     use BATL_lib,      ONLY: IsCartesianGrid
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, NoBlk
     use BATL_lib,      ONLY: CellSize_DB, DiLevelNei_IIIB
-
+    
     integer, intent(in) :: iDir, i, j, k, iBlock
-    logical, intent(inout) :: IsNewBlock
     real, intent(inout) :: Scalar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_D(3)
     logical, optional, intent(in):: UseFirstOrderBcIn
@@ -978,34 +978,33 @@ contains
     !
     !/
     logical :: UseFirstOrderBc
-
+    
     character(len=*), parameter:: NameSub = 'get_face_gradient'
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
-
-    if(IsNewBlock)then
+    
+    if(i == 1 .and. j == 1 .and. k == 1)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
             call set_block_jacobian_face(iBlock,UseFirstOrderBcIn)
-       IsNewBlock = .false.
     end if
     if(present(UseFirstOrderBcIn))then
        UseFirstOrderBc = UseFirstOrderBcIn
     else
        UseFirstOrderBc = .false.
     end if
-
+    
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1; iD = i - 1; iU = i;
     jR = j+1; jL = j-1; jD = j - 1; jU = j;
     kR = k+1; kL = k-1; kD = k - 1; kU = k
-
+    
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
-
+    
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -1032,7 +1031,7 @@ contains
          .and. NeiLwest(iBlock)==NoBlk)then
        iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
     end if
-
+    
     if(j==1)then
        if(NeiLsouth(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -1059,7 +1058,7 @@ contains
          .and. NeiLnorth(iBlock)==NoBlk)then
        jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
     end if
-
+    
     if(k==1)then
        if(NeiLbot(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -1086,7 +1085,7 @@ contains
          .and. NeiLtop(iBlock)==NoBlk)then
        kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
     end if
-
+    
     ! Use central difference to get gradient at face
     select case(iDir)
     case(x_)
@@ -1141,11 +1140,11 @@ contains
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
     end if
-
+    
   end subroutine get_face_gradient
   !============================================================================
 
-  subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
+  subroutine get_face_curl_old(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
        FaceCurl_D)
 
     use ModMain,      ONLY: x_, y_, z_
@@ -1163,7 +1162,6 @@ contains
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
@@ -1434,8 +1432,294 @@ contains
     end subroutine calc_gencoord_curl
     !==========================================================================
 
-  end subroutine get_face_curl
+  end subroutine get_face_curl_old
   !============================================================================
+
+  subroutine get_face_curl_new(iDir, i, j, k, iBlock, Vector_DG, FaceCurl_D)
+
+    use ModMain,      ONLY: x_, y_, z_
+    use BATL_lib,     ONLY: IsCartesianGrid, IsRzGeometry
+    use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
+         neiLnorth, neiLtop, neiLbot
+    use BATL_lib,     ONLY: CellSize_DB, DiLevelNei_IIIB
+    
+    integer, intent(in) :: iDir, i, j, k, iBlock
+    real, intent(inout) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(out)  :: FaceCurl_D(3)
+    
+    integer :: iL, iR, jL, jR, kL, kR
+    real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    Real :: InvDx, InvDy, InvDz
+    real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !--------------------------------------------------------------------------
+    InvDx = 1.0/CellSize_DB(x_,iBlock)
+    InvDy = 1.0/CellSize_DB(y_,iBlock)
+    InvDz = 1.0/CellSize_DB(z_,iBlock)
+    
+    if(i == 1 .and. j == 1 .and. k == 1)then
+       call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
+       if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
+    end if
+    
+    ! Central difference with averaging in orthogonal direction
+    iR = i+1; iL = i-1;
+    jR = j+1; jL = j-1;
+    kR = k+1; kL = k-1;
+    
+    Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
+    Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
+    Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
+    
+    if(i==1)then
+       if(NeiLeast(iBlock)==-1 &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1)) &
+            )then
+          iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
+       end if
+    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
+         i==nI .and. ((iDir==y_ .and. &
+         (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
+         (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
+         .or.         (iDir==z_ .and. &
+         (k==1    .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1) .or. &
+         (k==nK+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1))) &
+         )then
+       iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
+    end if
+    
+    if(j==1)then
+       if(NeiLsouth(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. DiLevelNei_IIIB(-1,-1, 0,iBlock)==-1) .or. &
+            (i==nI+1 .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1)) &
+            )then
+          jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
+       end if
+    elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
+         j==nJ .and. ((iDir==x_ .and. &
+         (i==1    .and. DiLevelNei_IIIB(-1, 1, 0,iBlock)==-1) .or. &
+         (i==nI+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
+         .or.         (iDir==z_ .and. &
+         (k==1    .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1) .or. &
+         (k==nK+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1)))&
+         )then
+       jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+    end if
+    
+    if(k==1)then
+       if(NeiLbot(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. DiLevelNei_IIIB(-1, 0,-1,iBlock)==-1) .or. &
+            (i==nI+1 .and. DiLevelNei_IIIB( 1, 0,-1,iBlock)==-1)) &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. DiLevelNei_IIIB( 0,-1,-1,iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,-1,iBlock)==-1)) &
+            )then
+          kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
+       end if
+    elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
+         k==nK .and. ((iDir==x_ .and. &
+         (i==1    .and. DiLevelNei_IIIB(-1, 0, 1,iBlock)==-1) .or. &
+         (i==nI+1 .and. DiLevelNei_IIIB( 1, 0, 1,iBlock)==-1)) &
+         .or.         (iDir==y_ .and. &
+         (j==1    .and. DiLevelNei_IIIB( 0,-1, 1,iBlock)==-1) .or. &
+         (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1))) &
+         )then
+       kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+    end if
+    
+    if(IsCartesianGrid)then
+       call calc_cartesian_curl
+    else
+       call calc_gencoord_curl
+    end if
+    
+    contains
+    !==========================================================================
+    
+    subroutine calc_cartesian_curl
+    
+      use BATL_lib, ONLY: Xyz_DGB
+      !------------------------------------------------------------------------
+      select case(iDir)
+      case(x_)
+         FaceCurl_D(y_) = -InvDx*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i-1,j,k))
+         if(nK > 1) FaceCurl_D(y_) = FaceCurl_D(y_) &
+              + Az*(Vector_DG(x_,i-1,j,kL) + Vector_DG(x_,i,j,kL)) &
+              + Bz*(Vector_DG(x_,i-1,j,k ) + Vector_DG(x_,i,j,k )) &
+              + Cz*(Vector_DG(x_,i-1,j,kR) + Vector_DG(x_,i,j,kR))
+    
+         FaceCurl_D(z_) = +InvDx*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i-1,j,k))
+         if(nJ > 1) FaceCurl_D(z_) = FaceCurl_D(z_) &
+              - Ay*(Vector_DG(x_,i-1,jL,k) + Vector_DG(x_,i,jL,k)) &
+              - By*(Vector_DG(x_,i-1,j ,k) + Vector_DG(x_,i,j ,k)) &
+              - Cy*(Vector_DG(x_,i-1,jR,k) + Vector_DG(x_,i,jR,k))
+    
+         if(nJ > 1)then
+            FaceCurl_D(x_) = &
+                 + Ay*(Vector_DG(z_,i-1,jL,k) + Vector_DG(z_,i,jL,k )) &
+                 + By*(Vector_DG(z_,i-1,j ,k) + Vector_DG(z_,i,j ,k )) &
+                 + Cy*(Vector_DG(z_,i-1,jR,k) + Vector_DG(z_,i,jR,k ))
+         else
+            FaceCurl_D(x_) = 0.0
+         end if
+         if(nK > 1) FaceCurl_D(x_) = FaceCurl_D(x_) &
+              - Az*(Vector_DG(y_,i-1,j,kL) + Vector_DG(y_,i,j ,kL)) &
+              - Bz*(Vector_DG(y_,i-1,j,k ) + Vector_DG(y_,i,j ,k )) &
+              - Cz*(Vector_DG(y_,i-1,j,kR) + Vector_DG(y_,i,j ,kR))
+    
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry) FaceCurl_D(x_) = FaceCurl_D(x_) &
+              + 0.5*(Vector_DG(z_,i,j,k) + Vector_DG(z_,i-1,j,k)) &
+              / Xyz_DGB(y_,i,j,k,iBlock)
+    
+      case(y_)
+         FaceCurl_D(x_) = &
+              +InvDy*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i,j-1,k))
+         if(nK > 1) FaceCurl_D(x_) = FaceCurl_D(x_) &
+              - Az*(Vector_DG(y_,i,j-1,kL) + Vector_DG(y_,i,j,kL)) &
+              - Bz*(Vector_DG(y_,i,j-1,k ) + Vector_DG(y_,i,j,k )) &
+              - Cz*(Vector_DG(y_,i,j-1,kR) + Vector_DG(y_,i,j,kR))
+    
+         FaceCurl_D(z_) = &
+              -InvDy*(Vector_DG(x_,i,j,k) - Vector_DG(x_,i,j-1,k)) &
+              + Ax*(Vector_DG(y_,iL,j-1,k) + Vector_DG(y_,iL,j,k)) &
+              + Bx*(Vector_DG(y_,i ,j-1,k) + Vector_DG(y_,i ,j,k)) &
+              + Cx*(Vector_DG(y_,iR,j-1,k) + Vector_DG(y_,iR,j,k))
+    
+         FaceCurl_D(y_) = &
+              - Ax*(Vector_DG(z_,iL,j-1,k) + Vector_DG(z_,iL,j,k)) &
+              - Bx*(Vector_DG(z_,i ,j-1,k) + Vector_DG(z_,i ,j,k)) &
+              - Cx*(Vector_DG(z_,iR,j-1,k) + Vector_DG(z_,iR,j,k))
+         if(nK > 1) FaceCurl_D(y_) = FaceCurl_D(y_) &
+              + Az*(Vector_DG(x_,i,j-1,kL) + Vector_DG(x_,i,j,kL)) &
+              + Bz*(Vector_DG(x_,i,j-1,k ) + Vector_DG(x_,i,j,k )) &
+              + Cz*(Vector_DG(x_,i,j-1,kR) + Vector_DG(x_,i,j,kR))
+    
+         ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+         if(IsRzGeometry)then
+            if(Xyz_DGB(y_,i,j-1,k,iBlock)<0.0)then
+               ! Just for bookkeeping. It's effect is zeroed by zero face area
+               FaceCurl_D(x_) = FaceCurl_D(x_) &
+                    + Vector_DG(z_,i,j,k)/Xyz_DGB(y_,i,j,k,iBlock)
+            else
+               FaceCurl_D(x_) = FaceCurl_D(x_) &
+                    + (Vector_DG(z_,i,j,k) + Vector_DG(z_,i,j-1,k)) &
+                    / (Xyz_DGB(y_,i,j,k,iBlock) + Xyz_DGB(y_,i,j-1,k,iBlock))
+            end if
+         end if
+    
+      case(z_)
+         FaceCurl_D(x_) = &
+              -InvDz*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i,j,k-1)) &
+              + Ay*(Vector_DG(z_,i,jL,k-1) + Vector_DG(z_,i,jL,k)) &
+              + By*(Vector_DG(z_,i,j ,k-1) + Vector_DG(z_,i,j ,k)) &
+              + Cy*(Vector_DG(z_,i,jR,k-1) + Vector_DG(z_,i,jR,k))
+    
+         FaceCurl_D(y_) = &
+              +InvDz*(Vector_DG(x_,i,j,k) - Vector_DG(x_,i,j,k-1)) &
+              - Ax*(Vector_DG(z_,iL,j,k-1) + Vector_DG(z_,iL,j,k)) &
+              - Bx*(Vector_DG(z_,i ,j,k-1) + Vector_DG(z_,i ,j,k)) &
+              - Cx*(Vector_DG(z_,iR,j,k-1) + Vector_DG(z_,iR,j,k))
+    
+         FaceCurl_D(z_) = &
+              + Ax*(Vector_DG(y_,iL,j,k-1) + Vector_DG(y_,iL,j,k)) &
+              + Bx*(Vector_DG(y_,i ,j,k-1) + Vector_DG(y_,i ,j,k)) &
+              + Cx*(Vector_DG(y_,iR,j,k-1) + Vector_DG(y_,iR,j,k)) &
+              - Ay*(Vector_DG(x_,i,jL,k-1) + Vector_DG(x_,i,jL,k)) &
+              - By*(Vector_DG(x_,i,j ,k-1) + Vector_DG(x_,i,j ,k)) &
+              - Cy*(Vector_DG(x_,i,jR,k-1) + Vector_DG(x_,i,jR,k))
+    
+      case default
+         write(*,*)'Error in calc_cartesian_curl: iDir=',iDir
+         call stop_mpi('DEBUG')
+      end select
+    
+    end subroutine calc_cartesian_curl
+    !==========================================================================
+    
+    subroutine calc_gencoord_curl
+    
+      real :: DvectorDcoord_DD(MaxDim,MaxDim)
+      !------------------------------------------------------------------------
+    
+      ! Calculate the partial derivatives dVector/dCoord
+      select case(iDir)
+      case(x_)
+         DvectorDcoord_DD(:,1) = &
+              InvDx*(Vector_DG(:,i,j,k) - Vector_DG(:,i-1,j,k))
+         if(nJ > 1)then
+            DvectorDcoord_DD(:,2) = &
+                 + Ay*(Vector_DG(:,i-1,jL,k) + Vector_DG(:,i,jL,k)) &
+                 + By*(Vector_DG(:,i-1,j ,k) + Vector_DG(:,i,j ,k)) &
+                 + Cy*(Vector_DG(:,i-1,jR,k) + Vector_DG(:,i,jR,k))
+         else
+            DvectorDcoord_DD(:,2) = 0.0
+         end if
+         if(nK > 1)then
+            DvectorDcoord_DD(:,3) = &
+                 + Az*(Vector_DG(:,i-1,j,kL) + Vector_DG(:,i,j,kL)) &
+                 + Bz*(Vector_DG(:,i-1,j,k ) + Vector_DG(:,i,j,k )) &
+                 + Cz*(Vector_DG(:,i-1,j,kR) + Vector_DG(:,i,j,kR))
+         else
+            DvectorDcoord_DD(:,3) = 0.0
+         end if
+    
+      case(y_)
+         DvectorDcoord_DD(:,1) = &
+              + Ax*(Vector_DG(:,iL,j-1,k) + Vector_DG(:,iL,j,k)) &
+              + Bx*(Vector_DG(:,i ,j-1,k) + Vector_DG(:,i ,j,k)) &
+              + Cx*(Vector_DG(:,iR,j-1,k) + Vector_DG(:,iR,j,k))
+         DvectorDcoord_DD(:,2) = &
+              InvDy*(Vector_DG(:,i,j,k) - Vector_DG(:,i,j-1,k))
+         if(nK > 1)then
+            DvectorDcoord_DD(:,3) = &
+                 + Az*(Vector_DG(:,i,j-1,kL) + Vector_DG(:,i,j,kL)) &
+                 + Bz*(Vector_DG(:,i,j-1,k ) + Vector_DG(:,i,j,k )) &
+                 + Cz*(Vector_DG(:,i,j-1,kR) + Vector_DG(:,i,j,kR))
+         else
+            DvectorDcoord_DD(:,3) = 0.0
+         end if
+    
+      case(z_)
+         DvectorDcoord_DD(:,1) = &
+              + Ax*(Vector_DG(:,iL,j,k-1) + Vector_DG(:,iL,j,k)) &
+              + Bx*(Vector_DG(:,i ,j,k-1) + Vector_DG(:,i ,j,k)) &
+              + Cx*(Vector_DG(:,iR,j,k-1) + Vector_DG(:,iR,j,k))
+         DvectorDcoord_DD(:,2) = &
+              + Ay*(Vector_DG(:,i,jL,k-1) + Vector_DG(:,i,jL,k)) &
+              + By*(Vector_DG(:,i,j ,k-1) + Vector_DG(:,i,j ,k)) &
+              + Cy*(Vector_DG(:,i,jR,k-1) + Vector_DG(:,i,jR,k))
+         DvectorDcoord_DD(:,3) = &
+              InvDz*(Vector_DG(:,i,j,k) - Vector_DG(:,i,j,k-1))
+      end select
+    
+      ! Curl_x = Dvector_z/Dy - Dvector_y/Dz
+      FaceCurl_D(x_) = &
+           + sum(DvectorDcoord_DD(z_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(y_,:)*DcoordDxyz_DDFD(:,z_,i,j,k,iDir))
+        
+      ! Curl_y = Dvector_x/Dz - Dvector_z/Dx
+      FaceCurl_D(y_) = &
+           + sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,z_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(z_,:)*DcoordDxyz_DDFD(:,x_,i,j,k,iDir))    
+
+      ! Curl_z = Dvector_y/Dx - Dvector_x/Dy
+      FaceCurl_D(z_) = &
+           + sum(DvectorDcoord_DD(y_,:)*DcoordDxyz_DDFD(:,x_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir))    
+
+    end subroutine calc_gencoord_curl
+    !==========================================================================
+  end subroutine get_face_curl_new
 
 end module ModFaceGradient
 !==============================================================================

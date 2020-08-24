@@ -73,9 +73,6 @@ module ModCoronalHeating
   logical,public :: UseWaveReflection = .true.
   logical        :: UseSurfaceWaveRefl= .false.
   real,   public :: rMinWaveReflection = 0.0
-
-  logical,public :: IsNewBlockAlfven = .true.
-  !$omp threadprivate( IsNewBlockAlfven )
   
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
@@ -1003,10 +1000,8 @@ contains
     !$omp threadprivate(LogAlfven_FD,LogRho_FD)
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
-    if(IsNewBlockAlfven)then
+    if(i == 1 .and. j == 1 .and. k == 1)then
        call get_log_alfven_speed
-
-       IsNewBlockAlfven = .false.
     end if
 
     if(IsCartesianGrid)then

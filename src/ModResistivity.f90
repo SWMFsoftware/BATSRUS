@@ -838,15 +838,12 @@ contains
     integer :: iDim, i, j, k, Di, Dj, Dk
     real    :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
     real    :: Jnormal, BneNormal
-    logical :: IsNewBlock
     logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'get_resistivity_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     if(DoTest) write(*,*) NameSub,' true cell=',&
          true_cell(iTest,jTest,ktest,iBlockTest)
-
-    IsNewBlock = .true.
 
     Rhs_VC = 0.0
 
@@ -867,7 +864,7 @@ contains
              if(  .not.true_cell(i,j,k,iBlock) .and. &
                   .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
              
-             call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, &
+             call get_face_curl(iDim, i, j, k, iBlock, &
                   StateImpl_VG, Current_D)
              
              FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = 0.0
@@ -966,7 +963,7 @@ contains
                 if(  .not.true_cell(i,j,k,iBlock) .and. &
                      .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
                 
-                call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, &
+                call get_face_curl(iDim, i, j, k, iBlock, &
                      StateImpl_VG, Current_D)
                 
                 FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = 0.0

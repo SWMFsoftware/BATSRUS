@@ -33,17 +33,16 @@ module ModFaceFlux
        UseLowOrder, IsLowOrderOnly_B
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockCurrent, HallFactor_DF, set_hall_factor_face, &
+       HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery
-  use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
-  use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
+  use ModRadDiffusion, ONLY: get_radiation_energy_flux
+  use ModHeatConduction, ONLY: &
        get_heat_flux, get_ion_heat_flux
   use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
   use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
   use ModNumConst
-  use ModCoronalHeating, ONLY: IsNewBlockAlfven
-  use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
+  use ModViscosity, ONLY: UseViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
   use omp_lib
@@ -144,9 +143,7 @@ module ModFaceFlux
   logical :: UseLindeFix
   
   ! Variables needed for Biermann battery term
-  logical :: IsNewBlockGradPe = .true.
   real, allocatable, public:: Pe_G(:,:,:)
-  !$omp threadprivate( IsNewBlockGradPe )
   !$omp threadprivate( Pe_G )
   
   ! These are variables for pure MHD solvers (Roe and HLLD)
@@ -268,6 +265,7 @@ contains
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
 
+    type(FaceFluxVarType) :: FFV
     real:: FaceDivU_I(nFluid)
     integer, parameter:: cLowOrder = 1
     real, parameter:: cSmall = 1e-6
@@ -278,16 +276,6 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)call print_values
-
-    ! Make sure that Hall MHD recalculates the magnetic field
-    ! in the current block that will be used for the Hall term
-    IsNewBlockCurrent      = .true.
-    IsNewBlockGradPe       = .true.
-    IsNewBlockRadDiffusion = .true.
-    IsNewBlockHeatCond     = .true.
-    IsNewBlockIonHeatCond  = .true.
-    IsNewBlockViscosity    = .true.
-    IsNewBlockAlfven       = .true.
 
     if(UseHallResist)then
        call set_hall_factor_face(iBlock)
@@ -422,7 +410,6 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
-      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
@@ -526,7 +513,6 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IY
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
-      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
@@ -635,7 +621,6 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IZ
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux
-      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
@@ -1105,7 +1090,8 @@ contains
          UseAnisoPe
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
-    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
+    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed, &
+         iMinFace, jMinFace, kMinFace
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1188,9 +1174,10 @@ contains
 
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) then
-       if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
+       if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace) &
+            b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
        call get_face_curl(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            IsNewBlockCurrent, b_DG, Current_D)
+            b_DG, Current_D)
        Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
 
@@ -1214,7 +1201,7 @@ contains
 
     if(UseHallGradPe)then
 
-       if(IsNewBlockGradPe)then
+       if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace)then
 
           if(.not.allocated(Pe_G)) &
                allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
@@ -1242,7 +1229,7 @@ contains
 
        ! Calculate face centered grad(Pe)
        call get_face_gradient(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            IsNewBlockGradPe, Pe_G, GradPe_D)
+            Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
