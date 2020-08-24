@@ -11,6 +11,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdIonsPe.f90"
+
+
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation = &
        'MHD with 2 ions and electron pressure'

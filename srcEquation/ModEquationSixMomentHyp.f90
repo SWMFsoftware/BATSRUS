@@ -13,6 +13,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationSixMomentHyp.f90"
+
+
   ! This equation module contains the standard MHD equations with
   ! anisotropic ion pressure.
   character (len=*), parameter :: &

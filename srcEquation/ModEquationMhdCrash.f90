@@ -19,6 +19,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdCrash.f90"
+
+
   ! This equation module contains the CRASH equations with magnetic field.
   ! An extra scalar variable to carry the div B away (hyperbolic cleaning)
   character (len=*), parameter :: &

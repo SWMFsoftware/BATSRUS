@@ -9,6 +9,9 @@ module ModVarIndexes
   implicit none
 
   save
+
+  character (len=*), parameter :: NameEquationFile = "ModEquationMultiSwIono.f90"
+
   ! This equation module declares two Ions (solar wind H and ionosphere H)
   ! for the purposes of tracking plasma entry into the magnetosphere in
   ! multifluid MHD.  It requires changes to the #MAGNETOSPHERE command

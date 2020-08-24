@@ -13,6 +13,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdTitan.f90"
+
+
   ! This equation module contains the MHD equations with species for Mars
   character (len=*), parameter :: NameEquation='Titan MHD'
 

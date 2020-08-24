@@ -14,6 +14,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdMarsPe.f90"
+
+
   ! This equation module contains the MHD equations with species for Mars
   character (len=*), parameter :: NameEquation='Mars MHD with electron pressure'
 

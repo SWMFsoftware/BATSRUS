@@ -13,6 +13,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdPw.f90"
+
+
   ! This equation module contains the standard MHD equations with
   ! two species for Earth.  1 - solar wind protons, 2 - ionospheric plasma
   character (len=*), parameter :: NameEquation= 'Polar Wind boundary 3 Species (H+, O+, He+), Glocer, March, 2008'

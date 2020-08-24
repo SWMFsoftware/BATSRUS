@@ -11,6 +11,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationOuterHelioPUI.f90"
+
+
   ! This equation module contains 2 ion fluids + 4 neutrals
   character (len=*), parameter :: NameEquation='SWH + PUI and four neutrals'
 

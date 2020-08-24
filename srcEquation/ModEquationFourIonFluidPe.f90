@@ -11,6 +11,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationFourIonFluidPe.f90"
+
+
   ! This equation file declares four ion fluids: solar wind H+, ionospheric
   ! H+, and ionospheric O+, and plasmasphere,  along with ion 
   ! electron pressure.  This allows for

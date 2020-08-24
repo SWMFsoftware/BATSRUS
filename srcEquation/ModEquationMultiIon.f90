@@ -10,6 +10,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMultiIon.f90"
+
+
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='Multi-ion MHD'
 

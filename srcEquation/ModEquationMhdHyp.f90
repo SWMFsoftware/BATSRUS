@@ -10,6 +10,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdHyp.f90"
+
+
   ! This equation module contains the standard MHD equations plus one
   ! extra scalar variable to carry the div B away (hyperbolic cleaning)
   character (len=*), parameter :: NameEquation='MHD with hyperbolic cleaning'

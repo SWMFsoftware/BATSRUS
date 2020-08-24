@@ -11,6 +11,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdEos.f90"
+
+
   ! This equation module contains the standard MHD equations with
   ! extra internal energy
   character (len=*), parameter :: NameEquation='MHD+eos'

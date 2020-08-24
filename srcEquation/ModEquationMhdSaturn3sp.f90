@@ -13,6 +13,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdSaturn3sp.f90"
+
+
   ! This equation module contains the standard MHD equations with
   ! three species for Saturn.  1 - solar wind protons+ionosphere, 
   ! 2 - water group plasma from the rings and Enceladus, 

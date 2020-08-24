@@ -11,6 +11,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdSwIonoPe.f90"
+
+
   ! This equation file declares three ion fluids: solar wind H+, ionospheric
   ! H+, and ionospheric O+ along with ion electron pressure.  This allows for
   ! thorough investigations of each populations entry and heating mechanisms

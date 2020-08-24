@@ -16,6 +16,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomFluids.f90"
+
+
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: &
        NameEquation='Multi-fluid MHD + Alfven waves + electron pressure'

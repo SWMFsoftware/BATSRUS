@@ -17,6 +17,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesPeSignB.f90"
+
+
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: NameEquation = &
        'MHD + Alfven waves + electron pressure + sign for field direction'

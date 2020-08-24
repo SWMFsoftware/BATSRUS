@@ -13,6 +13,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdComet.f90"
+
+
   ! This equation module contains the MHD equations with species for Comets
   character (len=*), parameter :: NameEquation='Cometary MHD'
 

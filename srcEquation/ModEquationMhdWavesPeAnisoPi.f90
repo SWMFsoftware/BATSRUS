@@ -17,6 +17,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesPeAnisoPi.f90"
+
+
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: &
        NameEquation='MHD + Alfven waves + isotropic Pe + anistropic Pi'

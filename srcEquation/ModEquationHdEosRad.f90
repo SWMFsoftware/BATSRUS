@@ -17,6 +17,9 @@ module ModVarIndexes
 
   save
 
+  character (len=*), parameter :: NameEquationFile = "ModEquationHdEosRad.f90"
+
+
   ! This equation module contains the standard HD equations with
   ! additional single-/multi-group radiation energy.
   character (len=*), parameter :: NameEquation='radiation HD'
