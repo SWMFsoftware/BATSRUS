@@ -50,6 +50,7 @@ module ModUser
   ! user routine Version number and descriptive string
   !/
   real,              parameter :: VersionUserModule = 1.4
+  character (len=*), parameter :: NameUserFile = "ModUserWaves.f90"
   character (len=*), parameter :: NameUserModule = &
        'Waves and GEM, Yingjuan Ma'
 
