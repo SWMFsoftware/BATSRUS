@@ -51,13 +51,13 @@ contains
           write(iUnitOut,*)
        end if
        call write_prefix; write(iUnitOut,'(a)') &
-            ' EQUATIONS:    '//NameEquation
+            ' EQUATIONS:     '//NameEquation
        call write_prefix; write(iUnitOut,'(a)') &
-            ' EQUATION FILE:'//NameEquationFile
+            ' EQUATION FILE: '//NameEquationFile
        call write_prefix; write(iUnitOut,'(a,f5.2)') &
-            ' USER MODULE: '//NameUserModule, VersionUserModule
+            ' USER MODULE:   '//NameUserModule, VersionUserModule
        call write_prefix; write(iUnitOut,'(a,f5.2)') &
-            ' USER FILE:   '//NameUserFile
+            ' USER FILE:     '//NameUserFile
        write(iUnitOut,*)
     case (1)
        call write_prefix; write(iUnitOut,*)
