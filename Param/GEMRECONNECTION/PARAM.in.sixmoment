@@ -2,9 +2,6 @@ Parameters are described in Huang, Zhenguang, et al.
 "A Six-moment Multi-fluid Plasma Model." 
 Journal of Computational Physics (2019).
 
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Six-moment GEM reconnection. 
 

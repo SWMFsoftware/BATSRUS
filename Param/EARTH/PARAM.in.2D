@@ -1,6 +1,3 @@
-#ECHO
-T
-
 #DIPOLE
 -3.11e-6                DipoleStrength [Tesla]
 
