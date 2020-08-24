@@ -3164,9 +3164,6 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 <command name="RESTARTOUTDIR">
 	<parameter name="NameRestartOutDir" type="string" length="100"
 						default="GM/restartOUT" />
-	<rule expr="-d $NameRestartOutDir">
-		Restart output directory $NameRestartOutDir must exist
-	</rule>
 
 #RESTARTOUTDIR
 GM/restart_n5000	NameRestartOutDir
@@ -3241,9 +3238,6 @@ command from session to session. The default directory name is 'restartOUT'.
 <command name="PLOTDIR">
 	<parameter name="NamePlotDir" type="string" length="100"
 				default="GM/IO2" />
-	<rule expr="-d $NamePlotDir">
-		Plot directory $NamePlotDir must exist
-	</rule>
 
 The NamePlotDir variable contains the name of the directory
 where plot files and logfiles are saved relative to the run directory.
