@@ -3,7 +3,7 @@
 100			DnShowProgressLong
 
 #DESCRIPTION
-Test magnetometer calculation and min B plots
+Param/MAGNETOMETER/PARAM.in: Test magnetometer calculation and min B plots
 
 #SAVERESTART
 F			DoSaveRestart

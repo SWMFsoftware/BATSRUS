@@ -1,5 +1,5 @@
 #DESCRIPTION
-MESSENGER M2 flyby run using the new layered inner boundary condition
+Param/MERCURY/PARAM.in: MESSENGER M2 flyby run using the new layered inner boundary condition
 
 #PLANET
 MERCURY			NamePlanet

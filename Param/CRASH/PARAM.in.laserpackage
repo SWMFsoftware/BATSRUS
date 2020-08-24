@@ -43,7 +43,7 @@ F			UseNonConsLevelSet
 control_time_step
 
 #DESCRIPTION
-Input file for the laser package
+Param/CRASH/PARAM.in.laserpackage: Input file for the laser package
 
 #TIMEACCURATE
 T			DoTimeAccurate

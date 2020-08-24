@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Raileigh-Taylor test	StringDescription
+Param/SHOCKTUBE/PARAM.in.rayleigh_taylor: Raileigh-Taylor test	StringDescription
 
 #EQUATION
 HD			NameEquation

@@ -1,5 +1,5 @@
 #DESCRIPTION
-Spherical test run based on May 4 1998 storm
+Param/EARTH/PARAM.in.spherical: Spherical test run based on May 4 1998 storm
 
 #TIMEACCURATE
 F			DoTimeAccurate

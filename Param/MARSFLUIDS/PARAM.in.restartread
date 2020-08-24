@@ -2,7 +2,7 @@
 GM/restartIN/restart.H
 
 #DESCRIPTION
-Mars test read restart
+Param/MARSFLUIDS/PARAM.in.restartread: Mars test read restart
 
 #ROTATION 
 F			UseRotation

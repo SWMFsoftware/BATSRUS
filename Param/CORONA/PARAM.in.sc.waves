@@ -1,5 +1,5 @@
 #DESCRIPTION
-Input file for creating a steady state solar corona driven by Alfven waves
+Param/CORONA/PARAM.in.sc.waves: Input file for creating a steady state solar corona driven by Alfven waves
 
 #TIMEACCURATE
 F			DoTimeAccurate

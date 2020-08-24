@@ -2,7 +2,7 @@
 F			DoUpdateCheck
 
 #DESCRIPTION
-Five-moment test	StringDescription
+Param/FIVEMOMENT/PARAM.in.shock: Five-moment test	StringDescription
 
 #CHECKGRIDSIZE
      100                              nI

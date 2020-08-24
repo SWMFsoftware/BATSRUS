@@ -5,7 +5,7 @@ GM/restartIN/restart.H
 SOLARWIND		TypeNormalization
 
 #DESCRIPTION
-Mars test
+Param/MARS/PARAM.in.restartread: Mars test
 
 #PLANET
 Mars			NamePlanet

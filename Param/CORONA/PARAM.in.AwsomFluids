@@ -2,7 +2,7 @@
 SC
 
 #DESCRIPTION
-Test in BATSRUS the AwsomFluids user module.
+Param/CORONA/PARAM.in.AwsomFluids: Test in BATSRUS the AwsomFluids user module.
 
 #TIMEACCURATE
 F                       DoTimeAccurate

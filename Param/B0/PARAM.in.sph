@@ -1,5 +1,5 @@
 #DESCRIPTION
-check equilibrium
+Param/B0/PARAM.in.sph: check equilibrium
 
 ! Switch off update B0
 #IDEALAXES

@@ -8,7 +8,7 @@ NONE
 NONE
 
 #DESCRIPTION
-Brio-Wu shock tube for ions, Sod shock tube for neutrals
+Param/MULTIFLUID/PARAM.in: Brio-Wu shock tube for ions, Sod shock tube for neutrals
 
 4 blocks with 64x2x2 cells, -128<x<128 grid
 #INCLUDE

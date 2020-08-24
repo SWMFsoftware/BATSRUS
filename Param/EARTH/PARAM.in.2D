@@ -13,7 +13,7 @@ T                       IsMagAxisPrimary (rest of parameters read if true)
 100			DnShowProgressLong
 
 #DESCRIPTION
-Two dimensional Earth simulation
+Param/EARTH/PARAM.in.2D: Two dimensional Earth simulation
 
 #TIMEACCURATE
 F			IsTimeAccurate

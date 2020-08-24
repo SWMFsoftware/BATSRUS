@@ -1,5 +1,5 @@
 #DESCRIPTION
-Initialize PIC from six-moment MHD. Double current sheet. 
+Param/GEMRECONNECTION/PARAM.in.double.CS.MHDEPIC: Initialize PIC from six-moment MHD. Double current sheet. 
 
 #PLANET
 NONE			NamePlanet

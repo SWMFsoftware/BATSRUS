@@ -13,7 +13,7 @@ TEST
 update_states update_states_mhd
 
 #DESCRIPTION
-Five-moment test	StringDescription
+Param/SIXMOMENT/PARAM.in.shock: Five-moment test	StringDescription
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma

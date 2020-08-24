@@ -2,7 +2,7 @@
 SC			NameComp
 
 #DESCRIPTION
-Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
+Param/CORONA/PARAM.in.spherical: Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
 
 #TIMEACCURATE
 F			DoTimeAccurate

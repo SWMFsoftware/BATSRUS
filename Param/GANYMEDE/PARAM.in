@@ -1,5 +1,5 @@
 #DESCRIPTION
-Test Ganymede run of steady state ideal MHD G8 flyby
+Param/GANYMEDE/PARAM.in: Test Ganymede run of steady state ideal MHD G8 flyby
 MhdHypPe equation set.
 face-based innerBC
 

@@ -1,5 +1,5 @@
 #DESCRIPTION
-Verification test for Runge-Kutta time integration
+Param/RUNGEKUTTA/PARAM.in: Verification test for Runge-Kutta time integration
 
 ! Only the friction term is needed from this module.
 #USERMODULE

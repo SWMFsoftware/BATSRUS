@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Param/CORONA/PARAM.in.sc.chromo: Input file for creating a steady state solar corona
 
 #COMPONENT 
 SC			NameComp

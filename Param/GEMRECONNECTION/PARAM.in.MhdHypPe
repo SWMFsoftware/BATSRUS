@@ -1,5 +1,5 @@
 #DESCRIPTION
-Hall MHD reconnection with a local perturbation
+Param/GEMRECONNECTION/PARAM.in.MhdHypPe: Hall MHD reconnection with a local perturbation
 
 #PLANET
 NONE			NamePlanet

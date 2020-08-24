@@ -6,7 +6,7 @@ Begin session: 1
 SC			NameComp
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Param/CORONA/PARAM.in.2Dwedge: Input file for creating a steady state solar corona
 
 #STAR
 1.0                     RadiusStar

@@ -14,7 +14,7 @@ INCLUDE
 Param/CRASH/AMR2.in
 
 #DESCRIPTION
-Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
+Param/CRASH/PARAM.in.scaling_hydro: Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
 
 #TIMING
 T                       UseTiming      (rest of parameters read if true)

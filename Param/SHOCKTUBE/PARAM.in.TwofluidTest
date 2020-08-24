@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Two-fluid MHD test	StringDescription
+Param/SHOCKTUBE/PARAM.in.TwofluidTest: Two-fluid MHD test	StringDescription
 
 #EQUATION
 MHD with electron pressure and hyperbolic cleaning	NameEquation

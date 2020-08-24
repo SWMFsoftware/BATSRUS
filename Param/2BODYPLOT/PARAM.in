@@ -3,7 +3,7 @@
 100			DnShowProgressLong
 
 #DESCRIPTION
-Run GM and test 2Body plots
+Param/2BODYPLOT/PARAM.in: Run GM and test 2Body plots
 
 #PLANET
 EARTH

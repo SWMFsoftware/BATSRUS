@@ -1,5 +1,5 @@
 #DESCRIPTION
-check equilibrium in rotating frame
+Param/ROTATINGFRAME/PARAM.in: check equilibrium in rotating frame
 
 #COMPONENT
 SC			NameComponent

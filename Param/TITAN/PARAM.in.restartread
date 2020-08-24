@@ -2,7 +2,7 @@
 GM/restartIN/restart.H
 
 #DESCRIPTION
-Titan test read restart
+Param/TITAN/PARAM.in.restartread: Titan test read restart
 
 #ROTATION 
 F			UseRotation

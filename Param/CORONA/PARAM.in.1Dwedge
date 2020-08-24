@@ -11,7 +11,7 @@ SC			NameComp
 0.0                     RotationPeriodStar
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Param/CORONA/PARAM.in.1Dwedge: Input file for creating a steady state solar corona
 
 #TIMEACCURATE
 F                       DoTimeAccurate

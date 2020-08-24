@@ -1,5 +1,5 @@
 #DESCRIPTION
-5-moment test with Langmuir waves
+Param/SIXMOMENT/PARAM.in.light: 5-moment test with Langmuir waves
 
 #USERMODULE
 Waves and GEM, Yingjuan Ma

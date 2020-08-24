@@ -3,7 +3,7 @@ Parameters are described in Huang, Zhenguang, et al.
 Journal of Computational Physics (2019).
 
 #DESCRIPTION
-Six-moment GEM reconnection. 
+Param/GEMRECONNECTION/PARAM.in.sixmoment: Six-moment GEM reconnection. 
 
 #PLANET
 NONE			NamePlanet
