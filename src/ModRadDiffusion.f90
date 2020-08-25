@@ -90,10 +90,6 @@ module ModRadDiffusion
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
   !$omp threadprivate( Erad_WG )
-
-  ! temporary radiation energy array needed by set_block_field
-  real, allocatable :: Erad1_WG(:,:,:,:)
-  !$omp threadprivate( Erad1_WG )
   
   ! The electron heat flux limiter corrects the electron heat conduction if
   ! the electron temperature length scale is only a few collisonal mean free
@@ -111,10 +107,6 @@ module ModRadDiffusion
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
   !$omp threadprivate( Te_G )
-
-  ! temporary electron temperature array needed by set_block_field
-  real, allocatable :: Te1_G(:,:,:)
-  !$omp threadprivate( Te1_G )
   
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
   !$omp threadprivate( FluxImpl_VFD )
@@ -220,10 +212,7 @@ contains
 
        !$omp parallel
        allocate(Erad_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       allocate(Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-
        allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       allocate(Te1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        !$omp end parallel
        
        ! Default to zero, unless reset
@@ -494,6 +483,11 @@ contains
     real :: PlanckSi_W(nWave), Planck_W(nWave)
 
     real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+
+    ! Temporary radiation energy array needed by set_block_field
+    real :: Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    ! Temporary electron temperature array needed by set_block_field
+    real :: Te1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Logical for the electron heat flux limiter
     logical :: IsNewBlockTe
