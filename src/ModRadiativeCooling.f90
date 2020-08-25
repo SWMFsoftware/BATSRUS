@@ -247,7 +247,7 @@ contains
   end subroutine add_chromosphere_heating
   !============================================================================
   subroutine calc_reb_density(iSide, iFace, jFace, kFace, iBlock,&
-       TotalFaceB_D,                                 &
+       IsNewBlock, TotalFaceB_D,                                 &
        Te_G, TeTRTopSiIn, TeChromoSiIn, RadIntegralSiIn, DensityReb)
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModConst, ONLY: kappa_0_e
@@ -260,6 +260,7 @@ contains
     ! uses eq from Lionell 2001. NO enthalpy flux correction in this
     ! implementation.
     integer, intent(in):: iSide,iFace,jFace,kFace,iBlock
+    logical, intent(inout):: IsNewBlock 
     real, intent(in):: TotalFaceB_D(3)
     real,intent(inout) :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -339,7 +340,7 @@ contains
          * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         Te_G, FaceGrad_D)
+         IsNewBlock, Te_G, FaceGrad_D)
 
     ! calculate the unit vector of the total magnetic field
     TotalFaceBunit_D = TotalFaceB_D / norm2(TotalFaceB_D)

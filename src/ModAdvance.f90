@@ -84,6 +84,14 @@ module ModAdvance
      ! Variables introduced for regional Boris correction
      real :: InvClightFace, InvClight2Face
      logical :: DoTestCell = .false.
+     ! Logicals for computation once per block
+     logical :: IsNewBlockVisco = .true.
+     logical :: IsNewBlockGradPe = .true.
+     logical :: IsNewBlockCurrent = .true.
+     logical :: IsNewBlockHeatCond = .true.
+     logical :: IsNewBlockIonHeatCond = .true.
+     logical :: IsNewBlockRadDiffusion = .true.
+     logical :: IsNewBlockAlfven = .true.
   end type FaceFluxVarType
 
   ! Numerical flux type

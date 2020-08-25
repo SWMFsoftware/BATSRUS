@@ -882,7 +882,7 @@ contains
   end subroutine turbulent_cascade
   !============================================================================
 
-  subroutine get_wave_reflection(iBlock)
+  subroutine get_wave_reflection(iBlock, IsNewBlock)
 
     use BATL_size, ONLY: nDim, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
@@ -895,12 +895,14 @@ contains
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
 
     integer, intent(in) :: iBlock
+    logical, optional, intent(inout):: IsNewBlock
 
     integer :: i, j, k
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(nDim)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     real :: AlfvenGradRefl, ReflectionRateImb
+    logical :: IsNewBlockAlfven
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_wave_reflection'
@@ -908,11 +910,17 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
+    if(present(IsNewBlock)) then
+      IsNewBlockAlfven = IsNewBlock
+    else
+      IsNewBlockAlfven = .false.
+    end if
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if( (.not.true_cell(i,j,k,iBlock)).or.&
             R_BLK(i,j,k, iBlock) < rMinWaveReflection)CYCLE
 
-       call get_grad_log_alfven_speed(i, j, k, iBlock, &
+       call get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
             GradLogAlfven_D, GradLogRho_D)
        call get_curl_u(i, j, k, iBlock, CurlU_D)
 
@@ -984,7 +992,7 @@ contains
   end subroutine get_wave_reflection
   !============================================================================
 
-  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, &
+  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, IsNewBlockAlfven, &
        GradLogAlfven_D, GradLogRho_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, &
@@ -993,15 +1001,18 @@ contains
     use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: i, j, k, iBlock
+    logical, intent(inout) :: IsNewBlockAlfven 
     real, intent(out) :: GradLogAlfven_D(nDim), GradLogRho_D(nDim)
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim),&
          LogRho_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
     !$omp threadprivate(LogAlfven_FD,LogRho_FD)
+
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
-    if(i == 1 .and. j == 1 .and. k == 1)then
+    if(IsNewBlockAlfven)then
        call get_log_alfven_speed
+       IsNewBlockAlfven = .false.
     end if
 
     if(IsCartesianGrid)then

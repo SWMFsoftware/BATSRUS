@@ -28,7 +28,8 @@ module ModViscosity
   !$omp threadprivate( Visco_DDI )
   
   ! Viscosity factor on the faces and in the cell centers
-  real, public, allocatable:: ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
+  real, public, allocatable, protected:: &
+       ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
   !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
   
   ! Local variables
@@ -225,17 +226,18 @@ contains
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k, iFluid
+    logical :: IsNewBlock
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
     associate( &
       iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
-      ViscoCoeff => FFV%ViscoCoeff )
+      ViscoCoeff => FFV%ViscoCoeff, &
+      IsNewBlockVisco => FFV%IsNewBlockVisco )
 
-    ! Get velocity vector for the block, only done ones per block
-    if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace &
-         .and. iDimFace == x_ ) then
+    ! Get velocity vector for the block, only done once per block
+    if(IsNewBlockVisco) then
        do iFluid = iFluidMin, iFluidMax
           if(nFluid>1) call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -247,10 +249,18 @@ contains
                 u_DGI(:,i,j,k,iFluid) = 0.0
              end if
           end do; end do; end do
-          call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-               iBlockFace, nDim, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
        end do
     end if
+
+    IsNewBlock = IsNewBlockVisco
+    ! Set face gradient once per fluid
+    do iFluid = iFluidMin, iFluidMax
+       call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, nDim, IsNewBlockVisco, &
+            u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
+       IsNewBlock = IsNewBlockVisco
+    end do
+    IsNewBlockVisco = .false.
 
     ! Get the viscosity tensor
     do iFluid = 1, nFluid

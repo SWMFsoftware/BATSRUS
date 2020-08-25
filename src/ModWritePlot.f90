@@ -1014,7 +1014,7 @@ contains
     use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
-    use ModFaceGradient, ONLY: get_face_curl_old
+    use ModFaceGradient, ONLY: get_face_curl
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
@@ -1349,7 +1349,8 @@ contains
              iDir=3; Dk=1
           end select
           do k=1,nK; do j=1,nJ; do i=1,nI
-             call get_face_curl_old(iDir, i+Di, j+Dj, k+Dk, iBlock, IsNewBlockCurrent, &
+             call get_face_curl(iDir, i+Di, j+Dj, k+Dk, iBlock, &
+                  IsNewBlockCurrent, &
                   FullB_DG, Current_D)
              select case(String(2:2))
              case('x')

@@ -321,12 +321,14 @@ contains
       StateRight_V => FFV%StateRight_V, &
       Normal_D => FFV%Normal_D, &
       RadDiffCoef => FFV%RadDiffCoef, &
-      EradFlux => FFV%EradFlux )
+      EradFlux => FFV%EradFlux, &
+      IsNewBlockRadDiffusion => FFV%IsNewBlockRadDiffusion )
 
-    if(i == 1 .and. j == 1 .and. k == 1) &
+    if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 
-    call get_face_gradient(iDir, i, j, k, iBlock, Erad_WG, FaceGrad_D)
+    call get_face_gradient(iDir, i, j, k, iBlock, IsNewBlockRadDiffusion, &
+         Erad_WG, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
        call get_diffusion_coef(StateLeft_V, DiffCoefL)
@@ -493,9 +495,10 @@ contains
 
     real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
-    ! Variables for the electron heat flux limiter
-    logical :: IsNewBlockTe = .false.
-    !$omp threadprivate( IsNewBlockTe )
+    ! Logical for the electron heat flux limiter
+    logical :: IsNewBlockTe
+    ! Logical for the radiation diffusion
+    logical :: IsNewBlockRadDiffusion
     
     real :: State_V(nVar)
     integer :: iVarSemi_
@@ -522,6 +525,7 @@ contains
 
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
+       IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
 
        if(DoCalcDelta) then
@@ -926,9 +930,10 @@ contains
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
 
-            if(i == 1 .and. j == 1 .and. k == 1)then
+            if(IsNewBlockRadDiffusion)then
                Erad_WG = State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)
                call set_block_field3(iBlock, nWave, Erad1_WG, Erad_WG)
+               IsNewBlockRadDiffusion = .false.
             end if
 
             Grad2ByErad2_W = &
@@ -955,7 +960,6 @@ contains
             ! Correct ghost cells as needed for gradient calculation
             if(IsNewBlockTe)then
                call set_block_field3(iBlock, 1, Te1_G, Te_G)
-
                IsNewBlockTe = .false.
             end if
 

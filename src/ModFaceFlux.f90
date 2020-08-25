@@ -1097,7 +1097,9 @@ contains
       Normal_D => FFV%Normal_D, &
       DiffCoef => FFV%DiffCoef, RadDiffCoef => FFV%RadDiffCoef, &
       HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
-      DoTestCell => FFV%DoTestCell )
+      DoTestCell => FFV%DoTestCell, &
+      IsNewBlockGradPe => FFV%IsNewBlockGradPe, &
+      IsNewBlockCurrent => FFV%IsNewBlockCurrent )
 
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
@@ -1109,10 +1111,9 @@ contains
 
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) then
-       if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace) &
-            b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
+       if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
        call get_face_curl(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            b_DG, Current_D)
+            IsNewBlockCurrent, b_DG, Current_D)
        Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
 
@@ -1135,7 +1136,7 @@ contains
 
     if(UseHallGradPe)then
 
-       if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace)then
+       if(IsNewBlockGradPe)then
 
           if(.not.allocated(Pe_G)) &
                allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
@@ -1163,7 +1164,7 @@ contains
 
        ! Calculate face centered grad(Pe)
        call get_face_gradient(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            Pe_G, GradPe_D)
+            IsNewBlockGradPe, Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
