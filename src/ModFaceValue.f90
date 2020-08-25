@@ -228,537 +228,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_face_value_param
   !============================================================================
-  subroutine tvd_reschange_body(&
-       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
-       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
-       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
-       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
-       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Facevalues in phys. cell looking at coarser cell
-       FineF_VII         ,& ! Facevalues in phys. cell looking at phys. cell
-       IsTrueCoarse2     ,& ! True if coarser ghostcell of 2nd layer is true
-       IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
-       IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
-       IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
-    !_____________!_____________!_______!_______!_
-    !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF! FToC FF!
-    !_____________!_____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
-    real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
-    real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
-    real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
-    real, intent(in):: Fine2_VII(:,:,:)          ! dimension(nVar,2,2)
-    real, intent(out):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
-    real, intent(out):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
-    real, intent(out):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
-    logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
-    logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
 
-
-    integer::iVar,i2,j2
-    real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
-    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
-
-    real:: Beta
-
-    character(len=*), parameter:: NameSub = 'tvd_reschange_body'
-    !--------------------------------------------------------------------------
-
-    ! Calculate averaged Fine1_VII
-    do iVar=1,nVar
-       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
-    end do
-    GradNormal_V = AveragedFine1_V - Coarse1_V
-
-    ! Save gradients squared
-    SignGradNormal_V = sign(1.0,GradNormal_V)
-
-    Beta = min(BetaLimiterResChange, BetaLimiter)
-
-    if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
-       ! Limit gradient in the first coarser cell
-       GradNormalLtd_V = SignGradNormal_V*&
-            max(0.0,&
-            min(Beta*cTwoThird*abs(GradNormal_V),&
-            Beta*0.5*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
-            cThird*abs(GradNormal_V)+&
-            0.25*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
-
-       do j2=1,2;do i2=1,2
-          ! Limit transverse gradients, if they are larger than the normal one
-          ! The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
-          CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V +&
-               sign(min(abs(GradNormalLtd_V), &
-               abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
-               Fine1_VII(:,i2,j2)-AveragedFine1_V)
-       end do;end do
-    else
-       do j2=1,2;do i2=1,2
-          ! First order scheme
-          CoarseToFineF_VII(:,i2,j2) = Coarse1_V
-       end do;end do
-    end if
-    if(.not.(IsTrueCoarse1.and.IsTrueFine1))then
-       do j2=1,2;do i2=1,2
-          ! First order scheme
-          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
-          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
-       end do;end do
-    else
-       do j2=1,2;do i2=1,2
-          if(IsTrueFine2_II(i2,j2))then
-             ! Limit gradient in the first layer of finer cells
-             GradNormalLtd_V = SignGradNormal_V*&
-                  max(0.0,&
-                  min(Beta*cThird*abs(GradNormal_V),&
-                  SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-                  Beta*0.5*SignGradNormal_V*&
-                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)),&
-                  cSixth*abs(GradNormal_V) + 0.25*SignGradNormal_V*&
-                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
-          else
-             ! First order scheme
-             GradNormalLtd_V = 0.0
-          end if
-          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
-          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
-       end do;end do
-    end if
-
-  end subroutine tvd_reschange_body
-  !============================================================================
-  subroutine tvd_reschange(&
-       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
-       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
-       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
-       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
-       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
-       FineF_VII)           ! Facevalues in the physical cell,
-    !                         looking at another physical cell
-
-    !_____________!_____________!________!_______!_
-    !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _!__F1_V__!__F2_V_!_
-    !             !         CToF! FToC FF!
-    !_____________!_____________!__F1_V__!__F2_V_!_
-    !             !             !        !       !
-
-    real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
-    real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
-    real, intent(inout):: CoarseToFineF_VII(:,:,:)        ! dimension(nVar,2,2)
-    real, intent(inout):: FineToCoarseF_VII(:,:,:)        ! dimension(nVar,2,2)
-    real, intent(inout):: FineF_VII(:,:,:)                ! dimension(nVar,2,2)
-
-    integer:: iVar,i2,j2
-    real,dimension(nVar):: AveragedFine1_V
-    real,dimension(nVar):: GradNormal_V,SignGradNormal_V
-    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
-
-    real :: Beta
-    character(len=*), parameter:: NameSub = 'tvd_reschange'
-    !--------------------------------------------------------------------------
-    ! Calculate averaged Fine1_VII
-    do iVar=1,nVar
-       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
-    end do
-    GradNormal_V = AveragedFine1_V - Coarse1_V
-
-    ! Save gradients squared
-    SignGradNormal_V = sign(1.0,GradNormal_V)
-
-    Beta = min(BetaLimiterResChange, BetaLimiter)
-
-    ! Limit gradient in the first coarser cell
-    GradNormalLtd_V = SignGradNormal_V*max(0.0, min( &
-         Beta*cTwoThird*abs(GradNormal_V),&
-         Beta*0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V), &
-         cThird*abs(GradNormal_V) + 0.25*&
-         SignGradNormal_V*(Coarse1_V - Coarse2_V)))
-
-    do j2=1,2; do i2=1,2
-       ! Limit transverse gradients, if they are larger than the normal one
-       ! Before limiting the transverse gradients are equal to
-       ! Fine1_VII-AveragedFine1V
-       CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V + &
-            sign(min(abs(GradNormalLtd_V),&
-            abs(Fine1_VII(:,i2,j2) - AveragedFine1_V)),&
-            Fine1_VII(:,i2,j2) - AveragedFine1_V)
-    end do;end do
-
-    do j2=1,2; do i2=1,2
-       ! Limit gradient in the first layer of finer cells
-       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-            Beta*cThird*abs(GradNormal_V),&
-            Beta*0.5*SignGradNormal_V &
-            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)), &
-            cSixth*abs(GradNormal_V)+0.25*SignGradNormal_V&
-            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)) &
-            ))
-       FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)-GradNormalLtd_V
-       FineF_VII(:,i2,j2)         = Fine1_VII(:,i2,j2)+GradNormalLtd_V
-
-    end do;end do
-
-  end subroutine tvd_reschange
-  !============================================================================
-  subroutine accurate_reschange3d(&
-       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
-       Coarse1_VII       ,& ! State in the coarser ghostcells, 1st layer
-       Fine1_VII         ,& ! States in 4 fine physical cells, 1st layer
-       Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
-       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
-       FineF_VII)           ! Values in the phys. cell,
-    !                         looking at another physical cell
-
-    !             ! C1_V        !       !       !
-    !_____________!_____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF! FToC FF!       !
-    !_____________!_____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
-    !             ! C1_V        !       !       !
-
-    real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
-    real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
-    real, intent(in) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
-    real, intent(in) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
-    real, intent(inout):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
-    real, intent(inout):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
-    real, intent(inout):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
-
-    integer :: iVar,i2,j2
-    real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
-    real, dimension(nVar):: GradNormal_V, SignGradNormal_V
-    real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
-    real, dimension(nVar, 2, 2):: Coarse1Max_VII, Coarse1Min_VII
-
-    real :: AverageOrig_V(nVar), AverageOrig
-    real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha, Alpha1
-    real :: Beta
-    real :: Denominator
-
-    character(len=*), parameter:: NameSub = 'accurate_reschange3d'
-    !--------------------------------------------------------------------------
-
-    ! Calculate averaged Fine1_VII
-    do iVar=1,nVar
-       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
-    end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,3,3)
-
-    ! Save sign of the gradient
-    SignGradNormal_V = sign(1.0,GradNormal_V)
-
-    ! Limit gradient in the first coarser cell
-    Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,3,3) - Coarse2_V)
-
-    Beta = min(BetaLimiterResChange, BetaLimiter)
-
-    GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
-         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
-
-    ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VII(:,3,3) + GradNormalLtd_V
-
-    do j2=1,2; do i2=1,2
-       ! Calculate transverse gradient between coarse cells
-       do iVar = 1, nVar
-          ! TransverseSlope = ( (Cside1 - Ccenter) + (Cside2 - Ccenter) ) / 4
-          Transverse_V(iVar) = 0.0625* &
-               ( sum(Coarse1_VII(iVar,4*i2-3:4*i2-2,3:4)) &
-               + sum(Coarse1_VII(iVar,3:4,4*j2-3:4*j2-2)) &
-               ) - 0.5*Coarse1_VII(iVar,3,3)
-       end do
-
-       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,3,3) + max(0.0, Transverse_V)
-       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,3,3) + min(0.0, Transverse_V)
-
-       ! Add transverse gradient and limit it
-       CoarseToFineF_VII(:,i2,j2) = &
-            max( min(Coarse1Min_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
-            min( max(Coarse1Max_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
-            FaceMiddle_V + Transverse_V) )
-
-    end do; end do
-
-    ! The average face value
-    AverageOrig_V = 0.25* &
-         ( CoarseToFineF_VII(:,1,1) + CoarseToFineF_VII(:,1,2) &
-         + CoarseToFineF_VII(:,2,1) + CoarseToFineF_VII(:,2,2) )
-
-    ! For each variable fix the face values if necessary
-    do iVar = 1, nVar
-
-       AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VII(iVar, 3, 3)
-       Middle      = FaceMiddle_V(iVar)
-
-       ! Check if the |L-M| <= |M-C| condition is satisfied
-       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
-
-       ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
-       FaceAverage = Middle + &
-            sign( abs(Middle - Coarse), AverageOrig - Middle )
-
-       ! Correct face values either upward or downward
-       if(AverageOrig < FaceAverage)then
-          FaceTmp_II = &
-               max(Coarse1Max_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
-       else
-          FaceTmp_II = &
-               min(Coarse1Min_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
-       end if
-
-       ! Calculate interpolation coefficient needed to satisfy the condition
-       ! Avoid zero denominator.
-       Denominator = 0.25*sum(FaceTmp_II) - AverageOrig
-       if(abs(Denominator) < 1e-30) then
-          CoarseToFineF_VII(iVar,:,:) = FaceTmp_II
-       else
-          Alpha = (FaceAverage - AverageOrig) / Denominator
-          Alpha1 = 1.0 - Alpha
-
-          ! Interpolate
-          CoarseToFineF_VII(iVar,:,:) = &
-               Alpha*FaceTmp_II + Alpha1*CoarseToFineF_VII(iVar,:,:)
-       endif
-    end do
-
-    ! The face is half the distance in the fine cell
-    Slope1_V = 0.5*Slope1_V
-    do j2=1,2; do i2=1,2
-       ! Limit gradient in the first layer of finer cells
-       Slope2_V = 0.5*SignGradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))
-
-       ! The first limiting ensures that the FineToCoarse face value
-       ! remains between the Fine1 and Coarse values
-       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,3,3)), &
-            Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
-
-       FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
-       FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
-
-    end do; end do
-
-  end subroutine accurate_reschange3d
-  !============================================================================
-  subroutine accurate_reschange2d(&
-       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
-       Coarse1_VI        ,& ! State in the coarser ghostcells, 1st layer
-       Fine1_VI          ,& ! States in 2 fine physical cells, 1st layer
-       Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
-       CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
-       FineF_VI)            ! Facevalues in the physical cell,
-    !                         looking at another physical cell
-
-    !             ! C1_V        !       !       !
-    !_____________!_____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF! FToC FF!       !
-    !_____________!_____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
-    !             ! C1_V        !       !       !
-
-    real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
-    real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
-    real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
-    real, intent(in) :: Fine2_VI(:,:)           ! dimension(nVar,2)
-
-    real, intent(inout):: CoarseToFineF_VI(:,:) ! dimension(nVar,2)
-    real, intent(inout):: FineToCoarseF_VI(:,:) ! dimension(nVar,2)
-    real, intent(inout):: FineF_VI(:,:)         ! dimension(nVar,2)
-
-    integer:: iVar, i2
-    real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
-    real, dimension(nVar):: GradNormal_V, SignGradNormal_V
-    real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
-    real, dimension(nVar,2):: Coarse1Max_VI, Coarse1Min_VI
-
-    real :: AverageOrig_V(nVar), AverageOrig
-    real :: Coarse, Middle, FaceAverage, FaceTmp_I(2), Alpha, Alpha1
-    real :: Beta
-    real :: Denominator
-
-    character(len=*), parameter:: NameSub = 'accurate_reschange2d'
-    !--------------------------------------------------------------------------
-
-    ! Calculate averaged Fine1_VI
-    do iVar=1,nVar
-       AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
-    end do
-    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,3)
-
-    ! Save sign of the gradient
-    SignGradNormal_V = sign(1.0,GradNormal_V)
-
-    ! Limit gradient in the first coarser cell
-    Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,3) - Coarse2_V)
-
-    Beta = min(BetaLimiterResChange, BetaLimiter)
-
-    GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
-         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
-
-    ! Add limited normal gradient to obtain the middle value for the fine face
-    FaceMiddle_V = Coarse1_VI(:,3) + GradNormalLtd_V
-
-    do i2 = 1, 2
-       ! Calculate transverse gradient between coarse cells
-       do iVar = 1, nVar
-          ! TransverseSlope = (Cside1 - Ccenter) / 4
-          Transverse_V(iVar) = &
-               0.125*sum(Coarse1_VI(iVar,4*i2-3:4*i2-2)) &
-               - 0.25*Coarse1_VI(iVar,3)
-       end do
-
-       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
-       Coarse1Max_VI(:,i2) = Coarse1_VI(:,3) + max(0.0, Transverse_V)
-       Coarse1Min_VI(:,i2) = Coarse1_VI(:,3) + min(0.0, Transverse_V)
-
-       ! Add transverse gradient and limit it
-       CoarseToFineF_VI(:,i2) = &
-            max( min(Coarse1Min_VI(:,i2), Fine1_VI(:,i2)), &
-            min( max(Coarse1Max_VI(:,i2), Fine1_VI(:,i2)), &
-            FaceMiddle_V + Transverse_V) )
-
-    end do
-
-    ! The average face value
-    AverageOrig_V = 0.5*( CoarseToFineF_VI(:,1) + CoarseToFineF_VI(:,2) )
-
-    ! For each variable fix the face values if necessary
-    do iVar = 1, nVar
-
-       AverageOrig = AverageOrig_V(iVar)
-       Coarse      = Coarse1_VI(iVar,3)
-       Middle      = FaceMiddle_V(iVar)
-
-       ! Check if the |L-M| <= |M-C| condition is satisfied
-       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
-
-       ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
-       FaceAverage = Middle + &
-            sign( abs(Middle - Coarse), AverageOrig - Middle )
-
-       ! Correct face values either upward or downward
-       if(AverageOrig < FaceAverage)then
-          FaceTmp_I = max(Coarse1Max_VI(iVar,:), CoarseToFineF_VI(iVar,:))
-       else
-          FaceTmp_I = min(Coarse1Min_VI(iVar,:), CoarseToFineF_VI(iVar,:))
-       end if
-
-       ! Calculate interpolation coefficient needed to satisfy the condition
-       ! Avoid zero denominator.
-       Denominator = 0.5*sum(FaceTmp_I) - AverageOrig
-       if(abs(Denominator) < 1e-30) then
-          CoarseToFineF_VI(iVar,:) = FaceTmp_I
-       else
-          Alpha = (FaceAverage - AverageOrig) / Denominator
-          Alpha1 = 1.0 - Alpha
-          ! Interpolate
-          CoarseToFineF_VI(iVar,:) = &
-               Alpha*FaceTmp_I + Alpha1*CoarseToFineF_VI(iVar,:)
-       endif
-
-    end do
-
-    ! The face is half the distance in the fine cell
-    Slope1_V = 0.5*Slope1_V
-    do i2 = 1, 2
-       ! Limit gradient in the first layer of finer cells
-       Slope2_V = 0.5*SignGradNormal_V*(Fine2_VI(:,i2) - Fine1_VI(:,i2))
-
-       ! The first limiting ensures that the FineToCoarse face value
-       ! remains between the Fine1 and Coarse values
-       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,3)), &
-            Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
-
-       FineToCoarseF_VI(:,i2) = Fine1_VI(:,i2) - GradNormalLtd_V
-       FineF_VI(:,i2) = Fine1_VI(:,i2) + GradNormalLtd_V
-
-    end do
-
-  end subroutine accurate_reschange2d
-  !============================================================================
-  subroutine accurate_reschange1d(&
-       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
-       Coarse1_V         ,& ! State in the coarser ghostcells, 1st layer
-       Fine1_V           ,& ! States in 2 fine physical cells, 1st layer
-       Fine2_V           ,& ! States in 2 fine physical cells, 2nd layer
-       CoarseToFineF_V   ,& ! Values at face, in the coarse ghostcell
-       FineToCoarseF_V   ,& ! Values in the phys. cell looking at coarser cell
-       FineF_V)             ! Facevalues in the physical cell,
-    !                         looking at another physical cell
-
-    !_____________!_____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V        ! F1_V  !  F2_V !
-    !_____________!_____________!_______!_______!_
-
-    real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
-    real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
-    real, intent(in) :: Fine1_V(:)           ! dimension(nVar)
-    real, intent(in) :: Fine2_V(:)           ! dimension(nVar)
-
-    real, intent(inout):: CoarseToFineF_V(:) ! dimension(nVar)
-    real, intent(inout):: FineToCoarseF_V(:) ! dimension(nVar)
-    real, intent(inout):: FineF_V(:)         ! dimension(nVar)
-
-    real, dimension(nVar):: Slope1_V, Slope2_V
-    real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
-
-    real :: Beta
-
-    character(len=*), parameter:: NameSub = 'accurate_reschange1d'
-    !--------------------------------------------------------------------------
-
-    ! Calculate averaged Fine1_VI
-    GradNormal_V = Fine1_V - Coarse1_V
-
-    ! Save sign of the gradient
-    SignGradNormal_V = sign(1.0,GradNormal_V)
-
-    ! Limit gradient in the first coarser cell
-    Slope1_V = cTwoThird*abs(GradNormal_V)
-    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V)
-
-    Beta = min(BetaLimiterResChange, BetaLimiter)
-
-    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
-
-    ! Add limited normal gradient to obtain the middle value for the fine face
-    CoarseToFineF_V = Coarse1_V + GradNormalLtd_V
-
-    ! The face is half the distance in the fine cell
-    Slope1_V = 0.5*Slope1_V
-    ! Limit gradient in the first layer of finer cells
-    Slope2_V = 0.5*SignGradNormal_V*(Fine2_V - Fine1_V)
-
-    ! The first limiting ensures that the FineToCoarse face value
-    ! remains between the Fine1 and Coarse values
-    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
-         SignGradNormal_V*(Fine1_V - Coarse1_V), &
-         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
-
-    FineToCoarseF_V = Fine1_V - GradNormalLtd_V
-    FineF_V         = Fine1_V + GradNormalLtd_V
-
-  end subroutine accurate_reschange1d
-  !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
 
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
@@ -1581,7 +1051,7 @@ contains
                do i = iMin, iMax
                   ! if(UseLowOrder_I(i))then...
                   LeftState_VX(:,i,j,k) =Primitive_VI(:,i-1)+dVarLimL_VI(:,i-1)
-                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)                 
+                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)  
                end do
             endif
 
@@ -1898,15 +1368,14 @@ contains
                endif
                do k = kMin, kMax
                   LeftState_VZ(:,i,j,k) =Primitive_VI(:,k-1)+dVarLimL_VI(:,k-1)
-                  RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)                  
+                  RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)
                end do
             end if
 
             if(.not.DoInterpolateFlux)then
                if(UseLowOrder) then
                   LowOrderCrit_I(kMin:kMax) = &
-                       LowOrderCrit_ZB(i,j,kMin:kMax,iBlock) 
-
+                       LowOrderCrit_ZB(i,j,kMin:kMax,iBlock)
                endif
 
                iVarSmoothLast = 0
@@ -2785,6 +2254,538 @@ contains
   end subroutine calc_face_value
   !============================================================================
 
+  subroutine tvd_reschange_body(&
+       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
+       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
+       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
+       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VII ,& ! Facevalues in phys. cell looking at coarser cell
+       FineF_VII         ,& ! Facevalues in phys. cell looking at phys. cell
+       IsTrueCoarse2     ,& ! True if coarser ghostcell of 2nd layer is true
+       IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
+       IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
+       IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
+    !_____________!_____________!_______!_______!_
+    !             !         CToF! FToC FF!
+    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    !             !         CToF! FToC FF!
+    !_____________!_____________!_F1_V__!__F2_V_!_
+    !             !             !       !       !
+    real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
+    real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(in):: Fine2_VII(:,:,:)          ! dimension(nVar,2,2)
+    real, intent(out):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(out):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
+    logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
+    logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
+
+
+    integer::iVar,i2,j2
+    real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
+    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
+
+    real:: Beta
+
+    character(len=*), parameter:: NameSub = 'tvd_reschange_body'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VII
+    do iVar=1,nVar
+       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
+    end do
+    GradNormal_V = AveragedFine1_V - Coarse1_V
+
+    ! Save gradients squared
+    SignGradNormal_V = sign(1.0,GradNormal_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
+       ! Limit gradient in the first coarser cell
+       GradNormalLtd_V = SignGradNormal_V*&
+            max(0.0,&
+            min(Beta*cTwoThird*abs(GradNormal_V),&
+            Beta*0.5*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
+            cThird*abs(GradNormal_V)+&
+            0.25*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
+
+       do j2=1,2;do i2=1,2
+          ! Limit transverse gradients, if they are larger than the normal one
+          ! The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V +&
+               sign(min(abs(GradNormalLtd_V), &
+               abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+               Fine1_VII(:,i2,j2)-AveragedFine1_V)
+       end do;end do
+    else
+       do j2=1,2;do i2=1,2
+          ! First order scheme
+          CoarseToFineF_VII(:,i2,j2) = Coarse1_V
+       end do;end do
+    end if
+    if(.not.(IsTrueCoarse1.and.IsTrueFine1))then
+       do j2=1,2;do i2=1,2
+          ! First order scheme
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)
+       end do;end do
+    else
+       do j2=1,2;do i2=1,2
+          if(IsTrueFine2_II(i2,j2))then
+             ! Limit gradient in the first layer of finer cells
+             GradNormalLtd_V = SignGradNormal_V*&
+                  max(0.0,&
+                  min(Beta*cThird*abs(GradNormal_V),&
+                  SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
+                  Beta*0.5*SignGradNormal_V*&
+                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)),&
+                  cSixth*abs(GradNormal_V) + 0.25*SignGradNormal_V*&
+                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
+          else
+             ! First order scheme
+             GradNormalLtd_V = 0.0
+          end if
+          FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
+          FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
+       end do;end do
+    end if
+
+  end subroutine tvd_reschange_body
+  !============================================================================
+  subroutine tvd_reschange(&
+       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
+       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
+       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
+       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
+       FineF_VII)           ! Facevalues in the physical cell,
+    !                         looking at another physical cell
+
+    !_____________!_____________!________!_______!_
+    !             !         CToF! FToC FF!
+    ! C2_V        ! C1_V       _!__F1_V__!__F2_V_!_
+    !             !         CToF! FToC FF!
+    !_____________!_____________!__F1_V__!__F2_V_!_
+    !             !             !        !       !
+
+    real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:)        ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)                ! dimension(nVar,2,2)
+
+    integer:: iVar,i2,j2
+    real,dimension(nVar):: AveragedFine1_V
+    real,dimension(nVar):: GradNormal_V,SignGradNormal_V
+    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
+
+    real :: Beta
+    character(len=*), parameter:: NameSub = 'tvd_reschange'
+    !--------------------------------------------------------------------------
+    ! Calculate averaged Fine1_VII
+    do iVar=1,nVar
+       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
+    end do
+    GradNormal_V = AveragedFine1_V - Coarse1_V
+
+    ! Save gradients squared
+    SignGradNormal_V = sign(1.0,GradNormal_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    ! Limit gradient in the first coarser cell
+    GradNormalLtd_V = SignGradNormal_V*max(0.0, min( &
+         Beta*cTwoThird*abs(GradNormal_V),&
+         Beta*0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V), &
+         cThird*abs(GradNormal_V) + 0.25*&
+         SignGradNormal_V*(Coarse1_V - Coarse2_V)))
+
+    do j2=1,2; do i2=1,2
+       ! Limit transverse gradients, if they are larger than the normal one
+       ! Before limiting the transverse gradients are equal to
+       ! Fine1_VII-AveragedFine1V
+       CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V + &
+            sign(min(abs(GradNormalLtd_V),&
+            abs(Fine1_VII(:,i2,j2) - AveragedFine1_V)),&
+            Fine1_VII(:,i2,j2) - AveragedFine1_V)
+    end do;end do
+
+    do j2=1,2; do i2=1,2
+       ! Limit gradient in the first layer of finer cells
+       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
+            Beta*cThird*abs(GradNormal_V),&
+            Beta*0.5*SignGradNormal_V &
+            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)), &
+            cSixth*abs(GradNormal_V)+0.25*SignGradNormal_V&
+            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)) &
+            ))
+       FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2)-GradNormalLtd_V
+       FineF_VII(:,i2,j2)         = Fine1_VII(:,i2,j2)+GradNormalLtd_V
+
+    end do;end do
+
+  end subroutine tvd_reschange
+  !============================================================================
+  subroutine accurate_reschange3d(&
+       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
+       Coarse1_VII       ,& ! State in the coarser ghostcells, 1st layer
+       Fine1_VII         ,& ! States in 4 fine physical cells, 1st layer
+       Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
+       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
+       FineF_VII)           ! Values in the phys. cell,
+    !                         looking at another physical cell
+
+    !             ! C1_V        !       !       !
+    !_____________!_____________!_______!_______!_
+    !             !         CToF! FToC FF!       !
+    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    !             !         CToF! FToC FF!       !
+    !_____________!_____________!_F1_V__!__F2_V_!_
+    !             !             !       !       !
+    !             ! C1_V        !       !       !
+
+    real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
+    real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
+    real, intent(in) :: Fine1_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(in) :: Fine2_VII(:,:,:)           ! dimension(nVar,2,2)
+    real, intent(inout):: CoarseToFineF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineToCoarseF_VII(:,:,:) ! dimension(nVar,2,2)
+    real, intent(inout):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
+
+    integer :: iVar,i2,j2
+    real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
+    real, dimension(nVar):: GradNormal_V, SignGradNormal_V
+    real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
+    real, dimension(nVar, 2, 2):: Coarse1Max_VII, Coarse1Min_VII
+
+    real :: AverageOrig_V(nVar), AverageOrig
+    real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha, Alpha1
+    real :: Beta
+    real :: Denominator
+
+    character(len=*), parameter:: NameSub = 'accurate_reschange3d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VII
+    do iVar=1,nVar
+       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
+    end do
+    GradNormal_V = AveragedFine1_V - Coarse1_VII(:,3,3)
+
+    ! Save sign of the gradient
+    SignGradNormal_V = sign(1.0,GradNormal_V)
+
+    ! Limit gradient in the first coarser cell
+    Slope1_V = cTwoThird*abs(GradNormal_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,3,3) - Coarse2_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+
+    ! Add limited normal gradient to obtain the middle value for the fine face
+    FaceMiddle_V = Coarse1_VII(:,3,3) + GradNormalLtd_V
+
+    do j2=1,2; do i2=1,2
+       ! Calculate transverse gradient between coarse cells
+       do iVar = 1, nVar
+          ! TransverseSlope = ( (Cside1 - Ccenter) + (Cside2 - Ccenter) ) / 4
+          Transverse_V(iVar) = 0.0625* &
+               ( sum(Coarse1_VII(iVar,4*i2-3:4*i2-2,3:4)) &
+               + sum(Coarse1_VII(iVar,3:4,4*j2-3:4*j2-2)) &
+               ) - 0.5*Coarse1_VII(iVar,3,3)
+       end do
+
+       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
+       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,3,3) + max(0.0, Transverse_V)
+       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,3,3) + min(0.0, Transverse_V)
+
+       ! Add transverse gradient and limit it
+       CoarseToFineF_VII(:,i2,j2) = &
+            max( min(Coarse1Min_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
+            min( max(Coarse1Max_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
+            FaceMiddle_V + Transverse_V) )
+
+    end do; end do
+
+    ! The average face value
+    AverageOrig_V = 0.25* &
+         ( CoarseToFineF_VII(:,1,1) + CoarseToFineF_VII(:,1,2) &
+         + CoarseToFineF_VII(:,2,1) + CoarseToFineF_VII(:,2,2) )
+
+    ! For each variable fix the face values if necessary
+    do iVar = 1, nVar
+
+       AverageOrig = AverageOrig_V(iVar)
+       Coarse      = Coarse1_VII(iVar, 3, 3)
+       Middle      = FaceMiddle_V(iVar)
+
+       ! Check if the |L-M| <= |M-C| condition is satisfied
+       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
+
+       ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
+       FaceAverage = Middle + &
+            sign( abs(Middle - Coarse), AverageOrig - Middle )
+
+       ! Correct face values either upward or downward
+       if(AverageOrig < FaceAverage)then
+          FaceTmp_II = &
+               max(Coarse1Max_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
+       else
+          FaceTmp_II = &
+               min(Coarse1Min_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
+       end if
+
+       ! Calculate interpolation coefficient needed to satisfy the condition
+       ! Avoid zero denominator.
+       Denominator = 0.25*sum(FaceTmp_II) - AverageOrig
+       if(abs(Denominator) < 1e-30) then
+          CoarseToFineF_VII(iVar,:,:) = FaceTmp_II
+       else
+          Alpha = (FaceAverage - AverageOrig) / Denominator
+          Alpha1 = 1.0 - Alpha
+
+          ! Interpolate
+          CoarseToFineF_VII(iVar,:,:) = &
+               Alpha*FaceTmp_II + Alpha1*CoarseToFineF_VII(iVar,:,:)
+       endif
+    end do
+
+    ! The face is half the distance in the fine cell
+    Slope1_V = 0.5*Slope1_V
+    do j2=1,2; do i2=1,2
+       ! Limit gradient in the first layer of finer cells
+       Slope2_V = 0.5*SignGradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))
+
+       ! The first limiting ensures that the FineToCoarse face value
+       ! remains between the Fine1 and Coarse values
+       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,3,3)), &
+            Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
+
+       FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
+       FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
+
+    end do; end do
+
+  end subroutine accurate_reschange3d
+  !============================================================================
+  subroutine accurate_reschange2d(&
+       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
+       Coarse1_VI        ,& ! State in the coarser ghostcells, 1st layer
+       Fine1_VI          ,& ! States in 2 fine physical cells, 1st layer
+       Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
+       CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
+       FineF_VI)            ! Facevalues in the physical cell,
+    !                         looking at another physical cell
+
+    !             ! C1_V        !       !       !
+    !_____________!_____________!_______!_______!_
+    !             !         CToF! FToC FF!       !
+    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    !             !         CToF! FToC FF!       !
+    !_____________!_____________!_F1_V__!__F2_V_!_
+    !             !             !       !       !
+    !             ! C1_V        !       !       !
+
+    real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
+    real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
+    real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
+    real, intent(in) :: Fine2_VI(:,:)           ! dimension(nVar,2)
+
+    real, intent(inout):: CoarseToFineF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineToCoarseF_VI(:,:) ! dimension(nVar,2)
+    real, intent(inout):: FineF_VI(:,:)         ! dimension(nVar,2)
+
+    integer:: iVar, i2
+    real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
+    real, dimension(nVar):: GradNormal_V, SignGradNormal_V
+    real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
+    real, dimension(nVar,2):: Coarse1Max_VI, Coarse1Min_VI
+
+    real :: AverageOrig_V(nVar), AverageOrig
+    real :: Coarse, Middle, FaceAverage, FaceTmp_I(2), Alpha, Alpha1
+    real :: Beta
+    real :: Denominator
+
+    character(len=*), parameter:: NameSub = 'accurate_reschange2d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VI
+    do iVar=1,nVar
+       AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
+    end do
+    GradNormal_V = AveragedFine1_V - Coarse1_VI(:,3)
+
+    ! Save sign of the gradient
+    SignGradNormal_V = sign(1.0,GradNormal_V)
+
+    ! Limit gradient in the first coarser cell
+    Slope1_V = cTwoThird*abs(GradNormal_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,3) - Coarse2_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    GradNormalLtd_V= SignGradNormal_V*max(0.0,min( &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+
+    ! Add limited normal gradient to obtain the middle value for the fine face
+    FaceMiddle_V = Coarse1_VI(:,3) + GradNormalLtd_V
+
+    do i2 = 1, 2
+       ! Calculate transverse gradient between coarse cells
+       do iVar = 1, nVar
+          ! TransverseSlope = (Cside1 - Ccenter) / 4
+          Transverse_V(iVar) = &
+               0.125*sum(Coarse1_VI(iVar,4*i2-3:4*i2-2)) &
+               - 0.25*Coarse1_VI(iVar,3)
+       end do
+
+       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
+       Coarse1Max_VI(:,i2) = Coarse1_VI(:,3) + max(0.0, Transverse_V)
+       Coarse1Min_VI(:,i2) = Coarse1_VI(:,3) + min(0.0, Transverse_V)
+
+       ! Add transverse gradient and limit it
+       CoarseToFineF_VI(:,i2) = &
+            max( min(Coarse1Min_VI(:,i2), Fine1_VI(:,i2)), &
+            min( max(Coarse1Max_VI(:,i2), Fine1_VI(:,i2)), &
+            FaceMiddle_V + Transverse_V) )
+
+    end do
+
+    ! The average face value
+    AverageOrig_V = 0.5*( CoarseToFineF_VI(:,1) + CoarseToFineF_VI(:,2) )
+
+    ! For each variable fix the face values if necessary
+    do iVar = 1, nVar
+
+       AverageOrig = AverageOrig_V(iVar)
+       Coarse      = Coarse1_VI(iVar,3)
+       Middle      = FaceMiddle_V(iVar)
+
+       ! Check if the |L-M| <= |M-C| condition is satisfied
+       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
+
+       ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
+       FaceAverage = Middle + &
+            sign( abs(Middle - Coarse), AverageOrig - Middle )
+
+       ! Correct face values either upward or downward
+       if(AverageOrig < FaceAverage)then
+          FaceTmp_I = max(Coarse1Max_VI(iVar,:), CoarseToFineF_VI(iVar,:))
+       else
+          FaceTmp_I = min(Coarse1Min_VI(iVar,:), CoarseToFineF_VI(iVar,:))
+       end if
+
+       ! Calculate interpolation coefficient needed to satisfy the condition
+       ! Avoid zero denominator.
+       Denominator = 0.5*sum(FaceTmp_I) - AverageOrig
+       if(abs(Denominator) < 1e-30) then
+          CoarseToFineF_VI(iVar,:) = FaceTmp_I
+       else
+          Alpha = (FaceAverage - AverageOrig) / Denominator
+          Alpha1 = 1.0 - Alpha
+          ! Interpolate
+          CoarseToFineF_VI(iVar,:) = &
+               Alpha*FaceTmp_I + Alpha1*CoarseToFineF_VI(iVar,:)
+       endif
+
+    end do
+
+    ! The face is half the distance in the fine cell
+    Slope1_V = 0.5*Slope1_V
+    do i2 = 1, 2
+       ! Limit gradient in the first layer of finer cells
+       Slope2_V = 0.5*SignGradNormal_V*(Fine2_VI(:,i2) - Fine1_VI(:,i2))
+
+       ! The first limiting ensures that the FineToCoarse face value
+       ! remains between the Fine1 and Coarse values
+       GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+            SignGradNormal_V*(Fine1_VI(:,i2) - Coarse1_VI(:,3)), &
+            Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
+
+       FineToCoarseF_VI(:,i2) = Fine1_VI(:,i2) - GradNormalLtd_V
+       FineF_VI(:,i2) = Fine1_VI(:,i2) + GradNormalLtd_V
+
+    end do
+
+  end subroutine accurate_reschange2d
+  !============================================================================
+  subroutine accurate_reschange1d(&
+       Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcells, 1st layer
+       Fine1_V           ,& ! States in 2 fine physical cells, 1st layer
+       Fine2_V           ,& ! States in 2 fine physical cells, 2nd layer
+       CoarseToFineF_V   ,& ! Values at face, in the coarse ghostcell
+       FineToCoarseF_V   ,& ! Values in the phys. cell looking at coarser cell
+       FineF_V)             ! Facevalues in the physical cell,
+    !                         looking at another physical cell
+
+    !_____________!_____________!_______!_______!_
+    !             !         CToF! FToC FF!       !
+    ! C2_V        ! C1_V        ! F1_V  !  F2_V !
+    !_____________!_____________!_______!_______!_
+
+    real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
+    real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
+    real, intent(in) :: Fine1_V(:)           ! dimension(nVar)
+    real, intent(in) :: Fine2_V(:)           ! dimension(nVar)
+
+    real, intent(inout):: CoarseToFineF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineToCoarseF_V(:) ! dimension(nVar)
+    real, intent(inout):: FineF_V(:)         ! dimension(nVar)
+
+    real, dimension(nVar):: Slope1_V, Slope2_V
+    real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
+
+    real :: Beta
+
+    character(len=*), parameter:: NameSub = 'accurate_reschange1d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VI
+    GradNormal_V = Fine1_V - Coarse1_V
+
+    ! Save sign of the gradient
+    SignGradNormal_V = sign(1.0,GradNormal_V)
+
+    ! Limit gradient in the first coarser cell
+    Slope1_V = cTwoThird*abs(GradNormal_V)
+    Slope2_V = 0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V)
+
+    Beta = min(BetaLimiterResChange, BetaLimiter)
+
+    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+
+    ! Add limited normal gradient to obtain the middle value for the fine face
+    CoarseToFineF_V = Coarse1_V + GradNormalLtd_V
+
+    ! The face is half the distance in the fine cell
+    Slope1_V = 0.5*Slope1_V
+    ! Limit gradient in the first layer of finer cells
+    Slope2_V = 0.5*SignGradNormal_V*(Fine2_V - Fine1_V)
+
+    ! The first limiting ensures that the FineToCoarse face value
+    ! remains between the Fine1 and Coarse values
+    GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
+         SignGradNormal_V*(Fine1_V - Coarse1_V), &
+         Beta*Slope1_V, Beta*Slope2_V, 0.5*(Slope1_V + Slope2_V)))
+
+    FineToCoarseF_V = Fine1_V - GradNormalLtd_V
+    FineF_V         = Fine1_V + GradNormalLtd_V
+
+  end subroutine accurate_reschange1d
+  !============================================================================
+  
   subroutine set_low_order_face
 
     use ModMain,  ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
