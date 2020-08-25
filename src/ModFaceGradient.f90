@@ -25,10 +25,6 @@ module ModFaceGradient
   public :: get_face_curl
   public :: get_face_curl_old
   public :: set_block_jacobian_face
-
-  ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-  real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-  !$omp threadprivate( DcoordDxyz_DDFD )
   
 contains
   !============================================================================
@@ -583,7 +579,7 @@ contains
   end subroutine set_block_field3
   !============================================================================
 
-  subroutine set_block_jacobian_face(iBlock, UseFirstOrderBcIn)
+  subroutine set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, UseFirstOrderBcIn)
 
     use ModMain, ONLY: x_, y_, z_
     use ModNumConst, ONLY: i_DD
@@ -591,7 +587,11 @@ contains
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, NoBlk
+
     integer, intent(in):: iBlock
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real, intent(out) :: &
+         DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     logical, optional, intent(in):: UseFirstOrderBcIn
 
     ! Dxyz/Dcoord matrix for one cell
@@ -787,8 +787,10 @@ contains
     
     integer :: iL, iR, jL, jR, kL, kR, iField
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    Real :: InvDx, InvDy, InvDz
+    real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
@@ -801,7 +803,8 @@ contains
        allocate(Var1_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        call set_block_field3(iBlock, nField, Var1_IG, Var_IG)
        deallocate(Var1_IG)
-       if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
+       if(.not.IsCartesianGrid) &
+            call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
     end if
     
     ! Central difference with averaging in orthogonal direction
@@ -952,6 +955,9 @@ contains
     real, intent(inout) :: Scalar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_D(3)
     logical, optional, intent(in):: UseFirstOrderBcIn
+
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     !\
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector components of gradient, which are parallel to the face
@@ -963,7 +969,7 @@ contains
     !/
     integer :: iD, iU, jD, jU, kD, kU
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    Real :: InvDx, InvDy, InvDz
+    real :: InvDx, InvDy, InvDz
     real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !\
     ! If UseFirstOrderBc, then near the domain boundary the
@@ -988,7 +994,8 @@ contains
          .and. iDir == x_)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
-            call set_block_jacobian_face(iBlock,UseFirstOrderBcIn)
+            call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
+            UseFirstOrderBcIn)
     end if
     if(present(UseFirstOrderBcIn))then
        UseFirstOrderBc = UseFirstOrderBcIn
@@ -1160,8 +1167,10 @@ contains
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    Real :: InvDx, InvDy, InvDz
+    real :: InvDx, InvDy, InvDz
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
@@ -1171,7 +1180,8 @@ contains
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
-       if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
+       if(.not. IsCartesianGrid) &
+            call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
        IsNewBlock = .false.
     end if
 
@@ -1453,8 +1463,10 @@ contains
     
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    Real :: InvDx, InvDy, InvDz
+    real :: InvDx, InvDy, InvDz
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
@@ -1463,7 +1475,8 @@ contains
     if(i == iMinFace .and. j == jMinFace .and. k == kMinFace &
          .and. iDir == x_)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
-       if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
+       if(.not. IsCartesianGrid) &
+            call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
     end if
     
     ! Central difference with averaging in orthogonal direction

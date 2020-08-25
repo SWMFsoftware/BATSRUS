@@ -1132,7 +1132,7 @@ contains
     ! collisional resistivity.
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
-    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
+    use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit,     ONLY: UseNoOverlap, nStencil
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: true_cell
@@ -1146,6 +1146,7 @@ contains
     integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
     integer :: iVar, jVar
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
+    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
@@ -1197,7 +1198,7 @@ contains
           end do; end do; end do
        end do
     else
-       call set_block_jacobian_face(iBlock)
+       call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
 
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
@@ -1272,7 +1273,7 @@ contains
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
          CellVolume_GB
-    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
+    use ModFaceGradient, ONLY: set_block_jacobian_face
     use ModImplicit,     ONLY: nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
@@ -1287,9 +1288,9 @@ contains
     integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
     integer:: iSub, iSup, iFace, kDim, lDir, jKlEpsilon, iKlEpsilon
     integer:: iVar, jVar
-    real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
-
     real:: InvVolume
+    real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
+    real:: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
@@ -1420,7 +1421,7 @@ contains
        ! Jacobian for generalized coordinate (eqs. 50-51)
 
        ! Get dCoord/Dxyz
-       call set_block_jacobian_face(iBlock)
+       call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
 
        ! kDim is the index for gen.coord in DcoordDxyz(kDim,...)
        ! lDim is the index of the field component in dR(B_j)/d(B_l)
