@@ -31,11 +31,6 @@ module ModViscosity
   real, public, allocatable:: ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
   !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
   
-  ! Logical is true if call set_visco_factor* sets any non-zero viscosity
-  ! factors
-  logical, public:: IsViscoBlock
-  !$omp threadprivate( IsViscoBlock )
-  
   ! Local variables
 
   ! Velocity vector for each block and fluid
@@ -157,6 +152,7 @@ contains
 
     ! Set the viscosity factor for the cell centers of block iBlock
     ! Also set IsViscoBlock if any of the cells have a non-zero factor.
+    logical :: IsViscoBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_visco_factor_cell'
@@ -189,6 +185,7 @@ contains
 
     ! Set the visco factor for the cell faces of block iBlock
     ! Also set IsViscoBlock if any of the faces have a non-zero factor
+    logical :: IsViscoBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_visco_factor_face'
