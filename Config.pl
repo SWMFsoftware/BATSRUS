@@ -342,6 +342,7 @@ sub current_settings{
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
     my $Version='???';
+    my $NameFile='???';
     while(<FILE>){
 	if(/NameUserModule/){
 	    $Module = $';
@@ -350,13 +351,15 @@ sub current_settings{
 	    $Module =~ s/^\s*[\'\"]//;   # remove leading quotation mark
 	    $Module =~ s/[\'\"].*\n//;  # remove trailing quotation marks
 	}
+        $NameFile = $1 if /NameUserFile\s*=.*ModUser(.*)\.f90/;
 	$Version = $1 if /VersionUserModule\s*=\s*([\d\.]+)/;
     }
     close(FILE);
-    $Settings .= "UserModule = $Module, ver $Version\n";
+    $Settings .= "UserModule = $NameFile: $Module, ver $Version\n";
 
     open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
     my $Equation='???';
+    my $NameFile='???';
     my $prev;
     while(<FILE>){
 	if(s/\&\s*\n//){
@@ -365,11 +368,12 @@ sub current_settings{
 	}
 	$_ = $prev . $_;
 	$prev = "";
+        $NameFile = $1 if /NameEquationFile\s*=.*ModEquation(.*)\.f90/;
 	next unless /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
 	$Equation = $1; last;
     }
 
-    $Settings .= "Equation   = $Equation\n";
+    $Settings .= "Equation   = $NameFile: $Equation\n";
 
 }
 
