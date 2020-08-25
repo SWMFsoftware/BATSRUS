@@ -389,7 +389,7 @@ contains
        UseLeftStateOnly  = .false.
     end if
 
-    if(iFace == 1 .and. jFace == 1 .and. kFace == 1)then
+    if(IsNewBlockHeatCond)then
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &

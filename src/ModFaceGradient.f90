@@ -9,7 +9,6 @@ module ModFaceGradient
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
        jRatio, kRatio, InvIjkRatio
-  use ModMain, ONLY: iMinFace, jMinFace, kMinFace
   use omp_lib
 
   implicit none
@@ -981,7 +980,6 @@ contains
     ! physical cells and the ghostcells within the computational
     ! domain are used, with eliminating the out-of-domain ghost cell
     ! from the interpolation stencil.
-    !
     !/
     logical :: UseFirstOrderBc
     
@@ -991,12 +989,12 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
     
-    if(i == iMinFace .and. j == jMinFace .and. k == kMinFace &
-         .and. iDir == x_)then
+    if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
             call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD, &
             UseFirstOrderBcIn)
+       IsNewBlock = .false.
     end if
     if(present(UseFirstOrderBcIn))then
        UseFirstOrderBc = UseFirstOrderBcIn
