@@ -221,6 +221,7 @@ contains
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
+    use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
 
     type(FaceFluxVarType), intent(inout) :: FFV
 
@@ -236,7 +237,8 @@ contains
       ViscoCoeff => FFV%ViscoCoeff )
 
     ! Get velocity vector for the block, only done ones per block
-    if(iFace == 1 .and. jFace == 1 .and. kFace == 1) then
+    if(iFace == iMinFace .and. jFace == jMinFace .and. kFace == kMinFace &
+         .and. iDimFace == x_ ) then
        do iFluid = iFluidMin, iFluidMax
           if(nFluid>1) call select_fluid(iFluid)
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -248,13 +250,10 @@ contains
                 u_DGI(:,i,j,k,iFluid) = 0.0
              end if
           end do; end do; end do
+          call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
+               iBlockFace, nDim, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
        end do
     end if
-
-    do iFluid = iFluidMin, iFluidMax
-       call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, nDim, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
-    end do
 
     ! Get the viscosity tensor
     do iFluid = 1, nFluid
