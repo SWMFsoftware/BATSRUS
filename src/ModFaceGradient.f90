@@ -9,6 +9,7 @@ module ModFaceGradient
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
        jRatio, kRatio, InvIjkRatio
+  use ModMain, ONLY: iMinFace, jMinFace, kMinFace
   use omp_lib
 
   implicit none
@@ -22,11 +23,8 @@ module ModFaceGradient
   public :: get_face_gradient
   public :: get_face_gradient_field
   public :: get_face_curl
+  public :: get_face_curl_old
   public :: set_block_jacobian_face
-
-  interface get_face_curl
-    module procedure get_face_curl_old, get_face_curl_new
-  end interface
 
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
@@ -798,7 +796,8 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
     
-    if(i == 1 .and. j == 1 .and. k == 1)then
+    if(i == iMinFace .and. j == jMinFace .and. k == kMinFace &
+         .and. iDir == x_)then
        allocate(Var1_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        call set_block_field3(iBlock, nField, Var1_IG, Var_IG)
        deallocate(Var1_IG)
@@ -985,7 +984,8 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
     
-    if(i == 1 .and. j == 1 .and. k == 1)then
+    if(i == iMinFace .and. j == jMinFace .and. k == kMinFace &
+         .and. iDir == x_)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
             call set_block_jacobian_face(iBlock,UseFirstOrderBcIn)
@@ -1167,11 +1167,15 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
 
+    call timing_start('calculate')
+
     if(IsNewBlock)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
        if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
        IsNewBlock = .false.
     end if
+
+    call timing_stop('calculate')
 
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1;
@@ -1435,7 +1439,7 @@ contains
   end subroutine get_face_curl_old
   !============================================================================
 
-  subroutine get_face_curl_new(iDir, i, j, k, iBlock, Vector_DG, FaceCurl_D)
+  subroutine get_face_curl(iDir, i, j, k, iBlock, Vector_DG, FaceCurl_D)
 
     use ModMain,      ONLY: x_, y_, z_
     use BATL_lib,     ONLY: IsCartesianGrid, IsRzGeometry
@@ -1456,7 +1460,8 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
     
-    if(i == 1 .and. j == 1 .and. k == 1)then
+    if(i == iMinFace .and. j == jMinFace .and. k == kMinFace &
+         .and. iDir == x_)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
        if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
     end if
@@ -1719,7 +1724,7 @@ contains
 
     end subroutine calc_gencoord_curl
     !==========================================================================
-  end subroutine get_face_curl_new
+  end subroutine get_face_curl
 
 end module ModFaceGradient
 !==============================================================================
