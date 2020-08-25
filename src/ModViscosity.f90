@@ -215,24 +215,26 @@ contains
   end subroutine set_visco_factor_face
   !============================================================================
 
-  subroutine get_viscosity_tensor(iDimFace, iFace, jFace, &
-       kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
+  subroutine get_viscosity_tensor(FFV)
 
-    use ModAdvance, ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB, FaceFluxVarType
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
 
-    integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
-    integer, intent(in) :: iFluidMin,iFluidMax
-    real,    intent(in) :: ViscoCoeff
+    type(FaceFluxVarType), intent(inout) :: FFV
 
-    real    :: Diag
-    logical :: IsNewBlock = .true.
+    real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k, iFluid
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
+    associate( &
+      iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
+      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
+      iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
+      ViscoCoeff => FFV%ViscoCoeff )
+
     ! Get velocity vector for the block, only done ones per block
     if(iFace == 1 .and. jFace == 1 .and. kFace == 1) then
        do iFluid = iFluidMin, iFluidMax
@@ -251,7 +253,7 @@ contains
 
     do iFluid = iFluidMin, iFluidMax
        call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, nDim,  u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
+            iBlockFace, nDim, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
     end do
 
     ! Get the viscosity tensor
@@ -284,6 +286,7 @@ contains
        Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)
     end do
 
+    end associate
   end subroutine get_viscosity_tensor
   !============================================================================
 

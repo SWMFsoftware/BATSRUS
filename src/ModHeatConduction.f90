@@ -330,12 +330,12 @@ contains
   end subroutine init_heat_conduction
   !============================================================================
 
-  subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
-       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
+  subroutine get_heat_flux(FFV)
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
+         FaceFluxVarType
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, InvGammaElectronMinus1
@@ -348,9 +348,7 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
-    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
-    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
-    real,    intent(out):: HeatCondCoefNormal, HeatFlux
+    type(FaceFluxVarType), intent(inout) :: FFV
 
     integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
@@ -364,6 +362,14 @@ contains
     !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
+    associate( &
+      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
+      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
+      StateLeft_V => FFV%StateLeft_V, &
+      StateRight_V => FFV%StateRight_V, &
+      Normal_D => FFV%Normal_D, &
+      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
+      HeatFlux => FFV%HeatFlux )
 
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
@@ -469,6 +475,7 @@ contains
        HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
     end if
 
+    end associate
   end subroutine get_heat_flux
   !============================================================================
 
@@ -586,18 +593,15 @@ contains
   end subroutine get_heat_cond_coef
   !============================================================================
 
-  subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
-       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
+  subroutine get_ion_heat_flux(FFV)
 
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, FaceFluxVarType
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
-    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
-    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
-    real,    intent(out):: HeatCondCoefNormal, HeatFlux
+    type(FaceFluxVarType), intent(inout) :: FFV
 
     integer :: i, j, k
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
@@ -605,6 +609,15 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
+    associate( &
+      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
+      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
+      StateLeft_V => FFV%StateLeft_V, &
+      StateRight_V => FFV%StateRight_V, &
+      Normal_D => FFV%Normal_D, &
+      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
+      HeatFlux => FFV%HeatFlux )
+
     if(iFace == 1 .and. jFace == 1 .and. kFace == 1)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -645,6 +658,7 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
+    end associate
   end subroutine get_ion_heat_flux
   !============================================================================
 

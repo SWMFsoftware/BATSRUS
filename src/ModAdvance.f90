@@ -23,6 +23,69 @@ module ModAdvance
   public :: init_mod_advance
   public :: clean_mod_advance
 
+  type, public :: FaceFluxVarType
+     ! index of cell in the negative and positive directions from face
+     integer :: iLeft,  jLeft, kLeft
+     integer :: iRight, jRight, kRight
+     ! Index of the block for this face, iBlockFace = iBlock
+     integer :: iBlockFace
+     ! Direction of the face iDimFace = iDim
+     integer :: iDimFace
+     ! Range of fluid and variable indexes for the current solver
+     integer:: iFluidMin = 1, iFluidMax = nFluid
+     integer:: iVarMin   = 1, iVarMax   = nVar
+     integer:: iEnergyMin = nVar+1, iEnergyMax = nVar + nFluid
+     ! index of the face
+     integer :: iFace, jFace, kFace   
+     ! Maximum speed for the Courant condition
+     real :: CmaxDt
+     real :: Area2, AreaX, AreaY, AreaZ, Area = 0.0
+     real :: DeltaBnL, DeltaBnR
+     real :: DiffBb ! (1/4)(BnL-BnR)^2
+     real :: StateLeft_V(nVar)
+     real :: StateRight_V(nVar)
+     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
+     ! Variables for rotated coordinate system (n is normal to face)
+     real :: Normal_D(3), NormalX, NormalY, NormalZ
+     real :: Tangent1_D(3), Tangent2_D(3)
+     real :: B0n, B0t1, B0t2
+     real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
+     real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
+     ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
+     ! in terms of divergence of the MHD part of momentum flux.
+     ! For this reason we calculate the MHD flux for the first ion fluid even
+     ! in the case when only its hydrodynamic part matters.
+     real :: MhdFlux_V(     RhoUx_:RhoUz_)
+     real :: MhdFluxLeft_V( RhoUx_:RhoUz_)
+     real :: MhdFluxRight_V(RhoUx_:RhoUz_)
+     ! normal electric field -> divE
+     real :: Enormal
+     ! Normal velocities for all fluids plus electrons
+     real :: Unormal_I(nFluid+1) = 0.0
+     real :: UnLeft_I(nFluid+1)
+     real :: UnRight_I(nFluid+1)
+     ! Variables for normal resistivity
+     real :: EtaJx, EtaJy, EtaJz, Eta     
+     ! Variables needed for Hall resistivity
+     real :: InvDxyz, HallCoeff
+     real :: HallJx, HallJy, HallJz
+     ! Variables needed for Biermann battery term
+     logical :: UseHallGradPe = .false.
+     real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
+     ! Variables for diffusion solvers (radiation diffusion, heat conduction)
+     real :: DiffCoef, EradFlux, RadDiffCoef
+     real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal     
+     ! B x Area for current -> BxJ
+     real :: bCrossArea_D(3) = 0.0
+     real :: B0x=0.0, B0y=0.0, B0z=0.0
+     ! Variables needed by viscosity
+     real :: ViscoCoeff
+     logical :: IsBoundary
+     ! Variables introduced for regional Boris correction
+     real :: InvClightFace, InvClight2Face
+     logical :: DoTestCell = .false.
+  end type FaceFluxVarType
+
   ! Numerical flux type
   character (len=10) :: FluxType
 

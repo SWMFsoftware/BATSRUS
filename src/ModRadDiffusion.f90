@@ -302,21 +302,27 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux(iDir, i, j, k, iBlock, &
-       StateLeft_V, StateRight_V, Normal_D, RadDiffCoef, EradFlux)
+  subroutine get_radiation_energy_flux(FFV)
 
-    use ModAdvance,      ONLY: State_VGB, Erad_
+    use ModAdvance,      ONLY: State_VGB, Erad_, FaceFluxVarType
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
 
-    integer, intent(in) :: iDir, i, j, k, iBlock
-    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
-    real,    intent(out):: RadDiffCoef, EradFlux
+    type(FaceFluxVarType), intent(inout) :: FFV
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
+    associate( &
+      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
+      i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
+      StateLeft_V => FFV%StateLeft_V, &
+      StateRight_V => FFV%StateRight_V, &
+      Normal_D => FFV%Normal_D, &
+      RadDiffCoef => FFV%RadDiffCoef, &
+      EradFlux => FFV%EradFlux )
+
     if(i == 1 .and. j == 1 .and. k == 1) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 
@@ -334,6 +340,7 @@ contains
 
     EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
+    end associate
   contains
     !==========================================================================
 
@@ -348,6 +355,9 @@ contains
 
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
+      associate( &
+         iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
+         i => FFV%iFace, j => FFV%jFace, k => FFV%kFace )
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)
@@ -369,6 +379,7 @@ contains
          DiffCoef = Clight/(3*OpacityRosseland)
       end if
 
+      end associate
     end subroutine get_diffusion_coef
     !==========================================================================
 

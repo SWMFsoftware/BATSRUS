@@ -9,6 +9,7 @@ module ModPartImplicit
        iProcTest, iVarTest, iProc, nProc, iComm
 
   use ModImplicit
+  use ModAdvance, ONLY: FaceFluxVarType
 
   implicit none
   private ! except
@@ -2255,7 +2256,7 @@ contains
 
     use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: nFlux, FaceFluxVarType, &
+    use ModFaceFlux, ONLY: nFlux, &
          set_block_values, set_cell_values, get_physical_flux
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
     use ModMultiFluid, ONLY: nFluid, iP_I
@@ -2331,7 +2332,7 @@ contains
        iDim, iBlock,Cmax_F)
 
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: FaceFluxVarType, &
+    use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_speed_max
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid

@@ -18,7 +18,8 @@ module ModFaceFlux
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        UseHighFDGeometry, correct_face_value
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
-  use ModAdvance, ONLY:&
+  use ModAdvance, ONLY: &
+       FaceFluxVarType, &
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  &! input: left  face state
        RightState_VX, RightState_VY, RightState_VZ, &! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        &! output: flux*Area
@@ -63,69 +64,6 @@ module ModFaceFlux
 
   ! Number of fluxes including pressure and energy fluxes
   integer, parameter, public:: nFlux=nVar+nFluid
-
-  type, public :: FaceFluxVarType
-     ! index of cell in the negative and positive directions from face
-     integer :: iLeft,  jLeft, kLeft
-     integer :: iRight, jRight, kRight
-     ! Index of the block for this face, iBlockFace = iBlock
-     integer :: iBlockFace
-     ! Direction of the face iDimFace = iDim
-     integer :: iDimFace
-     ! Range of fluid and variable indexes for the current solver
-     integer:: iFluidMin = 1, iFluidMax = nFluid
-     integer:: iVarMin   = 1, iVarMax   = nVar
-     integer:: iEnergyMin = nVar+1, iEnergyMax = nVar + nFluid
-     ! index of the face
-     integer :: iFace, jFace, kFace   
-     ! Maximum speed for the Courant condition
-     real :: CmaxDt
-     real :: Area2, AreaX, AreaY, AreaZ, Area = 0.0
-     real :: DeltaBnL, DeltaBnR
-     real :: DiffBb ! (1/4)(BnL-BnR)^2
-     real :: StateLeft_V(nVar)
-     real :: StateRight_V(nVar)
-     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
-     ! Variables for rotated coordinate system (n is normal to face)
-     real :: Normal_D(3), NormalX, NormalY, NormalZ
-     real :: Tangent1_D(3), Tangent2_D(3)
-     real :: B0n, B0t1, B0t2
-     real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
-     real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
-     ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
-     ! in terms of divergence of the MHD part of momentum flux.
-     ! For this reason we calculate the MHD flux for the first ion fluid even
-     ! in the case when only its hydrodynamic part matters.
-     real :: MhdFlux_V(     RhoUx_:RhoUz_)
-     real :: MhdFluxLeft_V( RhoUx_:RhoUz_)
-     real :: MhdFluxRight_V(RhoUx_:RhoUz_)
-     ! normal electric field -> divE
-     real :: Enormal
-     ! Normal velocities for all fluids plus electrons
-     real :: Unormal_I(nFluid+1) = 0.0
-     real :: UnLeft_I(nFluid+1)
-     real :: UnRight_I(nFluid+1)
-     ! Variables for normal resistivity
-     real :: EtaJx, EtaJy, EtaJz, Eta     
-     ! Variables needed for Hall resistivity
-     real :: InvDxyz, HallCoeff
-     real :: HallJx, HallJy, HallJz
-     ! Variables needed for Biermann battery term
-     logical :: UseHallGradPe = .false.
-     real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
-     ! Variables for diffusion solvers (radiation diffusion, heat conduction)
-     real :: DiffCoef, EradFlux, RadDiffCoef
-     real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal     
-     ! B x Area for current -> BxJ
-     real :: bCrossArea_D(3) = 0.0
-     real :: B0x=0.0, B0y=0.0, B0z=0.0
-     ! Variables needed by viscosity
-     real :: ViscoCoeff
-     logical :: IsBoundary
-     ! Variables introduced for regional Boris correction
-     real :: InvClightFace, InvClight2Face
-     logical :: DoTestCell = .false.
-  end type FaceFluxVarType
   
   ! Neutral fluids may use different flux function
   logical:: UseDifferentNeutralFlux = .false.
@@ -1158,9 +1096,6 @@ contains
       GradZPeNe => FFV%GradZPeNe, &
       Normal_D => FFV%Normal_D, &
       DiffCoef => FFV%DiffCoef, RadDiffCoef => FFV%RadDiffCoef, &
-      EradFlux => FFV%EradFlux, &
-      HeatFlux => FFV%HeatFlux, &
-      IonHeatFlux => FFV%IonHeatFlux, &
       HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
       DoTestCell => FFV%DoTestCell )
 
@@ -1183,8 +1118,7 @@ contains
 
     ! Calculateing stress tensor for viscosity Visco_DDI
     if(ViscoCoeff > 0.0)then
-       call get_viscosity_tensor(iDimFace, iFace,jFace,kFace,&
-            iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
+       call get_viscosity_tensor(FFV)
     end if
 
     if(Eta > 0.0)then
@@ -1249,23 +1183,17 @@ contains
     end if
 
     if(DoRadDiffusion)then
-       call get_radiation_energy_flux(iDimFace, iFace,jFace,kFace, &
-            iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
-            RadDiffCoef, EradFlux)
+       call get_radiation_energy_flux(FFV)
        DiffCoef = DiffCoef + RadDiffCoef
     end if
 
     if(DoHeatConduction)then
-       call get_heat_flux(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            StateLeft_V, StateRight_V, Normal_D, &
-            HeatCondCoefNormal, HeatFlux)
+       call get_heat_flux(FFV)
        DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
     if(DoIonHeatConduction)then
-       call get_ion_heat_flux(iDimFace, iFace,jFace,kFace, iBlockFace, &
-            StateLeft_V, StateRight_V, Normal_D, &
-            HeatCondCoefNormal, IonHeatFlux)
+       call get_ion_heat_flux(FFV)
        DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
