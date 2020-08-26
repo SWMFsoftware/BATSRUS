@@ -203,7 +203,6 @@ contains
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
 
-    type(FaceFluxVarType) :: FFV
     real:: FaceDivU_I(nFluid)
     integer, parameter:: cLowOrder = 1
     real, parameter:: cSmall = 1e-6
@@ -348,6 +347,7 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
+      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
@@ -451,6 +451,7 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IY
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
+      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
@@ -559,6 +560,7 @@ contains
       use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IZ
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux
+      type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
