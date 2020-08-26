@@ -174,7 +174,7 @@ contains
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, Efield_DGB, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
-    use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
+    use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
     use ModWaves,   ONLY: UseWavePressure
