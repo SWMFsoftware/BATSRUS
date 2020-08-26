@@ -28,7 +28,7 @@ module ModViscosity
   !$omp threadprivate( Visco_DDI )
   
   ! Viscosity factor on the faces and in the cell centers
-  real, public, allocatable, protected:: &
+  real, public, allocatable:: &
        ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
   !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
   
