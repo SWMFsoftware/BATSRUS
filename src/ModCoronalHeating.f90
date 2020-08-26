@@ -913,7 +913,7 @@ contains
     if(present(IsNewBlock)) then
       IsNewBlockAlfven = IsNewBlock
     else
-      IsNewBlockAlfven = .false.
+      IsNewBlockAlfven = .true.
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
