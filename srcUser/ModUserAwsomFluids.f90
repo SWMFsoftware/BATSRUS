@@ -579,7 +579,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
-       call get_wave_reflection(iBlock)
+       call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
                /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
@@ -594,7 +594,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
-       call get_wave_reflection(iBlock)
+       call get_wave_reflection(iBlock, IsNewBlockAlfven)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Cdiss_C(i,j,k)
@@ -609,7 +609,7 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
           IsNewBlockAlfven = .true.
-          call get_wave_reflection(iBlock)
+          call get_wave_reflection(iBlock, IsNewBlockAlfven)
        end if
 
        call get_block_heating(iBlock)
@@ -637,7 +637,7 @@ contains
           if(UseAlignmentAngle)then
              Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
              IsNewBlockAlfven = .true.
-             call get_wave_reflection(iBlock)
+             call get_wave_reflection(iBlock, IsNewBlockAlfven)
           end if
 
           call get_block_heating(iBlock)
