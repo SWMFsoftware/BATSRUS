@@ -541,7 +541,7 @@ contains
     use ModB0,             ONLY: set_b0_face
     use ModChromosphere,   ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C, get_tesi_c
-    use ModCoronalHeating, ONLY: IsNewBlockAlfven, CoronalHeating_C, &
+    use ModCoronalHeating, ONLY: CoronalHeating_C, &
          apportion_coronal_heating, get_block_heating, get_wave_reflection, &
          WaveDissipation_VC, UseAlignmentAngle, Cdiss_C
     use ModFaceValue,      ONLY: calc_face_value
@@ -564,6 +564,7 @@ contains
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
+    logical :: IsNewBlockAlfven
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
