@@ -7,7 +7,7 @@ program select_snapshot
 
   use ModIoUnit,    ONLY: io_unit_new
   use ModPlotFile,  ONLY: save_plot_file, read_plot_file
-  use ModUtilities, ONLY: split_string
+  use ModUtilities, ONLY: split_string, CON_stop
 
   implicit none
 
@@ -130,16 +130,3 @@ program select_snapshot
 
 end program select_snapshot
 
-!=========================================================================
-
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)') 'ERROR: '//StringError
-
-  stop
-
-end subroutine CON_stop

@@ -20,7 +20,7 @@
 Module CON_geopack_internal
 
   use ModNumConst
- ! use CON_world,ONLY:CON_stop
+  use ModUtilities, ONLY: CON_stop
   implicit none
 
   save
@@ -650,9 +650,4 @@ contains
   end subroutine CON_test_geopack
 
 end Module CON_geopack_internal
-!=======================================================================
-subroutine CON_stop(Char)
-  character(LEN=*),intent(in)::Char
-  write(*,*)Char
-  stop
-end subroutine CON_stop
+
