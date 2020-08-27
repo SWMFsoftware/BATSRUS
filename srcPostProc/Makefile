@@ -57,6 +57,15 @@ SNAPSHOT:
 ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag}
 
+# ------------------------------- INTERPOLATE--------------
+
+${BINDIR}/INTERPOLATE.exe: ${LIBSHARE} interpolate_output.o
+	${LINK.f90} -o ${BINDIR}/INTERPOLATE.exe interpolate_output.o \
+		-L${LIBDIR} -lSHARE ${Lflag}
+
+INTERPOLATE:
+	make ${BINDIR}/INTERPOLATE.exe
+
 # ------------------------------- CRST --------------------
 
 CRST:
