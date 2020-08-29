@@ -9,8 +9,7 @@ module ModFaceFlux
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: UseB, UseB0, cLimit
-  use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
-       UseIonHeatConduction
+  use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction
   use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
        EDotFA_X, EDotFA_Y, EDotFA_Z                     ! output: E.Area
   use ModGeometry,   ONLY: true_cell
@@ -66,7 +65,6 @@ module ModFaceFlux
   integer, parameter, public:: nFlux=nVar+nFluid
   
   ! Neutral fluids may use different flux function
-  logical:: UseDifferentNeutralFlux = .false.
   character(len=10), public:: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
@@ -196,7 +194,6 @@ contains
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    use ModWaves,    ONLY: UseWavePressure
     use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
     use ModMultiFluid, ONLY: UseMultiIon
 
@@ -344,7 +341,7 @@ contains
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IX
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
@@ -448,7 +445,7 @@ contains
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IY
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IY
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
@@ -557,7 +554,7 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IZ
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
@@ -669,7 +666,7 @@ contains
 
       use ModAdvance, ONLY: State_VGB, Energy_GBI
       use ModPhysics, ONLY: Gamma_I
-      use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+      use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
 
       real, intent(inout):: Flux_V(nFlux)
       type(FaceFluxVarType), intent(inout):: FFV
@@ -1025,9 +1022,7 @@ contains
 
   subroutine get_numerical_flux(Flux_V, FFV)
 
-    use ModWaves, ONLY: UseWavePressure
-    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, &
-         UseAnisoPe
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -1057,7 +1052,8 @@ contains
     real :: InvElectronDens
     integer :: i, j, k, iFluid
     real :: NatomicSi, TeSi
-    real :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !$omp threadprivate( b_DG )
     
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
@@ -1397,7 +1393,6 @@ contains
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V,Un,MhdFlux_V)
-      use ModElectricField, ONLY: UseJCrossBForce
 
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(RhoUx_:RhoUz_)
@@ -2441,7 +2436,7 @@ contains
     real, intent(out):: Pwave
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
-    real:: FluxBx, FluxBy, FluxBz, FullB2, Peperp, Pepar, AlfvenSpeed
+    real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
 
     integer:: iVar, iFluid
@@ -3534,9 +3529,8 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
        iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
-       ElectronFirst_, IonFirst_, NeutralFirst_, &
-       nIonFluid, nTrueIon, UseMultiIon, ChargeIon_I, ChargePerMass_I, &
-       MassIon_I
+       ElectronFirst_, IonFirst_, &
+       nIonFluid, nTrueIon, UseMultiIon, ChargePerMass_I
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
          GammaWave, UseAlfvenWaves
     use ModMain,    ONLY: Climit
@@ -3871,7 +3865,7 @@ contains
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
 
-      integer:: jFluid, iVar
+      integer:: jFluid
       !------------------------------------------------------------------------
       
       Rho = State_V(iRhoIon_I(1))
