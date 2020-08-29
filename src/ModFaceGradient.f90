@@ -23,7 +23,7 @@ module ModFaceGradient
   public :: get_face_gradient_field
   public :: get_face_curl
   public :: set_block_jacobian_face
-  
+
 contains
   !============================================================================
 
@@ -768,35 +768,35 @@ contains
   !============================================================================
 
   subroutine get_face_gradient_field(iDir, i, j, k, iBlock, nField, &
-    IsNewBlock, Var_IG, FaceGrad_DI)
+       IsNewBlock, Var_IG, FaceGrad_DI)
 
     ! calculate the gradient FaceGrad_DI of field Var_IG
     ! on face iDir of cell i, j, k of block iBlock
-    
+
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
          CellSize_DB, DiLevelNei_IIIB, x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    
+
     integer, intent(in) :: iDir, i, j, k, iBlock, nField
     logical, intent(inout) :: IsNewBlock
     real, intent(inout) :: Var_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_DI(nDim,nField)
-    
+
     integer :: iL, iR, jL, jR, kL, kR, iField
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-    
+
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
-    
+
     if(IsNewBlock)then
        allocate(Var1_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        call set_block_field3(iBlock, nField, Var1_IG, Var_IG)
@@ -805,16 +805,16 @@ contains
             call set_block_jacobian_face(iBlock, DcoordDxyz_DDFD)
        IsNewBlock = .false.
     end if
-    
+
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1;
     jR = j+1; jL = j-1;
     kR = k+1; kL = k-1;
-    
+
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
-    
+
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -836,7 +836,7 @@ contains
          )then
        iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
     end if
-    
+
     if(j==1)then
        if(NeiLsouth(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -858,7 +858,7 @@ contains
          )then
        jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
     end if
-    
+
     if(k==1)then
        if(NeiLbot(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -880,19 +880,19 @@ contains
          )then
        kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
     end if
-    
+
     do iField = 1, nField
        ! Use central difference to get gradient at face
        select case(iDir)
        case(1)
           FaceGrad_DI(Dim1_,iField) = &
                InvDx*(Var_IG(iField,i,j,k) - Var_IG(iField,i-1,j,k))
-    
+
           if(nJ > 1) FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i-1,jL,k) + Var_IG(iField,i,jL,k)) &
                + By*(Var_IG(iField,i-1,j ,k) + Var_IG(iField,i,j ,k)) &
                + Cy*(Var_IG(iField,i-1,jR,k) + Var_IG(iField,i,jR,k))
-    
+
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                + Az*(Var_IG(iField,i-1,j,kL) + Var_IG(iField,i,j,kL)) &
                + Bz*(Var_IG(iField,i-1,j,k ) + Var_IG(iField,i,j,k )) &
@@ -902,10 +902,10 @@ contains
                + Ax*(Var_IG(iField,iL,j-1,k) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j-1,k) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j-1,k) + Var_IG(iField,iR,j,k))
-    
+
           FaceGrad_DI(Dim2_,iField) = &
                InvDy*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j-1,k))
-    
+
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                + Az*(Var_IG(iField,i,j-1,kL) + Var_IG(iField,i,j,kL)) &
                + Bz*(Var_IG(iField,i,j-1,k ) + Var_IG(iField,i,j,k )) &
@@ -915,41 +915,41 @@ contains
                + Ax*(Var_IG(iField,iL,j,k-1) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j,k-1) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j,k-1) + Var_IG(iField,iR,j,k))
-    
+
           FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i,jL,k-1) + Var_IG(iField,i,jL,k))  &
                + By*(Var_IG(iField,i,j ,k-1) + Var_IG(iField,i,j ,k))  &
                + Cy*(Var_IG(iField,i,jR,k-1) + Var_IG(iField,i,jR,k))
-    
+
           FaceGrad_DI(Dim3_,iField) = &
                InvDz*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j,k-1))
        case default
           write(*,*)'Error face index iDir=',iDir
           call stop_mpi(NameSub)
        end select
-    
+
        ! multiply by the coordinate transformation matrix to obtain the
        ! cartesian gradient from the partial derivatives dScalar/dGencoord
        if(.not.IsCartesianGrid) FaceGrad_DI(:,iField) = &
             matmul(FaceGrad_DI(:,iField), &
             DcoordDxyz_DDFD(1:nDim,1:nDim,i,j,k,iDir))
-    
+
     end do
-    
+
   end subroutine get_face_gradient_field
   !============================================================================
 
   subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G,  &
-   FaceGrad_D, UseFirstOrderBcIn)
+       FaceGrad_D, UseFirstOrderBcIn)
 
     ! calculate the cell face gradient of Scalar_G
-    
+
     use BATL_lib,      ONLY: IsCartesianGrid
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, NoBlk
     use BATL_lib,      ONLY: CellSize_DB, DiLevelNei_IIIB
-    
+
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
     real, intent(inout) :: Scalar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -957,21 +957,20 @@ contains
     logical, optional, intent(in):: UseFirstOrderBcIn
 
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-    real :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-    !\
+    real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
+    !omp threadprivate( DcoordDxyz_DDFD )
+
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector components of gradient, which are parallel to the face
-    !/
     integer :: iL, iR, jL, jR, kL, kR
-    !\
+
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector component of gradient, which is orthogonal to the face
-    !/
     integer :: iD, iU, jD, jU, kD, kU
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real :: InvDx, InvDy, InvDz
     real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    !\
+
     ! If UseFirstOrderBc, then near the domain boundary the
     ! ghost cell value is only used to calculate the gradient
     ! in the direction across the computational domain boundary
@@ -980,15 +979,14 @@ contains
     ! physical cells and the ghostcells within the computational
     ! domain are used, with eliminating the out-of-domain ghost cell
     ! from the interpolation stencil.
-    !/
     logical :: UseFirstOrderBc
-    
+
     character(len=*), parameter:: NameSub = 'get_face_gradient'
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
-    
+
     if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
        if(.not.IsCartesianGrid) &
@@ -1001,16 +999,16 @@ contains
     else
        UseFirstOrderBc = .false.
     end if
-    
+
     ! Central difference with averaging in orthogonal direction
     iR = i+1; iL = i-1; iD = i - 1; iU = i;
     jR = j+1; jL = j-1; jD = j - 1; jU = j;
     kR = k+1; kL = k-1; kD = k - 1; kU = k
-    
+
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
-    
+
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -1037,7 +1035,7 @@ contains
          .and. NeiLwest(iBlock)==NoBlk)then
        iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
     end if
-    
+
     if(j==1)then
        if(NeiLsouth(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -1064,7 +1062,7 @@ contains
          .and. NeiLnorth(iBlock)==NoBlk)then
        jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
     end if
-    
+
     if(k==1)then
        if(NeiLbot(iBlock)==-1 &
             .or. (iDir==x_ .and. &
@@ -1091,7 +1089,7 @@ contains
          .and. NeiLtop(iBlock)==NoBlk)then
        kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
     end if
-    
+
     ! Use central difference to get gradient at face
     select case(iDir)
     case(x_)
@@ -1146,7 +1144,7 @@ contains
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
     end if
-    
+
   end subroutine get_face_gradient
   !============================================================================
 
