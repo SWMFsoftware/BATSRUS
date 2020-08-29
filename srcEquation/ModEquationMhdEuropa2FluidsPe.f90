@@ -12,8 +12,7 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdEuropa2FluidsPe.f90"
-
+  character(*),parameter:: NameEquationFile="ModEquationMhdEuropa2FluidsPe.f90"
 
   ! This equation module contains the standard MHD equations 
   ! with electron pressure
