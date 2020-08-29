@@ -2350,7 +2350,7 @@ contains
     !--------------------------------------------------------------------------
     associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-      Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
+      CmaxDt => FFV%CmaxDt, Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
     call test_start(NameSub, DoTest, iBlock)
@@ -2378,6 +2378,7 @@ contains
        B0y = B0_DF( y_,iFace, jFace, kFace)
        B0z = B0_DF( z_,iFace, jFace, kFace)
 
+       CmaxDt = 0.0 ! initialize to avoid floating point exception
        call get_speed_max(Primitive_V, FFV, cmax_I = Cmax_I)
 
        Cmax_F(iFace, jFace, kFace) = maxval(Cmax_I)*Area
