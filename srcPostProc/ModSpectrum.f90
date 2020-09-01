@@ -848,7 +848,6 @@ contains
     call timing_stop(NameSub) 
 
   end subroutine read_table
-  !==========================================================================
 
   !==========================================================================
   subroutine spectrum_calc_flux(StatePixelSegProc_VII, nLosSeg_I)
@@ -866,8 +865,7 @@ contains
     real                           :: Lambda, LambdaSI, Lambda0SI, DLambdaSI
     real                           :: DLambda, DLambdaSI2, Lambda_shifted
     real                           :: DLambdaInstr2 = 0.0 !!! do it later
-    real                           :: Zplus2, Zminus2, CosAlpha, SinAlpha
-    real                           :: B_D(3), Bnorm_D(3)
+    real                           :: Zplus2, Zminus2, Cos2Alpha, Sin2Alpha
     real                           :: Unth2, Uth2
     real                           :: Gint, LogNe, LogTe, Rho
     real                           :: Tlos
@@ -954,14 +952,14 @@ contains
         ! When Gint becomes negative due to extrapolation -> move to next
         if (Gint<=0) CYCLE 
 
-
+        ! Angle of magnetic field relative to X is Alpha. Cos(Alpha)=Bx/B
+        Cos2Alpha = Var_I(Bx_)**2/max(sum(Var_I(Bx_:Bz_)**2), 1e-30)
+        Sin2Alpha = 1 - Cos2Alpha
+        
         if (UseTAnisotropy) then
           ! Calculate angle between LOS and B directions
-          B_D      = Var_I(Bx_:Bz_)
-          CosAlpha = abs(B_D(1)/sqrt(max(sum(B_D**2), 1e-30)))
           ! Calculate temperature relative to the LOS direction
-          SinAlpha = sqrt(1 - CosAlpha**2)
-          Tlos = SinAlpha**2 * Var_I(Tperp_) + CosAlpha**2 * Var_I(Tpar_)
+          Tlos = Sin2Alpha * Var_I(Tperp_) + Cos2Alpha * Var_I(Tpar_)
         else
           Tlos = Var_I(T_)
         endif
@@ -973,7 +971,8 @@ contains
           Zplus2   = Var_I(I01_) * 4.0 / Rho
           Zminus2  = Var_I(I02_) * 4.0 / Rho
           ! non-thermal broadening
-          Unth2 = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
+          write(*,*)'!!!', Var_I(I01_), Var_I(I02_), Rho, Zplus2, Zminus2, Sin2Alpha
+          Unth2 = 1.0/16.0 * (Zplus2 + Zminus2) * Sin2Alpha
         else
           Unth2 = 0.
         endif
