@@ -44,7 +44,7 @@ module ModAdvance
      real :: DiffBb ! (1/4)(BnL-BnR)^2
      real :: StateLeft_V(nVar)
      real :: StateRight_V(nVar)
-     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
+     real :: FluxLeft_V(nVar+nFluid)=0.0, FluxRight_V(nVar+nFluid)=0.0
      ! Variables for rotated coordinate system (n is normal to face)
      real :: Normal_D(3), NormalX, NormalY, NormalZ
      real :: Tangent1_D(3), Tangent2_D(3)
@@ -73,7 +73,7 @@ module ModAdvance
      logical :: UseHallGradPe = .false.
      real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
      ! Variables for diffusion solvers (radiation diffusion, heat conduction)
-     real :: DiffCoef, EradFlux, RadDiffCoef
+     real :: DiffCoef, EradFlux=0.0, RadDiffCoef
      real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal     
      ! B x Area for current -> BxJ
      real :: bCrossArea_D(3) = 0.0
