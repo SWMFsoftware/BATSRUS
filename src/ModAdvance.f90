@@ -44,7 +44,7 @@ module ModAdvance
      real :: DiffBb ! (1/4)(BnL-BnR)^2
      real :: StateLeft_V(nVar)
      real :: StateRight_V(nVar)
-     real :: FluxLeft_V(nVar+nFluid)=0.0, FluxRight_V(nVar+nFluid)=0.0
+     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
      ! Variables for rotated coordinate system (n is normal to face)
      real :: Normal_D(3), NormalX, NormalY, NormalZ
      real :: Tangent1_D(3), Tangent2_D(3)
