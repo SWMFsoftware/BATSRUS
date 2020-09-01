@@ -971,7 +971,6 @@ contains
           Zplus2   = Var_I(I01_) * 4.0 / Rho
           Zminus2  = Var_I(I02_) * 4.0 / Rho
           ! non-thermal broadening
-          write(*,*)'!!!', Var_I(I01_), Var_I(I02_), Rho, Zplus2, Zminus2, Sin2Alpha
           Unth2 = 1.0/16.0 * (Zplus2 + Zminus2) * Sin2Alpha
         else
           Unth2 = 0.
