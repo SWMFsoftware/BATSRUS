@@ -14,6 +14,8 @@ program interpolate_output
   use ModConst,          ONLY: cRadToDeg
   use ModInterpolate,    ONLY: interpolate_vector
   use ModCoordTransform, ONLY: atan2_check
+  use ModUtilities,      ONLY: open_file, close_file
+  use ModIoUnit,         ONLY: UnitTmp_
   
   implicit none
 
@@ -29,10 +31,6 @@ program interpolate_output
   real    :: DateTime ! timestamp in simulation time
   
   ! I/O
-  integer :: iUnitTraj   ! iounit of trajectory file
-  integer :: iUnitIn     ! iounit of .outs file
-  integer :: iUnitInterp ! iounit of interpolated file
-  integer :: iUnitQuery  ! iounit of query file
   integer :: iError      ! used for all files
 
   ! .outs File
@@ -45,7 +43,6 @@ program interpolate_output
   real              :: Time ! snapshot time
   real              :: Param_I(100) ! parameters
   real, allocatable :: Coord_DII(:,:,:), Var_VII(:,:,:)
-  real, allocatable :: LogCoord_DII(:,:,:)
   integer :: n_D(0:3), n1, n2, n3
   integer :: i, iTrajTimestamp ! loop indices
   real, allocatable :: InterpData_VI(:,:) ! fully interpolated output
@@ -53,12 +50,14 @@ program interpolate_output
   integer :: MaxSnapshot ! limit of snapshots in .outs file
   integer :: nSnapshots ! number of snapshots contained in .outs file
   real :: RadMin,RadMax,PhiMin,PhiMax
-
+  integer :: weight
+  real :: dR, dPhi
+  
   ! Interpolated File
   character(len=100) :: NameInterpFile ! name of desired output file
   real,allocatable :: TimeOut_D(:)
   real,allocatable :: InterpCoord_DI(:,:)
-  character(len=*), parameter:: NameSub = 'interpolate_output'
+  character(len=*), parameter:: NameProgram = 'interpolate_output'
   !-------------------------------------------------------------------------
 
   ! READ TRAJECTORY FILE OF POSITIONS AND TIMES
@@ -70,32 +69,27 @@ program interpolate_output
   !             #START
   !              1997 5 17 3 35 00 000 -0.368 5.275 0.0
 
-  iUnitQuery = io_unit_new()
-  iUnitTraj = io_unit_new()
-  iUnitIn = io_unit_new()
-  iUnitInterp = io_unit_new()
-
-  open(unit=iUnitQuery,file='query.txt',iostat=iError,status='old')
-  read(iUnitQuery,'(a)',iostat=iError) NameFileIn
-  read(iUnitQuery,'(a)',iostat=iError) TypeFileIn
-  read(iUnitQuery,'(a)',iostat=iError) NameTrajFile
-  read(iUnitQuery,'(a)',iostat=iError) NameInterpFile
-  read(iUnitQuery,*,iostat=iError) StartTime
-  close(iUnitQuery)
+  call open_file(File='INTERPOLATE.in', Status='old', NameCaller=NameProgram)
+  read(UnitTmp_,'(a)',iostat=iError) NameFileIn
+  read(UnitTmp_,'(a)',iostat=iError) TypeFileIn
+  read(UnitTmp_,'(a)',iostat=iError) NameTrajFile
+  read(UnitTmp_,'(a)',iostat=iError) NameInterpFile
+  read(UnitTmp_,*,iostat=iError) StartTime
+  call close_file(NameCaller=NameProgram)
   
   !---------------------------------------------------------------------------
   !                   READ TRAJECTORY
   
   ! Open the trajectory file.
-  open(unit=iUnitTraj, file=NameTrajFile, iostat=iError, status="old")
+  call open_file(File=NameTrajFile, Status="old", NameCaller=NameProgram)
   
   ! Find the number of points in the trajectory file.
   nPoints = 0
   COUNTPOINTS: do
-     read(iUnitTraj,'(a)',iostat=iError) StringTraj
+     read(UnitTmp_,'(a)',iostat=iError) StringTraj
      if(index(StringTraj, '#START')>0)then
         do
-           read(iUnitTraj, '(a)', iostat=iError) StringTraj
+           read(UnitTmp_, '(a)', iostat=iError) StringTraj
            if(iError/=0)EXIT COUNTPOINTS
            nPoints = nPoints + 1
         enddo
@@ -108,14 +102,14 @@ program interpolate_output
   allocate(Xy_DI(2,nPoints))
   
   ! Rewind to start of file for reading times/positions.
-  rewind(unit=iUnitTraj) 
+  rewind(unit=UnitTmp_) 
 
   ! Read in the trajectory times/positions.
   READFILE: do
-     read(iUnitTraj,'(a)',iostat=iError) StringTraj
+     read(UnitTmp_,'(a)',iostat=iError) StringTraj
      if(index(StringTraj, '#START')>0)then
         do iLine=1, nPoints
-           read(iUnitTraj, *, iostat=iError) iTrajTime_DI(:,iLine), &
+           read(UnitTmp_, *, iostat=iError) iTrajTime_DI(:,iLine), &
                 Xy_DI(:,iLine)
            if(iError/=0)EXIT READFILE
 
@@ -127,15 +121,16 @@ program interpolate_output
   enddo READFILE
   
   ! Close the trajectory file.
-  close(unit=iUnitTraj) 
+  call close_file(NameCaller=NameProgram)
   
   !------------------------------------------------------------------------
   !                            INTERPOLATE
   MaxSnapshot = 100000
   nSnapshots = 0
+  iTrajTimestamp = 1
   do i=1,MaxSnapshot
      ! Read header info from .outs file.
-     call read_plot_file(NameFile = NameFileIn, iUnitIn = iUnitIn, &
+     call read_plot_file(NameFile = NameFileIn, iUnitIn = UnitTmp_, &
           TypeFileIn = TypeFileIn, &
           StringHeaderOut = StringHeader, &
           NameVarOut = NameVar, &
@@ -150,10 +145,10 @@ program interpolate_output
           n3Out = n3, &
           nOut_D = n_D, &         ! nOut_D grid size array
           ParamOut_I = Param_I)   ! parameters
-
+     
      if(Time < TrajTime_I(1)) CYCLE  ! if before start of trajectory file
      if(Time > TrajTime_I(nPoints)) EXIT  ! if after end of trajectory file
-
+     
      ! Create array to hold interpolated data.
      if(.not.allocated(InterpData_VI))then
         allocate(TimeOut_D(MaxSnapshot), InterpData_VI(nVar,MaxSnapshot), &
@@ -163,68 +158,60 @@ program interpolate_output
      ! Determine the shape of arrays from the header.
      !   Note: assumes no AMR/constant grid
      if(.not. allocated(Coord_DII)) &
-          allocate(Coord_DII(nDim, n1, n2), &
-          Var_VII(nVar, n1, n2), &
-          LogCoord_DII(nDim,n1,n2))
+          allocate(Coord_DII(nDim, n1, 0:n2+1), &
+          Var_VII(nVar, n1, 0:n2+1))
 
      ! Read the data at the snapshot.
-     call read_plot_file(NameFile=NameFileIn, iUnitIn=iUnitIn, &
+     call read_plot_file(NameFile=NameFileIn, iUnitIn=UnitTmp_, &
           TypeFileIn = TypeFileIn, &
-          CoordOut_DII = Coord_DII, &
-          VarOut_VII = Var_VII)
+          CoordOut_DII = Coord_DII(:,:,1:n2), &
+          VarOut_VII = Var_VII(:,:,1:n2))
      
      ! Interpolate location of trajectory file in time to snapshot.
-     iTrajTimestamp = 1
      do while(Time > TrajTime_I(iTrajTimestamp))
         iTrajTimestamp = iTrajTimestamp + 1
      enddo
      if(Time == TrajTime_I(iTrajTimestamp))then
         InterpCoord_D = Xy_DI(:,iTrajTimestamp)
      else
-        InterpCoord_D = interpolate_vector( &
-             a_VC = Xy_DI(:,iTrajTimestamp-1:iTrajTimestamp), &
-             nVar = nDim, &
-             nDim = 1, &
-             Min_D = [1], &
-             Max_D = [2], &
-             x_D = [Time], &
-             x1_I = TrajTime_I(iTrajTimestamp-1:iTrajTimestamp), &
-             DoExtrapolate = .false.)
+        weight = (TrajTime_I(iTrajTimestamp) - Time)/ &
+             (TrajTime_I(iTrajTimestamp)-TrajTime_I(iTrajTimestamp-1))
+        InterpCoord_D = Xy_DI(:,iTrajTimestamp-1)*weight + &
+             Xy_DI(:,iTrajTimestamp)*(1-weight)
      endif
 
      ! Convert coordinates to curvilinear.
      if(.not.IsCartesian)then
         ! Coordinates converted from [x,y] to [ln(r),phi]
-        InterpCoord_D = [log(sqrt(InterpCoord_D(1)**2 + &
-             InterpCoord_D(2)**2)), &
+        InterpCoord_D = [log(sqrt(sum(InterpCoord_D(1:2)**2))), &
              atan2_check(InterpCoord_D(2), InterpCoord_D(1))*cRadToDeg]
 
-        ! Use for non-uniform coords.
-        !LogCoord_DII(1,:,:) = log(sqrt(Coord_DII(1,:,:)**2 + &
-        !     Coord_DII(2,:,:)**2))
-        !LogCoord_DII(2,:,:) = atan2(Coord_DII(2,:,:), &
-        !     Coord_DII(1,:,:))*cRadToDeg
-
-        RadMin = log(sqrt(Coord_DII(1,1,1)**2+Coord_DII(2,1,1)**2))
-        RadMax = log(sqrt(Coord_DII(1,n1,n2)**2+Coord_DII(2,n1,n2)**2))
+        RadMin = log(sqrt(sum(Coord_DII(1:2,1,1)**2)))
+        RadMax = log(sqrt(sum(Coord_DII(1:2,n1,n2)**2)))
         PhiMin = atan2_check(Coord_DII(2,1,1),Coord_DII(1,1,1))*cRadToDeg
         PhiMax = atan2_check(Coord_DII(2,n1,n2),Coord_DII(1,n1,n2))*cRadToDeg
+        dR = (RadMax - RadMin)/(n1-1)
+        dPhi = (PhiMax - PhiMin)/(n2-1)
+        PhiMin = PhiMin - dPhi ! account for ghost cells
+        PhiMax = PhiMax + dPhi
      endif
 
+     ! Fill in ghost cells in phi.
+     Var_VII(:,:,0) = Var_VII(:,:,n2)
+     Var_VII(:,:,n2+1) = Var_VII(:,:,1)
+
      ! Normalize coordinates.
-     InterpCoord_D(1) = InterpCoord_D(1)/(RadMax-RadMin)*n1
-     InterpCoord_D(2) = InterpCoord_D(2)/(PhiMax-PhiMin)*n2
+     InterpCoord_D(1) = (InterpCoord_D(1)-RadMin) * (n1-1)/(RadMax-RadMin) + 1
+     InterpCoord_D(2) = (InterpCoord_D(2)-PhiMin) * (n2+1)/(PhiMax-PhiMin)
 
      ! Interpolate snapshot to trajectory location.
      InterpData_VI(:,i) = interpolate_vector( &
           a_VC = Var_VII, & ! variable array
           nVar = nVar, &    ! number of variables (11)
           nDim = 2, &       ! number of dimensions
-          Min_D = [1,1], &
-          Max_D = [n1,n2], &
+          Min_D = [1,0], &
+          Max_D = [n1,n2+1], &
           x_D = InterpCoord_D, & ! desired position
-          !x1_I = LogCoord_DII(1,:,1), & ! use for non-normalized coords
-          !x2_I = LogCoord_DII(2,1,:), & ! use for non-normalized coords
           DoExtrapolate = .false.)
 
      InterpCoord_DI(:,i) = InterpCoord_D
@@ -233,24 +220,25 @@ program interpolate_output
      nSnapshots = i ! Update number of snapshots in .outs file
   enddo
   
-  close(iUnitIn)
+  call close_file(NameCaller=NameProgram)
   deallocate(Coord_DII, Var_VII)
+
   
   !----------------------------------------------------------------------------
   !                              OUTPUT FILE
   ! Open file for interpolated output.
-  open(unit=iUnitInterp, file=NameInterpFile, iostat=iError, status="replace") 
+  call open_file(file=NameInterpFile, NameCaller=NameProgram) 
 
   ! Include header.
-  write(iUnitInterp,*)'t ',NameVar
+  write(UnitTmp_,*)'t ',NameVar
 
   ! Write data. For now, time is in simulation time.
   do iLine=1,nSnapshots
-     write(iUnitInterp,*)TimeOut_D(iLine), &
+     write(UnitTmp_,*)TimeOut_D(iLine), &
           InterpCoord_DI(:,iLine), InterpData_VI(:,iLine)
   enddo
   
-  close(iUnitInterp)
+  call close_file(NameCaller=NameProgram)
 
   
 end program interpolate_output
