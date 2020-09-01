@@ -1045,7 +1045,7 @@ contains
     real :: uLeft_D(3), uRight_D(3)
     real :: B0_D(3), dB0_D(3), Current_D(3)
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: DissipationFlux_V(nFlux)
+    real :: DissipationFlux_V(p_+1) ! MHD variables + energy
     real :: Pe                      ! electron pressure -> grad Pe
     real :: Pwave
     real :: GradPe_D(3)
@@ -1412,8 +1412,12 @@ contains
       associate( CmaxDt => FFV%CmaxDt, &
          FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V )
 
-      Flux_V = 0.5*(FluxLeft_V + FluxRight_V) + DissipationFlux_V
-      CmaxDt = Cmax
+        Flux_V(1:p_) = 0.5*(FluxLeft_V(1:p_) + FluxRight_V(1:p_)) &
+             + DissipationFlux_V(1:p_)
+        Flux_V(Energy_) = 0.5*(FluxLeft_V(Energy_) + FluxRight_V(Energy_)) &
+             + DissipationFlux_V(p_+1)
+
+        CmaxDt = Cmax
 
       end associate
     end subroutine roe_solver_new

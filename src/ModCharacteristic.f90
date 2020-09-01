@@ -5,7 +5,7 @@ module ModCharacteristicMhd
 
 !  use ModUtilities, ONLY: norm2
   use ModCoordTransform, ONLY: cross_product
-  use ModVarIndexes
+  use ModVarIndexes, nVarAll => nVar
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
   use ModMain, ONLY: Climit
   use ModNumConst, ONLY: cTolerance
@@ -15,11 +15,14 @@ module ModCharacteristicMhd
   private
   public:: get_dissipation_flux_mhd
 
-  ! Named MHD wave indexes
-  integer, parameter :: EntropyW_=Rho_, AlfvenRW_=Ux_, AlfvenLW_=Uy_, &
+  ! pressure is the last MHD variable
+  integer, parameter:: nVar = p_
+
+  ! Named characteristic wave indexes
+  integer, parameter:: EntropyW_=Rho_, AlfvenRW_=Ux_, AlfvenLW_=Uy_, &
        SlowRW_=Uz_, FastRW_=Bx_, SlowLW_=By_, FastLW_=Bz_, DivBW_=nVar
 
-  real, parameter :: cTolerance2=cTolerance**2
+  real, parameter:: cTolerance2=cTolerance**2
 
 contains
   !============================================================================
@@ -49,9 +52,9 @@ contains
     ! Variable transformtaions:
     ! make sense only for the increments, not for variables
 
-    real,dimension(nVar)::primitive_from_pseudochar
-    real,dimension(nVar),intent(in)::PseudoChar_V
-    real,intent(in)::RhoInv,XH
+    real, dimension(nVar):: primitive_from_pseudochar
+    real, intent(in):: PseudoChar_V(nVar)
+    real, intent(in):: RhoInv, XH
     !--------------------------------------------------------------------------
     primitive_from_pseudochar=PseudoChar_V
     primitive_from_pseudochar(Ux_:Uz_)=&
@@ -70,16 +73,19 @@ contains
     real, intent(in)::U_D(3), B_D(3)
     real, intent(in)::XH
 
-    real::flux_from_pseudochar(nVar+1)
+    real:: flux_from_pseudochar(nVar+1) ! +1 for energy
     real:: PseudoChar_V(nVar)
-
     !--------------------------------------------------------------------------
     flux_from_pseudochar(1:nVar) = PseudoChar_V
     flux_from_pseudochar(RhoUx_:RhoUz_) = &
          PseudoChar_V(RhoUx_:RhoUz_) + PseudoChar_V(Rho_)*U_D
+
+    ! Energy flux
     flux_from_pseudochar(nVar+1) = PseudoChar_V(P_)*InvGammaMinus1+&
-         sum(PseudoChar_V(RhoUx_:RhoUz_)*U_D) + sum(PseudoChar_V(Bx_:Bz_)*B_D) + &
-         PseudoChar_V(Rho_)*(0.5*sum(U_D**2) + (1 - InvGammaMinus1)*XH)
+         sum(PseudoChar_V(RhoUx_:RhoUz_)*U_D) + sum(PseudoChar_V(Bx_:Bz_)*B_D)&
+         + PseudoChar_V(Rho_)*(0.5*sum(U_D**2) + (1 - InvGammaMinus1)*XH)
+
+    ! Pressure flux
     flux_from_pseudochar(P_) = PseudoChar_V(P_) - XH*PseudoChar_V(Rho_)
 
   end function flux_from_pseudochar
@@ -96,14 +102,14 @@ contains
        EigenvalueL_V,       &
        EigenvalueR_V)
 
-    real,intent(in) :: Normal_D(3)
-    real,intent(in) :: StateL_V(nVar), StateR_V(nVar) ! Primitive vars:Rho,u,B,P
-    real,intent(in) :: B0_D(3)
-    real,intent(out):: Eigenvector_VV(nVar,nVar) ! Rho, RhoU, B, P+XH*Rho
-    real,intent(out):: DeltaWave_V(nVar)         ! Dimensionless
-    real,intent(out):: RhoH, UH_D(3), B1H_D(3), XH
-    real,optional,intent(out),dimension(nVar-1):: &
-         Eigenvalue_V, EigenvalueL_V, EigenvalueR_V
+    real, intent(in) :: Normal_D(3)
+    real, intent(in) :: StateL_V(nVar), StateR_V(nVar) ! Primitives: Rho,u,B,P
+    real, intent(in) :: B0_D(3)
+    real, intent(out):: Eigenvector_VV(nVar,nVar) ! Rho, RhoU, B, P+XH*Rho
+    real, intent(out):: DeltaWave_V(nVar)         ! Dimensionless
+    real, intent(out):: RhoH, UH_D(3), B1H_D(3), XH
+    real, optional, intent(out):: &
+         Eigenvalue_V(nVar-1), EigenvalueL_V(nVar-1), EigenvalueR_V(nVar-1)
 
     ! Jump in the state
     real:: dState_V(nVar)
@@ -367,11 +373,10 @@ contains
     !==========================================================================
     !-------------------------------------------------------------------------!
     subroutine set_eigenvalues(Value_V,Cs,Ca,Cf)
-      real,dimension(nVar-1),intent(inout)::Value_V
-      real,intent(in):: Cs, Ca, Cf
-      !\
-      ! Eigenvalues
-      !/
+
+      real, intent(inout):: Value_V(nVar-1)
+      real, intent(in)   :: Cs, Ca, Cf
+
       !------------------------------------------------------------------------
       Value_V(AlfvenRW_) = Value_V(AlfvenRW_) + Ca
       Value_V(AlfvenLW_) = Value_V(AlfvenLW_) - Ca
@@ -381,7 +386,6 @@ contains
       Value_V(FastLW_)   = Value_V(FastLW_  ) - Cf
     end subroutine set_eigenvalues
     !==========================================================================
-    !-------------------------------------------------------------------------!
     subroutine get_characteristic_speeds(A,         &
          RhoInv,    &
          RhoSqrt,   &
@@ -391,9 +395,9 @@ contains
          Ca,        &
          Cf)
 
-      real,intent(inout)::A ! In: speed of sound squared, out speed of sound
-      real,intent(in)   ::RhoInv,RhoSqrt,Bn,BTang_D(3)
-      real,intent(out)  ::Cs,Ca,Cf
+      real,intent(inout):: A ! In: speed of sound squared, out speed of sound
+      real,intent(in)   :: RhoInv, RhoSqrt, Bn, BTang_D(3)
+      real,intent(out)  :: Cs, Ca, Cf
       !------------------------------------------------------------------------
       A = sqrt(A) ! Speed of sound
 
@@ -418,14 +422,16 @@ contains
        LambdaB0, &
        EigenvalueFixed_V,CMax,IsBoundary)
 
-    real,intent(in) ,dimension(nVar-1)::Eigenvalue_V
-    real,intent(in) ,dimension(nVar-1)  ::EigenvalueL_V,EigenvalueR_V
-    real,intent(in) ::LambdaB0
-    real,intent(out),dimension(nVar-1)  ::EigenvalueFixed_V
-    real,intent(out)::cMax
-    logical,intent(in)::IsBoundary
-    integer::iWave
-    real::Eps_V(nVar-1),Lambda
+    real,    intent(in) :: Eigenvalue_V(nVar-1)
+    real,    intent(in) :: EigenvalueL_V(nVar-1), EigenvalueR_V(nVar-1)
+    real,    intent(in) :: LambdaB0
+    real,    intent(out):: EigenvalueFixed_V(nVar-1)
+    real,    intent(out):: cMax
+    logical, intent(in) :: IsBoundary
+
+    integer:: iWave
+    real:: Eps_V(nVar-1), Lambda
+
     character(len=*), parameter:: NameSub = 'get_fixed_abs_eigenvalue'
     !--------------------------------------------------------------------------
     Eps_V=max(LambdaB0,abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05)
@@ -456,20 +462,18 @@ contains
     real,   intent(out):: DissipationFlux_V(nVar+1)
     real,   intent(out):: cMax, Un
 
-    real,dimension(nVar,nVar)::Eigenvector_VV
-    real,dimension(nVar)     ::DeltaWave_V
-    real,dimension(nVar-1)   :: Eigenvalue_V
-    real,dimension(nVar-1)     ::   EigenvalueL_V,  &
-         EigenvalueR_V
-    real :: RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,LambdaB0
-    real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
-    integer::iWave! ,iDir_D(3)
+    real:: Eigenvector_VV(nVar,nVar)
+    real:: DeltaWave_V(nVar)
+    real:: Eigenvalue_V(nVar-1), EigenvalueL_V(nVar-1), EigenvalueR_V(nVar-1)
+    real:: RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,LambdaB0
+    real:: EigenvalueFixed_V(nVar), FluxPseudoChar_V(nVar)
+    integer:: iWave
 
     !--------------------------------------------------------------------------
     call decompose_state(Dir_D, StateL_V,StateR_V, B0_D, &
          Eigenvector_VV,        &
          DeltaWave_V,           &    ! Wave amplitudes, dimensionless
-         RhoH, XH, UH_D, B1H_D, &   ! Transformation coefficients
+         RhoH, XH, UH_D, B1H_D, &    ! transformation coefficients
          Eigenvalue_V, EigenvalueL_V, EigenvalueR_V)
 
     LambdaB0 = sqrt((sum(DeltaB0_D**2))/RhoH)
@@ -493,7 +497,7 @@ contains
     end if
     FluxPseudoChar_V = 0.0
 
-    do iWave=1,nVar-1
+    do iWave=1, nVar-1
        FluxPseudoChar_V = FluxPseudoChar_V + &
             Eigenvector_VV(:,iWave)*EigenvalueFixed_V(iWave)*&
             DeltaWave_V(iWave)
@@ -504,6 +508,7 @@ contains
          (UnL*DeltaBnR+UnR*DeltaBnL+&
          EigenvalueFixed_V(DivBW_)*(&
          DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
+
 
     DissipationFlux_V = 0.5*&
          flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
