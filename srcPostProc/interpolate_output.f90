@@ -29,6 +29,7 @@ program interpolate_output
   integer :: nPoints ! number of timestamps in trajectory file
   real    :: StartTime ! simulation start time
   real    :: DateTime ! timestamp in simulation time
+  integer :: iStartTime(7)
   
   ! I/O
   integer :: iError      ! used for all files
@@ -60,7 +61,43 @@ program interpolate_output
   character(len=*), parameter:: NameProgram = 'interpolate_output'
   !-------------------------------------------------------------------------
 
-  ! READ TRAJECTORY FILE OF POSITIONS AND TIMES
+  ! Read INTERPOLATE.in for file names and types.
+  ! Format:
+  !       [movie filename]
+  !       [.outs file type (real4/real8/ascii)]
+  !       [trajectory filename]
+  !       [interpolated filename]
+  !
+  !   e.g.:
+  !            z=0_mhd_1_e19970517-033600-000.outs
+  !            real4
+  !            MARS.dat
+  !            my_interpolated_output.dat
+  !
+  !  Note: Movie file MUST contain the simulation start time in the filename
+  !        for accurate conversion between satellite time and simulation time.
+
+  call open_file(File='INTERPOLATE.in', Status='old', NameCaller=NameProgram)
+  read(UnitTmp_,'(a)',iostat=iError) NameFileIn
+  read(UnitTmp_,'(a)',iostat=iError) TypeFileIn
+
+  ! Get simulation start time from filename.
+  i = index(NameFileIn,'_e')+2
+  read(NameFileIn(i:i+3),*) iStartTime(1) ! year
+  read(NameFileIn(i+4:i+5),*) iStartTime(2) ! month
+  read(NameFileIn(i+6:i+7),*) iStartTime(3) ! dy
+  read(NameFileIn(i+9:i+10),*) iStartTime(4) ! hr
+  read(NameFileIn(i+11:i+12),*) iStartTime(5) ! min
+  read(NameFileIn(i+13:i+14),*) iStartTime(6) ! sec
+  read(NameFileIn(i+16:i+18),*) iStartTime(7) ! msc
+  call time_int_to_real(iStartTime,StartTime)
+  
+  read(UnitTmp_,'(a)',iostat=iError) NameTrajFile
+  read(UnitTmp_,'(a)',iostat=iError) NameInterpFile
+  call close_file(NameCaller=NameProgram)
+  
+  !---------------------------------------------------------------------------
+  !                   READ TRAJECTORY
   !  Should be in the same format as satellite files.
   !  All commands prior to #START will be ignored.
   !  Coordinate system is assumed to be the same as the .outs file.
@@ -68,17 +105,6 @@ program interpolate_output
   !             year mo dy hr mn sc msc x y z
   !             #START
   !              1997 5 17 3 35 00 000 -0.368 5.275 0.0
-
-  call open_file(File='INTERPOLATE.in', Status='old', NameCaller=NameProgram)
-  read(UnitTmp_,'(a)',iostat=iError) NameFileIn
-  read(UnitTmp_,'(a)',iostat=iError) TypeFileIn
-  read(UnitTmp_,'(a)',iostat=iError) NameTrajFile
-  read(UnitTmp_,'(a)',iostat=iError) NameInterpFile
-  read(UnitTmp_,*,iostat=iError) StartTime
-  call close_file(NameCaller=NameProgram)
-  
-  !---------------------------------------------------------------------------
-  !                   READ TRAJECTORY
   
   ! Open the trajectory file.
   call open_file(File=NameTrajFile, Status="old", NameCaller=NameProgram)
