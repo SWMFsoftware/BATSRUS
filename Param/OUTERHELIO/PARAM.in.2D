@@ -1,5 +1,8 @@
 ! PARAM.in file for 2D Outer Heliosphere test
 ! Created 2020.05.20, Keebler
+! Updated 2020.09.01, changed timeframe
+! 	  	      added lookup tables
+!		      modified normalization
 
 #UPDATECHECK
 F
@@ -12,16 +15,24 @@ T                       UseComp
 F                       IsTimeAccurate
 
 #STARTTIME
-1990			iYear
-11			iMonth
+2017			iYear
+1			iMonth
 1			iDay
 0			iHour
 0			iMinute
 0			iSecond
 
-#SOLARWINDFILE
-T			UseSolarWindFile
-imf_oh2d_test.dat	NameSolarWindFile
+#LOOKUPTABLE
+SW1			NameTable
+load			NameCommand
+oh2d_l1_test.dat	NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+SW2			NameTable
+load			NameCommand
+oh2d_stereoa_test.dat	NameFile
+ascii			TypeFile
 
 #GRAVITY
 F                       UseGravity
@@ -30,14 +41,14 @@ F                       UseGravity
 #BODY
 T                       UseBody
 1.0                     rBody [AU] Earth's orbit
-0.01                     BodyNDim [/cc] (used for plotting only)
+0.01                    BodyNDim [/cc] (used for plotting only)
 1.09E5                  BodyTDim [K] (used for plotting only)
 
 #NORMALIZATION
-USER
+OUTERHELIO		TypeNormalization
 
 #RESTARTOUTFILE
-one
+one			StringRestartOutFile
 
 #PLOTFILENAME
 year                    NameMaxTimeUnit
@@ -80,7 +91,7 @@ user                    SolarWindInput
 2                       nOrder
 Linde                   TypeFlux
 mc3                     TypeLimiter
-1.5			BetaLimiter
+1.2			BetaLimiter
 
 #TIMESTEPPING
 2                       nStage (1 or 2)
@@ -115,10 +126,6 @@ z=0 MHD idl_ascii       StringPlot
 +init +ic		StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
-
- ! not actually used
-
- ! add IMF file, explore removing this section as well
 
 #SOLARWINDH     ! slow solar wind
 5.0                    SWH_rho_dim [n/cc]
@@ -155,8 +162,8 @@ T		       DoTimeAccurate
 1		       nPlotFile
 z=0 MHD idl_ascii      StringPlot
 -1  		       DnSavePlot
-0.5 day		       DtSavePlot (1/2 day)
--1		       DxSavePlot
+0.5 day		       DtSavePlot
+0.0		       DxSavePlot
 
 #STOP
 -1		       MaxIteration
