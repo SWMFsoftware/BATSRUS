@@ -58,7 +58,7 @@ F			IsAsymmetric
 T			DoNormalizeCell
 
 #LOOKUPTABLE
-o			NameTable
+element_o		NameTable
 load			NameCommand
 o_tbl.dat			
 ascii			TypeFile
