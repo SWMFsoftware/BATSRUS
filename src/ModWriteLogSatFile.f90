@@ -114,7 +114,8 @@ contains
     nLogR    = 0
     LogR_I   = 0.0
     if (iSatIn == 0) then
-       call split_string(log_vars, MaxLogVar, NameLogVar_I, nLogVar)
+       call split_string(log_vars, MaxLogVar, NameLogVar_I, nLogVar, &
+            UseArraySyntaxIn=.true.)
        do i=1,nLogVar
           if(index(NameLogVar_I(i),'flx')>0) nFluxVar = nFluxVar + 1
           if(index(NameLogVar_I(i),'pnt')>0 .or.  &

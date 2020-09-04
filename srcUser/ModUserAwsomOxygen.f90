@@ -52,9 +52,6 @@ module ModUser
  ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
     ! 1/(1+2*0.1)
   real                           :: ProtonElectronRatio = 0.83
-  real                           :: MassOxygen = 15.999
-  integer                        :: nElement = 0
-  character (len=2), allocatable :: NameElement_I(:)
   integer, allocatable           :: iTableElement_I(:)
   
 contains
@@ -98,13 +95,6 @@ contains
 
        case("#COLLISIONFACTOR")
           call read_var('CollisionFactor', CollisionFactor)
-
-       case("#CHARGESTATE")   
-          call read_var('nElement',nElement)
-          allocate(NameElement_I(nElement))
-          do iElement = 1, nElement
-             call read_var('NameElement', NameElement_I(iElement))
-          end do
           
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -140,7 +130,8 @@ contains
     use ModNumConst,    ONLY: cTwoPi, cDegToRad
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_
-    use ModVarIndexes,  ONLY: ScalarFirst_, ScalarLast_, NameVar_V 
+    use ModVarIndexes,  ONLY: ScalarFirst_, ScalarLast_, NameVar_V, &
+         NameElement_I, nElement 
     use ModLookupTable, ONLY: i_lookup_table, Table_I
     
     integer :: iIon, jIon, iVar
@@ -242,7 +233,7 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_, &
          UnitT_, No2Si_V 
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_, &
-         Ew_, ScalarFirst_
+         Ew_, ScalarFirst_, nElement
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
          MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_, &
          UseMultiIon, iPparIon_I, IsIon_I
@@ -584,7 +575,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
-       call get_wave_reflection(iBlock)
+       call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
                /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
@@ -599,7 +590,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
-       call get_wave_reflection(iBlock)
+       call get_wave_reflection(iBlock, IsNewBlockAlfven)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Cdiss_C(i,j,k)
@@ -614,7 +605,7 @@ contains
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
           IsNewBlockAlfven = .true.
-          call get_wave_reflection(iBlock)
+          call get_wave_reflection(iBlock, IsNewBlockAlfven)
        end if
 
        call get_block_heating(iBlock)
@@ -642,7 +633,7 @@ contains
           if(UseAlignmentAngle)then
              Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
              IsNewBlockAlfven = .true.
-             call get_wave_reflection(iBlock)
+             call get_wave_reflection(iBlock, IsNewBlockAlfven)
           end if
 
           call get_block_heating(iBlock)
@@ -706,7 +697,7 @@ contains
     use ModPhysics,     ONLY: InvGammaMinus1, GBody, rBody, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitX_, UnitT_, UnitN_
     use ModVarIndexes,  ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
-         Ehot_, p_, ScalarFirst_, Rho_
+         Ehot_, p_, ScalarFirst_, Rho_, nElement
     use ModMultiFluid,  ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, &
          iP_I, iPparIon_I, IsIon_I
@@ -936,7 +927,8 @@ contains
   subroutine user_calc_sources_impl(iBlock)
 
     use ModAdvance,     ONLY: State_VGB, Source_VC, UseElectronPressure
-    use ModVarIndexes,  ONLY: nVar, Rho_, p_, Pe_, ScalarFirst_, ScalarLast_
+    use ModVarIndexes,  ONLY: nVar, Rho_, p_, Pe_, ScalarFirst_, ScalarLast_, &
+         nElement
     use ModPhysics,     ONLY: No2Si_V, Si2No_V, UnitTemperature_,UnitT_,UnitN_
     use ModLookupTable, ONLY: Table_I, interpolate_lookup_table
     integer, intent(in) :: iBlock

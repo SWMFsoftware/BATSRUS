@@ -6,14 +6,20 @@ module ModVarIndexes
 
   use ModSingleFluid
   use ModExtraVariables, &
-       Redefine1 => nWave, &
-       Redefine2 => WaveFirst_, &
-       Redefine3 => WaveLast_, &
-       Redefine4 => Ppar_, &
-       Redefine5 => iPparIon_I, &
-       Redefine6 => Pe_, &
-       Redefine7 => Ehot_
-
+       Redefine1  => nWave, &
+       Redefine2  => WaveFirst_, &
+       Redefine3  => WaveLast_, &
+       Redefine4  => Ppar_, &
+       Redefine5  => iPparIon_I, &
+       Redefine6  => Pe_, &
+       Redefine7  => Ehot_, &
+       Redefine8  => nElement, &
+       Redefine9  => NameElement_I, &
+       Redefine10 => nChargeState_I, &
+       Redefine11 => nChargeStateAll, &
+       Redefine12 => ChargeStateFirst_, &
+       Redefine13 => ChargeStateLast_
+  
   implicit none
 
   save
@@ -30,7 +36,7 @@ module ModVarIndexes
   !!! SOMEHOW move to Config.pl
   ! Number of ions of element with atomic number Z
   integer, parameter          :: nElement = 1
-  character(len=*), parameter :: NameElement_I(1:nElement) = ['o']
+  character(len=2), parameter :: NameElement_I(1:nElement) = ['o']
   integer, parameter          :: nChargeState_I(1:nElement) = [9]   ! Oxygen
   integer, parameter          :: nChargeStateAll = 9
   !!!
@@ -92,21 +98,21 @@ module ModVarIndexes
        1.0 ] ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=6) :: NameVar_V(nVar+1) = [ &
-       'Rho   ', & ! Rho_
-       'Mx    ', & ! RhoUx_
-       'My    ', & ! RhoUy_
-       'Mz    ', & ! RhoUz_
-       'Bx    ', & ! Bx_
-       'By    ', & ! By_
-       'Bz    ', & ! Bz_
-       'Ehot  ', & ! Ehot_
-       ('CS??  ', iChargeState=ChargeStateFirst_,ChargeStateLast_), &  
-       ('I??   ', iWave=WaveFirst_,WaveLast_), &
-       'Pe    ', & ! Pe_
-       'Ppar  ', & ! Ppar_
-       'p     ', & ! p_
-       'e     ' ] ! Energy_
+  character(len=4) :: NameVar_V(nVar+1) = [ &
+       'Rho ', & ! Rho_
+       'Mx  ', & ! RhoUx_
+       'My  ', & ! RhoUy_
+       'Mz  ', & ! RhoUz_
+       'Bx  ', & ! Bx_
+       'By  ', & ! By_
+       'Bz  ', & ! Bz_
+       'Ehot', & ! Ehot_
+       ('El??', iChargeState=ChargeStateFirst_,ChargeStateLast_), &  
+       ('I?? ', iWave=WaveFirst_,WaveLast_), &
+       'Pe  ', & ! Pe_
+       'Ppar', & ! Ppar_
+       'p   ', & ! p_
+       'e   ' ] ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_

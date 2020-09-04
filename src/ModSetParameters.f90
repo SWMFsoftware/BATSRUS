@@ -2668,6 +2668,8 @@ contains
       character(len=50) :: String, NameFluid
       character(len=500):: StringConservative, StringPrimitivePlot
       character(len=500):: StringPrimitiveOrig
+      integer           :: iVar, iElement, iChargeState
+      character(len=4)  :: NameChargestate
       !------------------------------------------------------------------------
 
       ! Fix the NameVar_V string for waves
@@ -2686,6 +2688,24 @@ contains
          end do
       end if
 
+      ! Fix the NameVar_V string for charge states
+      if(ChargeStateLast_ > 1)then
+         iVar = ChargeStateFirst_
+         do iElement = 1, nElement
+            do iChargeState = 1, nChargeState_I(iElement)
+               if(nChargeState_I(iElement) < 10) then
+                  write(NameChargestate,'(a,i1.1)')&
+                       trim(NameElement_I(iElement)),iChargeState
+               else
+                  write(NameChargestate,'(a,i2.2)')&
+                       trim(NameElement_I(iElement)),iChargeState
+               end if
+               NameVar_V(iVar) = NameChargeState
+               iVar = iVar + 1
+            end do
+         end do
+      end if
+      
       ! space separated NameVar string containing all variable names
       call join_string(nVar, NameVar_V, NameVarCouple)
 
@@ -2791,6 +2811,32 @@ contains
             end if
          end if
 
+         ! Overwrite the charge state vars, trying to be consistent with
+         ! previous equation files
+         do iElement = 1, nElement
+            if (iVar >= ChargeStateFirst_+sum(nChargeState_I(1:iElement-1))&
+                 .and. iVar <= ChargeStateFirst_ + &
+                 sum(nChargeState_I(1:iElement))-1 .and. &
+                 ChargeStateLast_ > 1) then      
+               if(iVar == ChargeStateFirst_+sum(nChargeState_I(1:iElement-1)))&
+                    then                  
+                  if(nChargeState_I(iElement) < 10) then
+                     write(NamePrimitivePlot,'(a,i1.1,a)')&
+                          trim(NameElement_I(iElement))//'(', &
+                          nChargeState_I(iElement),')'                     
+                  else
+                     write(NamePrimitivePlot,'(a,i2.2,a)')&
+                          trim(NameElement_I(iElement))//'(',&
+                          nChargeState_I(iElement),')'
+                  end if
+                  NameConservative = NamePrimitivePlot      
+               else
+                  NameConservative  = ''
+                  NamePrimitivePlot = ''
+               end if
+            end if
+         end do
+         
          ! only add to string if it is not an empty string
          if (len_trim(NameConservative) >0) &
               StringConservative  = trim(StringConservative) //' '//  &
@@ -2800,7 +2846,7 @@ contains
               trim(NamePrimitivePlot)
       end do
 
-      ! combine the string array into a space separated list of nVar primitive
+      ! Combine the string array into a space separated list of nVar primitive
       ! variables
       call join_string(nVar, NamePrimitive_V, StringPrimitiveOrig)
 

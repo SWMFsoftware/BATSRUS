@@ -30,6 +30,12 @@ module ModExtraVariables
   integer, parameter :: nMaterial = 1
   integer, parameter :: MaterialFirst_ = 1, MaterialLast_ = 1
 
+  ! The named index range for charge states
+  integer, parameter :: nChargeStateAll = 1
+  integer, parameter :: ChargeStateFirst_ = 1, ChargeStateLast_ = 1
+  integer, parameter :: nElement = 1, nChargeState_I(nElement) = [1] 
+  character(len=1), parameter :: NameElement_I(1:nElement) = [' ']
+  
   ! The named index range for species and their masses
   integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
   real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)

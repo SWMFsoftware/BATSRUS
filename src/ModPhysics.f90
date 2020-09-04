@@ -1056,6 +1056,9 @@ contains
           elseif(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
              iUnitPrim_V(iVar) = UnitEnergyDens_
+          elseif(iVar >= ChargeStateFirst_ .and. iVar <= ChargeStateLast_)then
+             iUnitCons_V(iVar) = UnitRho_
+             iUnitPrim_V(iVar) = UnitRho_
           else
              if(iProc == 0) write(*,*) NameSub,': ',NameVar, &
                   ' was not found to set iUnitState_V,', &

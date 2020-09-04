@@ -58,7 +58,7 @@ F			IsAsymmetric
 T			DoNormalizeCell
 
 #LOOKUPTABLE
-O			NameTable
+o			NameTable
 load			NameCommand
 o_tbl.dat			
 ascii			TypeFile
@@ -184,7 +184,8 @@ minmod			TypeLimiter
 #LIMITER
 T			UseLogRhoLimiter
 T			UseLogPLimiter
-F			UseRhoRatioLimiter  !!! T
+T			UseRhoRatioLimiter  !!!
+o(9)
 
 #MINIMUMTEMPERATURE
 5e4			TMinDim  [K] for fluid 1
