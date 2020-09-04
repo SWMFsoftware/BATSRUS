@@ -206,7 +206,7 @@ contains
        allocate(iTableElement_I(nElement))
        do iElement = 1, nElement
           iTableElement_I(iElement) = &
-               i_lookup_table('element_'//trim(NameElement_I(iElement)))
+               i_lookup_table('ionization_'//trim(NameElement_I(iElement)))
           if(.not. iTableElement_I(iElement) > 0)&
                call stop_mpi('table requited for element '// &
                NameElement_I(iElement))
