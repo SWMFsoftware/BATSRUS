@@ -3886,7 +3886,8 @@ No magnetometer grid file is saved by default.
 				<option name="1D" value="1d/1d_"
 					if="$plotform =~ /\btec\b/"/>
 				<option name="ieb" />
-				<option name="lcb" />
+				<option name="last closed B" value="lcb" />
+				<option name="buffer" vale="buf" />
 			</part>
 			<part name="plotvar" type="string" required="T"
 				input="select">
@@ -4045,7 +4046,7 @@ No magnetometer grid file is saved by default.
 			<parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
 		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|shl|los|rfr|lin|eqr|eqb)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="200"/>
 			<parameter name="NamePars" type="string" length="200" default="{default}"/>
