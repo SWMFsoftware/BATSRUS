@@ -2252,14 +2252,16 @@ it gets overwritten by the binary value saved into the .rst binary files.
 The default value is tSimulation=0.
 </command>
 
-<command name="NSTEP" if="$_IsFirstSession">
+<command name="NSTEP" if="$_IsFirstSession" multiple="T">
 	<parameter name="nStep" type="integer" min="0" default="0" />
 
 #NSTEP
 100			nStep
 
 Set nStep for the component. Typically used in the restart.H header file.
-Generally it is not inserted in a PARAM.in file by the user.
+Generally it is not inserted in a PARAM.in file by the user, except
+when the number of steps are reset for extremely long runs, such as
+the operational run at NOAA SWPC, to avoid integer overflow.
 
 The default is nStep=0 as the starting time step with no restart.
 </command>
