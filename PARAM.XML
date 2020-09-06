@@ -582,7 +582,7 @@ call sequence. The NAGFOR compile combined with the -debug flag can do that.
 </command>
 
 <command name="TEST">
-	<parameter name="TestString" type="string" length="100"/>
+	<parameter name="StringTest" type="string" length="100"/>
 #TEST
 read_inputs
 
