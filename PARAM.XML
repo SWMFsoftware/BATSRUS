@@ -7802,7 +7802,7 @@ Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 
 </command>
 
-<command name="PICREGION">
+<command name="PICGRID">
 	 <parameter name="nPicRegion" type="integer" min="1"/>
 	 <for from="1" to="$nPicRegion">
 	      <parameter name="xMinPic" type="real"/>
@@ -7816,7 +7816,7 @@ Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 	      <parameter name="DzPic"   type="real" if="$nK != 1" />
 	 </for>
 
-#PICREGION
+#PICGRID
 2			nPicRegion
   6.			xMinCut
  10.			xMaxCut
@@ -7837,7 +7837,8 @@ Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 1/8			DyPic   (read for 2D or 3D only)
 1/8			DzPic   (read for 3D only)
 
-Define the number of PIC regions and their size and grid resolution.
+This command is a rename of the previous command #PICREGION, which defines
+the number of PIC regions and their size and grid resolution.
 All distances are given in the BATSRUS distance units.
 When coupling with IPIC3D, the number of PIC cells in any dimension
 should be an integer multiple of the number of subdomains in that direction
