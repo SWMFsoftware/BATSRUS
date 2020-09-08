@@ -3908,6 +3908,8 @@ No magnetometer grid file is saved by default.
 				<option name="EUV image variables" value="euv"/>
 				<option name="Tabular image variable"      value="tbl"/>
 				<option name="Radio wave intensity" value="rwi"/>
+				<option name="Instruments for line-of-sight images" value="INS"/>
+				<option name="Instruments for line-of-sight images, scaled" value="ins"/>
 				<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Equatorial rays" value="eqr"  if="$plotarea eq 'eqr'"/>
