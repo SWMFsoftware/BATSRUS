@@ -553,7 +553,7 @@ contains
           call write_prefix; write(iUnitOut,*) NameSub, &
                ': adjusting Time_Simulation=', Time_Simulation,&
                ' to TimeSimulationLimit=', TimeSimulationLimit,&
-               ' with Dt=', Dt
+               ' with Dt=', Dt*No2Si_V(UnitT_)
        end if
 
        Time_Simulation = TimeSimulationLimit
