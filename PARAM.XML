@@ -8662,7 +8662,8 @@ If UseSpeedMin is true the minimum speed is enforced. If above the
 radial distance of rSpeedMin the radial speed falls below SpeedMin 
 a force is applied (via a source term) to push the solar wind speed 
 above SpeedMin. TauSpeedMin is in seconds. This command is to be included 
-within the USERINPUT section.
+within the USERINPUT section and switch on the source explicit
+user switch.
 
 By default no minimum speed limit is applied.
 </command>
