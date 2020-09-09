@@ -21,7 +21,9 @@ module ModUser
        IMPLEMENTED7 => user_set_resistivity,            &
        IMPLEMENTED8 => user_calc_sources_impl,          &
        IMPLEMENTED9 => user_init_point_implicit,        &
-       IMPLEMENTED10=> user_get_b0
+       IMPLEMENTED10=> user_get_b0,                     &
+       IMPLEMENTED11=> user_calc_sources_expl,          &
+       IMPLEMENTED12=> user_initial_perturbation
 
   include 'user_module.h' ! list of public methods
 
@@ -68,6 +70,12 @@ module ModUser
 
   ! Multiply the collisionfrequencies by CollisionFactor
   real :: CollisionFactor = 1.0
+
+  ! Minimum speed parameters
+  logical :: UseSpeedMin = .false.
+  real    :: rSpeedMin ! radius above which speed is pushed above SpeedMin 
+  real    :: SpeedMin, SpeedMinDim       ! minimum radial speed 
+  real    :: TauSpeedMin, TauSpeedMinDim ! rate of pushing towards SpeedMin
 
 contains
   !============================================================================
@@ -130,6 +138,14 @@ contains
        case("#COLLISIONFACTOR")
           call read_var('CollisionFactor', CollisionFactor)
 
+       case("#MINIMUMSPEED")
+          call read_var('UseSpeedMin',  UseSpeedMin)
+          if (UseSpeedMin) then
+             call read_var('rSpeedMin',    rSpeedMin)
+             call read_var('SpeedMin',     SpeedMinDim)
+             call read_var('TauSpeedMin',  TauSpeedMinDim)
+          endif
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -164,8 +180,10 @@ contains
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_, &
-         UnitU_
-    ! UnitB_ and Unit_U are for jet only
+         UnitU_, Io2No_V, BodyNDim_I, BodyTDim_I, Gamma
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,   ONLY: EEE_initialize
+
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
 
@@ -183,8 +201,10 @@ contains
     UseWavePressure = .true.
 
     ! convert to normalized units
-    Nchromo_I = NchromoSi_I*Si2No_V(UnitN_)
-    Tchromo = TchromoSi*Si2No_V(UnitTemperature_)
+    Nchromo_I   = NchromoSi_I*Si2No_V(UnitN_)
+    Tchromo     = TchromoSi*Si2No_V(UnitTemperature_)
+    SpeedMin    = SpeedMinDim*Io2No_V(UnitU_)
+    TauSpeedMin = TauSpeedMinDim*Io2No_V(UnitT_)
 
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
@@ -269,6 +289,9 @@ contains
             (1.-ProfileExponentJet)
 
     endif
+
+    ! Initialize CME
+    if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -438,7 +461,7 @@ contains
     use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, No2Si_V, &
          UnitEnergydens_, UnitX_, UnitRho_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Pe_, iP_I, Ew_, &
-                             rho_, rhoUx_, rhoUy_, rhoUz_
+         rho_, rhoUx_, rhoUy_, rhoUz_
     use ModGeometry,   ONLY: R_BLK
     use BATL_lib,      ONLY: integrate_grid
 
@@ -577,7 +600,8 @@ contains
     case('refl')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., &
+            DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -592,7 +616,8 @@ contains
     case('sintheta')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., &
+            DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
 
@@ -607,7 +632,8 @@ contains
        if(UseAlignmentAngle)then
           Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
           call set_b0_face(iBlock)
-          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., &
+               DoMonotoneRestrict = .false.)
           IsNewBlockAlfven = .true.
           call get_wave_reflection(iBlock, IsNewBlockAlfven)
        end if
@@ -632,7 +658,8 @@ contains
        ! Not yet generalized to multi-fluid
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
-          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., &
+               DoMonotoneRestrict = .false.)
 
           if(UseAlignmentAngle)then
              Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
@@ -692,6 +719,8 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
 
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,   ONLY: EEE_get_state_BC
     use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
@@ -699,22 +728,26 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModPhysics,    ONLY: InvGammaMinus1, GBody, rBody, &
-         UnitU_ ! for jet only
+         UnitU_, UnitRho_, UnitB_, UnitP_, Si2No_V
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
-         Ehot_, p_
+         Ehot_, p_, Rho_, Ppar_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, &
          iP_I, iPparIon_I, IsIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,      ONLY: UseWavePressureLtd
     ! Below is for jet only
-    use ModMain,       ONLY: time_simulation, time_accurate, CellBCType
+    use ModMain,       ONLY: time_simulation, time_accurate, CellBCType, &
+         n_step, iteration_number
     use ModConst,      ONLY: cPi
     use ModCoordTransform, ONLY: rlonlat_to_xyz, cross_product
     ! Above is for jet only
     integer,          intent(in)  :: iBlock, iSide
     type(CellBCType), intent(in)  :: CBC
     logical,          intent(out) :: IsFound
+
+    ! For CME
+    real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)
 
     integer :: Minor_, Major_
     integer :: i, j, k, iFluid, iRho, iRhoUx, iRhoUz, iP
@@ -914,6 +947,8 @@ contains
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
           do k = MinK, MaxK; do j = MinJ, MaxJ
+             ! Note that the Bdir_D calculation does not include the 
+             ! CME part below
              FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
                   + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
              Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
@@ -930,6 +965,43 @@ contains
           end do; end do
        end do
     endif
+
+    ! start of CME part
+    if(UseCme)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ
+          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+
+          call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+               time_simulation, n_step, iteration_number)
+
+          RhoCme = RhoCme*Si2No_V(UnitRho_)
+          Bcme_D = Bcme_D*Si2No_V(UnitB_)
+          pCme   = pCme*Si2No_V(UnitP_)
+
+          BrCme   = sum(Runit_D*Bcme_D)
+          BrCme_D = BrCme*Runit_D
+          do i = MinI, 0
+             State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)+RhoCme
+             if(UseElectronPressure)then
+                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                     + 0.5*pCme
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                     + 0.5*pCme
+
+                if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
+                     State_VGB(Ppar_,i,j,k,iBlock) + 0.5*pCme
+             else
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + pCme
+             end if
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
+
+             ! If DoBqField = T, we need to modify the velocity components here 
+             ! Currently, with the #CME command, we have always DoBqField = F
+          end do
+       end do; end do
+    end if
+    ! End of CME part
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
@@ -961,6 +1033,88 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !============================================================================
+
+  subroutine user_calc_sources_expl(iBlock)
+
+    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure, &
+         UseAnisoPressure
+    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
+         iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
+    use ModVarIndexes, ONLY: nVar, Energy_, Pe_, Bx_, Bz_
+    use ModGeometry,   ONLY: Xyz_DGB, r_Blk
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    integer :: iRhoUx, iRhoUz, iP, iIon, iIonFirst, iPpar
+    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
+    real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
+    real :: U_D(3), Me_D(3), rUnit_D(3), Ur
+    real :: State_V(nVar), Source_V(nVar+nFluid)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    iIonFirst = 1
+    if(UseElectronPressure) iIonFirst = 0
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+       State_V = State_VGB(:,i,j,k,iBlock)
+
+       RhoIon_I = State_V(iRhoIon_I)
+       Ux_I(1:) = State_V(iRhoUxIon_I)/RhoIon_I
+       Uy_I(1:) = State_V(iRhoUyIon_I)/RhoIon_I
+       Uz_I(1:) = State_V(iRhoUzIon_I)/RhoIon_I
+       P_I(1:) = State_V(iPIon_I)
+       N_I(1:) = RhoIon_I/MassIon_I
+       T_I(1:) = P_I(1:)/N_I(1:)
+
+       if(UseElectronPressure)then
+          ChargeDensIon_I = ChargeIon_I*N_I(1:)
+          P_I(0) = State_V(Pe_)
+          N_I(0) = sum(ChargeDensIon_I)
+          T_I(0) = P_I(0)/N_I(0)
+          Ux_I(0) = sum(ChargeDensIon_I*Ux_I(1:))/N_I(0)
+          Uy_I(0) = sum(ChargeDensIon_I*Uy_I(1:))/N_I(0)
+          Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
+       end if
+
+       if(UseAnisoPressure) PparIon_I = State_V(iPparIon_I)
+
+       Source_V = 0.0
+
+       do iIon = iIonFirst, nIonFluid
+
+          if(iIon == 0)then
+             Me_D = 0.0
+             iP = Pe_
+          else
+             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+             iP = iPIon_I(iIon)
+             if(UseAnisoPressure) iPpar = iPparIon_I(iIon)
+             ! push ion speed above SpeedMin
+             if (UseSpeedMin .and. r_BLK(i,j,k,iBlock) > rSpeedMin) then
+                rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+                Ur =   Ux_I(iIon) * rUnit_D(x_) &
+                     + Uy_I(iIon) * rUnit_D(y_) &
+                     + Uz_I(iIon) * rUnit_D(z_)
+                if (Ur < SpeedMin) &
+                     Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                     + rUnit_D * RhoIon_I(iIon)*(SpeedMin - Ur)/TauSpeedMin
+             end if
+          endif
+       end do
+
+       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_calc_sources_expl
+  !======================================================================
 
   subroutine user_calc_sources_impl(iBlock)
 
@@ -1166,7 +1320,7 @@ contains
        UseUserB0 = .false.
        RETURN
     end if
-    
+
     ! Center of dipole shifted by UserDipoleDepth below RadiusMin
     call rlonlat_to_xyz( &
          (/RadiusMin-UserDipoleDepth, &
@@ -1192,6 +1346,80 @@ contains
 
     B0_D = B0_D + (Dp*Xyz_D - Dipole_D) * r3Inv
   end subroutine user_get_b0
+  !============================================================================
+
+  subroutine user_initial_perturbation
+
+    use EEE_ModMain,  ONLY: EEE_get_state_init
+    use ModMain, ONLY: nI, nJ, nK, MaxBlock, unused_B, n_step, iteration_number
+    use ModVarIndexes
+    use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_
+    use ModGeometry,  ONLY: Xyz_DGB
+    use ModEnergy,    ONLY: calc_energy_cell
+    use BATL_lib,     ONLY: nDim, MaxDim
+
+    integer :: i, j, k, iBlock
+    real :: x_D(nDim), Rho, B_D(MaxDim), p
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    do iBlock = 1, MaxBlock
+       if(unused_B(iBlock))CYCLE
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          x_D = Xyz_DGB(:,i,j,k,iBlock)
+
+          call EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
+
+          Rho = Rho*Si2No_V(UnitRho_)
+          B_D = B_D*Si2No_V(UnitB_)
+          p = p*Si2No_V(UnitP_)
+
+          ! Add the eruptive event state to the solar wind            
+          ! Convert momentum density to velocity                 
+          State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+               State_VGB(Rho_,i,j,k,iBlock)
+
+          State_VGB(Rho_,i,j,k,iBlock) = &
+               max(0.25*State_VGB(Rho_,i,j,k,iBlock), &
+               State_VGB(Rho_,i,j,k,iBlock) + Rho)
+
+          ! Fix momentum density to correspond to the modified mass density 
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
+
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
+
+          if(UseElectronPressure)then
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(0.25*State_VGB(Pe_,i,j,k,iBlock), &
+                  State_VGB(Pe_,i,j,k,iBlock) + 0.5*p)
+             State_VGB(p_,i,j,k,iBlock) = &
+                  max(0.25*State_VGB(p_,i,j,k,iBlock), &
+                  State_VGB(p_,i,j,k,iBlock) + 0.5*p)
+             if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
+                  max(0.25*State_VGB(Ppar_,i,j,k,iBlock), &
+                  State_VGB(Ppar_,i,j,k,iBlock) + 0.5*p)
+          else
+             State_VGB(p_,i,j,k,iBlock) = &
+                  max(0.25*State_VGB(p_,i,j,k,iBlock), &
+                  State_VGB(p_,i,j,k,iBlock) + p)
+          endif
+
+       end do; end do; end do
+       call calc_energy_cell(iBlock)
+
+    end do
+
+    call test_stop(NameSub, DoTest)
+  end subroutine user_initial_perturbation
   !============================================================================
 
 end module ModUser
