@@ -8641,6 +8641,32 @@ fluid.
 By default no minimum temperature limit is applied.
 </command>
 
+<command name="MINIMUMSPEED">
+	<parameter name="UseSpeedMin" type="logical" default="F"/>
+	<if expr="$UseSpeedMin">
+		<parameter name="rSpeedMin" type="real" min="1"
+			   default="10"/>
+                <parameter name="SpeedMin" type="real" min="0"
+			   default="250" />
+                <parameter name="TauSpeedMin" type="real" min="1"
+			   default="36000" />
+         </if>
+
+#MINIMUMSPEED
+T		UseSpeedMin
+10		rSpeedMin
+250		SpeedMin
+36000		TauSpeedMin
+
+If UseSpeedMin is true the minimum speed is enforced. If above the 
+radial distance of rSpeedMin the radial speed falls below SpeedMin 
+a force is applied (via a source term) to push the solar wind speed 
+above SpeedMin. TauSpeedMin is in seconds. This command is to be included 
+within the USERINPUT section.
+
+By default no minimum speed limit is applied.
+</command>
+
 <command name="ELECTRONPRESSURE">
 	 <parameter name="PeMinSi" type="real" min="-1" default="-1"/>
 
