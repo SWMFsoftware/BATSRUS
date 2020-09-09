@@ -1158,6 +1158,8 @@ so this command is always present in the current restart header files.
 			<option name="shear"/>
 			<option name="fieldlinethreads"/>
 			<option name="user"/>
+			<option name="userfixvalue"/>
+			<option name="usernoinflow"/>
 		</parameter>
 	</for>
 	<rule
@@ -2207,7 +2209,8 @@ Default is false for both UseCoarseAxis.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="STARTTIME" alias="SETREALTIME" if="$_IsFirstSession">
+<command name="STARTTIME" alias="SETREALTIME" if="$_IsFirstSession" 
+	 multiple="T">
 	<parameter name="iYear"  type="integer" default="2000" />
 	<parameter name="iMonth" type="integer" min="1" max="12" default="3"/>
 	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
@@ -2223,31 +2226,32 @@ Default is false for both UseCoarseAxis.
 0                       iSecond
 
 The #STARTTIME command sets the initial date and time for the
-simulation in Greenwich Mean Time (GMT) or Universal Time (UT)
-in stand alone mode.
-In the SWMF this command checks start times against the SWMF start time
-and warns if the difference exceeds 1 millisecond.
+simulation in Universal Time (UT) in stand alone mode.
 This time is stored in the BATSRUS restart header file.
+It can be overwritten with a subsequent #STARTTIME comand if necessary.
+
+In the SWMF this command checks BATSRUS start time against the SWMF start time
+and warns if the difference exceeds 1 millisecond.
 
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
 </command>
 
-<command name="TIMESIMULATION" if="$_IsFirstSession">
+<command name="TIMESIMULATION" if="$_IsFirstSession" multiple="T">
 	<parameter name="tSimulation" type="real" min="0" default="0.0" />
 
 #TIMESIMULATION
-3600.0			tSimulation [sec]
+1 hour			tSimulation [sec]
 
 The tSimulation variable contains the simulation time in seconds
 relative to the initial time set by the #STARTTIME command.
 The #TIMESIMULATION command and tSimulation are saved into the restart
-header file, which provides human readable information about the restart state.
+header file, so the simulation can be continued from the same time. 
+This value can be overwritten by a subsequent #TIMESIMULATION command 
+if necessary.
 
-In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
-In stand alone mode time\_simulation is set, but in case of a restart,
-it gets overwritten by the binary value saved into the .rst binary files.
+In SWMF the BATSRUS time is checked against the global SWMF simulation time.
 
 The default value is tSimulation=0.
 </command>
@@ -3071,7 +3075,7 @@ The commands in this group only work in stand alone mode.
 
 #STOP
 100			MaxIteration
-10.0			tSimulationMax [sec]
+1 week			tSimulationMax [sec]
 
 This command is only used in stand alone mode.
 
@@ -3143,7 +3147,7 @@ The default is DoCheckStopFile=.true.
 	<parameter name="CpuTimeMax" type="real" min="-1" default="-1" />
 
 #CPUTIMEMAX
-3600                    CpuTimeMax [sec]
+7.5 hours                    CpuTimeMax [sec]
 
 This command is only used in stand alone mode.
 
@@ -3629,10 +3633,10 @@ The default is nSatellite=0, i.e. no satellite data is saved.
 	<parameter name="SatelliteTimeStart" type="real" default="0" />
 	<parameter name="SatelliteTimeEnd" type="real" default="0" />
 #STEADYSTATESATELLITE
--86400.0                     SatelliteTimeStart [sec]
-86400.0                      SatelliteTimeEnd   [sec]
--3600.0                      SatelliteTimeStart [sec]
-3600.0                       SatelliteTimeEnd   [sec]
+-1 day                       SatelliteTimeStart [sec]
++1 day                       SatelliteTimeEnd   [sec]
+-1 hour                      SatelliteTimeStart [sec]
++1 hour                      SatelliteTimeEnd   [sec]
 
 In the non-time-accurate mode the numerical simulation result
 converges to a steady-state solution. In the course of this simulation
@@ -3887,7 +3891,7 @@ No magnetometer grid file is saved by default.
 					if="$plotform =~ /\btec\b/"/>
 				<option name="ieb" />
 				<option name="last closed B" value="lcb" />
-				<option name="buffer" vale="buf" />
+				<option name="coupling buffer" value="buf" />
 			</part>
 			<part name="plotvar" type="string" required="T"
 				input="select">
@@ -4214,6 +4218,9 @@ los ins idl_real4       StringPlot ! line of sight plot using table
 -1			DnSavePlot
 100.			DtSavePlot
 soho:c3 sta:euvi stb:cor2	StringsInstrument
+buf MHD idl	 	StringPlot
+-1  			DnSavePlot
+1 hour			DtSavePlot
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US.
@@ -4275,6 +4282,7 @@ eqr   - field lines traced from the magnetic equatorial plane
 eqb   - minimum B surface on a grid defined on the magnetic equatorial plane
 ieb   - field lines traced from a subset of the IE coupled grid
 lcb   - last closed field lines
+buf   - coupling buffer between two components
 \end{verbatim}
 The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
 This can be used for reconstructing the full grid and use the data
