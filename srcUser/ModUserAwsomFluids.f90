@@ -203,8 +203,10 @@ contains
     ! convert to normalized units
     Nchromo_I   = NchromoSi_I*Si2No_V(UnitN_)
     Tchromo     = TchromoSi*Si2No_V(UnitTemperature_)
-    SpeedMin    = SpeedMinDim*Io2No_V(UnitU_)
-    TauSpeedMin = TauSpeedMinDim*Io2No_V(UnitT_)
+    if(UseSpeedMin)then
+       SpeedMin = SpeedMinDim*Io2No_V(UnitU_)
+       TauSpeedMin = TauSpeedMinDim*Io2No_V(UnitT_)
+    end if
 
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
