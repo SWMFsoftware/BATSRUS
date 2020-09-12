@@ -378,7 +378,7 @@ contains
        call init_mod_geometry
        call init_mod_boundary_cells
        call init_mod_nodes
-       call user_action("initialize module")
+       
        if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
@@ -412,6 +412,8 @@ contains
        if (DoReadSolarwindFile) call read_solar_wind_file
 
        call set_physics_constants
+       
+       call user_action("initialize module")
 
        if(UseChargedParticles)then
           if(.not.time_accurate)then
@@ -437,7 +439,7 @@ contains
                write(*,*) NameSub,':UseFlic=.true., set nStage to 3'
           nStage = 3
        end if
-
+       
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
 
