@@ -174,16 +174,19 @@ test_fluxemergence_rundir:
 	cd ${TESTDIR}; gunzip *.gz
 	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fluxemergence_run:
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_1d
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_1d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.3D PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_3d
 	cd ${TESTDIR}; ./Restart.pl
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_3d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
 				mv runlog_restart RESULTS/run_restart
@@ -214,6 +217,7 @@ test_shocktube_compile:
 
 test_shocktube_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shocktube_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -246,6 +250,7 @@ test_shockramp_compile:
 
 test_shockramp_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.shockramp PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shockramp_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -277,6 +282,7 @@ test_partsteady_compile:
 
 test_partsteady_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.partsteady PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_partsteady_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -309,6 +315,7 @@ test_hallmhd_compile:
 
 test_hallmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HallTest PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_hallmhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -340,6 +347,7 @@ test_hybrid_compile:
 
 test_hybrid_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HybridTest PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_hybrid_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -372,6 +380,7 @@ test_viscosity_compile:
 
 test_viscosity_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/VISCOSITY/PARAM.in PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_viscosity_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -403,6 +412,7 @@ test_twofluidmhd_compile:
 
 test_twofluidmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwofluidTest PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_twofluidmhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -435,6 +445,7 @@ test_multifluid_compile:
 
 test_multifluid_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIFLUID/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_multifluid_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -467,6 +478,7 @@ test_magnetometer_compile:
 test_magnetometer_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/magin.dat .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	
 test_magnetometer_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -505,6 +517,7 @@ test_multiion_compile:
 
 test_multiion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIION/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_multiion_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -536,6 +549,7 @@ test_mhdions_compile:
 
 test_mhdions_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mhdions_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -567,6 +581,7 @@ test_mhdnoncons_compile:
 
 test_mhdnoncons_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDNONCONS/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mhdnoncons_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -600,7 +615,8 @@ test_eosgodunov_compile:
 
 test_eosgodunov_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.eosgodunov PARAM.in; \
-	ln -s ${BINDIR}/CRASH.exe . 
+	   	       ln -s ${BINDIR}/CRASH.exe . 
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_eosgodunov_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
@@ -634,6 +650,7 @@ test_laserpackage_compile:
 test_laserpackage_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.laserpackage PARAM.in
 	cd ${TESTDIR}; ln -s ../dataCRASH/LookupTables Tables
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_laserpackage_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./CRASH.exe > runlog
@@ -667,6 +684,7 @@ test_graydiffusion_compile:
 test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
 	cd ${TESTDIR}; gunzip -c Param/CRASH/initial_lowrie3.dat.gz > initial_lowrie3.dat
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_graydiffusion_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -702,6 +720,7 @@ test_coronasph_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_coronasph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -739,6 +758,7 @@ test_awsomfluids_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomFluids PARAM.in
 	cd ${TESTDIR}; cp ../data/CORONA/HeatPartition.dat.gz .
 	cd ${TESTDIR}; gunzip HeatPartition.dat.gz
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomfluids_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -775,6 +795,7 @@ test_awsomoxygen_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomOxygen PARAM.in
 	cd ${TESTDIR}; cp ../data/CHARGESTATE/o_tbl.dat.gz .
 	cd ${TESTDIR}; gunzip o_tbl.dat.gz
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_awsomoxygen_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -811,6 +832,7 @@ test_chromo_rundir:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
 	cd ${TESTDIR}; cp Param/CORONA/GridChromo GridChromo
 	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_chromo_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -845,8 +867,9 @@ test_outerhelio2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.2D ./PARAM.in
-	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_l1_test.dat ./oh2d_l1_test.dat
-	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_stereoa_test.dat ./oh2d_stereoa_test.dat
+	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_l1_test.dat .
+	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_stereoa_test.dat .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelio2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -881,6 +904,7 @@ test_outerhelio_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelio_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -913,6 +937,7 @@ test_outerheliopui_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -944,6 +969,7 @@ test_outerheliopui_1d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui1d ./PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_1d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1009,7 +1035,7 @@ test_titan_rundir: test_rundir
 	cd ${TESTDIR}; \
 		cp Param/TITAN/PARAM.in .; \
 		tar xzf Param/TITAN/TitanInput.tgz
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_titan_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1032,15 +1058,15 @@ test_titan_restart:
 
 test_titan_restart_save:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_titan
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_titan_restart_read:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
@@ -1080,7 +1106,7 @@ test_mars_rundir: test_rundir
 	cd ${TESTDIR}; \
 		cp Param/MARS/PARAM.in .; \
 		cp Param/MARS/marsmgsp.txt .
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mars_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1103,15 +1129,15 @@ test_mars_restart:
 
 test_mars_restart_save:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_mars
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_mars_restart_read:
 	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
@@ -1148,9 +1174,8 @@ test_marsfluids_compile:
 	make PIDL
 
 test_marsfluids_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/MARSFLUIDS/PARAM.in .
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_marsfluids_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1174,15 +1199,15 @@ test_marsfluids_restart:
 
 test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_marsfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
@@ -1220,9 +1245,8 @@ test_venus_compile:
 	make PIDL
 
 test_venus_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/VENUS/PARAM.in .; \
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/VENUS/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_venus_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1245,15 +1269,15 @@ test_venus_restart:
 
 test_venus_restart_save:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_venus
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_venus_restart_read:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
@@ -1289,9 +1313,8 @@ test_saturn_compile:
 	make PIDL
 
 test_saturn_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/SATURN/PARAM.in .; \
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/SATURN/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_saturn_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1323,9 +1346,8 @@ test_mercurysph_compile:
 	make PIDL
 
 test_mercurysph_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/MERCURY/PARAM.in .; \
-		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/MERCURY/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_mercurysph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1362,9 +1384,8 @@ test_ganymede_compile:
 	make PIDL
 
 test_ganymede_rundir: test_rundir
-	cd ${TESTDIR}; \
-	cp Param/GANYMEDE/PARAM.in .; \
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/GANYMEDE/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_ganymede_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1400,9 +1421,8 @@ test_comet_compile:
 	make PIDL
 
 test_comet_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/COMET/PARAM.in .; \
-		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/COMET/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_comet_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1438,9 +1458,8 @@ test_cometfluids_compile:
 	make PIDL
 
 test_cometfluids_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/COMET3FLUIDSPE/PARAM.in .
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_cometfluids_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1463,15 +1482,15 @@ test_cometfluids_restart:
 
 test_cometfluids_restart_save:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_cometfluids
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_cometfluids_restart_read:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
@@ -1510,7 +1529,7 @@ test_earthsph_rundir: test_rundir
 	cd ${TESTDIR}; \
 		cp Param/EARTH/PARAM.in.spherical PARAM.in; \
 		cp Param/EARTH/imf19980504.dat .
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earthsph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1542,8 +1561,8 @@ test_amr_compile:
 	make PIDL
 
 test_amr_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/AMR/PARAM.in PARAM.in
+	cd ${TESTDIR}; cp Param/AMR/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_amr_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1574,8 +1593,8 @@ test_amrsph_compile:
 	make PIDL
 
 test_amrsph_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/AMR/PARAM.in.sph PARAM.in
+	cd ${TESTDIR}; cp Param/AMR/PARAM.in.sph PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_amrsph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1606,9 +1625,8 @@ test_2bodyplot_compile:
 	make PIDL
 
 test_2bodyplot_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/2BODYPLOT/PARAM.in PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp Param/2BODYPLOT/PARAM.in PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_2bodyplot_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1650,6 +1668,7 @@ test_anisotropic_compile:
 
 test_anisotropic_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.anisope.fastwave PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_anisotropic_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1683,7 +1702,7 @@ test_cometCGhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ROSETTA/PARAM.in.hd.test PARAM.in
 	cd ${TESTDIR}; cp Param/ROSETTA/CG_MOC.bdf.gz . 
 	cd ${TESTDIR}; gunzip CG_MOC.bdf.gz
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_cometCGhd_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1718,11 +1737,10 @@ test_cometCGfluids_compile:
 	make PIDL
 
 test_cometCGfluids_rundir: test_rundir
-	cd ${TESTDIR}; \
-		cp Param/ROSETTA/PARAM.in.fluids.all PARAM.in
+	cd ${TESTDIR}; cp Param/ROSETTA/PARAM.in.fluids.all PARAM.in
 	cd ${TESTDIR}; cp Param/ROSETTA/CG_MOC.bdf.gz . 
 	cd ${TESTDIR}; gunzip CG_MOC.bdf.gz
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_cometCGfluids_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1755,6 +1773,7 @@ test_europa2fluidspe_compile:
 test_europa2fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.2fluids PARAM.in; \
 	   	       cp Param/EUROPA/satellite_e4.dat satellite_2fpe_e4.dat
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa2fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1788,6 +1807,7 @@ test_europa3fluidspe_compile:
 test_europa3fluidspe_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EUROPA/PARAM.in.3fluids PARAM.in; \
 	   	       cp Param/EUROPA/satellite_e4.dat satellite_3fpe_e4.dat
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_europa3fluidspe_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1819,7 +1839,7 @@ test_region2d_compile:
 
 test_region2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/REGION/PARAM.in.2d PARAM.in
-	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
+	./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
 
 test_region2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1865,7 +1885,7 @@ test_fivemoment_alfven_compile:
 
 test_fivemoment_alfven_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.alfven PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fivemoment_alfven_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1895,7 +1915,7 @@ test_fivemoment_shock_compile:
 
 test_fivemoment_shock_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.shock PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fivemoment_shock_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1925,7 +1945,7 @@ test_fivemoment_langmuir_compile:
 
 test_fivemoment_langmuir_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.langmuir PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
@@ -1958,7 +1978,7 @@ test_L1toBC_compile:
 test_L1toBC_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EARTH/PARAM.in.L1toBC PARAM.in
 	cd ${TESTDIR}; cp Param/EARTH/imf19980504.dat L1.dat
-	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
+	./TestParam.pl -F -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
 
 test_L1toBC_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
