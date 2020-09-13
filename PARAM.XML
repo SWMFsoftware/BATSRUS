@@ -5846,7 +5846,8 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="current squared"  value="j2"           />
 			<option name="current sheet"    value="currentsheet" />
 			<option name="div U"		value="divu"	     />
-			<option name="Transient" value="transient" />
+			<option name="Transient"        value="transient"    />
+			<option name="R_currents"       value="rcurrents"    />
 			<option name="User defined" value="user" />
 		</parameter>
 		<parameter name="CoarsenLimit" type="real" min="0" max="1"
@@ -8236,7 +8237,7 @@ Default is DoReadAgain false, so the code keeps running with the last
 value read.
 </command>
 
-<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
+<command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession" multiple="T">
 	<parameter name="UseBody" type="logical" default="F"/>
 	<if expr="$UseBody">
 		<parameter name="rBody" type="real" min="0" default="3"/>
@@ -8298,6 +8299,10 @@ for Earth running with a single ion fluid.
 For SC/IH/OH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
 The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
+
+This command is currently used twice to set some values for the solar corona
+even when there is no BODY boundary condition. This should be removed.
+For now multiple use is allowed.
 </command>
 
 <command name="STAR" if="$_IsFirstSession">>
