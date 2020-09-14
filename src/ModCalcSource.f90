@@ -94,6 +94,9 @@ contains
     ! Variables for multi-ion MHD
     real :: InvElectronDens, uPlus_D(3), U_D(3)
 
+    ! Variables for Minimum radial speed
+    real :: Ur, Rho, rUnit_D(3)
+
     logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
@@ -215,14 +218,31 @@ contains
           end do; end do; end do
 
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
-
        end do !iFluid
     end if !UseAnisoPressure.or.UseNonConservative
+
+    if(UseSpeedMin)then
+       ! push radial ion speed above SpeedMin outside rSpeedMin
+       do k=1,nK; do j=1,nJ; do i=1,nI        
+          if(r_BLK(i,j,k,iBlock) < rSpeedMin) CYCLE
+          rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+          do iFluid = 1, nIonFluid
+             if(nFluid > 1) call select_fluid(iFluid)
+             Rho = State_VGB(iRho,i,j,k,iBlock)
+             u_D = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)/Rho
+             Ur =  sum(u_D *rUnit_D)
+             if (Ur < SpeedMin) &
+                  Source_VC(iRhoUx:iRhoUz,i,j,k) = &
+                  Source_VC(iRhoUx:iRhoUz,i,j,k) &
+                  + rUnit_D * Rho*(SpeedMin - Ur)/TauSpeedMin
+          end do; end do; end do
+       end do
+    end if !UseSpeedMin
 
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
+          
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).

@@ -173,6 +173,11 @@ module ModPhysics
   real :: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
 
+  ! Minimum threshold for radial velocity
+  real :: SpeedMinDim, SpeedMin, rSpeedMin
+  real :: TauSpeedMinDim, TauSpeedMin
+  logical :: UseSpeedMin = .false.
+  
   ! Boundary pressure for subsonic outflow
   logical :: UseOutflowPressure = .false.
   real :: pOutflowSi = -1.0, pOutflow = -1.0
@@ -682,6 +687,12 @@ contains
     TMin_I       = TMinDim_I*Io2No_V(UnitTemperature_)
     TeMin        = TeMinDim*Io2No_V(UnitTemperature_)
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
+
+    ! Minimum value for radial speed
+    if(UseSpeedMin)then
+       SpeedMin    = SpeedMinDim*Io2No_V(UnitU_)
+       TauSpeedMin = TauSpeedMinDim*Io2No_V(UnitT_)
+    end if
 
     ! Relaxation parameters for anisotropic ion pressure
     TauInstability_I  = TauInstabilitySi_I*Si2No_V(UnitT_)
