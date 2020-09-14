@@ -37,7 +37,8 @@ contains
     character(len=*), intent(in) :: NameVarIn
 
     integer :: nCells_D(2)
-    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nDensityGm
+    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nDensityGm, &
+         nChargeStateAllGm
     integer, parameter :: pres_ =1, dens_=2, Hpres_=3, Opres_=4, &
          Hdens_=5, Odens_=6
 
@@ -60,7 +61,7 @@ contains
 
        ! Set multifluid coupling on/off based on number of densities:
        call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
-            nPGm, nPparGm, nWaveGm, nMaterialGm)
+            nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
        DoMultiFluidPSCoupling = nDensityGm > 1
 
        if(DoTestMe) write(*,*) NameSub// &

@@ -27,14 +27,16 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
        UseElectronPressure, UseAnisoPressure, UseMultiSpecies
   use ModVarIndexes, ONLY: &
        Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_
+       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_, &
+       ChargeStateFirst_, ChargeStateLast_
   use CON_coupler,   ONLY: &
        Grid_C, &
        Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
        MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, &
        RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
        BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
-       WaveFirstCouple_, WaveLastCouple_, EhotCouple_
+       WaveFirstCouple_, WaveLastCouple_, EhotCouple_, &
+       ChargeState_, ChargeStateFirstCouple_, ChargeStateLastCouple_
 
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
@@ -111,6 +113,10 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
        Buffer_V(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_)) &
        *Si2No_V(UnitEnergyDens_)
 
+  if(DoCoupleVar_V(ChargeState_))State_V(ChargeStateFirst_:ChargeStateLast_) = &
+       Buffer_V(iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_))&
+       *Si2No_V(UnitRho_)
+  
   State_V(p_)  = Buffer_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
   if(DoCoupleVar_V(ElectronPressure_))then
      State_V(Pe_) = Buffer_V(iVar_V(PeCouple_))*Si2No_V(UnitP_)
@@ -217,7 +223,8 @@ subroutine plot_buffer(iFile)
        UseElectronPressure, UseAnisoPressure
   use ModVarIndexes, ONLY: &
        nVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
+       WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
+       ChargeStateLast_
   use ModIO,            ONLY: NamePrimitiveVarOrig
   use ModTimeConvert,   ONLY: time_real_to_int
   use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_, n_step
@@ -272,6 +279,11 @@ subroutine plot_buffer(iFile)
      if(WaveFirst_ > 1)State_VII(z_+WaveFirst_:z_+WaveLast_,:,:) = &
           State_VII(z_+WaveFirst_:z_+WaveLast_,:,:)* &
           No2Si_V(UnitEnergyDens_)
+
+     if(ChargeStateFirst_ > 1)&
+          State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:) = &
+          State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:)* &
+          No2Si_V(UnitRho_)
 
      State_VII(z_+p_,:,:)  = State_VII(z_+p_,:,:)*No2Si_V(UnitP_)
      if(UseElectronPressure)State_VII(z_+Pe_,:,:)  = &
