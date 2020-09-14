@@ -22,7 +22,6 @@ module ModUser
        IMPLEMENTED8 => user_calc_sources_impl,          &
        IMPLEMENTED9 => user_init_point_implicit,        &
        IMPLEMENTED10=> user_get_b0,                     &
-       IMPLEMENTED11=> user_calc_sources_expl,          &
        IMPLEMENTED12=> user_initial_perturbation
 
   include 'user_module.h' ! list of public methods
@@ -70,12 +69,6 @@ module ModUser
 
   ! Multiply the collisionfrequencies by CollisionFactor
   real :: CollisionFactor = 1.0
-
-  ! Minimum speed parameters
-  logical :: UseSpeedMin = .false.
-  real    :: rSpeedMin ! radius above which speed is pushed above SpeedMin 
-  real    :: SpeedMin, SpeedMinDim       ! minimum radial speed 
-  real    :: TauSpeedMin, TauSpeedMinDim ! rate of pushing towards SpeedMin
 
 contains
   !============================================================================
@@ -138,14 +131,6 @@ contains
        case("#COLLISIONFACTOR")
           call read_var('CollisionFactor', CollisionFactor)
 
-       case("#MINIMUMSPEED")
-          call read_var('UseSpeedMin',  UseSpeedMin)
-          if (UseSpeedMin) then
-             call read_var('rSpeedMin',    rSpeedMin)
-             call read_var('SpeedMin',     SpeedMinDim)
-             call read_var('TauSpeedMin',  TauSpeedMinDim)
-          endif
-
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -203,10 +188,6 @@ contains
     ! convert to normalized units
     Nchromo_I   = NchromoSi_I*Si2No_V(UnitN_)
     Tchromo     = TchromoSi*Si2No_V(UnitTemperature_)
-    if(UseSpeedMin)then
-       SpeedMin = SpeedMinDim*Io2No_V(UnitU_)
-       TauSpeedMin = TauSpeedMinDim*Io2No_V(UnitT_)
-    end if
 
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
@@ -1034,88 +1015,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
-  !============================================================================
-
-  subroutine user_calc_sources_expl(iBlock)
-
-    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         UseAnisoPressure
-    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
-         iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
-    use ModVarIndexes, ONLY: nVar, Energy_, Pe_, Bx_, Bz_
-    use ModGeometry,   ONLY: Xyz_DGB, r_Blk
-
-    integer, intent(in) :: iBlock
-
-    integer :: i, j, k
-    integer :: iRhoUx, iRhoUz, iP, iIon, iIonFirst, iPpar
-    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
-    real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
-    real :: U_D(3), Me_D(3), rUnit_D(3), Ur
-    real :: State_V(nVar), Source_V(nVar+nFluid)
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_calc_sources_expl'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    iIonFirst = 1
-    if(UseElectronPressure) iIonFirst = 0
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-       State_V = State_VGB(:,i,j,k,iBlock)
-
-       RhoIon_I = State_V(iRhoIon_I)
-       Ux_I(1:) = State_V(iRhoUxIon_I)/RhoIon_I
-       Uy_I(1:) = State_V(iRhoUyIon_I)/RhoIon_I
-       Uz_I(1:) = State_V(iRhoUzIon_I)/RhoIon_I
-       P_I(1:) = State_V(iPIon_I)
-       N_I(1:) = RhoIon_I/MassIon_I
-       T_I(1:) = P_I(1:)/N_I(1:)
-
-       if(UseElectronPressure)then
-          ChargeDensIon_I = ChargeIon_I*N_I(1:)
-          P_I(0) = State_V(Pe_)
-          N_I(0) = sum(ChargeDensIon_I)
-          T_I(0) = P_I(0)/N_I(0)
-          Ux_I(0) = sum(ChargeDensIon_I*Ux_I(1:))/N_I(0)
-          Uy_I(0) = sum(ChargeDensIon_I*Uy_I(1:))/N_I(0)
-          Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
-       end if
-
-       if(UseAnisoPressure) PparIon_I = State_V(iPparIon_I)
-
-       Source_V = 0.0
-
-       do iIon = iIonFirst, nIonFluid
-
-          if(iIon == 0)then
-             Me_D = 0.0
-             iP = Pe_
-          else
-             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
-             iP = iPIon_I(iIon)
-             if(UseAnisoPressure) iPpar = iPparIon_I(iIon)
-             ! push ion speed above SpeedMin
-             if (UseSpeedMin .and. r_BLK(i,j,k,iBlock) > rSpeedMin) then
-                rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
-                Ur =   Ux_I(iIon) * rUnit_D(x_) &
-                     + Uy_I(iIon) * rUnit_D(y_) &
-                     + Uz_I(iIon) * rUnit_D(z_)
-                if (Ur < SpeedMin) &
-                     Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                     + rUnit_D * RhoIon_I(iIon)*(SpeedMin - Ur)/TauSpeedMin
-             end if
-          endif
-       end do
-
-       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
-
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_calc_sources_expl
   !======================================================================
 
   subroutine user_calc_sources_impl(iBlock)
