@@ -711,6 +711,14 @@ contains
           end do
           if(UseElectronPressure) call read_var('TeMinDim', TeMinDim)
 
+       case("#MINIMUMRADIALSPEED")
+          call    read_var('UseSpeedMin',   UseSpeedMin)
+          if(UseSpeedMin)then
+             call read_var('rSpeedMin',     rSpeedMin)
+             call read_var('SpeedMinDim',   SpeedMinDim)
+             call read_var('TauSpeedMinDim',TauSpeedMinDim)
+          end if
+          
        case("#ELECTRONPRESSURE")
           call read_var('PeMinSi', PeMinSi)
 
