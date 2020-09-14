@@ -11,16 +11,17 @@ module ModUser
   use ModMultiFluid, ONLY: nIonFluid
   use ModMain, ONLY: nI, nJ,nK
   use ModCoronalHeating, ONLY: PoyntingFluxPerB
-  use ModUserEmpty,                                     &
-       IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_init_session,               &
-       IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_get_log_var,                &
-       IMPLEMENTED5 => user_set_plot_var,               &
-       IMPLEMENTED6 => user_set_cell_boundary,          &
-       IMPLEMENTED7 => user_set_resistivity,            &
-       IMPLEMENTED8 => user_calc_sources_impl,          &
-       IMPLEMENTED9 => user_init_point_implicit
+  use ModUserEmpty,                                      &
+       IMPLEMENTED1  => user_action,                     &
+       IMPLEMENTED2  => user_read_inputs,                &
+       IMPLEMENTED3  => user_init_session,               &
+       IMPLEMENTED4  => user_set_ics,                    &
+       IMPLEMENTED5  => user_get_log_var,                &
+       IMPLEMENTED6  => user_set_plot_var,               &
+       IMPLEMENTED7  => user_set_cell_boundary,          &
+       IMPLEMENTED8  => user_set_resistivity,            &
+       IMPLEMENTED9  => user_calc_sources_impl,          &
+       IMPLEMENTED10 => user_init_point_implicit
   
   include 'user_module.h' ! list of public methods
 
@@ -56,7 +57,86 @@ module ModUser
   
 contains
   !============================================================================
+  subroutine user_action(NameAction)
+    ! Initial condition for charge state calculation
+    ! Can be used for both start and restart
 
+    use ModVarIndexes,  ONLY: ScalarFirst_, nElement, Pe_, P_, Rho_
+    use ModLookupTable, ONLY: Table_I,interpolate_lookup_table    
+    use ModPhysics,     ONLY: UnitT_, No2Si_V, UnitTemperature_, Si2No_V, &
+         UnitN_ 
+    use ModAdvance,     ONLY: UseElectronPressure, State_VGB
+    use BATL_lib,       ONLY: nBlock, nI, nJ, nK, Unused_B
+    
+    character(len=*),intent(in):: NameAction
+    character(len=*), parameter:: NameSub = 'user_action'
+    
+    real, allocatable          :: Ioniz_I(:), Recomb_I(:)
+    real                       :: Value_I(2), Te, TeSi
+    integer                    :: iVar, iElement, iCharge, nCharge
+    integer                    :: iBlock, i, j, k
+    real                       :: AbundanceElement, MassElement
+    !-------------------------------------------------------------------------- 
+    select case(NameAction)
+    case('initial condition done')
+       ! Charge state initial condition is ionization equilibrium 
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          do k = 1, nK ; do j = 1, nJ ; do i = 1, nI
+             if(UseElectronPressure)then
+                Te = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             else
+                Te = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             endif
+
+             TeSi = Te * No2Si_V(UnitTemperature_)
+
+             iVar = ScalarFirst_
+             do iElement = 1, nElement
+                nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
+                MassElement = Table_I(iTableElement_I(iElement))%Param_I(2)
+                AbundanceElement = Table_I(iTableElement_I(iElement))%Param_I(3)
+                allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
+                do iCharge = 0, nCharge
+                   call interpolate_lookup_table(iTableElement_I(iElement), &
+                        real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
+                   Ioniz_I(iCharge) =&
+                        Value_I(1)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+                   Recomb_I(iCharge) = &
+                        Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+                end do
+                ! initial guess for y_{0}
+                State_VGB(iVar,i,j,k,iBlock) = 1.
+                ! y_1*R_1 = y_0*I_0          
+                State_VGB(iVar+1,i,j,k,iBlock) = &
+                     State_VGB(ScalarFirst_,i,j,k,iBlock) * &
+                     Ioniz_I(0)/Recomb_I(1)
+                ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
+                do iCharge = 2, nCharge
+                   State_VGB(iVar+iCharge,i,j,k,iBlock) = &
+                        State_VGB(iVar+iCharge-1,i,j,k,iBlock) * &
+                        (Recomb_I(iCharge-1)+Ioniz_I(iCharge-1))/&
+                        Recomb_I(iCharge) - &
+                        State_VGB(iVar+iCharge-2,i,j,k,iBlock) * &
+                        Ioniz_I(iCharge-2)/Recomb_I(iCharge)
+                end do
+                ! normalize to 1 and multiply by proton mass density and
+                ! element mass relative to proton mass and element abundance
+                State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) = &
+                     State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) / &
+                     sum(State_VGB(iVar:iVar+nCharge,i,j,k,iBlock)) &
+                     *AbundanceElement*MassElement &
+                     *State_VGB(Rho_,i,j,k,iBlock)
+
+                iVar = iVar + nCharge + 1
+                deallocate(Ioniz_I,Recomb_I)
+             end do
+          end do; end do; end do
+       end do
+    end select
+
+  end subroutine user_action
+  !============================================================================
   subroutine user_read_inputs
 
     use ModMain,       ONLY: lVerbose
@@ -230,15 +310,14 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseAnisoPressure, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_, &
-         UnitT_, No2Si_V 
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_, &
-         Ew_, ScalarFirst_, nElement
+         Ew_
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
          MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_, &
          UseMultiIon, iPparIon_I, IsIon_I
     use ModWaves, ONLY: UseWavePressureLtd
-    use ModLookupTable, ONLY: Table_I,interpolate_lookup_table
+
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iFluid
@@ -250,11 +329,6 @@ contains
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
     real, parameter :: Epsilon = 1.0e-6
 
-    ! charge state variables
-    real, allocatable          :: Ioniz_I(:), Recomb_I(:)
-    real                       :: Value_I(2), Te, TeSi
-    integer                    :: iVar, iElement, iCharge, nCharge
-    real                       :: AbundanceElement, MassElement
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
@@ -372,52 +446,6 @@ contains
        if(UseWavePressureLtd) State_VGB(Ew_,i,j,k,iBlock) = &
             sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
-       ! Charge state initial condition is ionization equilibrium 
-       
-       if(UseElectronPressure)then
-          Te = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       else
-          Te = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       endif
-
-       TeSi = Te * No2Si_V(UnitTemperature_)
-
-       iVar = ScalarFirst_
-       do iElement = 1, nElement
-          nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
-          MassElement = Table_I(iTableElement_I(iElement))%Param_I(2)
-          AbundanceElement = Table_I(iTableElement_I(iElement))%Param_I(3)
-          allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
-          do iCharge = 0, nCharge
-             call interpolate_lookup_table(iTableElement_I(iElement), &
-                  real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
-             Ioniz_I(iCharge) = Value_I(1)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-             Recomb_I(iCharge) = Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-          end do
-          ! initial guess for y_{0}
-          State_VGB(iVar,i,j,k,iBlock) = 1.
-          ! y_1*R_1 = y_0*I_0          
-          State_VGB(iVar+1,i,j,k,iBlock) = &
-               State_VGB(ScalarFirst_,i,j,k,iBlock) * Ioniz_I(0)/Recomb_I(1)
-          ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
-          do iCharge = 2, nCharge
-             State_VGB(iVar+iCharge,i,j,k,iBlock) = &
-                  State_VGB(iVar+iCharge-1,i,j,k,iBlock) * &
-                  (Recomb_I(iCharge-1)+Ioniz_I(iCharge-1))/Recomb_I(iCharge) - &
-                  State_VGB(iVar+iCharge-2,i,j,k,iBlock) * &
-                  Ioniz_I(iCharge-2)/Recomb_I(iCharge)
-          end do
-          ! normalize to 1 and multiply by proton mass density and
-          ! element mass relative to proton mass and element abundance
-          State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) = &
-               State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) / &
-               sum(State_VGB(iVar:iVar+nCharge,i,j,k,iBlock)) &
-               *AbundanceElement*MassElement &
-               *State_VGB(Rho_,i,j,k,iBlock)
-
-          iVar = iVar + nCharge + 1
-          deallocate(Ioniz_I,Recomb_I)
-       end do
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
