@@ -7863,6 +7863,30 @@ The default is to have no PIC regions at all, so this command is
 required for the MHD-EPIC algorithm.
 </command>
 
+<command name="PICADAPT">
+	 <parameter name="UseAdaptivePic" type="logical" default="T" />
+  	 <if expr="$UseAdaptPic">
+    	 <parameter name="DoAdaptPic" type="logical" default="F" />
+    		 <if expr="$DoAdaptPic">
+      			 <parameter name="DnAdaptPic" type="integer" min="-1" 
+				    default="-1" />
+      			 <parameter name="DtAdaptPic" type="real" min="-1"
+				    default="-1" />
+    		 </if>
+  	 </if>
+#PICDAPT
+T				UseAdaptivePic
+F				DoAdaptPic
+100				DnAdaptPic
+-1.				DtAdaptPic
+
+This command controls the PIC adaptation functionality. Default is 
+UseAdaptivePic=.true. and DoAdaptPic=.false.. This results in FLEKS
+covers a fixed region using PIC by the parameters set up in 
+#PICGRID. If DoAdaptPic=.true., the PIC region will be recalculated
+based on the frequency (DnAdaptPic and DtAdaptPic) provided. 
+</command>
+
 </commandgroup>
 <commandgroup name="PHYSICS PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
