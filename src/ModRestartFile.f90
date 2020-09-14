@@ -1250,7 +1250,8 @@ contains
     !    state will be used for these variables (unless UseStrict=T, in which
     !    case the code will stop excution).
 
-    use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V
+    use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V, &
+         ChargeStateFirst_, ChargeStateLast_
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict, NameVarLower_V
 
@@ -1373,6 +1374,12 @@ contains
                 end do; end do ; end do
              end do
           case default
+             if(ChargeStateLast_ > 1 .and. iVar >= ChargeStateFirst_ .and. &
+                  iVar <= ChargeStateLast_)then
+                if(iProc == 0 .and. iVar == ChargeStateFirst_)write(*,*)&
+                     'charge state variable initialized via user action !!!'
+                CYCLE
+             end if
              if(iProc==0) &
                   write(*,*) 'WARNING!!! : the state variable ', &
                   NameVar_V(iVar) //                            &
