@@ -3892,6 +3892,7 @@ No magnetometer grid file is saved by default.
 				<option name="ieb" />
 				<option name="last closed B" value="lcb" />
 				<option name="coupling buffer" value="buf" />
+				<option name="points" value="pnt"/>
 			</part>
 			<part name="plotvar" type="string" required="T"
 				input="select">
@@ -9839,6 +9840,54 @@ field, the second one ('minus') is for waves propagating anti-parallel
 to the field. The propagation speed with respect to the background
 plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
 
+</commandgroup>
+
+<commandgroup name="PARTICLE FIELD LINES">
+
+<command name="PARTICLELINE">
+  <parameter name="UseParticles" type="logical" default="F"/>
+  <parameter name="nFieldLineMax" type="integer" default="-1"/>
+  <parameter name="nParticlePerLine" type="integer" default="-1"/>
+  <parameter name="SpaceStepMin" type="real" />
+  <parameter name="SpaceStepMax" type="real" />
+  <parameter name="InitMode" type="string" input="select">
+    <option name="preset"/>
+    <option name="import"/>
+  </parameter>
+  
+#PARTICLELINE
+T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+radius			OrderMode
+T			UseCorrection
+1.25                    rCorrectionMin
+-1                      rCorrectionMax
+
+The command defines the class of advected magnetic field lines, consisting of
+"particles" which are essentially the Lagrangian grid points. Initially, the
+magnetic field lines are traced starting from the origin point set, determined
+by the value of InitMode parameter (their coordinated are imported from another
+model or just preset in the parameter file).
+
+Based on values of SpaceStepMin and SpaceStepMax space step may be
+ - both negative => automatic (defined by grid resolution)
+ - otherwise     => restricted by min and/or max
+                    whichever is positive
+
+ Ordering modes, particle index increases with:
+ - radius:  distance from the center
+ - field: along the direction of the magnetic field
+
+ Field lines may need to be corrected during tracing. In this case
+ user may specify the boundaries where the correction is applied.
+ Again, negative value means that the minimum or maximum value of the
+ heliocentric distance at which the correction is applied.
+
+</command>
 </commandgroup>
 
 <commandgroup name="SCRIPT COMMANDS">
