@@ -2187,20 +2187,25 @@ Default is false for DoFixAxis.
 
 <command name="COARSEAXIS">
 	<parameter name="UseCoarseAxis" type="logical" default="F"/>
-	<parameter name="nCoarseLayer"  type="integer" min="1" default="1"/>
+	<parameter name="nCoarseLayer"  type="integer" min="1" default="3"/>
 
 #COARSEAXIS
 T			UseCoarseAxis
-1			nCoarseLayer
+3			nCoarseLayer
 
 The computational cells become very small near the symmetry axis
 of a spherical or grid.
 
 When UseCoarseAxis is true, the cells around the pole are merged into pairs, if
 nCoarseLayer=1. If nCoarseLayer=2, then around the pole each 4 cells are merged
-and in the second (from the pole) layer each 2 cells are merged.
+and in the second (from the pole) layer each 2 cells are merged. To achive this,
+nJ size parameter of the spherical gird should be a multiple of 4. If
+nCoarseLayer=3, then around the pole each 8 cells are merged,
+in the second (from the pole) layer each 4 cells are merged, and in the third
+(from the pole) layer each 2 cells are merged. To achive this,
+nJ size parameter of the spherical gird should be a multiple of 8.
 
-Default is false for both UseCoarseAxis.
+Default is false for UseCoarseAxis.
 </command>
 
 </commandgroup>
