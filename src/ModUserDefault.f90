@@ -9,7 +9,7 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  real,              parameter :: VersionUserModule = 1.1
+  real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = 'src/ModUserDefault.f90'
   character (len=*), parameter :: NameUserModule = 'DEFAULT EMPTY ROUTINES'
 
