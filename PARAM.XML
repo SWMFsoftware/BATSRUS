@@ -248,7 +248,8 @@ These modified commands cannot precede the #PLANET command!
 		<option name="NEPTUNE" 			/>
 		<option name="PLUTO" 			/>
 		<option name="MOON"			/>
-		<option name="IO"			/>
+		<option name="GANYMEDE"			/>	
+		<option name="IO"			/>	
 		<option name="EUROPA"			/>
 		<option name="GANYMEDE"			/>
 		<option name="TITAN"			/>
@@ -931,6 +932,7 @@ The default values are shown above.
 		<option name="SI"/>
 		<option name="PLANETARY" default="T"/>
 		<option name="SOLARWIND"/>
+		<option name="OUTERHELIO"/>
 		<option name="NONE"/>
 		<option name="USER"/>
                 <option name="READ"/>
@@ -967,7 +969,7 @@ is usually not consistent with the inverse cube of the normalization
 of distance.
 
 Possible values for TypeNormalization are NONE, PLANETARY, SOLARWIND,
-USER and READ.
+OUTERHELIO, USER and READ.
 
 If TypeNormalization="NONE" then the distance, velocity and density
 units are the SI units, i.e. meter, meter/sec, and kg/m$^3$.
@@ -988,6 +990,9 @@ is very impractical, because it depends on the solar wind values
 that are variable, and may not even make sense (e.g. for a shock tube test
 or a Tokamak problem). This normalization is only kept for sake of
 backwards compatibility.
+
+If TypeNormalization="OUTERHELIO" then the distance unit is 1 AU,
+the velocity unit is km/s, and the density unit is amu/cm3.
 
 If TypeNormalization="USER" the normalization is set in the user module.
 This may be useful if the normalization depends on some input parameters.
@@ -1301,8 +1306,8 @@ user          - user defined
 There are no default values. User must set face boundary type if a box is cut out of a non-Cartesian grid.
 </command>
 
-<command name="BOUNDARYSTATE">
-	 <parameter name="StringBoundary" type="character"/>
+<command name="BOUNDARYSTATE" multiple="T">
+	 <parameter name="StringBoundary" type="string" length="400"/>
 	 <parameter name="BoundaryStateDim_V" type="real"/>
 
 #BOUNDARYSTATE
@@ -1364,8 +1369,8 @@ state values must be given.
 <command name="SOLIDSTATE">
   <parameter name="UseSolidState" type="logical"/>
   <if expr="$UseSolidState">
-    <parameter name="TypeBcSolid" type="character"/>
-    <parameter name="TypeSolidGeometry" type="character"/>
+    <parameter name="TypeBcSolid" type="string"/>
+    <parameter name="TypeSolidGeometry" type="string"/>
     <parameter name="rSolid" type="real"/>
     <parameter name="SolidLimitDt" type="real"/>
   </if>
@@ -3298,10 +3303,10 @@ Default value is "GM/IO2".
 								default="1" />
 		<parameter name="DtSaveLogfile" type="real"    min="-1"
 								default="-1" />
-		<parameter name="NameLogVars" type="string" length="100"
+		<parameter name="NameLogVars" type="string" length="400"
 			if="$StringLogVar =~ /var/i" />
 		<parameter name="StringLogRadii" type="strings" min="1" max="10"
-			length="100" if="($StringLogVar=~/flx/i or $NameLogVars=~/flx/i)">
+			length="400" if="($StringLogVar=~/flx/i or $NameLogVars=~/flx/i)">
 			<part name="LogRadii" type="real" min="$rBody"
 								multiple="T"/>
 		</parameter>
@@ -4070,8 +4075,8 @@ No magnetometer grid file is saved by default.
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
-			<parameter name="NameVars" type="string" length="200"/>
-			<parameter name="NamePars" type="string" length="200" default="{default}"/>
+			<parameter name="NameVars" type="string" length="400"/>
+			<parameter name="NamePars" type="string" length="400" default="{default}"/>
 		</if>
 	</for>
 #SAVEPLOT
@@ -5763,6 +5768,7 @@ Defaults are DoAmr false and IsStrictAmr true.
 <command name="AMRLIMIT">
 	 <parameter name="PercentCoarsen" type="real" min="0" default="0" />
 	 <parameter name="PercentRefine" type="real" min="0" default="0" />
+	 <parameter name="MaxBlockAll" type="integer" min="1" />
 	 <parameter name="DiffCriteriaLevel" type="real" min="0"
 	 	    			     		 default="1e-8" />
 #AMRLIMIT
@@ -7348,7 +7354,7 @@ T			UseHyperbolicDivb
 0.1			HypDecay
 
 This command sets the parameters for hyperbolic/parabolic cleaning. The command
-(and the hyperbolic cleaning method) can only be used of there is a hyperbolic
+(and the hyperbolic cleaning method) can only be used if there is a hyperbolic
 scalar named Hyp in the equation module. The SpeedHypDim parameter sets the
 propagation speed for div B errors in dimensional units. Do not use a speed
 that limits the time step (ie. exceeds the fastest wave speed). The HypDecay
