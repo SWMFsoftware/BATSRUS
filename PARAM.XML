@@ -4040,7 +4040,7 @@ No magnetometer grid file is saved by default.
 			<parameter name="nLon"    type="real" min="4" default="36"/>
 		</if>
 		<if expr="$plotarea =~ /\bshl\b/">
-			<parameter name="TypeCoord" type="string" length="3" default="GEO"/>
+			<parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
 			<parameter name="rMin"   type="real" min="0"                 default="6.6"/>
 			<parameter name="rMax"   type="real" min="$rMin"             default="6.6"/>
 			<parameter name="dR"     type="real" min="0" if="$rMin   != $rMax"/>
@@ -4052,7 +4052,7 @@ No magnetometer grid file is saved by default.
 			<parameter name="dLat"   type="real" min="0" if="$LatMin != $LatMax"/>
 		</if>
 		<if expr="$plotarea =~ /\bbox\b/">
-			<parameter name="TypeCoord" type="string" length="3" default="HGR"/>
+			<parameter name="TypeCoordPlot" type="string" length="3" default="HGR"/>
 			<parameter name="x0"     type="real" default="0"/>
 			<parameter name="y0"     type="real" default="0"/>
 			<parameter name="z0"     type="real" default="0"/>
@@ -8267,8 +8267,7 @@ value read.
 		<parameter name="rBody" type="real" min="0" default="3"/>
 		<parameter name="rCurrents" type="real" min="-1" default="4"
 			if="$NameComp eq 'GM'"/>
-		<parameter name="BodyNDim" type="real" min="0" default="1"/>
-		<parameter name="BodyTDim" type="real" min="0" default="1000"/>
+		<parameter name="BodyNDim" type="real" min="0" default="28"/>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
@@ -8291,7 +8290,7 @@ T			UseBody (rest of parameters read if true)
 T                       UseBody (rest of parameters read if true)
 2.5                     rBody
 3.5                     rCurrents (only read for GM component)
-28.0                    BodyRhoDim (/cc)
+28.0                    BodyNDim (/cc)
 25000.0                 BodyTDim (K)
 
 Note that the #BODY command is most useful for Cartesian grids so that a sphere
