@@ -1,15 +1,15 @@
 #DESCRIPTION
-Param/FIVEMOMENT/PARAM.in.langmuir: 5-moment test with Langmuir waves
+Param/FIVEMOMENT/PARAM.in.langmuir: 5-moment test with Langmuir waves		StringDescription
 
 #USERMODULE
-Waves and GEM, Yingjuan Ma
+Waves and GEM, Yingjuan Ma		NameUserModule
 1.40			VersionUserModule
 
 #CHECKGRIDSIZE
-      50                              nI
-      50                              nJ
-       1                              nK
-      10                     MinBlockALL
+      50		nI
+      50		nJ
+       1		nK
+      10		MinBlockALL
 
 #PLANET
 NONE			NamePlanet
@@ -21,30 +21,30 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #GRID
-1                  	nRootBlockX
-1                     	nRootBlockY
-1                     	nRootBlockZ
--0.5                 	xMin
-+0.5                 	xMax
--0.5                   	yMin
- 0.5                   	yMax
--1.                   	zMin
- 1.                   	zMax
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-0.5			xMin
++0.5			xMax
+-0.5			yMin
+ 0.5			yMax
+-1.			zMin
+ 1.			zMax
 
 
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
-F			IsAssymetric
+F			IsAsymmetric
 F			DoNormalizeCell
 
 #LIGHTSPEED
 1.0			cLightDim
 
 #PLASMA
-1.0			IonMass
-1/100.0			ElectronMass
-1.0			IonCharge
+1.0			FluidMass
+1/100.0			IonCharge
+1.0			ElectronTemperatureRatio
 -1.0			ElectronCharge
 1.0			ElectronTemperatureRatio
 
@@ -71,7 +71,7 @@ F			DoNormalizeCell
 0.0			ShockPosition
 1.0			ShockSlope
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 #WAVE
 ElUx			NameVar
@@ -82,15 +82,13 @@ ElUx			NameVar
 -1.0			LambdaZ
 0.0			Phase
 
-#USERINPUTEND ---------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-periodic                TypeBcEast
-periodic                TypeBcWest
-periodic                TypeBcSouth
-periodic                TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -99,7 +97,7 @@ T			UseNonConservative
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 #HYPERBOLICDIVE
 0.5			HypEDecay
@@ -125,15 +123,15 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-2
-1d mhd idl_ascii	StringPlot
--1			DnOutput
-0.1			DtOutput
-0.			DxOutput
-z=0 MHD idl             StringPlot
--1			DnOutput
-0.1			DtOutput
-0.			DxOutput
+2			nPlotFile
+1d mhd idl_ascii		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.			DxSavePlot
+z=0 MHD idl		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.			DxSavePlot
 
 #STOP
 -1			MaxIteration

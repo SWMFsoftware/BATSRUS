@@ -2,10 +2,10 @@
 NONE			NamePlanet
 
 #IOUNITS
-NONE			NameIoUnits
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			NameNormalization
+NONE			TypeNormalization
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -16,17 +16,17 @@ update_state_normal calc_source
 update_state_normal calc_face_flux
 
 #TESTVAR
-pepar
+pepar			NameTestVar
 
 #TESTXYZ
-2.0
-0.0
-0.0
+2.0			xTest
+0.0			yTest
+0.0			zTest
 
 #GRID
-10			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+10			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -30.0			xMin
  30.0			xMax
 -0.05			yMin
@@ -35,7 +35,7 @@ pepar
  0.05			zMax
 
 #UNIFORMSTATE
-1.0			rho (left state)
+1.0			Rho (left state)
 12.0			Ux
 0.0			Uy
 0.0			Uz
@@ -47,7 +47,7 @@ pepar
 14.0			Ppar
 16.0			P
 
-#USERINPUTBEGIN -----------------
+#USERINPUTBEGIN -----------------------------------
 
 #WAVE
 Rho
@@ -104,50 +104,50 @@ By
 0.0			Phase
 
 
-#USERINPUTEND ---------------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-periodic	xMinBc
-periodic	xMaxBc
-float		yMinBc
-float		yMaxBc
-float		zMinBc
-float		zMaxBc
+periodic		TypeBc1
+periodic		TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaveRestart
 
 #PLOTFILENAME
-second		NameMaxTimeUnit
+second			NameMaxTimeUnit
 
 #SAVEINITIAL
-T		DoSaveInitial
+T			DoSaveInitial
 
 #SAVEPLOT
-1		nPlotfile
-1d var idl_ascii	PlotString
--1              DnSavePlot
-0.1             DtSavePlot
-0.0             DxSavePlot
-{mhd}
-{default}
+1			nPlotFile
+1d var idl_ascii		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+{mhd}			NameVars
+{default}		NamePars
 
 #STOP
--10		MaxIteration
-0.5		tSimulationMax
+-10			MaxIteration
+0.5			tSimulationMax

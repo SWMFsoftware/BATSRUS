@@ -1,14 +1,14 @@
 #UPDATECHECK
-F			DoUpdateCheck
+F			UseUpdateCheck
 
 #DESCRIPTION
-Param/FIVEMOMENT/PARAM.in.shock: Five-moment test	StringDescription
+Param/FIVEMOMENT/PARAM.in.shock: Five-moment test		StringDescription
 
 #CHECKGRIDSIZE
-     100                              nI
-       1                              nJ
-       1                              nK
-      10                     MinBlockALL
+     100		nI
+       1		nJ
+       1		nK
+      10		MinBlockALL
 
 #PLANET
 NONE			NamePlanet
@@ -23,9 +23,9 @@ NONE			TypeNormalization
 1.0			cLightDim
 
 #PLASMA
-0.1			IonMass
-0.001			ElectronMass
-1.0			IonCharge
+0.1			FluidMass
+0.001			IonCharge
+1.0			ElectronTemperatureRatio
 -1.0			ElectronCharge
 1.0			ElectronTemperatureRatio
 
@@ -66,23 +66,19 @@ NONE			TypeNormalization
 0.05e-4			eP
 
 #GRID
-8                  	nRootBlockX
-1                     	nRootBlockY
-1                     	nRootBlockZ
--0.5                 	xMin
-+0.5                 	xMax
--1.                   	yMin
- 1.                   	yMax
--1.                   	zMin
- 1.                   	zMax
+8			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-0.5			xMin
++0.5			xMax
+-1.			yMin
+ 1.			yMax
+-1.			zMin
+ 1.			zMax
 
 #OUTERBOUNDARY
-float                    TypeBcEast
-float                    TypeBcWest
-float                   TypeBcSouth
-float                   TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+float			TypeBc1
+float			TypeBc2
 
 #NONCONSERVATIVE
 F			UseNonConservative
@@ -91,7 +87,7 @@ F			UseNonConservative
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 TIMESTEPPING
 3			nStage
@@ -110,11 +106,11 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-1
-1d mhd idl_ascii	StringPlot
--1			DnOutput
-0.1			DtOutput
-0.			DxOutput
+1			nPlotFile
+1d mhd idl_ascii		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.			DxSavePlot
 
 #STOP
 -1			MaxIteration
