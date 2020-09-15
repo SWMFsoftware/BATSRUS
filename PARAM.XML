@@ -54,7 +54,7 @@ so the default components should not be changed by this command.
 </command>
 
 <command name="DESCRIPTION" if="$_IsStandAlone">
-	<parameter name="StringDescription" type="string" length="100" />
+	<parameter name="StringDescription" type="string" length="400" />
 
 #DESCRIPTION
 This is a test run for Jupiter with no rotation.
@@ -2198,11 +2198,11 @@ of a spherical or grid.
 
 When UseCoarseAxis is true, the cells around the pole are merged into pairs, if
 nCoarseLayer=1. If nCoarseLayer=2, then around the pole each 4 cells are merged
-and in the second (from the pole) layer each 2 cells are merged. To achive this,
+and in the second (from the pole) layer each 2 cells are merged. To achieve this,
 nJ size parameter of the spherical gird should be a multiple of 4. If
 nCoarseLayer=3, then around the pole each 8 cells are merged,
 in the second (from the pole) layer each 4 cells are merged, and in the third
-(from the pole) layer each 2 cells are merged. To achive this,
+(from the pole) layer each 2 cells are merged. To achieve this,
 nJ size parameter of the spherical gird should be a multiple of 8.
 
 Default is false for UseCoarseAxis.
@@ -5856,10 +5856,8 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="R_currents"       value="rcurrents"    />
 			<option name="User defined" value="user" />
 		</parameter>
-		<parameter name="CoarsenLimit" type="real" min="0" max="1"
-							   default="0.5"/>
-		<parameter name="RefineLimit" type="real" min="0" max="1"
-							  default="0.5"/>
+		<parameter name="CoarsenLimit" type="real" />
+		<parameter name="RefineLimit" type="real" min="$CoarsenLimit"/>
 		<if expr="$TypeRefine=~/transient/">
 			<parameter name="TypeTransient" type="string"
 				case="lower" input="select">
@@ -8079,22 +8077,19 @@ the equation module.
 </command>
 
 <command name="SHOCKTUBE" if="$_IsFirstSession">
-	<parameter name="Var1Left"  type="real"	/>
-	<parameter name="Var2Left"  type="real" />
-	<parameter name="Var1Right"  type="real" />
-	<parameter name="Var2Right"  type="real" />
+	<parameter name="Rho"  type="real"	/>
 
 #SHOCKTUBE
-1.		Var1Left
-0.		Var2Left
+1.		Rho Left
+0.		Ux
 0.		...
 0.
 0.75
 1.
 0.
 1.
-0.125		Var1Right
-0.		Var2Right
+0.125		Rho Right
+0.		Ux
 0.		...
 0.
 0.75
@@ -8684,19 +8679,19 @@ By default no minimum temperature limit is applied.
                 <parameter name="SpeedMinDim" type="real" min="0"
 			   default="250" />
                 <parameter name="TauSpeedMinDim" type="real" min="1"
-			   default="36000" />
+			   default="10 h" />
          </if>
 
 #MINIMUMRADIALSPEED
 T		UseSpeedMin
 10		rSpeedMin
 250		SpeedMinDim
-36000		TauSpeedMinDim
+10 h		TauSpeedMinDim
 
-If UseSpeedMin is true the minimum speed is enforced. If above the 
-radial distance of rSpeedMin the radial speed falls below SpeedMin 
+If UseSpeedMin is true, the minimum speed is enforced. If the radial speed
+falls below SpeedMin beyond the radial distance rSpeedMin, then
 a force is applied (via a source term) to push the solar wind speed 
-above SpeedMin. TauSpeedMinDim is in seconds and SpeedMinDim is in km/s.
+above SpeedMin with a time rate TauSpeedMinDim.
 
 By default no minimum speed limit is applied.
 </command>
@@ -9869,7 +9864,7 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
 
 </commandgroup>
 
-<commandgroup name="PARTICLE FIELD LINES">
+<commandgroup name="PARTICLES">
 
 <command name="PARTICLELINE">
   <parameter name="UseParticles" type="logical" default="F"/>
