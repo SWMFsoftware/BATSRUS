@@ -165,6 +165,12 @@ user			TypeResistivity
 0.55		        Radius
 0.0		        Resistivity
 
+MASSLOADING
+9.8e7			NeutralDensity (cm^-3)
+250			ScaleHeight (km)
+2.2e-8			IonizationRate (1/s)
+2e-15			CollisionCrossSection (cm2)
+
 #USERINPUTEND ----------------------
 
 #TIMESTEPPING

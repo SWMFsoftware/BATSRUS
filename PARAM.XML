@@ -250,6 +250,7 @@ These modified commands cannot precede the #PLANET command!
 		<option name="MOON"			/>
 		<option name="IO"			/>
 		<option name="EUROPA"			/>
+		<option name="GANYMEDE"			/>
 		<option name="TITAN"			/>
 		<option name="ENCELADUS"		/>
 		<option name="HALLEY"			/>
