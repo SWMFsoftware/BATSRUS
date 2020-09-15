@@ -4843,7 +4843,6 @@ The default is to flush the output, i.e. DoFlush=T.
             </if>
 	    <parameter name="TypeBStrap" type="string" case="lower"
 	    	       			 input="select" required="F">
-		<option name="" 	  />
 		<option name="none"	  />
 		<option name="readbstrap" />
 		<option name="getbstrap"  />
@@ -4853,7 +4852,6 @@ The default is to flush the output, i.e. DoFlush=T.
 			   				    default="0" />
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving" />
@@ -4872,7 +4870,6 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <elseif expr="$TypeBStrap =~ /getstrap/">
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving" />
@@ -4892,20 +4889,19 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <else>
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving"  />
 		    <option name="cancelflux" />
-	    </parameter>
-	    <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	<parameter name="bQStrappinDim" type="real" min="0" 
+		</parameter>
+		<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	    	  <parameter name="bQStrappinDim" type="real" min="0" 
 			   				    default="0" />
-		<parameter name="qDistance" type="real" min="0" default="0" />
-	    </if>
-	    <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	<parameter name="UChargeX" type="real" min="0" default="0" />
-	    </if>
+		  <parameter name="qDistance" type="real" min="0" default="0" />
+		</if>
+		<if expr="$TypeCharge =~ /moving|cancelflux/">
+	    	  <parameter name="UChargeX" type="real" min="0" default="0" />
+		</if>
 	    </else>
 	    </if>
 	</if>
@@ -4916,7 +4912,6 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <parameter name="Depth" type="real" min="0" default="0" />
 	    <parameter name="TypeBStrap" type="string" case="lower"
 	    	       			 input="select" required="F">
-		<option name="" 	  />
 		<option name="none"	  />
 		<option name="readbstrap" />
 		<option name="getbstrap"  />
@@ -4926,7 +4921,6 @@ The default is to flush the output, i.e. DoFlush=T.
 			   				    default="0" />
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving" />
@@ -4945,7 +4939,6 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <elseif expr="$TypeBStrap =~ /getstrap/">
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving" />
@@ -4965,7 +4958,6 @@ The default is to flush the output, i.e. DoFlush=T.
 	    <else>
 		<parameter name="TypeCharge" type="string" case="lower"
 	    	       			 input="select" required="F">
-		    <option name="" 	  />
 		    <option name="none"	  />
 		    <option name="steady" />
 		    <option name="moving"  />
