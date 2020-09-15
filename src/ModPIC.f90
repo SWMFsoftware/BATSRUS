@@ -90,7 +90,7 @@ module ModPIC
   integer, public, allocatable:: StatusMin_I(:), StatusMax_I(:)  
   integer, public::  nSizeStatus
 
-  integer, public:: nCellPerPatch = 2
+  integer, public:: nCellPerPatch = 4
 
   ! The PIC regon can rotate around x, y and z axis. The rotation rule is the
   ! same as the rotation for #REGION command.
