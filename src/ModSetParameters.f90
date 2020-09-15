@@ -677,10 +677,10 @@ contains
        case("#HYPRE")
           call hypre_read_param
 
-       case("#PIC", "#PICGRID", '#PICREGIONROTATE', "#PICUNIT", &
-            "#PICREGIONUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST", &
-            "#PICADAPT", "#PICPATCH", "#PICCRITERIA", "#PICPATCHEXTEND", &
-            "#PICREGIONMIN", "#PICREGIONMAX","#RESTARTPICSTATUS")
+       case("#PICGRID", '#PICGRIDROTATE', "#PICUNIT", "#PICGRIDUNIT", &
+            "#PICBALANCE", "#PICADAPT", "#PICPATCH", "#PICCRITERIA", &
+            "#PICPATCHEXTEND", "#PICREGIONMIN", "#PICREGIONMAX", &
+            "#RESTARTPICSTATUS")
           call pic_read_param(NameCommand)
 
        case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")

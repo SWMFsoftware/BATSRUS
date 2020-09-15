@@ -179,8 +179,7 @@ contains
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
 
-    case("#PICREGIONUNIT")
-       ! TODO: change the command name to #PICGRIDUNIT
+    case("#PICGRIDUNIT")
        UseSamePicUnit = .false. 
        call read_var('nPicRegion', nRegionPicTmp)
 
@@ -253,7 +252,7 @@ contains
 
        end do
 
-    case("#PICREGIONROTATE")       
+    case("#PICGRIDROTATE")       
        DoRotatePIC = .true.
 
        call read_var('nPicRegion', nRegionPicTmp)
