@@ -3961,7 +3961,10 @@ No magnetometer grid file is saved by default.
 			<parameter name="zPoint"  type="real" />
 		</if>
                 <if expr="$plotarea =~ /\blos\b/">
-			<parameter name="ObsPosX" type="real" default="-215"/>
+		    <if expr="$plotvar =~ /\bins\b/">
+		    	<parameter name="StringsInstrument" type="string" length="200"/>
+		    <elseif expr="$plotvar !~ /\bins\b/">
+		    	<parameter name="ObsPosX" type="real" default="-215"/>
 			<parameter name="ObsPosY" type="real" default="0"/>
 			<parameter name="ObsPosZ" type="real" default="0"/>
 			<parameter name="OffsetAngle" type="real"
@@ -3978,6 +3981,8 @@ No magnetometer grid file is saved by default.
 								default="200"/>
 			<parameter name="NameLosTable" type="string" length="100"
 				   if="$plotvar =~ /tbl/i"/>
+		     </elseif>
+		     </if>
                 </if>
  		<if expr="$plotarea =~ /\brfr\b/">
 			<parameter name="ObsPosX" type="real" default="-215"/>
