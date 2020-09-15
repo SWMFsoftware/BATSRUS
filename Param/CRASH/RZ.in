@@ -2,9 +2,9 @@
 rz			TypeGeometry
 
 #OUTERBOUNDARY
-float			TypeBcXmin
-float			TypeBcXmax
-reflect			TypeBcYmin
-float			TypeBcYmax
+float			TypeBc1
+float			TypeBc2
+reflect			TypeBc3
+float			TypeBc4
 reflect			TypeBcZmin
 reflect			TypeBcZmax

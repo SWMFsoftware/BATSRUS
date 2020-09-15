@@ -2,15 +2,15 @@
 spherical_lnr		TypeGeometry
 
 #GRID
-8			nRootBlockX
-4                       nRootBlockY
-2                       nRootBlockZ
--40.                    xMin
-  8.                    xMax
--24.                    yMin
- 24.                    yMax
--24.                    zMin
- 24.                    zMax
+8			nRootBlock1
+4			nRootBlock2
+2			nRootBlock3
+-40.			xMin
+  8.			xMax
+-24.			yMin
+ 24.			yMax
+-24.			zMin
+ 24.			zMax
 
 #GRIDBLOCKALL
 1000			MaxBlock
@@ -18,14 +18,14 @@ spherical_lnr		TypeGeometry
 ! this should be here but was missed in the original test
 
 LIMITRADIUS
-1.0231328486450759	rMin
+1.0231328486450759		rMin
 53.0			rMax ~ sqrt(40^2+24^2+24^2)
 
 #GRIDLEVEL
-1			nLevelArea
-all			NameArea
+1			nLevel
+all			StringShape
 
 #GRIDLEVEL
-10			nLevelArea
-sphere0			NameArea
+10			nLevel
+sphere0			StringShape
 1.22776			Radius = 1.2*rBody

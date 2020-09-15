@@ -4,13 +4,13 @@ Begin session: 1
 T			DoEcho
 
 #DESCRIPTION
-Input file for creating a steady state solar corona with oxygen charge states
+Input file for creating a steady state solar corona with oxygen charge states		StringDescription
 
 #COMPONENT
-SC
+SC			NameComp
 
 #TIMEACCURATE
-F                       DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
 2007			iYear
@@ -21,15 +21,12 @@ F                       DoTimeAccurate
 00			iSecond
 0.0			FracSecond
 
-#SAVERESTART
-F
-
 #COORDSYSTEM
 HGR			TypeCoordSystem
 
 #PLASMA
-1.0			IonMass [amu]
-1.0			AverageIonCharge [e]
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 #BODY
@@ -45,11 +42,11 @@ F			UseBody
 F			UseCurlB0
 
 #HELIODIPOLE
-2.8e-4                  HelioDipoleStrengthSi
-0.0                     HelioDipoleTiltDeg
+2.8e-4			HelioDipoleStrength
+0.0			HelioDipoleTilt
 
 #USERSWITCH
-+init +ic +source
++init +ic +source		StringSwitch
 
 #POINTIMPLICIT
 T			UsePointImplicit
@@ -60,34 +57,34 @@ T			DoNormalizeCell
 #LOOKUPTABLE
 ionization_o		NameTable
 load			NameCommand
-o_tbl.dat			
+o_tbl.dat		NameFile
 ascii			TypeFile
 
-#USERINPUTBEGIN ------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
-2e17                    nChromoSi H+ [1/m^3] ! 2e17
-5e4                     tChromoSi [K]
+2e17			nChromoSi H+ [1/m^3] ! 2e17
+5e4			tChromoSi [K]
 
-#USERINPUTEND ----------------------------
+#USERINPUTEND -------------------------------------
 
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection
-1.5e5                   LperpTimesSqrtBSi
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
--1.0
+-1.0			TauGLobalSi
 1e5			TauGlobalSi
 
 #HEATCONDUCTION
@@ -118,30 +115,30 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-Param/CORONA/RadCoolCorona_8.0.dat
+Param/CORONA/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExtendTransitionRegion
-2.2e5			TeModSi
+T			DoExpandTransitionRegion
+2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
 #FIXAXIS
-T                       DoFixAxis
-24.0                    rFixAxis
-0.0                     r2FixAxis
+T			DoFixAxis
+24.0			rFixAxis
+0.0			r2FixAxis
 
 turn these off when restarting
 ---------------------------------------------------
 #GRIDGEOMETRY
-spherical_genr
-Param/CORONA/grid_awsom.dat
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID
-2			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
+2			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
 -100.0			xMin
  100.0			xMax
 -100.0			yMin
@@ -154,23 +151,23 @@ Param/CORONA/grid_awsom.dat
 24.0			rMax
 ----------------------------------------------------
 #AMRREGION
-InnerShell              NameRegion
-shell0                  TypeRegion
-1.0                     Radius1
-1.7                     Radius2
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
 
 #AMRCRITERIARESOLUTION
-1                       nCriteria
-dphi                    TypeCriteria
-3.0                     RefineTo
-1.5                     CoarsenFrom
+1			nRefineCrit
+dphi			StringRefine
+3.0			RefineTo
+1.5			CoarsenFrom
 
 #GRIDRESOLUTION
-6                       nLevelArea
-initial                 NameArea
+6			Resolution
+initial			StringShape
 
 #DOAMR
-F                       DoAmr
+F			DoAmr
 
 #TIMESTEPPING
 2			nStage
@@ -189,7 +186,7 @@ T			UseRhoRatioLimiter  !!!
 o(9)
 
 #MINIMUMTEMPERATURE
-5e4			TMinDim  [K] for fluid 1
+5e4			TminDim  [K] for fluid 1
 5e4			TeMinDim [K]
 
 #MINIMUMPRESSURE
@@ -200,16 +197,16 @@ o(9)
 T			UseNonConservative
 
 #RESCHANGE
-T			UseAccurateResChange
+T			UseAccurateReschange
 
 #SAVERESTART
-T                       DoSaveRestart
-4                   DnSaveRestart
--1.0                    DtSaveRestart
+T			DoSaveRestart
+4			DnSaveRestart
+-1.0			DtSaveRestart
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
@@ -222,5 +219,5 @@ float			TypeBc5
 float			TypeBc6
 
 #STOP
-4                    MaxIteration
--1.0                    tSimulationMax
+4			MaxIteration
+-1.0			tSimulationMax

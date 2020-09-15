@@ -8,13 +8,13 @@ NONE			NamePlanet
 SI			TypeIoUnit
 
 #NORMALIZATION
-READ
+READ			TypeNormalization
 1.0e-6			No2SiUnitX Micron
 1.0e+3			No2SiUnitU km/s
 1000.0			No2SiUnitRho g/cm^3
 
 #UPDATECHECK
-F			DoUpdateCheck
+F			UseUpdateCheck
 
 #NONCONSERVATIVE
 F			UseNonConservative
@@ -26,7 +26,7 @@ T			UseRhoRatioLimiter
 EInt			NameVarLimitRatio
 
 #RESCHANGE
-T                       UseAccurateResChange
+T			UseAccurateReschange
 
 #SAVEINITIAL
 T			DoSaveInitial

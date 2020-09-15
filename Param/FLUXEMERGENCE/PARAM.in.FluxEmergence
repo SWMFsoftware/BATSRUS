@@ -5,8 +5,8 @@ EE			NameComp
 GSM			TypeCoordSystem
 
 #PROGRESS
-10                      DnProgressShort
-100                     DnProgressLong
+10			DnProgressShort
+100			DnProgressLong
 
 #TIMING
 T			UseTiming
@@ -15,89 +15,89 @@ T			UseTiming
 tree			TypeTimingReport
 
 #SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-180.                    DtSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+180.			DtSaveRestart
 
 #TIMEACCURATE
-T                       DoTimeAccurate
+T			IsTimeAccurate
 
 #INCLUDE
 restartIN/restart.H
 
 #GRAVITY
 T			UseGravity
-3			GravityDir
--273.066667             GravitySi [m/s^2]
+3			iDirGravity
+-273.066667		GravitySi [m/s^2]
 
 #OUTERBOUNDARY
 reflect			TypeBc1
 reflect			TypeBc2
 reflect			TypeBc3
 reflect			TypeBc4
-userfixvalue   	 	TypeBc5
-usernoinflow   		TypeBc6
+userfixvalue		TypeBc5
+usernoinflow		TypeBc6
 
 #NORMALIZATION
 READ			TypeNormalization
-1.5E05			No2SiUnitx
+1.5E05			No2SiUnitX
 6.4E03			No2SiUnitU
 2.7E-4			No2SiUnitRho
 
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
 
-#USERINPUTBEGIN -------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
-0.0                     z_photo
-40.                     UnsignedFluxHeight
-T                       UseThinRadiation
-F                       UseCoronalField
-5.e-6                   RhoThinCutoff
-F                       UseVerticalDamping
-80.                     TimeVerticalDamping
-0.0                     TemperatureGradient
-0.5                     DtUpdateFlux
-F                       UseUniformInitialState
-F                       UseUniformT
-F                       UseEnergyPert
-5e-4                    InitialDensity
-6e4                     InitialTemperature
-0.                      InitialBx
-0.                      InitialBy
-0.                      InitialBz
-6.e8                    NumberDensFloor
+0.0			z_photo
+40.			UnsignedFluxHeight
+T			UseThinRadiation
+F			UseCoronalField
+5.e-6			RhoThinCutoff
+F			UseVerticalDamping
+80.			TimeVerticalDamping
+0.0			TemperatureGradient
+0.5			DtUpdateFlux
+F			UseUniformInitialState
+F			UseUniformT
+F			UseEnergyPert
+5e-4			InitialDensity
+6e4			InitialTemperature
+0.			InitialBx
+0.			InitialBy
+0.			InitialBz
+6.e8			NumberDensFloor
 
 #ROPE
-T                       UseRope
-0                       x2c_rope
--66.67                  x3c_rope
-7.07                    ra_rope
--1.5                    qfac_rope
-4.e1                    lamb_rope
-1.                      buoyancy_rope
-3.6e1                   b0_rope_rope
+T			UseRope
+0			x2c_rope
+-66.67			x3c_rope
+7.07			ra_rope
+-1.5			qfac_rope
+4.e1			lamb_rope
+1.			buoyancy_rope
+3.6e1			b0_rope_rope
 
-#USERINPUTEND ---------------------
+#USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
-RhoUzExtraEP(Z,Const)   NameTable
-load                    NameCommand
-InitialState.dat        NameFile
-ascii                   TypeFile
+RhoUzExtraEP(Z,Const)		NameTable
+load			NameCommand
+InitialState.dat		NameFile
+ascii			TypeFile
 
 #LOOKUPTABLE
 eos(T,rho)		NameTable
-load                    NameCommand
-EOS.dat                 NameFile
-ascii                   TypeFile
+load			NameCommand
+EOS.dat			NameFile
+ascii			TypeFile
 
 #LOOKUPTABLE
-prl(T,Const)            NameTable
-load                    NameCommand
-RadCoolCorona.dat       NameFile
-ascii                   TypeFile
+prl(T,Const)		NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
 
 PLASMA
 1.23839			AverageIonMass [amu]
@@ -105,8 +105,8 @@ PLASMA
 1.0			ElectronTemperatureRatio
 
 #CORONALHEATING
-unsignedflux            TypeCoronalHeating
-4640.			Decaylength
+unsignedflux		TypeCoronalHeating
+4640.			DecayLength
 1.			HeatNormalization
 
 #MESSAGEPASS
@@ -117,16 +117,16 @@ dir			TypeMessagePass
 F			DoAutoRefine
 0.0			PercentCoarsen
 50.0			PercentRefine
-100000   		MaxTotalBlocks
+100000			MaxTotalBlocks
 
 #AMRLEVELS
-0                       MinBlockLevel
-99                      MaxBlockLevel
+0			MinBlockLevel
+99			MaxBlockLevel
 F			DoFixBodyLevel
 
 #SCHEME
-2			nORDER
-Linde                   TypeFlux
+2			nOrder
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -141,28 +141,28 @@ F			UseProjection
 F			UseConstrainB
 
 #SAVERESTART
-T                       DoSaveRestart  
--1                      DnSaveRestart
-180.                    DtSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+180.			DtSaveRestart
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR   			StringLog
+VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho Ux Uy Uz E Pmin Pmax        NameLogVars
+rho Ux Uy Uz E Pmin Pmax		NameLogVars
 4.0  10.0		rLog
- 
+
 #IOUNITS
-HELIOSPHERIC            TypeIoUnit
+HELIOSPHERIC		TypeIoUnit
 
 #SAVEPLOT
-2                       nPlotfiles
-x=0 VAR tec             StringPlot
--1                      DnSavePlot
-10.                    	DtSavePlot
-rho Ux Uy Uz P tempe Bx By Bz       NameVars
-g eta                   NamePars
+2			nPlotFile
+x=0 VAR tec		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+rho Ux Uy Uz P tempe Bx By Bz		NameVars
+g eta			NamePars
 cut VAR tec		StringPlot
 -1  			DnSavePlot
 10.			DtSavePlot
@@ -172,8 +172,8 @@ cut VAR tec		StringPlot
 35.			yMaxCut
 -17.4			zMinCut
 -17.3			zMaxCut
-rho Uz P tempe Bx By Bz	NameVars
-g eta	    		NamePars
+rho Uz P tempe Bx By Bz		NameVars
+g eta			NamePars
 
 SAVEINITIAL
 T

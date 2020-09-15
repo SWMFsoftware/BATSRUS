@@ -1,112 +1,112 @@
 #PLANET
-NONE
+NONE			NamePlanet
 
 #IOUNITS
-NONE
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE
+NONE			TypeNormalization
 
 #CHECKGRIDSIZE
-64                              nI
-4                               nJ
-1                               nK
-4                               MinBlockALL
+64			nI
+4			nJ
+1			nK
+4			MinBlockALL
 
 #GRID
-4                               nRootBlockX
-1				nRootBlockY
-1				nRootBlockZ
--128.				xMin	   
- 128.				xMax	   
--2.				yMin	   
- 2.				yMax	   
--0.5				zMin	   
- 0.5				zMax
+4			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-128.			xMin
+ 128.			xMax
+-2.			yMin
+ 2.			yMax
+-0.5			zMin
+ 0.5			zMax
 
 Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
-2.0
+2.0			Gamma
 
 #HYPERBOLICDIVB
-T		UseHyperbolicDivb
-4.0		SpeedHypDim
-0.1		HypDecay
+T			UseHyperbolicDivb
+4.0			SpeedHypDim
+0.1			HypDecay
 
 #DIVB
-F
-F
-F
-F
+F			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
 
 #SHOCKTUBE
-1.		rho (left state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
-1.		By
-0.		Bz
-0.		Hyp
-1.		P
-0.125		rho (right state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
--1.		By
-0.		Bz
-0.0		Hyp
-0.1		P
+1.			Rho (left state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+1.			By
+0.			Bz
+0.			Hyp
+1.			P
+0.125			rho (right state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+-1.			By
+0.			Bz
+0.0			Hyp
+0.1			P
 
 #SHOCKPOSITION
-0.0		ShockPosition
-0.5		ShockSlope
+0.0			ShockPosition
+0.5			ShockSlope
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
-shear		xMinBc
-shear		xMaxBc
-shear		yMinBc
-shear		yMaxBc
-float		zMinBc
-float		zMaxBc
+shear			TypeBc1
+shear			TypeBc2
+shear			TypeBc3
+shear			TypeBc4
+float			zMinBc
+float			zMaxBc
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Roe		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Roe			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaveRestart
 
 #PLOTFILENAME
-second
+second			NameMaxTimeUnit
 
 #SAVEPLOT
-2		nPlotfile
-z=0 raw idl	PlotString
--1		DnSavePlot
-10.0		DtSavePlot
-0.0		DxSavePlot
-1d raw idl_ascii	PlotString
--1              DnSavePlot
-10.0            DtSavePlot
-0.0             DxSavePlot
+2			nPlotFile
+z=0 raw idl		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+1d raw idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
--1		MaxIteration
-25.6		tSimulationMax
+-1			MaxIteration
+25.6			tSimulationMax
 

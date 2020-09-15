@@ -5,17 +5,17 @@ Param/SHOCKTUBE/PARAM.in.HallTest: Fast Whistler wave test. Hall term is only ap
 
 #EQUATION
 MHD			NameEquation
-8      			nVar
+8			nVar
 
 #USERMODULE
-Waves and GEM, Yingjuan Ma
-1.40             	VersionUserModule
+Waves and GEM, Yingjuan Ma		NameUserModule
+1.40			VersionUserModule
 
 #CHECKGRIDSIZE
-4                       nI
-2                       nJ
-2                       nK
-100                     MinBlockALL
+4			nI
+2			nJ
+2			nK
+100			MinBlockALL
 
 #PLANET
 NONE			NamePlanet
@@ -27,7 +27,7 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #UNIFORMSTATE
-1.0			rho
+1.0			Rho
 1.0			Ux
 0.0			Uy
 0.0			Uz
@@ -37,50 +37,50 @@ NONE			TypeNormalization
 1.0			P
 
 #GRID
-86                    	nRootBlockX
-1                     	nRootBlockY
-1                     	nRootBlockZ
--100.                 	xMin
- 100.                 	xMax
--1.                   	yMin
- 1.                   	yMax
--1.                   	zMin
- 1.                   	zMax
+86			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-100.			xMin
+ 100.			xMax
+-1.			yMin
+ 1.			yMax
+-1.			zMin
+ 1.			zMax
 
 #GRIDGEOMETRY
-rotatedcartesian	NameGeometry
+rotatedcartesian		TypeGeometry
 
 #SHOCKPOSITION
 0.0			ShockPosition
 3/4			ShockSlope
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-periodic                TypeBc5
-periodic                TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 Right Alfven (no Hall)
-+0.01		AmplBy
--0.01		AmplBz
--0.01		AmplUy
-+0.01		AmplUz
++0.01			AmplBy
+-0.01			AmplBz
+-0.01			AmplUy
++0.01			AmplUz
 
 Right fast Whistler
-+0.01		AmplBy
--0.01		AmplBz
--0.00590516	AmplUy
-+0.00590516	AmplUz
++0.01			AmplBy
+-0.01			AmplBz
+-0.00590516		AmplUy
++0.00590516		AmplUz
 
 Right slow Whistler
-+0.01		AmplBy
-+0.01		AmplBz
--0.0169343	AmplUy
--0.0169343	AmplUz
++0.01			AmplBy
++0.01			AmplBz
+-0.0169343		AmplUy
+-0.0169343		AmplUz
 
 #WAVE
 3			RhoUy_
@@ -118,10 +118,10 @@ Right slow Whistler
 -1.0			LambdaZ
 -90.0			Phase
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 #TEST
-init_hall_resist krylov load_balance			TestString
+init_hall_resist krylov load_balance		StringTest
 
 #TESTXYZ
 2.0			xTest		(X coordinate of cell for testing)
@@ -129,7 +129,7 @@ init_hall_resist krylov load_balance			TestString
 0.5			zTest		(Z coordinate of cell for testing)
 
 #TESTVAR
-6			iVarTest By
+By			NameTestVar
 
 #DIVBSOURCE
 F			UseB0Source
@@ -138,43 +138,43 @@ F			UseB0Source
 F			UseStrict
 
 #DIVB
-F                       UseDivbSource
-F                       UseDivbDiffusion
-F                       UseProjection
-F                       UseConstrainB
+F			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
 
 #STRICT
 T			UseStrict
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc		TypeLimiter
-1.5		BetaLimiter
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SEMIIMPLICIT
-T		UseSemiImplicit
-resistivity	TypeSemiImplicit
+T			UseSemiImplicit
+resistivity		TypeSemiImplicit
 
 #FIXEDTIMESTEP
-T		UseFixedTimeStep
-0.0021405	DtFixed
+T			UseDtFixed
+0.0021405		DtFixedDim
 
 #IMPLICIT
-F		UsePointImplicit
-T		UsePartImplicit
-F		UseFullImplicit
-1.0		CflImpl
+F			UsePointImplicit
+T			UsePartImplicit
+F			UseFullImplicit
+1.0			CflImpl
 
 #KRYLOV
-gmres		TypeKrylov  (gmres, bicgstab)
-nul             TypeInitKrylov (nul, old, explicit, scaled)
-1e-7            ErrorMaxKrylov
-100             MaxMatvecKrylov
+gmres			TypeKrylov  (gmres, bicgstab)
+nul			TypeInitKrylov (nul, old, explicit, scaled)
+1e-7			ErrorMaxKrylov
+100			MaxMatvecKrylov
 
 ! Trapeziodal scheme
 
@@ -184,24 +184,24 @@ F			UseBdf2
 F			UseSourceImpl
 
 #HALLRESISTIVITY
-T			UseHallResistFlux
-35.10762213248		HallFactor (for historical reasons)
+T			UseHallResist
+35.10762213248		HallFactorMax (for historical reasons)
 0.0			HallCmaxFactor
 
 
 #REGION
-box1                NameRegion
-box tapered             NameHallRegion
--75                      xMinBox
--25                      yMinBox
--1                      zMinBox
-25                       xMaxBox
-25                       yMaxBox
-1                       zMaxBox
-10                     Taper
+box1			NameRegion
+box tapered		StringShape
+-75			xMinBox
+-25			yMinBox
+-1			zMinBox
+25			xMaxBox
+25			yMaxBox
+1			zMaxBox
+10			Taper
 
 #HALLREGION
-+box1			HallRegions
++box1			StringHallRegion
 0			HallSpeedTinyDim
 
 
@@ -215,26 +215,27 @@ raw			StringLog
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-2
-1d VAR idl_ascii       StringPlot
-1			DnOutput
-0.1			DtOutput
-0.			DxOutput
-rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall     NameVars
-g rbody                 NamePars
-z=0 VAR idl             StringPlot
-1			DnOutput
-0.1			DtOutput
-0.			DxOutput
-rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall     NameVars
-g rbody                 NamePars
+2			nPlotFile
+1d VAR idl_ascii		StringPlot
+1			DnSavePlot
+0.1			DtSavePlot
+0.			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall		NameVars
+g rbody			NamePars
+z=0 VAR idl		StringPlot
+1			DnSavePlot
+0.1			DtSavePlot
+0.			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall		NameVars
+g rbody			NamePars
 
 Fast whistler wave period
 
 #STOP
 20			MaxIteration
--1.174097		tSimulationMax
+-1.0			tSimulationMax
 
+1.174097                ! whistler wave + advection
 1.99998			! Alfven wave + advection
 2.11333  		! slow Whistler wave (By,Bz same sign)
 

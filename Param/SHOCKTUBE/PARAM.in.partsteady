@@ -8,28 +8,28 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #CHECKGRIDSIZE
-4                       nI
-4                       nJ
-1                       nK
-1000                    MinBlockALL
+4			nI
+4			nJ
+1			nK
+1000			MinBlockALL
 
 #GRID
-64                      nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--128.			xMin	   
- 128.			xMax	   
--1.			yMin	   
- 1.			yMax	   
--1.			zMin	   
+64			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-128.			xMin
+ 128.			xMax
+-1.			yMin
+ 1.			yMax
+-1.			zMin
  1.			zMax
 
 #GRIDLEVEL
 1			nLevel
-initial			NameArea
+initial			StringShape
 
 #AMRINITPHYSICS
-1                       nRefineLevelIC
+1			nRefineLevelIC
 
 #DOAMR
 T			DoAmr
@@ -38,8 +38,8 @@ T			DoAmr
 T			IsStrictAmr
 
 #AMRCRITERIALEVEL
-1                       nRefineCrit
-gradlogP                TypeRefine
+1			nRefineCrit
+gradlogP		StringRefine
 0.01			CoarsenLimit
 0.05			RefineLimit
 1			MaxLevel
@@ -55,7 +55,7 @@ T			UsePartSteady
 
 Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
-2.0
+2.0			Gamma
 
 #HYPERBOLICDIVB
 T			UseHyperbolicDivb
@@ -63,13 +63,13 @@ T			UseHyperbolicDivb
 0.1			HypDecay
 
 #DIVB
-F
-F
-F
-F
+F			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
 
 #SHOCKTUBE
-1.			rho (left state)
+1.			Rho (left state)
 0.			Ux
 0.			Uy
 0.			Uz
@@ -89,10 +89,10 @@ F
 0.1			P
 
 #OUTERBOUNDARY
-float			xMinBc
-float			xMaxBc
-float			yMinBc
-float			yMaxBc
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
 float			zMinBc
 float			zMaxBc
 
@@ -108,26 +108,26 @@ mc3			TypeLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
-raw			StringLogfile
+raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVERESTART
-F			DoSaverestart
+F			DoSaveRestart
 
 #PLOTFILENAME
-second			NameTimeMaxUnit
+second			NameMaxTimeUnit
 
 #SAVEPLOT
-2			nPlotfile
-z=0 var idl		PlotString
+2			nPlotFile
+z=0 var idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 0.0			DxSavePlot
-rho ux uy uz bx by bz p hyp evolve proc crit1 dx
-g
-cut var idl_ascii	PlotString
--1              	DnSavePlot
+rho ux uy uz bx by bz p hyp evolve proc crit1 dx		NameVars
+g			NamePars
+cut var idl_ascii		StringPlot
+-1			DnSavePlot
 1.0			DtSavePlot
 -128.0			xMinCut
 +128.0			xMaxCut
@@ -135,9 +135,9 @@ cut var idl_ascii	PlotString
 0.01			yMaxCut
 -0.01			zMinCut
 0.01			zMaxCut
-0.0             	DxSavePlot
-rho ux uy uz bx by bz p hyp evolve dx
-g
+0.0			DxSavePlot
+rho ux uy uz bx by bz p hyp evolve dx		NameVars
+g			NamePars
 
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP

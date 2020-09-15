@@ -2,10 +2,10 @@
 NONE			NamePlanet
 
 #IOUNITS
-NONE			NameIoUnits
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			NameNormalization
+NONE			TypeNormalization
 
 #NONCONSERVATIVE
 F			UseNonConservative
@@ -17,9 +17,9 @@ F			UseNonConservative
 2000			MinBlockALL
 
 #GRID
-20			nRootBlockX
-5			nRootBlockY
-1			nRootBlockZ
+20			nRootBlock1
+5			nRootBlock2
+1			nRootBlock3
 0.0			xMin
 4.0			xMax
 0.0			yMin
@@ -28,33 +28,33 @@ F			UseNonConservative
 1.0			zMax
 
 #UPDATECHECK
-F                      UseUpdateCheck
-40.                     RhoMinPercent
-200.                    RhoMaxPercent
-40.                     pMinPercent
-200.                    pMaxPercent
+F			UseUpdateCheck
+40.			RhoMinPercent
+200.			RhoMaxPercent
+40.			pMinPercent
+200.			pMaxPercent
 
 #DOAMR
-T	DoAmr
-1	DnAmr
--1	DtAmr
-T
+T			DoAmr
+1			DnAmr
+-1			DtAmr
+T			IsStrictAmr
 
 #AMRCRITERIA
-1		nRefineCrit
-gradlogrho	TypeRefine
-3		CoarsenLimit
-6		RefineLimit
+1			nRefineCrit
+gradlogrho		TypeRefine
+3.0			CoarsenLimit
+6.0			RefineLimit
 
 #AMRLEVELS
-0
-2
+0			MinBlockLevel
+2			MaxBlockLevel
 
 #GAMMA
 1.4			Gamma
 
 #SHOCKTUBE
-8.0			rho (left state)
+8.0			Rho (left state)
 8.25			Ux
 0.0			Uy
 0.0			Uz
@@ -70,90 +70,90 @@ gradlogrho	TypeRefine
 1.0/6.0			ShockPosition
 -1.0/1.73205		ShockSlope
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 #SHOCKRAMP
 T			DoShockRamp
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 ! No need for user initial conditions
 #USERSWITCH
 -ic			StringSwitch
 
 #OUTERBOUNDARY
-user			xMinBc
-float   	        xMaxBc
-user     		yMinBc
-user			yMaxBc
+user			TypeBc1
+float			TypeBc2
+user			TypeBc3
+user			TypeBc4
 reflect			zMinBc
 reflect			zMaxBc
 
-#SCHEME      2 ghost cells
-5                       nOrder
-Linde                   TypeFlux
-mc3                     TypeLimiter
-2.0                     LimiterBeta
+#SCHEME			2 ghost cells
+5			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
 
 #RUNGEKUTTA
-3		nStage
-0.6		CflExpl
+3			nStage
+0.6			CflExpl
 
 
 #ADAPTIVELOWORDER
-T		UseAdaptiveLowOrder
-2		nLowOrder
-2.0		pCritLow
-1.5		pCritHigh
-2.0		VelCrit
+T			UseAdaptiveLowOrder
+2			nLowOrder
+2.0			pCritLow
+1.5			pCritHigh
+2.0			VelCrit
 
 #ARTIFICIALVISCOSITY
-T		UseArtificialViscosity
-0.3		AlphaVisco
-0.3		BetaVisco
+T			UseArtificialViscosity
+0.3			AlphaVisco
+0.3			BetaVisco
 
 
 #SAVELOGFILE
-F		DoSaveLogfile
+F			DoSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaveRestart
 
 #PLOTFILENAME
-second		NameMaxTimeUnit
+second			NameMaxTimeUnit
 
 #SAVEINITIAL
-T		DoSaveInitial
+T			DoSaveInitial
 
 #REGION
 tophalf			NameRegion
-box			NameArea
-0.0			xMin
-0.5			yMin
-4.0			xMax
-1.0			yMax
+box			StringShape
+0.0			xMinBox
+0.5			yMinBox
+4.0			xMaxBox
+1.0			yMaxBox
 
 #REGION
 rightside		NameRegion
-box tapered		NameArea
-3.0			xMin
-0.0			yMin
-4.0			xMax
-1.0			yMax
-0.1			taper
+box tapered		StringShape
+3.0			xMinBox
+0.0			yMinBox
+4.0			xMaxBox
+1.0			yMaxBox
+0.1			Taper
 
 #LOWORDERREGION
-+tophalf +rightside
++tophalf +rightside		StringLowOrderRegion
 
 #SAVEPLOT
-1			nPlotfile
-z=0 var idl_ascii       PlotString
--1                       DnSavePlot
-0.01                     DtSavePlot
-0.0                     DxSavePlot
-rho ux uy uz p dx loworder lowcritx lowcrity lowcritz
-g                       NamePar
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+0.01			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz p dx loworder lowcritx lowcrity lowcritz		NameVars
+g			NamePars
 
 #STOP
--1		MaxIteration
-0.05		tSimulationMax
+-1			MaxIteration
+0.05			tSimulationMax
