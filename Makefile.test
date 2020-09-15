@@ -174,10 +174,10 @@ test_fluxemergence_rundir:
 	cd ${TESTDIR}; gunzip *.gz
 	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fluxemergence_run:
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_1d
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_1d
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.3D PARAM.in
