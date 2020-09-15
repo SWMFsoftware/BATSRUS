@@ -7789,16 +7789,16 @@ are much smaller than 1 (e.g. in shock tube test problems).
 </command>
 
 
-<command name="PICREGIONUNIT">
-	 <parameter name="nPicRegion" type="integer" min="1"/>
-	 <for from="1" to="$nPicRegion">
+<command name="PICGRIDUNIT">
+	 <parameter name="nPicGrid" type="integer" min="1"/>
+	 <for from="1" to="$nPicGrid">
  	   <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
 	   <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
 	   <parameter name="ScalingFactor" type="real" min="0" default="1"/>
 	 </for>
 
-#PICREGIONUNIT
-2               nPicRegion
+#PICGRIDUNIT
+2               nPicGrid
 1.0		xUnitPicSi [m]
 3000e3		uUnitPicSi [m/s] Speed of light for the first PIC region
 8               ScalingFactor
@@ -7819,8 +7819,8 @@ Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 </command>
 
 <command name="PICGRID">
-	 <parameter name="nPicRegion" type="integer" min="1"/>
-	 <for from="1" to="$nPicRegion">
+	 <parameter name="nPicGrid" type="integer" min="1"/>
+	 <for from="1" to="$nPicGrid">
 	      <parameter name="xMinPic" type="real"/>
 	      <parameter name="xMaxPic" type="real" min="$xMinPic"/>
 	      <parameter name="yMinPic" type="real"                if="$nJ != 1" />
@@ -7833,7 +7833,7 @@ Do not use #PICUNIT and #PICREGIONUNIT at the same time.
 	 </for>
 
 #PICGRID
-2			nPicRegion
+2			nPicGrid
   6.			xMinCut
  10.			xMaxCut
  -5.			yMinCut (read for 2D or 3D only)
@@ -7888,6 +7888,33 @@ covers a fixed region using PIC by the parameters set up in
 #PICGRID. If DoAdaptPic=.true., the PIC region will be recalculated
 based on the frequency (DnAdaptPic and DtAdaptPic) provided. 
 </command>
+
+<command name="PICPATCH">
+  <parameter name="PatchSize" type="integer" default="4" min="2" />
+
+#PICPATCH
+4                        PatchSize 
+
+PatchSize is the grain size of switching on/off PIC cells for adaptive
+PIC coupling. The PIC grid cell numbers, which is defined by #PICGRID, 
+should be divisible by the PatchSize. 
+
+The smallest patch size is 2, and 4 is the default value. The smaller
+the patch size is, the smoother the PIC boundary will be. But the PIC
+code may become slower with smaller patch size. 4 or 8 are two typical 
+values. 2 may slow down the code significantly. 
+</command>
+
+<command name="PICBALANCE">
+  <parameter name="DoBalancePicBlock" type="logical" default="T"/>
+
+#PICBALANCE
+T                      DoBalancePicBlock 
+
+If it is switched on, the BATSRUS blocks that are overlapped with the PIC
+domains will be load balanced separatelly. 
+  </command>
+
 
 </commandgroup>
 <commandgroup name="PHYSICS PARAMETERS">
