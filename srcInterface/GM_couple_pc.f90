@@ -266,7 +266,7 @@ contains
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
     use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, & 
-         nRegionPic, nGhostPic, mhd_to_pic_vec, UseAdaptivePic, &
+         nRegionPic, mhd_to_pic_vec, UseAdaptivePic, &
          is_inside_active_pic_region
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
@@ -294,6 +294,10 @@ contains
 
     logical :: IsInside
 
+    ! Number of ghost cells around PIC region. Useful when coupled with
+    ! IPIC3D/AMPS but not FLKS. 
+    integer :: nGhostPic   = 2  
+    
     character(len=*), parameter :: NameSub='GM_get_regions'
     !--------------------------------------------------------------------------
 
@@ -316,10 +320,9 @@ contains
     do iRegion = 1, nRegionPic
 
        ! XyzMaxRegion_D and XyzMinRegion_D are in the rotated PIC coordinates.
-       ! I do not think use nGhostPic is still necessary. --Yuxi
+       XyzMinRegion_D = (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)         
        XyzMaxRegion_D = LenPic_DI(1:nDim,iRegion) - &
             (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
-       XyzMinRegion_D = (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)         
 
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE

@@ -63,9 +63,6 @@ module ModPIC
 
   ! Local variables
 
-  ! Coupling parameters
-  integer, public :: nGhostPic   = 2  ! Number of ghost cells around PIC region
-
   ! Conversion to PIC units  
   ! If UseSamePicUnit is true, use the same units for all PIC regions. 
   logical, public:: UseSamePicUnit = .true. 
@@ -97,9 +94,6 @@ module ModPIC
 
   ! The PIC regon can rotate around x, y and z axis. The rotation rule is the
   ! same as the rotation for #REGION command.
-  ! In the rotated coordinates, XyzMinPic_DI instead of
-  ! XyzPic0_DI is the origin point.
-  real, public, allocatable:: XyzPic0_DI(:,:)
   logical, public :: DoRotatePIC = .false.
 
   ! Is the node overlaped with PIC domain?
@@ -127,9 +121,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
-    case ("#PICGHOST")
-       call read_var('nGhostPic',nGhostPic)
-
     case ("#PICADAPT")
        call read_var('UseAdaptivePic', UseAdaptivePic)
        if(UseAdaptivePic) then
@@ -226,11 +217,10 @@ contains
 
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
-            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI, PatchSize_DI)
+            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI, PatchSize_DI)
        allocate( &
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
-            XyzPic0_DI(nDim,nRegionPic), &
             LenPic_DI(nDim,nRegionPic), &
             r_DDI(3,3,nRegionPic),       &
             DxyzPic_DI(nDim,nRegionPic), &
@@ -254,9 +244,6 @@ contains
                   ':The PIC cell size should be a positive number!')
           enddo
 
-          ! Origo point for the IPIC3D grid for this region
-          XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
-
           LenPic_DI(1:nDim, iRegion) = XyzMaxPic_DI(1:nDim,iRegion) - &
                XyzMinPic_DI(1:nDim,iRegion)
           r_DDI(:,:,iRegion) = 0
@@ -278,17 +265,15 @@ contains
 
        UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
-            XyzMinPic_DI, XyzMaxPic_DI, LenPic_DI, DxyzPic_DI,XyzPic0_DI)
+            XyzMinPic_DI, XyzMaxPic_DI, LenPic_DI, DxyzPic_DI)
        allocate( &
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
-            XyzPic0_DI(nDim,nRegionPic), &
             DxyzPic_DI(nDim,nRegionPic), &
             LenPic_DI(nDim,nRegionPic),  &
             r_DDI(3,3,nRegionPic))
        XyzMinPic_DI = 0
        XyzMaxPic_DI = 0
-       XyzPic0_DI = 0
        DxyzPic_DI = 0
        LenPic_DI = 0
        r_DDI=0
@@ -311,8 +296,6 @@ contains
              call              read_var('yRotate', yRotate)
              call              read_var('zRotate', zRotate)
           endif
-
-          XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
 
           ! Rotation matrix rotates around X, Y and Z axes in this order
           r_DDI(:,:,iRegion) = matmul( matmul( &
@@ -873,9 +856,9 @@ contains
 
        ! If Xyz_D is outside this PIC grid, then go to check the next PIC grid.
        if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
-            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) cycle 
+            0.9*DxyzPic_DI(:,iRegion) )) cycle 
        if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion) )) cycle 
+            0.9*DxyzPic_DI(:,iRegion) )) cycle 
 
        nX = PatchSize_DI(x_, iRegion)
        nY = PatchSize_DI(y_, iRegion)
