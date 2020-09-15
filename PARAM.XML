@@ -3456,10 +3456,12 @@ The default is DoSaveLogFile false.
 			<part name="OptionalVar" type="string" input="select"
 						required="F" multiple="T">
 				<option name="none" exclusive="T"/>
-				<option name="step" />
-				<option name="date" />
-				<option name="time" />
-				<option value="ray"/>
+				<option name="step"       />
+				<option name="date"       />
+				<option name="time"       />
+				<option value="ray"       />
+				<option value="traj"      />
+				<option value="trajrange" />
 			</part>
 		</parameter>
 		<parameter name="DnOutput" type="integer" min="-1"
