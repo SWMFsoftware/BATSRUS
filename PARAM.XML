@@ -413,12 +413,12 @@ The default value is zero.
 
 
 <command name="DIPOLE" if="$_IsStandAlone">
-	<parameter name="DipoleStrength" type="real" />
+	<parameter name="DipoleStrengthSi" type="real" />
 
 #DIPOLE
--3.11e-5		DipoleStrength [Tesla]
+-3.11e-5		DipoleStrengthSi [Tesla]
 
-The DipoleStrength variable contains the
+The DipoleStrengthSi variable contains the
 magnetic equatorial strength of the dipole magnetic field in Tesla.
 
 The default value is the real dipole strength for the planet.
