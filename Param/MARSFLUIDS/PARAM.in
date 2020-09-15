@@ -1,13 +1,13 @@
 #NORMALIZATION
-SOLARWIND
+SOLARWIND		TypeNormalization
 
 #DESCRIPTION
-Param/MARSFLUIDS/PARAM.in: Mars test
+Param/MARSFLUIDS/PARAM.in: Mars test		StringDescription
 
 #PLANET
 Mars			NamePlanet
 
-#ROTATION 
+#ROTATION
 F			UseRotation
 
 #GRAVITY
@@ -18,15 +18,15 @@ T			UseGravity
 spherical_lnr		TypeGeometry
 
 #GRID
-2                     nRootBlockX
-2                      nRootBlockY
-2                      nRootBlockZ
--24.                    xMin
-  8.                    xMax
--16.                    yMin
- 16.                    yMax
--16.                    zMin
- 16.                    zMax
+2			nRootBlock1
+2			nRootBlock2
+2			nRootBlock3
+-24.			xMin
+  8.			xMax
+-16.			yMin
+ 16.			yMax
+-16.			zMin
+ 16.			zMax
 
 #GRIDBLOCKALL
 1000			MaxBlock
@@ -36,12 +36,12 @@ spherical_lnr		TypeGeometry
 32.9849			rMax = sqrt(24^2+16^2+16^2)
 
 #GRIDLEVEL
-3			nLevelArea
-initial			NameArea
+3			nLevel
+initial			StringShape
 
 #GRIDLEVEL
-1			nLevelArea
-sphere0			NameArea
+1			nLevel
+sphere0			StringShape
 1.7			Radius
 
 GRIDLEVEL
@@ -50,31 +50,31 @@ sphere0			NameArea
 1.3			Radius
 
 #POINTIMPLICIT
-T			UsePointImplicit	
-1.0			BetaPointImpl	
-F			IsAsymmetric	
-T			DoNormalizeCell 
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
 
 #BODY
-T			body1
-1.0294464		Rbody
-1.0			Rcurrents
-1.0e2                 	BodyNDim
-300.                 	BodyTdim
-9.07E+03                BodyNDim
-300.                 	BodyTdim
- 4.8E-04                BodyNDim
-300.                 	BodyTdim
- 1.70E+01               BodyNDim
-300.                 	BodyTdim
+T			UseBody
+1.0294464		rBody
+1.0			rCurrents
+1.0e2			BodyNDim
+300.			BodyTDim
+9.07E+03		BodyNDim
+300.			BodyTdim
+ 4.8E-04		BodyNDim
+300.			BodyTdim
+ 1.70E+01		BodyNDim
+300.			BodyTdim
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #SCHEME
-2                       nOrder
-Linde                   TypeFlux
-minmod                  TypeLimiter
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #TIMESTEPPING
 2			nStage
@@ -84,17 +84,17 @@ minmod                  TypeLimiter
 T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-0
+0			nConservCrit
 
 
 #SAVELOGFILE
-T                       DoSaveLogfile
-RAW step time	        StringLog
-1	                DnSaveLogfile
--1.                     DtSaveLogfile
+T			DoSaveLogfile
+RAW step time		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #INNERBOUNDARY
-user			TypeInnerBc
+user			TypeBcBody
 
 #BOXBOUNDARY
 outflow			TypeBc1 MinX
@@ -107,18 +107,18 @@ fixed			TypeBc6 MaxZ
 ! 3nT Parker's spiral
 #SOLARWIND
 2.7			SwNDim  [/cc]
-2.55E5                 	SwTDim  [K]  
--485.0                 	SwUxDim [km/s]
-0.0                    	SwUyDim [km/s]
-0.0                    	SwUzDim [km/s]
--1.634                  SwBxDim [nT]
-2.516                   SwByDim [nT]
-1.0                     SwBzDim [nT]
+2.55E5			SwTDim  [K]
+-485.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+-1.634			SwBxDim [nT]
+2.516			SwByDim [nT]
+1.0			SwBzDim [nT]
 
 #USERSWITCH
 +init +ic +source		StringSwitch
 
-#USERINPUTBEGIN -----------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #UseHotO
 T
@@ -138,9 +138,9 @@ T
 25.26
 
 UseMarsAtm
-T           
-Mars_TGCM_max.dat   TGCMFilename 
-19                  NAlt
+T
+Mars_TGCM_max.dat		TGCMFilename
+19			NAlt
 
 #SOLARCON
 issiC
@@ -150,22 +150,22 @@ F
 T
 
 
-#USERINPUTEND ---------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #MHDIONS
-T		DoAddRho
-T		DoAddRhoU
+T			DoAddRho
+T			DoAddRhoU
 
 #PLASMA
-1.0             IonMass H [amu]
-32.0            IonMass O2 [amu]
-16.0            IonMass O [amu]
-44.0            IonMass CO2 [amu]
-1.0             IonCharge H [e]
-1.0             IonCharge O2 [e]
-1.0             IonCharge O [e]
-1.0             IonCharge CO2 [e]
-1.0             ElectronTemperatureRatio
+1.0			FluidMass H [amu]
+32.0			IonCharge O2 [amu]
+16.0			ElectronTemperatureRatio O [amu]
+44.0			IonMass CO2 [amu]
+1.0			IonCharge H [e]
+1.0			IonCharge O2 [e]
+1.0			IonCharge O [e]
+1.0			IonCharge CO2 [e]
+1.0			ElectronTemperatureRatio
 
 
 #MULTIION
@@ -181,19 +181,19 @@ block			TypeRestartInFile
 F			DoSaveRestart
 
 #SAVEPLOT
-3			nPlotFiles
-x=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+3			nPlotFile
+x=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-y=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+y=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
--1.0			DxSaveplot
+z=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
 
 1d MHD idl		StringPlot
 1000			DnSavePlot

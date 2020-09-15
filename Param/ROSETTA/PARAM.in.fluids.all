@@ -2,7 +2,7 @@
 NONE			NamePlanet
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
 2014			iYear
@@ -17,53 +17,53 @@ INCLUDE
 GM/restartIN/restart.H
 
 #GRID
-1                       nRootBlockX
-1                       nRootBlockY
-1                       nRootBlockZ
--16.0                   xMin
- 16.0                   xMax
--16.0                   yMin
- 16.0                   yMax
--16.0                   zMin
- 16.0                   zMax
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-16.0			xMin
+ 16.0			xMax
+-16.0			yMin
+ 16.0			yMax
+-16.0			zMin
+ 16.0			zMax
 
 #GRIDBLOCKALL
 400			MaxBlock
 
 #GRIDLEVEL
-3
-initial
+3			nLevel
+initial			StringShape
 
 #GRIDLEVEL
-3
-shell0
-0.5
-4.0
+3			nLevel
+shell0			StringShape
+0.5			RadiusInner
+4.0			Radius
 
 #GRIDLEVEL
-1
-all
+1			nLevel
+all			StringShape
 
 #SAVERESTART
-T
-5000
--1
+T			DoSaveRestart
+5000			DnSaveRestart
+-1			DtSaveRestart
 
 #BODY
-T                         body1
-1.0e-6                    rBody
-0.0                       rCurrents
-1.0e-9                    BodyRhoDim (1/ccm)
-25.0                      BodyTDim (K) temperature for fixed BC for P_BLK
-1.0e-9                    BodyRhoDim (1/ccm)
-180.0                     BodyTDim (K) temperature for fixed BC for P_BLK
-1.0e-9			  BodyRhoDim (1/ccm)
-180.0			  BodyTDim (K) temperature for fixed BC for P_BLK
+T			UseBody
+1.0e-6			rBody
+0.0			rCurrents
+1.0e-9			BodyNDim (1/ccm)
+25.0			BodyTDim (K) temperature for fixed BC for P_BLK
+1.0e-9			BodyRhoDim (1/ccm)
+180.0			BodyTDim (K) temperature for fixed BC for P_BLK
+1.0e-9			BodyRhoDim (1/ccm)
+180.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
 #USERSWITCH
 +init +ic		StringSwitch
 
-#USERINPUTBEGIN -------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #SHAPEFILE
 CG_MOC.bdf		NameShapeFile
@@ -73,16 +73,16 @@ T			DoUseCGShape
 2.0e3			rSphericalBodySi [m]
 
 #SUNDIRECTION
- 43.57                  LatSun
-  0.0                   LonSun
+ 43.57			LatSun
+  0.0			LonSun
 
 #COMETSTATE
-4.087536e20             ProductionRateMinSi [m^-2 s^-1]
-1.040419e21             ProductionRateMaxSi [m^-2 s^-1]
-57.5                    SolarAngleMaxDim [degree]
-133.0                   TempCometMinDim [K]
-182.1                   TempCometMaxDim [K]
-136.1                   TempComet75Dim [K]
+4.087536e20		ProductionRateMinSi [m^-2 s^-1]
+1.040419e21		ProductionRateMaxSi [m^-2 s^-1]
+57.5			SolarAngleMaxDim [degree]
+133.0			TempCometMinDim [K]
+182.1			TempCometMaxDim [K]
+136.1			TempComet75Dim [K]
 
 #IONIZATIONPARAM
 0.9			Heliocentric distance [AU]
@@ -95,207 +95,197 @@ T			DoUseCGShape
 solarwind		UseSwBC
 
 #MINIMUMNEUTEMPERATURE
-100.0
+100.0			TneuMin
 
-#USERINPUTEND   -------------------------------------
+#USERINPUTEND -------------------------------------
 
 #SOLARWIND
- 1.0                    SW_rho_dim [n/cc]    \
-100.0                   SW_T_dim [K]          |
- 0.0                    SW_Ux_dim [km/s]      |
- 0.0                    SW_Uy_dim [km/s]      | 3.3 AU
- 0.0                    SW_Uz_dim [km/s]      |
- 0.0                    SW_Bx_dim [nT]        |
- 0.0                    SW_By_dim [nT]        |
- 0.0                    SW_Bz_dim [nT]       /
+ 1.0			SwNDim [n/cc]    \
+100.0			SwTDim [K]          |
+ 0.0			SwUxDim [km/s]      |
+ 0.0			SwUyDim [km/s]      | 3.3 AU
+ 0.0			SwUzDim [km/s]      |
+ 0.0			SwBxDim [nT]        |
+ 0.0			SwByDim [nT]        |
+ 0.0			SwBzDim [nT]       /
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 #BOXBOUNDARY
-user                   TypeBc1
-user                   TypeBc2
-user                   TypeBc3
-user                   TypeBc4
-user                   TypeBc5
-user                   TypeBc6
+user			TypeBc1
+user			TypeBc2
+user			TypeBc3
+user			TypeBc4
+user			TypeBc5
+user			TypeBc6
 
 #EXTRABOUNDARY
-T                       UseExtraBoundary
-user                    TypeExtraBoundary
+T			UseExtraBoundary
+user			TypeExtraBoundary
 
 #MHDIONS
-T		          DoAddRhoP
-T			  DoAddRhoU
+T			DoAddRho
+T			DoAddRhoU
 
 #MINIMUMPRESSURE
-1e-15
-1e-15
-1e-15
-1e-15
+1e-15			pMinDim
+1e-15			pMinDim
+1e-15			pMinDim
+1e-15			PeMinDim
 
 #MINIMUMDENSITY
-1e-15
-1e-15
-1e-15
+1e-15			RhoMinDim
+1e-15			RhoMinDim
+1e-15			RhoMinDim
 
 #MINIMUMTEMPERATURE
-100
-100
-100
-100
+100			TminDim
+100			TminDim
+100			TminDim
+100			TeMinDim
 
 #GAMMA
-5.0/3.0			Gamma_I
+5.0/3.0			Gamma
 8.0/6.0			Gamma_I
 8.0/6.0			Gamma_I
 5.0/3.0			GammaElectron
 
 #PLASMA
-1.0                       IonMass SWp [amu]
-18.0                      IonMass H2Op [amu]
-18.0			  H2O Neutral [amu]
-1.0                       IonCharge SWp [e]
-1.0                       IonCharge H2Op [e]
-1.0                       ElectronPressureRatio
+1.0			FluidMass SWp [amu]
+18.0			IonCharge H2Op [amu]
+18.0			ElectronTemperatureRatio Neutral [amu]
+1.0			IonCharge SWp [e]
+1.0			IonCharge H2Op [e]
+1.0			ElectronPressureRatio
 
 #MULTIION
-1e-8			  LowDensityRatio
-1e-13			  LowPressureRatio
-F			  DoRestrictMultiIon
-3.0                       MachNumberMultiIon (read if DoRestrictMultiIon)
-0.25                      ParabolaWidthMultiIon (read if DoRestrictMultiIon)
+1e-8			LowDensityRatio
+1e-13			LowPressureRatio
+F			DoRestrictMultiIon
+3.0			MachNumberMultiIon (read if DoRestrictMultiIon)
+0.25			ParabolaWidthMultiIon (read if DoRestrictMultiIon)
 
 #MULTIIONSTATE
-T                         UseSingleIonVelocity
-F                         UseSingleIonTemperature
+T			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
 #SCHEME
-1                         nOrder
-Linde                     TypeFlux | only for nOrder=2
+1			nOrder
+Linde			TypeFlux | only for nOrder=2
 
 #TIMESTEPPING
-1                       nStage
-0.8                     CflExpl
+1			nStage
+0.8			CflExpl
 
 #NEUTRALFLUID
-F                       DoConserveNeutrals
-Linde                   TypeFluxNeutral
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
 
 #POINTIMPLICIT
-F                         UsePointImplicit
-1.0                       BetaPointImpl
-F                         IsAsymetric
-T                         DoNormalizeCell 
+F			UsePointImplicit
+1.0			BetaPointImpl
+F			IsAsymetric
+T			DoNormalizeCell
 
 #RESTARTOUTFILE
-one
+one			StringRestartOutFile
 
 #NONCONSERVATIVE
-T                         UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-0
+0			nConservCrit
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
-VAR step date time      StringLog
-1                      DnSaveLogfile
--1.                     DtSaveLogfile [sec]
-dtpnt rho Ux Uy Uz Bx By Bz p rhopnt Uxpnt Uypnt Uzpnt ppnt Pmin Pmax Neu1Rhoflx
-3.0 4.0
+T			DoSaveLogfile rest of parameters read if true
+VAR step date time		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+dtpnt rho Ux Uy Uz Bx By Bz p rhopnt Uxpnt Uypnt Uzpnt ppnt Pmin Pmax Neu1Rhoflx		NameLogVars
+3.0 4.0			StringLogRadii
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #SAVEPLOT
-4                       nplotfiles
-x=0 MHD idl             plot_string
-10                    DnSavePlot
--1.                     DtSavePlot
--1.			Dx
-y=0 MHD idl             plot_string
-10                    DnSavePlot
--1.                     DtSavePlot
--1.			Dx
-z=0 MHD idl             plot_string
-10                    DnSavePlot
--1.                     DtSavePlot
--1.			Dx
-3d MHD tec              plot_string
-50000                   DnSavePlot
--1.                     DtSavePlot
+4			nPlotFile
+x=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+3d MHD tec		StringPlot
+50000			DnSavePlot
+-1.			DtSavePlot
 
 #STOP
-80
--1.0
+80			MaxIteration
+-1.0			tSimulationMax
 
-#RUN ####################################################################
+#RUN ##########################################################################
 
 END
 
 #USERSWITCH
-+source +update +perturb	StringSwitch
++source +update +perturb		StringSwitch
 
-#USERINPUTBEGIN -------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #BODYBC
 reflected		UseSwBC
 
-#USERINPUTEND   -------------------------------------
-
-#SOLARWIND
-8.0                     SW_rho_dim [n/cc]
-1.e5                    SW_T_dim [K]
--371.                   SW_Ux_dim [km/s]
-0.0                     SW_Uy_dim [km/s]
-0.0                     SW_Uz_dim [km/s]
--3.4                    SW_Bx_dim [nT]
-3.4                     SW_By_dim [nT]
-0.0                     SW_Bz_dim [nT]
+#USERINPUTEND -------------------------------------
 
 #TIMESTEPPING
-1                       nStage
-0.2                     CflExpl
+1			nStage
+0.2			CflExpl
 
 #NEUTRALFLUID
-F                       DoConserveNeutrals
-Linde                   TypeFluxNeutral
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
 
 #POINTIMPLICIT
-T                         UsePointImplicit
-1.0                       BetaPointImpl
-T                         IsAsymetric
-T                         DoNormalizeCell
+T			UsePointImplicit
+1.0			BetaPointImplicit
+T			IsAsymmetric
+T			DoNormalizeCell
 
 #STOP
-100
--1.0
+100			MaxIteration
+-1.0			tSimulationMax
 
-#RUN ####################################################################
+#RUN ##########################################################################
 
 END
 
 #MULTIIONSTATE
-F                         UseSingleIonVelocity
-F                         UseSingleIonTemperature
+F			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
 #POINTIMPLICIT
-T                         UsePointImplicit
-1.0                       BetaPointImpl
-F                         IsAsymetric
-T                         DoNormalizeCell
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
 
 #STOP
-150
--1.0
+150			MaxIteration
+-1.0			tSimulationMax
 
-#RUN ####################################################################
+#RUN ##########################################################################
 
 END
 
 #TIMEACCURATE
-T                       IsTimeAccurate
+T			IsTimeAccurate
 
 #STOP
 180			MaxIteration

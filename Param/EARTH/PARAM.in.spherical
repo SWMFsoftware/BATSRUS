@@ -1,8 +1,8 @@
 #DESCRIPTION
-Param/EARTH/PARAM.in.spherical: Spherical test run based on May 4 1998 storm
+Param/EARTH/PARAM.in.spherical: Spherical test run based on May 4 1998 storm		StringDescription
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
 1998			iYear
@@ -12,19 +12,19 @@ F			DoTimeAccurate
 00			iMinute
 00			iSecond
 
-#RAYTRACE
-T			UseRaytrace
+#TRACE
+T			UseTrace
 T			UseAccurateTrace
-0.1			DtExchangeRay
-1			DnRaytrace
+0.1			DtExchangeTrace
+1			DnTrace
 
-#RAYTRACELIMIT
-4000.0			RayLengthMax
+#TRACELIMIT
+4000.0			TraceLengthMax
 
 #GRID
-2			nRootBlockX
-2			nRootBlockY
-2			nRootBlockZ
+2			nRootBlock1
+2			nRootBlock2
+2			nRootBlock3
 -224.			xMin
  32.			xMax
 -64.			yMin
@@ -39,45 +39,45 @@ T			UseAccurateTrace
 spherical_lnr		TypeGeometry
 
 #FIXAXIS
-T                       DoFixAxis
-1000.0                  rFixAxis
-1.0                     r2FixAxis
+T			DoFixAxis
+1000.0			rFixAxis
+1.0			r2FixAxis
 
 #LIMITRADIUS
-2.5                	rMin
-290.0		        rMax > (sqrt(224^2+128^2+128^2))
+2.5			rMin
+290.0			rMax > (sqrt(224^2+128^2+128^2))
 
 #GRIDLEVEL
-2
-initial
+2			nLevel
+initial			StringShape
 
 !refine inner magnetosphere
 #GRIDLEVEL
-3                       Resolution
-sphere0                 NameArea
-25.0                    rSphere
+3			nLevel
+sphere0			StringShape
+25.0			Radius
 
 !refine the magnetosphere
 #GRIDLEVEL
-3                       Resolution
-box                     NameArea
--100.0                  xMinBox
- -10.0                  yMinBox
-  -4.0                  zMinBox
- -12.0                  xMaxBox
-  16.0                  yMaxBox
-   4.0                  zMaxBox
+3			nLevel
+box			StringShape
+-100.0			xMinBox
+ -10.0			yMinBox
+  -4.0			zMinBox
+ -12.0			xMaxBox
+  16.0			yMaxBox
+   4.0			zMaxBox
 
 #MAGNETOSPHERE
-T                       UseBody
-2.5                     rBody
-3.0                     rCurrents
-28.0                   	BodyNDim (/cc) number density inside body
-25000.0                 BodyTDim (K) temperature inside body
+T			UseBody
+2.5			rBody
+3.0			rCurrents
+28.0			BodyNDim (/cc) number density inside body
+25000.0			BodyTDim (K) temperature inside body
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExlp
+0.80			CflExpl
 
 #BOXBOUNDARY
 outflow			TypeBc1
@@ -88,7 +88,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeBcIn
+ionosphere		TypeBcBody
 
 #SCHEME
 1			nOrder
@@ -96,73 +96,73 @@ Rusanov			TypeFlux
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR			StringLogfile
+VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status
+dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status		NameLogVars
 
 #SAVEPLOT
-6                       nPlotFiles
-x=0 RAY idl             StringPlot
-20                      DnSavePlot
+6			nPlotFile
+x=0 RAY idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-y=0 RAY idl             StringPlot
-20                      DnSavePlot
+y=0 RAY idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-z=0 RAY idl             StringPlot
-20                      DnSavePlot
+z=0 RAY idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-x=0 MHD idl             StringPlot
-20                      DnSavePlot
+x=0 MHD idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-y=0 MHD idl             StringPlot
-20                      DnSavePlot
+y=0 MHD idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-z=0 MHD idl             StringPlot
-20                      DnSavePlot
+z=0 MHD idl		StringPlot
+20			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
 #SOLARWINDFILE
-T                       UseSolarWindFile
-imf19980504.dat         NameSolarWindFile
+T			UseSolarWindFile
+imf19980504.dat		NameSolarWindFile
 
 #STOP
-20                      MaxIteration
+20			MaxIteration
 -1.			tSimulationMax
 
-#RUN	######################################################################
+#RUN ##########################################################################
 
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
-mc3                     TypeLimiter
-1.2
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #TIMESTEPPING
 2			nStage
-0.60			CflExlp
+0.60			CflExpl
 
 #BORIS
 T			UseBorisCorrection
 0.02			BorisClightFactor
 
 #STOP
-50                      MaxIteration
+50			MaxIteration
 -1.			tSimulationMax
 
-#RUN	######################################################################
+#RUN ##########################################################################
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
-#SAVERESTART                                                     
-F                       DoSaveRestart
+#SAVERESTART
+F			DoSaveRestart
 
 #TIMESTEPPING
 2			nStage
@@ -170,7 +170,7 @@ F                       DoSaveRestart
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-0.1	 		DtFixedDim
+0.1			DtFixedDim
 
 #GRIDBLOCKIMPLALL
 300			MaxBlockImpl
@@ -179,10 +179,10 @@ T			UseDtFixed
 F			UsePointImplicit
 T			UsePartImplicit
 F			UseFullImplicit
-100.0			ImplCFL
+100.0			CflImpl
 
 #TEST
-updatecheck krylov
+updatecheck krylov		StringTest
 
 #STOP
 60 			MaxIteration

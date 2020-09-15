@@ -1,27 +1,27 @@
 #PLANET
-HALLEY
+HALLEY			NamePlanet
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
-2000                    iYear
-1                       iMonth
-1                       iDay
-0                       iHour
-0                       iMinute
-0                       iSecond
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
 0.0			FracSecond
 
 #SOLARWIND
-8.0                     SW_rho_dim [n/cc]
-1.E5                    SW_T_dim [K]     
--371.                   SW_Ux_dim [km/s] 
-0.0                     SW_Uy_dim [km/s] 
-0.0                     SW_Uz_dim [km/s] 
--3.4                    SW_Bx_dim [nT]   
-3.4                     SW_By_dim [nT]
-0.0                     SW_Bz_dim [nT]
+8.0			SwNDim [n/cc]
+1.E5			SwTDim [K]
+-371.			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+-3.4			SwBxDim [nT]
+3.4			SwByDim [nT]
+0.0			SwBzDim [nT]
 
 #BOXBOUNDARY
 outflow			TypeBc1
@@ -32,149 +32,149 @@ float			TypeBc5
 float			TypeBc6
 
 #EXTRABOUNDARY
-T                       UseExtraBoundary
-user                    TypeExtraBoundary
+T			UseExtraBoundary
+user			TypeExtraBoundary
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 #GRID
-2                        proc_dims(1)
-2                        proc_dims(2)
-2                        proc_dims(3),
--0.02                  x1
- 0.02                  x2
--0.02                  y1
- 0.02                  y2
--0.02                  z1
- 0.02                  z2
+2			nRootBlock1
+2			nRootBlock2
+2			nRootBlock3
+-0.02			xMin
+ 0.02			xMax
+-0.02			yMin
+ 0.02			yMax
+-0.02			zMin
+ 0.02			zMax
 
 #GRIDBLOCKALL
 400			MaxBlock
 
-#BODY 
-F                         body1
-6e-6	                  rBody
-1.0                       rCurrents
-0.1                       BodyRhoDim (1/ccm)
-600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
-0.1                       BodyRhoDim (1/ccm)
-600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+#BODY
+F			UseBody
+6e-6			rBody
+1.0			rCurrents
+0.1			BodyRhoDim (1/ccm)
+600.0			BodyTDim (K) temperature for fixed BC for P_BLK
+0.1			BodyRhoDim (1/ccm)
+600.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
 #USERSWITCH
-+init +ic +source +update	StringSwitch
++init +ic +source +update		StringSwitch
 
-#USERINPUTBEGIN --------------------
+#USERINPUTBEGIN -----------------------------------
 
 #COMET
-7.0E29                    Neutral gas production rate [1/s]
-0.9                       Heliocentric distance [AU]
-2.0E-6                    Ionization frequency for cometary heavy ions
-15.0			  Minimum ion temperature (enforced in user_update_states)
+7.0E29			Neutral gas production rate [1/s]
+0.9			Heliocentric distance [AU]
+2.0E-6			Ionization frequency for cometary heavy ions
+15.0			Minimum ion temperature (enforced in user_update_states)
 
-#USERINPUTEND ----------------------
+#USERINPUTEND -------------------------------------
 
 #MHDIONS
-F		          DoAddRho
-T			  DoAddRhoU
+F			DoAddRho
+T			DoAddRhoU
 
 #MINIMUMPRESSURE
-3e-11			  pMin	total fluid
-1e-11			  pMin  Sw
-1e-11			  pMin  Hp
-1e-11			  pMin  H2Pp
-1e-11			  PeMin
+3e-11			pMinDim	total fluid
+1e-11			pMinDim Sw
+1e-11			pMinDim Hp
+1e-11			pMinDim H2Pp
+1e-11			PeMinDim
 
 #PLASMA
-1.0                       IonMass Sw [amu]
-1.0                       IonMass Hp [amu]
-18.0                      IonMass H2Op [amu]
-1.0                       IonCharge Sw [e]
-1.0                       IonCharge Hp [e]
-1.0                       IonCharge H2Op [e]
-1.0                       ElectronTemperatureRatio
+1.0			FluidMass Sw [amu]
+1.0			IonCharge Hp [amu]
+18.0			ElectronTemperatureRatio H2Op [amu]
+1.0			IonCharge Sw [e]
+1.0			IonCharge Hp [e]
+1.0			IonCharge H2Op [e]
+1.0			ElectronTemperatureRatio
 
 #MULTIION
-1e-4			  LowDensityRatio
-1e-11			  LowPressureRatio
-F			  DoRestrictMultiIon
+1e-4			LowDensityRatio
+1e-11			LowPressureRatio
+F			DoRestrictMultiIon
 
 #MULTIIONSTATE
-T	 		  UseSingleIonVelocity
-F	 		  UseSingleIonTemperature
+T			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
 #SCHEME
-1                         nOrder
-Rusanov                   TypeFlux | only for nOrder=2
-minmod			  TypeLimiter
+1			nOrder
+Rusanov			TypeFlux | only for nOrder=2
+minmod			TypeLimiter
 
 #TIMESTEPPING
-1                         nSTAGE
-0.5                       cfl
+1			nStage
+0.5			CflExpl
 
 #POINTIMPLICIT
-T                         UsePointImplicit
-1.0                       BetaPointImpl
-F                         IsAsymetric
-T                         DoNormalizeCell 
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
 
 #SAVERESTART
-T		  	  DoSaveRestart Rest of parameters read if true
-30			  DnSaveRestart
--1.			  DtSaveRestart [seconds]
+T			DoSaveRestart Rest of parameters read if true
+30			DnSaveRestart
+-1.			DtSaveRestart [seconds]
 
 #NONCONSERVATIVE
-T                         UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-0
+0			nConservCrit
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
-VAR step date time      StringLog
-60                       DnSaveLogfile
--1                      DtSaveLogfile [sec]
-Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
+T			DoSaveLogfile rest of parameters read if true
+VAR step date time		StringLog
+60			DnSaveLogfile
+-1			DtSaveLogfile [sec]
+Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP		NameLogVars
 
 #SAVEINITIAL
 F			DoSaveInitial
 
 #SAVEPLOT
-2                       nplotfiles
-z=0 VAR idl             plot_string
-10                      DnSavePlot
--1.                     DtSavePlot
+2			nPlotFile
+z=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
 -1.			DxSavePlot
-SwRho SwUx SwUy SwUz SwP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
-rBody
-z=0 VAR idl             plot_string
-10                      DnSavePlot
--1.                     DtSavePlot
+SwRho SwUx SwUy SwUz SwP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP		NameVars
+rBody			NamePars
+z=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
 -1.			DxSavePlot
-rho Ux Uy Uz P Pe Bx By Bz dt nn1 unx1 uny1 unz1 divb
-rBody
+rho Ux Uy Uz P Pe Bx By Bz dt nn1 unx1 uny1 unz1 divb		NameVars
+rBody			NamePars
 
 
 #PROGRESS
-1                     dnProgress1 (frequency of short reports to STDOUT)
-10                    dnProgress2 (frequency of summaries to STDOUT)
+1			DnProgressShort (frequency of short reports to STDOUT)
+10			DnProgressLong (frequency of summaries to STDOUT)
 
 #CPUTIMEMAX
-28400.0
+7.8 hours		CpuTimeMax
 
 #STOP
-30
--1
+30			MaxIteration
+-1			tSimulationMax
 
-#RUN ######################################################################
+#RUN ##########################################################################
 
-! For sake of testing restart 
+! For sake of testing restart
 #SAVERESTART
 F			DoSaveRestart
 
 #MULTIIONSTATE
-F	 		UseSingleIonVelocity
-F	 		UseSingleIonTemperature
+F			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
 HEATCONDUCTION
 T			UseHeatConduction
@@ -185,9 +185,9 @@ T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
 WEAKFIELDCONDUCTION
-T                       DoWeakFieldConduction
-0.001                   BmodifySi
-0.001                   DeltaBmodifySi
+T			DoWeakFieldConduction
+0.001			BmodifySi
+0.001			DeltaBmodifySi
 
 SEMIKRYLOV
 GMRES			TypeKrylov
@@ -195,7 +195,7 @@ GMRES			TypeKrylov
 10			MaxMatvecKrylov
 
 #STOP
-60
--1
+60			MaxIteration
+-1			tSimulationMax
 
 #END

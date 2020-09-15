@@ -1,13 +1,13 @@
 #NORMALIZATION
-SOLARWIND
+SOLARWIND		TypeNormalization
 
 #DESCRIPTION
-Param/TITAN/PARAM.in: Titan test
+Param/TITAN/PARAM.in: Titan test		StringDescription
 
 #PLANET
 Titan			NamePlanet
 
-#ROTATION 
+#ROTATION
 F			UseRotation
 
 #GRAVITY
@@ -18,82 +18,82 @@ T			UseGravity
 Param/TITAN/Grid
 
 #GRIDLEVEL
-3			nLevelArea
-initial			NameArea
+3			nLevel
+initial			StringShape
 
 #GRIDBLOCKALL
 700			MaxBlock
 
 ! These densities are overwritten by the Titan user module
 #BODY
-T			body1
-1.281553		Rbody
-1.0        		Rcurrents
-1.0e6                 	BodyNDim  Lp
-1.0e6                 	BodyNDim  Mp
-1.0e6                 	BodyNDim  H1p
-1.0e6                 	BodyNDim  H2p
-1.0e6                 	BodyNDim  MHCp
-1.0e6                 	BodyNDim  HHCp
-1.0e6                 	BodyNDim  HNIp
-300                 	BodyTDim
+T			UseBody
+1.281553		rBody
+1.0			rCurrents
+1.0e6			BodyNDim  Lp
+1.0e6			BodyTDim  Mp
+1.0e6			BodyNDim  H1p
+1.0e6			BodyNDim  H2p
+1.0e6			BodyNDim  MHCp
+1.0e6			BodyNDim  HHCp
+1.0e6			BodyNDim  HNIp
+300			BodyTDim
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
 
 #SCHEME
-2                       nOrder
-Linde                   TypeFlux
-minmod                  TypeLimiter
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #NONCONSERVATIVE
 F			UseNonConservative
 
 #TEST
-init_hall_resist
+init_hall_resist		StringTest
 update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
-T                       DoSaveLogfile
-RAW step time	        StringLog
-1	                DnSaveLogfile
--1.                     DtSaveLogfile
+T			DoSaveLogfile
+RAW step time		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #INNERBOUNDARY
-user			TypeInnerBc
+user			TypeBcBody
 
 #BOXBOUNDARY
-inflow                  TypeBc1
-outflow                 TypeBc2
-fixed                   TypeBc3
-fixed                   TypeBc4
-fixed                   TypeBc5
-fixed                   TypeBc6
+inflow			TypeBc1
+outflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
 
 #SOLARWIND
-2.90                     SW_rho_dim [n/cc] \  corresponding to mass density of (0.1 H^+ and 0.2 N^+)
-3.1114E5                SW_T_dim [K]        | (260ev)
-120.0                     SW_Ux_dim [km/s]  | (120km/s)
-0.0                     SW_Uy_dim [km/s]    |
-0.0                     SW_Uz_dim [km/s]    |
-0.0                     SW_Bx_dim [nT]      |(-1.0, -0.05, -4.99)
-0.0                     SW_By_dim [nT]      |
--5.00                    SW_Bz_dim [nT]    /
+2.90			SwNDim [n/cc] \  corresponding to mass density of (0.1 H^+ and 0.2 N^+)
+3.1114E5		SwTDim [K]        | (260ev)
+120.0			SwUxDim [km/s]  | (120km/s)
+0.0			SwUyDim [km/s]    |
+0.0			SwUzDim [km/s]    |
+0.0			SwBxDim [nT]      |(-1.0, -0.05, -4.99)
+0.0			SwByDim [nT]      |
+-5.00			SwBzDim [nT]    /
 
 #USERSWITCH
 +init +ic +source		StringSwitch
 
-#USERINPUTBEGIN -----------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 ! for T9 flyby
 SUBSOLARLOC
-0.303654    	SX0
--0.85936	SY0		
--0.39071	SZ0
+0.303654		SX0
+-0.85936		SY0
+-0.39071		SZ0
 
 !for symmetric cases
 #SUBSOLARLOC
@@ -102,18 +102,18 @@ SUBSOLARLOC
 0.0
 
 #USETITANINPUT
-CassiniTA	        Solarmax: CassiniTA:Solarmin
-T                       Including impact ionization
+CassiniTA		Solarmax: CassiniTA:Solarmin
+T			Including impact ionization
 
 #UPSTREAM
-0.1                     Proton density(cm^-3)
-0.05                     N^+ density(cm^-3)
-500.0                   plasma temperature(eV) 200+50
+0.1			Proton density(cm^-3)
+0.05			N^+ density(cm^-3)
+500.0			plasma temperature(eV) 200+50
 
 #USECOSSZA
 T
 
-#USERINPUTEND ---------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #MULTISPECIES
 T			DoReplaceDensity
@@ -121,35 +121,35 @@ T			DoReplaceDensity
 
 ! For nyx or dc only
 #RESTARTOUTFILE
-block			TypeRestartInFile
+block			StringRestartOutFile
 
 #SAVERESTART
 F			DoSaveRestart
 
 #SAVEPLOT
-6			nPlotFiles
-x=0 MHD tec             StringPlot
+6			nPlotFile
+x=0 MHD tec		StringPlot
 5000			DnSavePlot
 -1.0			DtSavePlot
-y=0 MHD tec             StringPlot
+y=0 MHD tec		StringPlot
 5000			DnSavePlot
 -1.0			DtSavePlot
-z=0 MHD tec             StringPlot
+z=0 MHD tec		StringPlot
 5000			DnSavePlot
--1.0			DxSavePlot
-x=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+-1.0			DtSavePlot
+x=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 0.0			DxSavePlot
-y=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+y=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 0.0			DxSavePlot
-z=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
-0.0			DxSaveplot
-cut MHD idl             StringPlot
+z=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
+0.0			DxSavePlot
+cut MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -10.0			xMin
@@ -157,7 +157,7 @@ cut MHD idl             StringPlot
 0.0001			yMin
 0.00011			yMax
 0.0001			zMin
-0.00011                 zmax
+0.00011			zmax
 0.			DxSavePlot
 
 #STOP

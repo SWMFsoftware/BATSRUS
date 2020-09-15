@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/MERCURY/PARAM.in: MESSENGER M2 flyby run using the new layered inner boundary condition
+Param/MERCURY/PARAM.in: MESSENGER M2 flyby run using the new layered inner boundary condition		StringDescription
 
 #PLANET
 MERCURY			NamePlanet
@@ -8,29 +8,29 @@ MERCURY			NamePlanet
 F			UseRotation
 
 #MAGNETICAXIS
-T                       IsMagAxisPrimary (rest of parameters read if true)
-180.0
-0.0
+T			IsMagAxisPrimary (rest of parameters read if true)
+180.0			MagAxisTheta
+0.0			MagAxisPhi
 
 #MAGNETICCENTER
 0.0			MagCenterX
-0.0             	MagCenterY
-0.2             	MagCenterZ
+0.0			MagCenterY
+0.2			MagCenterZ
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 
 ------grid begin------
 
 #GRIDGEOMETRY
-spherical_lnr           TypeGeometry
+spherical_lnr		TypeGeometry
 
 ! This grid is only used for test.
 #GRID
-10			nRootBlockX
-4			nRootBlockY
-8			nRootBlockZ
+10			nRootBlock1
+4			nRootBlock2
+8			nRootBlock3
 -8.			xMin
  8.			xMax
 -8.			yMin
@@ -42,26 +42,26 @@ spherical_lnr           TypeGeometry
 400			MaxBlock
 
 #LIMITRADIUS
-0.1                	rMin
-14		        rMax
+0.1			rMin
+14			rMax
 
 
 ! Turn on the following grid related commands for a realistic simulation.
 
 GRID
-14                       proc_dims(1)		nRootBlockX
-8                        proc_dims(2)		nRootBlockY
-8                        proc_dims(3),		nRootBlockZ
--64                      x1		xMin
- 8                       x2		xMax
--32                      y1		yMin
- 32                      y2		yMax
--32                      z1		zMin
- 32                      z2		zMax
+14			nRootBlock1
+8			nRootBlock2
+8			nRootBlock3
+-64			xMin
+ 8			xMax
+-32			yMin
+ 32			yMax
+-32			zMin
+ 32			zMax
 
 LIMITRADIUS
-0.8			rMin		RadiusMin
-80.0                 	rMax 		RadiusMax
+0.8			rMin
+80.0			rMax
 
 GRIDLEVEL
 1			nLevelArea
@@ -70,13 +70,12 @@ initial			TypeRegion
 GRIDLEVEL
 1			nLevelArea
 box_gen			TypeRegion
-1.2             	rmin		xMinBox
-135             	LonMin		yMinBox
--40.0           	LatMin		zMinBox
-3.0           		rmax		xMaxBox
-225.0           	LonMax		yMaxBox
-40.0            	LatMax		zMaxBox
-
+1.2			rMin
+135			LonMin
+-40.0			LatMin
+3.0			rMax
+225.0			LonMax
+40.0			LatMax
 
 GRIDLEVEL
 1			nLevelArea
@@ -93,21 +92,21 @@ box			NameArea
 
 
 #BORIS
-F			UseBorisCorr
+F			UseBorisCorrection
 0.02			BorisFactor
 
 
 TEST
-krylov show_pmin 
+krylov show_pmin
 
 
 #STARTTIME
 2000			iYear
-3                   	iMonth
-21                  	iDay
-10                  	iHour
-45                  	iMinute
-0                   	iSecond
+3			iMonth
+21			iDay
+10			iHour
+45			iMinute
+0			iSecond
 
 #MINIMUMPRESSURE
 0.000001		pMinDim
@@ -119,40 +118,38 @@ krylov show_pmin
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0                     IonCharge [e]  
-1.0                     ElectronTemperatureRatio
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
 
 
 #SOLARWIND
-40.0			SW_rho_dim [n/cc]		SwNDim
-0.174e6/2         	SW_T_dim [K]  			SwTDim
--400.0              	SW_Ux_dim [km/s]		SwUxDim
-0.0                	SW_Uy_dim [km/s]		SwUyDim
-0.0                 	SW_Uz_dim [km/s]		SwUzDim
--15.21              	SW_Bx_dim [nT] change sign for SW from +x to -x
-8.40                	SW_By_dim [nT] change sign for SW from +x to -x
--8.51               	SW_Bz_dim [nT]		SwBzDim
-
+40.0			SwNDim [n/cc]
+0.174e6/2		SwTDim [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+-15.21			SwBxDim [nT] change sign for SW from +x to -x
+8.40			SwByDim [nT] change sign for SW from +x to -x
+-8.51			SwBzDim [nT]
 
 #UNIFORMAXIS
 T			UseUniformAxis
 
-
 !------------------ Axis-------------------------------------
-! These commands are used to handle the shape density/pressure jump across the z-axis. 
-#IMPLICITENERGY                     
-F                     	UseImplicitEnergy  
-                 
-#FIXAXIS                                              
-F                   	DoFixAxis                 
-1.2              	rFixAxis
--1.0                	r2FixAxis                         
+! These commands are used to handle the shape density/pressure jump across the z-axis.
+#IMPLICITENERGY
+F			UseImplicitEnergy
+
+#FIXAXIS
+F			DoFixAxis
+1.2			rFixAxis
+0.0			r2FixAxis
 
 ! This command is helpful. But for this test with very coarse grid the code will
 ! crash with this command.
-COARSEAXIS                            
-T                       UseCoarseAxis                  
-1                       nCoarseLayer         
+COARSEAXIS
+T			UseCoarseAxis
+1			nCoarseLayer
 
 !-------------------------------------------------------------
 
@@ -165,26 +162,26 @@ T			UseBody (rest of parameters read if true)
 
 
 #TIMESTEPPING
-2                       nStage
-0.8                    	CflExlp         CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2                       nOrder (1 or 2)
-Rusanov
-mc3                     TypeLimiter
-1.2                     LimiterBeta
+2			nOrder (1 or 2)
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 
 ! --------------- Hall ------------------------------------------
 
 #HALLRESISTIVITY
 T			UseHallResist (rest of parameters read only if true)
-1.0             	HallFactorMax
-0.1             	HallCmaxFactor
+1.0			HallFactorMax
+0.1			HallCmaxFactor
 
 #REGION
 hallbox1		NameRegion
-box tapered             NameHallRegion
+box tapered		StringShape
 -5  			xMinBox
 -4			yMinBox
 -4			zMinBox
@@ -201,61 +198,59 @@ sphere0 tapered		StringShape
 
 #REGION
 polars			NameRegion
-doubleconez0 tapered	StringShape
-12	     		Height
+doubleconez0 tapered		StringShape
+12			Height
 2.0			Radius
-0.2			Taper			
+0.2			Taper
 
 #HALLREGION
-+hallbox1 -hallsphere -polars 
++hallbox1 -hallsphere -polars		StringHallRegion
 0
 
 
 ! Turn on semi-implicit for both  for time accurate run.
 #SEMIIMPLICIT
-F                       UseSemiImplicit
-resistivity             TypeSemiImplicit
+F			UseSemiImplicit
+resistivity		TypeSemiImplicit
 
 #SEMIKRYLOV
 GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
-0.001           	ErrorMaxKrylov  
-200             	MaxMatvecKrylov 
+0.001			ErrorMaxKrylov
+200			MaxMatvecKrylov
 
 #SEMIPRECONDITIONER
 T			DoPrecond (rest of parameters are read if true)
-MBILU           	TypePrecond (MBILU, BILU, DILU, GS, BLOCKJACOBI, JACOBI, HYPRE)
-0.5             	GustafssonPar (0 to 1, read for MBILU preconditioner only)
-
-
+MBILU			TypePrecond (MBILU, BILU, DILU, GS, BLOCKJACOBI, JACOBI, HYPRE)
+0.5			PrecondParam (0 to 1, read for MBILU preconditioner only)
 
 ! ---------------------------------------------------------------
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-inflow			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+inflow			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
-reflect             	TyepBcInner		
+reflect			TypeBcBody
 
 #RESTARTOUTFILE
-one			TypeRestartOutFile
+one			StringRestartOutFile
 
 #NONCONSERVATIVE
-T                  	UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola            	TypeConservCrit
-1.2                 	xParabolaConserv
-1.5                 	yParabolaConserv
+parabola		TypeConservCrit
+1.2			xParabolaConserv
+1.5			yParabolaConserv
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
@@ -263,18 +258,18 @@ RAW			StringLogfile
 T			DoSaveInitial
 
 #SAVEPLOT
-2			DnSavePlot
-y=0 var idl             PlotString
-10                      DnSavePlot
--1.0                    DtSavePlot
--1                      DxSavePlot
-rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz 
-g rbody
-3d var tec
-100
--1
-rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz
-g rbody
+2			nPlotFile
+y=0 var idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1			DxSavePlot
+rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz		NameVars
+g rbody			NamePars
+3d var tec		StringPlot
+100			DnSavePlot
+-1			DtSavePlot
+rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz		NameVars
+g rbody			NamePars
 
 #RESISTIVITY
 T			UseResistivity
@@ -284,27 +279,25 @@ user			TypeResistivity
 #USERSWITCH
 +init +ic		StringSwitch
 
-#USERINPUTBEGIN --------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RESISTIVEPLANET
-5e-11			Density		PlanetDensitySi
-1E-11                  	Pressure		PlanetPressureSi
-1.0                    	PlanetRadius
-5                      	nResistivPoints
-1.02                   	Radius
-0.0                    	Resistivety
-0.95                   	Radius
-1.0e13                  Resistivety
-0.85                    Radius
-1.0e13                  Resistivety
-0.83                   	Radius
-1.0e7	               	Resistivety
-0.8                    	Radius
-0.0                   	Resistivety
+5e-11			PlanetDensitySi
+1E-11			PlanetPressureSi
+1.0			PlanetRadius
+5			nResistivPoints
+1.02			Radius
+0.0			Resistivety
+0.95			Radius
+1.0e13			Resistivety
+0.85			Radius
+1.0e13			Resistivety
+0.83			Radius
+1.0e7			Resistivety
+0.8			Radius
+0.0			Resistivety
 
-#USERINPUTEND ----------------------
-
-
+#USERINPUTEND -------------------------------------
 
 #STOP
 100			MaxIteration

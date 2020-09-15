@@ -2,9 +2,9 @@
 GM/restartIN/restart.H
 
 #VERBOSE
-1                       lVerbose
+1			lVerbose
 
-#ROTATION 
+#ROTATION
 F			UseRotation
 
 #GRAVITY
@@ -12,7 +12,7 @@ T			UseGravity
 0			iDirGravity
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
@@ -22,23 +22,23 @@ F			DoTimeAccurate
 +init +ic +source		StringSwitch
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
-VAR step                StringLog
-1                       DnSaveLogfile
--1.                     DtSaveLogfile [sec]
-dt pmin pmax rho p hpflx opflx o2pflx co2pflx
-3.0 5.0
+T			DoSaveLogfile rest of parameters read if true
+VAR step		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+dt pmin pmax rho p hpflx opflx o2pflx co2pflx		NameLogVars
+3.0 5.0			StringLogRadii
 
 #BOXBOUNDARY
-outflow                 TypeBc1
-inflow                  TypeBc2
-fixed                   TypeBc3
-fixed                   TypeBc4
-fixed                   TypeBc5
-fixed                   TypeBc6
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
 
 #INNERBOUNDARY
-user			TypeInnerBc
+user			TypeBcBody
 
 #MULTISPECIES
 T			DoReplaceDensity
@@ -48,28 +48,28 @@ T			DoReplaceDensity
 F			DoSaveRestart
 
 #SAVEPLOT
-5			nplotfiles
-z=0 MHD tec             StringPlot
+5			nPlotFile
+z=0 MHD tec		StringPlot
 1000			DnSavePlot
--1.0			DxSavePlot
-y=0 MHD tec             StringPlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
 1000			DnSavePlot
+-1.0			DtSavePlot
+x=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-x=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
+y=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-y=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
--1.0			DxSaveplot
 
 #SCHEME
-2                       nOrder
+2			nOrder
 Linde			TypeFlux
 mc			TypeLimiter
 1.2			LimiterBeta

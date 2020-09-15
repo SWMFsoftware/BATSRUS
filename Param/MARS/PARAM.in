@@ -2,12 +2,12 @@
 SOLARWIND		TypeNormalization
 
 #DESCRIPTION
-Param/MARS/PARAM.in: Mars test
+Param/MARS/PARAM.in: Mars test		StringDescription
 
 #PLANET
 Mars			NamePlanet
 
-#ROTATION 
+#ROTATION
 F			UseRotation
 
 #GRAVITY
@@ -26,63 +26,63 @@ Param/MARS/Grid
 #BODY
 T			UseBody
 1.0294464		rBody
-1.0        		rCurrents
-1.0e6                 	BodyNDim Hp
-1.0e6                 	BodyNDim O2p
-1.0e6                 	BodyNDim Op
-1.0e6                 	BodyNDim CO2p
-300.0                 	BodyTDim
+1.0			rCurrents
+1.0e6			BodyNDim Hp
+1.0e6			BodyTDim O2p
+1.0e6			BodyNDim Op
+1.0e6			BodyNDim CO2p
+300.0			BodyTDim
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
 
 #SCHEME
-2                       nOrder
-Linde                   TypeF
-minmod                  TypeLimiter
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #NONCONSERVATIVE
 F			UseNonConservative
 
 #SAVELOGFILE
-T                       DoSaveLogfile
-VAR step time	        StringLog
-1	                DnSaveLogfile
--1.                     DtSaveLogfile
-rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx
-3.0
+T			DoSaveLogfile
+VAR step time		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx		NameLogVars
+3.0			StringLogRadii
 
 #INNERBOUNDARY
-user			TypeBcInner
+user			TypeBcBody
 
 #BOXBOUNDARY
-outflow                 TypeBc1
-inflow                  TypeBc2
-fixed                   TypeBc3
-fixed                   TypeBc4
-fixed                   TypeBc5
-fixed                   TypeBc6
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
 
 
 ! 3nT parker's spiral
 #SOLARWIND
-4.0                     SwNDim  [n/cc]
-3.5E5                   SwTDim  [K]
--500.0                  SwUxDim [km/s]
-0.0                     SwUyDim [km/s]
-0.0                     SwUzDim [km/s]
--1.6776                 SwBxDim [nT]
-2.4871                  SwByDim [nT]
-0.00                    SwBzDim [nT]
+4.0			SwNDim  [n/cc]
+3.5E5			SwTDim  [K]
+-500.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+-1.6776			SwBxDim [nT]
+2.4871			SwByDim [nT]
+0.00			SwBzDim [nT]
 
 #USERSWITCH
 +init +ic +b0 +source		StringSwitch
 
-#USERINPUTBEGIN -----------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #UseHotO
 T
@@ -102,7 +102,7 @@ T
 #SOLARCON
 solarmax
 
-#USERINPUTEND ---------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #MULTISPECIES
 T			DoReplaceDensity
@@ -112,29 +112,29 @@ T			DoReplaceDensity
 F			DoSaveRestart
 
 #SAVEPLOT
-6			nPlotFiles
-x=0 MHD tec             StringPlot
+6			nPlotFile
+x=0 MHD tec		StringPlot
 5000			DnSavePlot
 -1.0			DtSavePlot
-y=0 MHD tec             StringPlot
+y=0 MHD tec		StringPlot
 5000			DnSavePlot
 -1.0			DtSavePlot
-z=0 MHD tec             StringPlot
+z=0 MHD tec		StringPlot
 5000			DnSavePlot
+-1.0			DtSavePlot
+x=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-x=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+y=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-y=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
+z=0 MHD idl		StringPlot
+2000			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl             StringPlot
-2000			DnSaveplot
--1.0			DtSaveplot
--1.0			DxSaveplot
-cut MHD idl             StringPlot
+cut MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -10.0			xMin
@@ -142,7 +142,7 @@ cut MHD idl             StringPlot
 0.0001			yMin
 0.00011			yMax
 0.0001			zMin
-0.00011                 zmax
+0.00011			zmax
 0.			DxSavePlot
 
 #STOP

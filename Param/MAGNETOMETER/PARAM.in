@@ -1,15 +1,15 @@
 #PROGRESS
-1			DnShowProgressShort
-100			DnShowProgressLong
+1			DnProgressShort
+100			DnProgressLong
 
 #DESCRIPTION
-Param/MAGNETOMETER/PARAM.in: Test magnetometer calculation and min B plots
+Param/MAGNETOMETER/PARAM.in: Test magnetometer calculation and min B plots		StringDescription
 
 #SAVERESTART
 F			DoSaveRestart
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 ! June is chosen to make the magnetic equatorial plane tilted
 
@@ -26,16 +26,16 @@ T			DoTimeAccurate
 F			UseRotation
 
 #MAGNETOSPHERE
-T                       UseBody
-2.5                     rBody
-3.5                     rCurrents
-10.0			BodyRhoDim
+T			UseBody
+2.5			rBody
+3.5			rCurrents
+10.0			BodyNDim
 25000.0			BodyTDim
 
 #GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
  -96.			xMin
   32.			xMax
  -64.			yMin
@@ -48,82 +48,82 @@ T                       UseBody
 
 #GRIDRESOLUTION
 2.0			Resolution
-sphere0			NameArea
+sphere0			StringShape
 8.0			Radius
 
 #GRIDRESOLUTION
-2.0                     Resolution
-initial                 NameArea
+2.0			Resolution
+initial			StringShape
 
 #OUTERBOUNDARY
-outflow                 TypeBc1
-vary                    TypeBc2
-float                   TypeBc3
-float                   TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 #MAGNETICINNERBOUNDARY
 1.0			B1rCoef
 
 #SAVELOGFILE
-T
-RAW			StringLogfile
+T			DoSaveLogfile
+RAW			StringLog
 0			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SOLARWIND
-5.0                     SwNDim  [n/cc]
-100000.0                SwTDim  [K]
--400.0                  SwUxDim [km/s]
-0.0                     SwUyDim [km/s]
-0.0                     SwUzDim [km/s]
-0.0                     SwBxDim [nT]
-0.0                     SwByDim [nT]
--10.0                    SwBzDim [nT]
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+-10.0			SwBzDim [nT]
 
 #MAGNETOMETER
-GM/Param/MAGNETOMETER/magin.dat				MagInputFile
-single							TypeFileOut
--1							DnOutput
-10.0							DtOutput
+GM/Param/MAGNETOMETER/magin.dat		NameMagInputFile
+single			TypeFileOut
+-1			DnOutput
+10.0			DtOutput
 
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
 
 #SAVEPLOT
-5                       nPlotFile
-x=0 FUL idl             StringPlot
--1                      DnSavePlot
+5			nPlotFile
+x=0 FUL idl		StringPlot
+-1			DnSavePlot
 10.			DtSavePlot
--1.
-y=0 FUL idl             StringPlot
--1                      DnSavePlot
+-1.			DxSavePlot
+y=0 FUL idl		StringPlot
+-1			DnSavePlot
 10.			DtSavePlot
--1.
-z=0 FUL idl             StringPlot
--1                      DnSavePlot
+-1.			DxSavePlot
+z=0 FUL idl		StringPlot
+-1			DnSavePlot
 10.			DtSavePlot
--1.
-eqb eqb idl_ascii	StringPlot
--1                      DnSavePlot
+-1.			DxSavePlot
+eqb eqb idl_ascii		StringPlot
+-1			DnSavePlot
 10.			DtSavePlot
 20			nRadius
 25			nLon
-3.0			RadiusMin	
+3.0			RadiusMin
 20.0			RadiusMax
 0.0			LongitudeMin
 360.0			LongitudeMax
 eqb eqb tec		StringPlot
--1                      DnSavePlot
+-1			DnSavePlot
 10.			DtSavePlot
 20			nRadius
 25			nLon
-3.0			RadiusMin	
+3.0			RadiusMin
 10.0			RadiusMax
 60.0			LongitudeMin
 300.0			LongitudeMax

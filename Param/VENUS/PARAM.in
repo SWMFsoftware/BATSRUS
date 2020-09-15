@@ -1,51 +1,51 @@
 !- PARAM.in:  Example input file for BATSRUS --
 
 #NORMALIZATION
-SOLARWIND
+SOLARWIND		TypeNormalization
 
 #VERBOSE
-1                       lVerbose
+1			lVerbose
 
 #PLANET
-VENUS                      problem_type: 14=Venus Ionosphere
+VENUS			NamePlanet
 
-#ROTATION 
-F
+#ROTATION
+F			UseRotation
 
 #GRAVITY
-T
-0
+T			UseGravity
+0			iDirGravity
 
 #INCLUDE
 Param/VENUS/Grid
 
 #GRIDLEVEL
-2			nLevelArea
-initial			NameArea
+2			nLevel
+initial			StringShape
 
 ! The denisities are overwritten in the Venus ModUser file
 #BODY
-T			body1
-1.0231328486450759	Rbody
-1.0        		Rcurrents
-1.0e6                 	BodyNDim Hp
-1.0e6                 	BodyNDim CO2p
-1.0e6                 	BodyNDim O2p
-1.0e6                 	BodyNDim Op
-300.0                 	BodyTdim
+T			UseBody
+1.0231328486450759		rBody
+1.0			rCurrents
+1.0e6			BodyNDim Hp
+1.0e6			BodyTDim CO2p
+1.0e6			BodyNDim O2p
+1.0e6			BodyNDim Op
+300.0			BodyTdim
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
-2		nStage
-0.2		CflExpl
+2			nStage
+0.2			CflExpl
 
 #USERSWITCH
 +init +ic +source		StringSwitch
 
 #TEST
-read_inputs amr 
+read_inputs amr		StringTest
 update_states calc_sources calc_facefluxes calc_timestep
 
 #TESTXYZ
@@ -54,113 +54,75 @@ update_states calc_sources calc_facefluxes calc_timestep
 -0.0169			zTest		(Z coordinate of cell for testing)
 
 #TESTVAR
-1			iVarTest
+Rho			NameTestVar
 
 ! Index of variable to be tested. Default is rho_=1, ie. density.
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
-VAR step                StringLog
-1                       DnSaveLogfile
--1.                     DtSaveLogfile [sec]
-dt pmin pmax rho p hpflx opflx o2pflx co2pflx
-3.0 5.0
+T			DoSaveLogfile rest of parameters read if true
+VAR step		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+dt pmin pmax rho p hpflx opflx o2pflx co2pflx		NameLogVars
+3.0 5.0			StringLogRadii
 
 #BOXBOUNDARY
-outflow                 TypeBc1
-inflow                  TypeBc2
-fixed                   TypeBc3
-fixed                   TypeBc4
-fixed                   TypeBc5
-fixed                   TypeBc6
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
 
 #INNERBOUNDARY
-user
+user			TypeBcBody
 
 #MULTISPECIES
 T			DoReplaceDensity
 5.0			SpeciesPercentCheck
 
 #SOLARWIND
-14.0                    SW_rho_dim [n/cc]    \
-2.703E5                 SW_T_dim [K]          |
--400.0                  SW_Ux_dim [km/s]      |  
-0.0                     SW_Uy_dim [km/s]      |
-0.0                     SW_Uz_dim [km/s]      |
-0.0                     SW_Bx_dim [nT]        |
-15.0                    SW_By_dim [nT]        !15 nT parker spiral
-0.0                     SW_Bz_dim [nT]       /
+14.0			SwNDim [n/cc]    \
+2.703E5			SwTDim [K]          |
+-400.0			SwUxDim [km/s]      |
+0.0			SwUyDim [km/s]      |
+0.0			SwUzDim [km/s]      |
+0.0			SwBxDim [nT]        |
+15.0			SwByDim [nT]        !15 nT parker spiral
+0.0			SwBzDim [nT]       /
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 #SAVEPLOT
-5			nplotfiles
-z=0 MHD tec             StringPlot
-1000			DnOutput
--1.0			DxOutput
-y=0 MHD tec             StringPlot
-1000			DnOutput
--1.0
-x=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
--1.0
-y=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
--1.0
-z=0 MHD idl             StringPlot
-1000			DnSaveplot
--1.0			DtSaveplot
--1.0			DxSaveplot
+5			nPlotFile
+z=0 MHD tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+x=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
 
 #SCHEME
-2                       nOrder (1 or 2)
-Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
-mc                  LimiterType ! Only for nordder=2
-1.2
+2			nOrder (1 or 2)
+Linde			TypeFlux  1=Roe, 2=Rusanov, 3=Linde
+mc			TypeLimiter ! Only for nordder=2
+1.2			LimiterBeta
 
 #STOP
-50
--1.0
-
-#END
-
-
-#RUN ===============================================
-
-#SCHEME
-2                       nOrder (1 or 2)
-Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
-minmod                  LimiterType ! Only for nordder=2
-
-#STOP
-10000
--1.0
-
-#RUN ===============================================
-
-#SCHEME
-2                       nOrder (1 or 2)
-Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
-mc                  LimiterType ! Only for nordder=2
-1.2
-
-#STOP
-25000
--1.0
-
-#RUN ===================================================
-
-#SCHEME
-2                       nOrder (1 or 2)
-Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
-mc                  LimiterType ! Only for nordder=2
-1.5
-
-#STOP
-30000
--1.0
+50			MaxIteration
+-1.0			tSimulationMax
 
 #END

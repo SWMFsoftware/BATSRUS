@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/GANYMEDE/PARAM.in: Test Ganymede run of steady state ideal MHD G8 flyby
+Param/GANYMEDE/PARAM.in: Test Ganymede run of steady state ideal MHD G8 flyby		StringDescription
 MhdHypPe equation set.
 face-based innerBC
 
@@ -10,21 +10,21 @@ Ganymede		NamePlanet
 0.0			OmegaPlanet  [radian/s]
 0.0			TiltRotation [degree]
 DIPOLE			TypeBField
-4.3764                  MagAxisThetaGeo [degree]
-289.1550                MagAxisPhiGeo   [degree]
--718.8961E-9            DipoleStrength  [T]
+4.3764			MagAxisThetaGeo [degree]
+289.1550		MagAxisPhiGeo   [degree]
+-718.8961E-9		DipoleStrength  [T]
 
 Alternative description
 DIPOLE
-175.63                  MagAxisThetaGeo [degree]
-109.162                 MagAxisPhiGeo   [degree]
-718.895E-9              DipoleStrength  [T]
+175.63			MagAxisThetaGeo [degree]
+109.162			MagAxisPhiGeo   [degree]
+718.895E-9		DipoleStrength  [T]
 
 #ROTATION
 F			UseRotation
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #SAVERESTART
 F			DoSaveRestart
@@ -32,16 +32,16 @@ F			DoSaveRestart
 -1.0			DtSaveRestart
 
 #PROGRESS
-1			DnShowProgressShort
-10			DnShowProgressLong
+1			DnProgressShort
+10			DnProgressLong
 
 #HYPERBOLICDIVB
-T                       UseHyperbolicDivb
-150.0                   SpeedHypDim
-0.1                     HypDecay
+T			UseHyperbolicDivb
+150.0			SpeedHypDim
+0.1			HypDecay
 
 #COORDSYSTEM
-GSE			TypeCoordinate
+GSE			TypeCoordSystem
 
 #BODY
 T			UseBody
@@ -52,7 +52,7 @@ T			UseBody
 
 ! use BodyNDim, BodyTDim only, rbody as a parameter for plot
 #BODY
-F			
+F			UseBody
 
 SOLARWIND
 4.0			SwNDim   [/cc]
@@ -66,8 +66,8 @@ SOLARWIND
 
 #PLASMA
 14.0			FluidMass [amu]
-1.0                     AverageIonCharge [e]
-1.0/18.0                ElectronTemperatureRatio
+1.0			IonCharge [e]
+1.0/18.0		ElectronTemperatureRatio
 
 #MINIMUMPRESSURE
 0.001			pMinDim
@@ -83,7 +83,7 @@ F			UseNonConservative
 0			nConservCrit
 
 #RESTARTOUTFILE
-one                     TypeRestartOutFile
+one			StringRestartOutFile
 
 ! Grid structure info
 #INCLUDE
@@ -91,52 +91,52 @@ Param/GANYMEDE/Grid
 
 ----------------BC-----------------
 #OUTERBOUNDARY
-fixedb1			TypeCellBc1
-none			TypeCellBc2
-periodic		TypeCellBc3
-periodic		TypeCellBc4
-periodic		TypeCellBc5
-periodic		TypeCellBc6
+fixedb1			TypeBc1
+none			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #BOXBOUNDARY
-fixed			TypeBcXmin
-fixed			TypeBcXmax
-float			TypeBcYmin
-float			TypeBcYmax
-float			TypeBcZmin
-float			TypeBcZmax
+fixed			TypeBc1
+fixed			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #BOUNDARYSTATE
-coord1max xminbox xmaxbox         StringBoundary
-56.0                    BoundaryStateDim_V Rho
-140.0                   BoundaryStateDim_V Ux
-0.0                     BoundaryStateDim_V Uy
-0.0                     BoundaryStateDim_V Uz
--10.0                   BoundaryStateDim_V Bx
--6.0                    BoundaryStateDim_V By
--86.0                   BoundaryStateDim_V Bz
-0.0                     BoundaryStateDim_V Hyp
-0.2                     BoundaryStateDim_V Pe
-3.6                     BoundaryStateDim_V p
+coord1max xminbox xmaxbox		StringBoundary
+56.0			BoundaryStateDim_V Rho
+140.0			BoundaryStateDim_V Ux
+0.0			BoundaryStateDim_V Uy
+0.0			BoundaryStateDim_V Uz
+-10.0			BoundaryStateDim_V Bx
+-6.0			BoundaryStateDim_V By
+-86.0			BoundaryStateDim_V Bz
+0.0			BoundaryStateDim_V Hyp
+0.2			BoundaryStateDim_V Pe
+3.6			BoundaryStateDim_V p
 
 #BOUNDARYSTATE
 coord1min solid		StringBoundary
-550.0	  		BoundaryStateDim_V Rho
-0.0                     BoundaryStateDim_V Ux
-0.0                     BoundaryStateDim_V Uy
-0.0                     BoundaryStateDim_V Uz
-0.0                     BoundaryStateDim_V Bx
-0.0                     BoundaryStateDim_V By
-0.0                     BoundaryStateDim_V Bz
-0.0                     BoundaryStateDim_V Hyp
+550.0			BoundaryStateDim_V Rho
+0.0			BoundaryStateDim_V Ux
+0.0			BoundaryStateDim_V Uy
+0.0			BoundaryStateDim_V Uz
+0.0			BoundaryStateDim_V Bx
+0.0			BoundaryStateDim_V By
+0.0			BoundaryStateDim_V Bz
+0.0			BoundaryStateDim_V Hyp
 0.01			BoundaryStateDim_V Pe
 0.115			BoundaryStateDim_V p
 
 #SOLIDSTATE
-T                       UseSolidState
-user                    TypeBcSolid
-sphere                  TypeSolidGeometry
-1.0                     rSolid
+T			UseSolidState
+user			TypeBcSolid
+sphere			TypeSolidGeometry
+1.0			rSolid
 5e-3			SolidLimitDt
 
 -------------end BC--------------
@@ -149,21 +149,21 @@ user			TypeResistivity
 #USERSWITCH
 +init +ic		StringSwitch
 
-#USERINPUTBEGIN --------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RESISTIVEPLANET
-1.0                     PlanetRadius
-5                       nResistivPoints
-1.05                    Radius
-0.0                     Resistivity
-0.95                    Radius
+1.0			PlanetRadius
+5			nResistivPoints
+1.05			Radius
+0.0			Resistivity
+0.95			Radius
 6e11			Resistivity
-0.70                    Radius
+0.70			Radius
 6e11			Resistivity
-0.60                    Radius
+0.60			Radius
 6e9			Resistivity
-0.55		        Radius
-0.0		        Resistivity
+0.55			Radius
+0.0			Resistivity
 
 MASSLOADING
 9.8e7			NeutralDensity (cm^-3)
@@ -171,17 +171,17 @@ MASSLOADING
 2.2e-8			IonizationRate (1/s)
 2e-15			CollisionCrossSection (cm2)
 
-#USERINPUTEND ----------------------
+#USERINPUTEND -------------------------------------
 
 #TIMESTEPPING
 2			nStage
-0.8			CflExlp
+0.8			CflExpl
 
 #SCHEME
-2                       nOrder (1 or 2)
-Sokolov                 TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc3                     TypeLimiter
-1.2                     LimiterBeta
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -190,22 +190,22 @@ resistivity		TypeSemiImplicit
 By default the semi-Krylov solver is used.
 
 #SAVEINITIAL
-F	
+F			DoSaveInitial
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-1			nPlotFiles
-y=0 VAR idl_ascii       StringPlot
-10                   	DnSavePlot
--1.                     DtSavePlot
--1.                     Dx
-{MHD} b1x b1y b1z eta absdivb dt dx     NameVars
-{default}                       NamePars
+1			nPlotFile
+y=0 VAR idl_ascii		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+{MHD} b1x b1y b1z eta absdivb dt dx		NameVars
+{default}		NamePars
 
 #STOP
 5			MaxIteration

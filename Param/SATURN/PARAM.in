@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/SATURN/PARAM.in: Test for Saturn
+Param/SATURN/PARAM.in: Test for Saturn		StringDescription
 
 #PLANET
 SATURN			NamePlanet
@@ -8,33 +8,33 @@ SATURN			NamePlanet
 F			IsRotAxisPrimary
 
 #MAGNETICAXIS
-T			IsMagAxisPrimary (rest of parameters read if true) 
-17.0			MagAxisTheta [degree] 
-180.0			MagAxisPhi   [degree] 
+T			IsMagAxisPrimary (rest of parameters read if true)
+17.0			MagAxisTheta [degree]
+180.0			MagAxisPhi   [degree]
 
 #STARTTIME
-2007			year
-1			month
-12			day
-12			hour
-0			minute
-0			second 
-0.0 			FracSecond 
+2007			iYear
+1			iMonth
+12			iDay
+12			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #SAVERESTART
-F			DoSaveRestart (Rest of parameters read if true) 
+F			DoSaveRestart (Rest of parameters read if true)
 
 #NORMALIZATION
-SOLARWIND
+SOLARWIND		TypeNormalization
 
 #GRID
-       7		nRootBlockX
-       4		nRootBlockY
-       4		nRootBlockZ
- -5.76000E+02          	xMin
+       7		nRootBlock1
+       4		nRootBlock2
+       4		nRootBlock3
+ -5.76000E+02		xMin
   0.96000E+02		xMax
  -1.92000E+02		yMin
   1.92000E+02		yMax
@@ -45,100 +45,100 @@ SOLARWIND
 720			MaxBlock
 
 #GRIDRESOLUTION
-3.0
-initial
+3.0			Resolution
+initial			StringShape
 
 #GRIDRESOLUTION
-3/2
-sphere0
-4.0
+3/2			Resolution
+sphere0			StringShape
+4.0			Radius
 
 #GRIDRESOLUTION
-3/8			AreaResolution
-ringz0 rotated 		NameArea
-  8.0			HeightRing
-  3.0			Radius1
- 25.0			Radius2
-  0.0                   xRotate
--17.0                  yRotate
-  0.0                   zRotate
+3/8			Resolution
+ringz0 rotated 		StringShape
+  8.0			Height
+  3.0			RadiusInner
+ 25.0			Radius
+  0.0			xRotate
+-17.0			yRotate
+  0.0			zRotate
 
 #SOLARWIND
-  0.0081                       SW_rho_dim
-  1.0000000E+04                SW_T_dim
- -6.1500000E+02                SW_Ux_dim
-  0.0000000E+00                SW_Uy_dim
-  0.0000000E+00                SW_Uz_dim
-  0.0594000E+00                SW_Bx_dim
- -0.0173000E+00                SW_By_dim
-  0.0063000E+00                SW_Bz_dim
+  0.0081		SwNDim
+  1.0000000E+04		SwTDim
+ -6.1500000E+02		SwUxDim
+  0.0000000E+00		SwUyDim
+  0.0000000E+00		SwUzDim
+  0.0594000E+00		SwBxDim
+ -0.0173000E+00		SwByDim
+  0.0063000E+00		SwBzDim
 
 #MAGNETOSPHERE
-T                       UseBody 
-3.0                     rBody 
-4.0                     rCurrents 
-0.1                     Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-35000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+T			UseBody
+3.0			rBody
+4.0			rCurrents
+0.1			BodyNDim (/ccm) density for fixed BC for rho_BLK
+35000.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
 #NONCONSERVATIVE
-T                       UseNonConservative 
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-1			nConservCrit 
-r			TypeConservCrit_I
-6.0			rConserv 
+1			nConservCrit
+r			TypeConservCrit
+6.0			rConserv
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step		StringLogfile
+VAR step		StringLog
 1			DnSaveLogfile
--1.			DtSaveLogfile 
-rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax
+-1.			DtSaveLogfile
+rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax		NameLogVars
 
 #SAVEPLOT
-2                       nPlotFiles
-slc MHD tec             StringPlot  
-10000                   DnSavePlot
--1.                     DtSavePlot
--576.                    xMinCut
-  96.                    xMaxCut
--192.                    yMinCut
- 192.                    yMaxCut
--192.                    zMinCut
- 192.                    zMaxCut
- 0.                     xPoint
- 0.                     yPoint
- 0.                     zPoint
- -0.291371              xNormal
-  0.                    yNormal
-  0.956305              zNormal
-cut MHD tec             StringPlot 
-10000                   DnSavePlot
--1.                     DtSavePlot
--576.                   xMinCut    
- 192.                   xMaxCut    
--192.                   yMinCut    
- 192.                   yMaxCut    
--10.01                  zMinCut     
- -9.99                  zMaxCut    
+2			nPlotFile
+slc MHD tec		StringPlot
+10000			DnSavePlot
+-1.			DtSavePlot
+-576.			xMinCut
+  96.			xMaxCut
+-192.			yMinCut
+ 192.			yMaxCut
+-192.			zMinCut
+ 192.			zMaxCut
+ 0.			xPoint
+ 0.			yPoint
+ 0.			zPoint
+ -0.291371		xNormal
+  0.			yNormal
+  0.956305		zNormal
+cut MHD tec		StringPlot
+10000			DnSavePlot
+-1.			DtSavePlot
+-576.			xMinCut
+ 192.			xMaxCut
+-192.			yMinCut
+ 192.			yMaxCut
+-10.01			zMinCut
+ -9.99			zMaxCut
 
 #OUTERBOUNDARY
-outflow			TypeBc1 
-inflow			TypeBc2 
+outflow			TypeBc1
+inflow			TypeBc2
 float			TypeBc3
 float			TypeBc4
 float			TypeBc5
 float			TypeBc6
 
 #TVDRESCHANGE
-T
+T			UseTvdReschange
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExpl  
+0.80			CflExpl
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner 
+ionosphere		TypeBcBody
 
 #SCHEME
 1			nOrder
@@ -151,13 +151,13 @@ F			UseProjection
 F			UseConstrainB
 
 #HYPERBOLICDIVB
-T			UseHyperbolicDivB
--1.0			SpeedHypDim
+T			UseHyperbolicDivb
+400.0			SpeedHypDim
 0.1			HypDecay
 
 #AMR
 20			DnRefine
-F			DoAutomaticRefinement
+F			DoAutoRefine
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -165,45 +165,45 @@ F			DoAutomaticRefinement
 25			MaxIteration
 -1.			tSimulationMax
 
-#RUN   #######################################################################
+#RUN ##########################################################################
 
 #AMR
 -1			DnRefine
 
 #TIMESTEPPING
 2			nStage
-0.65			CflExpl  
+0.65			CflExpl
 
 #SCHEME
 2			nOrder
 Linde			TypeFlux
-minmod                  TypeLimiter
+minmod			TypeLimiter
 
 #BORIS
 T			UseBorisCorrection
-1.0                     BorisClightFactor 
+1.0			BorisClightFactor
 
 #USERSWITCH
 +source			StringSwitch
 
-#USERINPUTBEGIN ---------------
+#USERINPUTBEGIN -----------------------------------
 
 #MASSLOADING
 T			UseMassLoading
-3.16228E27              MassLoadingRate (#/s)
-F			DoAccelerateMassLoading 
+3.16228E27		MassLoadingRate (#/s)
+F			DoAccelerateMassLoading
 
-#USERINPUTEND -----------------
+#USERINPUTEND -------------------------------------
 
 #NONCONSERVATIVE
-T                       UseNonConservative 
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-1			nConservCrit 
-parabola		TypeConservCrit_I
-16.	                xParabolaConserv
-24.     	        yParabolaConserv
+1			nConservCrit
+parabola		TypeConservCrit
+16.			xParabolaConserv
+24.			yParabolaConserv
 
 #STOP
 50			MaxIteration
--1.			tSimulationMax  
+-1.			tSimulationMax

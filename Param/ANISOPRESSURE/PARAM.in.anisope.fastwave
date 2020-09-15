@@ -149,5 +149,5 @@ T			DoSaveInitial
 {default}		NamePars
 
 #STOP
--10			MaxIteration
+-1			MaxIteration
 0.5			tSimulationMax
