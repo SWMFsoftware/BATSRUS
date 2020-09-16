@@ -8161,7 +8161,7 @@ on the grid. The default values are zero, ie. the shock is in the
 X=0 plane.
 </command>
 
-<command name="SOLARWIND" if="$_IsFirstSession">
+<command name="SOLARWIND">
 	<parameter name="SwNDim"   type="real" min="-1"	default="5"	/>
 	<parameter name="SwTDim"   type="real" min="-1"	default="100000." />
 	<parameter name="SwUxDim"  type="real"		default="-400"	/>
