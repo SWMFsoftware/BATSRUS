@@ -152,11 +152,10 @@ user			TypeResistivity
 #USERINPUTBEGIN -----------------------------------
 
 #RESISTIVEPLANET
-1.0			PlanetRadius
-5			nResistivPoints
-1.05			Radius
-0.0			Resistivity
-0.95			Radius
+5                       nResistivePoints
+1.05                    Radius
+0.0                     Resistivity
+0.95                    Radius
 6e11			Resistivity
 0.70			Radius
 6e11			Resistivity
@@ -171,7 +170,11 @@ MASSLOADING
 2.2e-8			IonizationRate (1/s)
 2e-15			CollisionCrossSection (cm2)
 
-#USERINPUTEND -------------------------------------
+#SOLIDBOUNDARY
+1
+
+#USERINPUTEND ----------------------
+
 
 #TIMESTEPPING
 2			nStage
