@@ -3476,6 +3476,11 @@ The default is DoSaveLogFile false.
 							default="-1" />
 		<parameter name="NameTrajectoryFile" type="string"
 			length="100" />
+		<if expr="$OptionalVar eq 'trajrange'">
+		    <parameter name="StartTimeTraj" type="real" />
+		    <parameter name="EndTimeTraj"   type="real" />
+		    <parameter name="DtTraj"        type="real" />
+		</if>
 		<rule expr="-f $NameTrajectoryFile">
 			Trajectory file $NameTrajectoryFile must exist
 		</rule>
