@@ -244,6 +244,16 @@ reflected		UseSwBC
 
 #USERINPUTEND -------------------------------------
 
+#SOLARWIND
+8.0                     SW_rho_dim [n/cc]
+1.e5                    SW_T_dim [K]
+-371.                   SW_Ux_dim [km/s]
+0.0                     SW_Uy_dim [km/s]
+0.0                     SW_Uz_dim [km/s]
+-3.4                    SW_Bx_dim [nT]
+3.4                     SW_By_dim [nT]
+0.0                     SW_Bz_dim [nT]
+
 #TIMESTEPPING
 1			nStage
 0.2			CflExpl
