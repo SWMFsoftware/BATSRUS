@@ -1371,7 +1371,7 @@ state values must be given.
   <if expr="$UseSolidState">
     <parameter name="TypeBcSolid" type="string"/>
     <parameter name="TypeSolidGeometry" type="string"/>
-    <parameter name="rSolid" type="real"/>
+    <parameter name="rSolid" type="real" if="$TypeSolidGeometry eq 'sphere'"/>
     <parameter name="SolidLimitDt" type="real"/>
   </if>
 
@@ -1384,7 +1384,8 @@ sphere			TypeSolidGeometry
 
 This command sets the solid boundary parameters. Solid boundary is one type of
 face boundary. Currently it works only for a sphere geometry with radius
-rSolid. The timestep inside solid body is set to SolidLimitDt.
+rSolid. In local time stepping mode the timestep inside the solid body
+is set to SolidLimitDt.
 
 Default is UseSolidState=.false.
 </command>
@@ -3867,223 +3868,222 @@ No magnetometer grid file is saved by default.
 </command>
 
 <command name="SAVEPLOT">
-	<parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
-	<for name="iPlot" from="1" to="$nPlotFile">
-		<parameter name="StringPlot" type="strings" min="3" max="3">
-			<part name="plotform" type="string" input="select"
-								required="T">
-				<option value="tec" name="Node based TECPLOT"/>
-				<option value="tcp" name="Cell centered TECPLOT"/>
-				<option value="hdf" name="HDF5"/>
-				<option value="idl" name="IDL" default="T"/>
-				<option value="idl_real4"
-					name="IDL single prec"/>
-				<option value="idl_real8"
-					name="IDL double prec"/>
-				<option value="idl_ascii" name="IDL ascii"/>
-				<option value="idl_tec" name="IDL to Tecplot"/>
-			</part>
-			<part name="plotarea" type="string" input="select"
-								required="T">
-				<option name="1D" value="1d/1d_"/>
-				<option name="2D" value="2d/2d_"/>
-				<option name="3D" value="3d/3d_"/>
-				<option name="x=0" />
-				<option name="y=0" default="T" />
-				<option name="z=0" />
-				<option name="shell"  value="shl" />
-				<option name="box" />
-				<option name="los" />
-				<option name="rfr" />
-				<option name="line" value="lin" />
-				<option name="eq.rays" value="eqr" />
-				<option name="min B surface" value="eqb" />
-				<option name="cut" />
-				<option name="slice" value="slc"
-					if="$plotform =~ /\btec\b/"/>
-				<option name="dipole" value="dpl"
-					if="$plotform =~ /\btec\b/"/>
-				<option name="block" value="blk"
-					if="$plotform =~ /\btec\b/"/>
-				<option name="1D" value="1d/1d_"
-					if="$plotform =~ /\btec\b/"/>
-				<option name="ieb" />
-				<option name="last closed B" value="lcb" />
-				<option name="coupling buffer" value="buf" />
-				<option name="points" value="pnt"/>
-			</part>
-			<part name="plotvar" type="string" required="T"
-				input="select">
-				<option name="MHD variables"    value="MHD" default="T"/>
-				<option name="MHD vars. scaled" value="mhd"/>
-				<option name="HD variables"    value="HD"/>
-				<option name="HD vars. scaled" value="hd"/>
-				<option name="Full set of variables" value="FUL"/>
-				<option name="Full set scaled" value="ful"/>
-				<option name="All state variables" value="ALL"/>
-				<option name="All state variables scaled" value="all"/>
-				<option name="Raw variables"    value="RAW"/>
-				<option name="Raw vars. scaled" value="raw"/>
-				<option name="Ray tracing vars."  value="RAY"/>
-				<option name="Ray tracing scaled" value="ray"/>
-				<option name="Flux variables"    value="FLX"/>
-				<option name="Flux vars. scaled" value="flx"/>
-				<option name="Solar variables"    value="SOL"/>
-				<option name="Solar vars. scaled" value="sol"/>
-				<option name="EUV image variables" value="euv"/>
-				<option name="Tabular image variable"      value="tbl"/>
-				<option name="Radio wave intensity" value="rwi"/>
-				<option name="Instruments for line-of-sight images" value="INS"/>
-				<option name="Instruments for line-of-sight images, scaled" value="ins"/>
-				<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
-				<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
-				<option name="Equatorial rays" value="eqr"  if="$plotarea eq 'eqr'"/>
-				<option name="Minimum B surface" value="eqb" if="$plotarea eq 'eqb'"/>
-				<option name="Basic block variables"    value="BBK" />
-				<option name="Basic block vars. scaled"	value="bbk" />
-				<option name="Set variables"    value="VAR" />
-				<option name="Set vars. scaled" value="var"/>
-				<option name="Integrated variables"    value="INT" />
-				<option name="Integrated vars. scaled" value="int"/>
-				<option name="NULL - irrelevant" value="nul"/>
-			</part>
-		</parameter>
-		<parameter name="DnSavePlot" type="integer" min="-1"
-							default="-1"/>
-		<parameter name="DtSavePlot" type="real"    min="-1"
-							default="-1.0"/>
-		<if expr="$plotarea =~ /\bdpl|cut|slc\b/">
-			<parameter name="xMinCut" type="real" />
-			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
-			<parameter name="yMinCut" type="real" />
-			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
-			<parameter name="zMinCut" type="real" />
-			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
-		</if>
-		<if expr="$plotarea =~ /\bslc\b/">
-			<parameter name="xPoint"  type="real" />
-			<parameter name="yPoint"  type="real" />
-			<parameter name="zPoint"  type="real" />
-			<parameter name="xNormal" type="real" />
-			<parameter name="yNormal" type="real" />
-			<parameter name="zNormal" type="real" />
-		</if>
-		<if expr="$plotarea =~ /\bblk\b/">
-			<parameter name="xPoint"  type="real" />
-			<parameter name="yPoint"  type="real" />
-			<parameter name="zPoint"  type="real" />
-		</if>
-                <if expr="$plotarea =~ /\blos\b/">
-		    <if expr="$plotvar =~ /\bins\b/">
-		    	<parameter name="StringsInstrument" type="string" length="200"/>
-		    <elseif expr="$plotvar !~ /\bins\b/">
-		    	<parameter name="ObsPosX" type="real" default="-215"/>
-			<parameter name="ObsPosY" type="real" default="0"/>
-			<parameter name="ObsPosZ" type="real" default="0"/>
-			<parameter name="OffsetAngle" type="real"
-					min="-89" max="89" default="0"/>
-			<parameter name="rSizeImage" type="real" min="0"
-								default="32"/>
-			<parameter name="xOffset" type="real" default="0"/>
-			<parameter name="yOffset" type="real" default="0"/>
-			<parameter name="rOccult" type="real" min="0"
-								default="2"/>
-			<parameter name="MuLimbDarkening" type="real"
-						min="0" max="1" default="0.5"/>
-			<parameter name="nPix" type="integer" min="2"
-								default="200"/>
-			<parameter name="NameLosTable" type="string" length="100"
-				   if="$plotvar =~ /tbl/i"/>
-		     </elseif>
-		     </if>
-                </if>
- 		<if expr="$plotarea =~ /\brfr\b/">
-			<parameter name="ObsPosX" type="real" default="-215"/>
-			<parameter name="ObsPosY" type="real" default="0"/>
-			<parameter name="ObsPosZ" type="real" default="0"/>
-			<parameter name="StringRadioFrequency" type="string" length="100"/>
-			<parameter name="xSizeImage" type="real" min="0"
-								default="32"/>
-			<parameter name="ySizeImage" type="real" min="0"
-								default="32"/>
-			<parameter name="nPixX" type="integer" min="2"
-								default="200"/>
-			<parameter name="nPixY" type="integer" min="2"
-								default="200"/>
-                </if>
-		<if expr="$plotarea =~ /\blin\b/">
-			<parameter name="NameLine" type="string"
-			input="select">
-				<option name="Advected magnetic field line"
-								value="A" />
-				<option name="Magnetic field line" value="B"
-								default="T"/>
-				<option name="Stream line"  value="U"/>
-				<option name="Current line" value="J"/>
-			</parameter>
-			<parameter name="IsSingleLine" type="logical"
-							default="F" />
-			<parameter name="nLine" type="integer" min="1" max="20"
-							default="1" />
-			<for name="i" from="1" to="$nLine">
-				<parameter name="xStartLine" type="real"/>
-				<parameter name="yStartLine" type="real"/>
-				<parameter name="zStartLine" type="real"/>
-				<parameter name="IsParallel" type="logical"/>
-			</for>
-		</if>
-		<if expr="$plotarea =~ /\beqr\b/">
-			<parameter name="nRadius" type="real" min="1" default="20"/>
-			<parameter name="nLon"    type="real" min="1" default="25"/>
-			<parameter name="RadiusMin" type="real" min="1" default="3"/>
-			<parameter name="RadiusMax" type="real" min="1" default="10"/>
-		</if>
-		<if expr="$plotarea =~ /\beqb\b/">
-			<parameter name="nRadius" type="real" min="1" default="20"/>
-			<parameter name="nLon"    type="real" min="1" default="25"/>
-			<parameter name="RadiusMin" type="real" min="1" default="3"/>
-			<parameter name="RadiusMax" type="real" min="1" default="10"/>
-			<parameter name="LongitudeMin" type="real" min="0" default="0"/>
-			<parameter name="LongitudeMax" type="real" max="360" default="360"/>
-		</if>
-		<if expr="$plotarea =~ /\blcb\b/">
-			<parameter name="Radius"  type="real" min="0" default="6"/>
-			<parameter name="nLon"    type="real" min="4" default="36"/>
-		</if>
-		<if expr="$plotarea =~ /\bshl\b/">
-			<parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
-			<parameter name="rMin"   type="real" min="0"                 default="6.6"/>
-			<parameter name="rMax"   type="real" min="$rMin"             default="6.6"/>
-			<parameter name="dR"     type="real" min="0" if="$rMin   != $rMax"/>
-			<parameter name="LonMin" type="real" min="0"                 default="0"/>
-			<parameter name="LonMax" type="real" min="$LonMin" max="360" default="360"/>
-			<parameter name="dLon"   type="real" min="0" if="$LonMin != $LonMax"/>
-			<parameter name="LatMin" type="real" min="-90"               default="-90"/>
-			<parameter name="LatMax" type="real" min="$LatMin" max="90"  default="90"/>
-			<parameter name="dLat"   type="real" min="0" if="$LatMin != $LatMax"/>
-		</if>
-		<if expr="$plotarea =~ /\bbox\b/">
-			<parameter name="TypeCoordPlot" type="string" length="3" default="HGR"/>
-			<parameter name="x0"     type="real" default="0"/>
-			<parameter name="y0"     type="real" default="0"/>
-			<parameter name="z0"     type="real" default="0"/>
-			<parameter name="xSize"  type="real" min="0"/>
-			<parameter name="dX"     type="real" min="0" if="$xSize != 0" />
-			<parameter name="ySize"  type="real" min="0" />
-			<parameter name="dY"     type="real" min="0" if="$ySize != 0"/>
-			<parameter name="zSize"  type="real" min="0" />
-			<parameter name="dZ"     type="real" min="0" if="$zSize != 0"/>
-			<parameter name="xAngle" type="real" min="-360" max="360" default="0"/>
-			<parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
-			<parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
-		</if>
-		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
-		<if expr="$plotvar =~ /\bvar\b/i">
-			<parameter name="NameVars" type="string" length="400"/>
-			<parameter name="NamePars" type="string" length="400" default="{default}"/>
-		</if>
-	</for>
+  <parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
+  <for name="iPlot" from="1" to="$nPlotFile">
+    <parameter name="StringPlot" type="strings" min="3" max="3">
+      <part name="plotform" type="string" input="select"
+	    required="T">
+	<option value="tec" name="Node based TECPLOT"/>
+	<option value="tcp" name="Cell centered TECPLOT"/>
+	<option value="hdf" name="HDF5"/>
+	<option value="idl" name="IDL" default="T"/>
+	<option value="idl_real4"
+		name="IDL single prec"/>
+	<option value="idl_real8"
+		name="IDL double prec"/>
+	<option value="idl_ascii" name="IDL ascii"/>
+	<option value="idl_tec" name="IDL to Tecplot"/>
+      </part>
+      <part name="plotarea" type="string" input="select"
+	    required="T">
+	<option name="1D" value="1d/1d_"/>
+	<option name="2D" value="2d/2d_"/>
+	<option name="3D" value="3d/3d_"/>
+	<option name="x=0" />
+	<option name="y=0" default="T" />
+	<option name="z=0" />
+	<option name="shell"  value="shl" />
+	<option name="box" />
+	<option name="los" />
+	<option name="rfr" />
+	<option name="line" value="lin" />
+	<option name="eq.rays" value="eqr" />
+	<option name="min B surface" value="eqb" />
+	<option name="cut" />
+	<option name="slice" value="slc"
+		if="$plotform =~ /\btec\b/"/>
+	<option name="dipole" value="dpl"
+		if="$plotform =~ /\btec\b/"/>
+	<option name="block" value="blk"
+		if="$plotform =~ /\btec\b/"/>
+	<option name="1D" value="1d/1d_"
+		if="$plotform =~ /\btec\b/"/>
+	<option name="ieb" />
+	<option name="last closed B" value="lcb" />
+	<option name="coupling buffer" value="buf" />
+	<option name="points" value="pnt"/>
+      </part>
+      <part name="plotvar" type="string" required="T"
+	    input="select">
+	<option name="MHD variables"    value="MHD" default="T"/>
+	<option name="MHD vars. scaled" value="mhd"/>
+	<option name="HD variables"    value="HD"/>
+	<option name="HD vars. scaled" value="hd"/>
+	<option name="Full set of variables" value="FUL"/>
+	<option name="Full set scaled" value="ful"/>
+	<option name="All state variables" value="ALL"/>
+	<option name="All state variables scaled" value="all"/>
+	<option name="Raw variables"    value="RAW"/>
+	<option name="Raw vars. scaled" value="raw"/>
+	<option name="Ray tracing vars."  value="RAY"/>
+	<option name="Ray tracing scaled" value="ray"/>
+	<option name="Flux variables"    value="FLX"/>
+	<option name="Flux vars. scaled" value="flx"/>
+	<option name="Solar variables"    value="SOL"/>
+	<option name="Solar vars. scaled" value="sol"/>
+	<option name="EUV image variables" value="euv"/>
+	<option name="Tabular image variable"      value="tbl"/>
+	<option name="Radio wave intensity" value="rwi"/>
+	<option name="Instruments for line-of-sight images" value="INS"/>
+	<option name="Instruments for line-of-sight images, scaled" value="ins"/>
+	<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
+	<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
+	<option name="Equatorial rays" value="eqr"  if="$plotarea eq 'eqr'"/>
+	<option name="Minimum B surface" value="eqb" if="$plotarea eq 'eqb'"/>
+	<option name="Basic block variables"    value="BBK" />
+	<option name="Basic block vars. scaled"	value="bbk" />
+	<option name="Set variables"    value="VAR" />
+	<option name="Set vars. scaled" value="var"/>
+	<option name="Integrated variables"    value="INT" />
+	<option name="Integrated vars. scaled" value="int"/>
+	<option name="NULL - irrelevant" value="nul"/>
+      </part>
+    </parameter>
+    <parameter name="DnSavePlot" type="integer" min="-1"
+	       default="-1"/>
+    <parameter name="DtSavePlot" type="real"    min="-1"
+	       default="-1.0"/>
+    <if expr="$plotarea =~ /\bdpl|cut|slc\b/">
+      <parameter name="xMinCut" type="real" />
+      <parameter name="xMaxCut" type="real" min="$xMinCut"/>
+      <parameter name="yMinCut" type="real" />
+      <parameter name="yMaxCut" type="real" min="$yMinCut"/>
+      <parameter name="zMinCut" type="real" />
+      <parameter name="zMaxCut" type="real" min="$zMinCut"/>
+    </if>
+    <if expr="$plotarea =~ /\bslc\b/">
+      <parameter name="xPoint"  type="real" />
+      <parameter name="yPoint"  type="real" />
+      <parameter name="zPoint"  type="real" />
+      <parameter name="xNormal" type="real" />
+      <parameter name="yNormal" type="real" />
+      <parameter name="zNormal" type="real" />
+    </if>
+    <if expr="$plotarea =~ /\bblk\b/">
+      <parameter name="xPoint"  type="real" />
+      <parameter name="yPoint"  type="real" />
+      <parameter name="zPoint"  type="real" />
+    </if>
+    <if expr="$plotarea =~ /\blos\b/ and $plotvar =~ /\bins\b/">
+      <parameter name="StringsInstrument" type="string" length="200"/>
+    </if>
+    <if expr="$plotarea =~ /\blos\b/ and $plotvar !~ /\bins\b/">
+      <parameter name="ObsPosX" type="real" default="-215"/>
+      <parameter name="ObsPosY" type="real" default="0"/>
+      <parameter name="ObsPosZ" type="real" default="0"/>
+      <parameter name="OffsetAngle" type="real"
+		 min="-89" max="89" default="0"/>
+      <parameter name="rSizeImage" type="real" min="0"
+		 default="32"/>
+      <parameter name="xOffset" type="real" default="0"/>
+      <parameter name="yOffset" type="real" default="0"/>
+      <parameter name="rOccult" type="real" min="0"
+		 default="2"/>
+      <parameter name="MuLimbDarkening" type="real"
+		 min="0" max="1" default="0.5"/>
+      <parameter name="nPix" type="integer" min="2"
+		 default="200"/>
+      <parameter name="NameLosTable" type="string" length="100"
+		 if="$plotvar =~ /tbl/i"/>
+    </if>
+    <if expr="$plotarea =~ /\brfr\b/">
+      <parameter name="ObsPosX" type="real" default="-215"/>
+      <parameter name="ObsPosY" type="real" default="0"/>
+      <parameter name="ObsPosZ" type="real" default="0"/>
+      <parameter name="StringRadioFrequency" type="string" length="100"/>
+      <parameter name="xSizeImage" type="real" min="0"
+		 default="32"/>
+      <parameter name="ySizeImage" type="real" min="0"
+		 default="32"/>
+      <parameter name="nPixX" type="integer" min="2"
+		 default="200"/>
+      <parameter name="nPixY" type="integer" min="2"
+		 default="200"/>
+    </if>
+    <if expr="$plotarea =~ /\blin\b/">
+      <parameter name="NameLine" type="string"
+		 input="select">
+	<option name="Advected magnetic field line"
+		value="A" />
+	<option name="Magnetic field line" value="B"
+		default="T"/>
+	<option name="Stream line"  value="U"/>
+	<option name="Current line" value="J"/>
+      </parameter>
+      <parameter name="IsSingleLine" type="logical"
+		 default="F" />
+      <parameter name="nLine" type="integer" min="1" max="20"
+		 default="1" />
+      <for name="i" from="1" to="$nLine">
+	<parameter name="xStartLine" type="real"/>
+	<parameter name="yStartLine" type="real"/>
+	<parameter name="zStartLine" type="real"/>
+	<parameter name="IsParallel" type="logical"/>
+      </for>
+    </if>
+    <if expr="$plotarea =~ /\beqr\b/">
+      <parameter name="nRadius" type="real" min="1" default="20"/>
+      <parameter name="nLon"    type="real" min="1" default="25"/>
+      <parameter name="RadiusMin" type="real" min="1" default="3"/>
+      <parameter name="RadiusMax" type="real" min="1" default="10"/>
+    </if>
+    <if expr="$plotarea =~ /\beqb\b/">
+      <parameter name="nRadius" type="real" min="1" default="20"/>
+      <parameter name="nLon"    type="real" min="1" default="25"/>
+      <parameter name="RadiusMin" type="real" min="1" default="3"/>
+      <parameter name="RadiusMax" type="real" min="1" default="10"/>
+      <parameter name="LongitudeMin" type="real" min="0" default="0"/>
+      <parameter name="LongitudeMax" type="real" max="360" default="360"/>
+    </if>
+    <if expr="$plotarea =~ /\blcb\b/">
+      <parameter name="Radius"  type="real" min="0" default="6"/>
+      <parameter name="nLon"    type="real" min="4" default="36"/>
+    </if>
+    <if expr="$plotarea =~ /\bshl\b/">
+      <parameter name="TypeCoordPlot" type="string" length="3" default="GEO"/>
+      <parameter name="rMin"   type="real" min="0"                 default="6.6"/>
+      <parameter name="rMax"   type="real" min="$rMin"             default="6.6"/>
+      <parameter name="dR"     type="real" min="0" if="$rMin   != $rMax"/>
+      <parameter name="LonMin" type="real" min="0"                 default="0"/>
+      <parameter name="LonMax" type="real" min="$LonMin" max="360" default="360"/>
+      <parameter name="dLon"   type="real" min="0" if="$LonMin != $LonMax"/>
+      <parameter name="LatMin" type="real" min="-90"               default="-90"/>
+      <parameter name="LatMax" type="real" min="$LatMin" max="90"  default="90"/>
+      <parameter name="dLat"   type="real" min="0" if="$LatMin != $LatMax"/>
+    </if>
+    <if expr="$plotarea =~ /\bbox\b/">
+      <parameter name="TypeCoordPlot" type="string" length="3" default="HGR"/>
+      <parameter name="x0"     type="real" default="0"/>
+      <parameter name="y0"     type="real" default="0"/>
+      <parameter name="z0"     type="real" default="0"/>
+      <parameter name="xSize"  type="real" min="0"/>
+      <parameter name="dX"     type="real" min="0" if="$xSize != 0" />
+      <parameter name="ySize"  type="real" min="0" />
+      <parameter name="dY"     type="real" min="0" if="$ySize != 0"/>
+      <parameter name="zSize"  type="real" min="0" />
+      <parameter name="dZ"     type="real" min="0" if="$zSize != 0"/>
+      <parameter name="xAngle" type="real" min="-360" max="360" default="0"/>
+      <parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
+      <parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
+    </if>
+    <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
+	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
+    <if expr="$plotvar =~ /\bvar\b/i">
+      <parameter name="NameVars" type="string" length="400"/>
+      <parameter name="NamePars" type="string" length="400" default="{default}"/>
+    </if>
+  </for>
+
 #SAVEPLOT
 18			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
@@ -4818,176 +4818,102 @@ The default is to flush the output, i.e. DoFlush=T.
 
 <commandgroup name="ERUPTIVE EVENT GENERATOR">
 <command name="CME">
-	<parameter name="UseCme" type="logical" default="F" />
-	<parameter name="DoAddFluxRope" type="logical" default="F" />
-	<parameter name="LongitudeCme" type="real"
-	 	   		       min="0" max="359" default="0" />
-	<parameter name="LatitudeCme" type="real"
-		   		      min="-89" max="89" default="0" />	
-	<parameter name="OrientationCme" type="real" 
-	 	   			 min="0" max="359" default="0" />
-	<parameter name="TypeCme" type="string" case="upper" input="select"
-		   		  		required="T">
-		<option name="GL"             />
-		<option name="GIBSON-LOW"     />
-		<option name="TD"	      />
-		<option name="TITOV-DEMOULIN" />
-		<option name="TD14"	      />
-	</parameter>
-	<if expr="$TypeCme =~ /GL|GIBSON-LOW/">
-	    <parameter name="BStrength" type="real" default="0" />
-	    <parameter name="Radius" type="real" min="0" default="0" />
-	    <parameter name="aStretch" type="real" min="0" default="0" />
-	    <parameter name="ApexHeight" type="real" min="0" default="0" />
-	</if>
-	<if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
-	    <parameter name="BcTubeDim" type="real" default="0" />
-	    <parameter name="RadiusMajor" type="real" min="0" default="0" />
-	    <parameter name="RadiusMinor" type="real" min="0" default="0" />
-	    <parameter name="Depth" type="real" min="0" default="0" />
-	    <parameter name="UsePlasmaBeta" type="logical" defailt="F"/>
-	    <if expr="$UsePlasmaBeta =~ /F/">
-	    	<parameter name="Mass" type="real" min="0" default="0" />
-	    </if>
- 	    <if expr="$UsePlasmaBeta =~ /T/">
-	    	<parameter name="PlasmaBeta" type="real" min="0" default="0" />
-		<parameter name="EjectaTemperature" type="real" min="1e4" 
-			   			    	default="5e4" />
-            </if>
-	    <parameter name="TypeBStrap" type="string" case="lower"
-	    	       			 input="select" required="F">
-		<option name="none"	  />
-		<option name="readbstrap" />
-		<option name="getbstrap"  />
-	    </parameter>
-	    <if expr="$TypeBStrap =~ /readbstrap/">
-	    	<parameter name="bStrappingDim" type="real" min="0" 
-			   				    default="0" />
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving" />
-		    <option name="cancelflux" />
-	        </parameter>
-	    	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	    <parameter name="bQStrapFraction" type="real" min="0" 
-		    	       			 	     default="0" />
-		    <parameter name="qDistance" type="real" min="0" 
-		    	       				    default="0" />
-	    	</if>
-	    	<if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	    <parameter name="UChargeX" type="real" min="0" 
-		    	       		       		   default="0" />
-	    	</if>
-	    <elseif expr="$TypeBStrap =~ /getstrap/">
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving" />
-		    <option name="cancelflux" />
-	        </parameter>
-	    	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	    <parameter name="bQStrapFraction" type="real" min="0" 
-		    	       			 	     default="0" />
-		    <parameter name="qDistance" type="real" min="0" 
-		    	       				    default="0" />
-	    	</if>
-	    	<if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	    <parameter name="UChargeX" type="real" min="0" 
-		    	       		       		   default="0" />
-	    	</if>
-	    </elseif>
-	    <else>
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving"  />
-		    <option name="cancelflux" />
-		</parameter>
-		<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	  <parameter name="bQStrappinDim" type="real" min="0" 
-			   				    default="0" />
-		  <parameter name="qDistance" type="real" min="0" default="0" />
-		</if>
-		<if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	  <parameter name="UChargeX" type="real" min="0" default="0" />
-		</if>
-	    </else>
-	    </if>
-	</if>
-	<if expr="$TypeCme =~ /TD14/">
-	    <parameter name="BcTubeDim" type="real" default="0" />
-	    <parameter name="RadiusMajor" type="real" min="0" default="0" />
-	    <parameter name="RadiusMinor" type="real" min="0" default="0" />
-	    <parameter name="Depth" type="real" min="0" default="0" />
-	    <parameter name="TypeBStrap" type="string" case="lower"
-	    	       			 input="select" required="F">
-		<option name="none"	  />
-		<option name="readbstrap" />
-		<option name="getbstrap"  />
-	    </parameter>
-	    <if expr="$TypeBStrap =~ /readbstrap/">
-	    	<parameter name="bStrappingDim" type="real" min="0" 
-			   				    default="0" />
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving" />
-		    <option name="cancelflux" />
-	        </parameter>
-	    	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	    <parameter name="bQStrapFraction" type="real" min="0" 
-		    	       			 	     default="0" />
-		    <parameter name="qDistance" type="real" min="0" 
-		    	       				    default="0" />
-	    	</if>
-	    	<if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	    <parameter name="UChargeX" type="real" min="0" 
-		    	       		       		   default="0" />
-	    	</if>
-	    <elseif expr="$TypeBStrap =~ /getstrap/">
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving" />
-		    <option name="cancelflux" />
-	        </parameter>
-	    	<if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	    <parameter name="bQStrapFraction" type="real" min="0" 
-		    	       			 	     default="0" />
-		    <parameter name="qDistance" type="real" min="0" 
-		    	       				    default="0" />
-	    	</if>
-	    	<if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	    <parameter name="UChargeX" type="real" min="0" 
-		    	       		       		   default="0" />
-	    	</if>
-	    </elseif>
-	    <else>
-		<parameter name="TypeCharge" type="string" case="lower"
-	    	       			 input="select" required="F">
-		    <option name="none"	  />
-		    <option name="steady" />
-		    <option name="moving"  />
-		    <option name="cancelflux" />
-	    </parameter>
-	    <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	    	<parameter name="bQStrappinDim" type="real" min="0" 
-			   				    default="0" />
-		<parameter name="qDistance" type="real" min="0" default="0" />
-	    </if>
-	    <if expr="$TypeCharge =~ /moving|cancelflux/">
-	    	<parameter name="UChargeX" type="real" min="0" default="0" />
-	    </if>
-	    </else>
-	    </if>
-	</if>
-
+  <parameter name="UseCme" type="logical" default="F" />
+  <parameter name="DoAddFluxRope" type="logical" default="F" />
+  <parameter name="LongitudeCme" type="real"
+	     min="0" max="359" default="0" />
+  <parameter name="LatitudeCme" type="real"
+	     min="-89" max="89" default="0" />	
+  <parameter name="OrientationCme" type="real" 
+	     min="0" max="359" default="0" />
+  <parameter name="TypeCme" type="string" case="upper" input="select"
+	     required="T">
+    <option name="GL"             />
+    <option name="GIBSON-LOW"     />
+    <option name="TD"	      />
+    <option name="TITOV-DEMOULIN" />
+    <option name="TD14"	      />
+  </parameter>
+  <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
+    <parameter name="BStrength" type="real" default="0" />
+    <parameter name="Radius" type="real" min="0" default="0" />
+    <parameter name="aStretch" type="real" min="0" default="0" />
+    <parameter name="ApexHeight" type="real" min="0" default="0" />
+  </if>
+  <if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
+    <parameter name="BcTubeDim" type="real" default="0" />
+    <parameter name="RadiusMajor" type="real" min="0" default="0" />
+    <parameter name="RadiusMinor" type="real" min="0" default="0" />
+    <parameter name="Depth" type="real" min="0" default="0" />
+    <parameter name="UsePlasmaBeta" type="logical" defailt="F"/>
+    <if expr="not $UsePlasmaBeta">
+      <parameter name="Mass" type="real" min="0" default="0" />
+    </if>
+    <if expr="$UsePlasmaBeta">
+      <parameter name="PlasmaBeta" type="real" min="0" default="0" />
+      <parameter name="EjectaTemperature" type="real" min="1e4" 
+		 default="5e4" />
+    </if>
+    <parameter name="TypeBStrap" type="string" case="lower"
+	       input="select" required="F">
+      <option name="none"	  />
+      <option name="readbstrap" />
+      <option name="getbstrap"  />
+    </parameter>
+    <if expr="$TypeBStrap =~ /readbstrap/">
+      <parameter name="bStrappingDim" type="real" min="0" 
+		 default="0" />
+      <parameter name="TypeCharge" type="string" case="lower"
+	    	 input="select" required="F">
+	<option name="none"	  />
+	<option name="steady" />
+	<option name="moving" />
+	<option name="cancelflux" />
+      </parameter>
+      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	<parameter name="bQStrapFraction" type="real" min="0" 
+		   default="0" />
+	<parameter name="qDistance" type="real" min="0" 
+		   default="0" />
+      </if>
+      <if expr="$TypeCharge =~ /moving|cancelflux/">
+	<parameter name="UChargeX" type="real" min="0" 
+		   default="0" />
+      </if>
+    </if>
+  </if>
+  <if expr="$TypeCme =~ /TD14/">
+    <parameter name="BcTubeDim" type="real" default="0" />
+    <parameter name="RadiusMajor" type="real" min="0" default="0" />
+    <parameter name="RadiusMinor" type="real" min="0" default="0" />
+    <parameter name="Depth" type="real" min="0" default="0" />
+    <parameter name="TypeBStrap" type="string" case="lower"
+	       input="select" required="F">
+      <option name="none"	  />
+      <option name="readbstrap" />
+      <option name="getbstrap"  />
+    </parameter>
+    <parameter name="bStrappingDim" type="real" min="0" 
+	       default="0" />
+    <parameter name="TypeCharge" type="string" case="lower"
+	       input="select" required="F">
+      <option name="none"	  />
+      <option name="steady" />
+      <option name="moving" />
+      <option name="cancelflux" />
+    </parameter>
+    <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+      <parameter name="bQStrapFraction" type="real" min="0" 
+		 default="0" />
+      <parameter name="qDistance" type="real" min="0" 
+		 default="0" />
+    </if>
+    <if expr="$TypeCharge =~ /moving|cancelflux/">
+      <parameter name="UChargeX" type="real" min="0" 
+		 default="0" />
+    </if>
+  </if>
+	
 #CME
 T			UseCme
 T			DoAddFluxRope
@@ -4999,6 +4925,7 @@ GL			TypeCme    GL/GIBSON-LOW
 1.03			Radius         [Rs]
 0.3			aStretch       [Rs]
 1.8			ApexHeight     [Rs]
+
 
 
 First five parameters are common for all types of EE generators. If UseCme is 
@@ -5018,7 +4945,7 @@ The latest implementation for the Gibson-Low eruptive event generator
 (TypeCme=GL or TypeCme=Gibson-Low) follows the paper Borovikov, D., I. V. 
 Sokolov, W. B. Manchester, M. Jin, and T. I. Gombosi (2017), Eruptive event 
 generator based on the Gibson-Low magnetic configuration, J. Geophys. Res. 
-Space Physics, 122, 7979–7984, doi:10.1002/2017JA024304. With this regard, 
+Space Physics, 122, 7979, doi:10.1002/2017JA024304. With this regard, 
 parameter, BStrength (denoted as B0 in the cited paper) is the characteristic 
 magnetic field, in Gauss, such that the magnetic field at the center of 
 configuration (prior to stretching) equals ~0.7 B0. It is signed variable, two 
@@ -5086,8 +5013,6 @@ cancelflux		TypeCharge  none/steady/moving/cancelflux
 5			BqStrapping       [Gs]
 0.4			qDistance         [R_s]	
 5.0			ChargeUx          [km/s]
-
-				
 
 BcTubeDim, in Gauss, is a magnetic field at the center of totoid, which field 
 is created by the current inside the toroidal filament. RadiusMajor and 
@@ -8924,7 +8849,7 @@ parameters. The laser heating is switched off by default.
 		<option name="3d"            />
 	</parameter>
 	<if expr="$TypeBeam =~ /rz/">
-	  <parameter name="nRayPerbeam" type="integer" min="1" default="30"/>
+	  <parameter name="nRayPerBeam" type="integer" min="1" default="30"/>
 	</if>
 	<if expr="$TypeBeam =~ /3d/">
 	  <parameter name="TypeBeamCoordinates" type="string"
@@ -8932,11 +8857,11 @@ parameters. The laser heating is switched off by default.
                 <option name="polar"     default="T"/>
                 <option name="cartesian"            />
 	  </parameter>
-	  <if expr="$ypeBeamCoordinates =~ /polar/">
+	  <if expr="$TypeBeamCoordinates =~ /polar/">
 	    <parameter name="nRayR" type="integer" min="1" default="900"/>
 	    <parameter name="nRayPhi" type="integer" min="1" default="4"/>
 	  </if>
-	  <if expr="$ypeBeamCoordinates =~ /cartesian/">
+	  <if expr="$TypeBeamCoordinates =~ /cartesian/">
 	    <parameter name="nRayY" type="integer" min="1" default="50"/>
 	    <parameter name="nRayZ" type="integer" min="1" default="50"/>
 	  </if>
