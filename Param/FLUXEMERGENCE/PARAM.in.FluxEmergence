@@ -1,8 +1,5 @@
-#COMPONENT
-EE			NameComp
-
-#COORDSYSTEM
-GSM			TypeCoordSystem
+#INCLUDE
+restartIN/restart.H
 
 #PROGRESS
 10			DnProgressShort
@@ -14,16 +11,8 @@ T			UseTiming
 -1			nDepthTiming
 tree			TypeTimingReport
 
-#SAVERESTART
-T			DoSaveRestart
--1			DnSaveRestart
-180.			DtSaveRestart
-
 #TIMEACCURATE
 T			IsTimeAccurate
-
-#INCLUDE
-restartIN/restart.H
 
 #GRAVITY
 T			UseGravity
@@ -37,12 +26,6 @@ reflect			TypeBc3
 reflect			TypeBc4
 userfixvalue		TypeBc5
 usernoinflow		TypeBc6
-
-#NORMALIZATION
-READ			TypeNormalization
-1.5E05			No2SiUnitX
-6.4E03			No2SiUnitU
-2.7E-4			No2SiUnitRho
 
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
@@ -109,9 +92,6 @@ unsignedflux		TypeCoronalHeating
 4640.			DecayLength
 1.			HeatNormalization
 
-#MESSAGEPASS
-dir			TypeMessagePass
-
 #AMR
 -1			DnRefine
 F			DoAutoRefine
@@ -152,9 +132,6 @@ VAR			StringLog
 -1.			DtSaveLogfile
 rho Ux Uy Uz E Pmin Pmax		NameLogVars
 4.0  10.0		rLog
-
-#IOUNITS
-HELIOSPHERIC		TypeIoUnit
 
 #SAVEPLOT
 2			nPlotFile
