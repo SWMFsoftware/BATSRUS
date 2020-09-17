@@ -33,20 +33,20 @@ HYPRE			TypePrecond
 LEVELSET
 F			UseNonConsLevelSet
 
-#USERINPUTEND ----------------------------
+#USERINPUTEND -------------------------------------
 
 #PROGRESS
 1			DnProgressShort
 10000			DnProgressLong
 
 #TEST
-control_time_step
+control_time_step		StringTest
 
 #DESCRIPTION
-Param/CRASH/PARAM.in.laserpackage: Input file for the laser package
+Param/CRASH/PARAM.in.laserpackage: Input file for the laser package		StringDescription
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #SAVERESTART
 T			DoSaveRestart
@@ -62,16 +62,16 @@ of beams approximately at that angle:
 
 #LASERPULSE
 T			UseLaserHeating
-3.0e12			below max 3.8e12   PowerSI;  IrradianceSI
+3.0e12			IrradianceSi below max 3.8e12
 1.0e-9			tPulse
 1.0e-10			tRaise
 1.0e-10			tDecay
 
 Increase the number of rays per beam with increasing resolution
 
-#LASERBEAMS 
+#LASERBEAMS
 rz			TypeBeam
-100			nRayPerBeam; rays above the central ray; not total 
+100			nRayPerBeam rays above the central ray; not total
 410.			rBeam
 -150.0			xBeam
 
@@ -99,8 +99,8 @@ rz			TypeBeam
 4.2			SuperGaussianOrder
 
 #HEATFLUXLIMITER
-T                       UseHeatFluxLimiter
-0.06                    HeatFluxLimiter
+T			UseHeatFluxLimiter
+0.06			HeatFluxLimiter
 
 #CHECKGRIDSIZE
 8			nI
@@ -109,9 +109,9 @@ T                       UseHeatFluxLimiter
 200			MinBlockALL
 
 #GRID
-5			nRootBlockX 165
-2			nRootBlockY  15
-1			nRootBlockZ
+5			nRootBlock1 165
+2			nRootBlock2  15
+1			nRootBlock3
 -150.0			xMin -550.0
 1050.0			xMax 3850.0
    0.0			yMin
@@ -151,13 +151,13 @@ mc3			TypeLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1e-12			DtSaveLogfile
 
 #SAVEPLOT
-3			nPlotfile
-z=0 all idl		PlotString
+3			nPlotFile
+z=0 all idl		StringPlot
 -1			DnSavePlot
 1.e-10			DtSavePlot
 -1.0			DxSavePlot
@@ -174,9 +174,9 @@ idl los var		StringPlot ! line of sight plot
 0.			rOccult
 0.			MuLimbDarkening
 400			nPix
-radiograph		NameVar
-g			NamePar
-cut var idl
+radiograph		NameVars
+g			NamePars
+cut var idl		StringPlot
 -1			DnSavePlot
 1.e-10			DtSavePlot
 -10000.0		xMinCut
@@ -186,8 +186,8 @@ cut var idl
 0.0			zMinCut
 0.001			zMaxCut
 -1.0			DxSavePlot
-rho ux uy Eint p pe level tekev trkev tikev zavg elaser dx
-gamma
+rho ux uy Eint p pe level tekev trkev tikev zavg elaser dx		NameVars
+gamma			NamePars
 
 #TIMESTEPPING
 2			nStage
