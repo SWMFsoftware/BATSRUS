@@ -14,9 +14,9 @@ F			DoSaveInitial
 8			MinBlockALL
 
 #GRID
-8			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+8			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
    0.0			xMin
 5000.0			xMax
 -1.0			yMin
@@ -25,7 +25,7 @@ F			DoSaveInitial
  1.0			zMax
 
 #SHOCKTUBE
-100.			rho !~30 times the normal density
+100.			Rho !~30 times the normal density
 -3.0e4			Ux  !Piston speed
 0.0			Uy
 0.0			Uz
@@ -40,8 +40,8 @@ F			DoSaveInitial
 
 Reflective boundary at the left
 #OUTERBOUNDARY
-reflect			TypeBcxMin
-float			TypeBcxMax
+reflect			TypeBc1
+float			TypeBc2
 float			TypeBcyMin
 float			TypeBcyMax
 float			TypeBczMin
@@ -51,14 +51,14 @@ float			TypeBczMax
 2			nOrder
 Godunov			TypeFlux
 beta			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #SAVERESTART
-F			DoSaverestart
+F			DoSaveRestart
 
 #SAVEPLOT
-1			nPlotfile
-cut HD idl_ascii	PlotString
+1			nPlotFile
+cut HD idl_ascii		StringPlot
 -1			DnSavePlot
 1.0e-8			DtSavePlot
 0.0			xMinCut

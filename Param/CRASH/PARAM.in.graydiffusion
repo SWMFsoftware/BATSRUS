@@ -20,9 +20,9 @@ F			UseNonConservative
 16			MinBlockALL
 
 #GRID
-3			nRootBlockX
-3			nRootBlockY
-1			nRootBlockZ
+3			nRootBlock1
+3			nRootBlock2
+1			nRootBlock3
 -0.0384			xMin
  0.0384			xMax
 -0.0048			yMin
@@ -31,8 +31,8 @@ F			UseNonConservative
  0.0016			zMax
 
 #GRIDLEVEL
-1			nLevelArea
-box			NameArea
+1			nLevel
+box			StringShape
 -0.0128			xMinBox
 -0.0016			yMinBox
 -0.0016			zMinBox
@@ -41,8 +41,8 @@ box			NameArea
  0.0016			zMaxBox
 
 #GRIDLEVEL
-1			nLevelArea
-initial			NameArea
+1			nLevel
+initial			StringShape
 
 #USERSWITCH
 +init +ic		StringSwitch
@@ -53,10 +53,10 @@ initial			NameArea
 3			iRadiationTest
 initial_lowrie3.dat	NameInputFile
 
-#USERINPUTEND ----------------------------
+#USERINPUTEND -------------------------------------
 
 #RADIATION
-T			UseGrayDiffusion
+T			UseRadDiffusion
 F			UseRadFluxLimiter
 0.0			TradMinSi
 
@@ -86,10 +86,10 @@ mc			TypeLimiter
 all			TypeMessagePass
 
 #RESCHANGE
-T			UseAccurateResChange
+T			UseAccurateReschange
 
 #FIXEDTIMESTEP
-T			UseFixedTimeStep
+T			UseDtFixed
 2.3e-05			DtFixedDim
 
 #KRYLOV
@@ -105,16 +105,16 @@ F			UseUpdateCheck
 F			UsePointImplicit
 F			UsePartImplicit
 T			UseFullImplicit
-1.0			ImplCFL
+1.0			CflImpl
 
 #IMPLSTEP
-1.0                     ImplCoeff
-T                       UseBdf2
-T                       UseSourceImpl
+1.0			ImplCoeff
+T			UseBdf2
+T			UseSourceImpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
-raw			StringLogfile
+raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
@@ -125,13 +125,13 @@ F			DoSaveRestart
 T			DoSaveInitial
 
 #SAVEPLOT
-2			nPlotfile
+2			nPlotFile
 z=0 VAR idl		StringPlot
 20  			DnSavePlot
 -0.00025		DtSavePlot
 -1.0			DxSavePlot
-Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
-g
+Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0		NameVars
+g			NamePars
 cut VAR idl		StringPlot
 20 			DnSavePlot
 -0.00025		DtSavePlot
@@ -142,8 +142,8 @@ cut VAR idl		StringPlot
 0.000001		zMinCut
 0.000002		zMaxCut
 -1.0			DxSavePlot
-Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
-g
+Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0		NameVars
+g			NamePars
 
 #STOP
 20			MaxIteration

@@ -1,97 +1,97 @@
 #PLANET
-NONE				NamePlanet
+NONE			NamePlanet
 
 #IOUNITS
-NONE
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE
+NONE			TypeNormalization
 
 #CHECKGRIDSIZE
-16                              nI
-4                               nJ
-1                               nK
-200                             MinBlockALL
+16			nI
+4			nJ
+1			nK
+200			MinBlockALL
 
 #GRID
-1
-4
-1
--1.
- 1.
--1.
- 1.
--1.
- 1.
+1			nRootBlock1
+4			nRootBlock2
+1			nRootBlock3
+-1.			xMin
+ 1.			xMax
+-1.			yMin
+ 1.			yMax
+-1.			zMin
+ 1.			zMax
 
 #NONCONSERVATIVE
-F
+F			UseNonConservative
 
 #VISCOSITY
-T
-1.05
+T			UseViscosity
+1.05			ViscoCoeffSi
 
 #USERINPUTBEGIN -----------------
 
 #PIPEFLOW
 T
 
-#USERINPUTEND   -----------------
+#USERINPUTEND -------------------------------------
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
-user
-float
-user
-user
+user			TypeBc1
+float			TypeBc2
+user			TypeBc3
+user			TypeBc4
 float
 float
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Linde		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaveRestart
 
 #SAVEPLOT
-1		nPlotfile
-z=0 var idl_ascii	PlotString
--1		DnSavePlot
-1.0		DtSavePlot
-0.0		DxSavePlot
-Rho Mx My Mz E p visco dx
-g rbody
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+1.0			DtSavePlot
+0.0			DxSavePlot
+Rho Mx My Mz E p visco dx		NameVars
+g rbody			NamePars
 
 #STOP
--1		MaxIteration
-1.0		tSimulationMax
+-1			MaxIteration
+1.0			tSimulationMax
 
-#RUN #####################
+#RUN ##########################################################################
 
 #NONCONSERVATIVE
-T
+T			UseNonConservative
 
 #STOP
--1		MaxIteration
-2.0		tSimulationMax
+-1			MaxIteration
+2.0			tSimulationMax
 
-#RUN #####################
+#RUN ##########################################################################
 
 #NONCONSERVATIVE
-F
+F			UseNonConservative
 
 #REGION
 sphere1			NameRegion
@@ -103,19 +103,19 @@ sphere0 tapered		StringShape
 -sphere1		StringViscoRegion
 
 #SAVEPLOT
-1		nPlotfile
-z=0 var idl_ascii	PlotString
--1		DnSavePlot
-0.1		DtSavePlot
-0.0		DxSavePlot
-Rho Mx My Mz E p visco dx
-g rbody
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+0.1			DtSavePlot
+0.0			DxSavePlot
+Rho Mx My Mz E p visco dx		NameVars
+g rbody			NamePars
 
 #STOP
--1		MaxIteration
-2.1		tSimulationMax
+-1			MaxIteration
+2.1			tSimulationMax
 
-#RUN #####################################
+#RUN ##########################################################################
 
 #REGION
 sphere2			NameRegion
@@ -127,21 +127,21 @@ sphere0 tapered		StringShape
 sphere2			StringViscoRegion
 
 #STOP
--1		MaxIteration
-2.2		tSimulationMax
+-1			MaxIteration
+2.2			tSimulationMax
 
-#RUN ######################################
+#RUN ##########################################################################
 
 #REGION
 cube			NameRegion
 brick0 tapered		StringShape
-0.25   			xSize
-0.25			ySize
+0.25			xSizeBrick
+0.25			ySizeBrick
 0.5			Taper
 
 #VISCOSITYREGION
-cube                    StringViscoRegion
+cube			StringViscoRegion
 
 #STOP
--1		MaxIteration
-2.3		tSimulationMax
+-1			MaxIteration
+2.3			tSimulationMax

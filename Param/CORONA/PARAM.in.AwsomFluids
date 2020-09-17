@@ -1,21 +1,21 @@
 #COMPONENT
-SC
+SC			NameComp
 
 #DESCRIPTION
-Param/CORONA/PARAM.in.AwsomFluids: Test in BATSRUS the AwsomFluids user module.
+Param/CORONA/PARAM.in.AwsomFluids: Test in BATSRUS the AwsomFluids user module.		StringDescription
 
 #TIMEACCURATE
-F                       DoTimeAccurate
+F			IsTimeAccurate
 
 #STAR
-1.0                     RadiusStar
-1.0                     MassStar
-0.0                     RotationPeriodStar
+1.0			RadiusStar
+1.0			MassStar
+0.0			RotationPeriodStar
 
 #PLASMA
-1.0			IonMass H+ [amu]
-4.0			IonMass He++ [amu]
-1.0			AverageIonCharge H+ [e]
+1.0			FluidMass H+ [amu]
+4.0			IonCharge He++ [amu]
+1.0			ElectronTemperatureRatio H+ [e]
 2.0			AverageIonCharge He++ [e]
 1.0			ElectronTemperatureRatio
 
@@ -37,7 +37,7 @@ F			UseCurlB0
 5.6e-4			MonopoleStrengthSi
 
 #USERSWITCH
-+init +ic +source	StringSwitch
++init +ic +source		StringSwitch
 
 #USERINPUTBEGIN ------------------------
 
@@ -46,31 +46,31 @@ F			UseCurlB0
 1e16                    nChromoSi He++ [1/m^3]
 5e4                     tChromoSi [K]
 
-#USERINPUTEND ----------------------------
+#USERINPUTEND -------------------------------------
 
 #POYNTINGFLUX
 0.3e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection
-1.5e5                   LperpTimesSqrtBSi
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.17			StochasticExponent
 0.18			StochasticAmplitude
 
 #LOOKUPTABLE
 heatpartition		NameTable
 load			NameCommand
-HeatPartition.dat
+HeatPartition.dat		NameFile
 ascii			TypeFile
 
 #ANISOTROPICPRESSURE
-F			UseConstantTau_I
--1			TauInstabilitySi_I
+F			UseConstantTau
+-1			TauGLobalSi
 1e5			TauGlobalSi_I
 T			UseConstantTau_I
 -1			TauInstabilitySi_I
@@ -90,19 +90,19 @@ T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
 
 #POINTIMPLICIT
-T                       UsePointImplicit
-1.0                     BetaPointImplicit
-F                       IsAsymmetric
-T                       DoNormalizeCell
+T			UsePointImplicit
+1.0			BetaPointImplicit
+F			IsAsymmetric
+T			DoNormalizeCell
 
 #MULTIION
-1e-6                    LowDensityRatio
-1e-6                    LowPressureRatio
-F                       DoRestrictMultiIon
+1e-6			LowDensityRatio
+1e-6			LowPressureRatio
+F			DoRestrictMultiIon
 
 #MULTIIONSTATE
-F                       UseSingleIonVelocity
-F                       UseSingleIonTemperature
+F			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -119,18 +119,18 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-Param/CORONA/RadCoolCorona.dat
+Param/CORONA/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExtendTransitionRegion
-2.2e5			TeModSi
+T			DoExpandTransitionRegion
+2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
 ---------------------------------------------------
 #GRIDGEOMETRYLIMIT
-spherical_genr
-Param/CORONA/grid_TR.dat
+spherical_genr		TypeGeometry
+Param/CORONA/grid_TR.dat		NameGridFile
 1.001			Coord1Min Radius
 24.0			Coord1Max
 -1.0			Coord2Min Longitude
@@ -139,9 +139,9 @@ Param/CORONA/grid_TR.dat
 1.0			Coord3Max
 
 #GRID
-32			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+32			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -100.0			xMin
 100.0			xMax
 -100.0			yMin
@@ -171,7 +171,7 @@ F			UseRhoRatioLimiter
 1e-28			RhoMinDim [amu/cc] for fluid 2
 
 #MINIMUMTEMPERATURE
-5e4			TMinDim  [K] for fluid 1
+5e4			TminDim  [K] for fluid 1
 5e4			TMinDim  [K] for fluid 2
 5e4			TeMinDim [K]
 
@@ -187,8 +187,8 @@ reflect			TypeBc5
 reflect			TypeBc6
 
 #SAVEPLOT
-1			nPlotFiles
-1d MHD idl_ascii	StringPlot
+1			nPlotFile
+1d MHD idl_ascii		StringPlot
 100			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot

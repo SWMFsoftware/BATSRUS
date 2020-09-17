@@ -235,7 +235,7 @@ Fast whistler wave period
 20			MaxIteration
 -1.0			tSimulationMax
 
-1.174097                ! whistler wave + advection
+1.174097		! whistler wave + advection
 1.99998			! Alfven wave + advection
 2.11333  		! slow Whistler wave (By,Bz same sign)
 

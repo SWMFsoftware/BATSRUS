@@ -1,43 +1,43 @@
 #GRID
-1                       nRootBlockX
-1                       nRootBlockY
-7                       nRootBlockZ
--20                    xMin
-20                     xMax
--20                    yMin
-20                     yMax
--140                    zMin
-140                     zMax
+1			nRootBlock1
+1			nRootBlock2
+7			nRootBlock3
+-20			xMin
+20			xMax
+-20			yMin
+20			yMax
+-140			zMin
+140			zMax
 
 #GRIDBLOCKALL
 500			MaxBlock
 
 #GRIDRESOLUTION
-35./256                 Resolution
-initial                 NameArea
+35./256			Resolution
+initial			StringShape
 
 #GRIDLEVEL
-2                       nLevel
-all                     NameArea
+2			nLevel
+all			StringShape
 
 GRIDLEVEL
-3                       nLevel
-box                     NameArea
--20                     xMinBox
--20                     yMinBox
--60                     zMinBox
-20                     xMaxBox
-20                     yMaxBox
-20                      zMaxBox
+3			nLevel
+box			NameArea
+-20			xMinBox
+-20			yMinBox
+-60			zMinBox
+20			xMaxBox
+20			yMaxBox
+20			zMaxBox
 
 GRIDLEVEL
-4                       nLevel
-box                     NameArea
--20                    xMinBox
--20                    yMinBox
--10                     zMinBox
-20                     xMaxBox
-20                     yMaxBox
-0                       zMaxBox
+4			nLevel
+box			NameArea
+-20			xMinBox
+-20			yMinBox
+-10			zMinBox
+20			xMaxBox
+20			yMaxBox
+0			zMaxBox
 
 #END

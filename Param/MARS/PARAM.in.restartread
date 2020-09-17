@@ -1,14 +1,8 @@
 #INCLUDE
 GM/restartIN/restart.H
 
-#NORMALIZATION
-SOLARWIND		TypeNormalization
-
 #DESCRIPTION
 Param/MARS/PARAM.in.restartread: Mars test		StringDescription
-
-#PLANET
-Mars			NamePlanet
 
 #ROTATION
 F			UseRotation
@@ -55,17 +49,6 @@ fixed			TypeBc3
 fixed			TypeBc4
 fixed			TypeBc5
 fixed			TypeBc6
-
-! 3nT parker's spiral
-#SOLARWIND
-4.0			SwNDim  [n/cc]
-3.5E5			SwTDim  [K]
--500.0			SwUxDim [km/s]
-0.0			SwUyDim [km/s]
-0.0			SwUzDim [km/s]
--1.6776			SwBxDim [nT]
-2.4871			SwByDim [nT]
-0.00			SwBzDim [nT]
 
 #USERSWITCH
 +init +ic +b0 +source		StringSwitch

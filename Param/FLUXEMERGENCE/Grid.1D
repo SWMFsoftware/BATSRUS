@@ -1,11 +1,11 @@
 #GRID
-2			nRootBlockX 
-2			nRootBlockY 
-56			nRootBlockZ
--5.			xMin 
-5.			xMax 
+2			nRootBlock1
+2			nRootBlock2
+56			nRootBlock3
+-5.			xMin
+5.			xMax
 -5.			yMin
-5.			yMax 
+5.			yMax
 -140.			zMin
 140.			zMax
 
@@ -13,7 +13,7 @@
 500			MaxBlock
 
 #GRIDRESOLUTION
-5./64	 		Resolution
-initial			NameArea
+5./64			Resolution
+initial			StringShape
 
 #END
