@@ -7842,6 +7842,20 @@ code may become slower with smaller patch size. 4 or 8 are two typical
 values. 2 may slow down the code significantly. 
 </command>
 
+<command name="PICPATCHEXTEND">
+  <parameter name="NxExtend" type="integer" />
+  <parameter name="NyExtend" type="integer" if="$nJ != 1" />
+  <parameter name="NzExtend" type="integer" if="$nK != 1" />
+
+#PICPATCHEXTEND
+5			NxExtend
+5			NyExtend
+10			NzExtend
+
+PICPATCHEXTEND contains the number of patches extended from the PIC
+region defined by #PICCRITERIA on different directions.
+</command>
+
 <command name="PICBALANCE">
   <parameter name="DoBalancePicBlock" type="logical" default="T"/>
 
@@ -7850,8 +7864,54 @@ T                      DoBalancePicBlock
 
 If it is switched on, the BATSRUS blocks that are overlapped with the PIC
 domains will be load balanced separatelly. 
-  </command>
+</command>
 
+<command name="PICREGIONMIN">
+  <parameter name="StringPicRegionMin" type="string" length="200"
+	     default="none"/>
+
+#PICREGIONMIN
++daysidefixed -nearbody
+
+The #PICREGIONMIN command manually sets the region which PIC covers.
+The region strings are defined by the #REGION command. 
+</command>
+
+<command name="PICREGIONMAX">
+  <parameter name="StringPicRegionMax" type="string" length="200"
+	     default="none"/>
+
+#PICREGIONMAX
++tailsidelarge
+
+The #PICREGIONMAX command defines the maximum region the PIC will
+cover. Same as #PICREGIONMIN, region strings are defined by the
+#REGION command.
+</command>
+
+<command name="PICCRITERIA">
+  <parameter name='nPicCriteria' type="integer" min="1" />
+  <for from="1" to="nPicCriteria">
+    <parameter name="StringPicCriteria" type="string" length="200"/>
+    <parameter name="MinCriteriaValue" type="real" />
+    <parameter name="MaxCriteriaValue" type="real" />
+  </for>
+
+#PICCRITERIA
+2			nPicCriteria
+j/b			StringPicCriteria
+0.1			MinCriteriaValue
+999.0			MaxCriteriaValue
+divcurv			StringPicCriteria
+5.0			MinCriteriaValue
+999.0			MaxCriteriaValue
+
+#PICCRITERIA command defines the physical criteria for PIC region.
+The first input would be the number of criteria. For each criterion,
+there will be three inputs, the name, minimum value and maximum value.
+The cell which satisfies all criteria will be marked "positive" for
+the PIC. The names of criteria are defined in ModPIC.f90.
+</command>
 
 </commandgroup>
 <commandgroup name="PHYSICS PARAMETERS">
