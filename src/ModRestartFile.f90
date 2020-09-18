@@ -390,9 +390,10 @@ contains
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
+    use ModUtilities, ONLY: cTab, write_string_tabs_name
     use ModIO,       ONLY: NameMaxTimeUnit
     use BATL_lib,    ONLY: nRoot_D
-
+    
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
@@ -409,30 +410,31 @@ contains
     call open_file(file=NameFile, NameCaller=NameSub)
 
     write(UnitTmp_,'(a)')'#CODEVERSION'
-    write(UnitTmp_,'(f5.2,a35)')CodeVersion,'CodeVersion'
+    write(UnitTmp_,'(f5.2,a)')CodeVersion, cTab//cTab//cTab//'CodeVersion'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#USERMODULE'
-    write(UnitTmp_,'(a)')       NameUserModule
-    write(UnitTmp_,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
+    call write_string_tabs_name(NameUserModule, 'NameUserModule')
+    write(UnitTmp_,'(f5.2,a)') &
+         VersionUserModule, cTab//cTab//cTab//'VersionUserModule'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#COMPONENT'
-    write(UnitTmp_,'(a2,a38)')NameThisComp,'NameComp'
+    write(UnitTmp_,'(a)')NameThisComp//cTab//cTab//cTab//'NameComp'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#PRECISION'
-    write(UnitTmp_,'(i1,a39)')nByteReal,'nByteReal'
+    write(UnitTmp_,'(i1,a)')nByteReal, cTab//cTab//cTab//'nByteReal'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#EQUATION'
-    write(UnitTmp_,'(a,a32)')NameEquation,'NameEquation'
-    write(UnitTmp_,'(i8,a32)')nVar,'nVar'
+    call write_string_tabs_name(NameEquation, 'NameEquation')
+    write(UnitTmp_,'(i8,a)')nVar, cTab//cTab//'nVar'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTVARIABLES'
-    write(UnitTmp_,'(a)') trim(NameVarCouple)
+    call write_string_tabs_name(NameVarCouple, 'NameVarCouple')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
-    write(UnitTmp_,'(i8,a32)') nI,'nI'
-    write(UnitTmp_,'(i8,a32)') nJ,'nJ'
-    write(UnitTmp_,'(i8,a32)') nK,'nK'
-    write(UnitTmp_,'(i8,a32)') nBlockALL,'MinBlockALL'
+    write(UnitTmp_,'(i8,a)') nI, cTab//cTab//'nI'
+    write(UnitTmp_,'(i8,a)') nJ, cTab//cTab//'nJ'
+    write(UnitTmp_,'(i8,a)') nK, cTab//cTab//'nK'
+    write(UnitTmp_,'(i8,a)') nBlockALL, cTab//cTab//'MinBlockALL'
     if (IsStandAlone .and. NameThisComp == 'GM') then
        write(UnitTmp_,*)
        if(NamePlanet == 'NEW')then
@@ -440,7 +442,7 @@ contains
        else
           write(UnitTmp_,'(a)')'#PLANET'
        end if
-       write(UnitTmp_,'(a,a32)') NamePlanet,'NamePlanet'
+       call write_string_tabs_name(NamePlanet,'NamePlanet')
        if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
           write(UnitTmp_,*)
           write(UnitTmp_,'(a)')'#IDEALAXES'
@@ -448,31 +450,31 @@ contains
     end if
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NEWRESTART'
-    write(UnitTmp_,'(l1,a39)')UseConstrainB,'DoRestartBFace'
+    write(UnitTmp_,'(l1,a)')UseConstrainB, cTab//cTab//cTab//'DoRestartBFace'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTINFILE'
     ! Note that the output file format is saved as the input for next restart
-    write(UnitTmp_,'(a,a30)')TypeRestartOutFile,'TypeRestartInFile'
+    call write_string_tabs_name(TypeRestartOutFile, 'TypeRestartInFile')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
-    write(UnitTmp_,'(i8,a32)')n_step,'nStep'
+    write(UnitTmp_,'(i8,a)')n_step, cTab//cTab//'nStep'
     write(UnitTmp_,*)
     if(n_prev == n_step)then
        write(UnitTmp_,'(a)')'#NPREVIOUS'
-       write(UnitTmp_,'(i8,a32)')n_prev,'nPrev'
-       write(UnitTmp_,'(es22.15,a18)')dt_prev,'DtPrev'
+       write(UnitTmp_,'(i8,a)')      n_prev, cTab//cTab//'nPrev'
+       write(UnitTmp_,'(es22.15,a)') dt_prev, cTab//cTab//'DtPrev'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#STARTTIME'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(1),'iYear'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(2),'iMonth'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(3),'iDay'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(4),'iHour'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(5),'iMinute'
-    write(UnitTmp_,'(i8,a32)')iStartTime_I(6),'iSecond'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(1), cTab//cTab//'iYear'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(2), cTab//cTab//'iMonth'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(3), cTab//cTab//'iDay'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(4), cTab//cTab//'iHour'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(5), cTab//cTab//'iMinute'
+    write(UnitTmp_,'(i8,a)')iStartTime_I(6), cTab//cTab//'iSecond'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
-    write(UnitTmp_,'(es22.15,a18)')time_simulation,'tSimulation'
+    write(UnitTmp_,'(es22.15,a)') time_simulation, cTab//cTab//'tSimulation'
     write(UnitTmp_,*)
     if(.not.IsCartesian)then
        IsLimitedGeometry = CoordDimMin_D(1) < CoordDimMax_D(1)
@@ -481,86 +483,91 @@ contains
        else
           write(UnitTmp_,'(a)')'#GRIDGEOMETRY'
        endif
-       write(UnitTmp_,'(a20,a20)')TypeGeometry, 'TypeGeometry'
-       if(IsGenRadius) write(UnitTmp_,'(a100)')NameGridFile
+       call write_string_tabs_name(TypeGeometry, 'TypeGeometry')
+       if(IsGenRadius) &
+            call write_string_tabs_name(NameGridFile, 'NameGridFile')
        if(IsRoundCube) then
-          write(UnitTmp_,'(es22.15,a18)') rRound0,'rRound0'
-          write(UnitTmp_,'(es22.15,a18)') rRound1,'rRound1'
+          write(UnitTmp_,'(es22.15,a)') rRound0, cTab//cTab//'rRound0'
+          write(UnitTmp_,'(es22.15,a)') rRound1, cTab//cTab//'rRound1'
        endif
        if(IsLimitedGeometry) then
           do iDim = 1, nDim
-             write(UnitTmp_,'(es22.15,a18)') &
-                  CoordDimMin_D(iDim), 'CoordDimMin_D'
-             write(UnitTmp_,'(es22.15,a18)') &
-                  CoordDimMax_D(iDim), 'CoordDimMax_D'
+             write(UnitTmp_,'(es22.15,a)') &
+                  CoordDimMin_D(iDim), cTab//cTab//'CoordDimMin_D'
+             write(UnitTmp_,'(es22.15,a)') &
+                  CoordDimMax_D(iDim), cTab//cTab//'CoordDimMax_D'
           end do
        endif
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#GRID'
-    write(UnitTmp_,'(i8,a32)') nRoot_D(1), 'nRootBlockX'
-    write(UnitTmp_,'(i8,a32)') nRoot_D(2), 'nRootBlockY'
-    write(UnitTmp_,'(i8,a32)') nRoot_D(3), 'nRootBlockZ'
-    write(UnitTmp_,'(es22.15,a18)') x1, 'xMin'
-    write(UnitTmp_,'(es22.15,a18)') x2, 'xMax'
-    write(UnitTmp_,'(es22.15,a18)') y1, 'yMin'
-    write(UnitTmp_,'(es22.15,a18)') y2, 'yMax'
-    write(UnitTmp_,'(es22.15,a18)') z1, 'zMin'
-    write(UnitTmp_,'(es22.15,a18)') z2, 'zMax'
+    write(UnitTmp_,'(i8,a)') nRoot_D(1), cTab//cTab//'nRootBlockX'
+    write(UnitTmp_,'(i8,a)') nRoot_D(2), cTab//cTab//'nRootBlockY'
+    write(UnitTmp_,'(i8,a)') nRoot_D(3), cTab//cTab//'nRootBlockZ'
+    write(UnitTmp_,'(es22.15,a)') x1,    cTab//cTab//'xMin'
+    write(UnitTmp_,'(es22.15,a)') x2,    cTab//cTab//'xMax'
+    write(UnitTmp_,'(es22.15,a)') y1,    cTab//cTab//'yMin'
+    write(UnitTmp_,'(es22.15,a)') y2,    cTab//cTab//'yMax'
+    write(UnitTmp_,'(es22.15,a)') z1,    cTab//cTab//'zMin'
+    write(UnitTmp_,'(es22.15,a)') z2,    cTab//cTab//'zMax'
     write(UnitTmp_,*)
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
        write(UnitTmp_,'(a)')'#LIMITRADIUS'
-       write(UnitTmp_,'(es22.15,a18)') RadiusMin, 'RadiusMin'
-       write(UnitTmp_,'(es22.15,a18)') RadiusMax, 'RadiusMax'
+       write(UnitTmp_,'(es22.15,a)') RadiusMin, cTab//cTab//'RadiusMin'
+       write(UnitTmp_,'(es22.15,a)') RadiusMax, cTab//cTab//'RadiusMax'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#COORDSYSTEM'
     write(UnitTmp_,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#SOLARWIND'
-    write(UnitTmp_,'(es22.15,a18)')SW_n_dim,  'SwNDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_T_dim,  'SwTDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_Ux_dim, 'SwUxDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_Uy_dim, 'SwUyDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_Uz_dim, 'SwUzDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_Bx_dim, 'SwBxDdim'
-    write(UnitTmp_,'(es22.15,a18)')SW_By_dim, 'SwByDim'
-    write(UnitTmp_,'(es22.15,a18)')SW_Bz_dim, 'SwBzDim'
+    write(UnitTmp_,'(es22.15,a)')SW_n_dim,  cTab//cTab//'SwNDim'
+    write(UnitTmp_,'(es22.15,a)')SW_T_dim,  cTab//cTab//'SwTDim'
+    write(UnitTmp_,'(es22.15,a)')SW_Ux_dim, cTab//cTab//'SwUxDim'
+    write(UnitTmp_,'(es22.15,a)')SW_Uy_dim, cTab//cTab//'SwUyDim'
+    write(UnitTmp_,'(es22.15,a)')SW_Uz_dim, cTab//cTab//'SwUzDim'
+    write(UnitTmp_,'(es22.15,a)')SW_Bx_dim, cTab//cTab//'SwBxDdim'
+    write(UnitTmp_,'(es22.15,a)')SW_By_dim, cTab//cTab//'SwByDim'
+    write(UnitTmp_,'(es22.15,a)')SW_Bz_dim, cTab//cTab//'SwBzDim'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#IOUNITS'
-    write(UnitTmp_,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
+    call write_string_tabs_name(TypeIoUnit, 'TypeIoUnit')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NORMALIZATION'
     if(TypeNormalization == "NONE")then
-       write(UnitTmp_,'(a)')'NONE'
+       write(UnitTmp_,'(a)')'NONE'//cTab//cTab//cTab//'TypeNormalization'
     else
        write(UnitTmp_,'(a)')'READ'
-       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
-       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
-       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
+       write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitX_),   cTab//cTab//'No2SiUnitX'
+       write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitU_),   cTab//cTab//'No2SiUnitU'
+       write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitRho_), &
+            cTab//cTab//'No2SiUnitRho'
     end if
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#PLOTFILENAME'
-    write(UnitTmp_,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
+    call write_string_tabs_name(NameMaxTimeUnit, 'NameMaxTimeUnit')
     write(UnitTmp_,*)
 
     if(body1)then
        write(UnitTmp_,'(a)')'#BODY'
-       write(UnitTmp_,'(l1,a39)')      .true., 'UseBody'
-       write(UnitTmp_,'(es22.15,a18)') rBody, 'rBody'
+       write(UnitTmp_,'(a)') 'T'//cTab//cTab//cTab//'UseBody'
+       write(UnitTmp_,'(es22.15,a)') rBody, cTab//cTab//'rBody'
        if(NameThisComp=='GM') &
-            write(UnitTmp_,'(es22.15,a18)') rCurrents, 'rCurrents'
+            write(UnitTmp_,'(es22.15,a)') rCurrents, cTab//cTab//'rCurrents'
        if(UseMultiSpecies)then
           do iSpecies = 1, nSpecies
-             write(UnitTmp_,'(es22.15,a18)') &
-                  BodyNSpeciesDim_I(iSpecies), 'BodyNDim'
+             write(UnitTmp_,'(es22.15,a)') &
+                  BodyNSpeciesDim_I(iSpecies), cTab//cTab//'BodyNDim'
           end do
-          write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(IonFirst_), 'BodyTDim'
+          write(UnitTmp_,'(es22.15,a)') &
+               BodyTDim_I(IonFirst_), cTab//cTab//'BodyTDim'
        else
           do iFluid = IonFirst_, nFluid
-             write(UnitTmp_,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
-             write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
+             write(UnitTmp_,'(es22.15,a)') &
+                  BodyNDim_I(iFluid), cTab//cTab//'BodyNDim'
+             write(UnitTmp_,'(es22.15,a)') &
+                  BodyTDim_I(iFluid), cTab//cTab//'BodyTDim'
           end do
        end if
        write(UnitTmp_,*)
@@ -568,16 +575,16 @@ contains
 
     if(UseBody2)then
        write(UnitTmp_,'(a)')'#SECONDBODY'
-       write(UnitTmp_,'(l1,a39)')     UseBody2,      'UseBody2'
-       write(UnitTmp_,'(es22.15,a18)')Rbody2,        'rBody2'
-       write(UnitTmp_,'(es22.15,a18)')xbody2,        'xBody2'
-       write(UnitTmp_,'(es22.15,a18)')ybody2,        'yBody2'
-       write(UnitTmp_,'(es22.15,a18)')zbody2,        'zBody2'
-       write(UnitTmp_,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
-       write(UnitTmp_,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
-       write(UnitTmp_,'(es22.15,a18)')tDimBody2,     'tDimBody2'
-       write(UnitTmp_,'(l1,a39)')     UseBody2Orbit, 'UseBody2Orbit'
-       write(UnitTmp_,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
+       write(UnitTmp_,'(l1,a)')UseBody2,     cTab//cTab//cTab//'UseBody2'
+       write(UnitTmp_,'(es22.15,a)')Rbody2,        cTab//cTab//'rBody2'
+       write(UnitTmp_,'(es22.15,a)')xbody2,        cTab//cTab//'xBody2'
+       write(UnitTmp_,'(es22.15,a)')ybody2,        cTab//cTab//'yBody2'
+       write(UnitTmp_,'(es22.15,a)')zbody2,        cTab//cTab//'zBody2'
+       write(UnitTmp_,'(es22.15,a)')rCurrentsBody2,cTab//cTab//'rCurrentsBody2'
+       write(UnitTmp_,'(es22.15,a)')RhoDimBody2,   cTab//cTab//'RhoDimBody2'
+       write(UnitTmp_,'(es22.15,a)')tDimBody2,     cTab//cTab//'tDimBody2'
+       write(UnitTmp_,'(l1,a)')UseBody2Orbit,cTab//cTab//cTab//'UseBody2Orbit'
+       write(UnitTmp_,'(es22.15,a)')OrbitPeriod,   cTab//cTab//'OrbitPeriod'
        write(UnitTmp_,*)
     end if
 
