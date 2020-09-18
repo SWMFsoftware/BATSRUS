@@ -954,6 +954,7 @@ contains
 
   subroutine user_calc_sources_impl(iBlock)
 
+    use ModPointImplicit, ONLY: IsPointImplMatrixSet, DsDu_VVC
     use ModAdvance,     ONLY: State_VGB, Source_VC, UseElectronPressure
     use ModVarIndexes,  ONLY: nVar, Rho_, p_, Pe_, ScalarFirst_, ScalarLast_, &
          nElement
@@ -992,24 +993,40 @@ contains
        iVar = ScalarFirst_
        do iElement = 1, nElement
           nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
-          allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
+          allocate(Ioniz_I(0:nCharge), Recomb_I(0:nCharge))
           do iCharge = 0, nCharge
              call interpolate_lookup_table(iTableElement_I(iElement), &
                   real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
              Ioniz_I(iCharge) = Value_I(1)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-             Recomb_I(iCharge) = Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+             Recomb_I(iCharge)= Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
           end do
           
           do iCharge = 0, nCharge
              Source = 0
              if(iCharge /= 0)Source = State_V(iVar-1)*Ioniz_I(iCharge-1)
-             Source = Source-State_V(iVar)*(Ioniz_I(iCharge)+Recomb_I(iCharge)) 
+             Source = Source-State_V(iVar)*(Ioniz_I(iCharge)+Recomb_I(iCharge))
              if(iCharge /= nCharge)Source = Source + &
                   State_V(iVar+1)*Recomb_I(iCharge+1)
              Source_V(iVar) = Ne*Source
+
+             if(IsPointImplMatrixSet)then
+                if(iCharge == 0)then
+                   DsDu_VVC(iVar,iVar-1,i,j,k) = 0.0
+                else
+                   DsDu_VVC(iVar,iVar-1,i,j,k) = Ne*Ioniz_I(iCharge-1)
+                end if
+                DsDu_VVC(iVar,iVar,i,j,k) = &
+                     -Ne*(Ioniz_I(iCharge)+Recomb_I(iCharge))
+                if(iCharge == nCharge)then
+                   DsDu_VVC(iVar,iVar+1,i,j,k) = 0.0
+                else
+                   DsDu_VVC(iVar,iVar+1,i,j,k) = Ne*Recomb_I(iCharge+1)
+                end if
+             end if
+
              iVar = iVar + 1
           end do
-          deallocate(Ioniz_I,Recomb_I)
+          deallocate(Ioniz_I, Recomb_I)
        end do
 
        Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
@@ -1050,7 +1067,7 @@ contains
 
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set below.
-    IsPointImplMatrixSet = .false.
+    IsPointImplMatrixSet = .true.
 
     call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
