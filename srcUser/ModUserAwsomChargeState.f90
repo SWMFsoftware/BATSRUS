@@ -27,9 +27,9 @@ module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserFile = &
-       'ModUserAwsomOxygen.f90'
+       'ModUserAwsomChargeState.f90'
   character (len=*), parameter :: NameUserModule = &
-       'AWSoM model with Oxygen charge states'
+       'AWSoM model with charge states'
 
   ! Input parameters for chromospheric inner BC's
   real    :: NchromoSi_I(IonFirst_:nFluid) = 2e17, TchromoSi = 5e4

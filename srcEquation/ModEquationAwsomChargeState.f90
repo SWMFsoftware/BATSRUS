@@ -26,20 +26,18 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + Pe + aniso Pi + Oxygen charge states'
+       NameEquation='MHD + Alfven waves + Pe + aniso Pi + charge states'
   character (len=*), parameter :: &
-       NameEquationFile='ModEquationAwsomOxygen.f90'
+       NameEquationFile='ModEquationAwsomChargeState.f90'
 
   ! loop variable for implied do-loop over spectrum and ions
   integer, private :: iWave, iChargeState
 
-  !!! SOMEHOW move to Config.pl
   ! Number of ions of element with atomic number Z
   integer, parameter          :: nElement = 1
   character(len=2), parameter :: NameElement_I(1:nElement) = ['o']
-  integer, parameter          :: nChargeState_I(1:nElement) = [9]   ! Oxygen
+  integer, parameter          :: nChargeState_I(1:nElement) = [9]
   integer, parameter          :: nChargeStateAll = 9
-  !!!
   
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
