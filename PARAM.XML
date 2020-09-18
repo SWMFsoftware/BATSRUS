@@ -7843,16 +7843,16 @@ values. 2 may slow down the code significantly.
 </command>
 
 <command name="PICPATCHEXTEND">
-  <parameter name="NxExtend" type="integer" />
-  <parameter name="NyExtend" type="integer" if="$nJ != 1" />
-  <parameter name="NzExtend" type="integer" if="$nK != 1" />
+  <parameter name="NxExtend" type="integer" default="0" />
+  <parameter name="NyExtend" type="integer" if="$nJ != 1" default="0" />
+  <parameter name="NzExtend" type="integer" if="$nK != 1" default="0" />
 
 #PICPATCHEXTEND
 5			NxExtend
 5			NyExtend
 10			NzExtend
 
-PICPATCHEXTEND contains the number of patches extended from the PIC
+#PICPATCHEXTEND contains the number of patches extended from the PIC
 region defined by #PICCRITERIA on different directions.
 </command>
 
@@ -7890,11 +7890,15 @@ cover. Same as #PICREGIONMIN, region strings are defined by the
 </command>
 
 <command name="PICCRITERIA">
-  <parameter name='nPicCriteria' type="integer" min="1" />
-  <for from="1" to="nPicCriteria">
-    <parameter name="StringPicCriteria" type="string" length="200"/>
-    <parameter name="MinCriteriaValue" type="real" />
-    <parameter name="MaxCriteriaValue" type="real" />
+  <parameter name='nPicCriteria' type="integer" default="0" />
+  <for from="1" to="$nPicCriteria">
+    <parameter name="StringPicCriteria" type="string" length="200" default="none">
+		<option name="rho"		/>
+		<option name="j/b"		/>
+		<option name="divcurv"		/>
+    </parameter>
+    <parameter name="MinCriteriaValue" type="real" default="0" />
+    <parameter name="MaxCriteriaValue" type="real" default="0" />
   </for>
 
 #PICCRITERIA
@@ -7909,8 +7913,10 @@ divcurv			StringPicCriteria
 #PICCRITERIA command defines the physical criteria for PIC region.
 The first input would be the number of criteria. For each criterion,
 there will be three inputs, the name, minimum value and maximum value.
-The cell which satisfies all criteria will be marked "positive" for
-the PIC. The names of criteria are defined in ModPIC.f90.
+The cell which satisfies all criteria will be marked as "positive" for
+the PIC.
+The criteria name are in developing. Currently, "rho", "j/b", "divcurv"
+are available options.
 </command>
 
 </commandgroup>
