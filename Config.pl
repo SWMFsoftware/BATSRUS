@@ -73,6 +73,8 @@ my $nWave;
 my $nWaveNew;
 my $nMaterial;
 my $nMaterialNew;
+my $ChargeState;
+my $nChargeStateAll;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -97,6 +99,7 @@ foreach (@Arguments){
 	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
 	$nMaterialNew=$1;
 	next};
+    if(/^-cs=(.*)/)           {$ChargeState.="$1";            next};
     if(/^-ng$/i)              {print "ng=$GhostCell\n"; next};
     if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
@@ -118,12 +121,16 @@ while(<FILE>){
     next if /^\s*!/; # skip commented out lines
     $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
     $nMaterial=$1    if /\bnMaterial\s*=\s*(\d+)/i;
+    $nChargeStateAll=$1  if /\bnChargeStateAll\s*=\s*(\d+)/i;
 }
 close FILE;
 die "$ERROR nWave was not found in equation module\n" if $nWaveNew and not $nWave;
 &set_nwave     if $nWaveNew and $nWaveNew ne $nWave;
 die "$ERROR nMaterial was not found in equation module\n" if $nMaterialNew and not $nMaterial;
 &set_nmaterial if $nMaterialNew and $nMaterialNew ne $nMaterial;
+
+die "$ERROR nChargeStateAll was not found in equation module\n" if $ChargeState and not $nChargeStateAll;
+&set_charge_state if $ChargeState;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -301,6 +308,84 @@ sub set_nmaterial{
         print;
     }
 }
+
+##############################################################################
+
+sub set_charge_state{
+
+    my @ValidChargeState = ('h','he','li','be','b','c','n','o','f','ne','na',
+			    'mg','al','si','p','s','cl','ar','k','ca','sc',
+			    'ti','v','cr','mn','fe','co','ni','cu','zn');
+
+    my @ValidChargeStateAll = (2..31);
+    
+    # Separate input into array
+    my @ChargeStateIn;
+    @ChargeStateIn = split(',',$ChargeState);
+
+    # Get valid element names in correct order
+    my @Intersection = ();
+    foreach my $elem_j (@ValidChargeState) {
+	foreach my $elem_i (@ChargeStateIn) {
+	    if($elem_i eq $elem_j){
+		push @Intersection, $elem_i;
+	    }
+	}
+    }
+    
+    # Get rid of duplicates
+    my %seen = ();
+    my @Element_I = ();
+    foreach my $elem (@Intersection) {
+	next if $seen{$elem}++;
+	push @Element_I,$elem;
+    }
+    my $nElement = @Element_I;
+
+    # Get Z+1 for each element
+    my $cs = 1;
+    my @nChargeState_I = ();
+    foreach my $elem_j (@ValidChargeState) {
+	$cs = $cs+1;
+	foreach my $elem_i (@Element_I) {
+	    if($elem_i eq $elem_j){
+		push @nChargeState_I, $cs;
+	    }
+	}
+    }
+
+    # Sum of all charge states
+    my $nChargeStateAll = 0;
+    foreach (@nChargeState_I){
+	$nChargeStateAll += $_;
+    }
+
+    # Convert arrays to string
+    my $nChargeState_I=join(",",@nChargeState_I);
+    $nChargeState_I = " \[$nChargeState_I\]";
+    
+    foreach (@Element_I) {$_ = "'$_'";}
+    my $NameElement_I=join(",",@Element_I);
+    $NameElement_I = " \[$NameElement_I\]";
+
+    # Send variables to ModEquation file
+    @ARGV = ($EquationMod);
+    my $prev;
+    while(<>){
+        if(/^\s*!/){print; next} # Skip commented out lines
+        if(m/\&\s*\n/){         # Concatenate continuation lines
+            $prev .= $_;
+            next;
+        }
+        $_ = $prev . $_;
+	$prev = "";
+        s/\b(nChargeStateAll\s*=[^0-9]*)(\d+)/$1$nChargeStateAll/i;
+	s/\b(nElement\s*=[^0-9]*)(\d+)/$1$nElement/i;
+	s/\b(nChargeState_I\(1:nElement\)\s*=)(.*)/$1$nChargeState_I/i;
+	s/\b(NameElement_I\(1:nElement\)\s*=)(.*)/$1$NameElement_I/i;
+        print;
+    }
+}   
 
 #############################################################################
 
