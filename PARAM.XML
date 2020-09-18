@@ -7852,7 +7852,7 @@ values. 2 may slow down the code significantly.
 5			NyExtend
 10			NzExtend
 
-#PICPATCHEXTEND contains the number of patches extended from the PIC
+This command contains the number of patches extended from the PIC
 region defined by #PICCRITERIA on different directions.
 </command>
 
@@ -7884,21 +7884,24 @@ The region strings are defined by the #REGION command.
 #PICREGIONMAX
 +tailsidelarge
 
-The #PICREGIONMAX command defines the maximum region the PIC will
+This command defines the maximum region the PIC will
 cover. Same as #PICREGIONMIN, region strings are defined by the
 #REGION command.
 </command>
 
 <command name="PICCRITERIA">
-  <parameter name='nPicCriteria' type="integer" default="0" />
+  <parameter name='nPicCriteria' type="integer" default="1"
+	     min="0" max="3" />
   <for from="1" to="$nPicCriteria">
-    <parameter name="StringPicCriteria" type="string" length="200" default="none">
+    <parameter name="StringPicCriteria" type="string" length="200"
+	       default="none" input="select" >
 		<option name="rho"		/>
 		<option name="j/b"		/>
 		<option name="divcurv"		/>
     </parameter>
     <parameter name="MinCriteriaValue" type="real" default="0" />
-    <parameter name="MaxCriteriaValue" type="real" default="0" />
+    <parameter name="MaxCriteriaValue" type="real" default="0"
+	       min="$MinCriteriaValue" />
   </for>
 
 #PICCRITERIA
@@ -7910,7 +7913,7 @@ divcurv			StringPicCriteria
 5.0			MinCriteriaValue
 999.0			MaxCriteriaValue
 
-#PICCRITERIA command defines the physical criteria for PIC region.
+This command defines the physical criteria for PIC region.
 The first input would be the number of criteria. For each criterion,
 there will be three inputs, the name, minimum value and maximum value.
 The cell which satisfies all criteria will be marked as "positive" for
