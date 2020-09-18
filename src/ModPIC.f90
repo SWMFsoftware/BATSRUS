@@ -35,6 +35,11 @@ module ModPIC
   logical, public:: UseAdaptivePic = .false.
   logical, public:: DoRestartPicStatus = .false.
 
+  real, allocatable, public :: DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
+  real, allocatable, public :: FullBfield_DGB(:,:,:,:,:), UnitBfield_DGB(:,:,:,:,:), &
+       GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
+       GradUnitBz_DGB(:,:,:,:,:)
+
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
@@ -857,7 +862,7 @@ contains
        if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
             0.9*DxyzPic_DI(:,iRegion) )) cycle 
        if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-            0.9*DxyzPic_DI(:,iRegion) )) cycle 
+            0.9*DxyzPic_DI(:,iRegion) )) cycle
 
        nX = PatchSize_DI(x_, iRegion)
        nY = PatchSize_DI(y_, iRegion)
@@ -1144,16 +1149,14 @@ contains
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: B0_DGB
-    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_, UnitRho_
+    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_
+    use ModCoordTransform, ONLY: cross_product
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
     real :: CriteriaValue
-    real, allocatable :: j_D(:), Ufield_DGB(:,:,:,:,:), DivU_CB(:,:,:,:)
-    real, allocatable :: FullBfield_DGB(:,:,:,:,:), UnitBfield_DGB(:,:,:,:,:), &
-         GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), GradUnitBz_DGB(:,:,:,:,:),&
-         Curvature_DGB(:,:,:,:,:), DivCurvature_CB(:,:,:,:)
-    real :: current, b, bNorm
+    real, allocatable :: j_D(:), Ufield_DGB(:,:,:,:,:), DivU_CB(:,:,:,:), jxB_D(:)
+    real :: current, bNorm
     logical:: DoTest, SatisfyAll
 
     character(len=*), parameter:: NameSub = 'calc_pic_criteria'
@@ -1182,42 +1185,45 @@ contains
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)*Io2No_V(UnitU_)/Io2No_V(UnitX_)
        case('divcurv')
-          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)/Io2No_V(UnitX_)**2
-          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)/Io2No_V(UnitX_)**2
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        end select
     end do
 
     IsPicCrit_CB = iPicOff_
     PicCritInfo_CBI = iPicOff_
 
+    ! Full B Field is a useful variable
     allocate(FullBfield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
        FullBfield_DGB(:,:,:,:,iBlock) = &
             State_VGB(Bx_:Bz_,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
     end do
-    
+
     ! loop through criterias and allocate variables
     ! also the unit transfer is done here
     do iCriteria=1, nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
        case('j/b')
           allocate(j_D(3))
+          allocate(jxB_D(3))
        case('divu')
-          allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
        case('divcurv')
-          allocate(UnitBfield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(Curvature_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(DivCurvature_CB(minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(GradUnitBx_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(GradUnitBy_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
-          allocate(GradUnitBz_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+          allocate(UnitBfield_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(Curvature_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(DivCurvature_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(GradUnitBx_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(GradUnitBy_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          allocate(GradUnitBz_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
        end select
     end do
 
-    do iBlock=1,nBlock
+    do iBlock=1,nBlock       
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
@@ -1264,7 +1270,7 @@ contains
     if(allocated(Curvature_DGB)) call message_pass_cell(nDim, Curvature_DGB)
 
     do iBlock=1,nBlock
-       
+
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
@@ -1277,17 +1283,15 @@ contains
              select case(trim(NameCriteriaPic_I(iCriteria)))
              case('j/b')
                 call get_current(i, j, k, iBlock, j_D)
-                current = sqrt(j_D(1)**2 + j_D(2)**2 + j_D(3)**2)
-                b = sqrt(FullBfield_DGB(x_,i,j,k,iBlock)**2+&
-                     FullBfield_DGB(y_,i,j,k,iBlock)**2+&
-                     FullBfield_DGB(z_,i,j,k,iBlock)**2)
-                CriteriaValue = current / b * CellSize_DB(1, iBlock)
+                jxB_D = cross_product(j_D, FullBfield_DGB(:,i,j,k,iBlock))
+                current = norm2(j_D)
+                CriteriaValue = current**2 / norm2(jxB_D) * CellSize_DB(1, iBlock)
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
                 CriteriaValue = DivU_CB(i,j,k,iBlock)
              case('divcurv')
-                CriteriaValue = DivCurvature_CB(i,j,k,iBlock)
+                CriteriaValue = DivCurvature_CB(i,j,k,iBlock) * (CellSize_DB(1, iBlock)**2)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
@@ -1298,8 +1302,6 @@ contains
           end do ! end loop criteria
        end do; end do; end do
     end do ! end loop blocks
-
-    ! IsPicCrit_CB = product(PicCritInfo_CBI, dim=5)
 
     ! collect pic crit info
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1315,6 +1317,7 @@ contains
     if(iProc==0) write(*,*) "Cleaning temp arrays for PIC criteria..."
     ! Deallocate arrays
     if(allocated(j_D))               deallocate(j_D)
+    if(allocated(jxB_D))             deallocate(jxB_D)
     if(allocated(DivU_CB))           deallocate(DivU_CB)
     if(allocated(Ufield_DGB))        deallocate(Ufield_DGB)
     if(allocated(Curvature_DGB))     deallocate(Curvature_DGB)
@@ -1324,7 +1327,7 @@ contains
     if(allocated(GradUnitBx_DGB))    deallocate(GradUnitBx_DGB)
     if(allocated(GradUnitBy_DGB))    deallocate(GradUnitBy_DGB)
     if(allocated(GradUnitBz_DGB))    deallocate(GradUnitBz_DGB)
-
+    
     call test_stop(NameSub, DoTest)
   end subroutine calc_pic_criteria
   !============================================================================
