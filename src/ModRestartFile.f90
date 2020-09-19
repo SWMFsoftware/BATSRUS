@@ -428,7 +428,7 @@ contains
     write(UnitTmp_,'(i8,a)')nVar, cTab//cTab//'nVar'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTVARIABLES'
-    call write_string_tabs_name(NameVarCouple, 'NameVarCouple')
+    call write_string_tabs_name(NameVarCouple, 'NameRestartVar')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a)') nI, cTab//cTab//'nI'
@@ -454,7 +454,7 @@ contains
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTINFILE'
     ! Note that the output file format is saved as the input for next restart
-    call write_string_tabs_name(TypeRestartOutFile, 'TypeRestartInFile')
+    call write_string_tabs_name(TypeRestartOutFile, 'StringRestartInFile')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a)')n_step, cTab//cTab//'nStep'
@@ -501,9 +501,9 @@ contains
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#GRID'
-    write(UnitTmp_,'(i8,a)') nRoot_D(1), cTab//cTab//'nRootBlockX'
-    write(UnitTmp_,'(i8,a)') nRoot_D(2), cTab//cTab//'nRootBlockY'
-    write(UnitTmp_,'(i8,a)') nRoot_D(3), cTab//cTab//'nRootBlockZ'
+    write(UnitTmp_,'(i8,a)') nRoot_D(1), cTab//cTab//'nRootBlock1'
+    write(UnitTmp_,'(i8,a)') nRoot_D(2), cTab//cTab//'nRootBlock2'
+    write(UnitTmp_,'(i8,a)') nRoot_D(3), cTab//cTab//'nRootBlock3'
     write(UnitTmp_,'(es22.15,a)') x1,    cTab//cTab//'xMin'
     write(UnitTmp_,'(es22.15,a)') x2,    cTab//cTab//'xMax'
     write(UnitTmp_,'(es22.15,a)') y1,    cTab//cTab//'yMin'
@@ -519,7 +519,7 @@ contains
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#COORDSYSTEM'
-    write(UnitTmp_,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
+    call write_string_tabs_name(TypeCoordSystem,'TypeCoordSystem')
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#SOLARWIND'
     write(UnitTmp_,'(es22.15,a)')SW_n_dim,  cTab//cTab//'SwNDim'
@@ -527,7 +527,7 @@ contains
     write(UnitTmp_,'(es22.15,a)')SW_Ux_dim, cTab//cTab//'SwUxDim'
     write(UnitTmp_,'(es22.15,a)')SW_Uy_dim, cTab//cTab//'SwUyDim'
     write(UnitTmp_,'(es22.15,a)')SW_Uz_dim, cTab//cTab//'SwUzDim'
-    write(UnitTmp_,'(es22.15,a)')SW_Bx_dim, cTab//cTab//'SwBxDdim'
+    write(UnitTmp_,'(es22.15,a)')SW_Bx_dim, cTab//cTab//'SwBxDim'
     write(UnitTmp_,'(es22.15,a)')SW_By_dim, cTab//cTab//'SwByDim'
     write(UnitTmp_,'(es22.15,a)')SW_Bz_dim, cTab//cTab//'SwBzDim'
     write(UnitTmp_,*)
@@ -538,7 +538,7 @@ contains
     if(TypeNormalization == "NONE")then
        write(UnitTmp_,'(a)')'NONE'//cTab//cTab//cTab//'TypeNormalization'
     else
-       write(UnitTmp_,'(a)')'READ'
+       write(UnitTmp_,'(a)')'READ'//cTab//cTab//cTab//'TypeNormalization'
        write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitX_),   cTab//cTab//'No2SiUnitX'
        write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitU_),   cTab//cTab//'No2SiUnitU'
        write(UnitTmp_,'(es22.15,a)')No2Si_V(UnitRho_), &
