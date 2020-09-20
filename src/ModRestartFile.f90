@@ -514,8 +514,8 @@ contains
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
        write(UnitTmp_,'(a)')'#LIMITRADIUS'
-       write(UnitTmp_,'(es22.15,a)') RadiusMin, cTab//cTab//'RadiusMin'
-       write(UnitTmp_,'(es22.15,a)') RadiusMax, cTab//cTab//'RadiusMax'
+       write(UnitTmp_,'(es22.15,a)') RadiusMin, cTab//cTab//'rMin'
+       write(UnitTmp_,'(es22.15,a)') RadiusMax, cTab//cTab//'rMax'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#COORDSYSTEM'
