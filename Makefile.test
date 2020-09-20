@@ -12,7 +12,7 @@ DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
 test: 
 	@rm -f *.diff
-	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)	
+	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
@@ -48,6 +48,7 @@ test:
 	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
 	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
 	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
+	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
 	-@($(MAKE) test_comet TESTDIR=run_test_comet)
 	-@($(MAKE) test_cometfluids TESTDIR=run_test_cometfluids)
 	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
@@ -134,6 +135,7 @@ test_help:
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
+	@echo "    test_jupiter               (run Jupiter test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
@@ -1326,6 +1328,38 @@ test_saturn_check:
 		Param/SATURN/TestOutput/log_n000001.log \
 		> test_saturn.diff)
 	ls -l test_saturn.diff
+
+### TESTS FOR MODELING JUPITER ###
+
+test_jupiter:
+	@echo "test_jupiter_compile..." > test_jupiter.diff
+	$(MAKE) test_jupiter_compile
+	@echo "test_jupiter_rundir..." >> test_jupiter.diff
+	$(MAKE) test_jupiter_rundir
+	@echo "test_jupiter_run..." >> test_jupiter.diff
+	$(MAKE) test_jupiter_run
+	@echo "test_jupiter_check..." >> test_jupiter.diff
+	$(MAKE) test_jupiter_check
+
+test_jupiter_compile:
+	./Config.pl ${OPENMP} -u=Jupiter -e=Mhd -g=8,8,8
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_jupiter_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/JUPITER/PARAM.in .
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_jupiter_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_jupiter_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		Param/JUPITER/TestOutput/log_n000001.log \
+		> test_jupiter.diff)
+	ls -l test_jupiter.diff
 
 
 ### TESTS FOR MODELING MERCURY ###

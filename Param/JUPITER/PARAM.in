@@ -1,0 +1,142 @@
+#DESCRIPTION
+Param/JUPITER/PARAM.in: Test for Jupiter
+
+#PLANET
+JUPITER			NamePlanet
+
+#IDEALAXES
+
+#ROTATION
+T		UseRotation
+10.		
+
+#STARTTIME
+2000			year
+1			month
+1			day
+1			hour
+0			minute
+0			second 
+0.0 			FracSecond 
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+F			DoSaveRestart (Rest of parameters read if true) 
+
+#GRIDBLOCKALL
+1440                     MaxBlock
+
+#GRID
+       6		nRootBlockX
+       4		nRootBlockY
+       4		nRootBlockZ
+ -6.400e2          	xMin
+  1.280e2		xMax
+ -2.56e2		yMin
+  2.56e2		yMax
+ -2.56e2		zMin
+  2.56e2		zMax
+
+#GRIDRESOLUTION
+3.0			Resolution
+initial			NameArea
+
+#GRIDRESOLUTION
+3/2			Resolution
+sphere0			StringShape
+4.0			Radius
+
+#GRIDRESOLUTION
+3/8			Resolution
+ringz0			StringShape
+8.0			Height
+3.0			RadiusInner
+25.0			Radius
+
+#SOLARWIND
+0.2                      SW_rho_dim [n/cc]
+200000.0                   SW_T_dim [K] / 20eV
+-400.0                    SW_Ux_dim [km/s]
+0.0                       SW_Uy_dim [km/s]
+0.0                       SW_Uz_dim [km/s]
+0.0                       SW_Bx_dim [nT]
+0.0                       SW_By_dim [nT]
+-1.                       SW_Bz_dim [nT]
+
+
+#MAGNETOSPHERE
+T                       UseBody 
+3.                     rBody 
+4.                     rCurrents 
+50.                     Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
+35000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+
+#NONCONSERVATIVE
+T                       UseNonConservative 
+
+#CONSERVATIVECRITERIA
+1			nConservCrit 
+r			TypeConservCrit_I
+6.0			rConserv 
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile 
+rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax rhosi_integrated	NameLogVars
+
+#SAVEPLOT
+2                       nPlotFiles
+y=0 VAR tec             StringPlot
+10000                   DnSavePlot
+-1.                     DtSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi
+g rbody
+z=0 VAR tec             StringPlot
+10000                   DnSavePlot
+-1.                     DtSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi
+g rbody
+
+#OUTERBOUNDARY
+outflow			TypeBc1 
+inflow			TypeBc2 
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#TIMESTEPPING
+1			nStage
+0.80			CflExpl  
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner 
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#USERSWITCH
++source			StringSwitch
+
+#USERINPUTBEGIN ---------------
+
+#MASSLOADING
+T			UseMassLoading
+F			AccelerateMassLoading
+F			USeHighEnergyPressure
+1.375			NeutralProfileConst
+2.5			ScaleHeight (deg)
+0.0			RecombinationRate (1/s)
+1.0e-4			IonizationRate (1/s)
+1e-13			CollisionCrossSection (cm2)
+
+#USERINPUTEND -----------------
+
+#STOP
+50			MaxIteration
+-1.			tSimulationMax  
