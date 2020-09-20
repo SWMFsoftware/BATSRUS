@@ -9865,6 +9865,23 @@ If the logical DoThreadRestart is set to true, at the initial iteration the
 plasma state on the threaded field lines is recovered from the saved files
 otherwise it is calculated from scratch.
 </command>
+
+<command name="CHROMOSPHERE">
+  <paramater name="UseChromosphereHeating" type="logical" default="F"/>
+  <parameter name="NumberDensChromosphere" type ="real" min="0"
+	     default="2.0e11" />
+  <parameter name="TeChromosphere" type ="real" min="0"
+	     default="5.0e4" />
+  
+#CHROMOSPHERE
+F                 UseChromosphereHeating
+2.0e11            NumberDensChromosphere
+5.0e4             TeChromosphere
+
+Sets the chromosphere parameters. May be used if the chromosphere region
+is included into a computational domain or to specify the boundary condition
+for the emission model from the transition region
+</command>
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
