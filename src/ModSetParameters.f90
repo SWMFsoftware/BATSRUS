@@ -2054,8 +2054,8 @@ contains
 
        case("#LIMITRADIUS")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('RadiusMin', RadiusMin)
-          call read_var('RadiusMax', RadiusMax)
+          call read_var('rMin', RadiusMin)
+          call read_var('rMax', RadiusMax)
 
        case("#UNIFORMAXIS")
           if(.not.is_first_session())CYCLE READPARAM
