@@ -4830,7 +4830,7 @@ The default is to flush the output, i.e. DoFlush=T.
 	     required="T">
     <option name="GL"             />
     <option name="GIBSON-LOW"     />
-    <option name="TD"	      />
+    <option name="TD "	      />
     <option name="TITOV-DEMOULIN" />
     <option name="TD14"	      />
   </parameter>
@@ -4840,7 +4840,7 @@ The default is to flush the output, i.e. DoFlush=T.
     <parameter name="aStretch" type="real" min="0" default="0" />
     <parameter name="ApexHeight" type="real" min="0" default="0" />
   </if>
-  <if expr="$TypeCme =~ /TD|TITOV-DEMOULIN/">
+  <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
     <parameter name="BcTubeDim" type="real" default="0" />
     <parameter name="RadiusMajor" type="real" min="0" default="0" />
     <parameter name="RadiusMinor" type="real" min="0" default="0" />
@@ -4892,25 +4892,59 @@ The default is to flush the output, i.e. DoFlush=T.
       <option name="none"	  />
       <option name="readbstrap" />
       <option name="getbstrap"  />
-    </parameter>
-    <parameter name="bStrappingDim" type="real" min="0" 
-	       default="0" />
-    <parameter name="TypeCharge" type="string" case="lower"
-	       input="select" required="F">
-      <option name="none"	  />
       <option name="steady" />
       <option name="moving" />
       <option name="cancelflux" />
     </parameter>
-    <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-      <parameter name="bQStrapFraction" type="real" min="0" 
+    <if expr="$TypeBStrap =~ /readbstrap/">
+      <parameter name="bStrappingDim" type="real" min="0" 
+	       default="0" />
+      <parameter name="TypeCharge" type="string" case="lower"
+		 input="select" required="F">
+	  <option name="none"	  />
+	  <option name="steady" />
+	  <option name="moving" />
+	  <option name="cancelflux" />
+      </parameter>
+      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	 <parameter name="bQStrapFraction" type="real" min="0" 
+		    default="0" />
+	 <parameter name="qDistance" type="real" min="0" 
+		 default="0" />
+      </if>
+      <if expr="$TypeCharge =~ /moving|cancelflux/">
+	<parameter name="UChargeX" type="real" min="0" 
+		   default="0" />
+      </if>
+    </if>
+    <if expr="$TypeBStrap =~ /getbstrap/">
+      <parameter name="TypeCharge" type="string" case="lower"
+		 input="select" required="F">
+	  <option name="none"	  />
+	  <option name="steady" />
+	  <option name="moving" />
+	  <option name="cancelflux" />
+      </parameter>
+      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	 <parameter name="bQStrapFraction" type="real" min="0" 
+		    default="0" />
+	 <parameter name="qDistance" type="real" min="0" 
+		 default="0" />
+      </if>
+      <if expr="$TypeCharge =~ /moving|cancelflux/">
+	<parameter name="UChargeX" type="real" min="0" 
+		   default="0" />
+      </if>
+    </if>
+    <if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
+      <parameter name="bQStrappingDim" type="real" min="0" 
 		 default="0" />
       <parameter name="qDistance" type="real" min="0" 
 		 default="0" />
-    </if>
-    <if expr="$TypeCharge =~ /moving|cancelflux/">
-      <parameter name="UChargeX" type="real" min="0" 
-		 default="0" />
+      <if expr="$TypeBStrap =~ /moving|cancelflux/">
+	<parameter name="UChargeX" type="real" min="0" 
+		   default="0" />
+      </if>
     </if>
   </if>
 	
@@ -9819,6 +9853,17 @@ is used at the "coronal base", while the temperature is fixed at
 Te=TeTopTransitionRegion.
 
 Default value is DoExpandTransitionRegion = .false.
+</command>
+<command name="THREADRESTART">
+	 <parameter name="DoThreadRestart" type="logical"
+		    default="F"/>
+	 
+#THREADRESTART
+T              DoThreadRestart
+
+If the logical DoThreadRestart is set to true, at the initial iteration the
+plasma state on the threaded field lines is recovered from the saved files
+otherwise it is calculated from scratch.
 </command>
 </commandgroup>
 
