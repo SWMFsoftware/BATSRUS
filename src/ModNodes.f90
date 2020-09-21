@@ -12,9 +12,7 @@ module ModNodes
   implicit none
   save
 
-  !\
   ! Block node-centered MHD numberings
-  !/
   integer :: nNodeALL
   integer, allocatable :: NodeNumberLocal_NB(:,:,:,:)
   integer, allocatable :: NodeNumberGlobal_NB(:,:,:,:)

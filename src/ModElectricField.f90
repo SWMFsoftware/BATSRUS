@@ -33,7 +33,7 @@ module ModElectricField
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
   use ModVarIndexes,   ONLY: IsMhd
-  use ModMultiFluid,   ONLY: UseMultiIon 
+  use ModMultiFluid,   ONLY: UseMultiIon
   implicit none
   SAVE
 
@@ -46,11 +46,9 @@ module ModElectricField
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
   public:: get_num_electric_field   ! Calculate numerical E from fluxes
-  !\
   ! Logical, which controls, if the electric field in the frame of reference
-  ! comoving with an average ions, is calculated via the momentum flux (in a 
+  ! comoving with an average ions, is calculated via the momentum flux (in a
   ! conservative manner) or as J x B force.
-  !/
   logical, public :: UseJCrossBForce = UseB .and. &
        (UseMultiIon .or. .not.IsMhd)
 
@@ -83,7 +81,7 @@ module ModElectricField
        200,         &! nKrylovVector
        .false.,     &! UseInitialGuess
        -1.0, -1, -1) ! Error, nMatvec, iError (return values)
-  
+
   ! number of blocks used
   integer:: nBlockUsed
 
@@ -167,7 +165,7 @@ contains
     end if
     DoHallCurrent = .false.
     if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
-    
+
     if (DoHallCurrent) then
        ! get_current cannot be called in ghost cells
        ! Only apply DoHallCurrent in write_plot_common at this moment, which
@@ -176,7 +174,7 @@ contains
     else
        ! some functions may still need the electric field in ghost cells
        iMin=MinI; iMax=MaxI; jMin=MinJ; jMax=MaxJ; kMin=MinK; kMax=MaxK
-       
+
        ! set the current_D = 0.0 if not considering the Hall current
        Current_D = 0.0
     end if
@@ -190,11 +188,11 @@ contains
        ! Ideal MHD case
        b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-       
+
        ! inv of electron charge density = 1/(e*ne)
        InvElectronDens = 1.0/ &
             sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
-       
+
        ! charge average ion velocity
        uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
             *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
@@ -202,9 +200,9 @@ contains
             *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
        uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
             *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-       
+
        if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
-       
+
        uElec_D = uPlus_D - Current_D*InvElectronDens
 
        ! E = - ue x B
@@ -231,7 +229,9 @@ contains
     real :: ChargeDens_I(nIonFluid)
     real, dimension(MaxDim) :: Force_D, FullB_D, Current_D
     real :: InvElectronDens
-    logical :: DoTest, DoTestCell
+    logical :: DoTestCell
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -245,7 +245,7 @@ contains
 
           vInv = 1/CellVolume_GB(i,j,k,iBlock)
           State_V = State_VGB(:,i,j,k,iBlock)
-          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I) 
+          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
           if(sum(ChargeDens_I) <= 0.0) then
              write(*,*)'ChargePerMass_I='   , ChargePerMass_I
              write(*,*)'State_V(iRhoIon_I)=', State_V(iRhoIon_I)
@@ -278,7 +278,7 @@ contains
           Force_D = Force_D + vInv*&
                (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
           if(nDim > 1) Force_D = Force_D + vInv*&
-               (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))    
+               (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))
           if(nDim > 2) Force_D = Force_D + vInv*&
                (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
           if(DoTestCell)write(*,'(2a,15es16.8)') &
@@ -298,14 +298,12 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_efield_in_comoving_frame
-  !=============================================================
+  !============================================================================
   subroutine correct_efield_block(iBlock)
-    !\
     ! Recalculates electric field, which has been obtained
     ! with get_efield_in_comoving_frame, to a global frame
-    ! of reference. To achive this, -v x B is added, v being a 
-    ! the ion velocity (averaged charge velocity). 
-    !/
+    ! of reference. To achive this, -v x B is added, v being a
+    ! the ion velocity (averaged charge velocity).
 
     use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_
     use ModAdvance,    ONLY: State_VGB
@@ -328,11 +326,11 @@ contains
 
        b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-       
+
        ! inv of electron charge density = 1/(e*ne)
        InvElectronDens = 1.0/ &
             sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
-       
+
        ! charge average ion velocity
        uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I &
             *State_VGB(iRhoUxIon_I,i,j,k,iBlock))
@@ -340,8 +338,7 @@ contains
             *State_VGB(iRhoUyIon_I,i,j,k,iBlock))
        uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I &
             *State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-       
-      
+
        ! E = E(in comoving frame)- u x B
        Efield_DGB(:,i,j,k,iBlock) = Efield_DGB(:,i,j,k,iBlock) &
             -cross_product(uPlus_D, b_D)
@@ -349,7 +346,7 @@ contains
     end do; end do; end do
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_efield_block
-  !=============================================================!
+  !============================================================================
   subroutine correct_efield
     integer :: iBlock
 
@@ -365,7 +362,7 @@ contains
     call message_pass_cell(3, Efield_DGB, nProlongOrderIn=1)
     call test_stop(NameSub, DoTest)
   end subroutine correct_efield
-  !=============================================================!
+  !============================================================================
   subroutine calc_inductive_e
 
     ! Calculate the inductive part of the electric field Eind
@@ -677,6 +674,7 @@ contains
     use BATL_lib,      ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_num_electric_field'
     !--------------------------------------------------------------------------

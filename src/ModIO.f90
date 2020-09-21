@@ -67,9 +67,9 @@ module ModIO
 
   ! variables for the line of sight plots using the instrument names
   character(LEN=10)  :: TypeSatPos_I(MaxFile)
-  
+
   ! Logical variable for OBS box type
-  logical  :: IsObsBox_I(MaxFile) = .false. 
+  logical  :: IsObsBox_I(MaxFile) = .false.
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot

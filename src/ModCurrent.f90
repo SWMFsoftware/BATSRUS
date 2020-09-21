@@ -85,6 +85,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
@@ -223,6 +224,7 @@ contains
     end do BLOCK
 
     ! call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTest)
   end subroutine get_point_data
   !============================================================================
 
@@ -244,7 +246,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
     use omp_lib
-    
+
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
 
@@ -258,8 +260,8 @@ contains
     real   :: InvDx2, InvDy2, InvDz2
 
     integer:: iBlockLast = -1
-    !$omp threadprivate( iBlockLast )
-    
+    !$ omp threadprivate( iBlockLast )
+
     ! Exclude body cells
     character(len=*), parameter:: NameSub = 'get_current'
     !--------------------------------------------------------------------------
@@ -466,7 +468,7 @@ contains
       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
-      
+
     end subroutine calc_cartesian_j
     !==========================================================================
 
@@ -477,6 +479,7 @@ contains
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
 
       ! Get the dCartesian/dGencoord matrix with central difference
+
       !------------------------------------------------------------------------
       DxyzDcoord_DD(:,1) = InvDx2 &
            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
@@ -551,7 +554,7 @@ contains
     ! The grid is in the TypeCoordFacGrid system (default is SMG).
     ! Calculate the field aligned currents there, use the ratio of the
     ! magnetic field strength. Calculate radial component if requested.
-    ! The FAC is saved into Fac_II. 
+    ! The FAC is saved into Fac_II.
     ! The radial field into the optional Br_II.
     ! The tangential field (r x B/r) into Bt_DII in the FAC coords.
     ! Calculate the latitude boundary that still maps to rCurrents
@@ -592,11 +595,11 @@ contains
 
     ! If present, zero out Fac < FacMin (before taking radial part)
     real, intent(in), optional:: FacMin
-    
+
     ! Local variables
     character(len=3):: TypeCoordFac
 
-    ! Interpolation weight, interpolated agnetic field and current 
+    ! Interpolation weight, interpolated agnetic field and current
     real, allocatable :: bCurrent_VII(:,:,:)
 
     integer :: i, j, iHemisphere, iError
@@ -607,6 +610,7 @@ contains
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
     logical :: DoMap
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
     !--------------------------------------------------------------------------
@@ -684,7 +688,7 @@ contains
                State_V(Bx_-1)*B0_D
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
-          !if(.false.)then
+          ! if(.false.)then
           !   write(*,*)'iHemispher=',iHemisphere
           !   write(*,*)'Phi,Theta=',Phi,Theta
           !   write(*,*)'XyzIn_D  =', XyzIn_D
@@ -693,7 +697,7 @@ contains
           !   write(*,*)'B0_D     =',B0_D
           !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
           !   call stop_mpi('DEBUG')
-          !end if
+          ! end if
        end do
     end do
 

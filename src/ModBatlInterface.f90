@@ -425,9 +425,7 @@ contains
           if(.not.present(IsBody))call stop_mpi(&
             'No true cell in the interpolation stencil')
        else
-          !\
           ! Rescale weights to get their total equal 1
-          !/
           Weight_I(1:nCell) = Weight_I(1:nCell)/WeightTotal
        end if
        if(present(IsBody))IsBody = WeightTotal < 0.5

@@ -18,7 +18,7 @@ module ModPhysics
 
   implicit none
   save
-  public  
+  public
 
   public :: set_physics_constants
   public :: init_mhd_variables
@@ -86,9 +86,7 @@ module ModPhysics
   ! the dipole moment for body2
   real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
-  !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
-  !/
   real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
   real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
   real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
@@ -97,7 +95,6 @@ module ModPhysics
   real :: THETAtilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
 
-  !\
   ! The following are some notes on how to pick the Q's.  I have used the
   ! cartesian version of the quadrupole magnetic potential because it was
   ! the easiest to differentiate in our coordinate system.  The two ways
@@ -121,11 +118,8 @@ module ModPhysics
   !
   !                  ql(-m) = (-1)^m  *  complex_conjugate(qlm)
   !
-  !/
 
-  !\
   ! Far field solar wind solution variables.
-  !/
   real :: SW_T_dim=0.0, &
        SW_rho=0.0, SW_rho_dim=0.0, &
        SW_n=0.0,   SW_n_dim=0.0  , &
@@ -138,10 +132,8 @@ module ModPhysics
        SW_Bz=0.0 , SW_Bz_dim=0.0
 
   real :: SwTminDim = -1.0
-  
-  !\
+
   ! General Body parameters
-  !/
   character (len=2) :: NamePlanetRadius = 'R ' ! can be 'km' if there is no body
   real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
   real :: gBody=0.0
@@ -177,7 +169,7 @@ module ModPhysics
   real :: SpeedMinDim, SpeedMin, rSpeedMin
   real :: TauSpeedMinDim, TauSpeedMin
   logical :: UseSpeedMin = .false.
-  
+
   ! Boundary pressure for subsonic outflow
   logical :: UseOutflowPressure = .false.
   real :: pOutflowSi = -1.0, pOutflow = -1.0
@@ -187,9 +179,7 @@ module ModPhysics
   real    :: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
   real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
-  !\
   ! General variables for the second body
-  !/
   real :: rPlanetDimBody2=0.0, rBody2=0.0, rCurrentsBody2=0.0
   real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
   real :: PhaseBody2=0.0, DistanceBody2=0.0
@@ -216,14 +206,10 @@ module ModPhysics
   real, dimension(nVar,Coord1MinBc_:Coord3MaxBc_):: &
        CellState_VI, CellStateDim_VI
 
-  !\
   ! Units for normalization of variables
-  !/
   character (len=20) :: TypeNormalization="PLANETARY"
 
-  !\
   ! Type of units used for I/O (input params, log files, plot files, etc.)
-  !/
   character (len=20) :: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
@@ -305,9 +291,7 @@ contains
     call test_start(NameSub, DoTest)
 
     call set_unit_conversion_array_indices
-    !\
     ! Load body rotation rates, masses, and radii
-    !/
     NamePlanetRadius = 'R'
     select case(NameThisComp)
     case('GM')
@@ -343,11 +327,9 @@ contains
     ! Make sure that MassIon_I is consistent with MassFluid_I
     MassIon_I = MassFluid_I(IonFirst_:IonLast_)
 
-    !\
     ! Call set_units, which set the quantities for converting from
     ! normalized to  dimensional quantities and vice versa.  Also
     ! sets input and output strings for the conversion quantities
-    !/
     call set_units
 
     if(DoTest .and. iProc==0) then
@@ -392,9 +374,7 @@ contains
     if(ChargeIon_I(1) /= 0 .and. nIonFluid == 1 .and. .not. UseMultiSpecies) &
          IonMassPerCharge = IonMassPerCharge * MassIon_I(1)/ChargeIon_I(1)
 
-    !\
     ! set the (corrected) speed of light and get normalization
-    !/
     if(ClightDim > 0.0)then
        Clight   = ClightDim * Io2No_V(UnitU_)
     else
@@ -426,9 +406,7 @@ contains
 
     GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
-    !\
     ! Normalize solar wind values. Note: the solarwind is in I/O units
-    !/
     SW_n   = SW_n_dim*Io2No_V(UnitN_)
     SW_rho = SW_n * MassIon_I(1)
     SW_p   = SW_n * max(SW_T_dim, SwTminDim)*Io2No_V(UnitTemperature_)
@@ -698,9 +676,7 @@ contains
     TauInstability_I  = TauInstabilitySi_I*Si2No_V(UnitT_)
     TauGlobal_I  = TauGlobalSi_I*Si2No_V(UnitT_)
 
-    !\
     ! Now do the magnetic field stuff
-    !/
     ! Monopole strength (usually zero)
     if(TypeNormalization == 'NONE')then
        MonopoleStrength = MonopoleStrengthSi
@@ -752,14 +728,12 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !\
     ! set variables for converting from normalized to SI units and back:
     !
     ! Normalized*UnitSi = Si, Si/UnitSi = Normalized
     !
     ! There are three independent variables: distance(x), velocity(u)
     ! and density(rho).  All others are built from these three.
-    !/
     select case(TypeNormalization)
     case("PLANETARY")
        ! rPlanet, rPlanet/sec, amu/cm^3
@@ -786,7 +760,6 @@ contains
             trim(TypeNormalization))
     end select
 
-    !\
     ! Set other normalizing SI variables from the independent ones.
     !
     ! For sake of convenience
@@ -795,7 +768,6 @@ contains
     !  units of T are chosen to satisfy  T  = p/n               (kBoltzmann=1)
     !
     ! Note that No2Si_V(UnitN_) is NOT EQUAL TO 1/No2Si_V(UnitX_)^3 !!!
-    !/
     No2Si_V(UnitT_)          = No2Si_V(UnitX_)/No2Si_V(UnitU_)      ! s
     No2Si_V(UnitN_)          = No2Si_V(UnitRho_)/cProtonMass        ! #/m^3
     No2Si_V(UnitP_)          = No2Si_V(UnitRho_)*No2Si_V(UnitU_)**2 ! Pa
@@ -816,12 +788,9 @@ contains
          *No2Si_V(UnitX_)**3
     No2Si_V(UnitUnity_)      = 1.0   ! Fallback conversion for undefined units
 
-    !\
     ! Set inverse conversion SI -> normalized
-    !/
     Si2No_V = 1.0/No2Si_V
 
-    !\
     ! set variables to go from Input/Output units to SI units:
     !
     ! Io*Io2Si_V = Si
@@ -831,15 +800,12 @@ contains
     ! coincide with the units of velocity.
     !
     ! Also load the unit name strings for IDL and TEC output
-    !/
 
     ! As a default use SI units, so below only the differences need to be set
     Io2Si_V = 1.0
     No2Io_V = No2Si_V
 
-    !\
     ! set string variables used for writing Tecplot output
-    !/
     NameTecUnit_V(UnitX_)           = '[m]'
     NameTecUnit_V(UnitU_)           = '[m/s]'
     NameTecUnit_V(UnitRho_)         = '[kg/m^3]'
@@ -855,9 +821,7 @@ contains
     NameTecUnit_V(UnitTemperature_) = '[K]'
     NameTecUnit_V(UnitDivB_)        = '[T/m]'
     NameTecUnit_V(UnitAngle_)       = '[rad]'
-    !\
     ! set string variables used for writing IDL output
-    !/
     NameIdlUnit_V(UnitX_)           = 'm'
     NameIdlUnit_V(UnitRho_)         = 'kg/m3'
     NameIdlUnit_V(UnitU_)           = 'm/s'
@@ -891,9 +855,7 @@ contains
        Io2Si_V(UnitJ_)        = 1.0E-6                   ! microA/m^2
        Io2Si_V(UnitElectric_) = 1.0E-3                   ! mV/m
        Io2Si_V(UnitAngle_)    = cRadToDeg                ! degrees
-       !\
        ! set string variables used for writing output - TECPLOT
-       !/
        NameTecUnit_V(UnitX_)           = '['//trim(NamePlanetRadius)//']'
        NameTecUnit_V(UnitRho_)         = '[amu/cm^3]'
        NameTecUnit_V(UnitU_)           = '[km/s]'
@@ -905,9 +867,7 @@ contains
        NameTecUnit_V(UnitDivB_)        = '[nT/'//trim(NamePlanetRadius)//']'
        NameTecUnit_V(UnitAngle_)       = '[deg]'
 
-       !\
        ! set string variables used for writing output - IDL
-       !/
        NameIdlUnit_V(UnitX_)           = NamePlanetRadius
        NameIdlUnit_V(UnitRho_)         = 'Mp/cc'
        NameIdlUnit_V(UnitU_)           = 'km/s'
@@ -931,9 +891,7 @@ contains
        Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
        Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
        Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
-       !\
        ! set string variables used for writing output - TECPLOT
-       !/
        NameTecUnit_V(UnitX_)           = '[R]'
        NameTecUnit_V(UnitRho_)         = '[g/cm^3]'
        NameTecUnit_V(UnitU_)           = '[km/s]'
@@ -945,9 +903,7 @@ contains
        NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'
        NameTecUnit_V(UnitDivB_)        = '[Gauss/cm]'
        NameTecUnit_V(UnitAngle_)       = '[deg]'
-       !\
        ! set string variables used for writing output - IDL
-       !/
        NameIdlUnit_V(UnitX_)           = 'R'
        NameIdlUnit_V(UnitRho_)         = 'g/cm3'
        NameIdlUnit_V(UnitU_)           = 'km/s'
@@ -972,9 +928,7 @@ contains
        Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
        Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
        Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
-       !\
        ! set string variables used for writing output - TECPLOT
-       !/
        NameTecUnit_V(UnitX_)            = 'AU'
        NameTecUnit_V(UnitRho_)          = 'amu/cm3'
        NameTecUnit_V(UnitN_)            = '#/cm3'
@@ -986,9 +940,7 @@ contains
        NameTecUnit_V(UnitJ_)            = 'uA/m^2'
        NameTecUnit_V(UnitDivB_)         = 'G/cm'
        NameTecUnit_V(UnitAngle_)        = 'deg'
-       !\
        ! set string variables used for writing output - IDL
-       !/
        NameIdlUnit_V(UnitX_)            = 'AU'
        NameIdlUnit_V(UnitRho_)          = 'amu/cc'
        NameIdlUnit_V(UnitN_)            = '/cc'
@@ -1001,8 +953,6 @@ contains
        NameIdlUnit_V(UnitDivB_)         = 'G/cm'
        NameIdlUnit_V(UnitAngle_)        = 'deg'
 
-
-      
     case("NONE")
        ! I/O and normalized units are the same, so
        Io2Si_V = No2Si_V
@@ -1096,6 +1046,7 @@ contains
     use ModMain,    ONLY: UseB
 
     integer :: iVar, iFluid
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mhd_variables'
     !--------------------------------------------------------------------------
@@ -1248,7 +1199,7 @@ contains
     real, intent(out):: uRot_D(3)
 
     real, save:: Omega_D(3)
-    !$omp threadprivate( Omega_D )
+    !$ omp threadprivate( Omega_D )
     logical   :: IsUninitialized = .true.
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
@@ -1290,9 +1241,10 @@ contains
     character (len=10)  :: String, NamePlotVar
 
     integer :: iVar, jVar
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_dimensional_factor'
-    !--------------------
+    !--------------------------------------------------------------------------
     DimFactor_V = 1.0
     if(present(DimFactorBody_V))DimFactorBody_V = 1.0
     do iVar=1,nPlotVar
@@ -1327,7 +1279,7 @@ contains
           DimFactor_V(iVar) =  &
                No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
        case('e','e1','ew','erad')
-          DimFactor_V(iVar) =  & 
+          DimFactor_V(iVar) =  &
                No2Io_V(UnitEnergyDens_)
        case('p','pth','pperp','peperp')
           DimFactor_V(iVar) =  No2Io_V(UnitP_)
@@ -1389,5 +1341,6 @@ contains
        end select
     end do ! iVar
   end subroutine set_dimensional_factor
+  !============================================================================
 end module ModPhysics
 !==============================================================================

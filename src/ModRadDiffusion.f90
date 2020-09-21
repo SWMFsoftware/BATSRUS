@@ -11,7 +11,7 @@ module ModRadDiffusion
   ! heat conduction in the non-relativistic fluid velocity limit.
   !
   ! The unknowns are radiation energy density and black body radiation energy
-  ! density (a*Te**4) representing the material 
+  ! density (a*Te**4) representing the material
   ! (electron or ion) energy density.
   !
   ! Split semi-implicit schemes is implemented.
@@ -47,9 +47,8 @@ module ModRadDiffusion
   public :: update_impl_rad_diff
   public :: set_rad_diff_range
 
-
   logical, public :: IsNewTimestepRadDiffusion = .true.
-  
+
   ! Logical for using the electron heat flux limiter
   logical, public :: UseHeatFluxLimiter = .false.
 
@@ -89,8 +88,8 @@ module ModRadDiffusion
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_WG(:,:,:,:)
-  !$omp threadprivate( Erad_WG )
-  
+  !$ omp threadprivate( Erad_WG )
+
   ! The electron heat flux limiter corrects the electron heat conduction if
   ! the electron temperature length scale is only a few collisonal mean free
   ! paths of the electrons or smaller.
@@ -106,11 +105,11 @@ module ModRadDiffusion
   ! electron temperature array needed for calculating the elctron temperature
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
-  !$omp threadprivate( Te_G )
-  
+  !$ omp threadprivate( Te_G )
+
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-  !$omp threadprivate( FluxImpl_VFD )
-  
+  !$ omp threadprivate( FluxImpl_VFD )
+
 contains
   !============================================================================
 
@@ -194,10 +193,10 @@ contains
     end if
 
     if(UseFullImplicit)then
-       !$omp parallel
+       !$ omp parallel
        allocate(Erad_WG(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       !$omp end parallel
-       
+       !$ omp end parallel
+
        nDiff = 1
        allocate(iDiff_I(nDiff))
        iDiff_I(1) = WaveFirst_
@@ -210,11 +209,11 @@ contains
 
     if(UseSemiImplicit)then
 
-       !$omp parallel
+       !$ omp parallel
        allocate(Erad_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       !$omp end parallel
-       
+       !$ omp end parallel
+
        ! Default to zero, unless reset
        iTeImpl = 0; iErImplFirst = 0; iErImplLast = 0;
        iDiffHeat = 0; iDiffRadFirst = 0; iDiffRadLast = 0
@@ -393,6 +392,7 @@ contains
     real :: TeSi, Te
     real :: AbsorptionEmission, OpacityPlanckSi_W(nWave)
     real :: OpacityEmissionSi_W(nWave)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
     !--------------------------------------------------------------------------
@@ -493,10 +493,10 @@ contains
     logical :: IsNewBlockTe
     ! Logical for the radiation diffusion
     logical :: IsNewBlockRadDiffusion
-    
+
     real :: State_V(nVar)
     integer :: iVarSemi_
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
@@ -1347,10 +1347,8 @@ contains
              end do
           end do; end do; end do
 
-          !\
           ! Correct the contributions to the quadratic form
           ! from the boundary faces
-          !/
           if(NeiLev(5,iBlock) == NOBLK)then
              k = 1
              do j = 1, nJ; do i = 1, nI; do iDiff = iDiffMin, iDiffMax

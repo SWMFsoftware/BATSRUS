@@ -60,7 +60,6 @@ module ModProjectDivB
 
   ! Counter for matrix vector multiplications, and for errors of solver
 
-
   ! Minimum value for divB (a small number)
 
   real, parameter :: divbmin=1E-10
@@ -302,6 +301,7 @@ contains
     ! Local variables
     integer :: iBlock, i, j, k
     real    :: DxInvHalf, DyInvHalf, DzInvHalf
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_get_divb'
     !--------------------------------------------------------------------------

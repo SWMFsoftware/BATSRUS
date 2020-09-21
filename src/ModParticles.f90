@@ -6,7 +6,7 @@ module ModParticles
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-  use BATL_particles, ONLY: & 
+  use BATL_particles, ONLY: &
        Particle_I, BATL_message_pass=>message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
@@ -25,24 +25,18 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iKindParticle > 0) then
-       !\
        ! This sort of particles is already allocated
-       !/
        if(nVar /= Particle_I(iKindParticle)%nVar .or. &
             nIndex/=Particle_I(iKindParticle)%nIndex)call stop_mpi(&
             NameSub//':'//&
             'Particles are already allocated for different purpose')
        if(nParticleMax <= Particle_I(iKindParticle)%nParticleMax)&
             RETURN
-       !\
        ! Deallocate particles to be allocated with larger nParticles
-       !/
        deallocate(Particle_I(iKindParticle)%State_VI)
        deallocate(Particle_I(iKindParticle)%iIndex_II)
     else
-       !\
        ! Particles are allocated from scratch
-       !/
        nKindParticle = nKindParticle + 1
        if(nKindParticle > BatlNKind)call stop_mpi(NameSub//':'//&
             'Too many sorts of particles are allocated')
@@ -65,12 +59,12 @@ contains
     Particle_I(iKindParticle)%nParticle      = 0
     call test_stop(NameSub, DoTest)
   end subroutine allocate_particles
-  !================================
+  !============================================================================
   subroutine deallocate_particles(iKindParticle)
     integer, intent(inout) :: iKindParticle
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'deallocate_particles'
-    !--------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iKindParticle <= 0) call stop_mpi(NameSub//':'//&
          'Particles are not allocated, cannot be deallocated')
@@ -87,10 +81,11 @@ contains
   !============================================================================
   subroutine message_pass_particles(iKindIn)
     integer, optional, intent(in):: iKindIn
-    ! when changes in grid occur, e.g. AMR, 
+    ! when changes in grid occur, e.g. AMR,
     ! may need redistribute particles between blocks and processors
     integer:: iKindParticle, iKindFirst, iKindLast ! loop variables
-    !---------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(present(iKindIn))then
        iKindFirst = iKindIn; iKindLast = iKindIn
     else
@@ -100,5 +95,6 @@ contains
        call BATL_message_pass(iKindParticle)
     end do
   end subroutine message_pass_particles
+  !============================================================================
 end module ModParticles
 !==============================================================================

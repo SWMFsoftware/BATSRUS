@@ -28,7 +28,7 @@ module ModFaceValue
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
   public:: clean_mod_face_value
-  
+
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
@@ -50,12 +50,12 @@ module ModFaceValue
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
-  
+
   ! Region parameters for low order scheme
   character(len=200), public:: StringLowOrderRegion = 'none'
   integer, allocatable, public:: iRegionLowOrder_I(:)
-  !$omp threadprivate( iRegionLowOrder_I )
-  
+  !$ omp threadprivate( iRegionLowOrder_I )
+
   ! Local variables -----------------
 
   ! Parameters for the limiter applied near resolution changes
@@ -74,8 +74,8 @@ module ModFaceValue
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
-  !$omp threadprivate( iVarLimitRatio_I )
-  
+  !$ omp threadprivate( iVarLimitRatio_I )
+
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
   logical :: UseDuFlat     = .false.
@@ -95,22 +95,22 @@ module ModFaceValue
 
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
-  !$omp threadprivate( Primitive_VG )
-  
+  !$ omp threadprivate( Primitive_VG )
+
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
-  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
-  
+  !$ omp threadprivate( UseTrueCell, IsTrueCell_I )
+
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-  
+
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
-  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
-  
+  !$ omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
+
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
@@ -118,26 +118,27 @@ module ModFaceValue
   real:: Face_I(0:MaxIJK+2)
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
-  
+  !$ omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
+  !$ omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+
   real:: LowOrderCrit_I(1:MaxIJK+1)
-  !$omp threadprivate( LowOrderCrit_I )
+  !$ omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-  !$omp threadprivate( WeightL_II, WeightR_II)
+  !$ omp threadprivate( WeightL_II, WeightR_II)
 
 contains
   !============================================================================
   subroutine clean_mod_face_value
 
+    !--------------------------------------------------------------------------
     if(allocated(iVarLimitRatio_I))  deallocate(iVarLimitRatio_I)
     if(allocated(Primitive_VG))      deallocate(Primitive_VG)
     if(allocated(iRegionLowOrder_I)) deallocate(iRegionLowOrder_I)
     if(allocated(FaceL_I))           deallocate( &
          FaceL_I, FaceR_I, WeightL_II, WeightR_II)
-    
+
   end subroutine clean_mod_face_value
   !============================================================================
   subroutine read_face_value_param(NameCommand)
@@ -948,12 +949,12 @@ contains
     subroutine calc_primitives
 
       use ModPhysics, ONLY: InvClight2
-      
-      integer:: iVar
-      !------------------------------------------------------------------------
 
+      integer:: iVar
+
+      !------------------------------------------------------------------------
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
-      
+
       if(DoLimitMomentum)then
          ! momentum is limited
 
@@ -1017,7 +1018,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
-      !$omp threadprivate( State_VX )
+      !$ omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
 
@@ -1051,14 +1052,14 @@ contains
                do i = iMin, iMax
                   ! if(UseLowOrder_I(i))then...
                   LeftState_VX(:,i,j,k) =Primitive_VI(:,i-1)+dVarLimL_VI(:,i-1)
-                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)  
+                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
                end do
             endif
 
             if(.not.DoInterpolateFlux)then
                if(UseLowOrder) then
                   LowOrderCrit_I(iMin:iMax) = &
-                       LowOrderCrit_XB(iMin:iMax,j,k,iBlock) 
+                       LowOrderCrit_XB(iMin:iMax,j,k,iBlock)
                endif
 
                iVarSmoothLast = 0
@@ -1087,7 +1088,6 @@ contains
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
 
-
                   call limit_var(iMin, iMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
 
@@ -1110,7 +1110,7 @@ contains
                call limit_var(iMin, iMax, Ux_)
                uDotArea_XI(iMin:iMax,j,k,1) = CellFace_DB(1,iBlock) &
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
-               
+
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
@@ -1179,7 +1179,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
-      !$omp threadprivate( State_VY )
+      !$ omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -1336,7 +1336,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VZ(:,:,:,:)
-      !$omp threadprivate( State_VZ )
+      !$ omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -2266,11 +2266,11 @@ contains
        IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
        IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
        IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
-    !_____________!_____________!_______!_______!_
+    ! _____________!_____________!_______!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
     !             !         CToF! FToC FF!
-    !_____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
@@ -2281,7 +2281,6 @@ contains
     real, intent(out):: FineF_VII(:,:,:)         ! dimension(nVar,2,2)
     logical, intent(in):: IsTrueCoarse2, IsTrueCoarse1, IsTrueFine1
     logical, intent(in):: IsTrueFine2_II(:,:)    ! dimension(2,2)
-
 
     integer::iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
@@ -2365,11 +2364,11 @@ contains
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    !_____________!_____________!________!_______!_
+    ! _____________!_____________!________!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _!__F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! __F1_V__!__F2_V_!_
     !             !         CToF! FToC FF!
-    !_____________!_____________!__F1_V__!__F2_V_!_
+    ! _____________!_____________!__F1_V__!__F2_V_!_
     !             !             !        !       !
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
@@ -2442,11 +2441,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    !_____________!_____________!_______!_______!_
+    ! _____________!_____________!_______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
     !             !         CToF! FToC FF!       !
-    !_____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2588,11 +2587,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    !_____________!_____________!_______!_______!_
+    ! _____________!_____________!_______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
     !             !         CToF! FToC FF!       !
-    !_____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2729,10 +2728,10 @@ contains
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    !_____________!_____________!_______!_______!_
+    ! _____________!_____________!_______!_______!_
     !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
-    !_____________!_____________!_______!_______!_
+    ! _____________!_____________!_______!_______!_
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
@@ -2785,7 +2784,7 @@ contains
 
   end subroutine accurate_reschange1d
   !============================================================================
-  
+
   subroutine set_low_order_face
 
     use ModMain,  ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
@@ -2812,7 +2811,7 @@ contains
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_low_order_face'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     call test_start(NameSub, DoTest)
 
@@ -2837,10 +2836,10 @@ contains
 
              LowOrderCrit_XB(:,:,:,iBlock) = 0
              LowOrderCrit_YB(:,:,:,iBlock) = 0
-             LowOrderCrit_ZB(:,:,:,iBlock) = 0         
+             LowOrderCrit_ZB(:,:,:,iBlock) = 0
 
-             ! Get the LowOrderCrit based on physical criteria. The vale of 
-             ! 'LowOrderCrit_*B' is the ratio of the low order face value. 
+             ! Get the LowOrderCrit based on physical criteria. The vale of
+             ! 'LowOrderCrit_*B' is the ratio of the low order face value.
              if(UseAdaptiveLowOrder) call set_physics_based_low_order_face
 
              if(allocated(iRegionLowOrder_I)) then
@@ -2900,19 +2899,19 @@ contains
     call test_stop(NameSub, DoTest)
 
   contains
-    !=========================================================================
+    !==========================================================================
     subroutine set_physics_based_low_order_face
 
       ! Set criteria for low order scheme
-      
+
       use ModAdvance, ONLY: Vel_IDGB
 
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
-      logical:: DoTest
-      character(len=*), parameter:: NameSub='set_physics_based_low_order_face'
-      !------------------------------------------------------------------------
 
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
+      !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
 
       ! Face along x-direction
@@ -2966,7 +2965,7 @@ contains
 
     end subroutine set_physics_based_low_order_face
     !==========================================================================
-    real function low_order_face_criteria(State_VI, Vel_II)      
+    real function low_order_face_criteria(State_VI, Vel_II)
 
       use ModMain, ONLY: UseB
       use ModMultiFluid, ONLY: iRho, iP, select_fluid
@@ -2977,7 +2976,7 @@ contains
       integer:: iFluid
       real:: pTotal_I(-3:2), Sound_I(-3:2)
       real:: crit, pRatio, VelRatio, SoundMin
-      !--------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       pTotal_I = 0
       VelRatio = 0
@@ -3013,13 +3012,13 @@ contains
          endif
       endif
 
-      low_order_face_criteria = crit 
+      low_order_face_criteria = crit
 
     end function low_order_face_criteria
     !==========================================================================
 
   end subroutine set_low_order_face
-  !==========================================================================
+  !============================================================================
 
   subroutine calc_cell_norm_velocity
 
@@ -3029,7 +3028,6 @@ contains
     use ModAdvance, ONLY: Vel_IDGB, State_VGB
     use ModMultiFluid, ONLY: nFluid
 
-    !--------------------------------------------------------------------
     integer:: iBlock
 
     integer :: iMin, iMax, jMin, jMax, kMin, kMax, i, j, k, iDim
@@ -3037,9 +3035,9 @@ contains
 
     integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
 
-    logical :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_cell_norm_velocity'
-    !--------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     if(.not. allocated(Vel_IDGB))  allocate( &
@@ -3064,8 +3062,8 @@ contains
                   State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
              Vel_IDGB(iFluid,z_,:,:,:,iBlock) = &
                   State_VGB(iRhoUz,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
-          else 
-             ! Convert cell center velocity in xyz direction into grid 
+          else
+             ! Convert cell center velocity in xyz direction into grid
              ! aligned direction.
              do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
                 ijkDir_DD = 0
@@ -3087,7 +3085,7 @@ contains
                 endif
 
                 do iDim = 1, MaxDim
-                   Vel_IDGB(iFluid,iDim,i,j,k,iBlock) =  &                       
+                   Vel_IDGB(iFluid,iDim,i,j,k,iBlock) =  &
                         sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)* &
                         ijkDir_DD(:,iDim))/State_VGB(iRho,i,j,k,iBlock)
                 enddo
@@ -3104,10 +3102,10 @@ contains
 
   subroutine calc_face_div_u(iBlock)
     ! This subroutine 'estimates' div(V)*dl at the cell faces, where
-    ! 'dl' is the cell size. 
-    ! The algorithm is implemented based on the paper of 
-    ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
-    ! for more details. 
+    ! 'dl' is the cell size.
+    ! The algorithm is implemented based on the paper of
+    ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
+    ! for more details.
 
     use ModAdvance, ONLY: FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
          Vel_IDGB
@@ -3123,8 +3121,7 @@ contains
     real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     character(len=*), parameter:: NameSub = 'calc_face_div_u'
-    !------------------------------------------------------------------------
-
+    !--------------------------------------------------------------------------
     call timing_start(NameSub)
 
     iMin = 1 - nG;       iMax = nI + nG
@@ -3144,7 +3141,7 @@ contains
        do kFace=kMinFace,kMaxFace; do jFace=jMinFace,jMaxFace; do iFace=1,nIFace
           FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
                (Vel_DG(x_,iFace,jFace,kFace) - &
-               Vel_DG(x_,iFace-1,jFace,kFace)) 
+               Vel_DG(x_,iFace-1,jFace,kFace))
 
           if(nDim>1) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
                FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
@@ -3152,7 +3149,6 @@ contains
                Vel_DG(y_,iFace,jFace-1,kFace) + &
                Vel_DG(y_,iFace-1,jFace+1,kFace) - &
                Vel_DG(y_,iFace-1,jFace-1,kFace))/4
-
 
           if(nDim>2) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
                FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
@@ -3181,7 +3177,6 @@ contains
                   Vel_DG(z_,iFace,jFace-1,kFace-1))/4
           enddo; enddo; enddo
        endif
-
 
        if(nDim>2) then
           do kFace=1,nKFace; do jFace=jMinFace,jMaxFace; do iFace=iMinFace,iMaxFace
@@ -3304,9 +3299,9 @@ contains
 
              Median     = Average - 0.5*D2p
              LargeCurve = Cell + 0.5*(Cell - Cellm) + cFourThird*D2m
-          else 
-             Median     = Cell 
-             LargeCurve = UpperLimit 
+          else
+             Median     = Cell
+             LargeCurve = UpperLimit
           endif
 
           ! Note: FaceMin <= Cell, FaceMax >= Cell, so FaceMin <= FaceMax
@@ -3321,10 +3316,9 @@ contains
 
        end if
 
-
        if(UseLowOrder) then
           FaceL_I(l+1) = (1-LowOrderCrit_I(l+1))*FaceL_I(l+1) + &
-               LowOrderCrit_I(l+1)*FaceLowOrder                    
+               LowOrderCrit_I(l+1)*FaceLowOrder
        endif
 
        ! If the face value is a very small fraction of the cell
@@ -3349,7 +3343,6 @@ contains
        Cell   = Cell2_I(l)
        Cellp  = Cell2_I(l+1)
        Cellpp = Cell2_I(l+2)
-
 
        if(UseLowOrder) then
           if(LowOrderCrit_I(l) >=1) then
@@ -4121,7 +4114,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_monotone_restrict
   !============================================================================
-
 
 end module ModFaceValue
 !==============================================================================

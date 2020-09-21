@@ -3,6 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATSRUS
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, lVerbose
+
   use BATL_lib, ONLY: iProc, iComm, lVerbose, init_mpi, clean_mpi
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, &
@@ -32,55 +35,39 @@ program BATSRUS
   integer :: iSession=1
   real(Real8_) :: CpuTimeStart
 
-  !----------------------------------------------------------------------------
-  !\
   ! Initialization of MPI/parallel message passing.
-  !/
+  !----------------------------------------------------------------------------
   call init_mpi
 
-  !\
   ! Initialize some basic variables for the stand alone code
-  !/
   IsStandAlone      = .true.
 
-  !\
   ! Initialize the planetary constant library and set Earth
   ! as the default planet.
-  !/
   call init_planet_const
   call set_planet_defaults
 
-  !\
   ! Not yet doing the computation
-  !/
   time_loop = .false.
 
   ! Show git information
   if(iProc==0)then
      include "show_git_info.h"
   endif
-  
-  !\
+
   ! Announce BATSRUS
-  !/
   call write_progress(0)
 
-  !\
   ! Initialize time which is used to check CPU time
-  !/
   CpuTimeStart = MPI_WTIME()
 
-  !\
   ! Delete BATSRUS.SUCCESS and BATSRUS.STOP files if found
-  !/
   if(iProc==0)then
      call remove_file('BATSRUS.SUCCESS')
      call remove_file('BATSRUS.STOP')
   end if
 
-  !\
   ! Read input parameter file. Provide the default restart file for #RESTART
-  !/
   call read_file('PARAM.in', iComm, trim(NameRestartInDir)//'restart.H')
 
   SESSIONLOOP: do
@@ -88,20 +75,14 @@ program BATSRUS
 
      if(iProc==0.and.lVerbose>=0)&
           write(*,*)'----- Starting Session ',iSession,' ------'
-     !\
      ! Set and check input parameters for this session
-     !/
      call set_parameters('READ')
      call set_parameters('CHECK')
 
-     !\
      ! Test string is read, so set the test flags now
-     !/
      ! call set_oktest('main',DoTest,DoTest)
 
-     !\
      ! Time execution (timing parameters were set by MH_set_parameters)
-     !/
      if(iSession==1)then
         call timing_start('BATSRUS')
         call timing_start('setup')
@@ -117,9 +98,7 @@ program BATSRUS
      end if
 
      TIMELOOP: do
-        !\
         ! Stop this session if stopping conditions are fulfilled
-        !/
         if(stop_condition_true()) EXIT TIMELOOP
         if(is_time_to_stop())     EXIT SESSIONLOOP
 
@@ -175,9 +154,7 @@ program BATSRUS
 
   call BATS_finalize
 
-  !\
   ! Touch BATSRUS.SUCCESS
-  !/
   if(iProc==0) call touch_file('BATSRUS.SUCCESS')
 
   call clean_mpi
@@ -237,15 +214,14 @@ contains
 
     integer :: nIterExpect, nIterExpectTime
 
-    !\
     ! Show timing results if required
-    !/
 
     ! Show speed as cells/second/PE/step
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'show_progress'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if( UseTiming .and. iProc==0 &
          .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
 
@@ -297,6 +273,7 @@ contains
        write(*,*)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine show_progress
   !============================================================================
 
@@ -306,7 +283,6 @@ end program BATSRUS
 ! The following subroutines are here for compilation of the stand alone code.
 ! The subroutines and functions below are defined in srcInterface for SWMF,
 ! but they still need to get compiled in stand-alone mode.
-!==============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
   real,dimension(3),intent(in)::Xyz_D

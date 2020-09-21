@@ -34,7 +34,7 @@ module ModPlotBox
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
-  !Same, but for a single grid point
+  ! Same, but for a single grid point
   real :: PlotVar_V(nPlotVarMax)
 
   ! Coordinate conversion matrix
@@ -61,7 +61,7 @@ contains
 
     real :: Los_D(3), aUnit_D(3), bUnit_D(3), ObsPos_D(3)
 
-    logical                    :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -194,7 +194,7 @@ contains
 
     call test_start(NameSub, DoTest, iBlock)
 
-    ! Shift box elements with origin of box             
+    ! Shift box elements with origin of box
     do k = 1, nZ
        Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
 
@@ -247,11 +247,9 @@ contains
              if(DoPlotThreads .and. NeiLev(1, iBlock)==NOBLK .and. &
                   r < RadiusMin .and. Coord_D(1) < &
                   CoordMin_DB(1,iBlock) + 0.50*CellSize_DB(1,iBlock))then
-                !\
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
                 ! Interpolate using the solution on threads
-                !/
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
                 call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(&
                      1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))

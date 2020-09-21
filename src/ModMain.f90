@@ -4,6 +4,9 @@
 
 module ModMain
 
+  use BATL_lib, ONLY: &
+       lVerbose
+
   use ModKind
   use ModSize
   use ModVarIndexes
@@ -135,27 +138,27 @@ module ModMain
   end type CellBCType
 
   type :: FaceBCType
-     ! True if only boundaries at resolution changes are updated                 
+     ! True if only boundaries at resolution changes are updated
      logical :: DoResChangeOnly
-     ! Type of the boundary                                                      
+     ! Type of the boundary
      character(len=20) :: TypeBc
-     ! Index of the boundary                                                     
-     ! Negative iBoundary indicates which body we are computing for.             
-     ! Zero corresponds to the user defined extra boundary.                      
-     ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY                  
-     ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY                    
+     ! Index of the boundary
+     ! Negative iBoundary indicates which body we are computing for.
+     ! Zero corresponds to the user defined extra boundary.
+     ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
+     ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY
      integer :: iBoundary
-     ! Index of the face                                                         
+     ! Index of the face
      integer :: iFace, jFace, kFace
-     ! The side of the cell defined with respect to the cell inside the domain   
+     ! The side of the cell defined with respect to the cell inside the domain
      integer :: iSide
-     ! Boundary block index                                                      
+     ! Boundary block index
      integer :: iBlockBc
-     ! Simulation time                                                           
+     ! Simulation time
      real :: TimeBc
-     ! The coordinates of the face center and the B0 field at that point         
+     ! The coordinates of the face center and the B0 field at that point
      real :: FaceCoords_D(3), B0Face_D(3)
-     ! The values on the physical side and the ghost cell side of the boundary   
+     ! The values on the physical side and the ghost cell side of the boundary
      real :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
   end type FaceBCType
 
@@ -312,7 +315,7 @@ module ModMain
   ! Use resistivity planetary interior. It may be set to true in the
   ! ModUserMercury.f90.
   logical :: UseResistivePlanet = .false.
-  
+
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
   character(len=200):: NameVarComp2
@@ -325,6 +328,7 @@ module ModMain
 contains
   !============================================================================
   subroutine init_mod_main
+    !--------------------------------------------------------------------------
     if(.not.allocated(dt_BLK))then
        allocate(dt_BLK(MaxBlock))
        dt_BLK = 0.0
@@ -332,7 +336,10 @@ contains
   end subroutine init_mod_main
   !============================================================================
   subroutine clean_mod_main
+    !--------------------------------------------------------------------------
     if(allocated(dt_BLK)) deallocate(dt_BLK)
 
   end subroutine clean_mod_main
+  !============================================================================
 end module ModMain
+!==============================================================================

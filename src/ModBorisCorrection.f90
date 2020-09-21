@@ -24,7 +24,7 @@ module ModBorisCorrection
   public:: read_boris_param    ! read parameters for (simple) Boris correction
   public:: mhd_to_boris        ! from classical to (simple) Boris variables
   public:: boris_to_mhd        ! from (simple) Boris to classical variables
-  public:: add_boris_source    ! add source term proportional to div(E) 
+  public:: add_boris_source    ! add source term proportional to div(E)
   public:: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z ! convert faces
   public:: set_clight_cell     ! calculate speed of light at cell centers
   public:: set_clight_face     ! calculate speed of light at cell faces
@@ -36,12 +36,12 @@ module ModBorisCorrection
   ! Electric field . area vector for div(E) in Boris correction
   real, allocatable, public:: &
        EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
-  !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
+  !$ omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
 
   ! Speed of light at cell centers and cell faces
   real, allocatable, public:: Clight_G(:,:,:), Clight_DF(:,:,:,:)
-  !$omp threadprivate( Clight_G, Clight_DF )
-  
+  !$ omp threadprivate( Clight_G, Clight_DF )
+
   ! Local variables ---------------
 
   ! Description of the region where Boris correction is used
@@ -56,31 +56,33 @@ contains
 
     use ModMain, ONLY: &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    !--------------------------------------------------------------------------
+
     ! Get signed indexes for Boris region(s)
+    !--------------------------------------------------------------------------
     call get_region_indexes(StringBorisRegion, iRegionBoris_I)
     UseBorisRegion = allocated(iRegionBoris_I)
-    
-    !$omp parallel
+
+    !$ omp parallel
     if(.not.allocated(EDotFA_X))then
        allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
        allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     end if
-    !$omp end parallel
+    !$ omp end parallel
 
   end subroutine init_mod_boris_correction
-
   !============================================================================
+
   subroutine clean_mod_boris_correction
 
+    !--------------------------------------------------------------------------
     if(allocated(EDotFA_X)) deallocate(EDotFA_X)
     if(allocated(EDotFA_Y)) deallocate(EDotFA_Y)
     if(allocated(EDotFA_Z)) deallocate(EDotFA_Z)
 
   end subroutine clean_mod_boris_correction
-
   !============================================================================
+
   subroutine read_boris_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
@@ -124,7 +126,7 @@ contains
     end select
 
   end subroutine read_boris_param
-  !===========================================================================
+  !============================================================================
   subroutine mhd_to_boris(iBlock)
 
     ! Convert StateOld_VGB and State_VGB from classical MHD variables
@@ -134,10 +136,10 @@ contains
     integer:: i, j, k
 
     real:: InvClight2Cell
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then
@@ -145,13 +147,13 @@ contains
     else
        InvClight2Cell = InvClight2
     end if
-    
+
     if(UseBorisCorrection)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseBorisRegion) InvClight2Cell = 1/Clight_G(i,j,k)**2
-          
+
           call mhd_to_boris_cell(StateOld_VGB(:,i,j,k,iBlock), &
                EnergyOld_CBI(i,j,k,iBlock,1))
           ! State_VGB is not used in 1-stage and HalfStep schemes
@@ -171,7 +173,7 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           if(UseBorisRegion) InvClight2Cell = 1/Clight_G(i,j,k)**2
-          
+
           call mhd_to_boris_simple_cell(StateOld_VGB(:,i,j,k,iBlock))
           ! State_VGB is not used in 1-stage and HalfStep schemes
           if(.not.UseHalfStep .and. nStage > 1) &
@@ -181,8 +183,8 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
-    !==========================================================================
   contains
+    !==========================================================================
 
     subroutine mhd_to_boris_cell(State_V, Energy)
 
@@ -217,7 +219,7 @@ contains
       ! Use B0=B0_D in the total magnetic field if present.
 
       real:: b_D(3), Factor
-      character(len=*), parameter:: NameSub = 'mhd_to_boris_simple'
+      character(len=*), parameter:: NameSub = 'mhd_to_boris_simple_cell'
       !------------------------------------------------------------------------
       b_D = State_V(Bx_:Bz_)
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -227,10 +229,11 @@ contains
       State_V(RhoUx_:RhoUz_) = Factor*State_V(RhoUx_:RhoUz_)
 
     end subroutine mhd_to_boris_simple_cell
+    !==========================================================================
 
   end subroutine mhd_to_boris
-
   !============================================================================
+
   subroutine boris_to_mhd(iBlock)
 
     integer, intent(in):: iBlock
@@ -238,10 +241,10 @@ contains
     integer:: i, j, k
 
     real:: Clight2Cell, InvClight2Cell
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     if(UseBorisRegion)then
@@ -256,7 +259,7 @@ contains
        ! semi-relativistic to classical MHD variables
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          
+
           if(UseBorisRegion)then
              Clight2Cell = Clight_G(i,j,k)**2
              InvClight2Cell = 1/Clight2Cell
@@ -273,7 +276,7 @@ contains
        ! enhanced momentum
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          
+
           if(UseBorisRegion) Clight2Cell = Clight_G(i,j,k)**2
 
           call boris_simple_to_mhd_cell(StateOld_VGB(:,i,j,k,iBlock))
@@ -316,7 +319,7 @@ contains
       Energy = Energy - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
 
     end subroutine boris_to_mhd_cell
-    !=========================================================================
+    !==========================================================================
     subroutine boris_simple_to_mhd_cell(State_V)
 
       real, intent(inout)          :: State_V(nVar)
@@ -325,6 +328,7 @@ contains
       ! Use B0=B0_D in the total magnetic field if present.
 
       real:: b_D(3), Factor
+
       !------------------------------------------------------------------------
       b_D = State_V(Bx_:Bz_)
       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -334,6 +338,7 @@ contains
       State_V(RhoUx_:RhoUz_) = State_V(RhoUx_:RhoUz_)/Factor
 
     end subroutine boris_simple_to_mhd_cell
+    !==========================================================================
 
   end subroutine boris_to_mhd
   !============================================================================
@@ -350,9 +355,9 @@ contains
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_boris_source'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     if(UseBorisRegion) call set_clight_cell(iBlock)
     InvClightOrig2 = ClightFactor**2*InvClight2
     Coef = InvClightOrig2 - InvClight2
@@ -386,8 +391,8 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine add_boris_source
+  !============================================================================
 
-  !==========================================================================
   subroutine boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
     ! Convert face centered Boris momenta to MHD velocities
@@ -397,7 +402,7 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
 
@@ -472,7 +477,7 @@ contains
     end do; end do; end do
 
   end subroutine boris_to_mhd_x
-  !==========================================================================
+  !============================================================================
   subroutine boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
     integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
 
@@ -482,7 +487,7 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
        if(UseBorisRegion)then
@@ -553,7 +558,7 @@ contains
     end do; end do; end do
 
   end subroutine boris_to_mhd_y
-  !==========================================================================
+  !============================================================================
   subroutine boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
     integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
@@ -563,7 +568,7 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
 
@@ -637,14 +642,14 @@ contains
     end do; end do; end do
 
   end subroutine boris_to_mhd_z
-  !===========================================================================
+  !============================================================================
   subroutine set_clight_cell(iBlock)
 
     ! Set Clight_G, the reduced speed of light at cell centers
     ! including ghost cells
 
     integer, intent(in):: iBlock
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(.not.allocated(Clight_G)) &
          allocate(Clight_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
@@ -660,13 +665,13 @@ contains
     end if
 
   end subroutine set_clight_cell
-  !===========================================================================
+  !============================================================================
   subroutine set_clight_face(iBlock)
 
     ! Set Clight_DF, the reduced speed of light at cell faces (only nDim sides)
 
     integer, intent(in):: iBlock
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(.not.allocated(Clight_DF)) &
          allocate(Clight_DF(nDim,nINode,nJNode,nKNode))
 
@@ -682,7 +687,7 @@ contains
     end if
 
   end subroutine set_clight_face
-  !===========================================================================
+  !============================================================================
 
 end module ModBorisCorrection
 !==============================================================================

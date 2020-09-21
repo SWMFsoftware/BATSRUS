@@ -67,7 +67,7 @@ module ModFieldTrace
 
   ! Radius where the tracing stops
   real, public :: rTrace = 0.
-  
+
   ! Named indexes
   integer, public, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, &
@@ -98,7 +98,7 @@ module ModFieldTrace
 
   ! Inner radius to end tracing (either rTrace or rIonosphere)
   real :: rInner = 0.0, rInner2 = 0.0
-  
+
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -283,10 +283,11 @@ contains
 
     ! index for the direction connected to the equator
     integer:: iDir
-    character(len=*), parameter:: NameSub = 'xyz_to_rphi'
-    !--------------------------------------------------------------------------
+
     ! Check if both directions are connected to the ionosphere
     ! or the equatorial plane
+    character(len=*), parameter:: NameSub = 'xyz_to_rphi'
+    !--------------------------------------------------------------------------
     if(all(Pos_DI(3,:) > CLOSEDRAY))then
 
        ! Check if the first direction of the ray ends on the ionosphere
@@ -380,7 +381,6 @@ contains
        end if
     end if
 
-    
     if(rTrace == 0.0)then
        if(rBody > 0.0)then
           rTrace = max(rBody, rIonosphere)
@@ -392,14 +392,14 @@ contains
     ! Radius square preserving sign
     rIonosphere2 = rIonosphere*abs(rIonosphere)
     rTrace2      = rTrace*abs(rTrace)
-    
+
     if(rIonosphere < 0.0)then
        rInner = abs(rTrace)
     else
        rInner = rIonosphere
     end if
     rInner2 = rInner**2
-    
+
     CLOSEDRAY= -(rInner + 0.05)
     OPENRAY  = -(rInner + 0.1)
     BODYRAY  = -(rInner + 0.2)
@@ -711,13 +711,12 @@ contains
     real(Real8_) :: CpuTimeNow
 
     integer :: i, j, k, iBlock, iNode
-    
-    logical:: DoTest = .false.
-    
-    character(len=*), parameter:: NameSub = 'follow_ray'
-    !--------------------------------------------------------------------------
+
     ! call test_start(NameSubm DoTest)
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'follow_ray'
+    !--------------------------------------------------------------------------
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -827,7 +826,7 @@ contains
              CpuTimeStartRay = CpuTimeNow
           end if
        end if
-       
+
     end do RAYS
 
     call ray_exchange(.true., DoneAll)
@@ -919,7 +918,7 @@ contains
                write(*,*)'ERROR for XyzRay_D, r, iRay=',XyzRay_D, norm2(XyzRay_D), iRay
                write(*,*)'CoordMin_DB, CellSize_DB  =', &
                     CoordMin_DB(:,jBlock), CellSize_DB(:,jBlock)
-               !call stop_mpi(&
+               ! call stop_mpi(&
                !     'GM_ERROR in follow_ray: continues in same BLOCK')
             end if
          case(ray_open_)
@@ -1449,7 +1448,7 @@ contains
           if(r2Cur <= rTrace2)then
 
              ! If inside surface, then tracing is finished
-             
+
              if(NameVectorField /= 'B' .or. r2Cur < rInner2)then
                 XyzInOut_D = XyzCur_D
                 iFace=ray_iono_
@@ -1689,6 +1688,7 @@ contains
       real, intent(out)  :: XyzOut_D(3) ! Xyz location
 
       ! Determine cell indices corresponding to location IjkIn_D
+
       !------------------------------------------------------------------------
       i1=floor(IjkIn_D(1)); i2=i1+1
       j1=floor(IjkIn_D(2)); j2=j1+1
@@ -2577,12 +2577,11 @@ contains
                 ! Next nVar+4 variables are at z=0 (which is the start point)
                 StateMinB_VII(nVar+5: ,iR,iLon) = State_VI(2:,nPointDn)
 
-
                 if(UseSmg)then
                    ! Convert magnetic fields into SM coordinate system
                    StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
                         matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
-                   
+
                    StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
                         matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
                 end if
@@ -3688,7 +3687,6 @@ contains
                       write(UnitTmp_,'(a,2f7.2,a,a,f7.2,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
                            ', STRANDID=1, SOLUTIONTIME=',Lon, &
                            ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
-                      !/
                       write(stmp,'(f8.2)')Lat
                       write(UnitTmp_,'(a,a,a)') 'AUXDATA LAT="',trim(adjustl(stmp)),'"'
                       write(stmp,'(f8.2)')Lon
@@ -3759,14 +3757,12 @@ contains
                 if(MapDown) j = j + (nTP+1)
                 OC = -1; if(MapDown) OC = 2
                 if(MapDown .and. LonOC /= Lon) OC = 1
-                !\
                 !              write(UnitTmp_,'(a,2f7.2,a,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
                 !                   ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
                 !-
                 write(UnitTmp_,'(a,2f7.2,a,a,f7.2,a,i8,a)') 'ZONE T="IEB ll=',Lat,Lon,'"', &
                      ', STRANDID=1, SOLUTIONTIME=',Lon, &
                      ', I=',j,', J=1, K=1, ZONETYPE=ORDERED, DATAPACKING=POINT'
-                !/
                 write(stmp,'(f8.2)')Lat
                 write(UnitTmp_,'(a,a,a)') 'AUXDATA LAT="', &
                      trim(adjustl(stmp)),'"'
@@ -4121,7 +4117,7 @@ contains
                                i1=rayend_ind(2,iray,ix,iy,iz,iBlock); i2=i1+1
                                j1=rayend_ind(3,iray,ix,iy,iz,iBlock); j2=j1+1
                             end select
- 
+
                             call rayface_interpolate(&
                                  rayface(:,iray,i1:i2,j1:j2,k1:k2,iBlock),&
                                  rayend_pos(:,iray,ix,iy,iz,iBlock),4,&
@@ -4160,7 +4156,7 @@ contains
           Done_me = .true.
           do iBlock=1,nBlock
              if(Unused_B(iBlock))CYCLE
-             Done_me = all(rayface(1,:,:,:,:,iBlock) > LOOPRAY) ! !!NORAY)
+             Done_me = all(rayface(1,:,:,:,:,iBlock) > LOOPRAY) ! !! NORAY)
              if(.not.Done_me)EXIT
           end do
           call MPI_allreduce(Done_me,Done,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
@@ -4659,7 +4655,6 @@ contains
 
     real function interpolate_bb1(qbb)
 
-      !------------------------------------------------------------------------
       real, intent(in):: qbb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
       !------------------------------------------------------------------------
 
@@ -4762,7 +4757,7 @@ contains
     real function interpolate_bb1_node(qbb)
 
       real, intent(in):: qbb(1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
-      !-------------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! Bilinear interpolation in 3D
 
@@ -4823,6 +4818,7 @@ contains
       real, intent(out):: qb(3)
 
       ! Get B0
+
       !------------------------------------------------------------------------
       call get_b0(qx, qb)
 
@@ -5467,16 +5463,12 @@ contains
          end do ! iBlock
       end do ! iface
 
-      !\
       ! Wait for all receive commands to be posted for all processors
-      !/
       call barrier_mpi
 
       if(DoTest)write(*,*)'receives posted: me=',iProc
 
-      !\
       ! Send blocking messages with Rsend (ready to receive)
-      !/
       do iface=ifacemin,ifacemax
 
          ! Set index ranges for the face
@@ -5643,9 +5635,7 @@ contains
          if(DoTest)write(*,*)'messages sent, me, iface=',iProc,iface
       end do ! iface
 
-      !\
       ! WAIT FOR ALL MESSAGES TO BE RECEIVED
-      !/
       if (number_receive_requests > 0) &
            call MPI_waitall(number_receive_requests,receive_requests,status,iError)
 

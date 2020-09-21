@@ -246,9 +246,9 @@ contains
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer :: i, j, k, iFluid
+
     character(len=*), parameter:: NameSub = 'calc_pressure'
     !--------------------------------------------------------------------------
-
     do iFluid = iFluidMin, iFluidMax
        if(nFluid > 1) call select_fluid(iFluid)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -279,10 +279,10 @@ contains
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
 
-    !if(DoTest)then
+    ! if(DoTest)then
     !   write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
     !   write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
-    !end if
+    ! end if
 
   end subroutine calc_pressure
   !============================================================================
@@ -298,6 +298,7 @@ contains
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer:: i,j,k,iFluid
+
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &

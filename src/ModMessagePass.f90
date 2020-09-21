@@ -201,7 +201,7 @@ contains
     end if
 
     call timing_start('exch_energy')
-    !$omp parallel do
+    !$ omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
@@ -213,9 +213,7 @@ contains
           if (far_field_BCs_BLK(iBlock)) then
              call set_cell_boundary( &
                   nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-             !\
              ! Fill in boundary cells with hybrid particles
-             !/ 
              if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
           end if
           if(time_loop.and.UseBufferGrid)&
@@ -230,7 +228,7 @@ contains
        end if
 
     end do
-    !$omp end parallel do
+    !$ omp end parallel do
 
     if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
     call timing_stop('exch_energy')

@@ -62,7 +62,6 @@ module ModExpansionFactors
   ! \R_Sun       iR,iPhi,iTheta   ! R_surface
   !  -------------+---------------!
   ! /                             !
-  !/
   ! Field line predicted by the source surface model
   ! (this is a real curved magnetic field, not a ray Theta=const
   ! The value of the Fisk factor at the considered grid point is
@@ -86,7 +85,6 @@ module ModExpansionFactors
   ! \R_Sun       iR,iPhi,iTheta   ! R_SourceSurface
   !  -------------+---------------!
   ! /                             !
-  !/
   ! Field line predicted by the source surface model
   ! (this is a real curved magnetic field, not a ray Theta=const.
   ! The definition of the expansion factor is taken from:
@@ -103,16 +101,16 @@ module ModExpansionFactors
 
   ! parameters in the WSA models
   real :: ArgesAlpha_I(10)=[&
-       240.0,& ! constant speed km/s       !1
-       675.0,& ! modulation of speed km/s  !2
-       4.5  ,& ! power index               !3
-       1.0  ,& ! coeff                     !4
-       0.8  ,& ! coeff                     !5
-       2.8  ,& ! [deg] angle               !6
-       1.25 ,& ! power index               !7
-       3.0  ,& ! power index               !8
-       0.0  ,& ! lower bound               !9
-       9999.0]! upper bound               !10
+       240.0,& ! constant speed km/s       ! 1
+       675.0,& ! modulation of speed km/s  ! 2
+       4.5  ,& ! power index               ! 3
+       1.0  ,& ! coeff                     ! 4
+       0.8  ,& ! coeff                     ! 5
+       2.8  ,& ! [deg] angle               ! 6
+       1.25 ,& ! power index               ! 7
+       3.0  ,& ! power index               ! 8
+       0.0  ,& ! lower bound               ! 9
+       9999.0]! upper bound               ! 10
 
   ! Speed distribution extracted from Fisk model
   real, allocatable :: Fiskspeed_N(:,:,:)
@@ -361,18 +359,14 @@ contains
     !     (1.0-0.8*exp(-(ThetaB_N(:,:,:)/2.8)**1.25))**3.0)*1.0E3
 
     ! Generic formula with Arge's Alpha_i
-    !\
     ! Dependence on the expansion factor
-    !/
     WSAspeed_N(:,:,:) = &
          ArgesAlpha_I(1)  + &   ! Constant term [km/s]
          ArgesAlpha_I(2)    &   ! An amplitude of modulations with the expansion factor(EF)
          *ExpansionFactorInv_N(:,:,:)**(1.0/ArgesAlpha_I(3))& ! Auxiliary line: we use inverse of the EF
          / &                    ! The modulation amplitude should be divided by
          (ExpansionFactorInv_N(:,:,:) + 1.0)**(1.0/ArgesAlpha_I(3))*& ! Power index, dimensionless
-                                !\
                                 ! Dependence on the angular distance from the coronal hole boundary
-                                !/
          (ArgesAlpha_I(4) - &   ! Coeff
          ArgesAlpha_I(5) * &    ! Coeff
          exp(-(ThetaB_N(:,:,:)/ArgesAlpha_I(6)& ! Angular width
@@ -380,14 +374,14 @@ contains
          )**ArgesAlpha_I(8)     ! power index
 
     ! Default values for ArgesAlpha_I:
-    ! 240.0 ! km/s        !1
-    ! 675.0 ! km/s        !2
-    ! 4.5   ! power index !3
-    ! 1.0   ! coeff       !4
-    ! 0.8   ! coeff       !5
-    ! 2.8   ! [deg] angle !6
-    ! 1.25  ! power index !7
-    ! 3.0   ! power index !8
+    ! 240.0 ! km/s        ! 1
+    ! 675.0 ! km/s        ! 2
+    ! 4.5   ! power index ! 3
+    ! 1.0   ! coeff       ! 4
+    ! 0.8   ! coeff       ! 5
+    ! 2.8   ! [deg] angle ! 6
+    ! 1.25  ! power index ! 7
+    ! 3.0   ! power index ! 8
 
     ! Limit values by default is not applied
 
@@ -419,7 +413,7 @@ contains
 
     Fiskspeed_N(:,:,:)=100.0! FiskFactor_N(:,:,:)
 
-    ! Fiskspeed_N(:,:,:)=sqrt(max(2.0* (cFiskQ*& !m^2/s
+    ! Fiskspeed_N(:,:,:)=sqrt(max(2.0* (cFiskQ*& ! m^2/s
     !     max(FiskFactor_N(:,:,:)**2,0.5**2)/cLoopTemp &
     !     &-cSunGravitySI),(265.0*1.0E3)**2))
 
@@ -444,6 +438,7 @@ contains
     subroutine advance_line_point(RInOut_D, Dir)
       real,intent(inout):: RInOut_D(3)
       real,intent(in)   :: Dir
+
       !------------------------------------------------------------------------
       dS=0.25*min(dR,dPhi,dSinTheta,1.0)*2.0**(iIteration/ (20&
            &*max(nR,nPhi,nTheta)))
@@ -493,6 +488,7 @@ contains
       !     &**2, mask=ExpansionFactorInv_N(0,:,:)<0.001))
 
       ! An appropriate angle calculation on a sphere
+
       !------------------------------------------------------------------------
       theta_b = acos(maxval(cos(Theta_IJ(:,:))*cos(Theta) &
            + sin(Theta_IJ(:,:))*sin(Theta)*cos(Phi-Phi_IJ(:,:)), &
@@ -514,15 +510,11 @@ contains
     real :: Weight_III(0:1,0:1,0:1)
     real :: R_PFSSM
 
-    !\
     ! Calculate cell-centered spherical coordinates::
-    !/
     character(len=*), parameter:: NameSub = 'get_interpolated'
     !--------------------------------------------------------------------------
     Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
-    !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
-    !/
     if (Rin_PFSSM < max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
        Output = 0.0
        RETURN
@@ -530,24 +522,18 @@ contains
     Theta_PFSSM = acos(zInput/Rin_PFSSM)
     Phi_PFSSM   = atan2(yInput,xInput)
 
-    !\
     ! Set the source surface radius::
     ! The inner boundary in the simulations starts at a height
     ! H_PFSSM above that of the magnetic field measurements!
-    !/
 
     R_PFSSM = min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
 
-    !\
     ! Transform Phi_PFSSM from the component's frame to the
     ! magnetogram's frame.
-    !/
 
     Phi_PFSSM = Phi_PFSSM - PhiOffset*cDegToRad
 
-    !\
     ! Take a residual for the bi-linear interpolation
-    !/
     Res_D = [R_PFSSM,Phi_PFSSM,Theta_PFSSM]
 
     ! Limit a value of R:
@@ -631,12 +617,9 @@ contains
     character(len=*), parameter:: NameSub = 'get_gamma_emp'
     !--------------------------------------------------------------------------
     R1 = Rs_PFSSM
-    !\
     ! Calculate cell-centered spherical coordinates::
     RR = sqrt(xx**2+yy**2+zz**2)
-    !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
-    !/
     if (RR < max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
        gammaOut = gammaSS
        RETURN
@@ -680,14 +663,11 @@ contains
     real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
     real, parameter :: VAlfvenMin = 1.0e5   ! 100 km/s
 
+    ! Calculate cell-centered spherical coordinates::
     character(len=*), parameter:: NameSub = 'get_total_wave_energy_dens'
     !--------------------------------------------------------------------------
-    !\
-    ! Calculate cell-centered spherical coordinates::
     RR   = sqrt(X**2+Y**2+Z**2)
-    !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
-    !/
     if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
        WaveEnergyDensSI = 0.0
        RETURN
@@ -750,13 +730,11 @@ contains
     write ( iUnit, '(a)' ) ' '
     write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=',&
          & nTheta+1, ', F=point'
-    !\
     ! Writing parameters maps:
     ! List of parameters:
     ! 1) 1/fs(Rs), 2) Fisk_factor(Rs), 3) Theta_b(Rs), 4) Final WSA speed
     ! (at Rs),
     ! 5) Final Fisk speed (at Rs), 6) Gamma (R0), 7) Gamma (Rs)
-    !/
     do iTheta=0,nTheta
        rLatitude=r_latitude(iTheta)
        do iPhi=0,nPhi

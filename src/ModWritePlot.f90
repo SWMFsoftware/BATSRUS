@@ -16,6 +16,7 @@ module ModWritePlot
   public:: reverse_field
 
 contains
+  !============================================================================
   !==============================©==============================================
 
   subroutine write_plot(iFile)
@@ -237,10 +238,8 @@ contains
     DoPlotShell = plot_type1(1:3) == 'shl'
     DoPlotBox   = plot_type1(1:3) == 'box'
 
-    !\
     ! If threaded gap is used, the dimensional factors should be calculated,
     ! which are needed to convert a point state vector to a dimensional form
-    !/
     if(DoPlotThreads .and. (DoPlotShell .or. DoPlotBox))then
        if(plot_dimensional(iFile))then
           call set_dimensional_factor(nPlotVar, plotvarnames(1:nPlotVar), &
@@ -2030,6 +2029,7 @@ contains
 
     real:: CellSizeMax_D(nDim), SmallSize_D(nDim), PlotRes_D(nDim)
     integer:: iDim, iMin, iMax
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'adjust_plot_range'
     !--------------------------------------------------------------------------

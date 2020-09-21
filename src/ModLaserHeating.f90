@@ -70,13 +70,11 @@ module ModLaserHeating
   real:: tRaise = 1.0e-10 ! [s]
   real:: tDecay = 1.0e-10 ! [s]
   real:: tPulse = 1.1e-9  ! [s]
-  real:: IrradianceSi = 3.8e12 ! [J/s] !This is the power; rename?
+  real:: IrradianceSi = 3.8e12 ! [J/s] ! This is the power; rename?
 
   ! Beam geometry: 'rz', '2d', '3d', 'xy'
   character(LEN=3):: TypeBeam='???'
-  !\
   ! Geometry of the 'rz'-beam:
-  !/
   !
   !\     |
   !\\    |
@@ -87,7 +85,7 @@ module ModLaserHeating
   !    \\|_ _ _ _ _
   !     \|    I
   !      | This height is yCr
-  !______|____V____ axis of symmetry
+  ! ______|____V____ axis of symmetry
   !      |
   !      |
   !     /|
@@ -1184,6 +1182,7 @@ contains
     real:: rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside=.true.
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_beam_rz2'
     !--------------------------------------------------------------------------
@@ -1418,6 +1417,7 @@ contains
     integer:: iError
     real::    PosXHold, TurningPoint
     real::    SumLaserHeatingPe, SumLaserHeating, SumLaserHeatingRef
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_energy_source'
     !--------------------------------------------------------------------------

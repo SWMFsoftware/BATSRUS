@@ -25,7 +25,7 @@ module ModUserInterface
      subroutine user_set_face_boundary(FBC)
 
        use ModMain, ONLY: FaceBCType
-       
+
        type(FaceBCType) :: FBC
 
      end subroutine user_set_face_boundary
@@ -126,7 +126,7 @@ module ModUserInterface
        integer, intent(in) :: iBlock
        ! Change Source_VC here
      end subroutine user_calc_sources_impl
-     
+
      subroutine user_init_point_implicit
 
      end subroutine user_init_point_implicit

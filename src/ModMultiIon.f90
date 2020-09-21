@@ -446,7 +446,7 @@ contains
           u_D    = uIon_D - uPlus_D
           ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
           if(UseFlic)then
-             !UxB force is treated by advance_ion_current
+             ! UxB force is treated by advance_ion_current
              Force_D = 0
           else
              Force_D    = ForceCoeff * cross_product(u_D, FullB_D)

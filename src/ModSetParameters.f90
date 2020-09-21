@@ -3,6 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iVarTest
+
   implicit none
 
   private ! except
@@ -120,13 +123,14 @@ contains
          read_magnetogram_file, read_new_magnetogram_file
     use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
-    use ModCoronalHeating,  ONLY: read_corona_heating, &
+    use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
          init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat, &
          UseAlfvenWaveDissipation
-    use ModFieldLineThread, ONLY: read_threads
-    use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc
+    use ModFieldLineThread, ONLY: read_thread_param
+    use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
     use ModRadiativeCooling, ONLY: UseRadCooling,&
-         read_modified_cooling, check_cooling_param, read_chromosphere
+         read_cooling_param, check_cooling_param
+    use ModChromosphere, ONLY: read_chromosphere_param
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
@@ -200,7 +204,7 @@ contains
     integer                    :: iSwitch, nSwitch
     character(len=25)          :: NameSwitch_I(10), NameSwitch
     logical                    :: DoSwitchOn
-    
+
     ! Variables related to sessions
     logical :: IsFirstSession = .true.
     integer :: iSession, iSessionFirst = 0
@@ -278,7 +282,6 @@ contains
              endif
           endif
        endif
-
 
        if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
           if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
@@ -378,7 +381,7 @@ contains
        call init_mod_geometry
        call init_mod_boundary_cells
        call init_mod_nodes
-       
+
        if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
@@ -394,7 +397,7 @@ contains
           elseif(UseUserSourceImpl)then
              call init_mod_point_impl(user_init_point_implicit)
           else
-             !call init_mod_point_impl
+             ! call init_mod_point_impl
           end if
        end if
 
@@ -412,7 +415,7 @@ contains
        if (DoReadSolarwindFile) call read_solar_wind_file
 
        call set_physics_constants
-       
+
        call user_action("initialize module")
 
        if(UseChargedParticles)then
@@ -439,7 +442,7 @@ contains
                write(*,*) NameSub,':UseFlic=.true., set nStage to 3'
           nStage = 3
        end if
-       
+
        ! Normalization of solar wind data requires normalization in set_physics
        if (DoReadSolarwindFile) call normalize_solar_wind_data
 
@@ -513,9 +516,7 @@ contains
     ! Read solarwindfile if #SOLARWINDFILE command is in this session
     DoReadSolarwindFile = .false.
 
-    !\
     ! Read parameters from the text
-    !/
     READPARAM: do
        if(.not.read_line(StringLine) )then
           IsLastRead = .true.
@@ -718,7 +719,7 @@ contains
              call read_var('SpeedMinDim',   SpeedMinDim)
              call read_var('TauSpeedMinDim',TauSpeedMinDim)
           end if
-          
+
        case("#ELECTRONPRESSURE")
           call read_var('PeMinSi', PeMinSi)
 
@@ -766,15 +767,18 @@ contains
                 plot_dimensional(logfile_) = index(log_string,'VAR')>0
                 log_time='step time'
                 call read_var('log_vars',log_vars)
-             elseif(index(log_string,'RAW')>0 .or. index(log_string,'raw')>0)then
+             elseif(index(log_string,'RAW')>0 &
+                  .or. index(log_string,'raw')>0)then
                 plot_dimensional(logfile_) = index(log_string,'RAW')>0
                 log_time='step time'
                 log_vars='dt '//NameConservativeVarPlot//' Pmin Pmax'
-             elseif(index(log_string,'MHD')>0 .or. index(log_string,'mhd')>0)then
+             elseif(index(log_string,'MHD')>0 &
+                  .or. index(log_string,'mhd')>0)then
                 plot_dimensional(logfile_) = index(log_string,'MHD')>0
                 log_time='step date time'
                 log_vars=NameConservativeVarPlot//' Pmin Pmax'
-             elseif(index(log_string,'FLX')>0 .or. index(log_string,'flx')>0)then
+             elseif(index(log_string,'FLX')>0 &
+                  .or. index(log_string,'flx')>0)then
                 plot_dimensional(logfile_) = index(log_string,'FLX')>0
                 log_time='step date time'
                 log_vars='rho pmin pmax rhoflx pvecflx e2dflx'
@@ -993,10 +997,8 @@ contains
                       call read_var('ObsPosY',ObsPos_DI(2,iFile))
                       call read_var('ObsPosZ',ObsPos_DI(3,iFile))
                    else
-                      !\
                       ! Coordinates of the observation point are in HGI
                       ! system
-                      !/
                       call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
                       call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
                       call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
@@ -1583,9 +1585,7 @@ contains
                 call read_var('TypeConservCrit',TypeConservCrit_I(i),&
                      IsLowerCase=.true.)
                 select case(TypeConservCrit_I(i))
-                   !\
                    ! Geometry based criteria:
-                   !/
                 case('r','radius')
                    !    non-conservative scheme is used for r < rConserv
                    TypeConservCrit_I(i) = 'r'
@@ -1596,9 +1596,7 @@ contains
                    TypeConservCrit_I(i) = 'parabola'
                    call read_var('xParabolaConserv',xParabolaConserv)
                    call read_var('yParabolaConserv',yParabolaConserv)
-                   !\
                    ! Physics based criteria
-                   !/
                 case('p')
                    ! Balsara/Ryu switch 1
                    call read_var('pCoeffConserv',pCoeffConserv)
@@ -2584,7 +2582,7 @@ contains
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
             "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
             "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE")
-          call read_corona_heating(NameCommand)
+          call read_coronal_heating_param(NameCommand)
 
        case("#OPENCLOSEDHEAT")
           call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
@@ -2593,16 +2591,16 @@ contains
           call read_var('UseRadCooling', UseRadCooling)
 
        case("#CHROMOSPHERE")
-          call read_chromosphere
+          call read_chromosphere_param
 
        case("#TRANSITIONREGION")
-          call read_modified_cooling
+          call read_cooling_param
 
        case("#FIELDLINETHREAD", '#PLOTTHREADS')
-          call read_threads(NameCommand, iSession)
+          call read_thread_param(NameCommand, iSession)
 
        case("#THREADEDBC")
-          call read_threaded_bc
+          call read_threaded_bc_param
 
        case('#THREADRESTART')
           call read_var('DoThreadRestart', DoThreadRestart)
@@ -2715,7 +2713,7 @@ contains
             end do
          end do
       end if
-      
+
       ! space separated NameVar string containing all variable names
       call join_string(nVar, NameVar_V, NameVarCouple)
 
@@ -2827,26 +2825,26 @@ contains
             if (iVar >= ChargeStateFirst_+sum(nChargeState_I(1:iElement-1))&
                  .and. iVar <= ChargeStateFirst_ + &
                  sum(nChargeState_I(1:iElement))-1 .and. &
-                 ChargeStateLast_ > 1) then      
+                 ChargeStateLast_ > 1) then
                if(iVar == ChargeStateFirst_+sum(nChargeState_I(1:iElement-1)))&
-                    then                  
+                    then
                   if(nChargeState_I(iElement) < 10) then
                      write(NamePrimitivePlot,'(a,i1.1,a)')&
                           trim(NameElement_I(iElement))//'(', &
-                          nChargeState_I(iElement),')'                     
+                          nChargeState_I(iElement),')'
                   else
                      write(NamePrimitivePlot,'(a,i2.2,a)')&
                           trim(NameElement_I(iElement))//'(',&
                           nChargeState_I(iElement),')'
                   end if
-                  NameConservative = NamePrimitivePlot      
+                  NameConservative = NamePrimitivePlot
                else
                   NameConservative  = ''
                   NamePrimitivePlot = ''
                end if
             end if
          end do
-         
+
          ! only add to string if it is not an empty string
          if (len_trim(NameConservative) >0) &
               StringConservative  = trim(StringConservative) //' '//  &
@@ -2887,9 +2885,7 @@ contains
 
     subroutine set_defaults
 
-      !\
       ! Default plot and restart directories depend on NameThisComp
-      !/
       !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp
 
@@ -2963,9 +2959,7 @@ contains
 
       restart           = .false.
 
-      !\
       ! Give some "reasonable" default values
-      !/
 
       DipoleStrengthSi = 0.0
 
@@ -2983,9 +2977,7 @@ contains
 
       call init_mod_amr
 
-      !\
       ! Set component dependent defaults
-      !/
 
       GravityDir=0
       if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
@@ -3067,9 +3059,7 @@ contains
       logical :: IsFirstCheck = .true.
       character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
       !------------------------------------------------------------------------
-      !\
       ! Check for some combinations of things that cannot be accepted as input
-      !/
       if (iProc==0) write (*,*) ' '
 
       if(IsFirstCheck)then
@@ -3675,7 +3665,7 @@ contains
       if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
 
-      !Disable thread-related logicals, if UseFieldLineThreads=.false.
+      ! Disable thread-related logicals, if UseFieldLineThreads=.false.
       if(.not.UseFieldLineThreads)then
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if

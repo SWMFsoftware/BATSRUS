@@ -14,7 +14,7 @@ module ModWriteLogSatFile
   private ! except
 
   integer :: iFluid ! to make iFluid local in this module
-  
+
   public:: write_logfile          ! write one line into the log file
   public:: collect_satellite_data ! collect data from multiple processors
   public:: calc_sphere            ! calculate values on spherical surface
@@ -75,7 +75,7 @@ contains
     character(len=19) :: EventDateTime
 
     ! Header for the sat file in time accurate
-    real ::  TimeSatHeader 
+    real ::  TimeSatHeader
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -470,8 +470,8 @@ contains
 
       integer :: jVar
       character(len=lNameLogVar) :: NameLogVarLower
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       select case(NameLogVar)
       case('volume')
          ! Total volume
@@ -1134,6 +1134,7 @@ contains
 
     character (len=lNameLogVar) :: NameLogVar
     integer :: iVar, iVarTot, jVar
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_logvar'
     !--------------------------------------------------------------------------
@@ -1636,6 +1637,7 @@ contains
     !LOCAL VARIABLES:
     real    :: Weight
     integer :: iError
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'collect_satellite_data'
     !--------------------------------------------------------------------------
@@ -1816,8 +1818,8 @@ contains
 
     use BATL_lib, ONLY: nDim, nI, nJ, nK, j0_, nJp1_,k0_, nKp1_
 
-    implicit none
     real, intent(inout) :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+
     !--------------------------------------------------------------------------
     if(nDim == 1) RETURN
 

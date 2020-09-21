@@ -972,7 +972,7 @@ contains
     iInteger8 = lNameH5
     call write_hdf5_data(FileID, "Axis Labels", 1, [nPlotDim],&
          CharacterData=UnknownNameArray, nStringChars=iInteger8)
-    
+
     deallocate(UnknownNameArray)
     iIntHIDT = nPlotVar ! Convert to correct data type.
     call write_integer_sim_metadata(fileID, iIntHIDT)

@@ -379,10 +379,9 @@ contains
     integer, parameter :: ElecUx_ = iRhoUxIon_I(ElectronFirst_),  &
          ElecUz_ = iRhoUzIon_I(ElectronFirst_)
 
+    ! save the old state_V for testing
     character(len=*), parameter:: NameSub = 'correct_electronfluid_efield_cell'
     !--------------------------------------------------------------------------
-
-    ! save the old state_V for testing
     StateOld_V = State_V
 
     ! original electron temperature

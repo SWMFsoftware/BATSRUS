@@ -32,7 +32,7 @@ module ModGroundMagPerturb
   logical, public:: UseYoungBc = .false.
   real,    public:: ratioOH    = 0.25
   real,    public:: F107Young  = 150.0
-  
+
   ! Public geomagnetic indices variables
   logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
@@ -58,7 +58,7 @@ module ModGroundMagPerturb
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
   real, allocatable:: IeMagPerturb_DII(:,:,:)
 
-  ! Fast algorithms: 
+  ! Fast algorithms:
   real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   logical:: UseSurfaceIntegral = .false.      ! true for fast surface integral
   logical:: UseFastFacIntegral = .false.      ! true for fast FAC integral
@@ -315,7 +315,7 @@ contains
     ! Set number of shared magnetometers.
     if(DoCalcKp)  nIndexMag = nIndexMag + nKpMag
     if(DoCalcAe)  nIndexMag = nIndexMag + nAeMag
-    ! if(DoCalcDst) nIndexMag = nIndexMag + nDstMag !Not yet implemented..
+    ! if(DoCalcDst) nIndexMag = nIndexMag + nDstMag ! Not yet implemented..
     ! ...etc.
 
     if(DoTest) write(*,*)'Number of IndexMags used: ', nIndexMag
@@ -414,9 +414,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    !\
     ! Calculate the magnetic perturbations in cartesian coordinates
-    !/
 
     GmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
 
@@ -467,17 +465,17 @@ contains
     ! dipole field lines.
     !
     ! If UseSurfaceIntegral is true, also calculate the MagPerturbMhd_DI based
-    ! on the relationship between the volumetric Biot-Savart integral and the 
+    ! on the relationship between the volumetric Biot-Savart integral and the
     ! following surface integral that gives B at the location x0 as
     !
     ! B(x0) = int_|x|=R [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
     !
     ! where n = x/|x| is the radial unit vector and the integral is taken
-    ! at the radius R (rCurrents). This was derived by Igor Sokolov. 
+    ! at the radius R (rCurrents). This was derived by Igor Sokolov.
     ! For x0=0 we get int n.B*r + n x B x r/(4pir^3) = int B/(4pi r^2) = <B>
     ! i.e. the average of B over the surface.
     !
-    ! NOTE: The surface integral includes the external (IMF) field as well. 
+    ! NOTE: The surface integral includes the external (IMF) field as well.
 
     use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
@@ -486,8 +484,8 @@ contains
     use CON_axes,          ONLY: transform_matrix
     use ModMpi
 
-    !use ModPlotFile, ONLY: save_plot_file
-    
+    ! use ModPlotFile, ONLY: save_plot_file
+
     character(len=*), intent(in):: NameGroup
     integer, intent(in) :: nMag
     real,    intent(in) :: Xyz_DI(3,nMag)
@@ -515,7 +513,7 @@ contains
     ! Variables for fast FAC integration (using Igor Sokolov's idea)
     ! The Biot-Savart integral for a given magnetometer indexed by iMag
     ! depends linearly on the FAC(rCurrents,iTheta,iPhi), so the contribution
-    ! can be precalculated, which eliminates the expensive part of the 
+    ! can be precalculated, which eliminates the expensive part of the
     ! calculation. Storage of the contribution factors is distributed among
     ! the processors.
 
@@ -525,14 +523,14 @@ contains
     integer:: iMag0                   ! magnetometer index shift
 
     ! becomes true once the first integration was done for the group
-    logical:: UseFastFacIntegral_I(nGroup) = .false. 
+    logical:: UseFastFacIntegral_I(nGroup) = .false.
 
     ! Coordinate system for the grid that collects the FAC
     logical         :: DoConvertCoord
     real            :: SmToFacGrid_DD(3,3)
 
-    !real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
-    
+    ! real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
     !--------------------------------------------------------------------------
@@ -542,7 +540,7 @@ contains
     DoConvertCoord = TypeCoordFacGrid == 'MAG'
     if(DoConvertCoord) &
          SmToFacGrid_DD   = transform_matrix(Time_Simulation, 'SMG', 'MAG')
-    
+
     MagPerturbFac_DI= 0.0
 
     dTheta = cPi    / (nTheta-1)
@@ -550,7 +548,7 @@ contains
     dR     = (rCurrents - rIonosphere) / nR
 
     if(UseSurfaceIntegral) MagPerturbMhd_DI = 0.0
-    
+
     if(n_Step /= nStepLast)then
        nStepLast = n_Step
        ! Get the radial component of the field aligned current
@@ -581,8 +579,7 @@ contains
        call timing_stop('ground_calc_fac')
     end if
 
-
-    !if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
+    ! if(iProc==0) call save_plot_file('fac.out', NameVarIn = "Lon Lat Fac", &
     !     CoordMinIn_D = [1.0, -89.5], CoordMaxIn_D = [359., 89.5], &
     !     VarIn_II=transpose(Fac_II))
 
@@ -606,7 +603,7 @@ contains
                ' allocated InvDist2_DII(3,',nMagTotal,',',nLineProc,')'
        end if
 
-       ! Set group index iGroup and 
+       ! Set group index iGroup and
        ! starting magnetometer index iMag0 for LineContrib_DII
        select case(NameGroup)
        case('stat')
@@ -649,7 +646,7 @@ contains
                         + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
                 end do
              end if
-             
+
              FacRcurrents = Fac_II(iTheta,iPhi)
              if(FacRcurrents == 0.0) CYCLE
 
@@ -687,20 +684,20 @@ contains
        end if
 
        ! CHECK
-       !Volume = 0.; Surface = 0.
-       
+       ! Volume = 0.; Surface = 0.
+
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
-          ! At the poles sin(Theta)=0, but the area of the triangle 
+          ! At the poles sin(Theta)=0, but the area of the triangle
           ! formed by the pole and the latitude segment at Theta=dTheta/2
           ! is approximately dTheta/4*dTheta/2, so the sin(theta) is
           ! replaced with dTheta/8.
           SinTheta = max(sin(Theta), dTheta/8)
-          
+
           ! Calculate surface and volume elements
           dSurface  = rCurrents**2*SinTheta*dTheta*dPhi
           dVolCoeff = dR*dSurface
-         
+
           do iPhi = 1, nPhi
 
              Phi = (iPhi-1) * dPhi
@@ -733,8 +730,8 @@ contains
                 Bt_D = Bt_DII(:,iTheta,iPhi)
 
                 ! CHECK
-                !Surface = Surface + dSurface
-                !if(iTheta==nTheta .and. iPhi==nPhi) &
+                ! Surface = Surface + dSurface
+                ! if(iTheta==nTheta .and. iPhi==nPhi) &
                 !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
                 do iMag = 1, nMag
@@ -756,7 +753,7 @@ contains
                         InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
 
                 end do
-                
+
              end if
 
              do k = 1, nR
@@ -782,9 +779,9 @@ contains
                 dVol  = dVolCoeff*InvBr
 
                 !! Check correctness of integration. Needs Br at rCurrents.
-                !if(abs(XyzMid_D(3)) > rCurrents - Height) &
+                ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
                 !     Volume = Volume + abs(dVol*Br_II(iTheta,iPhi)
-                
+
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
@@ -803,7 +800,7 @@ contains
                         LineContrib_DII(:,iMag+iMag0,iLineProc) &
                         = LineContrib_DII(:,iMag+iMag0,iLineProc) + Pert_D
 
-                   !if(...)then
+                   ! if(...)then
                    !   write(*,*)'Xyz_D   =', Xyz_D
                    !   write(*,*)'XyzMid_D=', XyzMid_D
                    !   write(*,*)'b_D, InvBr=', b_D, InvBr
@@ -813,8 +810,8 @@ contains
                    !   write(*,*)'MagPerturb_D=', MagPerturbFac_DI(:,iMag)
                    !
                    !   call stop_mpi('DEBUG')
-                   !end if
-                   
+                   ! end if
+
                 end do ! iMag
              end do ! kr
           end do ! iPhi
@@ -823,7 +820,7 @@ contains
     end if
     !! Volume of the two spherical caps above Height (should be filled
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
-    !write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
+    ! write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
 
     if(DoConvertCoord)then
        ! Convert perturbations back to SM
@@ -960,7 +957,7 @@ contains
        ! O+ should not exceed H+
        ! RatioOH = min(RatioOH, 1.0)
     end if
-    
+
     call timing_stop(NameSub)
 
     call test_stop(NameSub, DoTest)
@@ -985,13 +982,13 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    
+
     ! Coordinate transformations
     IndexToGm_DD = transform_matrix(Time_simulation, &
          TypeCoordIndex, TypeCoordSystem)
     IndexToSm_DD = transform_matrix(Time_simulation, &
          TypeCoordIndex, 'SMG')
-    
+
     ! Obtain geomagnetic pertubations dB*_DI in SMG coordinates
 
     if(.not.UseSurfaceIntegral)then
@@ -1062,6 +1059,7 @@ contains
     real             :: LatMag, LonMag
 
     integer          :: nMag
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'check_mag_input_file'
     !--------------------------------------------------------------------------
@@ -1493,6 +1491,7 @@ contains
       integer ::  iTime_I(7), iLon, iLat, iMag
 
       character(len=100):: NameFile
+
       !------------------------------------------------------------------------
       if(allocated(MagOut_VII))then
          if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)

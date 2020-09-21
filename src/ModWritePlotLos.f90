@@ -88,7 +88,7 @@ contains
     ! Arguments
 
     integer, intent(in) :: iFile
-    !Misc: for using MPI
+    ! Misc: for using MPI
     integer :: iError
 
     ! File specific parameters
@@ -106,7 +106,7 @@ contains
     character (len=20) :: NameVar
 
     integer :: nEqpar, nPlotVar
-    integer :: iPix, jPix             ! indexes of the pixel 
+    integer :: iPix, jPix             ! indexes of the pixel
     real    :: aPix, bPix             ! coordinates of pixel in the image frae
     real    :: ImageCenter_D(3)       ! 3D coordinates of the center of image
     real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
@@ -164,7 +164,7 @@ contains
 
     integer :: iSat, iSatLoop
     integer:: iProcFound
-      
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
@@ -216,7 +216,7 @@ contains
        do iSatLoop = 1, nSatellite
           if ( NameSat_I(iSatLoop) /= TypeSatPos_I(iFile)) CYCLE
           iSat = iSatLoop
-          exit
+          EXIT
        end do
 
        ! obtain the current location based on the simulation time
@@ -272,11 +272,9 @@ contains
     call lower_case(plot_vars1)
     call split_string(plot_vars1, nPlotVarLosMax, plotvarnames, nPlotVar)
     call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
-    !\
-    ! Initialize table IDs. In this case automatically 
+    ! Initialize table IDs. In this case automatically
     ! UseTableGen = (iTableGen >=0) and analogously for other table
     ! related logicals.
-    !/
     iTableEuv = -1; iTableSxr = -1; iTableGen =  -1
     ! For generalized Los Table check PlotVarNames for string 'tbl'
     UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
@@ -671,7 +669,7 @@ contains
             ! XyzIntersect_D = XyzPix_D + d*LosPix_D
 
             ! The discriminant of the equation
-            LosDotXyzPix = sum(LosPix_D*XyzPix_D) 
+            LosDotXyzPix = sum(LosPix_D*XyzPix_D)
             XyzPix2 = sum(XyzPix_D**2)
             Discriminant = LosDotXyzPix**2 &
                  - XyzPix2  + (rInner + cTiny)**2
@@ -679,14 +677,14 @@ contains
             if (Discriminant > 0) then
                ! Only consider the intersection facing the observer
                SqrtDiscr = sqrt(Discriminant)
-               d = - LosDotXyzPix + SqrtDiscr 
+               d = - LosDotXyzPix + SqrtDiscr
                XyzIntersect_D = XyzPix_D + d*LosPix_D
                ! Integrate from the intersection point to observer
                call integrate_line(XyzIntersect_D, Distance - d)
 
                if(UseFieldLineThreads)then
                   ! The discriminant controlling intersection with
-                  ! the chromosphere 
+                  ! the chromosphere
                   DiscrChromo = LosDotXyzPix**2 - XyzPix2 + rChromo**2
                   ! Integrate in the other direction too if no intesection
                   LosPix_D = -LosPix_D
@@ -694,12 +692,10 @@ contains
                      ! Intersection with chromosphere
                      ! facing the observer
                      SqrtDiscr = sqrt(DiscrChromo)
-                     dChromo = - LosDotXyzPix + SqrtDiscr 
+                     dChromo = - LosDotXyzPix + SqrtDiscr
                      call integrate_line(XyzIntersect_D, d - dChromo, &
                           UseThreads = DoPlotThreads)
-                     !\
                      ! LOS ntersection with the top of Transition Region
-                     !/ 
                      if(UseTRCorrection.and.DoPlotThreads.and.                &
                           (UseEuv .or. UseSxr .or. UseTableGen))then
                          XyzTR_D = XyzIntersect_D + (d - dChromo)*LosPix_D
@@ -718,8 +714,8 @@ contains
                              iPix, jPix))
                      end if
                   else
-                     !Distance between two intersections with the low
-                     !boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
+                     ! Distance between two intersections with the low
+                     ! boundary R=rInner: - LosDotXyzPix \pm SqrtDisc
                      dMirror = 2*SqrtDiscr
                      call integrate_line(XyzIntersect_D, dMirror, &
                           UseThreads = DoPlotThreads)
@@ -777,18 +773,14 @@ contains
       !------------------------------------------------------------------------
       iDimMin = r_
       if(present(UseThreads))then
-         !\
-         !Integration through the threaded gap
-         !/
-         !The part of ray passing through the threaded gap does not
-         !contribute to the integral if UseThreads = .false.
+         ! Integration through the threaded gap
+         ! The part of ray passing through the threaded gap does not
+         ! contribute to the integral if UseThreads = .false.
          if(.not.UseThreads)RETURN
-         !\
-         ! In the threaded gap, the radial coordinate is allowed to go beyond 
-         ! the block boundary and the domain boundary. The criterion for the 
+         ! In the threaded gap, the radial coordinate is allowed to go beyond
+         ! the block boundary and the domain boundary. The criterion for the
          ! ray pass to a new block should ignore this coordinate.
-         !/ 
-         iDimMin = r_ + 1 
+         iDimMin = r_ + 1
       end if
       if(DoTest .and. iProc == 0) then
          write(*,'(2a, 3f10.7, a, f10.7)')NameSub, ' XyzStartIn_D=', &
@@ -833,7 +825,7 @@ contains
                  any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
          end if
          if(Ds <= 0.0)then
-            !To prevent intinite looping
+            ! To prevent intinite looping
             write(*,*)'ds=', Ds
             call stop_mpi(NameSub//&
                  ': Algorithm failed: zero integration step')
@@ -844,12 +836,12 @@ contains
          if(  any(CoordLos_D(iDimMin:) < CoordMinBlock_D(iDimMin:)) .or. &
               any(CoordLos_D(iDimMin:) > CoordMaxBlock_D(iDimMin:)))then
             if(present(UseThreads))then
-               ! Find new block/node, increase the radial coordinate to 
+               ! Find new block/node, increase the radial coordinate to
                ! put the point above the inner boundary
                call find_grid_block((rInner + cTiny)*XyzLos_D/norm2(XyzLos_D),&
                     iProcFound, iBlock, iNodeOut=iNode)
             else
-               ! Find new block/node, increase the radial coordinate to 
+               ! Find new block/node, increase the radial coordinate to
                ! put the point above the inner boundary
                call find_grid_block(XyzLos_D,&
                     iProcFound, iBlock, iNodeOut=iNode)
@@ -873,7 +865,7 @@ contains
          end if
 
          ! Check if mid point will be inside the block. If not, reduce Ds
-         IsEdge = .false. 
+         IsEdge = .false.
          do
             ! Move to the middle of the segment
             XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
@@ -921,8 +913,7 @@ contains
             end do
          end if
          if(Length + Ds >= LengthMax)then
-            !\
-            !Reduce the integration step newr the end of segment...
+            ! Reduce the integration step newr the end of segment...
             if(iProc == iProcFound)&
                  ! Add contribution from this segment to the image
                  call add_segment(LengthMax - Length, XyzLosNew_D, UseThreads)
@@ -993,8 +984,8 @@ contains
       real :: TeCutSi = 4.0e+5
       real :: DeltaTeCutSi = 3.0e+4
       real :: FractionTrue
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       rLos2= sum(XyzLos_D**2)
       xLos = XyzLos_D(1)
       yLos = XyzLos_D(2)
@@ -1050,12 +1041,10 @@ contains
       ! Interpolate state if it is needed by any of the plot variables
       StateInterpolateDone = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
-         !\
          !`Interpolate state vector in the point with gen coords
          ! equal to GenLos_D
-         !/
-         if(present(UseThreads)  & !This point is in the threaded gap OR the
-              .or.(DoPlotThreads.and.& !gap is used AND point is close to it
+         if(present(UseThreads)  & ! This point is in the threaded gap OR the
+              .or.(DoPlotThreads.and.& ! gap is used AND point is close to it
               GenLos_D(1) < CoordMin_D(1) + &
               0.50*CellSize_D(1) ))then
             ! Interpolate within the threaded gap
@@ -1087,22 +1076,19 @@ contains
          ! !! So minimum temperature is cTolerance in SI units???
          TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
-
          ! Here 1e-6 is to convert to CGS
          Ne = 1.0e-6*Ne*No2Si_V(UnitN_)
-         
-         !\
+
          !  ResponseFactor is applied to the product of tabulated "response
-         !  function" (which is provided in the tables without a scaling 
-         !  factor, 1e-26) by the element of dimensionless length, ds, which 
-         !  should be converted to cm by  multiplying it by UnitX (which gives 
-         !  meters) and by 100 cm/m. The dependence on density should be also 
-         !  accounted for by multiplying this by Ne**2, Ne being in psrticles 
-         !  per cm3 
-         !/
-         ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_)) 
+         !  function" (which is provided in the tables without a scaling
+         !  factor, 1e-26) by the element of dimensionless length, ds, which
+         !  should be converted to cm by  multiplying it by UnitX (which gives
+         !  meters) and by 100 cm/m. The dependence on density should be also
+         !  accounted for by multiplying this by Ne**2, Ne being in psrticles
+         !  per cm3
+         ResponseFactor = Ne**2*1.0e-26*(1.0e2*No2Si_V(UnitX_))
          if(present(UseThreads))then
-            !The head conduction is not modified, the whole response is true:
+            ! The head conduction is not modified, the whole response is true:
             FractionTrue = 1.0
          else
             ! calculate temperature cutoff to neglect widened transition region
@@ -1721,6 +1707,7 @@ contains
       real :: XyzLos_D(3)    ! Coordinate of center of line segment
 
       ! Number of segments for an accurate integral
+
       !------------------------------------------------------------------------
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
@@ -1959,6 +1946,7 @@ contains
     character (len=20) :: s
 
     integer :: iVar
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_IDL_los_units'
     !--------------------------------------------------------------------------

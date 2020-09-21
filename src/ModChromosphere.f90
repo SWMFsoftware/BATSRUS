@@ -17,13 +17,10 @@ module ModChromosphere
   ! the decay length = (30 m/K)*TeCromosphere SI
   logical:: UseChromosphereHeating    = .false.
 
-  real   :: NumberDensChromosphereCgs = 2.0e+11 ! [cm^{-3}
+  real   :: NumberDensChromosphereCgs = 2.0e+11 ! [cm^{-3}]
   real   :: TeChromosphereSi = 5.0e4            ! [K]
 
-  !\
   ! TRANSITION REGION
-  !/
-  !
 
   logical :: DoExtendTransitionRegion = .false.
 
@@ -46,25 +43,27 @@ module ModChromosphere
 
   ! Electron temperature in K:
   real :: TeSi_C(nI,nJ,nK)
-  !$omp threadprivate( TeSi_C )
-  
+  !$ omp threadprivate( TeSi_C )
+
 contains
   !============================================================================
 
-  subroutine read_chromosphere
+  subroutine read_chromosphere_param
+
     use ModReadParam, ONLY: read_var
     !--------------------------------------------------------------------------
-    call read_var('UseChromosphereHeating'   , UseChromosphereHeating)
-    call read_var('NumberDensChromosphereCgs', NumberDensChromosphereCgs)
-    call read_var('TeChromosphereSi',          TeChromosphereSi      )
-  end subroutine read_chromosphere
+    call read_var('UseChromosphereHeating', UseChromosphereHeating)
+    call read_var('NeChromosphereCgs',      NumberDensChromosphereCgs)
+    call read_var('TeChromosphereSi',       TeChromosphereSi)
+
+  end subroutine read_chromosphere_param
   !============================================================================
 
   real function extension_factor(TeSi)
     real, intent(in) :: TeSi    ! Dimensionless
 
     real :: FractionSpitzer
-    character(LEN=*), parameter:: NameSub='extension factor'
+    character(len=*), parameter:: NameSub = 'extension_factor'
     !--------------------------------------------------------------------------
     if(TeSi<1.0e1)then
        write(*,*)'TeSi input =', TeSi

@@ -11,7 +11,7 @@ module ModCellGradient
        nDim, jDim_, kDim_, x_, y_, z_, Dim1_, Dim2_, Dim3_
   use ModGeometry, ONLY: body_blk, true_cell
   use omp_lib
-  
+
   implicit none
 
   SAVE
@@ -21,14 +21,14 @@ module ModCellGradient
   public:: calc_gradient   ! calculate gradient
   public:: calc_gradient_ghost  ! set gradient in ghost cells too
   public:: calc_cell_curl_ghost ! calculate curl with 1 layer of ghost cells
-  
+
   real, public, allocatable :: GradVar_DGB(:,:,:,:,:)
 
   ! Local variables -------------
 
   integer, allocatable:: iTrue_G(:,:,:)
-  !$omp threadprivate( iTrue_G )
-  
+  !$ omp threadprivate( iTrue_G )
+
   interface calc_gradient
      module procedure calc_gradient1, calc_gradient3
   end interface
@@ -389,12 +389,10 @@ contains
              OneTrue_G = 0.0
           end where
           !
-          !\
           ! Where .not.true_cell, all the gradients are zero
           ! In true_cell the input to gradient from the face neighbor
           ! is ignored, if the face neighbor is .not.true_cell, the input
           ! from the opposite cell is doubled in this case
-          !/
           !
           do k=1,nK; do j=1,nJ; do i=1,nI
              VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
@@ -597,18 +595,18 @@ contains
 !    ! Calculate curl of Var_DG and return it in Curl_DG
 !    ! Physical cells and 1 layer of ghost cells are calculated (nG>=2)
 !    ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
-!    ! Calculate curl of Var_DG on a Cartesian grid. 
+!    ! Calculate curl of Var_DG on a Cartesian grid.
 !    ! Need to include general coordinates calculation in the future.
 !
 !    use ModGeometry, ONLY: body_blk, true_cell
-!    !hyzhou test
+!    ! hyzhou test
 !    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
 !
 !
 !    integer, intent(in):: iBlock
 !    real, intent(in) :: Var_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 !    integer, intent(in):: nG ! number of ghost cells in curl_DG
-!    real, intent(inout):: &  
+!    real, intent(inout):: &
 !         curl_DG(3,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
 !    logical, intent(in), optional:: UseBodyCellIn
 !
@@ -628,10 +626,10 @@ contains
 !       if(IsCartesian)then
 !
 !          ! For test comparison with get_current
-!          !Var_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+!          ! Var_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
 !
 !          ! Simple central differencing
-!          
+!
 !          InvDxHalf = 0.5/CellSize_DB(1,iBlock)
 !          InvDyHalf = 0.5/CellSize_DB(2,iBlock)
 !          InvDzHalf = 0.5/CellSize_DB(3,iBlock)
@@ -641,23 +639,22 @@ contains
 !             curl_DG(x_,i,j,k) = &
 !                  InvDyHalf*( Var_DG(z_,i,j+1,k) - Var_DG(z_,i,j-1,k) ) - &
 !                  InvDzHalf*( Var_DG(y_,i,j,k+1) - Var_DG(y_,i,j,k-1) )
-!             
+!
 !             curl_DG(y_,i,j,k) = &
 !                  InvDzHalf*( Var_DG(x_,i,j,k+1) - Var_DG(x_,i,j,k-1) ) - &
 !                  InvDxHalf*( Var_DG(z_,i+1,j,k) - Var_DG(z_,i-1,j,k) )
-!             
+!
 !             curl_DG(z_,i,j,k) = &
 !                  InvDxHalf*( Var_DG(y_,i+1,j,k) - Var_DG(y_,i-1,j,k) ) - &
 !                  InvDyHalf*( Var_DG(x_,i,j+1,k) - Var_DG(x_,i,j-1,k) )
-!          end do; end do; end do  
+!          end do; end do; end do
 !       else
 !          ! Need to be implemented for general coordinates
 !       end if
 !    end if
 !
-!    call test_stop(NameSub, DoTest, iBlock)    
+!    call test_stop(NameSub, DoTest, iBlock)
 !  end subroutine calc_cell_curl_ghost
-  !============================================================================
 
   ! idea copy from get_current
   subroutine calc_cell_curl_ghost(i,j,k,iBlock,Vector_DG,Curl_D)
@@ -667,20 +664,21 @@ contains
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModGeometry, ONLY: True_Cell, true_BLK
-    
+
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,    intent(out):: Curl_D(3)
-    
+
     integer:: iL, iR, jL, jR, kL, kR
     real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real   :: InvDx2, InvDy2, InvDz2
-    !--------------------------------------------------------------------------
+
 !    if(.not.True_Cell(i,j,k,iBlock))then
 !       Curl_D = 0.0
 !       RETURN
 !    endif
 
+    !--------------------------------------------------------------------------
     InvDx2 = 0.5/CellSize_DB(x_,iBlock)
     InvDy2 = 0.5/CellSize_DB(y_,iBlock)
     InvDz2 = 0.5/CellSize_DB(z_,iBlock)
@@ -694,7 +692,6 @@ contains
 
     kR = k+1; kL = k-1
     Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
-
 
     if(IsCartesianGrid)then
        call calc_cartesian_curl
@@ -745,6 +742,7 @@ contains
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
 
       ! Get the dCartesian/dGencoord matrix with central difference
+
       !------------------------------------------------------------------------
       DxyzDcoord_DD(:,1) = InvDx2 &
            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
@@ -800,6 +798,6 @@ contains
     !==========================================================================
   end subroutine calc_cell_curl_ghost
   !============================================================================
-  
+
 end module ModCellGradient
 !==============================================================================

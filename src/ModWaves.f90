@@ -30,7 +30,7 @@ module ModWaves
 
   integer, parameter :: AlfvenWaveMinusFirst_ = WaveLast_ + 1 - nWaveHalf
   integer, parameter :: AlfvenWaveMinusLast_  = WaveLast_
-  
+
   real :: FreqMinSI = -1.0
   real :: FreqMaxSI = -1.0
 
@@ -86,8 +86,8 @@ module ModWaves
   real:: PowerIndex = 5.0/3.0, FreqStartSi = -1.0
 
   real :: DivU_C(nI,nJ,nK) = 0.0       ! Auxiliary variable
-  !$omp threadprivate( DivU_C )
-  
+  !$ omp threadprivate( DivU_C )
+
 contains
   !============================================================================
   subroutine read_waves_param(NameCommand)
@@ -251,6 +251,7 @@ contains
     real, intent(in), optional:: Xyz_D(MaxDim), B0_D(MaxDim)
 
     real:: BTotal_D(MaxDim)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_wave_state'
     !--------------------------------------------------------------------------

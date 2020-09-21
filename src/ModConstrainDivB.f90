@@ -390,6 +390,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i,j,k
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'Bcenter2Bface'
     !--------------------------------------------------------------------------

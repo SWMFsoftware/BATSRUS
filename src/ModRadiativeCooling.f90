@@ -16,9 +16,9 @@ module ModRadiativeCooling
   integer,private:: iTableRadCool      =-1
 
   real :: AuxTeSi
-  !\
+
   ! Recommended usage of get_radiative_cooling function
-  !/
+  !
   ! use ModRadiativeCooling
   ! call user_material_properties(i,j,k,iBlock,TeOut=AuxTeSi)
   ! call get_radiative_cooling(State_VGB(i, j, k, iBlock,AuxTeSi, RadCooling)
@@ -27,29 +27,30 @@ module ModRadiativeCooling
   ! in RadCooling
 
   real :: RadCooling_C(1:nI,1:nJ,1:nK)
-  !$omp threadprivate( RadCooling_C )
-  
+  !$ omp threadprivate( RadCooling_C )
+
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   ! erg = 1e-7 J
        /1.0e-6    ! cm3 = 1e-6 m3
 contains
   !============================================================================
-  subroutine read_modified_cooling
+  subroutine read_cooling_param
+
     use ModReadParam
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_modified_cooling'
+    character(len=*), parameter:: NameSub = 'read_cooling_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call read_var('DoExtendTransitionRegion',DoExtendTransitionRegion)
+    call read_var('DoExtendTransitionRegion', DoExtendTransitionRegion)
     if(DoExtendTransitionRegion)then
-
-       call read_var('TeModSi',TeModSi)
-       call read_var('DeltaTeModSi',DeltaTeModSi)
+       call read_var('TeModSi', TeModSi)
+       call read_var('DeltaTeModSi', DeltaTeModSi)
     else
-       call read_var('TeTransitionRegionTopSi',TeTransitionRegionTopSi)
+       call read_var('TeTransitionRegionTopSi', TeTransitionRegionTopSi)
     end if
     call test_stop(NameSub, DoTest)
-  end subroutine read_modified_cooling
+
+  end subroutine read_cooling_param
   !============================================================================
 
   subroutine check_cooling_param
@@ -193,6 +194,7 @@ contains
 
     ! Calculate the integral, \int{\sqrt{T_e}\Lambda{T_e}dT_e}:
     !
+
     !--------------------------------------------------------------------------
     DeltaTeSi = (TeTransitionRegionSi - TeChromosphereSi) / nStep
 
@@ -208,11 +210,11 @@ contains
     Simpson_I(0) = 1.0; Simpson_I(nStep) = 1.0
     Y_I = Y_I * sqrt(X_I)
     IntegralCgs = sum(Simpson_I*Y_I) * DeltaTeSi / 3.0
-    !\
+
     ! Transform to SI. Account for the transformation coefficient for n_e^2
-    !/
     IntegralSi = IntegralCgs * Cgs2SiEnergyDens * 1.0e-12
     cooling_function_integral_si = IntegralSi
+
   end function cooling_function_integral_si
   !============================================================================
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
@@ -229,6 +231,7 @@ contains
          (cProtonMass * cGravityAcceleration)
 
     real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
+
     character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
     !--------------------------------------------------------------------------
     HeightSi_C = (r_BLK(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
@@ -260,7 +263,7 @@ contains
     ! uses eq from Lionell 2001. NO enthalpy flux correction in this
     ! implementation.
     integer, intent(in):: iSide,iFace,jFace,kFace,iBlock
-    logical, intent(inout):: IsNewBlock 
+    logical, intent(inout):: IsNewBlock
     real, intent(in):: TotalFaceB_D(3)
     real,intent(inout) :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 

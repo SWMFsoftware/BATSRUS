@@ -69,7 +69,7 @@ module ModImplicit
   use BATL_lib,      ONLY: iProc, iComm, nDim
   use ModVarIndexes, ONLY: nVar, P_
   use ModIO,         ONLY: iUnitOut, write_prefix
-  
+
   use ModLinearSolver, ONLY: LinearSolverParamType
 
   ! for sake of fewer changes in the user modules
@@ -84,14 +84,10 @@ module ModImplicit
        Stencil4_ = min(4,nStencil), Stencil5_ = min(5,nStencil), &
        Stencil6_ = min(6,nStencil), Stencil7_ = min(7,nStencil)
 
-  !\
   ! Number of variables and the index of energy (replacing pressure)
-  !/
   integer, parameter :: E_ = P_
 
-  !\
   ! Logicals determining if and what implcit scheme is used
-  !/
   logical :: UseImplicit = .false.
 
   ! Use fully implicit scheme (all blocks)
@@ -110,9 +106,7 @@ module ModImplicit
   ! True while doing the implicit update
   logical :: IsImplicitUpdate = .false.
 
-  !\
   ! Parameters for selecting implicit blocks
-  !/
   character (len=10) :: ImplCritType = 'dt'
   real               :: Rimplicit
 

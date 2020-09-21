@@ -145,7 +145,6 @@ contains
     ! Move points with the velocity
     Xyz_DI = XyzOld_DI + Dt * State_VI(Ux_:Uz_,:)
 
-    
     if(DoTest)then
        write(*,*)NameSub,' Dt        =',Dt
        write(*,*)NameSub,' Velocity  =',State_VI(Ux_:Uz_,:)

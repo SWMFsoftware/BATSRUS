@@ -63,6 +63,7 @@ contains
     integer :: i
 
     character(len=*), intent(in):: NameCommand
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_boundary_geometry_param'
     !--------------------------------------------------------------------------
@@ -243,6 +244,7 @@ contains
     logical, intent(in) :: DoSolveSolidIn
 
     integer :: iBlock
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fix_geometry'
     !--------------------------------------------------------------------------

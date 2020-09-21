@@ -191,7 +191,7 @@ contains
                  MhdFlux_VX(:,lFaceFrom,j,k)
          end do; end do
       end if
-         
+
       if(DoTest)then
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
          do i = 1, nFluid+1
@@ -389,7 +389,7 @@ contains
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux) &
+         ! if(UseMhdMomentumFlux) &
          !     MhdFlux_VX(:,lFaceTo,j,k) = CorrectedFlux_VXB(&
          !     MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
          if(.not.(UseB .and. IsCartesianGrid))CYCLE
@@ -407,7 +407,7 @@ contains
                  CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock) &
                  / CellFace_DFB(1,lFaceTo,j,k,iBlock)
          end if
-         
+
       end do; end do
       if(UseB .and. .not.IsCartesianGrid) &
            call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)
@@ -427,7 +427,7 @@ contains
               CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
          VdtFace_y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux)&
+         ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VY(:,i,lFaceTo,k) = CorrectedFlux_VYB(&
          !     MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
@@ -456,7 +456,7 @@ contains
               CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
          VdtFace_z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
-         !if(UseMhdMomentumFlux)&
+         ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VZ(:,i,j,lFaceTo) = CorrectedFlux_VZB(&
          !     MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then

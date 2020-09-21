@@ -10,7 +10,7 @@ module ModImCoupling
   ! Routines related to the coupline with the Inner Magnetosphere component
   use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModVarIndexes, ONLY: nFluid
-  
+
   implicit none
 
   SAVE
@@ -29,13 +29,13 @@ module ModImCoupling
   real, public, dimension(:,:), allocatable :: IM_bmin
 
   logical,public,allocatable :: IsImRho_I(:), IsImP_I(:), IsImPpar_I(:)
-    
+
   ! number of passed variables (densities and pressures)
   integer, public :: nVarCouple=0
 
   ! indexes of passed variables
   integer, public, allocatable :: iVarCouple_V(:)
-    
+
   ! Local variables --------------------------------------------
 
   ! The size of the IM grid
@@ -65,7 +65,7 @@ contains
     else
        allocate(ImRho_CV(iSize,jSize,nFluid), IsImRho_I(nFluid))
     endif
-       
+
     allocate(ImPpar_CV(iSize,jSize,nFluid), &
          IM_bmin(iSize,jSize))
 
@@ -101,22 +101,22 @@ contains
     ! variables for anisotropic pressure coupling
     real :: Pperp, PperpInvPpar, Coeff
 
-    !Keep track if IM grid is defined in the northern of southern hemisphere
+    ! Keep track if IM grid is defined in the northern of southern hemisphere
     logical :: IsSouthImGrid = .false.
-    
+
     integer :: iIonSecond, nIons
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_im_pressure'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     iIonSecond = min(IonFirst_+1, IonLast_)
-    !if (DoMultiFluidIMCoupling) then
+    ! if (DoMultiFluidIMCoupling) then
     !   nIons = iIonSecond
-    !else
+    ! else
     !   nIons = 1
-    !end if
+    ! end if
 
-    
     TauCoeffIm_C = 1.0
 
     ! Maximum latitude (ascending or descending) of the IM grid
@@ -129,7 +129,7 @@ contains
     else
        IsSouthImGrid = .false.
     endif
-    
+
     ! Check to see if cell centers are on closed fieldline
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -149,8 +149,8 @@ contains
           else
              Lat = ray(1,1,i,j,k,iBlock)
           endif
-          
-          !write(*,*) i,j,k,iBlock,Xyz_DGB(1:3,i,j,k,iBlock),Lat,ray(1,2,i,j,k,iBlock),LatMaxIm
+
+          ! write(*,*) i,j,k,iBlock,Xyz_DGB(1:3,i,j,k,iBlock),Lat,ray(1,2,i,j,k,iBlock),LatMaxIm
           ! Do not modify pressure along field lines outside the IM grid
           if(Lat > LatMaxIm .or. Lat < LatMinIm) CYCLE
 
@@ -159,7 +159,7 @@ contains
           else
              Lon = ray(2,1,i,j,k,iBlock)
           endif
-          
+
           if (IM_lat(1) > IM_lat(2)) then
              ! IM_lat is in descending order
              do iLat1 = 2, iSize
@@ -203,8 +203,8 @@ contains
           LonWeight2 = 1 - LonWeight1
 
           DENSITY: do iDensity=1,nDensity
-             !check if density is available from IM, if not cycle to next
-             if (.not. IsImRho_I(iDensity)) cycle DENSITY 
+             ! check if density is available from IM, if not cycle to next
+             if (.not. IsImRho_I(iDensity)) CYCLE DENSITY
              if(all( ImRho_CV( [iLat1,iLat2], &
                   [iLon1, iLon2],iDensity)&
                   > 0.0 ))then
@@ -214,12 +214,12 @@ contains
                      LonWeight2 * ( LatWeight1*ImRho_CV(iLat1,iLon2,iDensity) &
                      +              LatWeight2*ImRho_CV(iLat2,iLon2,iDensity)))
              end if
-             
+
           end do DENSITY
 
           FLUID: do iFluid=1,nFluid
-             !check if fluid is available from IM, if not cycle to next
-             if (.not. IsImP_I(iFluid)) cycle FLUID 
+             ! check if fluid is available from IM, if not cycle to next
+             if (.not. IsImP_I(iFluid)) CYCLE FLUID
              if(all( ImP_CV( [iLat1,iLat2], &
                   [iLon1, iLon2],iFluid ) &
                   > 0.0 ))then
@@ -228,8 +228,7 @@ contains
                      +              LatWeight2*ImP_CV(iLat2,iLon1,iFluid) ) + &
                      LonWeight2 * ( LatWeight1*ImP_CV(iLat1,iLon2,iFluid) &
                      +              LatWeight2*ImP_CV(iLat2,iLon2,iFluid) ) )
-             
-             
+
              ! ppar at minimum B
              if(DoAnisoPressureIMCoupling .and. IsImPpar_I(iFluid) )then
                 PparIm_IC(iFluid,i,j,k) = Si2No_V(UnitP_)*( &
@@ -243,7 +242,7 @@ contains
                      LonWeight2 * ( LatWeight1*IM_bmin(iLat1,iLon2) &
                      +              LatWeight2*IM_bmin(iLat2,iLon2) ) )
              end if
-             
+
              if(.not. DoAnisoPressureIMCoupling &
                   .or. .not. IsImPpar_I(iFluid))then
                 ! If coupled with RCM or if GM is not using anisotropic
@@ -259,14 +258,14 @@ contains
                 Coeff = 1/(PperpInvPpar &
                      + min(1.0, &
                      BminIm_C(i,j,k)/norm2(b_D))*(1 - PperpInvPpar))
-                
+
                 ! pressures and density at arbitrary location of a field line
                 pIm_IC(iFluid,i,j,k) = pIm_IC(iFluid,i,j,k)*Coeff &
                      + 2.0*Pperp*(Coeff - 1)*Coeff/3.0
                 PparIm_IC(iFluid,i,j,k) = PparIm_IC(iFluid,i,j,k)*Coeff
                 RhoIm_IC(iFluid,i,j,k) = RhoIm_IC(iFluid,i,j,k)*Coeff
              end if
-             
+
              if(dLatSmoothIm > 0.0)then
                 ! Go from low to high lat and look for first unset field line
                 ! !! WHAT ABOUT ASCENDING VS DESCENDING ORDER FOR LAT???
@@ -284,17 +283,17 @@ contains
              end if
           end do FLUID
        end if
-              
+
        ! If the pressure is not set by IM, and DoFixPolarRegion is true
        ! and the cell is within radius rFixPolarRegion and flow points outward
        ! then nudge the pressure (and density) towards the "polarregion" values
        if(pIm_IC(1,i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
             R_BLK(i,j,k,iBlock) < rFixPolarRegion .and. &
             Xyz_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0)then
-          do iFluid = 1, nFluid 
+          do iFluid = 1, nFluid
              pIm_IC(iFluid,i,j,k) = PolarP_I(iFluid)
           end do
-          do iDensity = 1, nDensity 
+          do iDensity = 1, nDensity
              RhoIm_IC(iDensity,i,j,k) = PolarRho_I(iDensity)
           end do
        end if
@@ -389,23 +388,23 @@ contains
     if(UseMultiSpecies)then
        nDensity = nSpecies+1
        allocate(iDens_I(nDensity))
-       !first density with multispecies is the total 
+       ! first density with multispecies is the total
        iDens_I(1) = Rho_
-       !subsequent densities are the species
+       ! subsequent densities are the species
        do iDensity=2,nDensity
           iDens_I(iDensity) = SpeciesFirst_+iDensity-2
        enddo
     else
-       nDensity = nFluid !nIons
+       nDensity = nFluid ! nIons
        allocate(iDens_I(nDensity))
        iDens_I = iRho_I(1:nFluid)!(1:nIons)
     end if
 
     if (.not.allocated(RhoIm_IC)) allocate(RhoIm_IC(nDensity,nI,nJ,nK))
-    
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       
+
        call get_im_pressure(iBlock, nDensity, pIm_IC, RhoIm_IC, TauCoeffIm_C, &
             PparIm_IC)
        if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do
@@ -426,11 +425,11 @@ contains
              end where
           end do
        end if
-       
+
        if(time_accurate)then
           if(DoCoupleImPressure)then
-             APPLY_P: do iFluid = 1, nFluid!nIons
-                if (.not. IsImP_I(iFluid)) cycle APPLY_P 
+             APPLY_P: do iFluid = 1, nFluid! nIons
+                if (.not. IsImP_I(iFluid)) CYCLE APPLY_P
                 where(pIm_IC(iFluid,:,:,:) > 0.0) &
                      State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = &
                      State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock)   &
@@ -450,7 +449,7 @@ contains
           if(DoCoupleImDensity)then
              ! Negative first fluid density signals cells not covered by IM
              APPLY_DENS: do iDensity = 1,nDensity
-                if (.not. IsImRho_I(iDensity)) cycle APPLY_DENS
+                if (.not. IsImRho_I(iDensity)) CYCLE APPLY_DENS
                 do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    if(RhoIm_IC(iDensity,i,j,k) <= 0.0 ) CYCLE
                    ! Here iDens_I can index multiple species or fluids
@@ -464,8 +463,8 @@ contains
           end if
        else
           if(DoCoupleImPressure)then
-             APPLY_P2: do iFluid = 1, nFluid!nIons
-                if (.not. IsImP_I(iFluid)) cycle APPLY_P2 
+             APPLY_P2: do iFluid = 1, nFluid! nIons
+                if (.not. IsImP_I(iFluid)) CYCLE APPLY_P2
                 where(pIm_IC(iFluid,:,:,:) > 0.0) &
                      State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = Factor* &
                      (TauCoupleIM &
@@ -481,7 +480,7 @@ contains
           end if
           if(DoCoupleImDensity)then
              APPLY_DENS2: do iDensity = 1,nDensity
-                if (.not. IsImRho_I(iDensity)) cycle APPLY_DENS2
+                if (.not. IsImRho_I(iDensity)) CYCLE APPLY_DENS2
                 do k = 1, nK; do j = 1, nJ; do i = 1,nI
                    if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
                    State_VGB(iDens_I,i,j,k,iBlock) = &
@@ -494,7 +493,7 @@ contains
        end if
        ! Convert back to momentum
        if(DoCoupleImDensity)then
-          do iFluid = 1, nFluid!nIons
+          do iFluid = 1, nFluid! nIons
              where(RhoIm_IC(iFluid,:,:,:) > 0.0)
                 State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
                      State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)* &

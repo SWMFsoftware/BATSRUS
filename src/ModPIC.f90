@@ -68,9 +68,9 @@ module ModPIC
 
   ! Local variables
 
-  ! Conversion to PIC units  
-  ! If UseSamePicUnit is true, use the same units for all PIC regions. 
-  logical, public:: UseSamePicUnit = .true. 
+  ! Conversion to PIC units
+  ! If UseSamePicUnit is true, use the same units for all PIC regions.
+  logical, public:: UseSamePicUnit = .true.
   real, public :: xUnitPicSi = 1, uUnitPicSi = 1, mUnitPicSi = 1
   real, public, allocatable  :: xUnitPicSi_I(:), uUnitPicSi_I(:), &
        mUnitPicSi_I(:), ScalingFactor_I(:)
@@ -81,7 +81,6 @@ module ModPIC
   ! PIC regions
   integer, public :: nRegionPic = 0
 
-
   ! R_DDI: mhd coordinates to pic coordinates.
   real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), &
        LenPic_DI(:,:), DxyzPic_DI(:,:), r_DDI(:,:,:)
@@ -90,9 +89,9 @@ module ModPIC
   integer, public, allocatable:: PatchSize_DI(:,:)
 
   ! Each patch uses 1 bit to record its status, on or off. The second
-  ! index is the region number. 
+  ! index is the region number.
   integer, public, allocatable:: Status_I(:)
-  integer, public, allocatable:: StatusMin_I(:), StatusMax_I(:)  
+  integer, public, allocatable:: StatusMin_I(:), StatusMax_I(:)
   integer, public::  nSizeStatus
 
   integer, public:: nCellPerPatch = 4
@@ -185,7 +184,7 @@ contains
        call read_var('uUnitPicSi', uUnitPicSi)
 
     case("#PICGRIDUNIT")
-       UseSamePicUnit = .false. 
+       UseSamePicUnit = .false.
        call read_var('nPicRegion', nRegionPicTmp)
 
        if(nRegionPic > 0 .and. nRegionPicTmp /= nRegionPic ) then
@@ -205,7 +204,7 @@ contains
        do iRegion = 1, nRegionPic
           call read_var('xUnitPicSi', xUnitPicSi_I(iRegion))
           call read_var('uUnitPicSi', uUnitPicSi_I(iRegion))
-          call read_var('ScalingFactor', ScalingFactor_I(iRegion))          
+          call read_var('ScalingFactor', ScalingFactor_I(iRegion))
        enddo
 
     case("#PICBALANCE")
@@ -257,7 +256,7 @@ contains
 
        end do
 
-    case("#PICGRIDROTATE")       
+    case("#PICGRIDROTATE")
        DoRotatePIC = .true.
 
        call read_var('nPicRegion', nRegionPicTmp)
@@ -415,8 +414,7 @@ contains
        IsPicCrit_CB = iPicOff_
     end if
 
-
-    do iRegion = 1, nRegionPic      
+    do iRegion = 1, nRegionPic
        do i=1, nDim
           ! Fix the PIC domain range.
           nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
@@ -442,12 +440,12 @@ contains
 
        if(allocated(StatusMax_I)) deallocate(StatusMax_I)
        allocate(StatusMax_I(nRegionPic))
-       StatusMax_I = 0 
+       StatusMax_I = 0
 
        ! Calculate the size nSizeStatus and allocate integer array Status_I
        ! to store the status of the patches for all PIC grids.
        nSizeStatus = 0
-       do iRegion = 1, nRegionPic          
+       do iRegion = 1, nRegionPic
           StatusMin_I(iRegion) = nSizeStatus + 1
 
           StatusMax_I(iRegion) = StatusMin_I(iRegion) -1 + &
@@ -455,21 +453,21 @@ contains
                /storage_size(nSizeStatus))
 
           ! The number of integers needed to store the patch status information.
-          nSizeStatus = StatusMax_I(iRegion) 
+          nSizeStatus = StatusMax_I(iRegion)
        enddo
 
-       if(allocated(Status_I)) deallocate(Status_I)             
+       if(allocated(Status_I)) deallocate(Status_I)
        allocate(Status_I(nSizeStatus))
        call set_status_all(iPicOff_)
 
     endif
 
-    do iRegion = 1, nRegionPic      
-       XyzMaxPic_DI(:,iRegion) = XyzMinPic_DI(:,iRegion) + LenPic_DI(:,iRegion)      
+    do iRegion = 1, nRegionPic
+       XyzMaxPic_DI(:,iRegion) = XyzMinPic_DI(:,iRegion) + LenPic_DI(:,iRegion)
 
        if(UseHallResist) then
-          PicMiddle_D = 0         
-          do i = 0, 2             
+          PicMiddle_D = 0
+          do i = 0, 2
              ! Part of the PIC grid may overlap with the MHD body, where the
              ! Hall factor is not defined. But it is not likely that the
              ! lower corner, the middle point, and the upper corner
@@ -478,7 +476,7 @@ contains
                   0.5*i*LenPic_DI(:,iRegion)
              call find_grid_block(PicMiddle_D, iProcPic,iBlockPic, &
                   iCellOut_D=iCell_D)
-             if(iProcPic /= Unset_) exit
+             if(iProcPic /= Unset_) EXIT
           enddo
 
           if(iProc == 0 .and. iProcPic == Unset_) call stop_mpi(&
@@ -486,9 +484,9 @@ contains
 
           if(iProcPic == iProc) then
              call set_hall_factor_cell(iBlockPic, .false.)
-             ScalingFactor_I(iRegion) = HallFactor_C( & 
+             ScalingFactor_I(iRegion) = HallFactor_C( &
                   iCell_D(x_), iCell_D(y_), iCell_D(z_))
-             ! If Hall is not used around this PIC region, then use 
+             ! If Hall is not used around this PIC region, then use
              ! HallFactorMax as the scaling factor.
              if(ScalingFactor_I(iRegion) == 0) &
                   ScalingFactor_I(iRegion) = HallFactorMax
@@ -559,14 +557,14 @@ contains
 
     integer:: iError
 
-    logical:: DoTest
     character(len=100) :: NameFile
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_pic_status_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Status_I exists in every proc, use only the first one
-    if(iProc /= 0) RETURN 
+    if(iProc /= 0) RETURN
 
     NameFile = trim('GM/restartOUT/')//NamePicStatusFile
     call open_file(FILE=NameFile, form='UNFORMATTED', NameCaller=NameSub)
@@ -589,13 +587,13 @@ contains
 
     integer:: iError
 
-    logical:: DoTest
     character(len=100) :: NameFile
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_pic_status_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    NameFile = trim('GM/restartIN/')//NamePicStatusFile    
+    NameFile = trim('GM/restartIN/')//NamePicStatusFile
     call open_file(FILE=NameFile, status='old', form='UNFORMATTED', &
          NameCaller=NameSub)
     read(UnitTmp_, iostat = iError) nSizeStatus
@@ -683,6 +681,7 @@ contains
     real:: XyzPic_D(nDim), XyzMhd_D(nDim), XyzMhdExtend_D(nDim)
     integer:: iBlock
     integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
@@ -789,7 +788,7 @@ contains
     !        if((r < nx/4 + nx/4*mod(Time_Simulation,10.0)/10.0 .and. &
     !             r > nx/8 + nx/10*mod(Time_Simulation,10.0)/10.0) .or. &
     !             r < nx/10) then
-    !           ! Setting PIC region for tests only. 
+    !           ! Setting PIC region for tests only.
     !           call set_point_status(Status_I,nx, ny, nz, i, j, k, iPicOn_)
     !        endif
 
@@ -797,16 +796,18 @@ contains
     ! enddo
 
   end subroutine pic_set_cell_status
+  !============================================================================
 
   logical function is_inside_pic_grid(IndexPatch_D, iRegion)
 
     integer, intent(in) :: IndexPatch_D(3)
     integer, intent(in) :: iRegion
 
+    !--------------------------------------------------------------------------
     if(any(IndexPatch_D < 0) .or. &
          any(IndexPatch_D >= PatchSize_DI(:, iRegion))) then
        is_inside_pic_grid = .false.
-    else 
+    else
        is_inside_pic_grid = .true.
     end if
 
@@ -851,22 +852,21 @@ contains
     integer:: iRegion, iStatus, nX, nY, nZ
     integer:: Index_D(3) = 0
     integer:: dI = 0, dJ = 0, dK = 0
-    !-----------------------------------------------
+    !--------------------------------------------------------------------------
 
-
-    IsInside = .false. 
+    IsInside = .false.
 
     do iRegion = 1, nRegionPic
 
        ! If Xyz_D is outside this PIC grid, then go to check the next PIC grid.
        if(any(Xyz_D < XyzMinPic_DI(1:nDim, iRegion) + &
-            0.9*DxyzPic_DI(:,iRegion) )) cycle 
+            0.9*DxyzPic_DI(:,iRegion) )) CYCLE
        if(any(Xyz_D > XyzMaxPic_DI(1:nDim, iRegion) - &
-            0.9*DxyzPic_DI(:,iRegion) )) cycle
+            0.9*DxyzPic_DI(:,iRegion) )) CYCLE
 
        nX = PatchSize_DI(x_, iRegion)
        nY = PatchSize_DI(y_, iRegion)
-       nZ = PatchSize_DI(z_, iRegion)       
+       nZ = PatchSize_DI(z_, iRegion)
 
        do dI = -1, 1; do dJ = -1, 1; do dK = -1, 1
 
@@ -884,18 +884,18 @@ contains
                Status_I(StatusMin_I(iRegion):StatusMax_I(iRegion)), &
                nx, ny, nz, Index_D(x_), Index_D(y_), Index_D(z_), iStatus)
 
-          if(iStatus==iPicOff_) return   
+          if(iStatus==iPicOff_) RETURN
 
        enddo; enddo; enddo
 
-       ! All the patches surround Xyz_D are actived. 
+       ! All the patches surround Xyz_D are actived.
        IsInside = .true.
-       return
+       RETURN
 
     end do
   end subroutine is_inside_active_pic_region
-
   !============================================================================
+
   integer function pic_find_region(iBlock,i,j,k)
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -922,8 +922,8 @@ contains
 
     pic_find_region=iStatus
   end function pic_find_region
-
   !============================================================================
+
   integer function pic_find_region_active(iBlock,i,j,k)
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -949,8 +949,8 @@ contains
     pic_find_region_active=iStatus
 
   end function pic_find_region_active
-
   !============================================================================
+
   integer function pic_find_region_criteria(iBlock,i,j,k)
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
@@ -973,9 +973,8 @@ contains
     pic_find_region_criteria=iStatus
 
   end function pic_find_region_criteria
-
-
   !============================================================================
+
   subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
     ! Transfer Pic coordinates to Mhd coordinates. Origin_D
     ! is the origin of the PIC coordinates.
@@ -1124,7 +1123,7 @@ contains
     else if(NameCoord=='Pic') then
        call mhd_to_pic_vec(iRegion,CoordMhd_D,CoordPic_D)
        CoordOut_D = CoordPic_D
-    else 
+    else
        if(iProc==0) call stop_mpi(NameSub// &
             ': NameCoord ' // NameCoord // ' not defined!')
     end if
@@ -1132,7 +1131,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine patch_index_to_coord
   !============================================================================
-
 
   subroutine calc_pic_criteria
 
@@ -1157,15 +1155,16 @@ contains
     real :: CriteriaValue
     real, allocatable :: j_D(:), Ufield_DGB(:,:,:,:,:), DivU_CB(:,:,:,:), jxB_D(:)
     real :: current, bNorm
-    logical:: DoTest, SatisfyAll
+    logical:: SatisfyAll
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_pic_criteria'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
     if(nCriteriaPic==0) then
-       IsPicCrit_CB = iPicOn_             
+       IsPicCrit_CB = iPicOn_
        RETURN
     end if
 
@@ -1223,7 +1222,7 @@ contains
        end select
     end do
 
-    do iBlock=1,nBlock       
+    do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
@@ -1327,11 +1326,10 @@ contains
     if(allocated(GradUnitBx_DGB))    deallocate(GradUnitBx_DGB)
     if(allocated(GradUnitBy_DGB))    deallocate(GradUnitBy_DGB)
     if(allocated(GradUnitBz_DGB))    deallocate(GradUnitBz_DGB)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine calc_pic_criteria
   !============================================================================
-
 
 end module ModPIC
 !==============================================================================

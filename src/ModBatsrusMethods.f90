@@ -232,25 +232,21 @@ contains
       end if
 
       ! Potentially useful for applying "First Touch" strategy
-!!$omp parallel do 
+!!$ omp parallel do
       do iBlock = 1, nBlockMax
          ! Initialize solution blocks
          call set_initial_condition(iBlock)
          ! Initialize the VDFs for the hybrid particles
-         if(UseHybrid.and.(.not.Unused_B(iBlock)))& 
+         if(UseHybrid.and.(.not.Unused_B(iBlock)))&
               call get_vdf_from_state(iBlock,DoOnScratch = .True.)
       end do
-!!$omp end parallel do
+!!$ omp end parallel do
 
       if(UseHybrid)then
-         !\
-         !Check particles and collect their moments
-         !/
+         ! Check particles and collect their moments
          call trace_particles(Dt=0.0,DoBorisStepIn=.false.)
-         !\
          ! Due to finite number of particles per cell, the state vector
          ! while randomized the particles has been modified somewhat
-         !/
          call get_state_from_vdf
       end if
 
@@ -341,7 +337,7 @@ contains
     use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
     use ModTimeStepControl, ONLY: TimeSimulationOldCheck
-    
+
     ! Local variables
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_session'
@@ -362,9 +358,7 @@ contains
     ! Find the test cell defined by #TESTIJK or #TESTXYZ commands
     call find_test_cell
 
-    !\
     ! Allow the user to add a perturbation to the initial condition.
-    !/
     if (UseUserPerturbation) then
        call user_initial_perturbation
        UseUserPerturbation=.false.
@@ -493,10 +487,10 @@ contains
 
     call timing_start('advance')
 
-    ! We are advancing in time. 
+    ! We are advancing in time.
     time_loop = .true.
 
-    ! Exchange messages if some information was received 
+    ! Exchange messages if some information was received
     ! from another SWMF component, for example.
     if(DoExtraMessagePass) call exchange_messages
 
@@ -613,13 +607,12 @@ contains
     ! Re-calculate the active PIC regions
     if(UseAdaptivePic) then
        if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate)) then
-          if(iProc==0) print*, "Re-calculating PIC region at simulation time ", Time_Simulation 
+          if(iProc==0) print*, "Re-calculating PIC region at simulation time ", Time_Simulation
           call calc_pic_criteria
           call pic_set_cell_status
        end if
     end if
 
-    
     if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
          iProc,n_step,Time_Simulation
 
@@ -708,7 +701,7 @@ contains
        call Bcenter2Bface(iBlock)
        ! Calculate energy (it is not set in set_initial_condition)
        ! because the projection scheme will need it
-       ! !!call calc_energy(iBlock)
+       ! !! call calc_energy(iBlock)
     end do
 
     call proj_get_divb(tmp1_BLK)
@@ -838,8 +831,9 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       logical :: SaveThreads4Plot
+
       !------------------------------------------------------------------------
-      SaveThreads4Plot = DoPlotThreads    
+      SaveThreads4Plot = DoPlotThreads
       do iFile = 1, nFile
          ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
@@ -921,8 +915,8 @@ contains
       ! is saved here before and it is restored after the loop.
 
       real :: tSimulationBackup = 0.0
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
 
       if(ifile==restart_) then
@@ -1231,7 +1225,7 @@ contains
     call clean_mod_part_impl
     call clean_mod_point_impl
     call clean_mod_semi_impl
-    
+
     ! call clean_mod_boundary_cells !!! to be implemented
     ! call clean_mod_resistivity !!! to be implemented
 

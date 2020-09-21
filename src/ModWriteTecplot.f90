@@ -197,11 +197,12 @@ contains
     !==========================================================================
 
   end subroutine write_tecplot_data
-  !==========================================================================
+  !============================================================================
   function int2str(i) result(res)
     character(:),allocatable :: res
     integer,intent(in) :: i
     character(range(i)+2) :: tmp
+    !--------------------------------------------------------------------------
     write(tmp,'(i0)') i
     res = trim(tmp)
   end function int2str
@@ -469,10 +470,10 @@ contains
                 if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
                      CYCLE
                 nBrick = nBrick + 1
-                
+
                 ! In stage 1 only count bricks
                 if(iStage < nStage) CYCLE
-                
+
                 write(UnitTmp_) &
                      iCell_G(i  ,j  ,k  ), &
                      iCell_G(i+1,j  ,k  ), &
@@ -490,10 +491,10 @@ contains
                 if(any(iCell_G(i:i+iPlotDim,j:j+jPlotDim,k:k+kPlotDim)==0))&
                      CYCLE
                 nBrick = nBrick + 1
-                
+
                 ! In stage 1 only count bricks
                 if(iStage < nStage) CYCLE
-                
+
                 if(nPlotDim == 3)then
                    if(DoSaveOneTecFile)then
                       write(UnitTmp_,'(8i11,a)', REC=nBrick) &
@@ -635,23 +636,23 @@ contains
               'D Data,'//textDateTime//'"',NEW_LINE('a')
       end if
       write(UnitTmp_) trim(StringUnit),NEW_LINE('a')
-      select case(nPlotDim) 
-      case(2) 
+      select case(nPlotDim)
+      case(2)
          write(UnitTmp_) &
               'ZONE T="2D   '//textNandT//'"', &
-              ', N=', int2str(nPointAll), &    
+              ', N=', int2str(nPointAll), &
               ', E=', int2str(nBrickAll), &
-              ', F=FEPOINT, ET=QUADRILATERAL', NEW_LINE('a')   
-      case(3)  
-         write(UnitTmp_) & 
+              ', F=FEPOINT, ET=QUADRILATERAL', NEW_LINE('a')
+      case(3)
+         write(UnitTmp_) &
               'ZONE T="3D   '//textNandT//'"', &
-              ', N=', int2str(nPointAll), &  
-              ', E=', int2str(nBrickAll), & 
+              ', N=', int2str(nPointAll), &
+              ', E=', int2str(nBrickAll), &
               ', F=FEPOINT, ET=BRICK',NEW_LINE('a')
       end select
     else
       call open_file(File=NameFile)
-      
+
       if(DoCut)then
          write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
       else
@@ -674,14 +675,14 @@ contains
               ', F=FEPOINT, ET=BRICK'
       end select
     end if
-   
+
     call write_tecplot_auxdata
     call close_file
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_head
   !============================================================================
-  
+
   subroutine write_tecplot_auxdata(iUnitIn)
 
     use ModMain, ONLY : nI,nJ,nK, &
@@ -727,13 +728,13 @@ contains
        write(iUnitHere) &
             'AUXDATA BLOCKS="',int2str(nBlockAll),'  ',int2str(nI),' x',&
             int2str(nJ),' x',int2str(nK),'"',Newline
-       
+
        ! BODYDENSITY
        write(tmp, '(a,(f5.2),2a)') 'AUXDATA BODYNUMDENSITY="',&
             BodyNDim_I(IonFirst_), '"',Newline
        str = trim(tmp)
        write(iUnitHere) str
-       
+
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple) then
           write(tmp, '(a,(f8.4),2a)') 'AUXDATA BORIS="T ', ClightFactor, '"',&
@@ -745,30 +746,30 @@ contains
           str =	trim(tmp)
           write(iUnitHere) str
        end if
-       
+
        ! BTHETATILT
        write(tmp, '(a,(f12.4),2a)') &
             'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"',Newline
        str = trim(tmp)
        write(iUnitHere) str
-       
+
        ! CELLS
        write(iUnitHere) 'AUXDATA CELLS="',int2str(nBlockALL*nIJK),&
             '"', Newline
-       
+
        ! CELLSUSED
        write(iUnitHere) 'AUXDATA CELLSUSED="',int2str(nTrueCells),'"',Newline
-       
+
        ! CODEVERSION
        write(tmp, '(a,(f5.2),2a)') &
             'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"',Newline
        str = trim(tmp)
        write(iUnitHere) str
-       
+
        ! COORDSYSTEM
        write(iUnitHere) &
             'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"',Newline
-       
+
        ! COROTATION
        if(UseRotatingBc)then
           write(iUnitHere) 'AUXDATA COROTATION="T"',Newline
@@ -778,18 +779,18 @@ contains
 
        ! FLUXTYPE
        write(iUnitHere) 'AUXDATA FLUXTYPE="',FluxType,'"',Newline
-       
+
        ! GAMMA
        write(tmp, '(a,(f14.6),2a)') 'AUXDATA GAMMA="',Gamma_I(1),'"',Newline
        str = trim(tmp)
        write(iUnitHere) str
-       
+
        ! ITER
        write(iUnitHere) 'AUXDATA ITER="',int2str(n_step),'"',Newline
-       
+
        ! NPROC
        write(iUnitHere) 'AUXDATA NPROC="',int2str(nProc),'"',Newline
-       
+
        ! ORDER
        if(nOrder > 1)then
           write(tmp, '(5a,(f8.5),2a)') 'AUXDATA ORDER="',&
@@ -800,12 +801,12 @@ contains
        else
           write(iUnitHere) 'AUXDATA ORDER="',int2str(nOrder),'"',Newline
        end if
-       
+
        ! RBODY
        write(tmp, '(a,(f12.2),2a)') 'AUXDATA RBODY="',rBody,'"',Newline
        str = trim(tmp)
        write(iUnitHere) str
-       
+
        ! SAVEDATE
        call Date_and_time(real_date, real_time)
        write(iUnitHere) &
@@ -813,13 +814,13 @@ contains
             real_date(5:6),'/', real_date(7:8), &
             ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6),&
             '"',Newline
-       
+
        ! TIMEEVENT
        write(iUnitHere) 'AUXDATA TIMEEVENT="',textDateTime,'"',Newline
-       
+
        ! TIMEEVENTSTART
        write(iUnitHere) 'AUXDATA TIMEEVENTSTART="',textDateTime0,'"',Newline
-       
+
        ! TIMESIM
        if(time_accurate)then
           write(iUnitHere) 'AUXDATA TIMESIM="T=',&
@@ -830,7 +831,7 @@ contains
        else
           write(iUnitHere) 'AUXDATA TIMESIM="T= N/A"',Newline
        end if
-       
+
        ! TIMESIMSHORT
        if(time_accurate)then
           write(iUnitHere) 'AUXDATA TIMESIMSHORT="T=',&
@@ -843,32 +844,32 @@ contains
        ! BLOCKS
        write(iUnitHere,'(a,i12,3(a,i2),a)') 'AUXDATA BLOCKS="',nBlockALL,'  ',&
             nI,' x',nJ,' x',nK,'"'
-       
+
        ! BODYDENSITY
        write(iUnitHere,'(a,(f12.2),a)') &
             'AUXDATA BODYNUMDENSITY="',BodyNDim_I(IonFirst_),'"'
-       
+
        ! BORIS
        if(UseBorisCorrection .or. UseBorisSimple)then
           write(iUnitHere,'(a,f8.4,a)') 'AUXDATA BORIS="T ',ClightFactor,'"'
        else
           write(iUnitHere,'(a,a,a)') 'AUXDATA BORIS="F"'
        end if
-       
+
        ! BTHETATILT
        write(iUnitHere,'(a,f12.4,a)') &
             'AUXDATA BTHETATILT="',ThetaTilt*cRadToDeg,'"'
-       
+
        ! CELLS
        write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLS="',nBlockALL*nIJK,'"'
-       
+
        ! CELLSUSED
        write(iUnitHere,'(a,i12,a)') 'AUXDATA CELLSUSED="',nTrueCells,'"'
-       
+
        ! CODEVERSION
        write(iUnitHere,'(a,f5.2,a)') &
             'AUXDATA CODEVERSION="BATSRUS',CodeVersion,'"'
-       
+
        ! COORDSYSTEM
        write(iUnitHere,'(a,a,a)') &
             'AUXDATA COORDSYSTEM="',TypeCoordSystem,'"'
@@ -880,19 +881,18 @@ contains
           write(iUnitHere,'(a)') 'AUXDATA COROTATION="F"'
        end if
 
-
        ! FLUXTYPE
        write(iUnitHere,'(a,a,a)') 'AUXDATA FLUXTYPE="',FluxType,'"'
-       
+
        ! GAMMA
        write(iUnitHere,'(a,f14.6,a)') 'AUXDATA GAMMA="',Gamma_I(1),'"'
-       
+
        ! ITER
        write(iUnitHere,'(a,i12,a)') 'AUXDATA ITER="',n_step,'"'
-       
+
        ! NPROC
        write(iUnitHere,'(a,i12,a)') 'AUXDATA NPROC="',nProc,'"'
-       
+
        ! ORDER
        if(nOrder > 1)then
           write(iUnitHere,'(a,i12,a,f8.5,a)') 'AUXDATA ORDER="',nOrder,&
@@ -900,24 +900,24 @@ contains
        else
           write(iUnitHere,'(a,i12,a)') 'AUXDATA ORDER="',nOrder,'"'
        end if
-       
+
        ! RBODY
        write(iUnitHere,'(a,f12.2,a)') 'AUXDATA RBODY="',rBody,'"'
-       
+
        ! SAVEDATE
        call Date_and_time(real_date, real_time)
        write(iUnitHere,'(a,a11,a4,a1,a2,a1,a2,a4,a2,a1,a2,a1,a2,a)')&
             'AUXDATA SAVEDATE="','Save Date: ', real_date(1:4),'/',&
             real_date(5:6),'/', real_date(7:8), ' at ',  &
             real_time(1:2),':',real_time(3:4),':',real_time(5:6),'"'
-       
+
        ! TIMEEVENT
        write(iUnitHere,'(a,a,a)') 'AUXDATA TIMEEVENT="',textDateTime,'"'
-       
+
        ! TIMEEVENTSTART
        write(iUnitHere,'(a,a,a)') &
             'AUXDATA TIMEEVENTSTART="',textDateTime0,'"'
-       
+
        ! TIMESIM
        if(time_accurate)then
           write(iUnitHere,'(a,a,a)') 'AUXDATA TIMESIM="',&
@@ -933,14 +933,14 @@ contains
        if(time_accurate)then
           write(iUnitHere,'(a,a,a)') &
                'AUXDATA TIMESIMSHORT="',&
-               'T='// &          
+               'T='// &
                StringDateOrTime(1:4)//":"// &
                StringDateOrTime(5:6),'"'
        else
           write(iUnitHere,'(a)') 'AUXDATA TIMESIMSHORT=" SS"'
        end if
     endif
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine write_tecplot_auxdata
   !============================================================================
@@ -1096,7 +1096,7 @@ contains
     real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
     integer, intent(in) :: iUnit
 
-    ! Note: the final output data is in single precision, so in fact it is a 
+    ! Note: the final output data is in single precision, so in fact it is a
     ! waste of memory to pass in double precision arrays.
 
     ! Local Variables

@@ -14,7 +14,7 @@ module ModCellBoundary
 
   ! Public methods
   public :: set_cell_boundary, set_edge_corner_ghost
-  
+
 contains
   !============================================================================
 
@@ -139,7 +139,7 @@ contains
          jMin => CBC%jMin, jMax => CBC%jMax, &
          kMin => CBC%kMin, kMax => CBC%kMax, &
          TypeBc => CBC%TypeBc)
-    
+
     ! Loop through all sides
     do iSide = iSideMin, iSideMax
 
@@ -399,7 +399,7 @@ contains
     end if
 
     end associate
-    
+
     deallocate(SymmCoeff_V)
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -419,7 +419,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -460,7 +460,7 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_gradpot_bc
     !==========================================================================
 
@@ -470,6 +470,7 @@ contains
       integer, intent(in) :: iVarMin, iVarMax
 
       integer:: i, j, k
+
       !------------------------------------------------------------------------
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
@@ -509,7 +510,7 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_float_bc
     !==========================================================================
 
@@ -553,7 +554,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       select case(iSide)
       case(1)
          ! Shift by +Di,-Dj
@@ -578,7 +579,7 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_shear_bc
     !==========================================================================
     subroutine set_symm_bc(iVarMin, iVarMax, Coeff_V)
@@ -593,7 +594,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -628,7 +629,7 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_symm_bc
     !==========================================================================
 
@@ -653,7 +654,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       select case(iSide)
       case(1,2)
          if(iSide == 1)then
@@ -721,7 +722,7 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_reflect_bc
     !==========================================================================
     subroutine set_fixed_bc(iVarMin, iVarMax, State_V)
@@ -737,13 +738,13 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) = State_V
       end do; end do; end do
 
       end associate
-      
+
     end subroutine set_fixed_bc
     !==========================================================================
     subroutine set_fixed_semi_bc
@@ -764,7 +765,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       if(UseSemiHallResist .or. UseSemiResistivity)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
@@ -797,7 +798,7 @@ contains
       end if
 
       end associate
-      
+
     end subroutine set_fixed_semi_bc
     !==========================================================================
     subroutine fix_b0(iVarMin, iVarMax)
@@ -814,14 +815,14 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
          jMin => CBC%jMin, jMax => CBC%jMax, &
          kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) =  &
               State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
       end associate
-      
+
     end subroutine fix_b0
     !==========================================================================
 
@@ -856,7 +857,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
          if(IsCartesianGrid)then
@@ -921,7 +922,7 @@ contains
       end do; end do; end do
 
       end associate
-      
+
     end subroutine set_solar_wind_bc
     !==========================================================================
 
@@ -934,12 +935,12 @@ contains
       ! index and location of a single point
       integer :: i, j, k
       real    :: y, z
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       do k = kMin, kMax
          z = Xyz_DGB(z_,1,1,k,iBlock)
          do j = jMin, jMax
@@ -954,7 +955,7 @@ contains
       end do
 
       end associate
-      
+
     end subroutine set_solar_wind_bc_buffer
     !==========================================================================
 
@@ -981,7 +982,7 @@ contains
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
            jMin => CBC%jMin, jMax => CBC%jMax, &
            kMin => CBC%kMin, kMax => CBC%kMax)
-      
+
       select case(iSide)
       case(1, 2)
          if(iSide == 1)then
@@ -1069,10 +1070,10 @@ contains
       end select
 
       end associate
-      
+
     end subroutine set_radiation_outflow_bc
     !==========================================================================
-    
+
   end subroutine set_cell_boundary
   !============================================================================
 

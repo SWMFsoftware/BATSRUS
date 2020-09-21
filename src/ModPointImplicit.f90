@@ -80,17 +80,17 @@ module ModPointImplicit
   integer, public, allocatable :: iVarPointImpl_I(:)
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
-  !$omp threadprivate( IsPointImplMatrixSet )
-  !$omp threadprivate( IsPointImplPerturbed )
+  !$ omp threadprivate( IsPointImplMatrixSet )
+  !$ omp threadprivate( IsPointImplPerturbed )
 
   real, allocatable :: Matrix_II(:,:), Rhs_I(:)
-  !$omp threadprivate( Matrix_II, Rhs_I )
+  !$ omp threadprivate( Matrix_II, Rhs_I )
 
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
-  !$omp threadprivate( DsDu_VVC )
+  !$ omp threadprivate( DsDu_VVC )
 
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
@@ -128,7 +128,7 @@ contains
     end interface
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'init_mod_point_implicit'
+    character(len=*), parameter:: NameSub = 'init_mod_point_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -190,12 +190,12 @@ contains
 
     nVarPointImpl = size(iVarPointImpl_I)
 
-    !$omp parallel
+    !$ omp parallel
     allocate( &
        DsDu_VVC(nVar,nVar,nI,nJ,nK), &
        Matrix_II(nVarPointImpl,nVarPointImpl), &
        Rhs_I(nVarPointImpl))
-    !$omp end parallel
+    !$ omp end parallel
 
     if(iProc==0 .and. index(StringTest, NameSub)>0)then
        write(*,*)NameSub,' allocated arrays'
@@ -233,16 +233,17 @@ contains
   !============================================================================
   subroutine clean_mod_point_impl
 
+    !--------------------------------------------------------------------------
     if(.not.allocated(UseUserPointImplicit_B)) RETURN
     deallocate(UseUserPointImplicit_B)
     if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
-    !$omp parallel
+    !$ omp parallel
     if(allocated(DsDu_VVC)) deallocate(DsDu_VVC)
     if(allocated(Rhs_I)) deallocate(Rhs_I)
     if(allocated(Matrix_II)) deallocate(Matrix_II)
-    !$omp end parallel
+    !$ omp end parallel
 
   end subroutine clean_mod_point_impl
   !============================================================================
@@ -556,10 +557,8 @@ contains
     if(nVar > MAXVAR) call stop_mpi(&
          'ERROR in ModPointImplicit linear solver: MaxVar is too small')
 
-    !\
     ! Loop through each row to get implicit scaling
     ! information.
-    !/
     DO IL=1,nVar
        LHSMAX=0.00
        DO JL=1,nVar
@@ -568,9 +567,7 @@ contains
        SCALING(IL)=1.00/LHSMAX
     END DO
 
-    !\
     ! Peform the LU decompostion using Crout's method.
-    !/
     DO JL=1,nVar
        DO IL=1,JL-1
           TOTALSUM=Matrix_VV(IL,JL)
@@ -610,10 +607,8 @@ contains
        END IF
     END DO
 
-    !\
     ! Peform the forward and back substitution to obtain
     ! the solution vector.
-    !/
     II=0
     DO IL=1,nVar
        LL=INDX(IL)

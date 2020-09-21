@@ -14,8 +14,8 @@ module ModUaCoupling
   SAVE
 
   private ! except
-  !public:: im_pressure_init
-  !public:: apply_im_pressure
+  ! public:: im_pressure_init
+  ! public:: apply_im_pressure
   public:: gm_init_ua_array
 
   ! The number of IM pressures obtained so far
@@ -35,10 +35,10 @@ contains
   subroutine gm_init_ua_array(nI,nJ,nK,MaxBlock,MaxNuSpecies)
 
     integer, intent(in):: nI,nJ,nK,MaxBlock,MaxNuSpecies
+    !--------------------------------------------------------------------------
     allocate(nDenNuSpecies_fromUA(nI, nJ, nK, MaxBlock, MaxNuSpecies))
 
   end subroutine gm_init_ua_array
-
   !============================================================================
 
 end module ModUaCoupling

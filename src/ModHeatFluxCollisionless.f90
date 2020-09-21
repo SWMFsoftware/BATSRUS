@@ -75,6 +75,7 @@ contains
 
     integer:: i, j, k, iP
     real:: GammaHere
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_heatflux_collisionless'
     !--------------------------------------------------------------------------

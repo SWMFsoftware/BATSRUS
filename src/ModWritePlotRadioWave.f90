@@ -42,67 +42,43 @@ contains
     !
     integer, intent(in) :: iFile
 
-    !\
     ! Local variables
-    !/
-    !\
-    ! Observer's location; actually it is the location 
+    ! Observer's location; actually it is the location
     !     of the radiotelescope.
-    !/
     real :: XyzObserver_D(MaxDim)
-    !\
-    !Misc functions of inputs 
-    !/     
+    ! Misc functions of inputs
     real :: ObserverDistance !=sqrt(sum(XyzObs_D**2))
-    !\
     ! Radius of "integration sphere"
-    !/
     real :: rIntegration
-    !\
     ! Dimensions of the raster in pixels
-    !/
     integer ::  nXPixel, nYPixel
-    !\
-    !Pixel grid
-    !/ 
+    ! Pixel grid
     real :: XLower, YLower, XUpper, YUpper
     real :: DxPixel, DyPixel
     ! Pixel coordinates INSIDE the image plane
-    real :: XPixel, YPixel  
-    ! Unity vector normal to the image plane 
-    real :: Normal_D(MaxDim)                                          
+    real :: XPixel, YPixel
+    ! Unity vector normal to the image plane
+    real :: Normal_D(MaxDim)
     real :: ZAxisOrt_D(MaxDim) = [0, 0, 1]
     ! Image plane inner Cartesian orts
-    real :: Tau_D(MaxDim), Xi_D(MaxDim) 
-    !\
+    real :: Tau_D(MaxDim), Xi_D(MaxDim)
     ! Pixel 3D Cartesian coordinates
     real, dimension(MaxDim) :: XyzPixel_D
-    !\
     ! Initial directions of rays
-    !/
     real :: SlopeUnscaled_D(MaxDim)
-    !\
-    ! Distance from the radiotelescope to the integration sphere  
-    real :: ObservToIntSphereDist 
-    !\
+    ! Distance from the radiotelescope to the integration sphere
+    real :: ObservToIntSphereDist
     ! Intersection point of the line of sight with the integration sphere
-    !/
     real :: XyzAtIntSphere_D(MaxDim)
-    !\
     !  Number of frequencies read from StringRadioFrequency_I(iFile)
-    !/
     integer :: nFreq
-    !\
     ! Frequencies in Hertz:
-    !/
     real               :: RadioFrequency_I(nPlotRfrFreqMax)
- 
+
     character (LEN=20) :: NameVar_I(nPlotRfrFreqMax)
-    !\
     ! The result of the emissivity integration
-    !/
     real, allocatable, dimension(:,:,:) :: Intensity_IIV
-    !Loop variables
+    ! Loop variables
     integer :: iFreq, i, j, iRay
     ! Radius of "integration sphere"
     real    :: ImagePlaneDiagRadius
@@ -110,6 +86,7 @@ contains
     character (LEN=120) :: NameVarAll, NameFile
     character (LEN=4)   :: NameFileExtension
     character (LEN=40)  :: NameFileFormat
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_radiowave'
     !--------------------------------------------------------------------------
@@ -149,13 +126,12 @@ contains
     Tau_D = cross_product(ZAxisOrt_D, Normal_D)
     Tau_D = Tau_D/sqrt(sum(Tau_D**2))
     Xi_D = cross_product(Normal_D, Tau_D)
-    !\
     ! Find the radius of the integration domain
     ImagePlaneDiagRadius = sqrt(xUpper**2 + yUpper**2)
     rIntegration = ceiling(max(ImagePlaneDiagRadius+1.0, 5.0))
     iRay = 0
     !
-    ! Calculate coordinates of all the pixels 
+    ! Calculate coordinates of all the pixels
     !
     do j = 1, nYPixel
        YPixel = YLower + (real(j) - 0.5)*DyPixel
@@ -164,32 +140,28 @@ contains
           XyzPixel_D = XPixel*Tau_D + YPixel*Xi_D
           SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
           iRay = iRay + 1
-          !Store direction vectors
+          ! Store direction vectors
           StateIn_VI(SlopeX_:SlopeZ_,iRay) = &
-               SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
-          !\
+               SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2))
           ! Find the points on the integration sphere where it intersects
-          ! with the straight "rays" 
-          !/
-          !\
+          ! with the straight "rays"
           ! Solve a quadratic equation,
           !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
-          !or  ObservToIntSphereDist**2 + 
+          ! or  ObservToIntSphereDist**2 +
           !  + 2*ObservToIntSphereDist*XyzObs_D
           !  + ObserverDistance**2 - rIntegration**2 = 0
-          !/  
           ObservToIntSphereDist = -sum(XyzObserver_D*&
                StateIn_VI(SlopeX_:SlopeZ_,iRay))&
                - sqrt(rIntegration**2 - ObserverDistance**2 &
                + sum(StateIn_VI(SlopeX_:SlopeZ_,iRay)&
                *XyzObserver_D)**2)
-          !So the points at the boundary of integration sphere
+          ! So the points at the boundary of integration sphere
           StateIn_VI(x_:z_,iRay) = XyzObserver_D &
                + StateIn_VI(SlopeX_:SlopeZ_,iRay)&
                *ObservToIntSphereDist
        end do
     end do
- 
+
     call parse_freq_string(StringRadioFrequency_I(iFile), RadioFrequency_I, &
          NameVar_I, nFreq)
 
@@ -197,7 +169,7 @@ contains
        if(DoTest)then
           write(*,*) 'XyzObserv_D     =', XyzObserver_D
           write(*,*)  '(XLower, YLower, XUpper, YUpper)=',&
-                XLower, YLower, XUpper, YUpper    
+                XLower, YLower, XUpper, YUpper
           write(*,*) 'nXPixel        =', nXPixel
           write(*,*) 'nYPixel        =', nYPixel
        end if
@@ -221,7 +193,7 @@ contains
 
     ! Get density gradient
     call calc_gradient_ghost(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
-    if (DoTest) write(*,*) 'rIntegration = ', rIntegration 
+    if (DoTest) write(*,*) 'rIntegration = ', rIntegration
     rIntegration2 = rIntegration**2 + 0.01
     do iFreq = 1, nFreq
        ! Calculate approximate radius of the  critical surface around the sun
@@ -308,9 +280,7 @@ contains
 
     use ModIO, ONLY: nPlotRfrFreqMax
 
-    !\
     ! INPUT
-    !/
     ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz'
 
     character(len=*), intent(in) :: NameVarAll
@@ -389,14 +359,10 @@ contains
 
     end do
     nFreq = nFreq - 1
-    !\
     ! Just in case: make all the frequencies positive
-    !/
     Frequency_I = abs(Frequency_I)
     if(iProc/=0)then
-       !\
        ! Do need NameVar_V, just initialize it
-       !/
        do iFreq = 1, nFreq; NameVar_I(iFreq)=' '; end do
        call test_stop(NameSub, DoTest)
        RETURN

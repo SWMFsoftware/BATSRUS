@@ -97,7 +97,9 @@ contains
     ! Variables for Minimum radial speed
     real :: Ur, Rho, rUnit_D(3)
 
-    logical:: DoTest, DoTestCell
+    logical:: DoTestCell
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -218,12 +220,12 @@ contains
           end do; end do; end do
 
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
-       end do !iFluid
-    end if !UseAnisoPressure.or.UseNonConservative
+       end do ! iFluid
+    end if ! UseAnisoPressure.or.UseNonConservative
 
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin
-       do k=1,nK; do j=1,nJ; do i=1,nI        
+       do k=1,nK; do j=1,nJ; do i=1,nI
           if(r_BLK(i,j,k,iBlock) < rSpeedMin) CYCLE
           rUnit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
           do iFluid = 1, nIonFluid
@@ -237,12 +239,12 @@ contains
                   + rUnit_D * Rho*(SpeedMin - Ur)/TauSpeedMin
           end do; end do; end do
        end do
-    end if !UseSpeedMin
+    end if ! UseSpeedMin
 
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          
+
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
@@ -424,7 +426,6 @@ contains
              if(DoTestCell .and. (iVarTest == Pepar_ .or. iVarTest == pe_)) &
                   call write_source('After bDotGradparUplus')
           end if
-
 
           ! For electron entropy equation there is no such term
           if(.not.UseElectronEntropy .and. .not. UseAnisoPe) then
@@ -810,7 +811,7 @@ contains
        call user_calc_sources_expl(iBlock)
        if(DoTest) call write_source('After explicit user sources')
     end if
-    
+
     if(.not.UsePointImplicit .and. UseUserSourceImpl)then
        call user_calc_sources_impl(iBlock)
        if(DoTest) call write_source( &
@@ -918,7 +919,6 @@ contains
 
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
-
 
       ! uPlus_D on the left and right faces
       real :: uPlusLeft_D(3),  uPlusRight_D(3)
@@ -1044,7 +1044,6 @@ contains
 
             if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
                  2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
-
 
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization

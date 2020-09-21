@@ -8,7 +8,7 @@ module ModMultiFluid
 
   use ModVarIndexes
   use omp_lib
-  
+
   implicit none
   save
 
@@ -64,11 +64,11 @@ module ModMultiFluid
        iPpar  = iPparIon_I(IonFirst_), &
        iP     = P_,                    &
        iEnergy= nVar+1
-  !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
-  !$omp threadprivate( iUx, iUy, iUz )
-  
+  !$ omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
+  !$ omp threadprivate( iUx, iUy, iUz )
+
   character (len=20) :: NameFluid = ''
-  !$omp threadprivate( NameFluid )
+  !$ omp threadprivate( NameFluid )
 
   ! Variables for setting fluid boundary condition separately from MHD
   ! variables.
@@ -82,16 +82,16 @@ module ModMultiFluid
        UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
        TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
        mProtonMass=1.0
-  
+
 contains
   !============================================================================
 
   subroutine select_fluid(iFluidIn)
-    integer :: iFluidIn 
+    integer :: iFluidIn
     !--------------------------------------------------------------------------
-    
-    if(nFluid == 1) return
-    
+
+    if(nFluid == 1) RETURN
+
     iRho   = iRho_I(iFluidIn)
     iRhoUx = iRhoUx_I(iFluidIn)
     iRhoUy = iRhoUy_I(iFluidIn)
@@ -117,7 +117,7 @@ contains
 
     character(len=*), intent(inout) :: String
     integer, optional, intent(out) :: iFluidOut
-    
+
     integer :: i, l, iFluid
     character(:), allocatable :: SubString
 
@@ -145,7 +145,7 @@ contains
     NameFluid = NameFluid_I(iFluid)
 
     if(present(iFluidOut)) iFluidOut = iFluid
-    
+
   end subroutine extract_fluid_name
   !============================================================================
 

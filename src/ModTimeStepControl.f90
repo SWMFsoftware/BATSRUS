@@ -45,7 +45,7 @@ module ModTimeStepControl
   integer, public:: DnCheckTimeStep = 1, iCheckTimeStep = 0
   real,    public:: TimeStepMin = 0.0
   real,    public:: TimeSimulationOldCheck
-  
+
 contains
   !============================================================================
 
@@ -264,10 +264,7 @@ contains
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
 
-    !\
     ! Compute maximum stable time step for this solution block
-    !/
-
     if(true_BLK(iBlock)) then
        Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
     else
@@ -360,9 +357,7 @@ contains
        DtMin = 0.0
        DtMax = 0.0
     else
-       !\
        ! Impose global time step for time-accurate calculations as required
-       !/
        if(UsePartImplicit)then
           ! Implicit blocks are not taken into account for partially implicit
           ! run
@@ -457,7 +452,7 @@ contains
        end if
     end if
 
-    !$omp parallel do
+    !$ omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
@@ -485,7 +480,7 @@ contains
        end if
 
     end do
-    !$omp end parallel do
+    !$ omp end parallel do
 
     ! Collect time level information from all processors
     if(UseMaxTimeStep .and. nProc > 1) call MPI_allreduce(MPI_IN_PLACE, &
@@ -560,7 +555,7 @@ contains
        Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
-       ! !!n_prev = -1
+       ! !! n_prev = -1
        ! Reset the state variable, the energy and set time_BLK variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE

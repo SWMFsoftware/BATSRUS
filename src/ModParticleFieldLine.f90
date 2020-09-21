@@ -106,7 +106,7 @@ module ModParticleFieldLine
 
   ! approximate number of particles per field line
   integer :: nParticlePerLine
-  
+
   ! number of active field lines
   integer:: nFieldLine = 0
 
@@ -127,10 +127,7 @@ module ModParticleFieldLine
   ! initialization related info
   integer:: nLineInit
   real, allocatable:: XyzLineInit_DI(:,:)
-  !\
   ! Shared variavles
-  !/
-  !\
   ! direction of tracing: -1 -> backward, +1 -> forward
   integer:: iDirTrace
 
@@ -170,7 +167,7 @@ contains
                ': invalid max number of field lines')
           if(nParticlePerLine <= 0) call stop_mpi(&
                NameThisComp//':'//NameSub//&
-               ': invalid number of particles per field lines')              
+               ': invalid number of particles per field lines')
           !--------------------------------------------------------------
           ! read min and max values for space step
           ! based on their values space step may be
@@ -318,10 +315,8 @@ contains
     if(nFieldLine > nFieldLineMax)&
          call stop_mpi(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
-    !\
     ! Save number of regular particles
     nParticleOld  = Particle_I(KindReg_)%nParticle
-    !\
     ! Copy end points to regular points. Note, that new regular points
     ! have numbers nParticleOld+1:nParticleOld+nLineThisProc
     call copy_end_to_regular
@@ -363,7 +358,7 @@ contains
        if(nParticleAll > nParticlePerLine*nFieldLineMax)&
             call stop_mpi(&
             NameThisComp//':'//NameSub//': max number of particles exceeded')
-       
+
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
        if(iDirTrace < 0 .and. iTraceMode == 0)then
@@ -388,6 +383,7 @@ contains
       ! have been started
       use ModMpi
       integer:: iError
+
       !------------------------------------------------------------------------
       if(nProc>1)then
          call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
@@ -402,6 +398,7 @@ contains
       ! have been started
       use ModMpi
       integer:: iError
+
       !------------------------------------------------------------------------
       if(nProc>1)then
          call MPI_Allreduce(Particle_I(KindReg_)%nParticle, nParticleAll, 1, &
@@ -420,6 +417,7 @@ contains
       real    :: XyzCell_D(nDim), BCell_D(nDim)
 
       ! precompute CosBR on the grid for all active blocks
+
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(Unused_B(iBlock))CYCLE
@@ -568,25 +566,20 @@ contains
             RETURN
          end if
       end if
-      !\
       ! First stage of RK2 method
-      !/
       ! copy last known coordinates to old coords
       StateEnd_VI(XOld_:ZOld_,iParticle) = &
            StateEnd_VI(x_:z_, iParticle)
-      !\
       ! get the direction of the magnetic field at original location
       ! get and save gradient of cosine of angle between field and
       ! radial direction
       ! get and save step size
-      !/
       call get_b_dir(iParticle, DirB_D,&
            Grad_D  = StateEnd_VI(GradCosBRX_:GradCosBRZ_,iParticle),&
            StepSize= StateEnd_VI(Ds_,iParticle),&
            IsBody  = IsEndOfSegment)
       ! particle's location may be inside central body
       if(IsEndOfSegment)RETURN
-      !\
       ! get cosine of angle between field and radial direction
       !
       CosBR =  sum(StateEnd_VI(x_:z_, iParticle)*DirB_D) / &
@@ -594,7 +587,6 @@ contains
       ! save cos(b,r) for the second stage
       StateEnd_VI(CosBR_, iParticle) = CosBR
 
-      !\
       ! Limit the interpolated time step
       StateEnd_VI(Ds_, iParticle) = &
            MIN(SpaceStepMax, MAX(SpaceStepMin,&
@@ -620,11 +612,9 @@ contains
            DoMove        = DoMove   ,&
            IsGone        = IsGone    )
 
-      !\
       ! Particle may come beyond the boundary of computational
       ! domain. Otherwise, it may need to be marked as passed
       ! the first stage and be moved to different PE
-      !/
       IsEndOfSegment = IsGone.or.DoMove
       if(DoMove) iIndexEnd_II(Pass_, iParticle) = HalfStep_
     end subroutine stage1
@@ -640,9 +630,7 @@ contains
       ! direction at the 2nd stage
       DirLine_D = DirB_D *&
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-      !\
       ! get cos of angle between b and r
-      !/
       CosBR = StateEnd_VI(CosBR_, iParticle)
       ! correct the direction to prevent the line from closing
       if(UseCorrection) &
@@ -662,10 +650,8 @@ contains
       StateEnd_VI(x_:z_,iParticle) = &
            StateEnd_VI(XOld_:ZOld_,iParticle) + &
            StateEnd_VI(Ds_, iParticle)*DirLine_D
-      !\
       ! Achieve that the change in the radial distance
       ! equals StateEnd_VI(Ds_, iParticle)*sum(Dir_D*DirR_D)
-      !/
       ROld = norm2(StateEnd_VI(XOld_:ZOld_,iParticle))
       DirR_D = StateEnd_VI(XOld_:ZOld_,iParticle)/ROld
 
@@ -681,11 +667,9 @@ contains
            iParticle     = iParticle,&
            DoMove        = DoMove   ,&
            IsGone        = IsGone    )
-      !\
       ! Particle may come beyond the boundary of
       ! computational domain or may need to be
       ! moved to different PE
-      !/
       IsEndOfSegment = IsGone.or.DoMove
     end subroutine stage2
     !==========================================================================
@@ -697,81 +681,56 @@ contains
 
       ! current direction
       real, intent(inout):: Dir_D(MaxDim)
-      !\
       ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
       ! from outward radial direction, OR
       ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
       ! from inward radial direction.
-      !/
       real:: DCosBR
       ! threshold for such deviation to apply correction
       real:: DCosBRMax = 0.15
-      !\
       ! Heliocentric distance
-      !/
       real :: R
-      !\
       ! unit vector of a radial direction
-      !/
       real :: R_D(MaxDim)
-      !\
       ! Unit vector parallel or antiparallel to GradCosBR
-      !/
       real :: DirGradCosBR_D(MaxDim)
-      !\
       ! Dot product of these two vestors
       real :: DirRDotDirGradCosBR
-      !\
       ! scalars to define parameters of the correction
       ! to avoid exessive line curvature.
-      !/
-      !\
       ! Dot product of the old and new directions
       real :: DirOldDotDirNew
       real, parameter :: cDirOldDotDirNewMin = 0.995
       !------------------------------------------------------------------------
-      !\
       ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
       ! from outward radial direction, OR
       ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
       ! from inward radial direction.
-      !/
       DCosBR = abs(CosBR - iIndexEnd_II(Alignment_,iParticle))
-      !\
       ! Heliocentric distance, to compare with RCorrection
-      !/
       R = norm2(StateEnd_VI(x_:z_,iParticle))
 
       ! if the line deviates to0 much -> correct its direction
       ! to go along surface B_R = 0
       if(DCosBR > DCosBRMax .and. &
            R > RCorrectionMin .and. R < RCorrectionMax)then
-         !\
          ! unit vector of a radial direction
-         !/
          R_D = StateEnd_VI(x_:z_, iParticle)/R
          ! unit vector along gradient of cosBR
          DirGradCosBR_D = &
               StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)/ &
               norm2(StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle))
-         !\
          ! Change the direction of line for the unit vector, which
          ! (1) is perpendicular to GradCosBR (or, the same, is parallel
          !    to the current sheet surface, CosBR=0=const
          ! (2) has a maximum possible radial component
-         !/
-         !\
          ! First, calculate the cosine of angle between radial direction and
          ! the direction of GradCosBR:
-         !/
          DirRDotDirGradCosBR = sum(DirGradCosBR_D*R_D)
-         !\
          ! get the corrected line direction
          Dir_D = iDirTrace*(R_D - DirGradCosBR_D*DirRDotDirGradCosBR)/&
               sqrt(1 - DirRDotDirGradCosBR**2)
-         !\
          ! Why???
-         !/
          RETURN
       end if
 
@@ -782,9 +741,7 @@ contains
       ! Do not correct, if cosine of angle between old and new direction is
       ! close enough to 1:
       if(DirOldDotDirNew > cDirOldDotDirNewMin) RETURN
-      !\
       ! Direction needs to be corrected
-      !/
       ! eliminate the component of the current direction parallel
       ! to the one during the previous step;
       Dir_D = Dir_D - DirOldDotDirNew*StateEnd_VI(DirX_:DirZ_,iParticle)
@@ -799,7 +756,7 @@ contains
       use ModCoordTransform, ONLY: cross_product
       use ModRandomNumber, ONLY: random_real
       use ModPhysics, ONLY: No2Si_V, UnitX_
-      use ModConst, ONLY: cAu 
+      use ModConst, ONLY: cAu
       use ModNumConst, ONLY: cTwoPi
       ! add components perpendicular to the current direction of the line
       ! to achieve the effect of field line random walk
@@ -807,7 +764,7 @@ contains
 
       ! current radial distance
       real:: Radius
-      
+
       ! 2 perpendicular directions to Dir_D
       real:: DirPerp1_D(MaxDim), DirPerp2_D(MaxDim)
 
@@ -815,14 +772,14 @@ contains
       real:: RndUnif1, RndUnif2, RndGauss1, RndGauss2
       ! seed for random number generator
       integer, save:: iSeed=0
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! first, find perpendicular directions
       DirPerp1_D = cross_product([1.0,0.0,0.0],Dir_D)
       if(all(DirPerp1_D == 0.0))&
            DirPerp1_D = cross_product([0.0,1.0,0.0],Dir_D)
       DirPerp1_D = DirPerp1_D / norm2(DirPerp1_D)
       DirPerp2_D = cross_product(DirPerp1_D, Dir_D )
-      
+
       ! find 2D gaussian
       RndUnif1  = random_real(iSeed)
       RndUnif2  = random_real(iSeed)
@@ -892,6 +849,7 @@ contains
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_b_dir'
     !--------------------------------------------------------------------------
@@ -993,9 +951,7 @@ contains
     call test_start(NameSub, DoTest)
     select case(iIndexReg_II(Pass_,iParticle))
     case(DoneFromScratch_)
-       !\
        ! begin particle's advection
-       !/
        ! copy last known coordinates to old coords
        StateReg_VI(XOld_:ZOld_,iParticle) = &
             StateReg_VI(x_:z_, iParticle)
@@ -1014,12 +970,10 @@ contains
             DoMove        = DoMove   ,&
             IsGone        = IsGone    )
 
-       !\
        ! Particle may be beyond the boundary of computational domain
        ! or need to move particle to different PE
        IsEndOfSegment = IsGone .or. DoMove
 
-       !\
        ! the first stage is done
        iIndexReg_II(Pass_, iParticle) = HalfStep_
     case(HalfStep_)
@@ -1035,7 +989,6 @@ contains
        call check_particle_location( &
             iKindParticle = KindReg_,&
             iParticle     = iParticle)
-       !\
        ! Integration is done
        !
        iIndexReg_II(Pass_, iParticle) = Normal_
@@ -1050,9 +1003,7 @@ contains
   contains
     !==========================================================================
     subroutine get_v
-      !\
       ! get local plasma velocity
-      !/
       ! Coordinates and block #
       real     :: Xyz_D(MaxDim)
       integer  :: iBlock
@@ -1119,6 +1070,7 @@ contains
 
     character(len=20)            :: Name_I(  nDataMax)
     integer                      :: iVar, iIndex, iOutput, nData
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_particle_data'
     !--------------------------------------------------------------------------

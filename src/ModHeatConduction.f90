@@ -27,7 +27,6 @@ module ModHeatConduction
   public :: add_jacobian_heat_cond
   public :: update_impl_heat_cond
 
-  
   ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'spitzer'
   logical :: DoUserHeatConduction
@@ -54,8 +53,8 @@ module ModHeatConduction
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
-  !$omp threadprivate( Te_G, Ti_G )
-  
+  !$ omp threadprivate( Te_G, Ti_G )
+
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
   ! TiFraction is defined such that Ti = p/rho * TiFraction
@@ -64,21 +63,21 @@ module ModHeatConduction
 
   ! Array needed for second order interpolation of ghost cells
   real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-  !$omp threadprivate( State1_VG, State2_VG )
-  
+  !$ omp threadprivate( State1_VG, State2_VG )
+
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-  !$omp threadprivate( FluxImpl_VFD )
-  
+  !$ omp threadprivate( FluxImpl_VFD )
+
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_G(:,:,:), bb_DDG(:,:,:,:,:)
-  !$omp threadprivate( HeatCoef_G, bb_DDG )
+  !$ omp threadprivate( HeatCoef_G, bb_DDG )
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
-  !$omp threadprivate( FreeStreamFlux_G )
-  
+  !$ omp threadprivate( FreeStreamFlux_G )
+
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
@@ -236,7 +235,6 @@ contains
          *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
-    !\
     ! In hydrogen palsma, the electron-ion heat exchange is described by
     ! the equation as follows:
     ! dTe/dt = -(Te-Ti)/(tau_{ei})
@@ -259,14 +257,12 @@ contains
     ! The calculation of the effective electron-ion collision rate is
     ! re-usable and can be also applied to calculate the resistivity:
     ! \eta = m \nu_{ei}/(e**2 Ne)
-    !/
 
     cTeTiExchangeRateSi = &
          CoulombLog/sqrt(cElectronMass)*  &!\
          ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
          ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
          *(2*cElectronMass/cProtonMass)    ! *energy exchange per ei collision
-    !\
     ! While used, this should be divided by TeSi**1.5 and multipled by
     ! atomic density, N_i in SI. We will apply dimensionless density
     ! so that the transformation coefficient shoule be multiplied by
@@ -274,7 +270,6 @@ contains
     ! divide by No2Si_V(UnitTemperature_)**1.5. We also need to convert the
     ! exchange rate from inverse seconds to dimensionless units by dividing by
     ! Si2No_V(UnitT_)
-    !/
 
     cTeTiExchangeRate = cTeTiExchangeRateSi * &
          (1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
@@ -283,10 +278,10 @@ contains
     DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
-       !$omp parallel
-       !$omp single
+       !$ omp parallel
+       !$ omp single
        allocate(HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
-       !$omp end single
+       !$ omp end single
        allocate( &
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -297,8 +292,8 @@ contains
 
        if(UseHeatFluxLimiter) &
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
-       !$omp end parallel
-       
+       !$ omp end parallel
+
        if(UseElectronPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_CB(nI,nJ,nK,MaxBlock))
           if(UseAnisoPressure)then
@@ -355,9 +350,9 @@ contains
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
-    !$omp threadprivate( UseFirstOrderBc )
-    !$omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
-    
+    !$ omp threadprivate( UseFirstOrderBc )
+    !$ omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
+
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
@@ -533,10 +528,8 @@ contains
              Te = TeFraction*State_V(p_)/State_V(Rho_)
           end if
        end if
-       !\
        ! To calculate the extension factor for the transition
        ! region we may need the temperature in Kelvin.
-       !/
        TeSi = Te*No2Si_V(UnitTemperature_)
     else
        call user_material_properties(State_V, &
@@ -768,6 +761,7 @@ contains
     real :: DtLocal, TeSi
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
     integer:: i, j, k, iBlock
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
@@ -796,9 +790,7 @@ contains
              Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
-       !\
        ! More work is to be done for if .not.UseIdealEos or UseMultion
-       !/
        if(.not.UseIdealEos)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
 
@@ -809,10 +801,8 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-          !\
           ! We apply the energy exchange rate for temperature,
           ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
-          !/
           ! For a hydrogen only, for ideal EOS only
           HeatExchange = cTeTiExchangeRate * &
                State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
@@ -999,12 +989,10 @@ contains
 
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
-                !\
                 ! We apply the energy exchange rate for temperature,
                 ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
                 ! to the electron energy density, therefore,we multiply by
                 ! Ne/(\gamma -1)
-                !/
                 TeTiCoef = InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
                      (cTeTiExchangeRate*Natomic/Te_G(i,j,k)**1.5)
              end if
@@ -1307,6 +1295,7 @@ contains
     integer :: iDim, i, j, k, Di, Dj, Dk
     real :: FaceGrad_D(MaxDim)
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
@@ -1324,7 +1313,7 @@ contains
           call get_face_gradient(iDim, i, j, k, iBlock, &
                IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D, &
                UseFirstOrderBcIn=UseFirstOrderBC)
-          
+
           FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
 
@@ -1499,6 +1488,7 @@ contains
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
     real :: GammaTmp
     real :: DtLocal
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_impl_heat_cond'
     !--------------------------------------------------------------------------

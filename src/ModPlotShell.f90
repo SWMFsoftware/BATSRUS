@@ -29,17 +29,15 @@ module ModPlotShell
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
-  !Same, but for a single grid point
+  ! Same, but for a single grid point
   real :: PlotVar_V(nPlotVarMax)
 
   ! Coordinate conversion matrix
   real:: PlotToGm_DD(3,3)
 
-  !\
   ! If  .true., the part of the grid is in the threaded gap
-  !/
   logical :: UseThreadedGap = .false.
-  ! 
+  !
 
   character (len=20) :: NamePlotVar_V(nPlotVarMax) = ''
 
@@ -55,7 +53,8 @@ contains
     use ModUtilities,      ONLY: split_string
     integer, intent(in):: iFile, nPlotVarIn
     integer :: nPlotVar
-    logical :: DoTest
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_shell'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -88,8 +87,8 @@ contains
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
     dLat = (LatMax - LatMin)/max(1, nLat - 1)
 
-    !In the ASWoM-R the grid points within the threaded gap are allowed
-    UseThreadedGap = DoPlotThreads .and. rMin < RadiusMin 
+    ! In the ASWoM-R the grid points within the threaded gap are allowed
+    UseThreadedGap = DoPlotThreads .and. rMin < RadiusMin
 
     ! The 0 element is to count the number of blocks that
     ! contribute to a plot variable.
@@ -165,7 +164,7 @@ contains
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
        r = rMin + (i-1)*dR
-       
+
        if(IsThreadedBlock)then
           ! The point should be skipped, if below the chromosphere
           if(r < rChromo) CYCLE
@@ -199,13 +198,11 @@ contains
 
              ! compute the interpolated values at the current location
              PlotVar_VIII(0,i,j,k) = 1.0
-             if(IsThreadedBlock.and. Coord_D(1) < & 
+             if(IsThreadedBlock.and. Coord_D(1) < &
                   CoordMin_DB(1,iBlock) + 0.50*CellSize_DB(1,iBlock))then
-                !\
                 ! The threaded gap is used and the point is below
                 ! the first layer of grid cell centers
                 ! Interpolate using the solution on threads
-                !/
                 call interpolate_thread_state(Coord_D, iBlock, State_V)
                 call set_thread_plotvar(iBlock, nPlotVar, NamePlotVar_V(&
                      1:nPlotVar), XyzGm_D, State_V, PlotVar_V(1:nPlotVar))

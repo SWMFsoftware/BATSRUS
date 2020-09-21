@@ -10,13 +10,11 @@ module ModParallel
   implicit none
   save
 
-  !\
   ! Neighbor solution block refinement levels
   ! ( 0=neighbors at same level,
   !  -1=neighbors at lower level,
   !  +1=neighbors at higher level,
   !  NOBLK=no neighbors).
-  !/
   integer, parameter :: NOBLK = Unset_
 
   integer, allocatable :: neiLtop(:)
@@ -28,12 +26,10 @@ module ModParallel
 
   integer, allocatable :: neiLEV(:,:)
 
-  !\
   ! Neighbor processor and block numbers (a value of NOBLK
   ! means not used).  As only one level change is permitted
   ! between neighboring solution blocks, there are either 1 or 4
   ! neighboring blocks in each of the six directions.
-  !/
   integer, allocatable :: neiPtop(:,:)
   integer, allocatable :: neiPbot(:,:)
   integer, allocatable :: neiPeast(:,:)
@@ -108,6 +104,7 @@ contains
   !============================================================================
   subroutine clean_mod_parallel
 
+    !--------------------------------------------------------------------------
     if(.not.allocated(nBlockMax_P)) RETURN
 
     deallocate(neiLtop)
@@ -135,5 +132,7 @@ contains
     deallocate(nBlockMax_P)
 
   end subroutine clean_mod_parallel
+  !============================================================================
 
 end module ModParallel
+!==============================================================================

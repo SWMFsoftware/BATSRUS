@@ -55,7 +55,7 @@ module ModIeCoupling
   logical, public:: UseCpcpBc = .false.
   real,    public:: Rho0Cpcp_I(nIonDensity)=18.0, RhoPerCpcp_I(nIonDensity)=0.2
   real,    public:: RhoCpcp_I(nIonDensity) = -1000.0
-  
+
   ! Local variables
   real:: dThetaIono, dPhiIono
   real, allocatable:: SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
@@ -199,9 +199,9 @@ contains
   end subroutine get_ie_potential
   !============================================================================
   subroutine calc_ie_cpcp
-    
+
     use ModPhysics, ONLY: Io2No_V, No2Si_V, UnitX_, UnitElectric_, UnitRho_
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     CpcpNorth = &
          maxval(IonoPotential_II(1:(nThetaIono+1)/2,:)) - &
@@ -218,9 +218,9 @@ contains
             * 0.5*(CpcpNorth + CpcpSouth) &
             * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
     end if
-    
+
   end subroutine calc_ie_cpcp
-  !============================================================================    
+  !============================================================================
   subroutine calc_grad_ie_potential
 
     ! Calculate gradient of ionosphere potential on the IE grid
@@ -273,7 +273,7 @@ contains
 
     ! Calculate cross polar cap potentials and related boundary conditions
     call calc_ie_cpcp
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine calc_grad_ie_potential
   !============================================================================
@@ -357,7 +357,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    ! call set_oktest(NameSub, DoTest, DoTestMe)
+    ! call set_oktest(NameSub, DoTest, DoTest)
 
     if(DoTest)write(*,*)NameSub,' Xyz_D=',Xyz_D
 
@@ -625,8 +625,8 @@ contains
     real:: XyzIono_D(3), dXyz_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
-    !real:: Surface ! CHECK integral
-    
+    ! real:: Surface ! CHECK integral
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
     !--------------------------------------------------------------------------
@@ -646,9 +646,9 @@ contains
     ! Calculate the height integrated Hall and Pedersen current densities
     call calc_ie_currents
 
-    !CHECK
-    !Surface = 0.0
-    
+    ! CHECK
+    ! Surface = 0.0
+
     ! Loop over the ionosphere grid, but skip the poles
     ! and the ghost cell in the Phi direction (j=nPhi)
     iLine = 0
@@ -664,9 +664,9 @@ contains
        ! 1/4pi times the area of a surface element
        Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
 
-       !CHECK
-       !Surface = Surface + Coef0
-       
+       ! CHECK
+       ! Surface = Surface + Coef0
+
        do iMag = 1, nMag
           ! Distance vector between magnetometer position
           ! and ionosphere surface element
@@ -702,8 +702,8 @@ contains
 
        end do; end do
     end do
-    !CHECK
-    !write(*,*)'!!! ',NameSub,': Surface=', Surface, rIonosphere**2
+    ! CHECK
+    ! write(*,*)'!!! ',NameSub,': Surface=', Surface, rIonosphere**2
 
     call timing_stop(NameSub)
 

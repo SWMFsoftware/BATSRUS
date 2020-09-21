@@ -207,11 +207,11 @@ contains
        end do
     end if
     if(UseB0)then
-       !$omp parallel do
+       !$ omp parallel do
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call add_b0(iBlock)
        end do
-       !$omp end parallel do
+       !$ omp end parallel do
     end if
 
     write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
@@ -393,7 +393,7 @@ contains
     use ModUtilities, ONLY: cTab, write_string_tabs_name
     use ModIO,       ONLY: NameMaxTimeUnit
     use BATL_lib,    ONLY: nRoot_D
-    
+
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
@@ -1271,6 +1271,7 @@ contains
 
     ! -----------------------------------------------------------------
     ! If no change of variables occured, copy directly and return.
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'match_copy_restart_variables'
     !--------------------------------------------------------------------------

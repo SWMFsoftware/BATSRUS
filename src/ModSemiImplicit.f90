@@ -142,7 +142,7 @@ contains
     if(allocated(SemiAll_VCB)) RETURN
 
     allocate(iBlockFromSemi_B(MaxBlock))
-    
+
     nVectorSemi = 0
     if(allocated(iVectorSemi_I)) deallocate(iVectorSemi_I)
 
@@ -276,10 +276,10 @@ contains
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
     use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK
-    !use omp_lib
+    ! use omp_lib
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
-    
+
     logical :: DoTestKrylov
 
     logical:: DoTest
@@ -287,7 +287,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call test_start('krylov', DoTestKrylov)
-    
+
     call timing_start(NameSub)
 
     if(DoTest) write(*,*)NameSub,' starting with test var, B0=', &
@@ -369,12 +369,12 @@ contains
        if(SemiParam%iError /= 0 .and. iProc == 0 .and. time_accurate) &
             call error_report(NameSub//': Krylov solver failed, Krylov error',&
             SemiParam%Error, iError1, .true.)
-       
+
        ! NewSemiAll_VCB = SemiAll_VCB + Solution
        n=0
-       !$omp parallel do private( n )
+       !$ omp parallel do private( n )
        do iBlockSemi = 1, nBlockSemi
-          n = (iBlockSemi-1)*nIJK*nVarSemi !openmp testing
+          n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           do k=1,nK; do j=1,nJ; do i=1,nI
              do iVar = iVarSemiMin, iVarSemiMax
                 n = n + 1
@@ -388,11 +388,11 @@ contains
              enddo
           enddo; enddo; enddo;
        enddo
-       !$omp end parallel do
+       !$ omp end parallel do
     end do ! Splitting
-    
+
     ! Put back semi-implicit result into the explicit code
-    !$omp parallel do private(iBlock)
+    !$ omp parallel do private(iBlock)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
@@ -414,12 +414,12 @@ contains
                //TypeSemiImplicit)
        end select
     end do
-    !$omp end parallel do
+    !$ omp end parallel do
 
-    !call cpu_time(finish)
+    ! call cpu_time(finish)
 
-    !print '("Time = ",f6.3," seconds.")',finish-start
-    
+    ! print '("Time = ",f6.3," seconds.")',finish-start
+
     if(DoTest) write(*,*)NameSub,' after update test var=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
@@ -498,10 +498,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    
     ! Fill in SemiState so it can be message passed
     SemiState_VGB = 0.0
-    !$omp parallel do private( iBlock )
+    !$ omp parallel do private( iBlock )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -509,7 +508,7 @@ contains
                SemiAll_VCB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
        end do; end do; end do
     end do
-    !$omp end parallel do
+    !$ omp end parallel do
 
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
@@ -628,10 +627,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    
+
     ! Fill in StateSemi so it can be message passed
     n = 0
-    !$omp parallel do private( iBlock,n )
+    !$ omp parallel do private( iBlock,n )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
@@ -640,7 +639,7 @@ contains
           SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n)
        end do; end do; end do; end do
     end do
-    !$omp end parallel do
+    !$ omp end parallel do
 
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
@@ -669,17 +668,17 @@ contains
     end select
 
     n = 0
-    !$omp parallel do private( iBlock,n,DtLocal,Volume )
+    !$ omp parallel do private( iBlock,n,DtLocal,Volume )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
-       
+
        if(far_field_BCs_BLK(iBlock)) &
             call set_cell_boundary( 1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.true.)
-       
+
        call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
             ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.true.)
-       
+
        if(UsePDotADotP)then
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           DtLocal = Dt
@@ -711,14 +710,14 @@ contains
        end if
 
     end do
-    !$omp end parallel do
-    
+    !$ omp end parallel do
+
     if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
-       !$omp parallel do private( iBlock )
+       !$ omp parallel do private( iBlock )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -728,17 +727,17 @@ contains
                Flux_VXB=FluxImpl_VXB, Flux_VYB=FluxImpl_VYB, &
                Flux_VZB=FluxImpl_VZB)
        end do
-       !$omp end parallel do
+       !$ omp end parallel do
     end if
 
     n = 0
     if(UseSplitSemiImplicit)then
-       !$omp parallel do private( iBlock, DtLocal, Volume, n )
+       !$ omp parallel do private( iBlock, DtLocal, Volume, n )
        do iBlockSemi=1,nBlockSemi
-          iBlock = iBlockFromSemi_B(iBlockSemi)  
+          iBlock = iBlockFromSemi_B(iBlockSemi)
           DtLocal = dt
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
-          
+
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.time_accurate .or. UseDtLimit) &
                   DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
@@ -747,11 +746,11 @@ contains
              y_I(n) = Volume* &
                   (x_I(n)*DconsDsemiAll_VCB(iVarSemi,i,j,k,iBlockSemi)/DtLocal&
                   - SemiImplCoeff * ResSemi_VCB(1,i,j,k,iBlockSemi))
-          end do; enddo; enddo       
+          end do; enddo; enddo
        end do
-       !$omp end parallel do
+       !$ omp end parallel do
     else
-       !$omp parallel do private( iBlock,DtLocal,n,Volume )
+       !$ omp parallel do private( iBlock,DtLocal,n,Volume )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           DtLocal = dt
@@ -768,9 +767,9 @@ contains
              enddo
           enddo; enddo; enddo
        end do
-       !$omp end parallel do
+       !$ omp end parallel do
     end if
-    
+
     if(UsePDotADotP)then
        pDotADotPPe = pDotADotPPe * SemiImplCoeff
     else
@@ -794,6 +793,7 @@ contains
     integer, intent(in) :: MaxN
     real,    intent(in) :: Vec_I(MaxN)
     real,    intent(out):: PrecVec_I(MaxN)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'cg_precond'
     !--------------------------------------------------------------------------
@@ -1027,8 +1027,8 @@ contains
     ! The HYPRE AMG preconditioner requires the overlap between blocks
     ! For all other preconditioners it is better to avoid the overpap
     if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
-    
-    !$omp parallel do private( iBlock, Coeff, DtLocal )
+
+    !$ omp parallel do private( iBlock, Coeff, DtLocal )
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -1066,8 +1066,8 @@ contains
             call hypre_set_matrix_block(iBlockSemi, &
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
     end do
-    !$omp end parallel do
-    
+    !$ omp end parallel do
+
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
     UseNoOverlap = .true.

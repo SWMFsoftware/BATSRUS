@@ -9,14 +9,11 @@ module ModCoarseAxis
   SAVE
   logical:: UseCoarseAxis = .false.
   integer:: nCoarseLayer = 3
-  !\
   ! In case nCoarseLayer=1, then each pair of the cells near the axis are merged
   !----------a x i s---------------
   ! |   |   |          first layer "|" denote the cell boundaries
   ! | | | | |          second layer
   ! ...
-  !/
-  !\
   ! In case nCoarseLayer=2, then each 4 cells are merged near the axis,
   ! each pair of cells is merged in the second layer.
   ! ---------a x i s---------------
@@ -24,8 +21,6 @@ module ModCoarseAxis
   ! |   |   |          second layer "|" denote the cell boundaries
   ! | | | | |          third layer
   ! ...
-  !/
-  !\
   ! In case nCoarseLayer=3, then each 8 cells are merged in the first layer,
   ! each 4 cells are merged in the second layer, each 2 in the third layer
   ! ---------a x i s---------------

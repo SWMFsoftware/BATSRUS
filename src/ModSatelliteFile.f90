@@ -292,7 +292,7 @@ contains
     integer :: l1, l2
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_satellite_file_status'
+    character(len=*), parameter:: NameSub = 'set_NameFile'
     !--------------------------------------------------------------------------
 
     call test_start(NameSub, DoTest)
@@ -334,11 +334,10 @@ contains
        write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
     end if
 
-
     call test_stop(NameSub, DoTest)
   end subroutine set_NameFile
-
   !============================================================================
+
   subroutine read_satellite_input_files
 
     use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
@@ -600,6 +599,7 @@ contains
     integer, intent(in) :: iSat
     character (len=100) :: name_string
     real :: Xvect(3)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'satellite_trajectory_formula'
     !--------------------------------------------------------------------------

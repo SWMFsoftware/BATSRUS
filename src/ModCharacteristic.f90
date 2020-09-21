@@ -168,18 +168,14 @@ contains
     RhoInvR  = 1.0/RhoR
     aR       = Gamma * StateR_V(P_ ) * RhoInvR
 
-    !\
     ! Set some values that are reused over and over
-    !/
 
     RhoSqrtL = sqrt(RhoL)
     RhoSqrtR = sqrt(RhoR)
 
     ! Start averaging
     RhoH     = RhoSqrtL * RhoSqrtR
-    !\
     ! Set some values that are reused over and over
-    !/
     RhoInvH  = 1.0/RhoH
     RhoSqrtH = sqrt(RhoH)
 
@@ -508,7 +504,6 @@ contains
          (UnL*DeltaBnR+UnR*DeltaBnL+&
          EigenvalueFixed_V(DivBW_)*(&
          DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
-
 
     DissipationFlux_V = 0.5*&
          flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)

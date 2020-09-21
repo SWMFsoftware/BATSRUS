@@ -3,7 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 !==== Simple subroutines and functions that operate on all used blocks ========
-!==============================================================================
 
 subroutine barrier_mpi
 
@@ -334,6 +333,7 @@ subroutine get_time_string
   type(TimeType):: Time
 
   ! This is the value if the time is too large
+
   !----------------------------------------------------------------------------
   StringDateOrTime = '99999999'
   select case(NameMaxTimeUnit)
@@ -417,6 +417,7 @@ subroutine get_iVar(NameVar, iVar)
   integer :: iVarLoop, iError, iFluid
 
   ! Initialize iVar
+
   character(len=*), parameter:: NameSub = 'get_iVar'
   !----------------------------------------------------------------------------
   iVar = -1

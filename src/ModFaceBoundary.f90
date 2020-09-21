@@ -23,7 +23,7 @@ module ModFaceBoundary
   ! Public methods
   public :: set_face_boundary
   public :: read_face_boundary_param
-  
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -35,10 +35,10 @@ module ModFaceBoundary
   ! Set B1_radial_ghost = B1rCoef * B1_radial_true at the inner boundary
   real:: B1rCoef = -1.0
 
-  ! The lower bound of pe/p at inner boundary when the electron 
-  ! pressure equation is used. 
+  ! The lower bound of pe/p at inner boundary when the electron
+  ! pressure equation is used.
   real :: RatioPe2P = 0
-  
+
 contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
@@ -48,7 +48,7 @@ contains
     use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
     use ModGroundMagPerturb, ONLY: UseYoungBc, F107Young
-    
+
     character(len=*), intent(in):: NameCommand
 
     integer:: iDensity, iFluid
@@ -95,7 +95,7 @@ contains
        end if
        if (iProc == 0) &
             write(*,*) "Young et al IBC activated, F10.7=", F107Young
-       
+
     case("#MAGNETICINNERBOUNDARY")
        call read_var('B1rCoef', B1rCoef)
     case default
@@ -198,7 +198,7 @@ contains
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB, iProc
     use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
-    
+
     type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
@@ -218,8 +218,8 @@ contains
                VarsTrueFace_V => FBC%VarsTrueFace_V, &
                VarsGhostFace_V => FBC%VarsGhostFace_V, &
                B0Face_D => FBC%B0Face_D, FaceCoords_D => FBC%FaceCoords_D, &
-               iBlockBc => FBC%iBlockBc )    
-    
+               iBlockBc => FBC%iBlockBc )
+
     call test_start(NameSub, DoTest, iBlockBc)
 
     if(TypeFaceBc_I(body1_) == 'polarwind') then
@@ -273,7 +273,7 @@ contains
           FracH = 1.0 / (1.0 + RatioOH)
           FracO = RatioOH  * FracH
           ! fixed total number density
-          !RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
+          ! RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(FracH+16*FracO)
 
           ! fixed H+ density
           RhoCpcp_I = Io2No_V(UnitRho_)*BodyNDim_I(IonFirst_)*(1+16*ratioOH)
@@ -281,17 +281,13 @@ contains
 
     endif
 
-    !\
     ! Apply face boundary conditions as required.
-    !/
     B0Face_D = 0.0
 
     do k = kMinFace, kMaxFace
        do j = jMinFace, jMaxFace
           do i = 1, nIFace
-             !\
              ! Apply BCs at X-direction faces as necessary.
-             !/
              !         NUMBERING!
              !
              !     C     F     C  B  F     C
@@ -347,9 +343,7 @@ contains
     do k = kMinFace, kMaxFace
        do j = 1 , nJFace
           do i = iMinFace, iMaxFace
-             !\
              ! Apply BCs at Y-direction faces as necessary.
-             !/
              if (IsTrueCell_G(i,j-1,k) .and. &
                   IsBodyCell_G(i,j,k)  .and. &
                   ( .not.DoResChangeOnly .or. &
@@ -397,9 +391,7 @@ contains
     do k = 1, nKFace
        do j = jMinFace, jMaxFace
           do i = iMinFace, iMaxFace
-             !\
              ! Apply BCs at Z-direction faces as necessary.
-             !/
              if (IsTrueCell_G(i,j,k-1) .and. &
                   IsBodyCell_G(i,j,k) .and. &
                   (.not.DoResChangeOnly .or. &
@@ -485,7 +477,7 @@ contains
       integer:: iHemisphere
       integer :: iIonSecond
       integer :: iFluid
-      
+
       ! Variables for the absorbing BC
       real:: UdotR, r2Inv
 
@@ -494,8 +486,8 @@ contains
       real:: Normal_D(MaxDim)
 
       character(len=*), parameter:: NameSubSub = 'set_face'
+
       !------------------------------------------------------------------------
-      
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
                  iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
                  VarsTrueFace_V => FBC%VarsTrueFace_V, &
@@ -686,7 +678,7 @@ contains
                  max(VarsTrueFace_V(Pe_), RatioPe2P*VarsTrueFace_V(iP_I(1)))
             if(UseAnisoPe) VarsGhostFace_V(Pepar_)      = &
                  VarsTrueFace_V(Pepar_)
-            
+
             ! Change sign for velocities (plasma frozen into dipole field)
             VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
             VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)

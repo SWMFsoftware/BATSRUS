@@ -51,7 +51,6 @@ contains
     use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
 
-    
     logical, intent(in) :: DoCalcTimestep
 
     integer :: iBlock
@@ -61,9 +60,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !\
     ! Perform multi-stage update of solution for this time (iteration) step
-    !/
     call timing_start(NameSub)
 
     if(UseBody2Orbit) call update_secondbody
@@ -86,7 +83,7 @@ contains
        endif
 
        if(DoConserveFlux)then
-          !$omp parallel do
+          !$ omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
@@ -112,7 +109,7 @@ contains
              call save_cons_flux(iBlock)
 
           end do
-          !$omp end parallel do
+          !$ omp end parallel do
 
           if(DoTest)write(*,*)NameSub,' done res change only'
 
@@ -120,15 +117,15 @@ contains
           call timing_start('send_cons_flux')
           call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
                CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
-          
+
           call timing_stop('send_cons_flux')
-          
+
           if(DoTest)write(*,*)NameSub,' done message pass'
-          
+
        endif
 
        ! Multi-block solution update.
-       !$omp parallel do
+       !$ omp parallel do
        do iBlock = 1, nBlock
 
           if(Unused_B(iBlock)) CYCLE
@@ -136,7 +133,7 @@ contains
           ! Calculate interface values for L/R states of each face
           ! and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
-          
+
           if(DoInterpolateFlux)then
              call timing_start('calc_fluxes')
              call calc_cell_flux(iBlock)
@@ -146,43 +143,37 @@ contains
           call timing_start('calc_facevalues')
           call calc_face_value(iBlock, DoResChangeOnly= .false. , DoMonotoneRestrict = .true.)
           call timing_stop('calc_facevalues')
-          
+
           if(body_BLK(iBlock)) &
                call set_face_boundary(iBlock, Time_Simulation,.false.)
-          
+
           if(.not.DoInterpolateFlux)then
              ! Compute interface fluxes for each cell.
              call timing_start('calc_fluxes')
              call calc_face_flux(.false., iBlock)
              call timing_stop('calc_fluxes')
           end if
-          
+
           ! Enforce flux conservation by applying corrected fluxes
           ! to each coarse grid cell face at block edges with
           ! resolution changes.
           if(DoConserveFlux) call apply_cons_flux(iBlock)
-          
+
           ! Compute source terms for each cell.
           call timing_start('calc_sources')
           call calc_source(iBlock)
           call timing_stop('calc_sources')
-          !\
-          ! With known magnetic field and electric field in the 
+          ! With known magnetic field and electric field in the
           ! comoving frame update ion velocities at the half time-step
-          !/
           if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
-          !\
           ! Electric field in the comoving frame is calculated
           ! and, probably used, in calc_sorces. Add -UxB, to get field
           ! in the global coordinate frame
-          !/
           if(UseChargedParticles.and.UseMhdMomentumFlux)&
                call correct_efield_block(iBlock)
-          !\
-          !In the course of second stage in the FLIC scheme nothing
-          !is updated instead of the (multi)ion currents, which are
-          !updated by advance_ion_current.
-          !/ 
+          ! In the course of second stage in the FLIC scheme nothing
+          ! is updated instead of the (multi)ion currents, which are
+          ! updated by advance_ion_current.
           if(UseFlic.and.iStage==2)CYCLE
           ! Calculate time step (both local and global
           ! for the block) used in multi-stage update
@@ -195,7 +186,7 @@ contains
           call timing_start('update_state')
           call update_state(iBlock)
           call timing_stop('update_state')
-          
+
           if(DoCalcElectricField .and. iStage == nStage) &
                call get_num_electric_field(iBlock)
 
@@ -220,7 +211,7 @@ contains
           call set_block_data(iBlock)
 
        end do ! Multi-block solution update loop.
-       !$omp end parallel do
+       !$ omp end parallel do
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
 
@@ -260,7 +251,7 @@ contains
           if(UseUpdateCheck .and. iStage==1) &
                Time_SimulationOld = Time_Simulation
           if(UseFlic)then
-             !Staging Dt/2; Dt/2; Dt
+             ! Staging Dt/2; Dt/2; Dt
              if(iStage/=2)Time_Simulation = Time_Simulation + &
                   Dt*No2Si_V(UnitT_)/2
           else
@@ -269,29 +260,24 @@ contains
           if(UseUpdateCheck .and. iStage==nStage) &
                Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
        endif
-       !\
        ! If we have particle to move in the electromagnetic field,
        ! test or hybrid ones
        if(UseChargedParticles)then
           if(iStage==1)then
-             !\
              ! Ballistically (with no change in particle velocity)
              ! propagate particles for a half time-step
              ! This step corresponds to Equation 16 of Moschou, Sokolov et al.
              ! 2019 Hybrid paper of ASTRONUM
-             !/
              call trace_particles(Dt=Dt, DoBorisStepIn=.false.)
              if(UseHybrid)call get_state_from_vdf
           end if
-          !\
-          ! Calculate acceleration by the electromagnetic force. 
+          ! Calculate acceleration by the electromagnetic force.
           ! This step corresponds to Equation 7, 21 and Stage 2 in Figure 2
           ! of the Moschou, Sokolov et al. 2019 Hybrid paper of ASTRONUM
           ! Then ballistically (with no change in particle velocity)
           ! propagate them for a half time-step
           ! This step corresponds to Equation 16 of Moschou, Sokolov et al. 2019
           ! Hybrid paper of ASTRONUM
-          !/
           if(UseFlic)then
              if(iStage==2)call trace_particles(&
                   Dt=Dt, DoBorisStepIn=.true.)
@@ -326,6 +312,7 @@ contains
     use ModBoundaryGeometry, ONLY: fix_block_geometry
 
     integer :: iBlock
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_secondbody'
     !--------------------------------------------------------------------------

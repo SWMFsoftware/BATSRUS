@@ -14,7 +14,7 @@ module ModCoronalHeating
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
   use ModExpansionFactors, ONLY: get_bernoulli_integral
   use omp_lib
-  
+
   implicit none
   SAVE
 
@@ -27,8 +27,8 @@ module ModCoronalHeating
   public :: apportion_coronal_heating
   public :: get_wave_reflection
   public :: init_coronal_heating
-  public :: read_corona_heating
-  
+  public :: read_coronal_heating_param
+
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:
   real, public :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
@@ -73,7 +73,7 @@ module ModCoronalHeating
   logical,public :: UseWaveReflection = .true.
   logical        :: UseSurfaceWaveRefl= .false.
   real,   public :: rMinWaveReflection = 0.0
-  
+
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
@@ -82,8 +82,8 @@ module ModCoronalHeating
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real, public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
-  !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
-  
+  !$ omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
+
   character(len=lStringLine) :: TypeHeatPartitioning
 
   ! Switch whether to use uniform heat partition
@@ -106,8 +106,8 @@ module ModCoronalHeating
   ! Elsasser variables in the cascade rate
   logical, public :: UseAlignmentAngle = .false.
   real, public :: Cdiss_C(nI,nJ,nK) = 1.0
-  !$omp threadprivate(Cdiss_C)
-  
+  !$ omp threadprivate(Cdiss_C)
+
   logical :: DoInit = .true.
 
   ! Bill Abbet's model, if .true.
@@ -149,7 +149,7 @@ contains
     real :: BzCgs_II(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
     real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
-    !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
+    !$ omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
 
@@ -341,6 +341,7 @@ contains
     real, intent(out)   :: BzCgs_II(1:nI, 1:nJ)
     real :: MinZ, MaxZ, DxLeft, z
     integer :: iLeft
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_photosphere_field'
     !--------------------------------------------------------------------------
@@ -377,6 +378,7 @@ contains
 
     real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, DrL, dAreaCgs
     integer :: iLeft, j, k, iL
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_photosphere_unsignedflux'
     !--------------------------------------------------------------------------
@@ -418,7 +420,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_photosphere_unsignedflux
   !============================================================================
-  subroutine read_corona_heating(NameCommand)
+  subroutine read_coronal_heating_param(NameCommand)
 
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
@@ -427,7 +429,7 @@ contains
 
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_corona_heating'
+    character(len=*), parameter:: NameSub = 'read_coronal_heating_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     select case(NameCommand)
@@ -471,7 +473,7 @@ contains
              if(iError/=0)UseSurfaceWaveRefl = .false.
           end if
        case default
-          call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
+          call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
        end select
     case('#LIMITIMBALANCE')
@@ -518,7 +520,7 @@ contains
           call read_var('StochasticExponent', StochasticExponent)
           call read_var('StochasticAmplitude', StochasticAmplitude)
        case default
-          call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
+          call stop_mpi(NameSub//': unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
 
@@ -532,14 +534,14 @@ contains
        call read_var('UseAlignmentAngle', UseAlignmentAngle)
 
     case default
-       call stop_mpi('Read_corona_heating: unknown command = ' &
+       call stop_mpi(NameSub//': unknown command = ' &
             // NameCommand)
     end select
 
     call test_stop(NameSub, DoTest)
-  end subroutine read_corona_heating
-
+  end subroutine read_coronal_heating_param
   !============================================================================
+
   subroutine init_coronal_heating
 
     use ModPhysics,     ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, &
@@ -613,6 +615,7 @@ contains
     real :: FractionB, Bcell
 
     real :: WaveDissipation_V(WaveFirst_:WaveLast_)
+
     character(len=*), parameter:: NameSub = 'get_cell_heating'
     !--------------------------------------------------------------------------
     if(UseB0)then
@@ -944,7 +947,7 @@ contains
             DissipationRateMax/extension_factor(TeSi_C(i,j,k))
 
        AlfvenGradRefl = (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho
-       
+
        if(UseSurfaceWaveRefl)then
           !
           ! Calculate perpendicular gradient of log(sqrt(Rho))
@@ -1001,12 +1004,12 @@ contains
     use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: i, j, k, iBlock
-    logical, intent(inout) :: IsNewBlockAlfven 
+    logical, intent(inout) :: IsNewBlockAlfven
     real, intent(out) :: GradLogAlfven_D(nDim), GradLogRho_D(nDim)
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim),&
          LogRho_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
-    !$omp threadprivate(LogAlfven_FD,LogRho_FD)
+    !$ omp threadprivate(LogAlfven_FD,LogRho_FD)
 
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------

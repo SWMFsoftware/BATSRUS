@@ -60,7 +60,7 @@ module ModSolarwind
 
   ! Position of the satellite
   real :: SatelliteXyz_D(3)=0.
-  !$omp threadprivate( SatelliteXyz_D )
+  !$ omp threadprivate( SatelliteXyz_D )
 
   ! Shall we reread the file
   logical :: DoReadAgain = .false.
@@ -134,7 +134,7 @@ contains
     character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     ! Set defaults
     UseZeroBx = .false.
     TimeDelay = 0.0
@@ -147,7 +147,7 @@ contains
 
     ! Read solar wind file on all processors in parallel
     call open_file(FILE=NameSolarwindFile, STATUS="old")
-    
+
     if(lVerbose>0 .and. iProc==0)then
        call write_prefix
        write(iUnitOut,*) NameSub,' reading ',trim(NameSolarwindFile)
@@ -334,12 +334,12 @@ contains
                   matmul(Transform_DD, Solarwind_VI(iVar:iVar+2,nData))
           end do
           ! Shouldn't we add the orbital velocity of the Earth for HGI?!?
-          
+
        endif
     enddo
 
     call close_file
-    
+
     ! Check if the start time is within 1 day of the input data
     if( StartTime + Time_Simulation < Time_I(1) - cDay .or. &
          StartTime > Time_I(nData)+cDay) then
@@ -411,9 +411,8 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine read_solar_wind_file
-
   !============================================================================
-  
+
   subroutine normalize_solar_wind_data
 
     use ModAdvance, ONLY: &
@@ -425,7 +424,7 @@ contains
          iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
     use ModMPI
-    
+
     integer:: iData, iFluid
     integer:: T_= p_
     real :: Solarwind_V(nVar)
@@ -439,7 +438,7 @@ contains
 
        ! Put this point into a small array
        Solarwind_V = Solarwind_VI(:,iData)
-       
+
        ! normalize B and U
        Solarwind_V(Bx_:Bz_) = Solarwind_V(Bx_:Bz_)*Io2No_V(UnitB_)
        Solarwind_V(Ux_:Uz_) = Solarwind_V(Ux_:Uz_)*Io2No_V(UnitU_)
@@ -570,9 +569,9 @@ contains
 
        ! Put back results in big array
        Solarwind_VI(:,iData) = Solarwind_V
-       
+
     end do ! iData
-    
+
     if(DoTest)then
        write(*,*)'Io2No_V(UnitP_)',Io2No_V(UnitP_)
        write(*,*)'Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)',&
@@ -581,9 +580,9 @@ contains
        write(*,*)'After normalization, Solarwind_VI(:,2)=',Solarwind_VI(:,2)
        write(*,*)'After normalization, Solarwind_VI(:,3)=',Solarwind_VI(:,3)
     end if
-    
+
     call test_stop(NameSub, DoTest)
-    
+
   end subroutine normalize_solar_wind_data
   !============================================================================
 
@@ -593,7 +592,7 @@ contains
     ! TimeSimulation and position Xyz_D.
     ! If there is no solar wind file specified, the values given
     ! in the #SOLARWIND command (stored in FaceState_VI) are returned.
-    ! If the solar wind file consists of a single line, return 
+    ! If the solar wind file consists of a single line, return
     ! the values in it.
     ! If the solar wind file consists of multiple lines, then first
     ! find the time preceeding TimeSimulation and get the
@@ -636,7 +635,7 @@ contains
     real, intent(in)  :: TimeSimulation
     real, intent(in)  :: Xyz_D(3)
     real, intent(out) :: SolarWind_V(nVar)  ! Varying solar wind parameters
-    
+
     integer :: iData
     real(Real8_) :: Time
     real         :: SatDistance, u
@@ -648,7 +647,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_solar_wind_point'
     !--------------------------------------------------------------------------
-    
+
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
        SolarWind_V = FaceState_VI(:,xMinBc_)
@@ -707,13 +706,13 @@ contains
        Solarwind_V = interpolate_vector(Solarwind_VI, nVar=nVar, nDim=1, &
             Min_D=[1], Max_D=[nData], x_D=[Time], &
             x1_I=Time_I, DoExtrapolate=.false.)
-       
+
        u = dot_product(SolarWind_V(Ux_:Uz_), Normal_D)
        if(DoTestCell) write(*,*)NameSub,' u_D, u =',Solarwind_V(Ux_:Uz_),u
 
        ! Shift Time with travel time from the satellite plane
        if(abs(u) > 1e-5)then
-          
+
           ! Absolute time is in SI units
           Time = Time - SatDistance/u * No2Si_V(UnitT_)
 

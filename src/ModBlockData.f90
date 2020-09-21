@@ -72,18 +72,20 @@ contains
   !============================================================================
   subroutine init_mod_block_data
 
+    !--------------------------------------------------------------------------
     if(allocated(nData_B)) RETURN
     allocate(nData_B(MaxBlock), iData_B(MaxBlock), UseData_B(MaxBlock), &
          Data_B(MaxBlock))
     nData_B   = -1
     iData_B   = -1
     UseData_B = .false.
-    
+
   end subroutine init_mod_block_data
   !============================================================================
-  
+
   subroutine clean_mod_block_data
-    
+
+    !--------------------------------------------------------------------------
     if(allocated(nData_B)) deallocate(nData_B, iData_B, UseData_B, Data_B)
 
   end subroutine clean_mod_block_data

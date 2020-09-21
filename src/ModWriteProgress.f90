@@ -24,8 +24,9 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModUser, ONLY: NameUserModule, VersionUserModule, NameUserFile
     use ModVarIndexes, ONLY: NameEquation, NameEquationFile
-    
+
     integer, intent(in) :: inopt
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_progress'
     !--------------------------------------------------------------------------
@@ -103,6 +104,7 @@ contains
 
     integer :: iFluid
     character(len=100):: String, StringFormat
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_runtime_values'
     !--------------------------------------------------------------------------

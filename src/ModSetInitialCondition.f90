@@ -57,9 +57,7 @@ contains
           State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
        end do
     else
-       !\
        ! If used, initialize solution variables and parameters.
-       !/
        if(UseB0) call set_b0_cell(iBlock)
 
        ! Subtract B0 from Full B0+B1 from restart to obtain B1

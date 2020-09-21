@@ -3,6 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModHdf5
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   ! This empty module is used when HDF5 plotting is not enabled
 
   implicit none
@@ -27,6 +30,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_hdf5_plot'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call test_stop(NameSub, DoTest)
   end subroutine init_hdf5_plot
   !============================================================================
 
@@ -46,8 +51,10 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_hdf5'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc==0) write (*,*) "ERROR: HDF5 plotting is not enabled!"
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_plot_hdf5
   !============================================================================
   subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
@@ -73,9 +80,11 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_var_hdf5'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     nCell = 0
     H5advance = .false.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_var_hdf5
   !============================================================================
 
