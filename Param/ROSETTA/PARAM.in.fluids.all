@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/ROSETTA/PARAM.in.fluids.all: multifluid comet CG simulation
+
 #PLANET
 NONE			NamePlanet
 
@@ -53,12 +56,12 @@ T			DoSaveRestart
 T			UseBody
 1.0e-6			rBody
 0.0			rCurrents
-1.0e-9			BodyNDim (1/ccm)
-25.0			BodyTDim (K) temperature for fixed BC for P_BLK
-1.0e-9			BodyRhoDim (1/ccm)
-180.0			BodyTDim (K) temperature for fixed BC for P_BLK
-1.0e-9			BodyRhoDim (1/ccm)
-180.0			BodyTDim (K) temperature for fixed BC for P_BLK
+1.0e-9			BodyNDim (1/cc)
+25.0			BodyTDim (K) temperature for fixed BC pressure
+1.0e-9			BodyNDim (1/cc)
+180.0			BodyTDim (K) temperature for fixed BC pressure
+1.0e-9			BodyNDim (1/cc)
+180.0			BodyTDim (K) temperature for fixed BC pressure
 
 #USERSWITCH
 +init +ic		StringSwitch
@@ -100,7 +103,7 @@ solarwind		UseSwBC
 #USERINPUTEND -------------------------------------
 
 #SOLARWIND
- 1.0			SwNDim [n/cc]    \
+ 1.0			SwNDim [n/cc]      \
 100.0			SwTDim [K]          |
  0.0			SwUxDim [km/s]      |
  0.0			SwUyDim [km/s]      | 3.3 AU
@@ -245,14 +248,14 @@ reflected		UseSwBC
 #USERINPUTEND -------------------------------------
 
 #SOLARWIND
-8.0                     SW_rho_dim [n/cc]
-1.e5                    SW_T_dim [K]
--371.                   SW_Ux_dim [km/s]
-0.0                     SW_Uy_dim [km/s]
-0.0                     SW_Uz_dim [km/s]
--3.4                    SW_Bx_dim [nT]
-3.4                     SW_By_dim [nT]
-0.0                     SW_Bz_dim [nT]
+8.0			SwNDim [n/cc]
+1.e5			SwTDim [K]
+-371.			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+-3.4			SwBxDim [nT]
+3.4			SwByDim [nT]
+0.0			SwBzDim [nT]
 
 #TIMESTEPPING
 1			nStage
