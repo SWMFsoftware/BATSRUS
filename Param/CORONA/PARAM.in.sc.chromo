@@ -1,9 +1,9 @@
 Begin session: 1
 
 #DESCRIPTION
-Param/CORONA/PARAM.in.sc.chromo: Input file for creating a steady state solar corona
+Param/CORONA/PARAM.in.sc.chromo: Input file for creating a steady state solar corona		StringDescription
 
-#COMPONENT 
+#COMPONENT
 SC			NameComp
 
 #SAVERESTART
@@ -15,8 +15,8 @@ T			DoSaveRestart
 HGR			TypeCoordSystem
 
 #PLASMA
-1.0			IonMass [amu]
-1.0			AverageIonCharge [e]
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 #BODY
@@ -36,7 +36,7 @@ T			UseBody
 
 READPOTENTIALFIELD
 T			UseMagnetogram
-potentialfield.out	NamePotentialFieldFile
+potentialfield.out		NamePotentialFieldFile
 0.0			H_PFSSM
 2.0			UnitB 1.0
 
@@ -45,7 +45,7 @@ T			UseMagnetogram
 1.0			rMagnetogram
 2.5			rSourceSurface
 0.0			HeightInnerBc
-Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
+Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
 12			nHeaderLine
 0.0			PhiShift
 2.0			UnitB
@@ -61,7 +61,7 @@ T			UseCurlB0
 0.55e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
-alfvenwavedissipation	TypeCoronalHeating
+alfvenwavedissipation		TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.08			Crefl
 
@@ -80,7 +80,7 @@ T			UseHeatFluxRegion
 8.0			rCollisionless
 
 #TEST
-update_b0
+update_b0		StringTest
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -97,12 +97,12 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat
+RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExtendTransitionRegion
-2.2e5			TeModSi
+T			DoExpandTransitionRegion
+2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
 #INCLUDE
@@ -119,7 +119,7 @@ AMR
 F			DoAutoRefine
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
@@ -138,16 +138,16 @@ F			UseNonConservative
 all			TypeMessagePass
 
 #RESCHANGE
-T			UseAccurateResChange
+T			UseAccurateReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #INNERBOUNDARY
-user			TypeBcInner
+user			TypeBcBody
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
@@ -158,19 +158,19 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-5			nPlotFiles 1
+5			nPlotFile 1
 x=0 VAR idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
-{default}
+rho ux uy uz ti bx by bz I01 I02 p		NameVars
+{default}		NamePars
 z=0 VAR idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
-{default}
+rho ux uy uz ti bx by bz I01 I02 p		NameVars
+{default}		NamePars
 x=0 RAY idl		StringPlot
 20			DnSavePlot 5000
 10.0			DtSavePlot
@@ -182,12 +182,12 @@ y=0 RAY idl		StringPlot
 cut RAY idl		StringPlot
 -1  			DnSavePlot
 60.0			DtSavePlot
-1.0			rMin
-10.0			rMax
-0.0			LonMin
-360.0			LonMax
--90.0			LatMin
-+90.0			LatMax
+1.0			xMinCut
+10.0			xMaxCut
+0.0			yMinCut
+360.0			yMaxCut
+-90.0			zMinCut
++90.0			zMaxCut
 0.0			DxSavePlot
 
 x=0 VAR tec		StringPlot
@@ -211,13 +211,13 @@ T			DoSaveInitial
 50			MaxIteration 60000
 -1.0			tSimulationMax
 
-#RUN ########################################################################
+#RUN ##########################################################################
 Begin session: 2
 #AMR
 -1			DnRefine
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #USERSWITCH
 +perturb -ic		StringSwitch
@@ -262,7 +262,7 @@ GL			TypeCme
 -1			MaxIteration
 5.0			tSimulationMax
 !
-#RUN ########################################################################
+#RUN ##########################################################################
 
 ! perturb again with new CME
 #USERSWITCH
@@ -275,41 +275,41 @@ T			DoAddFluxRope
 15.0			LatitudeCme
 30.0			OrientationCme
 TD14			TypeCme
-1.79519580205131	BcTubeDim
-1.005747126436782	RadiusMajor
-0.431034482758621	RadiusMinor
-0.1436781609195402	Depth
-cancelflux
-100			BStrapping [Gs]
+1.79519580205131		BcTubeDim
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
+cancelflux		TypeBStrap
+100			bQStrappingDim [Gs]
 0.4			qDistance
 10			UChargeX
 
 #HELIOUPDATEB0
-2.0
+2.0			DtUpdateB0
 
 #STOP
 -1			MaxIteration
 10.0			tSimulationMax
 
-#RUN ########################################################################
+#RUN ##########################################################################
 
 #HELIOUPDATEB0
--1.0
+-1.0			DtUpdateB0
 
 #MINIMUMPRESSURE
-1.0E-9            pMinDim
-1.0e-9            peMinDim
+1.0E-9			pMinDim
+1.0e-9			peMinDim
 
 #MINIMUMTEMPERATURE
-5.0e4
+5.0e4			TminDim
 5.0e4
 
 #TIMESTEPLIMIT
-T                       UseDtLimit
+T			UseDtLimit
 5.0			DtLimitDim [sec] (read if UseDtLimit is true)
 
 #UPDATECHECK
-F			DoUpdateCheck
+F			UseUpdateCheck
 
 #STOP
 -1			MaxIteration

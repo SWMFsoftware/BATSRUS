@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/JUPITER/PARAM.in: Test for Jupiter
+Param/JUPITER/PARAM.in: Test for Jupiter		StringDescription
 
 #PLANET
 JUPITER			NamePlanet
@@ -7,32 +7,32 @@ JUPITER			NamePlanet
 #IDEALAXES
 
 #ROTATION
-T		UseRotation
-10.		
+T			UseRotation
+10.			RotationPeriod
 
 #STARTTIME
-2000			year
-1			month
-1			day
-1			hour
-0			minute
-0			second 
-0.0 			FracSecond 
+2000			iYear
+1			iMonth
+1			iDay
+1			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #SAVERESTART
-F			DoSaveRestart (Rest of parameters read if true) 
+F			DoSaveRestart (Rest of parameters read if true)
 
 #GRIDBLOCKALL
-1440                     MaxBlock
+1440			MaxBlock
 
 #GRID
-       6		nRootBlockX
-       4		nRootBlockY
-       4		nRootBlockZ
- -6.400e2          	xMin
+       6		nRootBlock1
+       4		nRootBlock2
+       4		nRootBlock3
+ -6.400e2		xMin
   1.280e2		xMax
  -2.56e2		yMin
   2.56e2		yMax
@@ -41,7 +41,7 @@ F			DoSaveRestart (Rest of parameters read if true)
 
 #GRIDRESOLUTION
 3.0			Resolution
-initial			NameArea
+initial			StringShape
 
 #GRIDRESOLUTION
 3/2			Resolution
@@ -56,54 +56,54 @@ ringz0			StringShape
 25.0			Radius
 
 #SOLARWIND
-0.2                      SW_rho_dim [n/cc]
-200000.0                   SW_T_dim [K] / 20eV
--400.0                    SW_Ux_dim [km/s]
-0.0                       SW_Uy_dim [km/s]
-0.0                       SW_Uz_dim [km/s]
-0.0                       SW_Bx_dim [nT]
-0.0                       SW_By_dim [nT]
--1.                       SW_Bz_dim [nT]
+0.2			SwNDim [n/cc]
+200000.0		SwTDim [K] / 20eV
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+-1.			SwBzDim [nT]
 
 
 #MAGNETOSPHERE
-T                       UseBody 
-3.                     rBody 
-4.                     rCurrents 
-50.                     Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-35000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+T			UseBody
+3.			rBody
+4.			rCurrents
+50.			BodyNDim (/ccm) density for fixed BC for rho_BLK
+35000.0			Magneto_T_dim (K) temperature for fixed BC for P_BLK
 
 #NONCONSERVATIVE
-T                       UseNonConservative 
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-1			nConservCrit 
-r			TypeConservCrit_I
-6.0			rConserv 
+1			nConservCrit
+r			TypeConservCrit
+6.0			rConserv
 
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR step		StringLog
 1			DnSaveLogfile
--1.			DtSaveLogfile 
-rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax rhosi_integrated	NameLogVars
+-1.			DtSaveLogfile
+rho mx my mz bx by bz p pmin pmax jin jout jinmax joutmax rhosi_integrated		NameLogVars
 
 #SAVEPLOT
-2                       nPlotFiles
-y=0 VAR tec             StringPlot
-10000                   DnSavePlot
--1.                     DtSavePlot
-rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi
-g rbody
-z=0 VAR tec             StringPlot
-10000                   DnSavePlot
--1.                     DtSavePlot
-rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi
-g rbody
+2			nPlotFile
+y=0 VAR tec		StringPlot
+10000			DnSavePlot
+-1.			DtSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi		NameVars
+g rbody			NamePars
+z=0 VAR tec		StringPlot
+10000			DnSavePlot
+-1.			DtSavePlot
+rho ux uy uz bx by bz p jx jy jz dt dtblk cons impl rhosi		NameVars
+g rbody			NamePars
 
 #OUTERBOUNDARY
-outflow			TypeBc1 
-inflow			TypeBc2 
+outflow			TypeBc1
+inflow			TypeBc2
 float			TypeBc3
 float			TypeBc4
 float			TypeBc5
@@ -111,10 +111,10 @@ float			TypeBc6
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExpl  
+0.80			CflExpl
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner 
+ionosphere		TypeBcBody
 
 #SCHEME
 1			nOrder
@@ -135,8 +135,8 @@ F			USeHighEnergyPressure
 1.0e-4			IonizationRate (1/s)
 1e-13			CollisionCrossSection (cm2)
 
-#USERINPUTEND -----------------
+#USERINPUTEND -------------------------------------
 
 #STOP
 50			MaxIteration
--1.			tSimulationMax  
+-1.			tSimulationMax

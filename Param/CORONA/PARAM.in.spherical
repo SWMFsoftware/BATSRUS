@@ -2,10 +2,10 @@
 SC			NameComp
 
 #DESCRIPTION
-Param/CORONA/PARAM.in.spherical: Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
+Param/CORONA/PARAM.in.spherical: Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC		StringDescription
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
 1998			iYear
@@ -17,17 +17,17 @@ F			DoTimeAccurate
 0.0 			FracSecond
 
 #COORDSYSTEM
-HGR                     TypeCoordSystem
+HGR			TypeCoordSystem
 
 #USERSWITCH
-+init +ic +update	StringSwitch
++init +ic +update		StringSwitch
 
 #MAGNETOGRAM
 T			UseMagnetogram
 1.0			rMagnetogram
 2.5			rSourceSurface
 0.0			HeightInnerBc
-Param/CORONA/MDI_small.dat    NameMagnetogramFile
+Param/CORONA/MDI_small.dat		NameHarmonicsFile
 12			nHeaderLine
 -1.0			PhiShift
 1.0			UnitB
@@ -39,12 +39,12 @@ WSA			NameModelSW
 1.5000E+00		Gamma
 
 #OUTERBOUNDARY
-float	                TypeBc1
-float   	        TypeBc2
-float	                TypeBc3
-float	  		TypeBc4
-float	 	        TypeBc5
-float	   		TypeBc6
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 INCLUDE
 Param/CORONA/GridSpherical
@@ -54,9 +54,9 @@ spherical_lnr		TypeGeometry
 
 ! Use a true sphere, so box is made much larger
 #GRID
-1			nRootBlockX
-4			nRootBlockY
-2			nRootBlockZ
+1			nRootBlock1
+4			nRootBlock2
+2			nRootBlock3
 -24.0			xMin
  24.0			xMax
 -24.0			yMin
@@ -72,28 +72,28 @@ spherical_lnr		TypeGeometry
 24.0			rMax
 
 #GRIDLEVEL
-0			nLevelArea
-initial			NameArea
+0			nLevel
+initial			StringShape
 
 #AMRREGION
-shell1                  NameRegion 
-box_gen			TypeRgion
-1.0			rMin
-0.0			LonMin
--45.0			LatMin
-4.0			rMax
-360.0			LonMax
-+45.0			LatMax
+shell1			NameRegion
+box_gen			StringShape
+1.0			xMinBox
+0.0			yMinBox
+-45.0			zMinBox
+4.0			xMaxBox
+360.0			yMaxBox
++45.0			zMaxBox
 
 #AMRCRITERIALEVEL
-2                       nCriteria 
-currentsheet            TypeCriteria
-0.5                     CoarsenLimit
-0.5                     RefineLimit
-3                       MaxLevel
-Level +shell1           TypeCriteria
-3                       RefineTo
-3                       CoursenTo
+2			nRefineCrit
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+3			MaxLevel
+Level +shell1		StringRefine
+3			RefineTo
+3			CoarsenFrom
 
 
 #BODY
@@ -103,7 +103,7 @@ T			UseBody
 3.5E+6			BodyTDim
 
 #INNERBOUNDARY
-ionosphere		TypeBcIn
+ionosphere		TypeBcBody
 
 #USECURLB0
 T			UseCurlB0
@@ -111,28 +111,28 @@ T			UseCurlB0
 
 #AMR
 20			DnRefine
-F			DoAutoRefine 
+F			DoAutoRefine
 
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc                      TypeLimiter
+mc			TypeLimiter
 1.2			LimiterBeta
 
 #TIMESTEPPING
-2                       nStage
-0.80                    CflExpl
+2			nStage
+0.80			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-3			nPlotFiles
+3			nPlotFile
 x=0 MHD idl		StringPlot
-10                   	DnSavePlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 y=0 MHD idl		StringPlot
@@ -148,23 +148,23 @@ z=0 MHD idl		StringPlot
 70			MaxIteration
 -1.0			tSimulationMax
 
-#RUN ########################################################################
+#RUN ##########################################################################
 
 #AMR
 -1			DnRefine
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #USERSWITCH
-+perturb +b0
++perturb +b0		StringSwitch
 
 #CME
 T			UseCme
 T			DoAddFluxRope
-80.0                    LongitudeCme
--10.0                   LatitudeCme
-0.0                     OrientationCme
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
 GL			TypeCme
 -0.4			BStrength
 1.0			Radius
@@ -172,32 +172,32 @@ GL			TypeCme
 1.5			ApexHeight
 
 #STOP
-71			MaxIteration  
+71			MaxIteration
 -1.0			tSimulationMax
 
-#RUN #############################################################
+#RUN ##########################################################################
 
 ! Another CME is launched, perturb again
 #USERSWITCH
-+perturb
++perturb		StringSwitch
 
 #CME
 T			UseCme
 T			DoAddFluxRope
-180.0                   LongitudeCme
-15.0                    LatitudeCme
-30.0                    OrientationCme
+180.0			LongitudeCme
+15.0			LatitudeCme
+30.0			OrientationCme
 TD			TypeCme
 1			Current
-1.005747126436782	RadiusMajor
-0.431034482758621	RadiusMinor
-0.1436781609195402	Depth
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
 T			UsePlsamaBeta
 0.1			PlasmaBeta
 5.0e4			EjectaTemperature
-readbstrap              TypeCharge
-11.976710014764566      bStrapping
+readbstrap		TypeCharge
+11.976710014764566		bStrapping
 
 #STOP
-100			MaxIteration  
+100			MaxIteration
 -1.0			tSimulationMax
