@@ -9674,18 +9674,18 @@ is 0.34 for randomly phased kinetic Alfven waves.
 </command>
 
 <command name="#CHROMOSPHERE">
-	<parameter name="UseChromoHeating" type="logical" default="F"/>
-    	<parameter name="NumberDensCgs" type="real" default="2e11"/>
-    	<parameter name="TeChromoSi" type="real" default="5e4"/>
+  <parameter name="UseChromosphereHeating" type="logical" default="F"/>
+  <parameter name="NeChromosphereCgs" type="real" default="2e11" min="0"/>
+  <parameter name="TeChromosphereSi" type="real" default="5e4" min="0"/>
 
 #CHROMOSPHERE
-F			UseChromoHeating
-2e11                    NumberDensCgs
-5e4			TeChromoSi
+F			UseChromosphereHeating
+2e11                    NeChromosphereCgs
+5e4			TeChromosphereSi
 
 Set plasma parameters on top of chromosphere. If desired, the special heating 
-function may be applied to mantain a hydrostatic density profile in the 
-chromosphere at constant Te=TeChromosphereSi
+function may be applied to maintain a hydrostatic density profile in the 
+chromosphere at constant electron temperature TeChromosphereSi.
 </command>
 
 <command name="RADIATIVECOOLING">
