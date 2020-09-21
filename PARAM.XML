@@ -4837,7 +4837,7 @@ The default is to flush the output, i.e. DoFlush=T.
   <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
     <parameter name="BStrength" type="real" default="0" />
     <parameter name="Radius" type="real" min="0" default="0" />
-    <parameter name="aStretch" type="real" min="0" default="0" />
+    <parameter name="Stretch" type="real" min="0" default="0" />
     <parameter name="ApexHeight" type="real" min="0" default="0" />
   </if>
   <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
@@ -4957,7 +4957,7 @@ T			DoAddFluxRope
 GL			TypeCme    GL/GIBSON-LOW
 1.0			BStrength      [Gs]
 1.03			Radius         [Rs]
-0.3			aStretch       [Rs]
+0.3			Stretch        [Rs]
 1.8			ApexHeight     [Rs]
 
 
@@ -4985,7 +4985,7 @@ magnetic field, in Gauss, such that the magnetic field at the center of
 configuration (prior to stretching) equals ~0.7 B0. It is signed variable, two 
 choises of sign correspond to two possible signs of the integral helicity. 
 Radius of configuration is the radius of the last magnetic (spherical) surface 
-confining all currents in the configuration. aStretch ("a" in the paper) is 
+confining all currents in the configuration. Stretch ("a" in the paper) is 
 the scale of stretching transformation (see details in the paper). Finally, 
 ApexHeight is the altitude of top of configuration respectively to the solar 
 surface. It is expoected that Radius &lt; ApexHeight &lt; 2*Radius.
@@ -4998,7 +4998,7 @@ format as follows:
 
    BStrengthNew = 13.1687517342067082*BStrengthOld*Radius**2
 4. The old line for reading Distance should be converted to the line for
-   reading ApexHeight = Distance + Radius - aStretch - 1
+   reading ApexHeight = Distance + Radius - Stretch - 1
 5. Line for reading pBackground should be removed
 !!!!!!!!!!!!!!!!!!!!!!!!!!!HELICITY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 FOR GL configuration, the field parameter, BStrength, may be both positive 
