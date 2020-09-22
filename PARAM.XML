@@ -9673,7 +9673,7 @@ is 0.34 for randomly phased kinetic Alfven waves.
 
 </command>
 
-<command name="#CHROMOSPHERE">
+<command name="CHROMOSPHERE">
   <parameter name="UseChromosphereHeating" type="logical" default="F"/>
   <parameter name="NeChromosphereCgs" type="real" default="2e11" min="0"/>
   <parameter name="TeChromosphereSi" type="real" default="5e4" min="0"/>
@@ -9683,9 +9683,12 @@ F			UseChromosphereHeating
 2e11                    NeChromosphereCgs
 5e4			TeChromosphereSi
 
-Set plasma parameters on top of chromosphere. If desired, the special heating 
-function may be applied to maintain a hydrostatic density profile in the 
-chromosphere at constant electron temperature TeChromosphereSi.
+Set plasma parameters at top of chromosphere. If desired, the special
+heating function may be applied to maintain a hydrostatic density
+profile in the chromosphere at constant electron temperature
+TeChromosphereSi. May be used if the chromosphere region is included
+into a computational domain or to specify the boundary condition for
+the analytic emission model from the transition region.
 </command>
 
 <command name="RADIATIVECOOLING">
@@ -9866,22 +9869,6 @@ plasma state on the threaded field lines is recovered from the saved files
 otherwise it is calculated from scratch.
 </command>
 
-<command name="CHROMOSPHERE">
-  <paramater name="UseChromosphereHeating" type="logical" default="F"/>
-  <parameter name="NumberDensChromosphere" type ="real" min="0"
-	     default="2.0e11" />
-  <parameter name="TeChromosphere" type ="real" min="0"
-	     default="5.0e4" />
-  
-#CHROMOSPHERE
-F                 UseChromosphereHeating
-2.0e11            NumberDensChromosphere
-5.0e4             TeChromosphere
-
-Sets the chromosphere parameters. May be used if the chromosphere region
-is included into a computational domain or to specify the boundary condition
-for the emission model from the transition region
-</command>
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
