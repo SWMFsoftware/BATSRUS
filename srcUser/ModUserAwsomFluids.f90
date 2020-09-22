@@ -550,10 +550,12 @@ contains
     use ModCoronalHeating, ONLY: CoronalHeating_C, &
          apportion_coronal_heating, get_block_heating, get_wave_reflection, &
          WaveDissipation_VC, UseAlignmentAngle, Cdiss_C
+    use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
     use ModFaceValue,      ONLY: calc_face_value
-    use ModMultiFluid,     ONLY: IonLast_
-    use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_
-    use ModVarIndexes,     ONLY: WaveFirst_, WaveLast_
+    use ModMultiFluid,     ONLY: IonLast_, IonFirst_
+    use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_, UnitT_, &
+         UnitTemperature_
+    use ModVarIndexes,     ONLY: WaveFirst_, WaveLast_, Rho_, Pe_, p_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -580,6 +582,38 @@ contains
     IsFound = .true.
 
     select case(NameVar)
+    case('te')
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          if(UseElectronPressure)then
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          else
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          end if
+       end do; end do; end do
+
+    case('ti')
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+               /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+       end do; end do; end do
+
+   case('qrad')
+       call get_tesi_c(iBlock, TeSi_C)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+               RadCooling_C(i,j,k))
+          PlotVar_G(i,j,k) = RadCooling_C(i,j,k) &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       end do; end do; end do
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
     case('refl')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
