@@ -168,7 +168,7 @@ T			DoAddFluxRope
 GL			TypeCme
 -0.4			BStrength
 1.0			Radius
-0.3			aStretch
+0.3			Stretch
 1.5			ApexHeight
 
 #STOP

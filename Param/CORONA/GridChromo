@@ -2,14 +2,14 @@
 turn these off when restarting
 ---------------------------------------------------
 #GRIDGEOMETRY
-spherical_genr
-Param/CORONA/grid_TR.dat
+spherical_genr		TypeGeometry
+Param/CORONA/grid_TR.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 #GRID
-1			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
 -100.0			xMin
  100.0			xMax
 -100.0			yMin
@@ -25,35 +25,35 @@ Param/CORONA/grid_TR.dat
 24.0			rMax
 ----------------------------------------------------
 #AMRREGION
-InnerShell              NameRegion
-shell0                  TypeRegion
-1.0                     Radius1
-1.7                     Radius2
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
 
 #AMRREGION
-LargeShell              NameRegion
-shell0                  TypeRegion
-1.0                     Radius1
-2.0                     Radius2
+LargeShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+2.0			Radius
 
 #AMRCRITERIARESOLUTION
-4                                        nCriteria
-Level +InnerShell                        TypeCriteria
-4                                        RefineTo
-4                                        CoursenTo
-currentsheet +LargeShell -InnerShell     TypeCriteria
-0.5                                      CoarsenLimit
-0.5                                      RefineLimit
-0.1                                      MaxResolution
-Level                                    TypeCriteria
-2                                        RefineTo
-2                                        CoursenTo
-currentsheet -LargeShell                 TypeCriteria
-0.5                                      CoarsenLimit
-0.5                                      RefineLimit
-0.1                                      MaxResolution
+4			nRefineCrit
+Level +InnerShell		StringRefine
+4			RefineTo
+4			CoarsenFrom
+currentsheet +LargeShell -InnerShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+currentsheet -LargeShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
 
 #GRIDLEVEL
-2                       nLevelArea 5
-initial                 NameArea
+2			nLevel 5
+initial			StringShape
 
