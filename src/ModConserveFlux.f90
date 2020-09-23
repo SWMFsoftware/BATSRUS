@@ -71,12 +71,11 @@ contains
   !============================================================================
 
   subroutine init_mod_cons_flux
-
-    integer :: iBlock
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_cons_flux'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
+    call test_start(NameSub, DoTest)
 
     if(.not.allocated(CorrectedFlux_VXB)) allocate( &
          CorrectedFlux_VXB(nCorrectedFaceValues,nJ,nK,2,MaxBlock), &
@@ -87,7 +86,7 @@ contains
     CorrectedFlux_VYB = 0.0
     CorrectedFlux_VZB = 0.0
 
-    call test_stop(NameSub, DoTest, iBlock)
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_cons_flux
   !============================================================================
 
