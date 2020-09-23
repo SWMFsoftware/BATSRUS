@@ -286,6 +286,7 @@ contains
 
     ! Check if both directions are connected to the ionosphere
     ! or the equatorial plane
+
     character(len=*), parameter:: NameSub = 'xyz_to_rphi'
     !--------------------------------------------------------------------------
     if(all(Pos_DI(3,:) > CLOSEDRAY))then

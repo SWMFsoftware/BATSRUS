@@ -80,17 +80,17 @@ module ModPointImplicit
   integer, public, allocatable :: iVarPointImpl_I(:)
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
-  !$ omp threadprivate( IsPointImplMatrixSet )
-  !$ omp threadprivate( IsPointImplPerturbed )
+  !$omp threadprivate( IsPointImplMatrixSet )
+  !$omp threadprivate( IsPointImplPerturbed )
 
   real, allocatable :: Matrix_II(:,:), Rhs_I(:)
-  !$ omp threadprivate( Matrix_II, Rhs_I )
+  !$omp threadprivate( Matrix_II, Rhs_I )
 
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
-  !$ omp threadprivate( DsDu_VVC )
+  !$omp threadprivate( DsDu_VVC )
 
   public:: update_point_implicit    ! do update with point implicit scheme
   public:: read_point_implicit_param
@@ -190,12 +190,12 @@ contains
 
     nVarPointImpl = size(iVarPointImpl_I)
 
-    !$ omp parallel
+    !$omp parallel
     allocate( &
        DsDu_VVC(nVar,nVar,nI,nJ,nK), &
        Matrix_II(nVarPointImpl,nVarPointImpl), &
        Rhs_I(nVarPointImpl))
-    !$ omp end parallel
+    !$omp end parallel
 
     if(iProc==0 .and. index(StringTest, NameSub)>0)then
        write(*,*)NameSub,' allocated arrays'
@@ -239,11 +239,11 @@ contains
     if(allocated(iVarPointImpl_I)) deallocate(iVarPointImpl_I)
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     if(allocated(EpsPointImpl_V)) deallocate(EpsPointImpl_V)
-    !$ omp parallel
+    !$omp parallel
     if(allocated(DsDu_VVC)) deallocate(DsDu_VVC)
     if(allocated(Rhs_I)) deallocate(Rhs_I)
     if(allocated(Matrix_II)) deallocate(Matrix_II)
-    !$ omp end parallel
+    !$omp end parallel
 
   end subroutine clean_mod_point_impl
   !============================================================================

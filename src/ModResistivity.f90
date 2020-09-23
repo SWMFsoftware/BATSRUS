@@ -208,7 +208,7 @@ contains
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-    !$ omp parallel do private(ResistFactor_G)
+    !$omp parallel do private(ResistFactor_G)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
        select case(TypeResistivity)
@@ -233,7 +233,7 @@ contains
           Eta_GB(:,:,:,iBlock) = Eta_GB(:,:,:,iBlock)*ResistFactor_G
        end if
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     if(allocated(iRegionResist_I)) deallocate(ResistFactor_G)
 
@@ -507,8 +507,8 @@ contains
 
     call set_resistivity
 
-    !$ omp parallel do private(DoTestCell,DtLocal) &
-    !$ omp private(HeatExchange,HeatExchangePeP,HeatExchangePePpar)
+    !$omp parallel do private(DoTestCell,DtLocal) &
+    !$omp private(HeatExchange,HeatExchangePeP,HeatExchangePePpar)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -587,7 +587,7 @@ contains
 
        call calc_energy_cell(iBlock)
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_heat_exchange
@@ -638,7 +638,7 @@ contains
        iBlockFromSemi_B(nBlockSemi) = iBlock
     end do
 
-    !$ omp parallel do
+    !$omp parallel do
     do iBlockSemi=1,nBlockSemi
        ! Store the magnetic field in SemiAll_VCB
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -646,7 +646,7 @@ contains
                State_VGB(Bx_:Bz_,i,j,k,iBlockFromSemi_B(iBlockSemi))
        end do; end do; end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     if(DoTest) write(*,*) NameSub,' iProc, nBlockSemi=', iProc, nBlockSemi
 
@@ -677,7 +677,7 @@ contains
     ! Message pass resistivity to fill in ghost cells
     call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
-    !$ omp parallel do private( Di,Dj,Dk,FaceNormal_D,Eta )
+    !$omp parallel do private( Di,Dj,Dk,FaceNormal_D,Eta )
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -698,7 +698,7 @@ contains
           end do; end do; end do
        end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine init_impl_resistivity
@@ -738,7 +738,7 @@ contains
     if(HallCmaxFactor > 0 .and. .not.allocated(WhistlerCoeff_FDB)) &
          allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
-    !$ omp parallel do private(InvDxyz,FaceNormal_D,Rho,b_D)
+    !$omp parallel do private(InvDxyz,FaceNormal_D,Rho,b_D)
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -801,7 +801,7 @@ contains
           end do; end do; end do
        end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     call test_stop(NameSub, DoTest)
   end subroutine init_impl_hall_resist

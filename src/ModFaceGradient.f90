@@ -959,7 +959,7 @@ contains
 
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-    !$ omp threadprivate( DcoordDxyz_DDFD )
+    !$omp threadprivate( DcoordDxyz_DDFD )
 
     ! Limits for the cell index for the cells involoved in calculating
     ! the vector components of gradient, which are parallel to the face
@@ -1169,7 +1169,7 @@ contains
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     ! Jacobian matrix for general grid: Dgencoord/Dcartesian
     real, save :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
-    !$ omp threadprivate( DcoordDxyz_DDFD )
+    !$omp threadprivate( DcoordDxyz_DDFD )
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)

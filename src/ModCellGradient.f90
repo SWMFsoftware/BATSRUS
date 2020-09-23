@@ -27,7 +27,7 @@ module ModCellGradient
   ! Local variables -------------
 
   integer, allocatable:: iTrue_G(:,:,:)
-  !$ omp threadprivate( iTrue_G )
+  !$omp threadprivate( iTrue_G )
 
   interface calc_gradient
      module procedure calc_gradient1, calc_gradient3

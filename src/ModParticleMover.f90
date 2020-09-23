@@ -568,6 +568,7 @@ contains
 
     ! In this subroutine we obtain the VDF for each particle species
     ! stemming from the state vector variables.
+
     !--------------------------------------------------------------------------
     call get_cell_state_from_vdf(&
          MinI=1                , &
@@ -650,10 +651,10 @@ contains
     real :: RndUnif, RndUnif1, RndUnif2
     ! Parameters of the Maxwellian distribution
     real :: Energy, MomentumAvr
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cell_state_from_vdf'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
     ! Transform State Vector Variables to VDFs
     ! Initialize random number generator with the global block

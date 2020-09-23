@@ -57,7 +57,7 @@ module ModThreadedLC
   ! Temperature 3D array
   !
   real,allocatable :: Te_G(:,:,:)
-  !$ omp threadprivate( Te_G )
+  !$omp threadprivate( Te_G )
   !
   ! Arrays for 1D distributions
   !

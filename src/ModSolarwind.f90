@@ -60,7 +60,7 @@ module ModSolarwind
 
   ! Position of the satellite
   real :: SatelliteXyz_D(3)=0.
-  !$ omp threadprivate( SatelliteXyz_D )
+  !$omp threadprivate( SatelliteXyz_D )
 
   ! Shall we reread the file
   logical :: DoReadAgain = .false.

@@ -207,11 +207,11 @@ contains
        end do
     end if
     if(UseB0)then
-       !$ omp parallel do
+       !$omp parallel do
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call add_b0(iBlock)
        end do
-       !$ omp end parallel do
+       !$omp end parallel do
     end if
 
     write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'

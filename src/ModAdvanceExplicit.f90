@@ -83,7 +83,7 @@ contains
        endif
 
        if(DoConserveFlux)then
-          !$ omp parallel do
+          !$omp parallel do
           do iBlock=1,nBlock
              if(Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
@@ -109,7 +109,7 @@ contains
              call save_cons_flux(iBlock)
 
           end do
-          !$ omp end parallel do
+          !$omp end parallel do
 
           if(DoTest)write(*,*)NameSub,' done res change only'
 
@@ -125,7 +125,7 @@ contains
        endif
 
        ! Multi-block solution update.
-       !$ omp parallel do
+       !$omp parallel do
        do iBlock = 1, nBlock
 
           if(Unused_B(iBlock)) CYCLE
@@ -211,7 +211,7 @@ contains
           call set_block_data(iBlock)
 
        end do ! Multi-block solution update loop.
-       !$ omp end parallel do
+       !$omp end parallel do
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
 

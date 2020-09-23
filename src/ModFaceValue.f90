@@ -54,7 +54,7 @@ module ModFaceValue
   ! Region parameters for low order scheme
   character(len=200), public:: StringLowOrderRegion = 'none'
   integer, allocatable, public:: iRegionLowOrder_I(:)
-  !$ omp threadprivate( iRegionLowOrder_I )
+  !$omp threadprivate( iRegionLowOrder_I )
 
   ! Local variables -----------------
 
@@ -74,7 +74,7 @@ module ModFaceValue
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
-  !$ omp threadprivate( iVarLimitRatio_I )
+  !$omp threadprivate( iVarLimitRatio_I )
 
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
@@ -95,12 +95,12 @@ module ModFaceValue
 
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
-  !$ omp threadprivate( Primitive_VG )
+  !$omp threadprivate( Primitive_VG )
 
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
-  !$ omp threadprivate( UseTrueCell, IsTrueCell_I )
+  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
 
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
@@ -109,7 +109,7 @@ module ModFaceValue
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
-  !$ omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
+  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
 
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
@@ -118,15 +118,15 @@ module ModFaceValue
   real:: Face_I(0:MaxIJK+2)
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-  !$ omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
-  !$ omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
+  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
 
   real:: LowOrderCrit_I(1:MaxIJK+1)
-  !$ omp threadprivate( LowOrderCrit_I )
+  !$omp threadprivate( LowOrderCrit_I )
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-  !$ omp threadprivate( WeightL_II, WeightR_II)
+  !$omp threadprivate( WeightL_II, WeightR_II)
 
 contains
   !============================================================================
@@ -1018,7 +1018,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
-      !$ omp threadprivate( State_VX )
+      !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
 
@@ -1179,7 +1179,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
-      !$ omp threadprivate( State_VY )
+      !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -1336,7 +1336,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VZ(:,:,:,:)
-      !$ omp threadprivate( State_VZ )
+      !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
       !------------------------------------------------------------------------
@@ -2266,11 +2266,11 @@ contains
        IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
        IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
        IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
-    ! _____________!_____________!_______!_______!_
+    ! _____________! _____________!_______!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
     !             !         CToF! FToC FF!
-    ! _____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
@@ -2364,11 +2364,11 @@ contains
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________!_____________!________!_______!_
+    ! _____________! _____________!________!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! __F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! __F1_V__! __F2_V_!_
     !             !         CToF! FToC FF!
-    ! _____________!_____________!__F1_V__!__F2_V_!_
+    ! _____________! _____________!__F1_V__!__F2_V_!_
     !             !             !        !       !
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
@@ -2441,11 +2441,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    ! _____________!_____________!_______!_______!_
+    ! _____________! _____________!_______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
     !             !         CToF! FToC FF!       !
-    ! _____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2587,11 +2587,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    ! _____________!_____________!_______!_______!_
+    ! _____________! _____________!_______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__!__F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
     !             !         CToF! FToC FF!       !
-    ! _____________!_____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2728,10 +2728,10 @@ contains
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________!_____________!_______!_______!_
+    ! _____________! _____________!_______!_______!_
     !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
-    ! _____________!_____________!_______!_______!_
+    ! _____________! _____________!_______!_______!_
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)

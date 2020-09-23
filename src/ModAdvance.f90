@@ -177,7 +177,7 @@ module ModAdvance
   ! Local cell-centered source terms and divB.
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
   real :: SourceMhd_VC(RhoUx_:RhoUz_, nI, nJ, nK)
-  !$ omp threadprivate( Source_VC, SourceMhd_VC )
+  !$omp threadprivate( Source_VC, SourceMhd_VC )
 
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -204,48 +204,48 @@ module ModAdvance
   real, allocatable:: LeftState_VX(:,:,:,:), RightState_VX(:,:,:,:)
   real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
   real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
-  !$ omp threadprivate( LeftState_VX, RightState_VX )
-  !$ omp threadprivate( LeftState_VY, RightState_VY )
-  !$ omp threadprivate( LeftState_VZ, RightState_VZ )
+  !$omp threadprivate( LeftState_VX, RightState_VX )
+  !$omp threadprivate( LeftState_VY, RightState_VY )
+  !$omp threadprivate( LeftState_VZ, RightState_VZ )
 
   ! Face centered div(U)*dl
   real, allocatable:: FaceDivU_IX(:,:,:,:)
   real, allocatable:: FaceDivU_IY(:,:,:,:)
   real, allocatable:: FaceDivU_IZ(:,:,:,:)
-  !$ omp threadprivate( FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ )
+  !$omp threadprivate( FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ )
 
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
-  !$ omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
+  !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
 
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
-  !$ omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
+  !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
 
   ! Cell centered fluxes
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
-  !$ omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
+  !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
 
   ! Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false., DoCorrectFace = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
-  !$ omp threadprivate( FluxCenter_VGD )
+  !$omp threadprivate( FluxCenter_VGD )
 
   ! CWENO weight used to limit flux.
   real, allocatable:: Weight_IVX(:,:,:,:,:), Weight_IVY(:,:,:,:,:), &
        Weight_IVZ(:,:,:,:,:)
-  !$ omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
+  !$omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
 
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable:: &
        uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)
-  !$ omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
+  !$omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
   real, allocatable:: &
        bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
-  !$ omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
+  !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
 
   ! Mhd part of the momentum flux. May be subtracted for calculating
   ! electric field
@@ -259,7 +259,7 @@ module ModAdvance
 
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
        MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
-  !$ omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
+  !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
 
   ! Merge cells around the polar axis in spherical geometry
   logical :: DoFixAxis = .false.
@@ -307,7 +307,7 @@ contains
        Source_VCB = 0.0
     endif
 
-    !$ omp parallel
+    !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DX))then
        allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
@@ -315,7 +315,7 @@ contains
        allocate(bCrossArea_DZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
        bCrossArea_DX = 0.0; bCrossArea_DY = 0.0; bCrossArea_DZ = 0.0
     end if
-    !$ omp end parallel
+    !$omp end parallel
 
     if(allocated(State_VGB)) RETURN
 
@@ -340,7 +340,7 @@ contains
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
 
-    !$ omp parallel
+    !$omp parallel
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then
     ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
@@ -371,7 +371,7 @@ contains
     allocate(FaceDivU_IX(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
     allocate(FaceDivU_IY(nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace))
     allocate(FaceDivU_IZ(nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace))
-    !$ omp end parallel
+    !$omp end parallel
 
     if(iProc==0)then
        call write_prefix
@@ -409,7 +409,7 @@ contains
     if(allocated(LowOrderCrit_YB)) deallocate(LowOrderCrit_YB)
     if(allocated(LowOrderCrit_ZB)) deallocate(LowOrderCrit_ZB)
     if(allocated(Vel_IDGB))        deallocate(Vel_IDGB)
-    !$ omp parallel
+    !$omp parallel
     if(allocated(LeftState_VX))    deallocate(LeftState_VX, RightState_VX)
     if(allocated(LeftState_VY))    deallocate(LeftState_VY, RightState_VY)
     if(allocated(LeftState_VZ))    deallocate(LeftState_VZ, RightState_VZ)
@@ -434,7 +434,7 @@ contains
     if(allocated(MhdFlux_VX))      deallocate(MhdFlux_VX)
     if(allocated(MhdFlux_VY))      deallocate(MhdFlux_VY)
     if(allocated(MhdFlux_VZ))      deallocate(MhdFlux_VZ)
-    !$ omp end parallel
+    !$omp end parallel
 
     if(iProc==0)then
        call write_prefix

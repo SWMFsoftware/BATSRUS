@@ -53,7 +53,7 @@ module ModHeatConduction
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
-  !$ omp threadprivate( Te_G, Ti_G )
+  !$omp threadprivate( Te_G, Ti_G )
 
   ! Used for ideal EOS: p = n*T + ne*Te (dimensionless) and n=rho/ionmass
   ! so that p=rho/massion *T*(1+ne/n Te/T)
@@ -63,20 +63,20 @@ module ModHeatConduction
 
   ! Array needed for second order interpolation of ghost cells
   real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-  !$ omp threadprivate( State1_VG, State2_VG )
+  !$omp threadprivate( State1_VG, State2_VG )
 
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
-  !$ omp threadprivate( FluxImpl_VFD )
+  !$omp threadprivate( FluxImpl_VFD )
 
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
   ! Arrays to build the Heat conduction dyad
   real, allocatable :: HeatCoef_G(:,:,:), bb_DDG(:,:,:,:,:)
-  !$ omp threadprivate( HeatCoef_G, bb_DDG )
+  !$omp threadprivate( HeatCoef_G, bb_DDG )
   ! Arrays needed for the heat flux limiter
   real, allocatable :: FreeStreamFlux_G(:,:,:)
-  !$ omp threadprivate( FreeStreamFlux_G )
+  !$omp threadprivate( FreeStreamFlux_G )
 
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
@@ -278,10 +278,10 @@ contains
     DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
-       !$ omp parallel
-       !$ omp single
+       !$omp parallel
+       !$omp single
        allocate(HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
-       !$ omp end single
+       !$omp end single
        allocate( &
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -292,7 +292,7 @@ contains
 
        if(UseHeatFluxLimiter) &
             allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
-       !$ omp end parallel
+       !$omp end parallel
 
        if(UseElectronPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_CB(nI,nJ,nK,MaxBlock))
@@ -350,8 +350,8 @@ contains
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
-    !$ omp threadprivate( UseFirstOrderBc )
-    !$ omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
+    !$omp threadprivate( UseFirstOrderBc )
+    !$omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
 
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------

@@ -82,7 +82,7 @@ module ModCoronalHeating
   ! Arrays for the calculated heat function and dissipated wave energy
   real, public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real, public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
-  !$ omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
+  !$omp threadprivate( CoronalHeating_C, WaveDissipation_VC )
 
   character(len=lStringLine) :: TypeHeatPartitioning
 
@@ -106,7 +106,7 @@ module ModCoronalHeating
   ! Elsasser variables in the cascade rate
   logical, public :: UseAlignmentAngle = .false.
   real, public :: Cdiss_C(nI,nJ,nK) = 1.0
-  !$ omp threadprivate(Cdiss_C)
+  !$omp threadprivate(Cdiss_C)
 
   logical :: DoInit = .true.
 
@@ -149,7 +149,7 @@ contains
     real :: BzCgs_II(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
     real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
-    !$ omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
+    !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
 
@@ -1009,7 +1009,7 @@ contains
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim),&
          LogRho_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
-    !$ omp threadprivate(LogAlfven_FD,LogRho_FD)
+    !$omp threadprivate(LogAlfven_FD,LogRho_FD)
 
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------

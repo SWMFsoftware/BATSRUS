@@ -29,7 +29,7 @@ module ModHallResist
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
   logical, public:: IsNewBlockCurrent=.true.
-  !$ omp threadprivate( IsNewBlockCurrent )
+  !$omp threadprivate( IsNewBlockCurrent )
 
   ! Coefficient for taking whistler wave speed into account
   real, public:: HallCmaxFactor = 1.0
@@ -41,19 +41,19 @@ module ModHallResist
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
   real:: IonMassPerChargeCoef
-  !$ omp threadprivate( IonMassPerCharge_G )
+  !$omp threadprivate( IonMassPerCharge_G )
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:)
-  !$ omp threadprivate( HallJ_CD )
+  !$omp threadprivate( HallJ_CD )
 
   ! Hall factor on the faces and in the cell centers
   real, public, allocatable:: HallFactor_DF(:,:,:,:), HallFactor_C(:,:,:)
-  !$ omp threadprivate( HallFactor_DF, HallFactor_C )
+  !$omp threadprivate( HallFactor_DF, HallFactor_C )
 
   ! Logical is true if call set_hall_factor* sets any non-zero hall factors
   logical, public:: IsHallBlock
-  !$ omp threadprivate( IsHallBlock )
+  !$omp threadprivate( IsHallBlock )
 
   ! Local variables ---------
 
@@ -89,7 +89,7 @@ contains
        write(*,*) ''
     end if
 
-    !$ omp parallel
+    !$omp parallel
     if(.not.allocated(HallJ_CD)) allocate(              &
          HallJ_CD(nI,nJ,nK,MaxDim),                     &
          IonMassPerCharge_G(0:nI+1,j0_:nJp1_,k0_:nKp1_) )
@@ -97,7 +97,7 @@ contains
     HallJ_CD = 0.0
 
     IonMassPerCharge_G = IonMassPerCharge
-    !$ omp end parallel
+    !$omp end parallel
 
     ! This is used in combination with normalized density
     ! divided by SI charge density.

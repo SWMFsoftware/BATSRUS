@@ -86,7 +86,7 @@ module ModWaves
   real:: PowerIndex = 5.0/3.0, FreqStartSi = -1.0
 
   real :: DivU_C(nI,nJ,nK) = 0.0       ! Auxiliary variable
-  !$ omp threadprivate( DivU_C )
+  !$omp threadprivate( DivU_C )
 
 contains
   !============================================================================

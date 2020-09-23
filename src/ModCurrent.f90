@@ -260,7 +260,7 @@ contains
     real   :: InvDx2, InvDy2, InvDz2
 
     integer:: iBlockLast = -1
-    !$ omp threadprivate( iBlockLast )
+    !$omp threadprivate( iBlockLast )
 
     ! Exclude body cells
     character(len=*), parameter:: NameSub = 'get_current'

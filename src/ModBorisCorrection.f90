@@ -36,11 +36,11 @@ module ModBorisCorrection
   ! Electric field . area vector for div(E) in Boris correction
   real, allocatable, public:: &
        EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
-  !$ omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
+  !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
 
   ! Speed of light at cell centers and cell faces
   real, allocatable, public:: Clight_G(:,:,:), Clight_DF(:,:,:,:)
-  !$ omp threadprivate( Clight_G, Clight_DF )
+  !$omp threadprivate( Clight_G, Clight_DF )
 
   ! Local variables ---------------
 
@@ -58,17 +58,18 @@ contains
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
 
     ! Get signed indexes for Boris region(s)
+
     !--------------------------------------------------------------------------
     call get_region_indexes(StringBorisRegion, iRegionBoris_I)
     UseBorisRegion = allocated(iRegionBoris_I)
 
-    !$ omp parallel
+    !$omp parallel
     if(.not.allocated(EDotFA_X))then
        allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
        allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     end if
-    !$ omp end parallel
+    !$omp end parallel
 
   end subroutine init_mod_boris_correction
   !============================================================================

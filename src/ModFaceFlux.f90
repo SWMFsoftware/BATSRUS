@@ -80,7 +80,7 @@ module ModFaceFlux
 
   ! Variables needed for Biermann battery term
   real, allocatable, public:: Pe_G(:,:,:)
-  !$ omp threadprivate( Pe_G )
+  !$omp threadprivate( Pe_G )
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -1053,7 +1053,7 @@ contains
     integer :: i, j, k, iFluid
     real :: NatomicSi, TeSi
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    !$ omp threadprivate( b_DG )
+    !$omp threadprivate( b_DG )
 
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
@@ -3412,7 +3412,7 @@ contains
     real:: Un_I(nFluid+1), En, Pe, Pwave
 
     real, allocatable, save:: Flux_VD(:,:)
-    !$ omp threadprivate( Flux_VD )
+    !$omp threadprivate( Flux_VD )
     integer:: iFlux
 
     logical:: DoTest

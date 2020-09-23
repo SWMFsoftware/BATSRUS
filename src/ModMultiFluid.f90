@@ -64,11 +64,11 @@ module ModMultiFluid
        iPpar  = iPparIon_I(IonFirst_), &
        iP     = P_,                    &
        iEnergy= nVar+1
-  !$ omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
-  !$ omp threadprivate( iUx, iUy, iUz )
+  !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
+  !$omp threadprivate( iUx, iUy, iUz )
 
   character (len=20) :: NameFluid = ''
-  !$ omp threadprivate( NameFluid )
+  !$omp threadprivate( NameFluid )
 
   ! Variables for setting fluid boundary condition separately from MHD
   ! variables.

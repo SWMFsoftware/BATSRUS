@@ -763,8 +763,8 @@ contains
        do num_checks = 1,max_checks
           percent_chg_rho = 0.1
           percent_chg_p   = 0.1
-          !$ omp parallel do private(iVar, i, j, k) &
-          !$ omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
+          !$omp parallel do private(iVar, i, j, k) &
+          !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
           do iBlock = 1, nBlockMax
              if (Unused_B(iBlock)) CYCLE
              if (num_checks == 1) then
@@ -813,7 +813,7 @@ contains
                   StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                   /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
           end do
-          !$ omp end parallel do
+          !$omp end parallel do
 
           if(DoTest)then
              ! Find location of maximum change
@@ -822,8 +822,8 @@ contains
              call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
 
-             !$ omp parallel do &
-             !$ omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
+             !$omp parallel do &
+             !$omp reduction(max:percent_chg_rho) reduction(max:percent_chg_p)
              do iBlock = 1, nBlockMax
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
@@ -885,7 +885,7 @@ contains
                    end do
                 end do; end do; end do
              end do
-             !$ omp end parallel do
+             !$omp end parallel do
           end if ! DoTest
           time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
           call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
@@ -907,7 +907,7 @@ contains
           dt = dt * time_fraction
           report_tf = report_tf*time_fraction
 
-          !$ omp parallel do private(i,j,k)
+          !$omp parallel do private(i,j,k)
           do iBlock = 1, nBlockMax
              if(Unused_B(iBlock)) CYCLE
 
@@ -916,7 +916,7 @@ contains
                 call fix_update(i,j,k,iBlock,time_fraction)
              end do; end do; end do
           end do
-          !$ omp end parallel do
+          !$omp end parallel do
        end do
 
        PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
@@ -939,11 +939,11 @@ contains
        !///
        report_tf = 1.
        PercentChangePE = 0.
-       !$ omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
-       !$ omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
-       !$ omp private(time_fraction, percent_chg_rho, percent_chg_p) &
-       !$ omp reduction(max:PercentChangePE) &
-       !$ omp reduction(min:report_tf)
+       !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
+       !$omp private(time_fraction_rho,time_fraction_p,cell_time_fraction) &
+       !$omp private(time_fraction, percent_chg_rho, percent_chg_p) &
+       !$omp reduction(max:PercentChangePE) &
+       !$omp reduction(min:report_tf)
        do iBlock = 1, nBlockMax
           if(Unused_B(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1032,7 +1032,7 @@ contains
              report_tf = min(report_tf, cell_time_fraction)
           end do; end do; end do
        end do
-       !$ omp end parallel do
+       !$omp end parallel do
 
        call MPI_allreduce(report_tf, report_tf_all, 1, &
             MPI_REAL, MPI_MIN, iComm, iError)
@@ -1055,7 +1055,7 @@ contains
        end if
 
        if(DoTest3)then
-          !$ omp parallel do private(i,j,k)
+          !$omp parallel do private(i,j,k)
           do iBlock = 1,nBlockMax
              if(Unused_B(iBlock))CYCLE
              do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1103,7 +1103,7 @@ contains
                      'value_new=',State_VGB(p_,i,j,k,iBlock)
              end do; end do; end do
           end do
-          !$ omp end parallel do
+          !$omp end parallel do
        end if
     end if
 
@@ -1113,7 +1113,7 @@ contains
 
     ! Check for positivity of variables
     IsNegative = .false.
-    !$ omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
+    !$omp parallel do private(Value,i_D,IsNegative,iVar,i,j,k)
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
@@ -1141,7 +1141,7 @@ contains
           end if
        end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
     if(IsNegative)then
        if(time_accurate)then
           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &

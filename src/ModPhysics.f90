@@ -1199,7 +1199,7 @@ contains
     real, intent(out):: uRot_D(3)
 
     real, save:: Omega_D(3)
-    !$ omp threadprivate( Omega_D )
+    !$omp threadprivate( Omega_D )
     logical   :: IsUninitialized = .true.
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'

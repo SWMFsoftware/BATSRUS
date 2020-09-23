@@ -372,7 +372,7 @@ contains
 
        ! NewSemiAll_VCB = SemiAll_VCB + Solution
        n=0
-       !$ omp parallel do private( n )
+       !$omp parallel do private( n )
        do iBlockSemi = 1, nBlockSemi
           n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -388,11 +388,11 @@ contains
              enddo
           enddo; enddo; enddo;
        enddo
-       !$ omp end parallel do
+       !$omp end parallel do
     end do ! Splitting
 
     ! Put back semi-implicit result into the explicit code
-    !$ omp parallel do private(iBlock)
+    !$omp parallel do private(iBlock)
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
@@ -414,7 +414,7 @@ contains
                //TypeSemiImplicit)
        end select
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     ! call cpu_time(finish)
 
@@ -500,7 +500,7 @@ contains
 
     ! Fill in SemiState so it can be message passed
     SemiState_VGB = 0.0
-    !$ omp parallel do private( iBlock )
+    !$omp parallel do private( iBlock )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -508,7 +508,7 @@ contains
                SemiAll_VCB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
        end do; end do; end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
@@ -630,7 +630,7 @@ contains
 
     ! Fill in StateSemi so it can be message passed
     n = 0
-    !$ omp parallel do private( iBlock,n )
+    !$omp parallel do private( iBlock,n )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        n = (iBlockSemi-1)*nIJK*nVarSemi ! openmp testing
@@ -639,7 +639,7 @@ contains
           SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n)
        end do; end do; end do; end do
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
@@ -668,7 +668,7 @@ contains
     end select
 
     n = 0
-    !$ omp parallel do private( iBlock,n,DtLocal,Volume )
+    !$omp parallel do private( iBlock,n,DtLocal,Volume )
     do iBlockSemi=1,nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -710,14 +710,14 @@ contains
        end if
 
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
-       !$ omp parallel do private( iBlock )
+       !$omp parallel do private( iBlock )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -727,12 +727,12 @@ contains
                Flux_VXB=FluxImpl_VXB, Flux_VYB=FluxImpl_VYB, &
                Flux_VZB=FluxImpl_VZB)
        end do
-       !$ omp end parallel do
+       !$omp end parallel do
     end if
 
     n = 0
     if(UseSplitSemiImplicit)then
-       !$ omp parallel do private( iBlock, DtLocal, Volume, n )
+       !$omp parallel do private( iBlock, DtLocal, Volume, n )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           DtLocal = dt
@@ -748,9 +748,9 @@ contains
                   - SemiImplCoeff * ResSemi_VCB(1,i,j,k,iBlockSemi))
           end do; enddo; enddo
        end do
-       !$ omp end parallel do
+       !$omp end parallel do
     else
-       !$ omp parallel do private( iBlock,DtLocal,n,Volume )
+       !$omp parallel do private( iBlock,DtLocal,n,Volume )
        do iBlockSemi=1,nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           DtLocal = dt
@@ -767,7 +767,7 @@ contains
              enddo
           enddo; enddo; enddo
        end do
-       !$ omp end parallel do
+       !$omp end parallel do
     end if
 
     if(UsePDotADotP)then
@@ -1028,7 +1028,7 @@ contains
     ! For all other preconditioners it is better to avoid the overpap
     if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
 
-    !$ omp parallel do private( iBlock, Coeff, DtLocal )
+    !$omp parallel do private( iBlock, Coeff, DtLocal )
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
 
@@ -1066,7 +1066,7 @@ contains
             call hypre_set_matrix_block(iBlockSemi, &
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
     end do
-    !$ omp end parallel do
+    !$omp end parallel do
 
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 

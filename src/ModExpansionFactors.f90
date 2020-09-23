@@ -664,6 +664,7 @@ contains
     real, parameter :: VAlfvenMin = 1.0e5   ! 100 km/s
 
     ! Calculate cell-centered spherical coordinates::
+
     character(len=*), parameter:: NameSub = 'get_total_wave_energy_dens'
     !--------------------------------------------------------------------------
     RR   = sqrt(X**2+Y**2+Z**2)

@@ -59,12 +59,12 @@ module ModB0
 
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
-  !$ omp threadprivate( B0_DX, B0_DY, B0_DZ )
+  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
 
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
-  !$ omp threadprivate( CurlB0_DC, DivB0_C )
+  !$omp threadprivate( CurlB0_DC, DivB0_C )
 
   ! Local variables
 
@@ -135,8 +135,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !$ omp parallel
-    !$ omp single
+    !$omp parallel
+    !$omp single
     if(.not.allocated(B0_DGB))then
        allocate( &
             B0_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
@@ -148,7 +148,7 @@ contains
        B0ResChange_DYSB = 0.0
        B0ResChange_DZSB = 0.0
     end if
-    !$ omp end single
+    !$omp end single
 
     if( .not.allocated(B0_DX) ) then
        if(UseConstrainB)then
@@ -172,7 +172,7 @@ contains
     if((UseCurlB0 .or. UseB0Source) .and. .not.allocated(CurlB0_DC)) &
          allocate(CurlB0_DC(3,nI,nJ,nK))
 
-    !$ omp end parallel
+    !$omp end parallel
 
     ! Read the FDIPS Lookup Table and get the Longitude
     ! shift. Create the rotation matrix based on the shift
@@ -199,11 +199,11 @@ contains
     if(allocated(B0_DGB)) deallocate(B0_DGB, &
          B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
-    !$ omp parallel
+    !$omp parallel
     if(allocated(DivB0_C))   deallocate(DivB0_C)
     if(allocated(CurlB0_DC)) deallocate(CurlB0_DC)
     if(allocated(B0_DX)) deallocate(B0_DX,B0_DY,B0_DZ)
-    !$ omp end parallel
+    !$omp end parallel
 
   end subroutine clean_mod_b0
   !============================================================================
@@ -669,6 +669,7 @@ contains
     logical :: DoQuadrupole, DoOctupole
 
     ! Determine radial distance and powers of it
+
     character(len=*), parameter:: NameSub = 'get_b0_multipole'
     !--------------------------------------------------------------------------
     r2 = sum(Xyz_D(1:nDim)**2)

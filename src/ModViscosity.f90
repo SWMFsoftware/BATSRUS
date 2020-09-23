@@ -25,22 +25,22 @@ module ModViscosity
 
   ! Visosity tensor for each fluid
   real, public, allocatable:: Visco_DDI(:,:,:)
-  !$ omp threadprivate( Visco_DDI )
+  !$omp threadprivate( Visco_DDI )
 
   ! Viscosity factor on the faces and in the cell centers
   real, public, allocatable:: &
        ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
-  !$ omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
+  !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
 
   ! Local variables
 
   ! Velocity vector for each block and fluid
   real, allocatable:: u_DGI(:,:,:,:,:)
-  !$ omp threadprivate( u_DGI )
+  !$omp threadprivate( u_DGI )
 
   ! Gradient of velocity centered for faces
   real, allocatable:: GradU_DDI(:,:,:)
-  !$ omp threadprivate( GradU_DDI )
+  !$omp threadprivate( GradU_DDI )
 
   real :: ViscoCoeff=0.0, ViscoCoeffSi=0.0
 
@@ -49,7 +49,7 @@ module ModViscosity
 
   ! Indexes of regions defined with the #REGION commands
   integer, allocatable:: iRegionVisco_I(:)
-  !$ omp threadprivate( iRegionVisco_I )
+  !$omp threadprivate( iRegionVisco_I )
 
   ! Artificial viscosity.
   logical, public :: UseArtificialVisco=.false.
@@ -100,7 +100,7 @@ contains
 
     ViscoCoeff = ViscoCoeffSi*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
-    !$ omp parallel
+    !$omp parallel
     if(allocated(u_DGI))     deallocate(u_DGI)
     if(allocated(GradU_DDI)) deallocate(GradU_DDI)
     if(allocated(Visco_DDI)) deallocate(Visco_DDI)
@@ -116,7 +116,7 @@ contains
 
     ! Get signed indexes for viscosity region(s)
     call get_region_indexes(StringViscoRegion, iRegionVisco_I)
-    !$ omp end parallel
+    !$omp end parallel
 
     call test_stop(NameSub, DoTest)
   end subroutine viscosity_init
@@ -130,12 +130,12 @@ contains
     call test_start(NameSub, DoTest)
     if(.not.UseViscosity) RETURN
 
-    !$ omp parallel
+    !$omp parallel
     if(allocated(u_DGI))          deallocate(u_DGI)
     if(allocated(GradU_DDI))      deallocate(GradU_DDI)
     if(allocated(Visco_DDI))      deallocate(Visco_DDI)
     if(allocated(iRegionVisco_I)) deallocate(iRegionVisco_I)
-    !$ omp end parallel
+    !$omp end parallel
 
     StringViscoRegion = 'none'
 
