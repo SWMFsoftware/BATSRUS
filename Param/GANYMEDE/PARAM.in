@@ -186,6 +186,10 @@ Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+COARSEAXIS
+T
+1
+
 #SEMIIMPLICIT
 T			UseSemiImplicit
 resistivity		TypeSemiImplicit
