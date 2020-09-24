@@ -284,7 +284,7 @@ contains
           call read_var('UseTRCorrection', UseTRCorrection)
           ! When the triangulation is done, interpolation may be done with
           ! two ways to find the interpolation weights: via the areas of
-          ! spherical triangles, or via areas of planar trianles on a plane
+          ! spherical triangles, or via areas of planar triangles on a plane
           ! latter is the "original" passing through three nodes of the
           ! interpolation stencil (the interpolation mechanism by Renka, who
           ! proved its good theretical properties, such as continuity of
@@ -1674,7 +1674,7 @@ contains
              ! Transform longitude and latitude to the unit vector
              call rlonlat_to_xyz(1.0, Coord_D(Lon_), Coord_D(Lat_),&
                   Xyz_D)
-             ! Find a triange into which this vector falls and the
+             ! Find a triangle into which this vector falls and the
              ! interpolation weights
              if(UsePlanarTriangles)then
                 call find_triangle_orig(Xyz_D, nThread+2, Xyz_DI ,&
