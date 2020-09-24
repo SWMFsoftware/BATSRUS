@@ -27,7 +27,9 @@ would crash the code.
 \subsection{Finite Volume Discretization \label{section:finite_volume}}
 
 \begin{figure}
-   \centerline{\epsfig{file=fivol.eps,height=7cm}}
+  \begin{center}
+  \includegraphics[height=7cm]{fivol.pdf}
+  \end{center}
    \caption{Finite volume representation of 1D data. The grid cells are
             bounded by cell interfaces (dashed lines).
             The dots represent the cell averages of $U$.
@@ -194,7 +196,9 @@ no spurious oscillations are produced by the numerical scheme.
 \subsection{Slope Limiters \label{section:limiters}}
 
 \begin{figure}
-   \centerline{\epsfig{file=slope.eps,height=9cm}}
+   \begin{center}
+   \includegraphics[height=9cm]{slope.pdf}
+   \end{center}
    \caption{Three different slope limiters applied to the same
             configuration. Each limiter considers a few different 
             approximate slopes (thin lines) and selects one of them

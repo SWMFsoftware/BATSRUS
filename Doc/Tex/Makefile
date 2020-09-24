@@ -14,7 +14,7 @@ help:
 	@echo ""
 	@echo "cleanpdf     - clean + remove PDF manuals"
 
-USERMANUAL.dvi: \
+USERMANUAL.pdf: \
 	USERMANUAL.tex \
 	HEADER.tex \
 	introduction.tex \
