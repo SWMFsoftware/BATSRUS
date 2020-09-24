@@ -79,6 +79,8 @@ contains
     !-------------------------------------------------------------------------- 
     select case(NameAction)
     case('initial condition done')
+       do iElement = 1, nElement
+       end do
        ! Charge state initial condition is ionization equilibrium 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
@@ -90,7 +92,6 @@ contains
              endif
 
              TeSi = Te * No2Si_V(UnitTemperature_)
-
              iVar = ScalarFirst_
              do iElement = 1, nElement
                 nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
@@ -109,7 +110,7 @@ contains
                 State_VGB(iVar,i,j,k,iBlock) = 1.
                 ! y_1*R_1 = y_0*I_0          
                 State_VGB(iVar+1,i,j,k,iBlock) = &
-                     State_VGB(ScalarFirst_,i,j,k,iBlock) * &
+                     State_VGB(iVar,i,j,k,iBlock) * &
                      Ioniz_I(0)/Recomb_I(1)
                 ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
                 do iCharge = 2, nCharge
@@ -134,7 +135,6 @@ contains
           end do; end do; end do
        end do
     end select
-
   end subroutine user_action
   !============================================================================
   subroutine user_read_inputs
@@ -210,8 +210,7 @@ contains
     use ModNumConst,    ONLY: cTwoPi, cDegToRad
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_
-    use ModVarIndexes,  ONLY: ScalarFirst_, ScalarLast_, NameVar_V, &
-         NameElement_I, nElement 
+    use ModVarIndexes,  ONLY: NameElement_I, nElement 
     use ModLookupTable, ONLY: i_lookup_table, Table_I
     
     integer :: iIon, jIon, iVar
@@ -898,7 +897,7 @@ contains
           State_VGB(iVar,i,j,k,iBlock) = 1.
           ! y_1*R_1 = y_0*I_0          
           State_VGB(iVar+1,i,j,k,iBlock) = &
-               State_VGB(ScalarFirst_,i,j,k,iBlock) * Ioniz_I(0)/Recomb_I(1)
+               State_VGB(iVar,i,j,k,iBlock) * Ioniz_I(0)/Recomb_I(1)
           ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
           do iCharge = 2, nCharge
              State_VGB(iVar+iCharge,i,j,k,iBlock) = &

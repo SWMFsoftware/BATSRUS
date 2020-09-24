@@ -35,7 +35,7 @@ module ModVarIndexes
 
   ! Number of ions of element with atomic number Z
   integer, parameter          :: nElement = 1
-  character(len=2), parameter :: NameElement_I(1:nElement) = ['o']
+  character(len=2), parameter :: NameElement_I(1:nElement) = ['o ']
   integer, parameter          :: nChargeState_I(1:nElement) = [9]
   integer, parameter          :: nChargeStateAll = 9
   
