@@ -9774,30 +9774,27 @@ T       UseTriangulation
 T       UseTRCorrection
 T	UsePlanarTriangles  
 
-
 Used for plotting images in the solar corona. The threaded gap 
 contributes to the line-of-site integrals determining the intensity of
-the image pixel, if DoPlotThreads=.true. If nUniform is greater or equal
-to 1, the threaded gap is split for nGUniform intervals, uniformly in the
+the image pixel, if DoPlotThreads is true. If nUniform is greater or equal
+than 1, the threaded gap is split into nGUniform intervals uniformly in the
 first generalized coordinate. Otherwise, the grid for plotting continues 
 the grid of the block near the inner boundary, as extra ghost cells.
 
-If UseTriangulation = .flase., the thread are approximated with straight 
+If UseTriangulation is false, the threads are approximated with straight 
 radial lines, otherwise data from the actual curved threads are interpolated 
 to a uniform spherical grid using a triangulation on a unit spherical grid. 
 
-If UseTRCorrection is .true. correct the contribution frop the threaded gap to 
+If UseTRCorrection is true correct the contribution frop the threaded gap to 
 the LOS plots is corrected to account for the contribution from transition 
-region   
+region.
  	
 When triangulation on sphere as described above is completed, interpolation 
-may be done with two ways to find the interpolation weights: (1) via the areas 
-of spherical trangles; or (2) via areas of planar trianles on a plane passing 
-through three nodes of the interpolation stencil (the latter is the "original"
-interpolation mechanism by Renka, who proved its good theretical 
+weights can be assigned in two ways: via the areas of spherical triangles 
+(UsePlanarTriangle=F) or via areas of planar triangles (UsePlanarTriangle=T). 
+The latter is the "original" interpolation algorithm by Renka, who proved its good theretical 
 properties, such as continuity of the interpolated valiable across the
-boundary of interpolation stencil). The "original" algorithm is applied
-if the logical, UsePlanarTriangles  is set to .true.
+boundary of the interpolation stencil. 
 
 </command>
 
