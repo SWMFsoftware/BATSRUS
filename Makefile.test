@@ -1355,7 +1355,7 @@ test_jupiter_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_jupiter_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-17 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-16 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		Param/JUPITER/TestOutput/log_n000001.log \
 		> test_jupiter.diff)
