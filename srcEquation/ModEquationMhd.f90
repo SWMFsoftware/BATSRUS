@@ -18,6 +18,7 @@ module ModVarIndexes
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 8
+  logical, parameter :: IsMhd     = .true.
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
