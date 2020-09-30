@@ -15,7 +15,7 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: &
-       NameEquation='Solar wind protons with neutral indexes'
+       NameEquation='Solar wind protons with extra indexes'
 
   ! Number of variables without energy:
   integer, parameter :: nVar = 8
@@ -28,16 +28,21 @@ module ModVarIndexes
        Rho_       =  1,          SWHRho_   = 1, &
        RhoUx_     =  2, Ux_ = 2, SWHRhoUx_ = 2, SWHUx_ = 2, &
        RhoUy_     =  3, Uy_ = 3, SWHRhoUy_ = 3, SWHUy_ = 3, &
-       RhoUz_     =  4, Uz_ = 4, SWHRhoUx_ = 4, SWHUz_ = 4, &
+       RhoUz_     =  4, Uz_ = 4, SWHRhoUz_ = 4, SWHUz_ = 4, &
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
        p_         =  8,          SWHP_ = 8, &
        Energy_    = nVar+1,      SWHEnergy_ = nVar+1
 
-  ! Neutral indexes are also declared for sake of compilation with ModUser
+  ! Extra indexes are also declared for sake of compilation with ModUserOuterhelio
   ! written for multi-fluid neutrals
   integer, parameter :: &
+       Pu3Rho_    = nVar  , &
+       Pu3RhoUx_  = nVar-2, Pu3Ux_ = Pu3RhoUx_, &
+       Pu3RhoUy_  = nVar-1, Pu3Uy_ = Pu3RhoUy_, &
+       Pu3RhoUz_  = nVar  , Pu3Uz_ = Pu3RhoUz_, &
+       Pu3P_      = nVar  , Pu3Energy_ = nVar,  &
        NeuRho_    = nVar  , &
        NeuRhoUx_  = nVar-2, NeuUx_ = NeuRhoUx_, &
        NeuRhoUy_  = nVar-1, NeuUy_ = NeuRhoUy_, &
@@ -97,7 +102,7 @@ module ModVarIndexes
 
 
   ! Primitive variable names
-  integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
+  integer, parameter :: U_ = RhoU_
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
