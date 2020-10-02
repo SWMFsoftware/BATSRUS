@@ -17,8 +17,6 @@ module ModWritePlot
 
 contains
   !============================================================================
-  !==============================©==============================================
-
   subroutine write_plot(iFile)
 
     ! Loops over all blocks per processor and write the appropriate plot files
