@@ -4845,7 +4845,7 @@ The default is to flush the output, i.e. DoFlush=T.
     <parameter name="RadiusMajor" type="real" min="0" default="0" />
     <parameter name="RadiusMinor" type="real" min="0" default="0" />
     <parameter name="Depth" type="real" min="0" default="0" />
-    <parameter name="UsePlasmaBeta" type="logical" defailt="F"/>
+    <parameter name="UsePlasmaBeta" type="logical" default="F"/>
     <if expr="not $UsePlasmaBeta">
       <parameter name="Mass" type="real" min="0" default="0" />
     </if>
@@ -9710,7 +9710,7 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 <commandgroup name="THREADED LOW SOLAR CORONA">
 
 <command name="FIELDLINETHREAD">
-	 <parameter name="UseFieldLineThreads" type="logical" defailt="F"/>
+	 <parameter name="UseFieldLineThreads" type="logical" default="F"/>
 	 <parameter name="nPointThreadMax" type="integer" default="100"/>
 	 <parameter name="DsThreadMin" type="real" default="0.002"/>
 
