@@ -426,9 +426,6 @@ sub current_settings{
 
     $Settings  = "Number of cells in a block  : nI=$nI, nJ=$nJ, nK=$nK\n";
     $Settings .= "Number of ghost cell layers : nG=$GhostCell\n";
-    $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
-    $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
-	if $nMaterial;
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
@@ -452,20 +449,54 @@ sub current_settings{
     my $Equation='???';
     my $NameFile='???';
     my $prev;
+    my %Value;
+
     while(<FILE>){
-	if(s/\&\s*\n//){
+	next if /^\s*!/; # skip commented out lines
+	if(s/\&\s*\n//){ # concatenate continuation lines
 	    $prev .= $_;
 	    next;
 	}
 	$_ = $prev . $_;
 	$prev = "";
+
+	# Extract variable settings: var = integer, var = othervar
+	$Value{"$1"} = $2 while s/(\w+)\s*=\s*(\d+)//m;
+	$Value{"$1"} = $Value{"$2"} while s/(\w+)\s*=\s*(\w+)//m;
+
+	# Extract descriptions
         $NameFile = $1 if /NameEquationFile\s*=.*ModEquation(.*)\.f90/;
-	next unless /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
-	$Equation = $1; last;
+	$Equation = $1 if /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
+    }
+    if($Verbose){
+	print "$_ = $Value{$_}\n" foreach (sort keys %Value);
     }
 
     $Settings .= "Equation   = $NameFile: $Equation\n";
 
+    my $nVar     = $Value{"nVar"};
+    my $nSpecies; 
+    $nSpecies = $Value{"SpeciesLast_"} - $Value{"SpeciesFirst_"} + 1
+	if $Value{"SpeciesLast_"} and $Value{"SpeciesFirst_"};
+    my $nIonFluid = $Value{"IonLast_"} - $Value{"IonFirst_"} + 1;
+    my $nFluid   = $Value{"nFluid"};
+    my $nNeutralFluid; 
+    $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
+    
+    $Settings .= "Number of state variables   : nVar=$nVar\n";
+    $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
+	if $nSpecies;
+    $Settings .= "Number of wave bins         : nWave=$nWave\n" if $nWave;
+    $Settings .= "Number of materials         : nMaterial=$nMaterial\n" 
+	if $nMaterial;
+    $Settings .= "Number of ion fluids        : nIonFluid=$nIonFluid\n"
+	if $nIonFluid != 1;
+    $Settings .= "Number of neutral fluids    : nNeutralFluid=$nNeutralFluid\n"
+	if $nNeutralFluid;
+    $Settings .= "Number of fluids            : nFluid=$nFluid\n"
+	if $nFluid > 1;
+
+    $Settings; # return value
 }
 
 #############################################################################
