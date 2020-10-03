@@ -47,8 +47,8 @@ GSE			TypeCoordSystem
 T			UseBody
 0.5			rBody      [rPlanet]
 3.5			rCurrents  [rPlanet]
-39			BodyNDim   [/cc]
-2.32e5			BodyTDim   [K]
+0			BodyNDim   [/cc]
+0			BodyTDim   [K]
 
 ! use BodyNDim, BodyTDim only, rbody as a parameter for plot
 #BODY
@@ -173,7 +173,7 @@ MASSLOADING
 #SOLIDBOUNDARY
 1
 
-#USERINPUTEND ----------------------
+#USERINPUTEND -------------------------------------
 
 
 #TIMESTEPPING
