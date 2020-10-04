@@ -1158,7 +1158,7 @@ so this command is always present in the current restart header files.
 			<option name="reflect"/>
 			<option name="linetied"/>
 			<option name="fixed"/>
-			<option value="fixedb1" name="fixed B1"/>
+			<option name="fixed B1" value="fixedb1"/>
 			<option name="inflow/vary"/>
 			<option name="ihbuffer"/>
 			<option name="shear"/>
@@ -1243,7 +1243,7 @@ The default values are 'none' on all sides.
 			<option name="reflectb"/>
 			<option name="reflectall"/>
                         <option name="fixed"/>
-			<option value="fixedB1" name="fixed B1"/>
+			<option name="fixed B1" value="fixedB1"/>
 			<option name="zeroB1"/>
                         <option name="inflow/vary"/>
                         <option name="user"/>
@@ -3466,9 +3466,9 @@ The default is DoSaveLogFile false.
 				<option name="step"       />
 				<option name="date"       />
 				<option name="time"       />
-				<option value="ray"       />
-				<option value="traj"      />
-				<option value="trajrange" />
+				<option name="ray"       />
+				<option name="traj"      />
+				<option name="trajrange" />
 			</part>
 		</parameter>
 		<parameter name="DnOutput" type="integer" min="-1"
@@ -3877,12 +3877,10 @@ No magnetometer grid file is saved by default.
 	<option value="tcp" name="Cell centered TECPLOT"/>
 	<option value="hdf" name="HDF5"/>
 	<option value="idl" name="IDL" default="T"/>
-	<option value="idl_real4"
-		name="IDL single prec"/>
-	<option value="idl_real8"
-		name="IDL double prec"/>
+	<option value="idl_real4" name="IDL single prec"/>
+	<option value="idl_real8" name="IDL double prec"/>
 	<option value="idl_ascii" name="IDL ascii"/>
-	<option value="idl_tec" name="IDL to Tecplot"/>
+	<option value="idl_tec"   name="IDL to Tecplot"/>
       </part>
       <part name="plotarea" type="string" input="select"
 	    required="T">
@@ -8074,21 +8072,21 @@ This default is backwards compatible with previous versions of the code.
 	<parameter name="NameTable" type="string" length="100"/>
 	<parameter name="NameCommand" type="string" case="lower"
 	    input="select">
-		<option value="load" default="T"/>
-		<option value="use"/>
-		<option value="use param"/>
-		<option value="save"/>
-		<option value="save param"/>
-		<option value="make"/>
-		<option value="make param"/>
-		<option value="param"/>
+		<option name="load" default="T"/>
+		<option name="use"/>
+		<option name="use param"/>
+		<option name="save"/>
+		<option name="save param"/>
+		<option name="make"/>
+		<option name="make param"/>
+		<option name="param"/>
 	</parameter>
 	<if expr="$NameCommand =~ /load|save|use/">
 		<parameter name="NameFile" type="string" length="100"/>
 		<parameter name="TypeFile" type="string" input="select">
-			<option value="real8"  default="T"/>
-			<option value="real4"/>
-			<option value="ascii"/>
+			<option name="real8"  default="T"/>
+			<option name="real4"/>
+			<option name="ascii"/>
 		</parameter>
 	</if>
 	<if expr="$NameCommand =~ /param/">
