@@ -434,7 +434,7 @@ contains
     write(UnitTmp_,'(i8,a)') nI, cTab//cTab//'nI'
     write(UnitTmp_,'(i8,a)') nJ, cTab//cTab//'nJ'
     write(UnitTmp_,'(i8,a)') nK, cTab//cTab//'nK'
-    write(UnitTmp_,'(i8,a)') nBlockALL, cTab//cTab//'MinBlockALL'
+    write(UnitTmp_,'(i8,a)') nBlockALL, cTab//cTab//'MinBlockAll'
     if (IsStandAlone .and. NameThisComp == 'GM') then
        write(UnitTmp_,*)
        if(NamePlanet == 'NEW')then
