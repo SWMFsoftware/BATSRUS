@@ -9,8 +9,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="nJ"           type="integer" value="$_GridSize[1]" />
 <set name="nK"           type="integer" value="$_GridSize[2]" />
 <set name="nDim"         type="integer" value="3-($nJ==1)-($nK==1)"/>
-<set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
-<set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
+<set name="MaxBlock"     type="integer" value="0" />
 
 <set name="NameComp"          type="string" value="$_NameComp"/>
 <set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
@@ -846,24 +845,29 @@ The #PRECISION command may also be used to enforce a certain precision.
 		min="$_GridSize[1]" max="$_GridSize[1]" />
 	<parameter name="nK" type="integer" default="8"
 		min="$_GridSize[2]" max="$_GridSize[2]" />
-	<parameter name="MinBlockALL" type="integer" default="4000"
+	<parameter name="MinBlockAll" type="integer" default="4000"
 		min="1" />
+	<set name="MaxBlock" value="$MinBlockAll+1"/>
 
 #CHECKGRIDSIZE
        4                        nI
        4                        nJ
        4                        nK
-     576                        MinBlockALL
+     576                        MinBlockAll
 
-Checks block size and sets the number of blocks if necessary. 
-Stops with an error message if nI, nJ, or nK differ from those set in ModSize.
-If MinBlockAll/nProc is larger than MaxBlock set by Config.pl -g, 
-then increase it such that the grid will fit into memory with one 
-extra block on each processor. This should be sufficient if no AMR is
-performed.
-This command is used in the restart headerfile to check consistency,
-and it is also useful to check if the executable is consistent with the
-requirements of the problem described in the PARAM.in file.
+This command is typically used in the restart headerfile to check consistency.
+The nI, nJ, nK parameters provide the block size in terms of number of grid cells
+in the 3 directions. The code stops with an error message if nI, nJ, or nK differ 
+from the values set with Config.pl -g=...
+
+The MinBlockAll parameter stores the total number of grid blocks 
+actually used at the time the restart file was saved. 
+When doing a restart, it is used to set the number of grid blocks 
+to be sufficient to coninue the run as long as no AMR is performed. 
+To allocate more blocks, use the #GRIDBLOCKALL command.
+
+This command can also be used directly in PARAM.in to check the block size and to set
+the total number of blocks at the same time. 
 </command>
 
 <command name="BLOCKLEVELSRELOADED">
@@ -1805,21 +1809,24 @@ component.
   <parameter name="MaxBlock" type="integer" min="1" default="10"/>
 
 #GRIDBLOCK
-100		MaxBlock
+100		MaxBlock (per processor)
 
 #GRIDBLOCKALL
-4000            MaxBlock on all processors
+4000            MaxBlock (for the whole simulation)
 
-This command can be used in the first session of BATSRUS only.
+This command can be and should be used in the first session of BATSRUS. For a restarted
+run, the #CHECKGRIDSIZE command in the restart header file also sets MaxBlock, 
+but that can and should be overwritten if the grid is expected to change due to an AMR.
 
 Set the maximum number of grid blocks either per processor (#GRIDBLOCK) 
-or in total (#GRIDBLOCKALL). Typically it is better to set the total
-number so the code can run on arbitrary number of CPUs.
-It is a good idea to set these values to be 
+or in total for the whole simulation (#GRIDBLOCKALL). 
+Typically it is better to set the total number so the code can run on arbitrary 
+number of CPUs. It is a good idea to set these values to be 
 larger than but close to the actual number of blocks
 used during the run to minimize memory use and improve performance.
 
-The default value is 100 blocks per processor. 
+The default value is 10 blocks per processor, but it is not recommended to rely on
+the default setting.
 </command>
 
 <command name="GRIDBLOCKIMPL" alias="GRIDBLOCKIMPLALL">
@@ -10055,13 +10062,8 @@ The default is to use a single PARAM.in file.
 !!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock">
-	Part implicit scheme requires more than 1 implicit block!
-</rule>
-
-<rule expr="$MaxImplBlock==$MaxBlock or not $UseFullImplicit">
-	Full implicit scheme should be used with equal number of
-	explicit and implicit blocks!
+<rule expr="$MaxBlock>0">
+        Number of grid blocks should be set in the first session!
 </rule>
 
 </commandList>
