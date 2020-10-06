@@ -122,7 +122,7 @@ module ModAdvance
   logical:: DoCalcElectricField = .false.
 
   ! Update check parameters
-  logical :: UseUpdateCheck
+  logical :: UseUpdateCheck = .false.
   real :: percent_max_rho(2), percent_max_p(2)
 
   ! The percentage limit for species to be checked in update check

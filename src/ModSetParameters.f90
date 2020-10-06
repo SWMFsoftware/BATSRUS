@@ -2948,11 +2948,6 @@ contains
 
       UseB0Source     = UseB0 .and. nDim > 1
 
-      UseUpdateCheck  = .true.
-
-      percent_max_rho = [40., 400.]
-      percent_max_p = [40., 400.]
-
       optimize_message_pass = 'all'
 
       plot_dimensional      = .true.

@@ -6529,7 +6529,7 @@ have no conservative criteria: nConservCrit = 0.
 </command>
 
 <command name="UPDATECHECK">
-	<parameter name="UseUpdateCheck" type="logical" default="T" />
+	<parameter name="UseUpdateCheck" type="logical" default="F" />
 	<if expr="$UseUpdateCheck">
 		<parameter name="RhoMinPercent" type="real" min="0" max="100"
 			default="40" />
@@ -6564,7 +6564,7 @@ if density is 1.0 initially and it would change below 0.6 or above 5.0,
 the (local) time step will be reduced so that the final density remains
 inside the prescribed bounds.
 
-Default values are shown for the non-Runge-Kutta time integration schemes.
+Default is UseUpdateCheck false. 
 For Runge-Kutta schemes UseUpdateCheck is forced to be false.
 </command>
 
