@@ -1,6 +1,13 @@
 #DESCRIPTION
 Param/TESTSUITE/PARAM.in: TestSuite for BATSRUS.
 
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
 #INCLUDE
 Planet
 
@@ -16,8 +23,6 @@ Time
 #INCLUDE
 Corotation
 
-#BEGIN_COMP GM #############################################################
-
 #INCLUDE
 Geometry
 
@@ -27,10 +32,8 @@ Grid
 #INCLUDE
 Res
 
-^CFG IF SECONDBODY BEGIN
 #INCLUDE
 SecondBody
-^CFG IF SECONDBODY END
 
 #INCLUDE
 Outer
@@ -73,11 +76,7 @@ Reschange
 #INCLUDE
 Plottype
 
-^CFG IF IMPLICIT BEGIN
 #INCLUDE
 Implicit
-^CFG END IMPLICIT
-
-#END_COMP GM ###############################################################
 
 #END

@@ -1,8 +1,6 @@
-^CFG FILE PROJECTION
-
 #DIVB
 F			UseDivbSource
-F			UseDivbDiffusion	^CFG IF DIVBDIFFUSE
+F			UseDivbDiffusion
 T			UseProjection
 F			UseConstrainB
 

@@ -1,7 +1,3 @@
-^CFG FILE IONOSPHERE
-
-#END_COMP GM ###############################################################
-
 #COUPLE2
 IE			NameComp1
 GM			NameComp2

@@ -1,5 +1,3 @@
-^CFG FILE BORISCORR
-
 #SCHEME
 1			nOrder
 #INCLUDE
@@ -11,7 +9,7 @@ F			UseBoris
 #STOP
 200			MaxIter
 
-#RUN
+#RUN #########################################################################
 
 #TIMESTEPPING
 T                       DoTimeAccurate
@@ -22,7 +20,7 @@ T                       DoTimeAccurate
 250
 1000.0
 
-#RUN
+#RUN #########################################################################
 
 #INCLUDE
 Timestep
