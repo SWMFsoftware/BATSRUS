@@ -1,6 +1,16 @@
 #COMPONENT
 OH			NameComp
 
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids
+
 #PLANET
 NONE			NamePlanet
 

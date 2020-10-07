@@ -1,3 +1,10 @@
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
 #NORMALIZATION
 SOLARWIND		TypeNormalization
 
