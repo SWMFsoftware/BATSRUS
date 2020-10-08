@@ -1,5 +1,3 @@
-#UPDATECHECK
-F			UseUpdateCheck
 
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.shock: Five-moment test		StringDescription

@@ -27,8 +27,6 @@ F			UseNonConservative
 0.0			zMin
 1.0			zMax
 
-#UPDATECHECK
-F                      UseUpdateCheck
 40.                     RhoMinPercent
 200.                    RhoMaxPercent
 40.                     pMinPercent

@@ -98,9 +98,6 @@ nul			TypeInitKrylov
 1.0e-5			ErrorMaxKrylov
 80			MaxMatvecKrylov
 
-#UPDATECHECK
-F			UseUpdateCheck
-
 #IMPLICIT
 F			UsePointImplicit
 F			UsePartImplicit

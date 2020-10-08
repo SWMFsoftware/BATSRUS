@@ -1,8 +1,6 @@
 #DESCRIPTION
 Param/FIVEMOMENT/PARAM.in.alfven: Five-moment test with Alfven waves		StringDescription
 
-#UPDATECHECK
-F			UseUpdateCheck
 
 #POINTIMPLICIT
 T			UsePointImplicit

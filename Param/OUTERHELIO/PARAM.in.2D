@@ -4,8 +4,6 @@
 ! 			added lookup tables
 !			modified normalization
 
-#UPDATECHECK
-F			UseUpdateCheck
 
 #COMPONENT
 OH			NameComp

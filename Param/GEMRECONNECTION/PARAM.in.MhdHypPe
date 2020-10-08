@@ -17,8 +17,6 @@ NONE			TypeIoUnit
 #NORMALIZATION
 NONE			TypeNormalization
 
-#UPDATECHECK
-F			UseUpdateCheck
 
 #NONCONSERVATIVE
 T			UseNonConservative

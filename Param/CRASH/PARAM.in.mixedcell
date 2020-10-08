@@ -30,9 +30,6 @@ T			IsTimeAccurate
 -12.5			zMin
  12.5			zMax
 
-#UPDATECHECK
-F			DoUpdateCheck
-
 #SHOCKPOSITION
 1000.0			ShockPosition
 0.0			ShockSlope
