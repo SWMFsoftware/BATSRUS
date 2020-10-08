@@ -17,7 +17,7 @@ T			IsTimeAccurate
 4			nI
 4			nJ
 2			nK
-250			MinBlockALL
+250			MinBlockAll
 
 #GRID
 100			nRootBlockX

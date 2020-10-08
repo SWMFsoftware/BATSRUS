@@ -8,7 +8,7 @@ Param/FIVEMOMENT/PARAM.in.shock: Five-moment test		StringDescription
      100		nI
        1		nJ
        1		nK
-      10		MinBlockALL
+      10		MinBlockAll
 
 #PLANET
 NONE			NamePlanet

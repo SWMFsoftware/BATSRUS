@@ -11,7 +11,7 @@ NONE			TypeNormalization
 4			nI
 4			nJ
 1			nK
-1000			MinBlockALL
+1000			MinBlockAll
 
 #GRID
 64			nRootBlock1

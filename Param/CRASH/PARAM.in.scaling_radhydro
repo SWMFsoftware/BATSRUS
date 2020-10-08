@@ -120,7 +120,7 @@ T			UseEqualTemperatureHyades
 4			nI
 4			nJ
 4			nK
-1000			MinBlockALL
+1000			MinBlockAll
 
 #GRID
 80			nRootBlockX

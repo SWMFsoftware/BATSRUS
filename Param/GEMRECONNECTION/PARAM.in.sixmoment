@@ -37,7 +37,7 @@ CHECKGRIDSIZE
 8			nI
 8			nJ
 1			nK
-100			MinBlockALL
+100			MinBlockAll
 
 #GRID
 64			nRootBlockX

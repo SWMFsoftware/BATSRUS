@@ -22,7 +22,7 @@ A single block 256x4x4 grid
 64			nI
 2			nJ
 2			nK
-4			MinBlockALL
+4			MinBlockAll
 
 Distance units are in km
 #GRID

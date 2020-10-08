@@ -106,7 +106,7 @@ T			UseHeatFluxLimiter
 8			nI
 8			nJ
 1			nK
-200			MinBlockALL
+200			MinBlockAll
 
 #GRID
 5			nRootBlock1 165

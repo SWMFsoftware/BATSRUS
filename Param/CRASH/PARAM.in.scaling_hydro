@@ -43,7 +43,7 @@ real8                   TypeFile
 8			nI
 8			nJ
 8			nK
-100			MinBlockALL
+100			MinBlockAll
 
 #GRID
 80			nRootBlockX
