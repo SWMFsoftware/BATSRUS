@@ -23,6 +23,9 @@ pepar			NameTestVar
 0.0			yTest
 0.0			zTest
 
+#GRIDBLOCKALL
+20			MaxBlock
+
 #GRID
 10			nRootBlock1
 1			nRootBlock2

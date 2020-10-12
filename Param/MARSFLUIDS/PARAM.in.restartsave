@@ -24,6 +24,9 @@ T			UseGravity
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
 
+#GRIDBLOCKALL
+50			MaxBlock
+
 #GRID
 2			nRootBlock1
 2			nRootBlock2

@@ -13,6 +13,9 @@ F			UseBody
 #PLOTFILENAME
 year			NameMaxTimeUnit
 
+#GRIDBLOCK
+1			MaxBlock
+
 #GRID
 1			nRootBlock1
 1			nRootBlock2

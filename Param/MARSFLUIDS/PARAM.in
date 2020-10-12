@@ -36,7 +36,7 @@ spherical_lnr		TypeGeometry
  16.			zMax
 
 #GRIDBLOCKALL
-1000			MaxBlock
+50			MaxBlock
 
 #LIMITRADIUS
 1.029884232197		rMin

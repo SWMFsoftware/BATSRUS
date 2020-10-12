@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/ROSETTA/PARAM.in.fluids.all: multifluid comet CG simulation
+Param/ROSETTA/PARAM.in.fluids.all: multifluid comet CG simulation		StringDescription
 
 #PLANET
 NONE			NamePlanet

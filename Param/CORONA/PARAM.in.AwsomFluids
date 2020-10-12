@@ -138,6 +138,9 @@ Param/CORONA/grid_TR.dat		NameGridFile
 -1.0			Coord3Min Latitude
 1.0			Coord3Max
 
+#GRIDBLOCKALL
+40			MaxBlock
+
 #GRID
 32			nRootBlock1
 1			nRootBlock2
