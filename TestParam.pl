@@ -60,30 +60,36 @@ Examples:
 my $XmlFile           = 'PARAM.XML';
 my $ConfigScript      = 'Config.pl';
 my $NameComp='GM';
-my $Precision;
-my $GridSize;
+my $Precision;       # passed to CheckParam.pl
+my $SettingsPassed;  # passed to CheckParam.pl
 
 if(-x $ConfigScript){
-    $GridSize = `$ConfigScript -g`; chop($GridSize);
-    $GridSize =~ s/$ConfigScript(\s*-g=)?//;
+    my $Settings = `./Config.pl`;
 
-    $Precision = `Config.pl -show`;
-    $Precision = $1 if $Precision =~ /\b(single|double)\b/i;
+    die "ERROR in TestParam.pl: $ConfigScript did not provide the settings\n" unless $Settings;
 
+    foreach (split(/\n/,$Settings)){
+	$Precision = $1 if /(single|double) precision/;
+	# Extract : NAME=VALUE, NAME=VALUE
+	if(s/.*://){
+	    $SettingsPassed .= "$1:$2," while s/(\w+)\s*=\s*(\d+)//;
+	}
+    }
+    chop $SettingsPassed;
 }else{
     warn "WARNING could not execute $ConfigScript\n";
 }
 
 my @command = (
-	       $CheckParamScript,
-	       "-S",
-               "-F=$Format",
-	       "-c=$NameComp",
-	       "-v=$Verbose",
-	       "-g=$GridSize",
-	       "-p=$Precision",
-	       "-x=$XmlFile",
-	       @ARGV);
+    $CheckParamScript,
+    "-S",
+    "-F=$Format",
+    "-c=$NameComp",
+    "-v=$Verbose",
+    "-p=$Precision",
+    "-s=$SettingsPassed",
+    "-x=$XmlFile",
+    @ARGV);
 
 print "@command\n" if $Verbose;
 system(@command);
