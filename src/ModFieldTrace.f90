@@ -713,11 +713,12 @@ contains
 
     integer :: i, j, k, iBlock, iNode
 
-    ! call test_start(NameSubm DoTest)
-
-    logical:: DoTest
+    logical:: DoTest 
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
+
+    call test_start(NameSub, DoTest)
+    
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -863,6 +864,7 @@ contains
        EXIT GETRAYFINAL
     end do GETRAYFINAL
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
 
