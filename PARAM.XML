@@ -4,16 +4,22 @@
 
 List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 
-<!-- Grid size array is transformed into scalars to simplify rules -->
-<set name="nI"           type="integer" value="$_GridSize[0]" />
-<set name="nJ"           type="integer" value="$_GridSize[1]" />
-<set name="nK"           type="integer" value="$_GridSize[2]" />
+<!-- Set variables for expressions and rules -->
+<set name="nSpecies"     type="integer" value="$_Value{nSpecies}" />
+<set name="nFluid"       type="integer" value="($_Value{nFluid} or 1)" />
+<set name="nIonFluid"    type="integer" value="($_Value{nIonFluid} or 1)" />
+<set name="UsePe"        type="integer" value="$_Value{UsePe}" />
+<set name="nG"           type="integer" value="$_Value{nG}" />
+<set name="nI"           type="integer" value="$_Value{nI}" />
+<set name="nJ"           type="integer" value="$_Value{nJ}" />
+<set name="nK"           type="integer" value="$_Value{nK}" />
 <set name="nDim"         type="integer" value="3-($nJ==1)-($nK==1)"/>
-<set name="MaxBlock"     type="integer" value="0" />
-
 <set name="NameComp"          type="string" value="$_NameComp"/>
 <set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
 <set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
+
+<!-- Initialize MaxBlock to 0 so we can check if it was set or not -->
+<set name="MaxBlock"     type="integer" value="0" />
 
 <commandgroup name="STAND ALONE MODE">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -603,14 +609,13 @@ see the appropriate strings.
 </command>
 
 <command name="TESTIJK">
-	<parameter name="iTest"      type="integer" min="-2"
-		max="$_GridSize[0]+2" default="1" />
-	<parameter name="jTest"      type="integer" min="-2"
-		max="$_GridSize[1]+2" default="1" if="$nDim/=1" />
-	<parameter name="kTest"      type="integer" min="-2"
-		max="$_GridSize[2]+2" default="1" if="$nDim==3" />
-	<parameter name="iBlockTest" type="integer" min="1"
-		max="$_GridSize[3]"   default="1" />
+	<parameter name="iTest"      type="integer" min="-$nG"
+		max="$nI+$nG" default="1" />
+	<parameter name="jTest"      type="integer" min="-$nG"
+		max="$nJ+$nG" default="1" if="$nDim!=1" />
+	<parameter name="kTest"      type="integer" min="-nG"
+		max="$nK+2" default="1" if="$nDim==3" />
+	<parameter name="iBlockTest" type="integer" min="1" default="1" />
 	<parameter name="iProcTest"  type="integer" min="0" />
 #TESTIJK
 1                       iTest           (cell index for testing)
@@ -839,26 +844,22 @@ The #PRECISION command may also be used to enforce a certain precision.
 </command>
 
 <command name="CHECKGRIDSIZE" if="$_IsFirstSession">
-	<parameter name="nI" type="integer" default="8"
-		min="$_GridSize[0]" max="$_GridSize[0]" />
-	<parameter name="nJ" type="integer" default="8"
-		min="$_GridSize[1]" max="$_GridSize[1]" />
-	<parameter name="nK" type="integer" default="8"
-		min="$_GridSize[2]" max="$_GridSize[2]" />
-	<parameter name="MinBlockAll" type="integer" default="4000"
-		min="1" />
-	<set name="MaxBlock" value="$MinBlockAll+1"/>
+  <parameter name="nI" type="integer" min="$nI" max="$nI" />
+  <parameter name="nJ" type="integer" min="$nJ" max="$nJ" />
+  <parameter name="nK" type="integer" min="$nK" max="$nK" />
+  <parameter name="MinBlockAll" type="integer" default="4000" min="1" />
+  <set name="MaxBlock" value="$MinBlockAll+1"/>
 
 #CHECKGRIDSIZE
-       4                        nI
-       4                        nJ
-       4                        nK
-     576                        MinBlockAll
+  4                        nI
+  4                        nJ
+  4                        nK
+576                        MinBlockAll
 
 This command is typically used in the restart headerfile to check consistency.
-The nI, nJ, nK parameters provide the block size in terms of number of grid cells
-in the 3 directions. The code stops with an error message if nI, nJ, or nK differ 
-from the values set with Config.pl -g=...
+The nI, nJ, nK parameters provide the block size in terms of number of
+grid cells in the 3 directions. The code stops with an error message
+if nI, nJ, or nK differ from the values set with Config.pl -g=...
 
 The MinBlockAll parameter stores the total number of grid blocks 
 actually used at the time the restart file was saved. 
@@ -866,8 +867,8 @@ When doing a restart, it is used to set the number of grid blocks
 to be sufficient to coninue the run as long as no AMR is performed. 
 To allocate more blocks, use the #GRIDBLOCKALL command.
 
-This command can also be used directly in PARAM.in to check the block size and to set
-the total number of blocks at the same time. 
+This command can also be used directly in PARAM.in to check the block size
+and to set the total number of blocks at the same time. 
 </command>
 
 <command name="BLOCKLEVELSRELOADED">
@@ -8013,9 +8014,13 @@ Default is 5/3 for all the gamma-s.
 </command>
 
 <command name="PLASMA">
-	<parameter name="FluidMass"  type="real" min="0" default="1"/>
-	<parameter name="IonCharge"  type="real"         default="1"/>
-	<parameter name="ElectronTemperatureRatio" type="real" min="0"
+  <for from="1" to="$nFluid">
+    <parameter name="FluidMass"  type="real" min="0" default="1"/>
+  </for>
+  <for from="1" to="$nIonFluid">
+    <parameter name="IonCharge"  type="real"         default="1"/>
+  </for>
+  <parameter name="ElectronTemperatureRatio" type="real" min="0"
 								default="0"/>
 #PLASMA
 1.0		FluidMass [amu]
@@ -8367,10 +8372,13 @@ value read.
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession" multiple="T">
 	<parameter name="UseBody" type="logical" default="F"/>
 	<if expr="$UseBody">
-		<parameter name="rBody" type="real" min="0" default="3"/>
-		<parameter name="rCurrents" type="real" min="-1" default="4"
-			if="$NameComp eq 'GM'"/>
-		<parameter name="BodyNDim" type="real" min="0" default="28"/>
+	  <parameter name="rBody" type="real" min="0" default="3"/>
+	  <parameter name="rCurrents" type="real" min="-1" default="4"
+		     if="$NameComp eq 'GM'"/>
+	  <for from="1" to="$nFluid">
+	    <parameter name="BodyNDim" type="real" min="0" default="28"/>
+	    <parameter name="BodyTDim" type="real" min="0" default="50000"/>
+	  </for>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
