@@ -475,12 +475,12 @@ sub current_settings{
     $Settings .= "Equation   = $NameFile: $Equation\n";
 
     my $nVar     = $Value{"nVar"};
-    my $nSpecies; 
+    my $nSpecies;
     $nSpecies = $Value{"SpeciesLast_"} - $Value{"SpeciesFirst_"} + 1
 	if $Value{"SpeciesLast_"} and $Value{"SpeciesFirst_"};
     my $nIonFluid = $Value{"IonLast_"} - $Value{"IonFirst_"} + 1;
-    my $nFluid   = $Value{"nFluid"};
-    my $nNeutralFluid; 
+    my $nFluid    = $Value{"nFluid"}   - $Value{"IonFirst_"} + 1;
+    my $nNeutralFluid;
     $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
     
     $Settings .= "Number of state variables   : nVar=$nVar\n";
@@ -495,7 +495,8 @@ sub current_settings{
 	if $nNeutralFluid;
     $Settings .= "Number of fluids            : nFluid=$nFluid\n"
 	if $nFluid > 1;
-
+    $Settings .= "Electron pressure           : UsePe=1\n" if $Value{"Pe_"}>1;
+    
     $Settings; # return value
 }
 
