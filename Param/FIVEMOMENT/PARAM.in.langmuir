@@ -43,9 +43,9 @@ F			DoNormalizeCell
 
 #PLASMA
 1.0			FluidMass
-1/100.0			IonCharge
-1.0			ElectronTemperatureRatio
--1.0			ElectronCharge
+1/100.0			FluidMass
+1.0			IonCharge
+-1.0			IonCharge
 1.0			ElectronTemperatureRatio
 
 #UNIFORMSTATE

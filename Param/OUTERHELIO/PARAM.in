@@ -23,14 +23,14 @@ T			UseBody
 30.0			rBody (AU)
 0.01			BodyNDim [/cc] number density for ions
 1.09E5			BodyTDim [K] temperature for ions
-0.18			BodyNDim(2) for 1st neutral fluid
-6519.0			BodyTDim(2)
-7.E-5			BodyNDim(3) for 2nd neutral fluid
-6519.0			BodyTDim(3)
-7.8E-3			BodyNDim(4) for 3rd neutral fluid
-1.609E3			BodyTDim(4)
-0.18			BodyNDim(5) for 4th neutral fluid
-6519.0			BodyTDim(5)
+0.18			BodyNDim for 1st neutral fluid
+6519.0			BodyTDim
+7.E-5			BodyNDim for 2nd neutral fluid
+6519.0			BodyTDim
+7.8E-3			BodyNDim for 3rd neutral fluid
+1.609E3			BodyTDim
+0.18			BodyNDim for 4th neutral fluid
+6519.0			BodyTDim
 
 #NORMALIZATION
 USER			TypeNormalization

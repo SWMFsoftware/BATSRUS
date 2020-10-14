@@ -184,8 +184,8 @@ T			UseGravity
 
 #PLASMA
 16.0			FluidMass O [amu]
-32.0			IonCharge O2 [amu]
-16.0			ElectronTemperatureRatio O [amu]
+32.0			FluidMass O2 [amu]
+16.0			FluidMass O [amu]
 1.0			IonCharge O [e]
 1.0			IonCharge O2 [e]
 1.0			IonCharge O [e]

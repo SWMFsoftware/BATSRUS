@@ -48,8 +48,8 @@ T			DoAddRhoU
 
 #PLASMA
 1.0			FluidMass Sw [amu]
-1.0			IonCharge Hp [amu]
-18.0			ElectronTemperatureRatio H2Op [amu]
+1.0			FluidMass Hp [amu]
+18.0			FluidMass H2Op [amu]
 1.0			IonCharge Sw [e]
 1.0			IonCharge Hp [e]
 1.0			IonCharge H2Op [e]

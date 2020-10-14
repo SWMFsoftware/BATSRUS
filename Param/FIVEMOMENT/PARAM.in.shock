@@ -22,9 +22,9 @@ NONE			TypeNormalization
 
 #PLASMA
 0.1			FluidMass
-0.001			IonCharge
-1.0			ElectronTemperatureRatio
--1.0			ElectronCharge
+0.001			FluidMass
+1.0			IonCharge
+-1.0			IonCharge
 1.0			ElectronTemperatureRatio
 
 #SHOCKTUBE

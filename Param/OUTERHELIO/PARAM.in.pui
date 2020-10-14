@@ -23,16 +23,16 @@ T			UseBody (rest of parameters read if true)
 30.0			rBody (user units)
 0.01			BodyNDim (/cc) number density for sw ions
 2.0E4			BodyTDim temperature for sw ions
-9.45E-4			BodyNDim(2) for PUIs
-8.20E6			BodyTdim(2)
-0.18			BodyNDim(3) for 1st neutral fluid
-6519.0			BodyTDim(3)
-7.E-5			BodyNDim(4) for 2nd neutral fluid
-6519.0			BodyTDim(4)
-7.8E-3			BodyNDim(5) for 3rd neutral fluid
-1.609E3			BodyTDim(5)
-0.18			BodyNDim(6) for 4th neutral fluid
-6519.0			BodyTDim(6)
+9.45E-4			BodyNDim for PUIs
+8.20E6			BodyTDim
+0.18			BodyNDim for 1st neutral fluid
+6519.0			BodyTDim
+7.E-5			BodyNDim for 2nd neutral fluid
+6519.0			BodyTDim
+7.8E-3			BodyNDim for 3rd neutral fluid
+1.609E3			BodyTDim
+0.18			BodyNDim for 4th neutral fluid
+6519.0			BodyTDim
 
 #NORMALIZATION
 USER			TypeNormalization

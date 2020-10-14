@@ -156,11 +156,11 @@ T			DoAddRhoU
 
 #PLASMA
 1.0			FluidMass SWp [amu]
-18.0			IonCharge H2Op [amu]
-18.0			ElectronTemperatureRatio Neutral [amu]
+18.0			FluidMass H2Op [amu]
+18.0			FluidMass Neutral [amu]
 1.0			IonCharge SWp [e]
 1.0			IonCharge H2Op [e]
-1.0			ElectronPressureRatio
+1.0			ElectronTemperatureRatio
 
 #MULTIION
 1e-8			LowDensityRatio

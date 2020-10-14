@@ -32,9 +32,9 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass
-0.01			IonCharge
-1.0			ElectronTemperatureRatio
--1.0			ElectronCharge
+0.01			FluidMass
+1.0			IonCharge
+-1.0			IonCharge
 1.0			ElectronTemperatureRatio
 
 #UNIFORMSTATE

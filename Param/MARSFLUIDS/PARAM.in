@@ -69,11 +69,11 @@ T			UseBody
 1.0e2			BodyNDim
 300.			BodyTDim
 9.07E+03		BodyNDim
-300.			BodyTdim
+300.			BodyTDim
  4.8E-04		BodyNDim
-300.			BodyTdim
+300.			BodyTDim
  1.70E+01		BodyNDim
-300.			BodyTdim
+300.			BodyTDim
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -165,9 +165,9 @@ T			DoAddRhoU
 
 #PLASMA
 1.0			FluidMass H [amu]
-32.0			IonCharge O2 [amu]
-16.0			ElectronTemperatureRatio O [amu]
-44.0			IonMass CO2 [amu]
+32.0			FluidMass O2 [amu]
+16.0			FluidMass O [amu]
+44.0			FluidMass CO2 [amu]
 1.0			IonCharge H [e]
 1.0			IonCharge O2 [e]
 1.0			IonCharge O [e]

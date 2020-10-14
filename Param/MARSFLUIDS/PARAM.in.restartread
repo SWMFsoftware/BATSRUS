@@ -103,9 +103,9 @@ T			DoAddRhoU
 
 #PLASMA
 1.0			FluidMass H [amu]
-32.0			IonCharge O2 [amu]
-16.0			ElectronTemperatureRatio O [amu]
-44.0			IonMass CO2 [amu]
+32.0			FluidMass O2 [amu]
+16.0			FluidMass O [amu]
+44.0			FluidMass CO2 [amu]
 1.0			IonCharge H [e]
 1.0			IonCharge O2 [e]
 1.0			IonCharge O [e]

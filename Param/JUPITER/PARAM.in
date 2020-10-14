@@ -71,7 +71,7 @@ T			UseBody
 3.			rBody
 4.			rCurrents
 50.			BodyNDim (/ccm) density for fixed BC for rho_BLK
-35000.0			Magneto_T_dim (K) temperature for fixed BC for P_BLK
+35000.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
 #NONCONSERVATIVE
 T			UseNonConservative

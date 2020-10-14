@@ -14,9 +14,9 @@ F			IsTimeAccurate
 
 #PLASMA
 1.0			FluidMass H+ [amu]
-4.0			IonCharge He++ [amu]
-1.0			ElectronTemperatureRatio H+ [e]
-2.0			AverageIonCharge He++ [e]
+4.0			FluidMass He++ [amu]
+1.0			IonCharge H+ [e]
+2.0			IonCharge He++ [e]
 1.0			ElectronTemperatureRatio
 
 #BODY
