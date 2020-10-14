@@ -8375,10 +8375,18 @@ value read.
 	  <parameter name="rBody" type="real" min="0" default="3"/>
 	  <parameter name="rCurrents" type="real" min="-1" default="4"
 		     if="$NameComp eq 'GM'"/>
-	  <for from="1" to="$nFluid">
-	    <parameter name="BodyNDim" type="real" min="0" default="28"/>
+	  <if expr="$nSpecies!=0">
+	    <for from="1" to="$nSpecies">
+	      <parameter name="BodyNDim" type="real" min="0" default="28"/>
+	    </for>
 	    <parameter name="BodyTDim" type="real" min="0" default="50000"/>
-	  </for>
+	  </if>
+	  <if expr="$nSpecies==0">  
+	    <for from="1" to="$nFluid">
+	      <parameter name="BodyNDim" type="real" min="0" default="28"/>
+	      <parameter name="BodyTDim" type="real" min="0" default="50000"/>
+	    </for>
+	  </if>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
