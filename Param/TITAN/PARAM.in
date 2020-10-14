@@ -30,7 +30,7 @@ T			UseBody
 1.281553		rBody
 1.0			rCurrents
 1.0e6			BodyNDim  Lp
-1.0e6			BodyTDim  Mp
+1.0e6			BodyNDim  Mp
 1.0e6			BodyNDim  H1p
 1.0e6			BodyNDim  H2p
 1.0e6			BodyNDim  MHCp
