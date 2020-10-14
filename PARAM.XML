@@ -7999,7 +7999,11 @@ By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 !!!!!!!!!!!!!!!  PHYSICS PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="GAMMA" if="$_IsFirstSession">
-	<parameter name="Gamma" type="real" min="1" default="1.6666666667"/>
+  <for from="1" to="$nFluid">
+    <parameter name="Gamma" type="real" min="1" default="1.6666666667"/>
+  </for>
+  <parameter name="GammaElectron" type="real" min="1" default="1.6666666667"
+	     if="$UsePe"/> 
 #GAMMA
 4/3			Gamma for fluid 1
 1.4			Gamma for fluid 2
@@ -8014,22 +8018,32 @@ Default is 5/3 for all the gamma-s.
 </command>
 
 <command name="PLASMA">
-  <for from="1" to="$nFluid">
-    <parameter name="FluidMass"  type="real" min="0" default="1"/>
-  </for>
-  <for from="1" to="$nIonFluid">
-    <parameter name="IonCharge"  type="real"         default="1"/>
-  </for>
+  <if expr="$nSpecies != 0">
+    <for from="1" to="$nSpecies">
+      <parameter name="MassSpecies" type="real" min="0" default="1"/>
+    </for>
+    <for from="1" to="$nSpecies">
+      <parameter name="ChargeSpecies" type="real" default="1"/>
+    </for>
+  </if>
+  <if expr="$nSpecies == 0">
+    <for from="1" to="$nFluid">
+      <parameter name="FluidMass"  type="real" min="0" default="1"/>
+    </for>
+    <for from="1" to="$nIonFluid">
+      <parameter name="IonCharge"  type="real"         default="1"/>
+    </for>
+  </if>
   <parameter name="ElectronTemperatureRatio" type="real" min="0"
 								default="0"/>
 #PLASMA
-1.0		FluidMass [amu]
-1.0		IonCharge [e]
-0.0		ElectronTemperatureRatio
+1.0		FluidMass [amu] H+
+1.0		IonCharge [e]   H+
+0.5		ElectronTemperatureRatio
 
 For single fluid, single species MHD the FluidMass parameter determines the
-average mass of ions (and strongly coupled neutrals) in atomic mass units (amu).
-The number density is n=rho/FluidMass.
+average mass of ions (and strongly coupled neutrals) in atomic mass units
+(amu). The number density is n=rho/FluidMass.
 For a pure hydrogen plasma FluidMass=1.0, while for a mix of 90 per cent
 hydrogen and 10 per cent helium FluidMass=1.4.
 
@@ -8375,13 +8389,13 @@ value read.
 	  <parameter name="rBody" type="real" min="0" default="3"/>
 	  <parameter name="rCurrents" type="real" min="-1" default="4"
 		     if="$NameComp eq 'GM'"/>
-	  <if expr="$nSpecies!=0">
+	  <if expr="$nSpecies != 0">
 	    <for from="1" to="$nSpecies">
 	      <parameter name="BodyNDim" type="real" min="0" default="28"/>
 	    </for>
 	    <parameter name="BodyTDim" type="real" min="0" default="50000"/>
 	  </if>
-	  <if expr="$nSpecies==0">  
+	  <if expr="$nSpecies == 0">  
 	    <for from="1" to="$nFluid">
 	      <parameter name="BodyNDim" type="real" min="0" default="28"/>
 	      <parameter name="BodyTDim" type="real" min="0" default="50000"/>
@@ -8738,7 +8752,9 @@ Default is UseBiermannBattery false.
 </command>
 
 <command name="MINIMUMDENSITY">
-	<parameter name="RhoMinDim" type="real" min="-1" default="-1"/>
+  <for from="1" to="$nFluid">
+    <parameter name="RhoMinDim" type="real" min="-1" default="-1"/>
+  </for>
 
 #MINIMUMDENSITY
 0.001		RhoMinDim for fluid 1
@@ -8775,7 +8791,10 @@ By default no minimum pressure limit is applied.
 </command>
 
 <command name="MINIMUMTEMPERATURE">
-	<parameter name="TminDim" type="real" min="-1" default="-1"/>
+  <for from="1" to="$nFluid">
+    <parameter name="TminDim" type="real" min="-1" default="-1"/>
+  </for>
+  <parameter name="TeMinDim" type="real" min="-1" default="-1" if="$UsePe"/>
 
 #MINIMUMTEMPERATURE
 5e4		TminDim for fluid 1
