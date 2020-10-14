@@ -19,10 +19,8 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_resistivity,            &
-       IMPLEMENTED8 => user_calc_sources_impl,          &
-       IMPLEMENTED9 => user_init_point_implicit,        &
-       IMPLEMENTED10=> user_get_b0,                     &
-       IMPLEMENTED12=> user_initial_perturbation
+       IMPLEMENTED8 => user_get_b0,                     &
+       IMPLEMENTED9 => user_initial_perturbation
 
   include 'user_module.h' ! list of public methods
 
@@ -41,10 +39,6 @@ module ModUser
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
-
-  real    :: Mass_I(0:nIonFluid), Charge_I(0:nIonFluid)
-  real    :: ReducedMass_II(0:nIonFluid,0:nIonFluid)
-  real    :: CollisionCoef_II(0:nIonFluid,0:nIonFluid)
 
   ! variables for polar jet application
   ! Dipole under surface
@@ -169,7 +163,6 @@ contains
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,   ONLY: EEE_initialize
 
-    integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
 
     logical:: DoTest
@@ -209,29 +202,6 @@ contains
     ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
-
-    Mass_I(0) = cElectronMass/cProtonMass
-    Mass_I(1:) = MassIon_I
-    Charge_I(0) = 1.0
-    Charge_I(1:) = ChargeIon_I
-
-    ! Coefficient for effective ion-ion collision frequencies
-    do jIon = 0, nIonFluid
-       do iIon = 0, nIonFluid
-          ReducedMass_II(iIon,jIon) = Mass_I(iIon)*Mass_I(jIon) &
-               /(Mass_I(iIon) + Mass_I(jIon))
-
-          CollisionCoef_II(iIon,jIon) = CollisionFactor*CoulombLog &
-               *sqrt(ReducedMass_II(iIon,jIon)/cProtonMass)/Mass_I(iIon) &
-               *(Charge_I(iIon)*Charge_I(jIon)*cElectronCharge**2/cEps)**2 &
-               /(3*(cTwoPi*cBoltzmann)**1.5)
-       end do
-    end do
-    ! To obtain the effective ion-ion collision frequencies, the
-    ! coefficients still need to be multiplied by Nion(jIon)/reducedTemp**1.5.
-    ! Here, we already take care of the units.
-    CollisionCoef_II = CollisionCoef_II &
-         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! dipole (jet) parameter converted to normalized units
     if(IsPolarDipole)then
@@ -672,7 +642,6 @@ contains
        NameTecUnit = 'J/m^3/s'
 
     case('qebyq', 'qparbyq', 'qperpbyq', 'qparbyqa', 'qperpbyqa')
-       ! Not yet generalized to multi-fluid
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
           call calc_face_value(iBlock, DoResChangeOnly = .false., &
@@ -1050,193 +1019,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !======================================================================
-
-  subroutine user_calc_sources_impl(iBlock)
-
-    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         UseAnisoPressure
-    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
-         iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
-    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1
-    use ModVarIndexes, ONLY: nVar, Energy_, Pe_, Bx_, Bz_
-    use ModConst,      ONLY: cElectronMass, cProtonMass
-    use ModB0,         ONLY: UseB0, B0_DGB
-
-    integer, intent(in) :: iBlock
-
-    integer :: i, j, k
-    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst, iPpar
-    real :: ReducedTemp, CollisionRate, Coef
-    real :: Du2
-    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
-    real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
-    real :: U_D(3), Du_D(3), Me_D(3), B_D(3)
-    real :: State_V(nVar), Source_V(nVar+nFluid)
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    iIonFirst = 1
-    if(UseElectronPressure) iIonFirst = 0
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-       State_V = State_VGB(:,i,j,k,iBlock)
-
-       RhoIon_I = State_V(iRhoIon_I)
-       Ux_I(1:) = State_V(iRhoUxIon_I)/RhoIon_I
-       Uy_I(1:) = State_V(iRhoUyIon_I)/RhoIon_I
-       Uz_I(1:) = State_V(iRhoUzIon_I)/RhoIon_I
-       P_I(1:) = State_V(iPIon_I)
-       N_I(1:) = RhoIon_I/MassIon_I
-       T_I(1:) = P_I(1:)/N_I(1:)
-
-       if(UseElectronPressure)then
-          ChargeDensIon_I = ChargeIon_I*N_I(1:)
-          P_I(0) = State_V(Pe_)
-          N_I(0) = sum(ChargeDensIon_I)
-          T_I(0) = P_I(0)/N_I(0)
-          Ux_I(0) = sum(ChargeDensIon_I*Ux_I(1:))/N_I(0)
-          Uy_I(0) = sum(ChargeDensIon_I*Uy_I(1:))/N_I(0)
-          Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
-       end if
-
-       if(UseAnisoPressure) PparIon_I = State_V(iPparIon_I)
-
-       Source_V = 0.0
-
-       do iIon = iIonFirst, nIonFluid
-
-          if(iIon == 0)then
-             Me_D = 0.0
-             iP = Pe_
-          else
-             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
-             iP = iPIon_I(iIon)
-             if(UseAnisoPressure) iPpar = iPparIon_I(iIon)
-          end if
-
-          do jIon = iIonFirst, nIonFluid
-             if(iIon == jIon .and. .not.(UseAnisoPressure.and.iIon>0)) CYCLE
-
-             ReducedTemp = (Mass_I(jIon)*T_I(iIon)+Mass_I(iIon)*T_I(jIon)) &
-                  /(Mass_I(iIon) + Mass_I(jIon))
-
-             ! Turbulence modifies the collision rate, but we do not
-             ! incorporate that here
-             CollisionRate = CollisionCoef_II(iIon,jIon) &
-                  *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
-
-             if(UseAnisoPressure .and. iIon>0)then
-                Source_V(iPpar) = Source_V(iPpar) &
-                     + (P_I(iIon) - PparIon_I(iIon))*CollisionRate &
-                     *Mass_I(iIon)/ReducedMass_II(iIon,jIon)
-
-                if(iIon == jIon) CYCLE
-             end if
-
-             Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
-                  Uz_I(jIon) - Uz_I(iIon) /)
-
-             Du2 = sum(Du_D**2)
-
-             Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
-
-             if(iIon == 0)then
-                Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D
-             else
-                Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                     + RhoIon_I(iIon)*CollisionRate*Du_D
-
-                if(UseAnisoPressure)then
-                   if(UseB0) then
-                      B_D = B0_DGB(:,i,j,k,iBlock) &
-                           + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                   else
-                      B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                   end if
-                   B_D = B_D/max(sqrt(sum(B_D**2)), 1e-15)
-
-                   Source_V(iPpar) = Source_V(iPpar) &
-                        + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
-                        + (1.0/3.0)*Du2 + (sum(Du_D*B_D))**2)
-                end if
-             end if
-
-             Source_V(iP) = Source_V(iP) &
-                  + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
-                  + (2.0/3.0)*Du2)
-          end do
-       end do
-
-       do iIon = 1, nIonFluid
-          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
-          iP = iPIon_I(iIon)
-          iEnergy = Energy_ + IonFirst_ - 2 + iIon
-
-          if(UseElectronPressure) Source_V(iRhoUx:iRhoUz) &
-               = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon)/N_I(0)*Me_D
-
-          U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
-          Source_V(iEnergy) = Source_V(iEnergy) + InvGammaMinus1*Source_V(iP) &
-               + sum(U_D*Source_V(iRhoUx:iRhoUz))
-       end do
-
-       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
-
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_calc_sources_impl
-  !============================================================================
-  subroutine user_init_point_implicit
-
-    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
-    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
-         iPparIon_I, IonFirst_, IonLast_
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    use ModVarIndexes, ONLY: nVar, Pe_
-
-    logical :: IsPointImpl_V(nVar)
-    integer :: iVar, iPointImplVar, nPointImplVar, iFluid
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    IsPointImpl_V = .false.
-
-    ! All ion momenta and pressures are implicit
-    IsPointImpl_V(iRhoUxIon_I) = .true.
-    IsPointImpl_V(iRhoUyIon_I) = .true.
-    IsPointImpl_V(iRhoUzIon_I) = .true.
-    IsPointImpl_V(iPIon_I)     = .true.
-    if(UseElectronPressure) IsPointImpl_V(Pe_) = .true.
-    if(UseAnisoPressure)then
-       do iFluid = IonFirst_, IonLast_
-          IsPointImpl_V(iPparIon_I(iFluid)) = .true.
-       end do
-    end if
-    nPointImplVar = count(IsPointImpl_V)
-
-    allocate(iVarPointImpl_I(nPointImplVar))
-
-    iPointImplVar = 0
-    do iVar = 1, nVar
-       if(.not. IsPointImpl_V(iVar)) CYCLE
-       iPointImplVar = iPointImplVar + 1
-       iVarPointImpl_I(iPointImplVar) = iVar
-    end do
-
-    ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set below.
-    IsPointImplMatrixSet = .false.
-
-    call test_stop(NameSub, DoTest)
-  end subroutine user_init_point_implicit
-  !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
 
