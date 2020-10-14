@@ -8754,7 +8754,10 @@ By default no minimum density limit is applied.
 </command>
 
 <command name="MINIMUMPRESSURE">
-	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
+  <for from="1" to="$nFluid">
+    <parameter name="pMinDim" type="real" min="-1" default="-1"/>
+  </for>
+  <parameter name="PeMinDim" type="real" min="-1" default="-1" if="$UsePe"/>
 
 #MINIMUMPRESSURE
 0.001		pMinDim for fluid 1
