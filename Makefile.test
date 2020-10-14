@@ -750,7 +750,7 @@ test_awsomfluids:
 # Test fails on Pleiades with OpenMP
 
 test_awsomfluids_compile:
-	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2
+	./Config.pl -f -noopenmp -e=AwsomFluidsAnisoPi -u=AwsomChargeState -g=6,2,2
 	$(MAKE) BATSRUS
 	make PIDL
 

@@ -50,8 +50,8 @@ module ModUser
   real :: CollisionFactor = 1.0
 
   ! Charge state calculation variables
- ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
-    ! 1/(1+2*0.1)
+  ! For H:He 10:1 fully ionized plasma the proton:electron ratio is
+  ! 1/(1+2*0.1)
   real                           :: ProtonElectronRatio = 0.83
   integer, allocatable           :: iTableElement_I(:)
   
@@ -61,7 +61,8 @@ contains
     ! Initial condition for charge state calculation
     ! Can be used for both start and restart
 
-    use ModVarIndexes,  ONLY: ScalarFirst_, nElement, Pe_, P_, Rho_
+    use ModVarIndexes,  ONLY: ChargeStateFirst_, nElement, Pe_, P_, Rho_, &
+         ChargeStateLast_
     use ModLookupTable, ONLY: Table_I,interpolate_lookup_table    
     use ModPhysics,     ONLY: UnitT_, No2Si_V, UnitTemperature_, Si2No_V, &
          UnitN_ 
@@ -76,11 +77,11 @@ contains
     integer                    :: iVar, iElement, iCharge, nCharge
     integer                    :: iBlock, i, j, k
     real                       :: AbundanceElement, MassElement
-    !-------------------------------------------------------------------------- 
+    !--------------------------------------------------------------------------
     select case(NameAction)
     case('initial condition done')
-       do iElement = 1, nElement
-       end do
+       if(ChargeStateLast_ == 1) RETURN
+
        ! Charge state initial condition is ionization equilibrium 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
@@ -92,12 +93,12 @@ contains
              endif
 
              TeSi = Te * No2Si_V(UnitTemperature_)
-             iVar = ScalarFirst_
+             iVar = ChargeStateFirst_
              do iElement = 1, nElement
                 nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
                 MassElement = Table_I(iTableElement_I(iElement))%Param_I(2)
-                AbundanceElement = Table_I(iTableElement_I(iElement))%Param_I(3)
-                allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
+                AbundanceElement =Table_I(iTableElement_I(iElement))%Param_I(3)
+                allocate(Ioniz_I(0:nCharge), Recomb_I(0:nCharge))
                 do iCharge = 0, nCharge
                    call interpolate_lookup_table(iTableElement_I(iElement), &
                         real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
@@ -130,7 +131,7 @@ contains
                      *State_VGB(Rho_,i,j,k,iBlock)
 
                 iVar = iVar + nCharge + 1
-                deallocate(Ioniz_I,Recomb_I)
+                deallocate(Ioniz_I, Recomb_I)
              end do
           end do; end do; end do
        end do
@@ -209,8 +210,9 @@ contains
          cElectronMass, cProtonMass
     use ModNumConst,    ONLY: cTwoPi, cDegToRad
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_
-    use ModVarIndexes,  ONLY: NameElement_I, nElement 
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, &
+         BodyNDim_I, BodyTDim_I, Gamma
+    use ModVarIndexes,  ONLY: NameElement_I, nElement, ChargeStateLast_
     use ModLookupTable, ONLY: i_lookup_table, Table_I
     
     integer :: iIon, jIon, iVar
@@ -280,18 +282,18 @@ contains
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! Read in charge state lookup table(s)
-    if(nElement > 0)then
+    if(ChargeStateLast_ > 1)then
        if(allocated(iTableElement_I)) deallocate(iTableElement_I)
        allocate(iTableElement_I(nElement))
        do iElement = 1, nElement
           iTableElement_I(iElement) = &
                i_lookup_table('ionization_'//trim(NameElement_I(iElement)))
           if(.not. iTableElement_I(iElement) > 0)&
-               call stop_mpi('table requited for element '// &
+               call stop_mpi('table required for element '// &
                NameElement_I(iElement))
        end do
     endif
-    
+
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session finished'
@@ -566,10 +568,12 @@ contains
     use ModCoronalHeating, ONLY: CoronalHeating_C, &
          apportion_coronal_heating, get_block_heating, get_wave_reflection, &
          WaveDissipation_VC, UseAlignmentAngle, Cdiss_C
+    use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
     use ModFaceValue,      ONLY: calc_face_value
     use ModMultiFluid,     ONLY: IonLast_
-    use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_
-    use ModVarIndexes,     ONLY: WaveFirst_, WaveLast_, ScalarFirst_
+    use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_, &
+         UnitTemperature_
+    use ModVarIndexes,     ONLY: WaveFirst_, WaveLast_, Rho_, Pe_, p_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -597,10 +601,43 @@ contains
     IsFound = .true.
 
     select case(NameVar)
+    case('te')
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          if(UseElectronPressure)then
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          else
+             PlotVar_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          end if
+       end do; end do; end do
+
+    case('ti')
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
+               /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+       end do; end do; end do
+
+   case('qrad')
+       call get_tesi_c(iBlock, TeSi_C)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+               RadCooling_C(i,j,k))
+          PlotVar_G(i,j,k) = RadCooling_C(i,j,k) &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       end do; end do; end do
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
     case('refl')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., &
+            DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -615,7 +652,8 @@ contains
     case('sintheta')
        Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
-       call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., &
+            DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
 
@@ -630,7 +668,8 @@ contains
        if(UseAlignmentAngle)then
           Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
           call set_b0_face(iBlock)
-          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., &
+               DoMonotoneRestrict = .false.)
           IsNewBlockAlfven = .true.
           call get_wave_reflection(iBlock, IsNewBlockAlfven)
        end if
@@ -655,7 +694,8 @@ contains
        ! Not yet generalized to multi-fluid
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
-          call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .false.)
+          call calc_face_value(iBlock, DoResChangeOnly = .false., &
+               DoMonotoneRestrict = .false.)
 
           if(UseAlignmentAngle)then
              Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
@@ -722,17 +762,18 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModPhysics,     ONLY: InvGammaMinus1, GBody, rBody, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitX_, UnitT_, UnitN_
+         UnitTemperature_, UnitX_, UnitT_, UnitN_, UnitRho_, UnitB_, UnitP_
     use ModVarIndexes,  ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
-         Ehot_, p_, ScalarFirst_, Rho_, nElement
+         Ehot_, p_, ChargeStateFirst_, ChargeStateLast_, Rho_, nElement, Ppar_
     use ModMultiFluid,  ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, &
          iP_I, iPparIon_I, IsIon_I
     use ModImplicit,    ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,       ONLY: UseWavePressureLtd
     use ModLookupTable, ONLY: Table_I,interpolate_lookup_table
-    use ModMain,        ONLY: CellBCType
-    
+    use ModMain,        ONLY: CellBCType, time_simulation, n_step, &
+         iteration_number
+
     integer,          intent(in)  :: iBlock, iSide
     type(CellBCType), intent(in)  :: CBC
     logical,          intent(out) :: IsFound
@@ -871,7 +912,7 @@ contains
 
     ! Charge state boundary conditions
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-       
+
        if(UseElectronPressure)then
           Te = State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        else
@@ -880,44 +921,49 @@ contains
 
        TeSi = Te * No2Si_V(UnitTemperature_)
 
-       iVar = ScalarFirst_
-       do iElement = 1, nElement
-          nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
-          MassElement = Table_I(iTableElement_I(iElement))%Param_I(2)
-          AbundanceElement = Table_I(iTableElement_I(iElement))%Param_I(3)
+       if(ChargeStateLast_ > 1)then
+          iVar = ChargeStateFirst_
+          do iElement = 1, nElement
+             nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
+             MassElement = Table_I(iTableElement_I(iElement))%Param_I(2)
+             AbundanceElement = Table_I(iTableElement_I(iElement))%Param_I(3)
 
-          allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
-          do iCharge = 0, nCharge
-             call interpolate_lookup_table(iTableElement_I(iElement), &
-                  real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
-             Ioniz_I(iCharge) = Value_I(1)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-             Recomb_I(iCharge) = Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
+             allocate(Ioniz_I(0:nCharge),Recomb_I(0:nCharge))
+             do iCharge = 0, nCharge
+                call interpolate_lookup_table(iTableElement_I(iElement), &
+                     real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
+                Ioniz_I(iCharge) = Value_I(1)*1e-6 &
+                     /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+                Recomb_I(iCharge) =Value_I(2)*1e-6 &
+                     /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+             end do
+             ! initial guess for y_{0}
+             State_VGB(iVar,i,j,k,iBlock) = 1.
+             ! y_1*R_1 = y_0*I_0          
+             State_VGB(iVar+1,i,j,k,iBlock) = &
+                  State_VGB(iVar,i,j,k,iBlock) * Ioniz_I(0)/Recomb_I(1)
+             ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
+             do iCharge = 2, nCharge
+                State_VGB(iVar+iCharge,i,j,k,iBlock) = &
+                     State_VGB(iVar+iCharge-1,i,j,k,iBlock) * &
+                     (Recomb_I(iCharge-1)+Ioniz_I(iCharge-1)) &
+                     /Recomb_I(iCharge) &
+                     - State_VGB(iVar+iCharge-2,i,j,k,iBlock) * &
+                     Ioniz_I(iCharge-2)/Recomb_I(iCharge)
+             end do
+
+             ! normalize to 1 and multiply by proton mass density and
+             ! element mass relative to proton mass and element abundance
+             State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) = &
+                  State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) / &
+                  sum(State_VGB(iVar:iVar+nCharge,i,j,k,iBlock)) &
+                  *AbundanceElement*MassElement &
+                  *State_VGB(Rho_,i,j,k,iBlock)
+
+             iVar = iVar + nCharge + 1
+             deallocate(Ioniz_I,Recomb_I)
           end do
-          ! initial guess for y_{0}
-          State_VGB(iVar,i,j,k,iBlock) = 1.
-          ! y_1*R_1 = y_0*I_0          
-          State_VGB(iVar+1,i,j,k,iBlock) = &
-               State_VGB(iVar,i,j,k,iBlock) * Ioniz_I(0)/Recomb_I(1)
-          ! 0 = y_{m-1} * I_{m-1} + y_m*(I_m+R_m) - y_{m+1}*R_{m+1} 
-          do iCharge = 2, nCharge
-             State_VGB(iVar+iCharge,i,j,k,iBlock) = &
-                  State_VGB(iVar+iCharge-1,i,j,k,iBlock) * &
-                  (Recomb_I(iCharge-1)+Ioniz_I(iCharge-1))/Recomb_I(iCharge) - &
-                  State_VGB(iVar+iCharge-2,i,j,k,iBlock) * &
-                  Ioniz_I(iCharge-2)/Recomb_I(iCharge)
-          end do
-
-          ! normalize to 1 and multiply by proton mass density and
-          ! element mass relative to proton mass and element abundance
-          State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) = &
-               State_VGB(iVar:iVar+nCharge,i,j,k,iBlock) / &
-               sum(State_VGB(iVar:iVar+nCharge,i,j,k,iBlock)) &
-               *AbundanceElement*MassElement &
-               *State_VGB(Rho_,i,j,k,iBlock)
-
-          iVar = iVar + nCharge + 1
-          deallocate(Ioniz_I,Recomb_I)
-       end do
+       end if
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -954,119 +1000,285 @@ contains
   subroutine user_calc_sources_impl(iBlock)
 
     use ModPointImplicit, ONLY: IsPointImplMatrixSet, DsDu_VVC
-    use ModAdvance,     ONLY: State_VGB, Source_VC, UseElectronPressure
-    use ModVarIndexes,  ONLY: nVar, Rho_, p_, Pe_, ScalarFirst_, ScalarLast_, &
-         nElement
-    use ModPhysics,     ONLY: No2Si_V, Si2No_V, UnitTemperature_,UnitT_,UnitN_
+    use ModAdvance,     ONLY: State_VGB, Source_VC, UseElectronPressure, &
+         UseAnisoPressure
+    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
+         iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
+    use ModVarIndexes,  ONLY: nVar, Energy_, Rho_, p_, Pe_, Bx_, Bz_, &
+         ChargeStateFirst_, ChargeStateLast_, nElement
+    use ModPhysics,     ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
+         UnitN_, GammaMinus1, InvGammaMinus1
     use ModLookupTable, ONLY: Table_I, interpolate_lookup_table
+    use ModConst,      ONLY: cElectronMass, cProtonMass
+    use ModB0,         ONLY: UseB0, B0_DGB
+
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
 
-    real :: State_V(nVar), Source_V(nVar+1)
+    real :: State_V(nVar), Source_V(nVar+nFluid)
 
     real                       :: Value_I(2)
     real                       :: Ne, Te, TeSi, Source
     integer                    :: iCharge, nCharge, iElement, iVar
 
+    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst, iPpar
+    real :: ReducedTemp, CollisionRate, Coef
+    real :: Du2
+    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
+    real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
+    real :: U_D(3), Du_D(3), Me_D(3), B_D(3)
+
     real, allocatable          :: Ioniz_I(:), Recomb_I(:)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    if(nIonFluid > 1 .and. ChargeStateLast_ == 1)then
 
-       State_V = State_VGB(:,i,j,k,iBlock)
-       Source_V = 0.0
+       iIonFirst = 1
+       if(UseElectronPressure) iIonFirst = 0
 
-       Ne = State_V(Rho_) * ProtonElectronRatio
-       if(UseElectronPressure)then
-          Te = State_V(Pe_)/State_V(Rho_)
-       else
-          Te = State_V(p_)/State_V(Rho_)
-       endif
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       TeSi = Te * No2Si_V(UnitTemperature_)
+          State_V = State_VGB(:,i,j,k,iBlock)
 
-       iVar = ScalarFirst_
-       do iElement = 1, nElement
-          nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
-          allocate(Ioniz_I(0:nCharge), Recomb_I(0:nCharge))
-          do iCharge = 0, nCharge
-             call interpolate_lookup_table(iTableElement_I(iElement), &
-                  real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
-             Ioniz_I(iCharge) = Value_I(1)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-             Recomb_I(iCharge)= Value_I(2)*1e-6/Si2No_V(UnitN_)/Si2No_V(UnitT_)
-          end do
-          
-          do iCharge = 0, nCharge
-             Source = 0
-             if(iCharge /= 0)Source = State_V(iVar-1)*Ioniz_I(iCharge-1)
-             Source = Source-State_V(iVar)*(Ioniz_I(iCharge)+Recomb_I(iCharge))
-             if(iCharge /= nCharge)Source = Source + &
-                  State_V(iVar+1)*Recomb_I(iCharge+1)
-             Source_V(iVar) = Ne*Source
+          RhoIon_I = State_V(iRhoIon_I)
+          Ux_I(1:) = State_V(iRhoUxIon_I)/RhoIon_I
+          Uy_I(1:) = State_V(iRhoUyIon_I)/RhoIon_I
+          Uz_I(1:) = State_V(iRhoUzIon_I)/RhoIon_I
+          P_I(1:) = State_V(iPIon_I)
+          N_I(1:) = RhoIon_I/MassIon_I
+          T_I(1:) = P_I(1:)/N_I(1:)
 
-             if(IsPointImplMatrixSet)then
-                if(iCharge == 0)then
-                   DsDu_VVC(iVar,iVar-1,i,j,k) = 0.0
-                else
-                   DsDu_VVC(iVar,iVar-1,i,j,k) = Ne*Ioniz_I(iCharge-1)
-                end if
-                DsDu_VVC(iVar,iVar,i,j,k) = &
-                     -Ne*(Ioniz_I(iCharge)+Recomb_I(iCharge))
-                if(iCharge == nCharge)then
-                   DsDu_VVC(iVar,iVar+1,i,j,k) = 0.0
-                else
-                   DsDu_VVC(iVar,iVar+1,i,j,k) = Ne*Recomb_I(iCharge+1)
-                end if
+          if(UseElectronPressure)then
+             ChargeDensIon_I = ChargeIon_I*N_I(1:)
+             P_I(0) = State_V(Pe_)
+             N_I(0) = sum(ChargeDensIon_I)
+             T_I(0) = P_I(0)/N_I(0)
+             Ux_I(0) = sum(ChargeDensIon_I*Ux_I(1:))/N_I(0)
+             Uy_I(0) = sum(ChargeDensIon_I*Uy_I(1:))/N_I(0)
+             Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
+          end if
+
+          if(UseAnisoPressure) PparIon_I = State_V(iPparIon_I)
+
+          Source_V = 0.0
+
+          do iIon = iIonFirst, nIonFluid
+
+             if(iIon == 0)then
+                Me_D = 0.0
+                iP = Pe_
+             else
+                iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+                iP = iPIon_I(iIon)
+                if(UseAnisoPressure) iPpar = iPparIon_I(iIon)
              end if
 
-             iVar = iVar + 1
+             do jIon = iIonFirst, nIonFluid
+                if(iIon == jIon .and. .not.(UseAnisoPressure.and.iIon>0)) CYCLE
+
+                ReducedTemp = (Mass_I(jIon)*T_I(iIon)+Mass_I(iIon)*T_I(jIon)) &
+                     /(Mass_I(iIon) + Mass_I(jIon))
+
+                ! Turbulence modifies the collision rate, but we do not
+                ! incorporate that here
+                CollisionRate = CollisionCoef_II(iIon,jIon) &
+                     *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
+
+                if(UseAnisoPressure .and. iIon>0)then
+                   Source_V(iPpar) = Source_V(iPpar) &
+                        + (P_I(iIon) - PparIon_I(iIon))*CollisionRate &
+                        *Mass_I(iIon)/ReducedMass_II(iIon,jIon)
+
+                   if(iIon == jIon) CYCLE
+                end if
+
+                Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
+                     Uz_I(jIon) - Uz_I(iIon) /)
+
+                Du2 = sum(Du_D**2)
+
+                Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
+
+                if(iIon == 0)then
+                   Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D
+                else
+                   Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                        + RhoIon_I(iIon)*CollisionRate*Du_D
+
+                   if(UseAnisoPressure)then
+                      if(UseB0) then
+                         B_D = B0_DGB(:,i,j,k,iBlock) &
+                              + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                      else
+                         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                      end if
+                      B_D = B_D/max(sqrt(sum(B_D**2)), 1e-15)
+
+                      Source_V(iPpar) = Source_V(iPpar) &
+                           + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
+                           + (1.0/3.0)*Du2 + (sum(Du_D*B_D))**2)
+                   end if
+                end if
+
+                Source_V(iP) = Source_V(iP) &
+                     + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
+                     + (2.0/3.0)*Du2)
+             end do
           end do
-          deallocate(Ioniz_I, Recomb_I)
-       end do
 
-       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+          do iIon = 1, nIonFluid
+             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+             iP = iPIon_I(iIon)
+             iEnergy = Energy_ + IonFirst_ - 2 + iIon
 
-    end do; end do; end do
+             if(UseElectronPressure) Source_V(iRhoUx:iRhoUz) &
+                  = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon)/N_I(0)*Me_D
 
+             U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
+             Source_V(iEnergy) = Source_V(iEnergy) &
+                  + InvGammaMinus1*Source_V(iP) &
+                  + sum(U_D*Source_V(iRhoUx:iRhoUz))
+          end do
+
+          Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+       end do; end do; end do
+
+    elseif(nIonFluid == 1 .and. ChargeStateLast_ > 1)then
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          State_V = State_VGB(:,i,j,k,iBlock)
+          Source_V = 0.0
+
+          Ne = State_V(Rho_) * ProtonElectronRatio
+          if(UseElectronPressure)then
+             Te = State_V(Pe_)/State_V(Rho_)
+          else
+             Te = State_V(p_)/State_V(Rho_)
+          endif
+
+          TeSi = Te * No2Si_V(UnitTemperature_)
+
+          iVar = ChargeStateFirst_
+          do iElement = 1, nElement
+             nCharge = nint(Table_I(iTableElement_I(iElement))%Param_I(1))
+             allocate(Ioniz_I(0:nCharge), Recomb_I(0:nCharge))
+             do iCharge = 0, nCharge
+                call interpolate_lookup_table(iTableElement_I(iElement), &
+                     real(iCharge), TeSi, Value_I, DoExtrapolate = .false.)
+                Ioniz_I(iCharge) = Value_I(1)*1e-6 &
+                     /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+                Recomb_I(iCharge)= Value_I(2)*1e-6 &
+                     /Si2No_V(UnitN_)/Si2No_V(UnitT_)
+             end do
+
+             do iCharge = 0, nCharge
+                Source = 0
+                if(iCharge /= 0)Source = State_V(iVar-1)*Ioniz_I(iCharge-1)
+                Source = Source &
+                     - State_V(iVar)*(Ioniz_I(iCharge)+Recomb_I(iCharge))
+                if(iCharge /= nCharge)Source = Source + &
+                     State_V(iVar+1)*Recomb_I(iCharge+1)
+                Source_V(iVar) = Ne*Source
+
+                if(IsPointImplMatrixSet)then
+                   if(iCharge == 0)then
+                      DsDu_VVC(iVar,iVar-1,i,j,k) = 0.0
+                   else
+                      DsDu_VVC(iVar,iVar-1,i,j,k) = Ne*Ioniz_I(iCharge-1)
+                   end if
+                   DsDu_VVC(iVar,iVar,i,j,k) = &
+                        -Ne*(Ioniz_I(iCharge)+Recomb_I(iCharge))
+                   if(iCharge == nCharge)then
+                      DsDu_VVC(iVar,iVar+1,i,j,k) = 0.0
+                   else
+                      DsDu_VVC(iVar,iVar+1,i,j,k) = Ne*Recomb_I(iCharge+1)
+                   end if
+                end if
+
+                iVar = iVar + 1
+             end do
+             deallocate(Ioniz_I, Recomb_I)
+          end do
+
+          Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+       end do; end do; end do
+
+    end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources_impl
   !============================================================================
   subroutine user_init_point_implicit
 
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
+         iPparIon_I, IonFirst_, IonLast_
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    use ModVarIndexes, ONLY: nVar, ScalarFirst_, ScalarLast_
+    use ModVarIndexes, ONLY: nVar, Pe_, ChargeStateFirst_, ChargeStateLast_
 
     logical :: IsPointImpl_V(nVar)
-    integer :: iVar, iPointImplVar, nPointImplVar
+    integer :: iVar, iPointImplVar, nPointImplVar, iFluid
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     IsPointImpl_V = .false.
 
-    ! Charge state variables
-    IsPointImpl_V(ScalarFirst_:ScalarLast_) = .true.
-    
-    nPointImplVar = count(IsPointImpl_V)
+    if(nIonFluid > 1 .and. ChargeStateLast_ == 1)then
+       ! All ion momenta and pressures are implicit
+       IsPointImpl_V(iRhoUxIon_I) = .true.
+       IsPointImpl_V(iRhoUyIon_I) = .true.
+       IsPointImpl_V(iRhoUzIon_I) = .true.
+       IsPointImpl_V(iPIon_I)     = .true.
+       if(UseElectronPressure) IsPointImpl_V(Pe_) = .true.
+       if(UseAnisoPressure)then
+          do iFluid = IonFirst_, IonLast_
+             IsPointImpl_V(iPparIon_I(iFluid)) = .true.
+          end do
+       end if
+       nPointImplVar = count(IsPointImpl_V)
 
-    allocate(iVarPointImpl_I(nPointImplVar))
+       allocate(iVarPointImpl_I(nPointImplVar))
 
-    ! Shifts indices to start from 1
-    iPointImplVar = 0
-    do iVar = 1, nVar
-       if(.not. IsPointImpl_V(iVar)) CYCLE
-       iPointImplVar = iPointImplVar + 1
-       iVarPointImpl_I(iPointImplVar) = iVar
-    end do
+       iPointImplVar = 0
+       do iVar = 1, nVar
+          if(.not. IsPointImpl_V(iVar)) CYCLE
+          iPointImplVar = iPointImplVar + 1
+          iVarPointImpl_I(iPointImplVar) = iVar
+       end do
 
-    ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set below.
-    IsPointImplMatrixSet = .true.
+       ! Tell the point implicit scheme if dS/dU will be set analytically
+       ! If this is set to true the DsDu_VVC matrix has to be set below.
+       IsPointImplMatrixSet = .false.
+    elseif(nIonFluid == 1 .and. ChargeStateLast_ > 1)then
+       ! Charge state variables
+       IsPointImpl_V(ChargeStateFirst_:ChargeStateLast_) = .true.
+
+       nPointImplVar = count(IsPointImpl_V)
+
+       allocate(iVarPointImpl_I(nPointImplVar))
+
+       ! Shifts indices to start from 1
+       iPointImplVar = 0
+       do iVar = 1, nVar
+          if(.not. IsPointImpl_V(iVar)) CYCLE
+          iPointImplVar = iPointImplVar + 1
+          iVarPointImpl_I(iPointImplVar) = iVar
+       end do
+
+       ! Tell the point implicit scheme if dS/dU will be set analytically
+       ! If this is set to true the DsDu_VVC matrix has to be set below.
+       IsPointImplMatrixSet = .true.
+    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
