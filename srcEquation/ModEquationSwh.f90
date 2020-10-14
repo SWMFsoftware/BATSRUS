@@ -89,16 +89,16 @@ module ModVarIndexes
        1.0 ]  ! SWHEnergy_
 
   ! The names of the variables used in i/o
-  character(len=6) :: NameVar_V(nVar+1) = [ &
-       'SWHRho', & ! Rho_
-       'SWHMx ', & ! RhoUx_
-       'SWHMy ', & ! RhoUy_
-       'SWHMz ', & ! RhoUz_
-       'SWHBx ', & ! Bx_
-       'SWHBy ', & ! By_
-       'SWHBz ', & ! Bz_
-       'SWHp  ', & ! p_
-       'SWHe  ' ] ! Energy_
+  character(len=3) :: NameVar_V(nVar+1) = [ &
+       'Rho', & ! Rho_
+       'Mx ', & ! RhoUx_
+       'My ', & ! RhoUy_
+       'Mz ', & ! RhoUz_
+       'Bx ', & ! Bx_
+       'By ', & ! By_
+       'Bz ', & ! Bz_
+       'p  ', & ! p_
+       'e  ' ] ! Energy_
 
 
   ! Primitive variable names
@@ -108,5 +108,6 @@ module ModVarIndexes
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
 end module ModVarIndexes
+
 
 
