@@ -35,7 +35,7 @@ if (not -f $config and not -f "../../$config"){
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
     `$gitclone srcBATL` if not -d "srcBATL";
-    #`$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
+    `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
 }
 
 if(-f $config){
@@ -409,10 +409,16 @@ sub set_user_module{
     if($UserModule eq '1'){
 	my @UserModules;
 	chdir $SrcUser;
-	@UserModules = ("Default", sort(glob("*.f90")));
+	@UserModules = glob("*.f90");
+	chdir "..";
+	if($SrcUserExtra){
+	    chdir $$SrcUserExtra;
+	    push @UserModules, glob("*.f90");
+	    chdir "..";
+	}
+	@UserModules = ("Default", sort @UserModules);
 	for (@UserModules){s/^ModUser//; s/\.f90$//;}
 	print "Available User Modules:\n   ",join("\n   ",@UserModules),"\n";
-	chdir "..";
 	return;
     }
 
