@@ -5,18 +5,19 @@
 List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 
 <!-- Set variables for expressions and rules -->
-<set name="nSpecies"     type="integer" value="$_Value{nSpecies}" />
-<set name="nFluid"       type="integer" value="($_Value{nFluid} or 1)" />
-<set name="nIonFluid"    type="integer" value="($_Value{nIonFluid} or 1)" />
-<set name="UsePe"        type="integer" value="$_Value{UsePe}" />
-<set name="nG"           type="integer" value="$_Value{nG}" />
-<set name="nI"           type="integer" value="$_Value{nI}" />
-<set name="nJ"           type="integer" value="$_Value{nJ}" />
-<set name="nK"           type="integer" value="$_Value{nK}" />
-<set name="nDim"         type="integer" value="3-($nJ==1)-($nK==1)"/>
-<set name="NameComp"          type="string" value="$_NameComp"/>
-<set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
-<set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
+<set name="nSpecies"          type="integer" value="$_Value{nSpecies}"         />
+<set name="nFluid"            type="integer" value="($_Value{nFluid} or 1)"    />
+<set name="nIonFluid"         type="integer" value="($_Value{nIonFluid} or 1)" />
+<set name="nNeturalFluid"     type="integer" value="$_Value{nNeutralFluid}"    />
+<set name="UsePe"             type="integer" value="$_Value{UsePe}"            />
+<set name="nG"                type="integer" value="$_Value{nG}"               />
+<set name="nI"                type="integer" value="$_Value{nI}"               />
+<set name="nJ"                type="integer" value="$_Value{nJ}"               />
+<set name="nK"                type="integer" value="$_Value{nK}"               />
+<set name="nDim"              type="integer" value="3-($nJ==1)-($nK==1)"       />
+<set name="NameComp"          type="string"  value="$_NameComp"                />
+<set name="NameRestartOutDir" type="string"  value="$NameComp/restartOUT"      />
+<set name="NamePlotDir"       type="string"  value="$NameComp/IO2"             />
 
 <!-- Initialize MaxBlock to 0 so we can check if it was set or not -->
 <set name="MaxBlock"     type="integer" value="0" />
@@ -1754,8 +1755,10 @@ The total number density is taken as constant from the #BODY command.
 <command name="OHBOUNDARY">
   <parameter name="UseOhNeutralBc" type="logical" default="F"/>
   <if expr="$UseOhNeutralBc">
-    <parameter name="RhoNeuFactor" type="real" min="0" default="1"/>
-    <parameter name="uNeuFactor"   type="real" min="0" default="1"/>
+    <for from="1" to="$nNeutralFluid">
+      <parameter name="RhoNeuFactor" type="real" min="0" default="1"/>
+      <parameter name="uNeuFactor"   type="real" min="0" default="1"/>
+    </for>
   </if>
 
 #OHBOUNDARY
@@ -7590,19 +7593,22 @@ and DoImSatTrace false.
 </command>
 
 <command name="IMCOUPLING">
-	<parameter name="TauCoupleIm" type="real" min="1"/>
-	<parameter name="DoImSatTrace" type="logical" default="F" />
-	<parameter name="DoCoupleImPressure" type="logical" default="T"/>
-	<parameter name="DoCoupleImDensity"  type="logical" default="F"/>
-	<parameter name="DensityCoupleFloor" type="real" min="0" default="0"
-		   if="$DoCoupleImPressure"/>
-	<parameter name="DoFixPolarRegion"   type="logical" default="F"/>
-	<if expr="$DoFixPolarRegion">
-		<parameter name="rFixPolarRegion" type="real" min="1"
-							default="5"/>
-		<parameter name="PolarNDim" type="real" min="0" default="20"/>
-		<parameter name="PolarTDim" type="real" min="0" default="1e5"/>
-	</if>
+  <parameter name="TauCoupleIm" type="real" min="1"/>
+  <parameter name="DoImSatTrace" type="logical" default="F" />
+  <parameter name="DoCoupleImPressure" type="logical" default="T"/>
+  <parameter name="DoCoupleImDensity"  type="logical" default="F"/>
+  <parameter name="DensityCoupleFloor" type="real" min="0" default="0"
+	     if="$DoCoupleImPressure"/>
+  <parameter name="DoFixPolarRegion"   type="logical" default="F"/>
+  <if expr="$DoFixPolarRegion">
+    <parameter name="rFixPolarRegion" type="real" min="1"
+	       default="5"/>
+    <for from="1" to="$nFluid">
+      <parameter name="PolarNDim" type="real" min="0" default="20"/>
+      <parameter name="PolarTDim" type="real" min="0" default="1e5"/>
+    </for>
+  </if>
+
 #IMCOUPLING
 20.0			TauCoupleIm
 F			DoImSatTrace
@@ -8865,19 +8871,19 @@ it on because the solution near strong shocks is more reliable.
 </command>
 
 <command name="ANISOTROPICPRESSURE">
-	 <parameter name="UseConstantTau" type="logical" default="F"/>
-	 <if expr="$UseConstantTau">
-	 	 <parameter name="TauInstabilitySi" type="real" default="-1"/>
-	 </if>
-	 <parameter name="TauGLobalSi" type="real" default="-1"/>
+  <for from="1" to="$nFluid">
+    <parameter name="UseConstantTau" type="logical" default="F"/>
+    <parameter name="TauInstabilitySi" type="real" default="-1"/>
+    <parameter name="TauGLobalSi" type="real" default="-1"/>
+  </for>
 
 #ANISOTROPICPRESSURE
-T			UseConstantTau_I
-10			TauInstabilitySi_I
-100			TauGlobalSi_I
-T			UseConstantTau_I
-10			TauInstabilitySi_I
-100			TauGlobalSi_I
+T			UseConstantTau fluid 1
+10			TauInstabilitySi
+100			TauGlobalSi
+T			UseConstantTau fluid 2
+10			TauInstabilitySi
+100			TauGlobalSi
 
 Set parameters for the pressure relaxation term for each fluid. Note that
 in the previous version, TauInstabilitySi will only be read if UseConstantTau
