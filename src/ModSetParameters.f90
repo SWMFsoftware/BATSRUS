@@ -696,18 +696,18 @@ contains
           call read_hall_param(NameCommand)
 
        case("#MINIMUMDENSITY")
-          do iFluid = 1, nFluid
+          do iFluid = IonFirst_, nFluid
              call read_var('RhoMinDim', RhoMinDim_I(iFluid))
           end do
 
        case("#MINIMUMPRESSURE")
-          do iFluid = 1, nFluid
+          do iFluid = IonFirst_, nFluid
              call read_var('pMinDim', pMinDim_I(iFluid))
           end do
           if(UseElectronPressure) call read_var('PeMinDim', PeMinDim)
 
        case("#MINIMUMTEMPERATURE")
-          do iFluid = 1, nFluid
+          do iFluid = IonFirst_, nFluid
              call read_var('TMinDim', TMinDim_I(iFluid))
           end do
           if(UseElectronPressure) call read_var('TeMinDim', TeMinDim)
@@ -727,7 +727,7 @@ contains
           call read_var('UseElectronEntropy', UseElectronEntropy)
 
        case("#ANISOTROPICPRESSURE")
-          do iFluid = 1, nFluid
+          do iFluid = IonFirst_, nFluid
              call read_var('UseConstantTau_I', UseConstantTau_I(iFluid))
              call read_var('TauInstabilitySi_I', TauInstabilitySi_I(iFluid))
              call read_var('TauGlobalSi_I', TauGlobalSi_I(iFluid))
