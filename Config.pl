@@ -451,6 +451,8 @@ sub current_settings{
     my $prev;
     my %Value;
 
+    my $ChargeStateList;
+    
     while(<FILE>){
 	next if /^\s*!/; # skip commented out lines
 	if(s/\&\s*\n//){ # concatenate continuation lines
@@ -467,6 +469,9 @@ sub current_settings{
 	# Extract descriptions
         $NameFile = $1 if /NameEquationFile\s*=.*ModEquation(.*)\.f90/;
 	$Equation = $1 if /NameEquation\s*=\s*[\'\"]([^\'\"]*)/;
+
+	# Charge states element list
+	$ChargeStateList = $1 if /NameElement_I\(1:nElement\)\s*=\s*(.*)/;	
     }
     if($Verbose){
 	print "$_ = $Value{$_}\n" foreach (sort keys %Value);
@@ -482,6 +487,9 @@ sub current_settings{
     my $nFluid    = $Value{"nFluid"}   - $Value{"IonFirst_"} + 1;
     my $nNeutralFluid;
     $nNeutralFluid = $nFluid - $Value{"IonLast_"} if $Value{"IonLast_"};
+
+    $Settings .= "Charge states of elements   : $ChargeStateList\n" if
+	$nChargeStateAll;
     
     $Settings .= "Number of state variables   : nVar=$nVar\n";
     $Settings .= "Number of species           : nSpecies=$nSpecies\n" 
@@ -542,6 +550,13 @@ Additional options for BATSRUS/Config.pl:
                 Set the number of material levels to NMATERIAL
                 for the selected EQUATION module.
 
+-cs=ELEMENT_I
+                Set the comma delimited list of element names for charge 
+                state calculation.
+                Only the 30 first elements of the periodic table are possible.
+                Works with equation module AwsomChargeState in IH and SC 
+                components only.
+
 Examples for BATSRUS/Config.pl:
 
 List available options for equations and user modules:
@@ -556,6 +571,10 @@ Select the CRASH equation and user modules and
 set the number of materials to 5 and number of radiation groups to 30:
 
     Config.pl -e=Crash -u=Crash -nMaterial=5 -nWave=30
+
+Set list of elements for charge state calculation
+
+    Config.pl -cs=o,c,fe,mg
 
 Set block size to 8x8x8, number of blocks to 400 and implicit blocks to 100
 and number of ghost cells to 2:
