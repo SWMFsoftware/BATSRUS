@@ -63,6 +63,7 @@ my $Force;
 # Equation and user module variables
 my $Src         = 'src';
 my $SrcUser     = 'srcUser';
+my $SrcUserExtra= 'srcUserExtra';
 my $UserMod     = "$Src/ModUser.f90";
 my $UserModSafe = "$Src/ModUser.f90.safe";
 my $SrcEquation = 'srcEquation';
@@ -411,8 +412,8 @@ sub set_user_module{
 	chdir $SrcUser;
 	@UserModules = glob("*.f90");
 	chdir "..";
-	if($SrcUserExtra){
-	    chdir $$SrcUserExtra;
+	if(-d $SrcUserExtra){
+	    chdir $SrcUserExtra;
 	    push @UserModules, glob("*.f90");
 	    chdir "..";
 	}
@@ -426,7 +427,10 @@ sub set_user_module{
     if($UserModule eq "Default"){
 	$File = "$Src/ModUserDefault.f90";
     }else{
+	# Search in srcUser and srcUserExtra;
 	$File = "$SrcUser/ModUser$UserModule.f90";
+	$File = "$SrcUserExtra/ModUser$UserModule.f90" 
+	    if -d $SrcUserExtra and not -f $File;
     }
     die "$ERROR File $File does not exist!\n" unless -f $File;
     return if -f $UserMod and not `diff $File $UserMod`;
