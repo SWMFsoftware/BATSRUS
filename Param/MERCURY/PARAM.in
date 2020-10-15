@@ -110,7 +110,7 @@ krylov show_pmin
 
 #MINIMUMPRESSURE
 0.000001		pMinDim
-0.000001		PeMin
+0.000001		PeMinDim
 
 #MINIMUMDENSITY
 0.0001			RhoMinDim

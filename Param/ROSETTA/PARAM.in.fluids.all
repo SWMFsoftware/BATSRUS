@@ -150,8 +150,8 @@ T			DoAddRhoU
 
 #GAMMA
 5.0/3.0			Gamma
-8.0/6.0			Gamma_I
-8.0/6.0			Gamma_I
+8.0/6.0			Gamma
+8.0/6.0			Gamma
 5.0/3.0			GammaElectron
 
 #PLASMA

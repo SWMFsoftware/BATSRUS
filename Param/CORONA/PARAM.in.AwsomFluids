@@ -175,7 +175,7 @@ F			UseRhoRatioLimiter
 
 #MINIMUMTEMPERATURE
 5e4			TminDim  [K] for fluid 1
-5e4			TMinDim  [K] for fluid 2
+5e4			TminDim  [K] for fluid 2
 5e4			TeMinDim [K]
 
 #NONCONSERVATIVE
