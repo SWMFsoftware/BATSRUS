@@ -16,17 +16,26 @@ our $Code = "BATSRUS";
 our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments = @ARGV;
 
-my $GITDIR   = "git\@gitlab.umich.edu:swmf_software";
+# Figure out remote git server
+my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS\n//;
+my $umichgitlab = ($remote eq 'git@gitlab.umich.edu:swmf_software');
+
 my $config   = "share/Scripts/Config.pl";
-my $gitclone = "share/Scripts/gitclone -s";
+my $gitclone;
+if($umichgitlab){
+    $gitclone = "share/Scripts/gitclone -s";
+}else{
+    $gitclone = "share/Scripts/githubclone";
+}
 
 # Git clone missing directories as needed. Start with share/ to get $gitclone.
 if (not -f $config and not -f "../../$config"){
-    `git clone $GITDIR/share; $gitclone util`;
+    `git clone $remote/share; $gitclone util`;
 }
 # The component ID is hidden from Rename.pl
-if ($Component eq "G"."M" and not -d "srcBATL"){
-    `$gitclone srcBATL`;
+if ($Component eq "G"."M"){
+    `$gitclone srcBATL` if not -d "srcBATL";
+    #`$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
 }
 
 if(-f $config){
