@@ -34,6 +34,7 @@ if (not -f $config and not -f "../../$config"){
 }
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
+    print "$remote\n";
     print "$gitclone\n";
     `$gitclone srcBATL` if not -d "srcBATL";
     `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
