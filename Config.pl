@@ -30,10 +30,11 @@ if($umichgitlab){
 
 # Git clone missing directories as needed. Start with share/ to get $gitclone.
 if (not -f $config and not -f "../../$config"){
-    `git clone $remote/share; $gitclone util`;
+    `git clone $remote/share; git clone $remote/util`;
 }
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
+    print "$gitclone\n";
     `$gitclone srcBATL` if not -d "srcBATL";
     `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
 }
