@@ -18,7 +18,7 @@ our @Arguments = @ARGV;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS.git\n//;
-my $umichgitlab = (index($remote, "gitlab.umich.edu:swmf_software") != -1);
+my $umichgitlab = (index($remote, "lab.umich.edu/swmf_software") != -1);
 
 my $config   = "share/Scripts/Config.pl";
 my $gitclone;
