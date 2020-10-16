@@ -8874,7 +8874,7 @@ it on because the solution near strong shocks is more reliable.
   <for from="1" to="$nFluid">
     <parameter name="UseConstantTau" type="logical" default="F"/>
     <parameter name="TauInstabilitySi" type="real" default="-1"/>
-    <parameter name="TauGLobalSi" type="real" default="-1"/>
+    <parameter name="TauGlobalSi" type="real" default="-1"/>
   </for>
 
 #ANISOTROPICPRESSURE

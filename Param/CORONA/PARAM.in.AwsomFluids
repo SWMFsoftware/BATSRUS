@@ -70,11 +70,11 @@ ascii			TypeFile
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
--1			TauGLobalSi
-1e5			TauGlobalSi_I
-T			UseConstantTau_I
--1			TauInstabilitySi_I
--1			UseConstantTau_I
+-1			TauInstabilitySi
+1e5			TauGlobalSi
+T			UseConstantTau
+-1			TauInstabilitySi
+-1			TauGlobalSi
 
 #HEATCONDUCTION
 T			UseHeatConduction
