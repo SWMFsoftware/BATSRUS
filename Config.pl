@@ -17,8 +17,10 @@ our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments = @ARGV;
 
 # Figure out remote git server
-my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS.git\n//;
-my $umichgitlab = (index($remote, "lab.umich.edu") != -1);
+my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS(.git)?\n//;
+my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
+
+#print "remote=$remote umichgitlab=$umichgitlab\n";
 
 my $config   = "share/Scripts/Config.pl";
 my $gitclone;
