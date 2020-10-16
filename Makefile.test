@@ -931,14 +931,14 @@ test_outerheliopui:
 	$(MAKE) test_outerheliopui_check
 
 test_outerheliopui_compile:
-	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelioPUI -g=4,4,4
+	./Config.pl ${OPENMP} -u=OuterHelio -e=OuterHelioPUIPe -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
 test_outerheliopui_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.puipe ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_run:
