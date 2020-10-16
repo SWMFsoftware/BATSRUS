@@ -18,7 +18,7 @@ our @Arguments = @ARGV;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/BATSRUS.git\n//;
-my $umichgitlab = ($remote eq "git\@gitlab.umich.edu:swmf_software");
+my $umichgitlab = (index($remote, "gitlab.umich.edu:swmf_software") != -1);
 
 my $config   = "share/Scripts/Config.pl";
 my $gitclone;
@@ -34,8 +34,6 @@ if (not -f $config and not -f "../../$config"){
 }
 # The component ID is hidden from Rename.pl
 if ($Component eq "G"."M"){
-    print "$remote\n";
-    print "$gitclone\n";
     `$gitclone srcBATL` if not -d "srcBATL";
     `$gitclone srcUserExtra` if not -d "srcUserExtra" and $umichgitlab;
 }
