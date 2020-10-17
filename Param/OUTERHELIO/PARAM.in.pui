@@ -9,7 +9,7 @@ T			UseUpdateCheck
 400.			pMaxPercent
 
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+Param/OUTERHELIO/PARAM.in.pui: Outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
 
 #PLANET
 NONE			NamePlanet

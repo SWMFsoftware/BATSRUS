@@ -1,6 +1,9 @@
 #COMPONENT
 OH			NameComp
 
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.pui1d: charge exchange test with 2 ion and 4 neutral fluids		StringDescription
+
 #TIMEACCURATE
 T			IsTimeAccurate
 
