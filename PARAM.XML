@@ -18,6 +18,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="NameComp"          type="string"  value="$_NameComp"                />
 <set name="NameRestartOutDir" type="string"  value="$NameComp/restartOUT"      />
 <set name="NamePlotDir"       type="string"  value="$NameComp/IO2"             />
+<set name="lLine"             type="integer" value="400"                       />
 
 <!-- Initialize MaxBlock to 0 so we can check if it was set or not -->
 <set name="MaxBlock"     type="integer" value="0" />
@@ -60,7 +61,7 @@ so the default components should not be changed by this command.
 </command>
 
 <command name="DESCRIPTION" if="$_IsStandAlone">
-	<parameter name="StringDescription" type="string" length="400" />
+	<parameter name="StringDescription" type="string" length="$lLine" />
 
 #DESCRIPTION
 This is a test run for Jupiter with no rotation.
@@ -521,7 +522,7 @@ Where g and h are the Legendre coefficients in units of nT.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="USERSWITCH" alias="USERSWITCHES">
-  <parameter name="StringSwitch" type="string" length="200" case="lower"/>
+  <parameter name="StringSwitch" type="string" length="$lLine" case="lower"/>
 
 #USERSWITCH
 -all +init +ic -perturb +B0 +source +update +progress     StringSwitch
@@ -590,7 +591,7 @@ call sequence. The NAGFOR compile combined with the -debug flag can do that.
 </command>
 
 <command name="TEST">
-	<parameter name="StringTest" type="string" length="100"/>
+	<parameter name="StringTest" type="string" length="$lLine"/>
 #TEST
 read_inputs
 
@@ -725,7 +726,7 @@ defined in ModMain.f90.
 </command>
 
 <command name="USERMODULE" if="$_IsFirstSession">
-	<parameter name="NameUserModule" type="string" length="100"
+	<parameter name="NameUserModule" type="string" length="$lLine"
 						default="EMPTY" />
 	<parameter name="VersionUserModule" type="real" min="0"
 						default="1.0" />
@@ -744,7 +745,7 @@ module is not checked.
 </command>
 
 <command name="EQUATION" if="$_IsFirstSession">
-	<parameter name="NameEquation" type="string" length="100"
+	<parameter name="NameEquation" type="string" length="$lLine"
 						default="MHD" />
 	<parameter name="nVar" type="integer" default="8" />
 #EQUATION
@@ -759,7 +760,7 @@ and as a description.
 </command>
 
 <command name="RESTARTVARIABLES">
-	 <parameter name="NameRestartVar" type="string" length="200"/>
+	 <parameter name="NameRestartVar" type="string" length="$lLine"/>
 #RESTARTVARIABLES
 Rho Mx My Mz Bx By Bz p           NameRestartVar
 
@@ -792,8 +793,8 @@ The default is to use the same variables and equation modules during restart.
 
 <command name="SPECIFYRESTARTVARMAPPING">
 	 <parameter name="DoSpecifyRestartVarMapping"  type="logical" default="F"/>
-	 <parameter name="NameVarsRestartFrom"         type="string" length="400"/>
-	 <parameter name="NameVarsRestartTo"           type="string" length="400"/>
+	 <parameter name="NameVarsRestartFrom"         type="string" length="$lLine"/>
+	 <parameter name="NameVarsRestartTo"           type="string" length="$lLine"/>
 
 #SPECIFYRESTARTVARMAPPING
 T			DoSpecifyRestartVarMapping
@@ -1021,8 +1022,9 @@ and SOLARWIND for all other components.
 <command name="IOUNITS" if="$_IsFirstSession">
 	<parameter name="TypeIoUnit" type="string" input="select">
 		<option name="SI"/>
-		<option name="PLANETARY"    default="$NameComp eq 'GM'"/>
-		<option name="HELIOSPHERIC" default="$NameComp ne 'GM'"/>
+		<option name="PLANETARY"    default="$NameComp eq 'GM'"    />
+		<option name="OUTERHELIO"   default="$NameComp eq 'OH'"    /> 
+		<option name="HELIOSPHERIC" default="$NameComp !~ /GM|OH/" />
 		<option name="NONE"/>
 		<option name="USER"/>
 	</parameter>
@@ -1075,7 +1077,7 @@ and "HELIOSPHERIC" otherwise (EE, SC, IH or OH).
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
-	<parameter name="NameRestartInDir" type="string" length="100"
+	<parameter name="NameRestartInDir" type="string" length="$lLine"
 				default="GM/restartIN" />
 	<rule expr="-d $NameRestartInDir">
 		Restart input directory $NameRestartInDir must exist!
@@ -1313,7 +1315,7 @@ There are no default values. User must set face boundary type if a box is cut ou
 </command>
 
 <command name="BOUNDARYSTATE" multiple="T">
-	 <parameter name="StringBoundary" type="string" length="400"/>
+	 <parameter name="StringBoundary" type="string" length="$lLine"/>
 	 <parameter name="BoundaryStateDim_V" type="real"/>
 
 #BOUNDARYSTATE
@@ -3191,7 +3193,7 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="RESTARTOUTDIR">
-	<parameter name="NameRestartOutDir" type="string" length="100"
+	<parameter name="NameRestartOutDir" type="string" length="$lLine"
 						default="GM/restartOUT" />
 
 #RESTARTOUTDIR
@@ -3265,7 +3267,7 @@ command from session to session. The default directory name is 'restartOUT'.
 </command>
 
 <command name="PLOTDIR">
-	<parameter name="NamePlotDir" type="string" length="100"
+	<parameter name="NamePlotDir" type="string" length="$lLine"
 				default="GM/IO2" />
 
 The NamePlotDir variable contains the name of the directory
@@ -3315,10 +3317,10 @@ Default value is "GM/IO2".
 								default="1" />
 		<parameter name="DtSaveLogfile" type="real"    min="-1"
 								default="-1" />
-		<parameter name="NameLogVars" type="string" length="400"
+		<parameter name="NameLogVars" type="string" length="$lLine"
 			if="$StringLogVar =~ /var/i" />
 		<parameter name="StringLogRadii" type="strings" min="1" max="10"
-			length="400" if="($StringLogVar=~/flx/i or $NameLogVars=~/flx/i)">
+			length="$lLine" if="($StringLogVar=~/flx/i or $NameLogVars=~/flx/i)">
 			<part name="LogRadii" type="real" min="$rBody"
 								multiple="T"/>
 		</parameter>
@@ -3487,7 +3489,7 @@ The default is DoSaveLogFile false.
 		<parameter name="DtOutput" type="real"    min="-1"
 							default="-1" />
 		<parameter name="NameTrajectoryFile" type="string"
-			length="100" />
+			length="$lLine" />
 		<if expr="$OptionalVar eq 'trajrange'">
 		    <parameter name="StartTimeTraj" type="real" />
 		    <parameter name="EndTimeTraj"   type="real" />
@@ -3496,7 +3498,7 @@ The default is DoSaveLogFile false.
 		<rule expr="-f $NameTrajectoryFile">
 			Trajectory file $NameTrajectoryFile must exist
 		</rule>
-		<parameter name="NameSatelliteVars" type="string" length="100"
+		<parameter name="NameSatelliteVars" type="string" length="$lLine"
 			if="$NameSatelliteVar =~ /\bvar\b/i" />
 	</for>
 #SATELLITE
@@ -3756,7 +3758,7 @@ By default no indices are calculated.
 </command>
 
 <command name="MAGNETOMETER">
-	<parameter name="NameMagInputFile" type="string" length="100"/>
+	<parameter name="NameMagInputFile" type="string" length="$lLine"/>
 	<parameter name="TypeFileOut" type="string" input="select">
 		<option name="single" default="T"/>
 		<option name="step"/>
@@ -3984,7 +3986,7 @@ No magnetometer grid file is saved by default.
       <parameter name="zPoint"  type="real" />
     </if>
     <if expr="$plotarea =~ /\blos\b/ and $plotvar =~ /\bins\b/">
-      <parameter name="StringsInstrument" type="string" length="200"/>
+      <parameter name="StringsInstrument" type="string" length="$lLine"/>
     </if>
     <if expr="$plotarea =~ /\blos\b/ and $plotvar !~ /\bins\b/">
       <parameter name="ObsPosX" type="real" default="-215"/>
@@ -4002,14 +4004,14 @@ No magnetometer grid file is saved by default.
 		 min="0" max="1" default="0.5"/>
       <parameter name="nPix" type="integer" min="2"
 		 default="200"/>
-      <parameter name="NameLosTable" type="string" length="100"
+      <parameter name="NameLosTable" type="string" length="$lLine"
 		 if="$plotvar =~ /tbl/i"/>
     </if>
     <if expr="$plotarea =~ /\brfr\b/">
       <parameter name="ObsPosX" type="real" default="-215"/>
       <parameter name="ObsPosY" type="real" default="0"/>
       <parameter name="ObsPosZ" type="real" default="0"/>
-      <parameter name="StringRadioFrequency" type="string" length="100"/>
+      <parameter name="StringRadioFrequency" type="string" length="$lLine"/>
       <parameter name="xSizeImage" type="real" min="0"
 		 default="32"/>
       <parameter name="ySizeImage" type="real" min="0"
@@ -4088,8 +4090,8 @@ No magnetometer grid file is saved by default.
     <parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	       if="($plotform=~/\bidl/ and $plotarea!~/\b(box|buf|shl|los|rfr|lin|eqr|eqb)\b/)" />
     <if expr="$plotvar =~ /\bvar\b/i">
-      <parameter name="NameVars" type="string" length="400"/>
-      <parameter name="NamePars" type="string" length="400" default="{default}"/>
+      <parameter name="NameVars" type="string" length="$lLine"/>
+      <parameter name="NamePars" type="string" length="$lLine" default="{default}"/>
     </if>
   </for>
 
@@ -5916,7 +5918,7 @@ together.
 <command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION,AMRCRITERIACELLSIZE">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
-	    <parameter name="StringRefine" type="string" length="200" case="lower"/>
+	    <parameter name="StringRefine" type="string" length="$lLine" case="lower"/>
 	    <if expr="$StringRefine=~/^level/">
 	    	<parameter name="RefineTo"    type="integer" min="0" />
 	        <parameter name="CoarsenFrom" type="integer" min="$RefineTo" />
@@ -6232,7 +6234,7 @@ The default is the second order Rusanov scheme with the minmod limiter.
 </command>
 
 <command name="LOWORDERREGION">
-	 <parameter name="StringLowOrderRegion" type="string" length="200"
+	 <parameter name="StringLowOrderRegion" type="string" length="$lLine"
 	 	    default="none"/>
 
 #LOWORDERREGION
@@ -6626,7 +6628,7 @@ The default value is 1, i.e. there is no initial reduction applied.
 </command>
 
 <command name="CONTROLVAR">
-	<parameter name="NameVarControl"  type="string" length="100"
+	<parameter name="NameVarControl"  type="string" length="$lLine"
 			case="lower" default="rho p"/>
 #CONTROLVAR
 rho p			NameVarControl
@@ -7076,7 +7078,7 @@ The default is using 1st order prolongation for the first order scheme
 	<parameter name="UseLogRhoLimiter" type="logical" default="F" />
 	<parameter name="UseLogPLimiter" type="logical" default="F" />
 	<parameter name="UseRhoRatioLimiter" type="logical" default="F" />
-	<parameter name="NameVarLimitRatio" type="string" length="100"
+	<parameter name="NameVarLimitRatio" type="string" length="$lLine"
 		if="$UseScalarRhoLimiter" />
 
 #LIMITER
@@ -7201,7 +7203,7 @@ Default is UseBorisSimple=.false.
 </command>
 
 <command name="BORISREGION">
-  <parameter name="NameBorisRegion" type="string" length="200"
+  <parameter name="NameBorisRegion" type="string" length="$lLine"
 	     default="none"/>
 
 #BORISREGION
@@ -7933,7 +7935,7 @@ The default is DoBalancePicBlock true.
 </command>
 
 <command name="PICREGIONMIN">
-  <parameter name="StringPicRegionMin" type="string" length="200"
+  <parameter name="StringPicRegionMin" type="string" length="$lLine"
 	     default="none"/>
 
 #PICREGIONMIN
@@ -7948,7 +7950,7 @@ domain can be switched off.
 </command>
 
 <command name="PICREGIONMAX">
-  <parameter name="StringPicRegionMax" type="string" length="200"
+  <parameter name="StringPicRegionMax" type="string" length="$lLine"
 	     default="none"/>
 
 #PICREGIONMAX
@@ -7965,7 +7967,7 @@ By default the whole domain covered by PIC grids can become active.
   <parameter name='nPicCriteria' type="integer" default="1"
 	     min="0" max="3" />
   <for from="1" to="$nPicCriteria">
-    <parameter name="StringPicCriteria" type="string" length="200"
+    <parameter name="StringPicCriteria" type="string" length="$lLine"
 	       input="select" >
 		<option name="j/b" default="T"	/>
 		<option name="rho"		/>
@@ -8101,7 +8103,7 @@ This default is backwards compatible with previous versions of the code.
 </command>
 
 <command name="LOOKUPTABLE" multiple="T">
-	<parameter name="NameTable" type="string" length="100"/>
+	<parameter name="NameTable" type="string" length="$lLine"/>
 	<parameter name="NameCommand" type="string" case="lower"
 	    input="select">
 		<option name="load" default="T"/>
@@ -8114,7 +8116,7 @@ This default is backwards compatible with previous versions of the code.
 		<option name="param"/>
 	</parameter>
 	<if expr="$NameCommand =~ /load|save|use/">
-		<parameter name="NameFile" type="string" length="100"/>
+		<parameter name="NameFile" type="string" length="$lLine"/>
 		<parameter name="TypeFile" type="string" input="select">
 			<option name="real8"  default="T"/>
 			<option name="real4"/>
@@ -8122,15 +8124,15 @@ This default is backwards compatible with previous versions of the code.
 		</parameter>
 	</if>
 	<if expr="$NameCommand =~ /param/">
-	        <parameter name="NameTableParam" type="string" length="100"/>
+	        <parameter name="NameTableParam" type="string" length="$lLine"/>
 		<for from="1" to="count_split($NameTableParam)">
 		     <parameter name="TableParam" type="real"/>
 		</for>
 	</if>
 	<if expr="$NameCommand =~ /make|save|use/">
 		<parameter name="StringDescription" type="string"
-							  length="100"/>
-		<parameter name="NameVar"   type="string" length="100"/>
+							  length="$lLine"/>
+		<parameter name="NameVar"   type="string" length="$lLine"/>
 		<parameter name="nIndex"    type="integer" min="1"/>
 		<for from="1" to="$nIndex">
 			<parameter name="nIndex_I" type="integer" min="2"/>
@@ -8282,7 +8284,7 @@ The default values are all 0.0-s.
 	<parameter name="UseSolarWindFile" type="logical" default="F"/>
 	<if expr="$UseSolarWindFile">
 		<parameter name="NameSolarWindFile" type="string"
-			length="100"/>
+			length="$lLine"/>
 	</if>
 	<rule expr="-f $NameSolarWindFile">
 		Solar wind file $NameSolarWindFile must exist
@@ -8553,7 +8555,7 @@ Default is no viscosity.
 </command>
 
 <command name="VISCOSITYREGION">
-	 <parameter name="StringViscoRegion" type="string" length="200"
+	 <parameter name="StringViscoRegion" type="string" length="$lLine"
 	 	    default="none"/>
 
 #VISCOSITYREGION
@@ -8664,7 +8666,7 @@ The defaults are true for all three logicals.
 </command>
 
 <command name="RESISTIVEREGION" alias="RESISTIVITYREGION">
-	 <parameter name="StringResistRegion" type="string" length="200"
+	 <parameter name="StringResistRegion" type="string" length="$lLine"
 	 	    default="none"/>
 
 #RESISTIVEREGION
@@ -8720,7 +8722,7 @@ Default is UseHallResist false.
 </command>
 
 <command name="HALLREGION">
-	 <parameter name="StringHallRegion" type="string" length="200"
+	 <parameter name="StringHallRegion" type="string" length="$lLine"
 	 	    default="none"/>
 
 #HALLREGION
@@ -9338,7 +9340,7 @@ Default is no dipole field for the second body.
 		<parameter name="HeightInnerBc" type="real"
 						default="0.0" />
 		<parameter name="NameHarmonicsFile" type="string"
-						length="100" />
+						length="$lLine" />
 		<parameter name="nHeaderLine" type="integer" min="0"
 						default="12" />
 		<parameter name="PhiShift" type="real"
@@ -9389,7 +9391,7 @@ Default is UseMagnetogram=F.
 	<if expr="$UseLdem">
 
 		<parameter name="NameLdemFile" type="string"
-						length="100" />
+						length="$lLine" />
 		<parameter name="iRadiusLdem" type="integer" min="0"
 						default="12" />
 	</if>
@@ -10074,7 +10076,7 @@ Based on values of SpaceStepMin and SpaceStepMax space step may be
 !!!!!!!!!!!!!!! SCRIPT COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="INCLUDE">
-	<parameter name="NameIncludeFile" type="string" length="100"
+	<parameter name="NameIncludeFile" type="string" length="$lLine"
 		default="Param/" />
 
 #INCLUDE
