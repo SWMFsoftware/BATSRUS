@@ -938,7 +938,7 @@ test_outerheliopui_compile:
 test_outerheliopui_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.puipe ./PARAM.in
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_run:
