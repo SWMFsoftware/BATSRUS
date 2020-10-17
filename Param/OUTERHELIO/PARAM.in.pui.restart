@@ -1,0 +1,174 @@
+#INCLUDE
+restartIN/restart.H
+
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.pui.restart: Restart outer heliosphere with 2 ion and 4 neutral fluids		StringDescription
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.6			CflExpl
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+fluid mach		NameVars
+rbody			NamePars
+z=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+#MULTIIONSTATE
+T			UseSingleIonVelocity
+F			UseSingleIonTemperature
+
+#MULTIION
+1e-10			LowDensityRatio
+1e-10			LowPressureRatio
+F			DoRestrictMultiIon
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNe2Factor
+0.2			uNe2Factor
+1.E-2			RhoNe3Factor
+1.0			uNe3Factor
+1.E-3			RhoNe4Factor
+0.1			uNe4Factor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.3			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERSWITCH
++init +source_expl +perturb +progress		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+! This is same as rbody in #BODY
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+2.0E4			SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+2.0E4			SWH_Te_dim [K]
+
+#PICKUPION3
+9.45E-4			PU3_rho_dim [n/cc]
+8.20E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.3			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.4111			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+6519.0			VLISW_Te_dim [K]
+
+#REGIONS
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+1.0			MachPop4Limit
+0.9			MachPUIPop3
+1.2			MachSWPop1
+
+#SOURCES
+T			UseSourceSWH
+T 			UseSourcePu3
+T 			UseSourceNeu
+T 			UseSourceNe2
+T 			UseSourceNe3
+T 			UseSourceNe4
+
+#USERINPUTEND -------------------------------------
+
+#STOP
+25			MaxIteration
+-1.0			tSimulationMax
+
+

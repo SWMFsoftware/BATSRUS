@@ -142,7 +142,7 @@ box			StringShape
 user			TypeBcBody
 
 #OUTERBOUNDARY
-user			TypeBc1 user
+user			TypeBc1
 outflow			TypeBc2
 outflow			TypeBc3
 outflow			TypeBc4
@@ -178,9 +178,6 @@ RAW			StringLog
 10			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-F			DoSaveInitial
-
 #SAVEPLOT
 3			nPlotFile
 y=0 MHD idl		StringPlot
@@ -206,10 +203,6 @@ F			UseSingleIonTemperature
 1e-10			LowDensityRatio
 1e-10			LowPressureRatio
 F			DoRestrictMultiIon
-
-#MHDIONS
-T			DoAddRho
-T			DoAddRhoU
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -303,6 +296,8 @@ minmod			TypeLimiter
 50			MaxIteration
 -1.0			tSimulationMax
 
+#END
+
 #RUN ##########################################################################
 
 #TIMESTEPPING
@@ -339,4 +334,3 @@ T			UseSourceNe4
 75			MaxIteration
 -1.0			tSimulationMax
 
-#END

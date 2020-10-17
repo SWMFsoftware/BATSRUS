@@ -942,8 +942,13 @@ test_outerheliopui_rundir:
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerheliopui_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog_start
+	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui.restart ./PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS/
 
 test_outerheliopui_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
