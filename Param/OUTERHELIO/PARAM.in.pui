@@ -248,6 +248,7 @@ T			UseOhNeutralBc
 7.17E-03		SWH_Bx_dim [nT]
 0.0			SWH_By_dim [nT]
 0.0			SWH_Bz_dim [nT]
+2.0E4			SWH_Te_dim [K]
 
 #PICKUPION3
 9.45E-4			PU3_rho_dim [n/cc]
@@ -265,6 +266,7 @@ T			UseOhNeutralBc
 0.4111			VLISW_Bx_dim
 -0.0748			VLISW_By_dim
 -0.1296			VLISW_Bz_dim
+6519.0			VLISW_Te_dim [K]
 
 #REGIONS
 6.E5			TempPop1LimitDim
