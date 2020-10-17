@@ -1,0 +1,153 @@
+#INCLUDE
+restartIN/restart.H
+
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#TIMEACCURATE
+F  			IsTimeAccurate
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#SCHEME
+2			nOrder
+Roe			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+fluid mach		NameVars
+rbody			NamePars
+z=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNe2Factor
+0.2			uNe2Factor
+1.E-2			RhoNe3Factor
+1.0			uNe3Factor
+1.E-3			RhoNe4Factor
+0.1			uNe4Factor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.0			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERSWITCH
++init +source_expl +perturb +progress		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#SOLARWINDH
+0.00874			SWH_N_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+
+#VLISW
+0.06			VLISW_N_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.0			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.3093			VLISW_Bx_dim
+-0.080			VLISW_By_dim
+-0.2988			VLISW_Bz_dim
+
+#REGIONS
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+0.5			MachPop4Limit
+
+#SOURCES
+T			UseIonSource
+T			UseNeuSource
+T			UseNe2Source
+T			UseNe3Source
+T			UseNe4Source
+
+#USERINPUTEND -------------------------------------
+
+#STOP
+50			MaxIteration
+-1.0			tSimulationMax
+
+#END
