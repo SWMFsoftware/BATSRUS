@@ -201,7 +201,6 @@ allclean:
 	cd srcBATL; $(MAKE) distclean
 	cd srcInterface; $(MAKE) distclean
 	cd srcPostProc;  $(MAKE) distclean
-	cd srcTest; $(MAKE) distclean
 	@				#^CFG IF DOC BEGIN
 	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
 	cd Doc/Tex; $(MAKE) clean ${CLEAN1}
