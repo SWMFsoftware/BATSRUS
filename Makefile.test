@@ -824,7 +824,7 @@ test_chromo:
 
 # Fails on Pleiades with OpenMP
 test_chromo_compile:
-	./Config.pl -noopenmp -u=ScChromo -e=MhdWaves -g=6,4,4
+	./Config.pl -noopenmp -u=AwsomR -e=MhdWaves -g=6,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
