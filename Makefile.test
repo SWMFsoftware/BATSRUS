@@ -2046,6 +2046,6 @@ test_spectrum:
 
 test_spectrum2:
 	./Config.pl -nohypre -noamrex -nohdf5 -nospice -noopenmp -mpi
-	./Config.pl -e=MhdWavesPe -u=AwsomFluids -g=6,8,8 -ng=2
-	$(MAKE) BATSRUS	 
+	./Config.pl -e=Awsom -u=AwsomFluids -g=6,8,8 -ng=2
+	$(MAKE) BATSRUS
 	cd srcPostProc; $(MAKE) test_spectrum2
