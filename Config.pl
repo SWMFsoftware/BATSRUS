@@ -333,7 +333,7 @@ sub set_charge_state{
     
     # Separate input into array
     my @ChargeStateIn;
-    @ChargeStateIn = split(',',$ChargeState);
+    @ChargeStateIn = split('\+',$ChargeState);
 
     # Get valid element names in correct order
     my @Intersection = ();
@@ -572,7 +572,7 @@ Additional options for BATSRUS/Config.pl:
                 for the selected EQUATION module.
 
 -cs=ELEMENT_I
-                Set the comma delimited list of element names for charge 
+                Set the + delimited list of element names for charge 
                 state calculation.
                 Only the 30 first elements of the periodic table are possible.
                 Works with equation module AwsomChargeState in IH and SC 
@@ -595,7 +595,7 @@ set the number of materials to 5 and number of radiation groups to 30:
 
 Set list of elements for charge state calculation
 
-    Config.pl -cs=o,c,fe,mg
+    Config.pl -cs=o+c+fe+mg
 
 Set block size to 8x8x8, number of blocks to 400 and implicit blocks to 100
 and number of ghost cells to 2:
