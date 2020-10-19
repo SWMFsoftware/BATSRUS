@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -8,28 +8,26 @@ module ModVarIndexes
        Redefine1 => nWave, &
        Redefine2 => WaveFirst_, &
        Redefine3 => WaveLast_, &
-       Redefine4 => Ppar_, &
-       Redefine5 => iPparIon_I, &
-       Redefine6 => Pe_, &
-       Redefine7 => Ehot_
+       Redefine4 => Erad_, &
+       Redefine5 => Pe_, &
+       Redefine6 => Ehot_
 
   implicit none
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesPeAnisoPi.f90"
-
+  character (len=*), parameter :: NameEquationFile = "ModEquationAwsom.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + isotropic Pe + anistropic Pi'
+       NameEquation='MHD + Alfven waves + electron pressure'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
-  integer, parameter :: nVar = 11 + nWave
+  integer, parameter :: nVar = 10 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -46,10 +44,12 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
-       Pe_        = nVar-2,             &
-       Ppar_      = nVar-1,             &
+       Pe_        = nVar-1,             &
        p_         = nVar,               &
        Energy_    = nVar+1
+
+  ! This is for backward compatibility with single group radiation
+  integer, parameter :: Erad_ = WaveFirst_
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -60,8 +60,6 @@ module ModVarIndexes
   integer, parameter :: iRhoUy_I(nFluid) = [RhoUy_]
   integer, parameter :: iRhoUz_I(nFluid) = [RhoUz_]
   integer, parameter :: iP_I(nFluid)     = [p_]
-
-  integer, parameter :: iPparIon_I(1) = Ppar_
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -77,7 +75,6 @@ module ModVarIndexes
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Pe_
-       1.0, & ! Ppar_
        1.0, & ! p_
        1.0 ] ! Energy_
 
@@ -93,7 +90,6 @@ module ModVarIndexes
        'Ehot', & ! Ehot_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
        'Pe  ', & ! Pe_
-       'Ppar', & ! Ppar_
        'p   ', & ! p_
        'e   ' ] ! Energy_
 
