@@ -8,72 +8,7 @@ BLESS=NO
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-.NOTPARALLEL: test
-
-test: 
-	@rm -f *.diff
-	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
-	-@($(MAKE) test_spectrum2)
-	-@($(MAKE) test_spectrum)
-	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
-	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
-	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
-	./Config.pl -ng=2
-	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
-	-@($(MAKE) test_hallmhd TESTDIR=run_test_hallmhd)
-	-@($(MAKE) test_twofluidmhd TESTDIR=run_test_twofluidmhd)
-	-@($(MAKE) test_multifluid TESTDIR=run_test_multifluid)
-	-@($(MAKE) test_multiion TESTDIR=run_test_multiion)
-	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
-	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
-	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
-	./Config.pl -nohdf5
-	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
-	./Config.pl -nohypre
-	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
-	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
-	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
-	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
-	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
-	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
-	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
-	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
-	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
-	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
-	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
-	-@($(MAKE) test_titan TESTDIR=run_test_titan)
-	-@($(MAKE) test_mars TESTDIR=run_test_mars)
-	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
-	-@($(MAKE) test_venus TESTDIR=run_test_venus)
-	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
-	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
-	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
-	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
-	-@($(MAKE) test_comet TESTDIR=run_test_comet)
-	-@($(MAKE) test_cometfluids TESTDIR=run_test_cometfluids)
-	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
-	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
-	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
-	-@($(MAKE) test_europa3fluidspe TESTDIR=run_test_europa3fluidspe)
-	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
-	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
-	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
-	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment_alfven)
-	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment_shock)
-	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment_langmuir)
-	-@($(MAKE) test_func TESTDIR=run_test_func)
-	./Config.pl -noopenmp
-	@ls -l *.diff
-
-# !!! NOTE: In the above list "test_func" should be the last test
-
-# All tests are done in this directory:
-TESTDIR = run_test
-
-# Reference solution is put into this directory when needed:
-REFDIR = run_test_ref
-
-OPENMP = -openmp
+.NOTPARALLEL: test test_extra
 
 test_help:
 	@echo "    test                       (run tests with ${OMPIRUN})"
@@ -89,11 +24,37 @@ test_help:
 	@echo "    test_amr_check             (check test_amr results against reference)"
 	@echo "    test_amr_check BLESS=YES   (update test_amr reference solutions)"
 	@echo "    test_amr TESTDIR=run_amr   (run AMR test in run_amr directory)"
+	@echo ""
+	@echo "    test_2bodyplot             (run 2 Body Plot test)"  
+	@echo "    test_amr                   (run Cartesian AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
+	@echo "    test_chromo                (run Chromo - Solar Corona test)"
+	@echo "    test_earthsph              (run spherical Earth test)"
+	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
+	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
+	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
+	@echo "    test_func                  (run functionality tests)"
+	@echo "    test_hallmhd               (run Hall MHD test)"
+	@echo "    test_L1toBC                (run L1 to BC propagation test)"
+	@echo "    test_magnetometer          (run magnetometer test)"
+	@echo "    test_mhdions               (run MHD with ions test)"
+	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
+	@echo "    test_multifluid            (run multi-fluid test)"
+	@echo "    test_multiion              (run multi-ion test)"
+	@echo "    test_partsteady            (run part steady test)"
+	@echo "    test_region2d              (run 2D BATL region test)"
+	@echo "    test_shockramp             (run shockramp test)"
+	@echo "    test_shocktube             (run shocktube test)"
+	@echo "    test_spectrum              (run spectrum post-processing test)"
+	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
+	@echo "    test_twofluidmhd           (run two-fluid test)"
+	@echo "    test_viscosity             (run viscosity test)"
+	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra_help; fi)
+
+test_extra_help:
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_awsomchargestate      (run corona with charge state test)"
-	@echo "    test_2bodyplot             (run 2 Body Plot test)"  
 	@echo "    test_comet                 (run comet test)"
 	@echo "    test_cometfluids           (run 3-fluid+Pe comet test)"
 	@echo "    test_cometfluids_start     (run first 3-fluid+Pe comet test)" 
@@ -101,21 +62,15 @@ test_help:
 	@echo "    test_cometCGhd             (run comet CG hd test)"
 	@echo "    test_cometCGfluids         (run comet CG fluids test)"
 	@echo "    test_coronasph             (run spherical corona test)"
-	@echo "    test_chromo                (run Chromo - Solar Corona test)"
-	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
 	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
-	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
-	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
-	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
-	@echo "    test_func                  (run functionality tests)"
+	@echo "    test_titan                 (run Titan tests)"
+	@echo "    test_titan_start           (run first Titan test)"
+	@echo "    test_titan_restart         (run titan restart test)"
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
-	@echo "    test_hallmhd               (run Hall MHD test)"
-	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_laserpackage          (run CRASH laser package test)"
-	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
 	@echo "    test_mars_start            (run first mars test)"
 	@echo "    test_mars_restart          (run mars restart test)"
@@ -124,28 +79,81 @@ test_help:
 	@echo "    test_marsfluids            (run marsfluids tests)"
 	@echo "    test_marsfluids_start      (run first marsfluids test)"
 	@echo "    test_marsfluids_restart    (run marsfluids restart test)"
-	@echo "    test_mhdions               (run MHD with ions test)"
-	@echo "    test_mhdnoncons            (run non-conservative MHD test)"
-	@echo "    test_multifluid            (run multi-fluid test)"
-	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_outerhelio2d          (run 2D Outer Heliosphere test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_outerheliopui_1d      (run 1D Outer Heliosphere w/ PUIs test)"
-	@echo "    test_partsteady            (run part steady test)"
-	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_jupiter               (run Jupiter test)"
-	@echo "    test_shocktube             (run shocktube test)"
-	@echo "    test_shockramp             (run shockramp test)"
-	@echo "    test_spectrum              (run spectrum post-processing test)"
-	@echo "    test_spectrum2             (run spectrum2 post-processing test)"		
-	@echo "    test_titan                 (run Titan tests)"
-	@echo "    test_titan_start           (run first Titan test)"
-	@echo "    test_titan_restart         (run titan restart test)"
-	@echo "    test_twofluidmhd           (run two-fluid test)"
-	@echo "    test_viscosity             (run viscosity test)"
 	@echo "    test_venus                 (run Venus test)"
+
+test: 
+	@rm -f *.diff
+	-@($(MAKE) test_spectrum2)
+	-@($(MAKE) test_spectrum)
+	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
+	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
+	./Config.pl -ng=2
+	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
+	-@($(MAKE) test_hallmhd TESTDIR=run_test_hallmhd)
+	-@($(MAKE) test_twofluidmhd TESTDIR=run_test_twofluidmhd)
+	-@($(MAKE) test_multifluid TESTDIR=run_test_multifluid)
+	-@($(MAKE) test_multiion TESTDIR=run_test_multiion)
+	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
+	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
+	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
+	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
+	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
+	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
+	-@($(MAKE) test_magnetometer TESTDIR=run_test_magnetometer)
+	-@($(MAKE) test_anisotropic TESTDIR=run_test_anisotropic)
+	-@($(MAKE) test_region2d TESTDIR=run_test_region2d)
+	-@($(MAKE) test_fivemoment_alfven TESTDIR=run_test_fivemoment_alfven)
+	-@($(MAKE) test_fivemoment_shock TESTDIR=run_test_fivemoment_shock)
+	-@($(MAKE) test_fivemoment_langmuir TESTDIR=run_test_fivemoment_langmuir)
+	-@($(MAKE) test_func TESTDIR=run_test_func)
+	-@(if [ -d srcUserExtra ]; then ${MAKE} test_extra; fi)
+	./Config.pl -noopenmp
+	@ls -l *.diff
+
+test_extra:
+	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
+	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
+	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
+	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
+	./Config.pl -nohdf5
+	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
+	./Config.pl -nohypre
+	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
+	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
+	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
+	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
+	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
+	-@($(MAKE) test_outerheliopui_1d TESTDIR=run_test_outerheliopui_1d)
+	-@($(MAKE) test_titan TESTDIR=run_test_titan)
+	-@($(MAKE) test_mars TESTDIR=run_test_mars)
+	-@($(MAKE) test_marsfluids TESTDIR=run_test_marsfluids)
+	-@($(MAKE) test_venus TESTDIR=run_test_venus)
+	-@($(MAKE) test_mercurysph TESTDIR=run_test_mercurysph)
+	-@($(MAKE) test_ganymede TESTDIR=run_test_ganymede)
+	-@($(MAKE) test_saturn TESTDIR=run_test_saturn)
+	-@($(MAKE) test_jupiter TESTDIR=run_test_jupiter)
+	-@($(MAKE) test_comet TESTDIR=run_test_comet)
+	-@($(MAKE) test_cometfluids TESTDIR=run_test_cometfluids)
+	-@($(MAKE) test_cometCGhd TESTDIR=run_test_cometCGhd)
+	-@($(MAKE) test_cometCGfluids TESTDIR=run_test_cometCGfluids)
+	-@($(MAKE) test_europa2fluidspe TESTDIR=run_test_europa2fluidspe)
+	-@($(MAKE) test_europa3fluidspe TESTDIR=run_test_europa3fluidspe)
+
+# !!! NOTE: In the above list "test_func" should be the last test
+
+# All tests are done in this directory:
+TESTDIR = run_test
+
+# Reference solution is put into this directory when needed:
+REFDIR = run_test_ref
+
+OPENMP = -openmp
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -2046,6 +2054,6 @@ test_spectrum:
 
 test_spectrum2:
 	./Config.pl -nohypre -noamrex -nohdf5 -nospice -noopenmp -mpi
-	./Config.pl -e=Awsom -u=AwsomFluids -g=6,8,8 -ng=2
+	./Config.pl -e=Awsom -u=Awsom -g=6,8,8 -ng=2
 	$(MAKE) BATSRUS
 	cd srcPostProc; $(MAKE) test_spectrum2
