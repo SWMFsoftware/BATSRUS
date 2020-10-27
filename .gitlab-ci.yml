@@ -61,6 +61,8 @@ stable:
   variables:
     DEV_BRANCH: feature-stable-pipeline
   before_script:
+    - git config --global user.name "${GITLAB_USER_NAME}"
+    - git config --global user.email "${GITLAB_USER_EMAIL}"
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
     - apt-get update -y && apt-get install --yes git
   rules:
