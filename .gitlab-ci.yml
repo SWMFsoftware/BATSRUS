@@ -61,6 +61,7 @@ stable:
   variables:
     DEV_BRANCH: feature-stable-pipeline
   before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
     - apt-get update -y && apt-get install --yes git
   rules:
     - if: '$CI_COMMIT_BRANCH == "$DEV_BRANCH"'
@@ -74,6 +75,8 @@ stable:
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
     - git fetch origin stable --depth=1
-    - git checkout stable && git merge $DEV_BRANCH && git push origin stable
+    - git checkout stable 
+    - git merge origin/$DEV_BRANCH
+    - git push origin stable
 
 # vim: softtabstop=2 shiftwidth=2
