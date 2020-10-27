@@ -54,3 +54,26 @@ performance:
    - make -j test_hallmhd NP=1
   rules:
     - allow_failure: true
+
+merge-stable:
+  stage: deploy
+  variables:
+    PROJECT_PATH: https://gitlab.umich.edu/swmf_software/BATSRUS
+  before_script:
+    - apt-get install --yes curl
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature-two-branch-pipeline"'
+    - when: on_success
+    - allow_failure: false
+  script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY_CI" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - git clone --depth 1 git@gitlab.umich.edu:swmf_software/BATSRUS.git
+    - cd BATSRUS
+    - git checkout stable && git merge master && git push origin stable
+
+# vim: softtabstop=2 shiftwidth=2
