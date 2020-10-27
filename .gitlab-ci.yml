@@ -59,7 +59,7 @@ performance:
 stable:
   stage: merge
   variables:
-    - DEV_BRANCH=feature-stable-pipeline
+    DEV_BRANCH: feature-stable-pipeline
   before_script:
     - apt-get update -y && apt-get install --yes git
   rules:
