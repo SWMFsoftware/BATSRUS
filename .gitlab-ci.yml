@@ -65,17 +65,22 @@ stable:
     - apt-get update -y && apt-get install --yes git
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git config --global user.email "${GITLAB_USER_EMAIL}"
+    # change remote to ssh url
+    - gitlab_hostname=$(echo "${CI_REPOSITORY_URL}" | sed -e 's|https\?://gitlab-ci-token:.*@||g' | sed -e 's|/.*||g')
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY_CI" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan "${gitlab_hostname}" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
   rules:
     - if: '$CI_COMMIT_BRANCH == "$DEV_BRANCH"'
     - when: on_success
     - allow_failure: false
   script:
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY_CI" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+    # change remote to ssh url
+    - hostname=$(echo "${CI_REPOSITORY_URL}" | sed -e 's|https\?://gitlab-ci-token:.*@||g' | sed -e 's|/.*||g')
+    - git remote set-url --push origin "${hostname}"
     - git fetch origin stable --depth=1
     - git checkout stable 
     - git merge origin/$DEV_BRANCH
