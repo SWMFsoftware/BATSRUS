@@ -59,7 +59,7 @@ performance:
 stable:
   stage: merge
   variables:
-    DEV_BRANCH: feature-stable-pipeline
+    DEV_BRANCH: master
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
     - apt-get update -y && apt-get install --yes git
