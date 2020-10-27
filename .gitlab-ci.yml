@@ -57,13 +57,13 @@ performance:
     - allow_failure: true
 
 merge:
-  stage: merge
+  stage: stable
   variables:
-    PROJECT_PATH: https://gitlab.umich.edu/swmf_software/BATSRUS
+    - DEV_BRANCH=feature-stable-pipeline
   before_script:
-    - apt-get install --yes curl
+    - apt-get update -y && apt-get install --yes git
   rules:
-    - if: '$CI_COMMIT_BRANCH == "feature-stable-pipeline"'
+    - if: '$CI_COMMIT_BRANCH == "$DEV_BRANCH"'
     - when: on_success
     - allow_failure: false
   script:
@@ -73,8 +73,7 @@ merge:
     - chmod 700 ~/.ssh
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - git clone --depth 1 git@gitlab.umich.edu:swmf_software/BATSRUS.git
-    - cd BATSRUS
-    - git checkout stable && git merge master && git push origin stable
+    - git fetch origin stable --depth=1
+    - git checkout stable && git merge $DEV_BRANCH && git push origin stable
 
 # vim: softtabstop=2 shiftwidth=2
