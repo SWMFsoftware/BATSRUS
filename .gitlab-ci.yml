@@ -56,8 +56,8 @@ performance:
   rules:
     - allow_failure: true
 
-merge:
-  stage: stable
+stable:
+  stage: merge
   variables:
     - DEV_BRANCH=feature-stable-pipeline
   before_script:
