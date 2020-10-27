@@ -55,7 +55,7 @@ performance:
   rules:
     - allow_failure: true
 
-merge-stable:
+.post:
   stage: deploy
   variables:
     PROJECT_PATH: https://gitlab.umich.edu/swmf_software/BATSRUS
