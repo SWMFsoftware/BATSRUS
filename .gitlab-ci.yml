@@ -80,9 +80,10 @@ stable:
     - ssh-keyscan "${gitlab_hostname}" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   rules:
-    - when: never
     - if: '$CI_COMMIT_BRANCH == "$SOURCE_BRANCH" && $CI_PIPELINE_SOURCE == "push"'
       when: on_success
+    - if: '$CI_COMMIT_BRANCH == "$TARGET_BRANCH" && $CI_PIPELINE_SOURCE == "push"'
+      when: never
     - allow_failure: false
   script:
     # change remote to ssh url
