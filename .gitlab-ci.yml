@@ -57,6 +57,9 @@ performance:
   rules:
     - allow_failure: true
 
+# You must create deploy keys in order for this to work.
+# If the TARGET_BRANCH is protected the person who *created*
+# the deploy keys must have permissions to write.
 stable:
   stage: merge
   # Config the branches you want to merge
@@ -77,9 +80,9 @@ stable:
     - ssh-keyscan "${gitlab_hostname}" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   rules:
-    - if: '$CI_COMMIT_BRANCH == "$SOURCE_BRANCH"'
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - when: on_success
+    - when: never
+    - if: '$CI_COMMIT_BRANCH == "$SOURCE_BRANCH" && $CI_PIPELINE_SOURCE == "push"'
+      when: on_success
     - allow_failure: false
   script:
     # change remote to ssh url
