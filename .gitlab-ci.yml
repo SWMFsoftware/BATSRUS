@@ -80,10 +80,10 @@ stable:
     - ssh-keyscan "${gitlab_hostname}" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   rules:
-    - if: '$CI_COMMIT_BRANCH == "$SOURCE_BRANCH"'
+    - when: never
+    - if: '$CI_COMMIT_BRANCH == $SOURCE_BRANCH'
       when: on_success
       allow_failure: false
-    - when: never
   script:
     # change remote to ssh url
     - url_host=$(echo "${CI_REPOSITORY_URL}" | sed -e 's|https\?://gitlab-ci-token:.*@|ssh://git@|g')
