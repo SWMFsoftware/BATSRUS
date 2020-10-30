@@ -36,25 +36,25 @@ SAVEPLOTALL
 1.0			ElectronTemperatureRatio
 
 #UNIFORMSTATE
-1.0			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.04			By
-0.0			Bz
-0.0			Ex
-0.0			Ey
-0.0			Ez
-0.0			HypE
-4.5e-4/2		Ppar
-4.5e-4/2		P
-1.0/1000		ElRho
-0.0			ElUx
-0.0			ElUy
-0.0			ElUz
-4.5e-4/2		ElPpar
-4.5e-4/2		ElP
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.04			StateVar By
+0.0			StateVar Bz
+0.0			StateVar Ex
+0.0			StateVar Ey
+0.0			StateVar Ez
+0.0			StateVar HypE
+4.5e-4/2		StateVar Ppar
+4.5e-4/2		StateVar P
+1.0/1000		StateVar ElRho
+0.0			StateVar ElUx
+0.0			StateVar ElUy
+0.0			StateVar ElUz
+4.5e-4/2		StateVar ElPpar
+4.5e-4/2		StateVar ElP
 
 #SHOCKPOSITION
 0.0			ShockPosition

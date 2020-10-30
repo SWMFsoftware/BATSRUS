@@ -35,24 +35,24 @@ T			IsTimeAccurate
 0.0			ShockSlope
 
 #SHOCKTUBE
-100.			Rho (left state)
-0.0			Ux 
-0.0			Uy
-0.0			Uz
-1.0			Be
-0.0			Xe
-0.0			Pl
-0.0			EInt
-2.0e+9			p
-1.0			Rho (right state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Be
-1.0			Xe
-0.0			Pl
-0.0			EInt
-2.0e+4			p
+100.			LeftState Rho
+0.0			LeftState Ux 
+0.0			LeftState Uy
+0.0			LeftState Uz
+1.0			LeftState Be
+0.0			LeftState Xe
+0.0			LeftState Pl
+0.0			LeftState EInt
+2.0e+9			LeftState p
+1.0			RightState Rho
+0.0			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+0.0			RightState Be
+1.0			RightState Xe
+0.0			RightState Pl
+0.0			RightState EInt
+2.0e+4			RightState p
 
 #NONCONSERVATIVE
 F			UseNonConservative

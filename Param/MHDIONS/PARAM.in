@@ -38,42 +38,42 @@ Distance units are in km
 
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
-5.0			Rho  (left state)
-400.			Ux
-0.			Uy
-0.			Uz
-0.0			Bx
-0.0			By
-5.0			Bz
-0.01			p
-4.0			HpRho
-400.0			HpUx
-0.			HpUy
-0.			HpUz
-0.0064			HpP
-1.0			OpRho
-400.0			OpUx
-0.			OpUy
-0.			OpUz
-0.0016			OpP
-18.0			Rho (right state)
-100.0			Ux
-0.			Uy
-0.			Uz
-0.0			Bx
-0.0			By
-18.0			Bz
-1.0			P
-14.4			HpRho
-100.0			HpUx
-0.			HpUy
-0.			HpUz
-0.64			HpP
-3.6			OpRho
-100.0			OpUx
-0.			OpUy
-0.			OpUz
-0.16			OpP
+5.0			LeftState Rho
+400.			LeftState Ux
+0.			LeftState Uy
+0.			LeftState Uz
+0.0			LeftState Bx
+0.0			LeftState By
+5.0			LeftState Bz
+0.01			LeftState p
+4.0			LeftState HpRho
+400.0			LeftState HpUx
+0.			LeftState HpUy
+0.			LeftState HpUz
+0.0064			LeftState HpP
+1.0			LeftState OpRho
+400.0			LeftState OpUx
+0.			LeftState OpUy
+0.			LeftState OpUz
+0.0016			LeftState OpP
+18.0			RightState Rho
+100.0			RightState Ux
+0.			RightState Uy
+0.			RightState Uz
+0.0			RightState Bx
+0.0			RightState By
+18.0			RightState Bz
+1.0			RightState P
+14.4			RightState HpRho
+100.0			RightState HpUx
+0.			RightState HpUy
+0.			RightState HpUz
+0.64			RightState HpP
+3.6			RightState OpRho
+100.0			RightState OpUx
+0.			RightState OpUy
+0.			RightState OpUz
+0.16			RightState OpP
 
 #PLASMA
 1.0			FluidMass H+

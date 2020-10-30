@@ -44,44 +44,44 @@ NONE			TypeNormalization
 1.0			ElectronTemperatureRatio
 
 #SHOCKTUBE
-1.0			Rho Left
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.75e-2			Bx
-1.0e-2			By
-0.0			Bz
-0.0			Ex
-0.0			Ey
-0.0			Ez
-0.0			HypE
-0.5e-4			Ppar
-0.5e-4			P
-1.0/100.0		eRho
-0.0			eUx
-0.0			eUy
-0.0			eUz
-0.5e-4			ePpar
-0.5e-4			eP
-0.125			Rho  Right
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.75e-2			Bx
--1.0e-2			By
-0.0			Bz
-0.0			Ex
-0.0			Ey
-0.0			Ez
-0.0			HypE
-0.05e-4			Ppar
-0.05e-4			P
-0.125/100.0		eRho
-0.0			eUx
-0.0			eUy
-0.0			eUz
-0.05e-4			ePpar
-0.05e-4			eP
+1.0			LeftState Rho
+0.0			LeftState Ux
+0.0			LeftState Uy
+0.0			LeftState Uz
+0.75e-2			LeftState Bx
+1.0e-2			LeftState By
+0.0			LeftState Bz
+0.0			LeftState Ex
+0.0			LeftState Ey
+0.0			LeftState Ez
+0.0			LeftState HypE
+0.5e-4			LeftState Ppar
+0.5e-4			LeftState P
+1.0/100.0		LeftState eRho
+0.0			LeftState eUx
+0.0			LeftState eUy
+0.0			LeftState eUz
+0.5e-4			LeftState ePpar
+0.5e-4			LeftState eP
+0.125			RightState Rho
+0.0			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+0.75e-2			RightState Bx
+-1.0e-2			RightState By
+0.0			RightState Bz
+0.0			RightState Ex
+0.0			RightState Ey
+0.0			RightState Ez
+0.0			RightState HypE
+0.05e-4			RightState Ppar
+0.05e-4			RightState P
+0.125/100.0		RightState eRho
+0.0			RightState eUx
+0.0			RightState eUy
+0.0			RightState eUz
+0.05e-4			RightState ePpar
+0.05e-4			RightState eP
 
 #GRID
 8                  	nRootBlockX

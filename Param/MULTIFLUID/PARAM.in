@@ -19,32 +19,32 @@ Param/SHOCKTUBE/grid64
 2.0			Gamma
 
 #SHOCKTUBE
-1.			Rho (left state)
-0.			Ux
-0.			Uy
-0.			Uz
-0.75			Bx
-1.			By
-0.			Bz
-1.			P
-10.			NeuRho
-0.			NeuUx
-0.			NeuUy
-0.			NeuUz
-10.			NeuP
-0.125			rho (right state)
-0.			Ux
-0.			Uy
-0.			Uz
-0.75			Bx
--1.			By
-0.			Bz
-0.1			P
-1.25			NeuRho
-0.			NeuUx
-0.			NeuUy
-0.			NeuUz
-1.0			NeuP
+1.			LeftState Rho
+0.			LeftState Ux
+0.			LeftState Uy
+0.			LeftState Uz
+0.75			LeftState Bx
+1.			LeftState By
+0.			LeftState Bz
+1.			LeftState P
+10.			LeftState NeuRho
+0.			LeftState NeuUx
+0.			LeftState NeuUy
+0.			LeftState NeuUz
+10.			LeftState NeuP
+0.125			RightState rho
+0.			RightState Ux
+0.			RightState Uy
+0.			RightState Uz
+0.75			RightState Bx
+-1.			RightState By
+0.			RightState Bz
+0.1			RightState P
+1.25			RightState NeuRho
+0.			RightState NeuUx
+0.			RightState NeuUy
+0.			RightState NeuUz
+1.0			RightState NeuP
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY

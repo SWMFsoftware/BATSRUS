@@ -39,16 +39,16 @@ T			UseNonConservative
  0.05			zMax
 
 #UNIFORMSTATE
-1.225			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.07			Bx
-0.0			By
-0.0			Bz
-0.0			Hyp
-4.9e-4			Pe
-2.45e-3			P
+1.225			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.07			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+0.0			StateVar Hyp
+4.9e-4			StateVar Pe
+2.45e-3			StateVar P
 
 #PLASMA
 1.0			FluidMass

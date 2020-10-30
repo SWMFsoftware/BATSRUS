@@ -28,24 +28,24 @@ T			UseNonConservative
  0.05			zMax
 
 #SHOCKTUBE
-1.0			rho (left state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-10.0			By
-0.0			Bz
-3.0			Ppar
-22.0			Pperp
-1.0			rho (right state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-10.0			By
-0.0			Bz
-3.0			Ppar
-22.0			Pperp
+1.0			LeftState rho
+0.0			LeftState Ux
+0.0			LeftState Uy
+0.0			LeftState Uz
+0.0			LeftState Bx
+10.0			LeftState By
+0.0			LeftState Bz
+3.0			LeftState Ppar
+22.0			LeftState Pperp
+1.0			RightState rho
+0.0			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+0.0			RightState Bx
+10.0			RightState By
+0.0			RightState Bz
+3.0			RightState Ppar
+22.0			RightState Pperp
 
 #USERSWITCH
 +ic			StringSwitch

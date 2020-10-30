@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.TwofluidTest: Two-fluid MHD test		StringDescription
+Param/SHOCKTUBE/PARAM.in.TwofluidTest: Two-fluid MHD test		LeftState StringDescription
 
 #EQUATION
 MHD with electron pressure and hyperbolic cleaning		NameEquation
@@ -30,26 +30,26 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #SHOCKTUBE
-1.0			Rho (left state)
-1.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-0.0			Hyp
-1.0			Pe
-1.0			P
-1.0			Rho (right state)
-1.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-0.0			Hyp
-1.01			Pe
-1.01			P
+1.0			LeftState Rho
+1.0			LeftState Ux
+0.0			LeftState Uy
+0.0			LeftState Uz
+0.0			LeftState Bx
+0.0			LeftState By
+0.0			LeftState Bz
+0.0			LeftState Hyp
+1.0			LeftState Pe
+1.0			LeftState P
+1.0			RightState Rho
+1.0			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+0.0			RightState Bx
+0.0			RightState By
+0.0			RightState Bz
+0.0			RightState Hyp
+1.01			RightState Pe
+1.01			RightState P
 
 #GRID
 4			nRootBlock1

@@ -35,14 +35,14 @@ spherical                       TypeGeometry
 ! This makes the unperturbed sound speed = 1 for gamma=5/3
 
 #UNIFORMSTATE
-5.0			rho (left state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-3.0			p
+5.0			StateVar rho (left state)
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+3.0			StateVar p
 
 #MONOPOLEB0
 16.0			MonopoleStrengthSi

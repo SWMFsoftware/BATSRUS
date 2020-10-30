@@ -36,14 +36,14 @@ F			UseNonConservative
 5/3			Gamma
 
 #UNIFORMSTATE
-25/9			rho (left state)
-0			Ux
-0.0			Uy
-0.0			Uz
-0			Bx
-0			By
-0			Bz
-5/3			P
+25/9			StateVar rho (left state)
+0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0			StateVar Bx
+0			StateVar By
+0			StateVar Bz
+5/3			StateVar P
 
 
 #USERINPUTBEGIN ----------------

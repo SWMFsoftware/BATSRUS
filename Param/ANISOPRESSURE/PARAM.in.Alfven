@@ -28,15 +28,15 @@ T			UseNonConservative
  0.05			zMax
 
 #UNIFORMSTATE
-1.0			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-10.0			Bx
-0.0			By
-0.0			Bz
-6.0			Ppar
-35.3333			p
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+10.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+6.0			StateVar Ppar
+35.3333			StateVar p
 
 #USERINPUTBEGIN -----------------
 

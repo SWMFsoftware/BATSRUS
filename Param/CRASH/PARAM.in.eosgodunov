@@ -25,18 +25,18 @@ F			DoSaveInitial
  1.0			zMax
 
 #SHOCKTUBE
-100.			Rho !~30 times the normal density
--3.0e4			Ux  !Piston speed
-0.0			Uy
-0.0			Uz
-0.0			Eint
-2.04e+7			P   !3000 K of temperature
-100.			rho (right state)
--3.0e4			Ux
-0.0			Uy
-0.0			Uz
-0.0			Eint
-2.04e+7			P
+100.			LeftState Rho !~30 times the normal density
+-3.0e4			LeftState Ux  !Piston speed
+0.0			LeftState Uy
+0.0			LeftState Uz
+0.0			LeftState Eint
+2.04e+7			LeftState P   !3000 K of temperature
+100.			RightState rho
+-3.0e4			RightState Ux
+0.0			RightState Uy
+0.0			RightState Uz
+0.0			RightState Eint
+2.04e+7			RightState P
 
 Reflective boundary at the left
 #OUTERBOUNDARY

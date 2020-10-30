@@ -38,17 +38,17 @@ pepar			NameTestVar
  0.05			zMax
 
 #UNIFORMSTATE
-1.0			Rho (left state)
-12.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-30.0			By
-0.0			Bz
-14.0			Pepar
-16.0			Pe
-14.0			Ppar
-16.0			P
+1.0			StateVar Rho (left state)
+12.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+30.0			StateVar By
+0.0			StateVar Bz
+14.0			StateVar Pepar
+16.0			StateVar Pe
+14.0			StateVar Ppar
+16.0			StateVar P
 
 #USERINPUTBEGIN -----------------------------------
 

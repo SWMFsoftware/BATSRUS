@@ -33,32 +33,32 @@ PLANETARY		TypeNormalization
 
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
-0.9			Rho (left state)
-0.			Ux
-0.			Uy
-0.			Uz
-1.0			Bx
-0.1			By
-0.			Bz
-0.9e-4			P
-0.1			RhoO2
-0.			Ux
-0.			Uy
-0.			Uz
-0.1e-4			P
-0.9			rho (right state)
-0.			Ux
-0.			Uy
-0.			Uz
-1.0			Bx
--0.1			By
-0.			Bz
-0.9e-4			P
-0.1			RhoO2
-0.			Ux
-0.			Uy
-0.			Uz
-0.1e-4			P
+0.9			LeftState Rho
+0.			LeftState Ux
+0.			LeftState Uy
+0.			LeftState Uz
+1.0			LeftState Bx
+0.1			LeftState By
+0.			LeftState Bz
+0.9e-4			LeftState P
+0.1			LeftState RhoO2
+0.			LeftState Ux
+0.			LeftState Uy
+0.			LeftState Uz
+0.1e-4			LeftState P
+0.9			RightState rho
+0.			RightState Ux
+0.			RightState Uy
+0.			RightState Uz
+1.0			RightState Bx
+-0.1			RightState By
+0.			RightState Bz
+0.9e-4			RightState P
+0.1			RightState RhoO2
+0.			RightState Ux
+0.			RightState Uy
+0.			RightState Uz
+0.1e-4			RightState P
 
 #PLASMA
 1.0			FluidMass H+

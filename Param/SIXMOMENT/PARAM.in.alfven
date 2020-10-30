@@ -39,25 +39,25 @@ NONE			TypeNormalization
 1.0			ElectronTemperatureRatio
 
 #UNIFORMSTATE
-1.0			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-1.0			Bx
-0.0			By
-0.0			Bz
-0.0			Ex
-0.0			Ey
-0.0			Ez
-0.0			HypE_
-0.00167			Ppar
-0.01			P
-0.01			eRho
-0.0			eUx
-0.0			eUy
-0.0			eUz
-0.00167			ePpar
-0.01			eP
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+1.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+0.0			StateVar Ex
+0.0			StateVar Ey
+0.0			StateVar Ez
+0.0			StateVar HypE_
+0.00167			StateVar Ppar
+0.01			StateVar P
+0.01			StateVar eRho
+0.0			StateVar eUx
+0.0			StateVar eUy
+0.0			StateVar eUz
+0.00167			StateVar ePpar
+0.01			StateVar eP
 
 #GRID
 1                    	nRootBlockX

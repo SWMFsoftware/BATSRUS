@@ -49,25 +49,25 @@ F			DoNormalizeCell
 1.0			ElectronTemperatureRatio
 
 #UNIFORMSTATE
-1.0			Rho Left
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-0.0			Ex
-0.0			Ey
-0.0			Ez
-0.0			HypE
-5e-6			Ppar
-5e-6			P
-1.0/100.0		ElRho
-0.0			ElUx
-0.0			ElUy
-0.0			ElUz
-5.e-6			ElPpar
-5.e-6			ElP
+1.0			StateVar Rho Left
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+0.0			StateVar Ex
+0.0			StateVar Ey
+0.0			StateVar Ez
+0.0			StateVar HypE
+5e-6			StateVar Ppar
+5e-6			StateVar P
+1.0/100.0		StateVar ElRho
+0.0			StateVar ElUx
+0.0			StateVar ElUy
+0.0			StateVar ElUz
+5.e-6			StateVar ElPpar
+5.e-6			StateVar ElP
 
 SHOCKPOSITION
 0.0			ShockPosition

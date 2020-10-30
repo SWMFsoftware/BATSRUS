@@ -5,6 +5,7 @@
 List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 
 <!-- Set variables for expressions and rules -->
+<set name="nVar"              type="integer" value="$_Value{nVar}"             />
 <set name="nSpecies"          type="integer" value="$_Value{nSpecies}"         />
 <set name="nFluid"            type="integer" value="($_Value{nFluid} or 1)"    />
 <set name="nIonFluid"         type="integer" value="($_Value{nIonFluid} or 1)" />
@@ -8189,14 +8190,16 @@ This command can occur multiple times. By default no lookup tables are used.
 </command>
 
 <command name="UNIFORMSTATE" if="$_IsFirstSession">
-	<parameter name="Rho"  type="real"	/>
+  <for from="1" to="$nVar">
+    <parameter name="StateVar" type="real"/>
+  </for>
 
 #UNIFORMSTATE
-0.125		Rho
-1.0		Ux
--0.5		Uy
-0.0             Uz
-1.0             p
+0.125		StateVar Rho
+1.0		StateVar Ux
+-0.5		StateVar Uy
+0.0             StateVar Uz
+1.0             StateVar p
 
 The #UNIFORMSTATE command sets up a uniform initial state. This uniform
 state can be perturbed or modified by the user module.
@@ -8205,25 +8208,30 @@ the equation module.
 </command>
 
 <command name="SHOCKTUBE" if="$_IsFirstSession">
-	<parameter name="Rho"  type="real"	/>
-
+  <for from="1" to="$nVar">
+    <parameter name="LeftState" type="real"/>
+  </for>
+  <for from="1" to="$nVar">
+    <parameter name="RightState" type="real"/>
+  </for>
+    
 #SHOCKTUBE
-1.		Rho Left
-0.		Ux
-0.		...
-0.
-0.75
-1.
-0.
-1.
-0.125		Rho Right
-0.		Ux
-0.		...
-0.
-0.75
--1.
-0.
-0.1
+1.		LeftState Rho
+0.		LeftState Ux
+0.		LeftState Uy
+0.		LeftState Uz
+0.75		LeftState Bx
+1.		LeftState By
+0.		LeftState Bz
+1.              LeftState p
+0.125		RightState Rho
+0.		RightState Ux
+0.		RightState Uy
+0.              RightState Uz
+0.75            RightState Bx
+-1.		RightState By
+0.		RightState Bz
+0.1             RightState p
 
 The #SHOCKTUBE command can be used to set up a shocktube problem.
 The left and right state values are given in terms of the primitive
