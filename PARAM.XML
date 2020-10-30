@@ -255,7 +255,6 @@ These modified commands cannot precede the #PLANET command!
 		<option name="NEPTUNE" 			/>
 		<option name="PLUTO" 			/>
 		<option name="MOON"			/>
-		<option name="GANYMEDE"			/>	
 		<option name="IO"			/>	
 		<option name="EUROPA"			/>
 		<option name="GANYMEDE"			/>
