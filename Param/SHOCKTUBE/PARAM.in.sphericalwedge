@@ -1,4 +1,7 @@
-Config.pl -e=Mhd -u=Waves -f -g=8,2,2,1000,1
+Config.pl -e=Mhd -u=Waves -f -g=8,2,2
+
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.sphericalwedge: testing wedge grid		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -11,6 +14,9 @@ NONE			NameNormalization
 
 NONCONSERVATIVE
 T			UseNonConservative
+
+#GRIDBLOCKALL
+100			MaxBlock
 
 #GRID
 64			nRootBlockX

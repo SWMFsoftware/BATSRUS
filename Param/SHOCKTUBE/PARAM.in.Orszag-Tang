@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.Orszag-Tang: Orszag-Tang vortex test		StringDescription
+
 #PLANET
 NONE			NamePlanet
 
@@ -26,11 +29,6 @@ F			UseNonConservative
 1.0			yMax
 0.0			zMin
 1.0			zMax
-
-40.                     RhoMinPercent
-200.                    RhoMaxPercent
-40.                     pMinPercent
-200.                    pMaxPercent
 
 #GAMMA
 5/3			Gamma

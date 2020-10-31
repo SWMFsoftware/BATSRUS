@@ -1,7 +1,7 @@
 Begin session: 1
 
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.HybridTest: Fast Whistler wave test. Hall term is only applied at part of the domain.		LeftState StringDescription
+Param/SHOCKTUBE/PARAM.in.HybridTest: Fast Whistler wave test. Hall term is only applied at part of the domain.		StringDescription
 
 #EQUATION
 MHD			NameEquation
