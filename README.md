@@ -27,11 +27,25 @@ Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 are in the CRASH_data repository.
 If needed, it has to be placed into the home directory.
 
-## Getting BATSRUS from Git (requires access to UM GitLab)
+Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
+----------------------------------------------------------------
 
-Read the [instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
+Clone BATSRUS from GitHub
+
+```bash
+cd {where_you_want_to_have_mstem-quda}
+git clone https://github.com/MSTEM-QUDA/BATSRUS
+```
+
+The rest of the repositories (share, util, srcBATL ...)
+will be cloned from GitHub during the installation.
+
+Getting the full BATSRUS from UM GitLab (requires access)
+---------------------------------------------------------------
+Read the
+[instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
 about registering, passwordless access, mail notifications,
-and defining the "gitlabclone" (or gitclone) alias/function. 
+and using the "gitlabclone" script.
 
 ## Check out the BATSRUS distribution
 ```
@@ -79,24 +93,24 @@ Many machines used by UofM are already recognized by the
 `Config.pl` scripts in the SWMF.
 For these platform/compiler combinations installation is very simple:
 ```
-Config.pl -install
+./Config.pl -install
 ```
 On other platforms the Fortran (and C) compilers should be explicitly given. 
 To see available choices, type 
 ```
-Config.pl -compiler
+./Config.pl -compiler
 ```
 Then install the code with the selected Fortran (and default C) compiler, e.g.
 ```
-Config.pl -install -compiler=gfortran
+./Config.pl -install -compiler=gfortran
 ```
 A non-default C compiler can be added after a comma, e.g.
 ```
-Config.pl -install -compiler=mpxlf90,mpxlc
+./Config.pl -install -compiler=mpxlf90,mpxlc
 ```
 For machines with no MPI library, use
 ```
-Config.pl -install -nompi -compiler=....
+./Config.pl -install -nompi -compiler=....
 ```
 This will only allow serial execution, of course.
 
@@ -112,18 +126,18 @@ ulimit -s unlimited
 
 # Create the manuals
 
-Please note that creating the PDF manuals requires 
-that LaTex (available through the command line) and ps2pdf
-be installed on your system.
+Please note that creating the PDF manuals requires that LaTex
+(available through the command line) is installed on your system.
 
 To create the PDF manuals for BATSRUS and CRASH type
 ```
 make PDF
-cd util/CRASH/doc/Tex; make PDF
+cd util/CRASH/doc/Tex; make PDF # for GitLab version only
 ```
 in the BATSRUS directory. The manuals will be in the `Doc/` and
 `util/CRASH/doc/`` directories, and can be accessed by opening
-`Doc/index.html` and `util/CRASH/doc/index.html`.
+`Doc/index.html` and `util/CRASH/doc/index.html`. Note that
+the CRASH application is only usable in the full GitLab version.
 
 The input parameters of BATSRUS/CRASH are described in the `PARAM.XML`
 in the main directory. This is the best source of information when
