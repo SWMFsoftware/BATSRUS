@@ -213,7 +213,7 @@ dist:
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
 	tar -cf tmp.tar  Makefile Makefile.test
-	tar -rf tmp.tar  README README.md LICENSE.txt
+	tar -rf tmp.tar  README.md LICENSE.txt
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Test*.pl		#^CFG IF TESTING
