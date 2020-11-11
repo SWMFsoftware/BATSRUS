@@ -83,25 +83,21 @@ module ModThreadedLC
   ! Two logicals with self-explained names
   logical        :: UseAlignedVelocity = .true.
   logical        :: DoConvergenceCheck = .false.
-
   ! Two parameters controling the choise of the order for density and
   ! pressure: first order (LimMin=LimMax=0), second order (LimMin=LimMax=1)
   ! or limited second order as a default
   real:: LimMin = 0.0, LimMax = 1
 
   ! Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
-  real           ::  RhoNoDimCoef
 
+  real           ::  RhoNoDimCoef
   ! Misc
   real:: TeMin, ConsMin, ConsMax, TeSiMax
-
   ! For transforming conservative to TeSi and back
   real, parameter:: cTwoSevenths = 2.0/7.0
-
   ! Gravitation potential in K
   real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
        (cBoltzmann*rSun)
-
   ! In hydrogen palsma, the electron-ion heat exchange is described by
   ! the equation as follows:
   ! dTe/dt = -(Te-Ti)/(tau_{ei})
@@ -133,7 +129,6 @@ module ModThreadedLC
 
   integer        :: nIter = 20
   real           :: cTol=1.0e-6
-  logical :: UseThomasAlg4Waves = .false.
 contains
   !============================================================================
   subroutine init_threaded_lc
@@ -264,16 +259,12 @@ contains
   end subroutine init_threaded_lc
   !============================================================================
   subroutine read_threaded_bc_param
-
     use ModReadParam, ONLY: read_var
-
     character(LEN=7)::TypeBc = 'limited'
     integer :: iError
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_threaded_bc_param'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     call read_var('UseAlignedVelocity', UseAlignedVelocity)
     call read_var('DoConvergenceCheck', DoConvergenceCheck)
     call read_var('TypeBc'            , TypeBc            )
@@ -298,11 +289,6 @@ contains
        nIter = 20 ! Recover a default value
        RETURN
     end if
-    call read_var('UseThomasAlg4Waves',UseThomasAlg4Waves, iError)
-    if(iError/=0)&
-       UseThomasAlg4Waves = .false. ! Recover the default value
-    call test_stop(NameSub, DoTest)
-
   end subroutine read_threaded_bc_param
   !============================================================================
   !
@@ -373,12 +359,11 @@ contains
     ! Electron heat condution flux from Low Corona to TR:
     !
     real :: HeatFlux2TR
-
     integer :: nIterHere
     logical :: DoCheckConvHere
 
-    character(len=12) :: NameTiming
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
+    character(len=12) :: NameTiming
     !--------------------------------------------------------------------------
     !
     ! Initialize all output parameters from 0D solution
@@ -415,13 +400,8 @@ contains
        TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k)
        TiSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k)
        PSi_I(1:nPoint)  = BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
-       if(UseThomasAlg4Waves)then
-          AMajor_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMajor_,1-nPoint:0,j,k)
-          AMinor_I(1:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMinor_,1-nPoint:0,j,k)
-       else
-          AMajor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k)
-          AMinor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
-       end if
+       AMajor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k)
+       AMinor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
        if(iAction/=Enthalpy_)then
           TeSi_I(nPoint)   = TeSiIn
           TiSi_I(nPoint)   = TiSiIn
@@ -453,13 +433,8 @@ contains
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       if(UseThomasAlg4Waves)then
-          BoundaryThreads_B(iBlock)%State_VIII(AMajor_,1-nPoint:0,j,k) = AMajor_I(1:nPoint)
-          BoundaryThreads_B(iBlock)%State_VIII(AMinor_,1-nPoint:0,j,k) = AMinor_I(1:nPoint)
-       else
-          BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint)
-          BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
-       end if
+       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case(Enthalpy_)
        call solve_heating(nIterIn=nIterHere)
        !
@@ -486,14 +461,9 @@ contains
        call solve_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
-       if(UseThomasAlg4Waves)then
-          BoundaryThreads_B(iBlock)%State_VIII(AMajor_,1-nPoint:0,j,k) = AMajor_I(1:nPoint)
-          BoundaryThreads_B(iBlock)%State_VIII(AMinor_,1-nPoint:0,j,k) = AMinor_I(1:nPoint)
-       else
-          BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint)
-          BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
-       end if
+       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)  
+       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
@@ -615,10 +585,8 @@ contains
     end if
     call timing_stop(NameTiming)
   contains
-    !==========================================================================
     subroutine analytical_te_ti
       integer :: iPoint
-      !------------------------------------------------------------------------
       TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
@@ -659,9 +627,6 @@ contains
     subroutine get_dxi_and_xi
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim, vAlfven
-
-      !
-
       !------------------------------------------------------------------------
       do iPoint=1,nPoint
          !
@@ -688,29 +653,10 @@ contains
               BoundaryThreads_B(iBlock)% DXiCell_III(iPoint-nPoint,j,k)/&
               sqrt(vAlfven)
       end do
-      if(UseThomasAlg4Waves)then
-         !
-         ! Gridpoints for waves are at the centers of temperature cells
-         !
-         Xi_I(1) = 0.50*DXi_I(1)
-         do iPoint = 2, nPoint
-            Xi_I(iPoint) = Xi_I(iPoint-1) + &
-                 0.50*(DXi_I(iPoint-1) + DXi_I(iPoint))
-         end do
-         !
-         ! Correct the end points by the half intervals
-         !
-         Xi_I(1) = 0.0; Xi_I(nPoint) = Xi_I(nPoint) + 0.50*DXi_I(nPoint)
-      else
-         !
-         ! Gridpoints for waves are at the faces between temperature cells
-         ! except for zeroth and nPoint'th ones
-         !
-         Xi_I(0) = 0.0
-         do iPoint = 1, nPoint
-            Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
-         end do
-      end if
+      Xi_I(0) = 0.0
+      do iPoint = 1, nPoint
+         Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
+      end do
     end subroutine get_dxi_and_xi
     !==========================================================================
     subroutine analytical_waves
@@ -726,7 +672,6 @@ contains
       !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
       !
       ! The sought value is in between 1 and 1 + AMinorIn
-
       !------------------------------------------------------------------------
       Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
       do while(abs(Sigma - SigmaOld) > 0.01*cTol)
@@ -744,14 +689,9 @@ contains
       ! 4.3. Now, apply formulae, which are valid for no-reflection case:
       !
       AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
-      if(UseThomasAlg4Waves)then
-         AMinor_I(1:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
-              exp(Sigma*(XiTot - Xi_I(1:nPoint-1))))
-      else
-         AMajor_I(0) = 1
-         AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
-              exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
-      end if
+      AMajor_I(0) = 1
+      AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
+           exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
     end subroutine analytical_waves
     !==========================================================================
     !=================Calculation of sources and Jacobian matrices=============
@@ -759,8 +699,6 @@ contains
       use ModCoronalHeating,  ONLY: rMinWaveReflection
       integer:: iPoint
       !
-
-      !------------------------------------------------------------------------
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 &
            )then
          !
@@ -1113,78 +1051,7 @@ contains
          !
          M_VV(ConsAMinor_,ConsAMajor_) = aMinor*DeltaXi
       end if
-      ! dissipation_major = (-AMinor*&
-      !      (max(0.0,AMajor - MaxImbalance*AMinor)      &
-      !      -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
-      !      min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
-      !      - AMinor*AMajor)*DeltaXi
-
-      ! dissipation_minor = ( AMajor*&
-      !     (max(0.0,AMajor - MaxImbalance*AMinor)      &
-      !     -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
-      !     min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
-      !     - AMinor*AMajor)*DeltaXi
     end subroutine get_aw_dissipation
-    !==========================================================================
-    subroutine get_res_heating
-      real    :: DeltaXi, AMajor, AMinor, ReflCoef
-      integer :: iPoint
-
-      !------------------------------------------------------------------------
-      ResHeating_I = 0.0;  Res_VI(ConsAMajor_:ConsAMinor_,:)   = 0
-      M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
-      !
-      ! Go forward, integrate AMajor_I with given AMinor_I
-      !
-      L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
-      L_VVI(ConsAMajor_,ConsAMAjor_,1:nPoint) = -1
-      Res_VI(ConsAMajor_,2:nPoint) = &
-           AMajor_I(1:nPoint-1) - AMajor_I(2:nPoint)
-      Res_VI(ConsAMajor_,1) = 0.0
-      !
-      ! Go backward, integrate AMinor_I with given AMajor_I
-      ! We integrate equation,
-      !
-      ! -2da_-/d\xi=
-      != max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
-      ! *min(ReflCoef,2max(a_,a_+)) -2a_-a_+
-      !
-      U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,:) = 0
-      U_VVI(ConsAMinor_,ConsAMinor_,1:nPoint) = -1
-      Res_VI(ConsAMinor_,1:nPoint-1) = &
-           AMinor_I(2:nPoint) - AMinor_I(1:nPoint-1)
-      Res_VI(ConsAMinor_,nPoint) = 0.0
-      !
-      ! Account for reflection and dissipation:
-      !
-      do iPoint = 1, nPoint
-         AMajor  = AMajor_I( iPoint)
-         AMinor  = AMinor_I( iPoint)
-         DeltaXi = DXi_I(iPoint)
-         ReflCoef = 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint))
-         !
-         ! Sources and Jacobian
-         !
-         call get_aw_dissipation(AMajor, AMinor, ReflCoef, DeltaXi, &
-              DissipationPlus_I(iPoint), DissipationMinus_I(iPoint),&
-              M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,iPoint))
-         Res_VI(ConsAMajor_,iPoint) = Res_VI(ConsAMajor_,iPoint) +  &
-              DissipationPlus_I( iPoint)
-         Res_VI(ConsAMinor_,iPoint) = Res_VI(ConsAMinor_,iPoint) +  &
-              DissipationMinus_I( iPoint)
-         ResHeating_I(iPoint) = -2*AMajor*DissipationPlus_I(iPoint) &
-              -2*AMinor*DissipationMinus_I(iPoint)
-      end do
-      !
-      !  Particular cases
-      !
-      Res_VI(ConsAMajor_,1) = 0
-      M_VVI(ConsAMajor_,ConsAMajor_:ConsAMinor_,     1) = [1.0, 0.0]
-      !
-      !
-      Res_VI(ConsAMinor_,nPoint) = 0
-      M_VVI(ConsAMinor_,ConsAMajor_:ConsAMinor_,nPoint) = [0.0, 1.0]
-    end subroutine get_res_heating
     !==========================================================================
     subroutine solve_a_plus_minus(AMinorBC,&
          AMajorBC, nIterIn)
@@ -1200,11 +1067,7 @@ contains
       real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
       character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
       !------------------------------------------------------------------------
-      if(UseThomasAlg4Waves)then
-         AMajor_I(1) = 1.0
-      else
-         AMajor_I(0) = 1.0
-      end if
+      AMajor_I(0) = 1.0
       AMinor_I(nPoint)  = AMinorBC
       if(present(nIterIn))then
          nIter=nIterIn
@@ -1215,11 +1078,7 @@ contains
       DissipationPlus_I  = 0.0
       do iIter=1,nIter
          ADiffMax = 0.0
-         if(UseThomasAlg4Waves)then
-            call thomas_alg( ADiffMax)
-         else
-            call runge_kutta(ADiffMax)
-         end if
+         call runge_kutta(ADiffMax)
          if(ADiffMax<cTol)EXIT
          if(DoCheckConvHere.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
@@ -1242,47 +1101,13 @@ contains
          end if
       end do
       AMajorBC = AMajor_I(nPoint)
-      if(.not.UseThomasAlg4Waves)then
-         ResHeating_I = 0.0
-         ResHeating_I(1:nPoint-1) = &
-              -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
-              DissipationPlus_I(1:nPoint-1) -&
-              (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
-              DissipationMinus_I(1:nPoint-1)
-      end if
+      ResHeating_I = 0.0
+      ResHeating_I(1:nPoint-1) = &
+           -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
+           DissipationPlus_I(1:nPoint-1) -&
+           (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
+           DissipationMinus_I(1:nPoint-1)
     end subroutine solve_a_plus_minus
-    !==========================================================================
-    subroutine thomas_alg(ADiffMax)
-      real, intent(inout) :: ADiffMax
-      real    :: AOld
-      integer :: iPoint
-      !------------------------------------------------------------------------
-      !
-      ! Calculate sources and Jacobians:
-      !
-      call timing_start('thomas_alg')
-      call get_res_heating
-      call tridiag_block_matrix2(nI=nPoint,  &
-           L_VVI=L_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
-           1:nPoint),&
-           M_VVI=M_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
-           1:nPoint),&
-           U_VVI=U_VVI(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_,&
-           1:nPoint),&
-           R_VI=Res_VI(ConsAMajor_:ConsAMinor_,1:nPoint),            &
-           W_VI=DCons_VI(ConsAMajor_:ConsAMinor_,1:nPoint))
-      do iPoint=2, nPoint
-         AOld = AMajor_I(iPoint)
-         AMajor_I(iPoint) = AMajor_I(iPoint) + DCons_VI(ConsAMajor_,iPoint)
-         ADiffMax = max(ADiffMax,abs(DCons_VI(ConsAMajor_,iPoint)))
-      end do
-      do iPoint = nPoint - 1, 1, -1
-         AOld = AMinor_I(iPoint)
-         AMinor_I(iPoint) = AMinor_I(iPoint) + DCons_VI(ConsAMinor_,iPoint)
-         ADiffMax = max(ADiffMax,abs(DCons_VI(ConsAMinor_,iPoint)))
-      end do
-      call timing_stop('thomas_alg')
-    end subroutine thomas_alg
     !==========================================================================
     subroutine runge_kutta(ADiffMax)
       real, intent(inout) :: ADiffMax
@@ -1308,7 +1133,6 @@ contains
          AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
          ADiffMax = max(ADiffMax, &
               abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
-         ! ADiffMax = max(ADiffMax, abs(AOld - AMajor_I(iPoint)))
       end do
       ! Go backward, integrate AMinor_I with given AMajor_I
       ! We integrate equation,
@@ -1334,7 +1158,6 @@ contains
          AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
          ADiffMax = max(ADiffMax,&
               abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
-         ! ADiffMax = max(ADiffMax,abs(AOld - AMinor_I(iPoint)))
       end do
       call timing_stop('runge_kutta')
     end subroutine runge_kutta
@@ -1414,7 +1237,6 @@ contains
          FluxConst    = USi * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-
       end if
       !
       ! 5/2*U*Pi*(Z+1)
@@ -1445,7 +1267,7 @@ contains
               ((Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint))*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(1-nPoint:0,j,k)*No2Si_V(UnitB_))&
               ), FluxConst)
-          ! Limit enthalpy flux at the TR:
+         ! Limit enthalpy flux at the TR:
          if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
               0.50*HeatFlux2TR/TeSi_I(1)), FluxConst)
          !
@@ -1520,15 +1342,6 @@ contains
          M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) +&
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
-         ! M_VVI(Cons_,LogP_,1:nPoint-1) = M_VVI(Cons_,LogP_,1:nPoint-1)&
-         !  -0.250*QeRatio*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         ! M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         ! M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
-         !     0.250*QeRatio*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          DCons_VI = 0.0
          ! IonEnthalpyFlux = ElectronEnthalpyFlux/Z
          ResEnthalpy_I=0.0
@@ -1559,15 +1372,6 @@ contains
          M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) -&
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
-         ! M_VVI(Ti_,LogP_,1:nPoint-1) = M_VVI(Ti_,LogP_,1:nPoint-1)&
-         !  -0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1) !=-dHeating/dLogPe
-         ! M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) + &
-         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*&
-         !     TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))!=-dHeating/dCons
-         ! M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
-         !     0.250*(1 - QeRatio)*ResHeating_I(1:nPoint-1)/&
-         !     (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) !=-dHeating/d log Ti
          call tridiag_block_matrix3(nI=nPoint-1,     &
               L_VVI=L_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
               M_VVI=M_VVI(  Cons_:LogP_,Cons_:LogP_,1:nPoint-1),&
@@ -1643,7 +1447,6 @@ contains
          call stop_mpi('Algorithm failure in advance_thread')
       end if
     end subroutine advance_thread
-    !==========================================================================
 
   end subroutine solve_boundary_thread
   !============================================================================
@@ -1673,11 +1476,9 @@ contains
     !      (M+L+U)W = R
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
-
-    character(len=*), parameter :: NameTiming = 'tridiag3'
-    character(len=*), parameter:: NameSub = 'tridiag_block_matrix3'
+    
+    character(len=*), parameter :: NameSub = 'tridiag_block_matrix3'
     !--------------------------------------------------------------------------
-    call timing_start(NameTiming)
     if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
@@ -1710,7 +1511,6 @@ contains
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-    call timing_stop(NameTiming)
   end subroutine tridiag_block_matrix3
   !============================================================================
   subroutine tridiag_block_matrix2(nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
@@ -1730,10 +1530,8 @@ contains
     !      (M+L+U)W = R
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
-    character(len=*), parameter :: NameTiming = 'tridiag2'
-    character(len=*), parameter:: NameSub = 'tridiag_block_matrix2'
+    character(len=*), parameter :: NameSub = 'tridiag_block_matrix2'
     !--------------------------------------------------------------------------
-    call timing_start(NameTiming)
     if (determinant_2(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
@@ -1767,7 +1565,6 @@ contains
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-    call timing_stop(NameTiming)
   end subroutine tridiag_block_matrix2
   !============================================================================
   real function determinant_2(a_II)
@@ -1779,7 +1576,6 @@ contains
   function inverse_matrix_2(a_II) result(b_II)
     real :: b_II(2,2)
     real, intent(in) :: a_II(2,2)
-
     !--------------------------------------------------------------------------
     b_II(1,1) =  a_II(2,2); b_II(2,2) =  a_II(1,1)
     b_II(1,2) = -a_II(1,2); b_II(2,1) = -a_II(2,1)
