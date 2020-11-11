@@ -213,17 +213,15 @@ dist:
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
 	tar -cf tmp.tar  Makefile Makefile.test
-	tar -rf tmp.tar  README.md LICENSE.txt
+	tar -rf tmp.tar  README.md PARAM.XML LICENSE.txt
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Test*.pl		#^CFG IF TESTING
 	tar -rf tmp.tar  Doc			#^CFG IF DOC
-	tar -rf tmp.tar  PARAM.XML
 	tar -rf tmp.tar  Config.pl
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  src srcBATL srcUser srcEquation srcInterface
-	tar -rf tmp.tar  srcPostProc
+	tar -rf tmp.tar  src srcBATL srcUser srcEquation srcInterface srcPostProc
 	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
 	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
 	@echo ' '
