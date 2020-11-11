@@ -3507,7 +3507,7 @@ MHD ray                 StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
-VAR trajrange           StringSatellite
+MHD trajrange           StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
