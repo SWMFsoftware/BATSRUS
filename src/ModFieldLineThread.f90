@@ -41,13 +41,11 @@ module ModFieldLineThread
      ! Renamed and revised: in meters
      real,pointer :: LengthSi_III(:,:,:)
 
-     !
      ! Renamed and revised: only the value BDsFaceInv_III(0,j,k) keeps this
      ! sense and used for calculating TMax_II(j,k). The values of
      ! BDsFaceInv_III(negative iPoint,j,k) are equal to
      ! ds[m]/(B[T]*PoyntingFluxPerBSi). Are used to calculate
      ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsFaceInv
-     !
      real,pointer :: BDsFaceInvSi_III(:,:,:)
      ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
      ! temperature equals the Poynting flux (which is not realistic and means
