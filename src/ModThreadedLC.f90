@@ -361,8 +361,8 @@ contains
     integer :: nIterHere
     logical :: DoCheckConvHere
 
-    character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     character(len=12) :: NameTiming
+    character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     !--------------------------------------------------------------------------
     !
     ! Initialize all output parameters from 0D solution
@@ -460,8 +460,8 @@ contains
        call solve_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
-       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)  
-       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint) 
+       BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case default
        write(*,*)'iAction=',iAction
@@ -584,8 +584,10 @@ contains
     end if
     call timing_stop(NameTiming)
   contains
+    !==========================================================================
     subroutine analytical_te_ti
       integer :: iPoint
+      !------------------------------------------------------------------------
       TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
@@ -626,6 +628,7 @@ contains
     subroutine get_dxi_and_xi
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim, vAlfven
+
       !------------------------------------------------------------------------
       do iPoint=1,nPoint
          !
@@ -671,6 +674,7 @@ contains
       !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
       !
       ! The sought value is in between 1 and 1 + AMinorIn
+
       !------------------------------------------------------------------------
       Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
       do while(abs(Sigma - SigmaOld) > 0.01*cTol)
@@ -698,6 +702,7 @@ contains
       use ModCoronalHeating,  ONLY: rMinWaveReflection
       integer:: iPoint
       !
+      !------------------------------------------------------------------------
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 &
            )then
          !
@@ -882,6 +887,7 @@ contains
       !OUTPUTS:
       ! Sources
       real, intent(out) :: DissipationPlus, DissipationMinus
+
       !------------------------------------------------------------------------
       if(AMajor > MaxImbalance*AMinor)then
          ! AMajor is dominant. Figure out if the
@@ -1332,6 +1338,7 @@ contains
          call stop_mpi('Algorithm failure in advance_thread')
       end if
     end subroutine advance_thread
+    !==========================================================================
 
   end subroutine solve_boundary_thread
   !============================================================================
@@ -1361,8 +1368,8 @@ contains
     !      (M+L+U)W = R
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
-    
-    character(len=*), parameter :: NameSub = 'tridiag_block_matrix3'
+
+    character(len=*), parameter:: NameSub = 'tridiag_block_matrix3'
     !--------------------------------------------------------------------------
     if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
