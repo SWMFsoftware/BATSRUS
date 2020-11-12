@@ -588,12 +588,15 @@ contains
          ! Add enthalpy correction
          ! Limit particle flux, so that the local speed never exceeds a tenth
          ! of the thermal speed
-         Flux_I(1:nPoint)    =sign(min(abs(FluxConst), &
+         Flux_I(1:nPoint)    =sign(min(&
+              abs(FluxConst), &
               0.1*sqrt(cBoltzmann*(Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint))/&
-              (MassIon_I(1)*cAtomicMass))*PSi_I(1:nPoint)/&
-              ((Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint))*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(1-nPoint:0,j,k)*No2Si_V(UnitB_))&
-              ), FluxConst)
+              (MassIon_I(1)*cAtomicMass))*&
+              PSi_I(1:nPoint)/&
+              (  (Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint) )*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(1-nPoint:0,j,k)*&
+              No2Si_V(UnitB_))     )&
+              , FluxConst)
          ! Limit enthalpy flux at the TR:
          if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
               0.50*HeatFlux2TR/TeSi_I(1)), FluxConst)
@@ -965,7 +968,7 @@ contains
   ! Here each of the compenets w_i and r_i are 3-component states and
   ! m_i, l_i, u_i are 3*3 matrices                                       !
   subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-
+    
     integer, intent(in):: n
     real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
     real, intent(out):: W_VI(3,n)
@@ -977,7 +980,7 @@ contains
     !      (M+L+U)W = R
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
-
+    ! 11.12.2020 - This version is backward compatible to 10.30.2019
     character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
     !--------------------------------------------------------------------------
     if (determinant(M_VVI(:,:,1)) == 0.0) then
@@ -1028,7 +1031,7 @@ contains
     integer:: nIter
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     AMajor_I(0) = 1.0
     AMinor_I(nI)  = AMinorBC
     if(present(nIterIn))then
@@ -1075,11 +1078,11 @@ contains
           
           ! Corrector
           APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
-          AMMid = AM + 0.5*Derivative*DeltaXi
+          AMMid = AM - 0.5*Derivative*DeltaXi
           Derivative = derivative_minor(&
                APMid, AMMid, &
                0.50*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep)))
-          AMinor_I(iStep) = AMinor_I(iStep+1) + Derivative*DeltaXi
+          AMinor_I(iStep) = AMinor_I(iStep+1) - Derivative*DeltaXi
           ADiffMax = max(ADiffMax,&
                abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
        end do
@@ -1116,11 +1119,11 @@ contains
     real function derivative_minor(AMajor, AMinor, Reflection)
       real, intent(in)         ::   AMajor, AMinor, Reflection
       !------------------------------------------------------------------------
-      derivative_minor =  AMajor*&
+      derivative_minor =  -AMajor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
-           - AMinor*AMajor
+           + AMinor*AMajor
     end function derivative_minor
   end subroutine solve_a_plus_minus
   !============================================================================
