@@ -758,6 +758,7 @@ contains
     subroutine get_dxi_and_xi
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim, vAlfven
+
       !------------------------------------------------------------------------
       do iPoint=1,nPoint
          ! 1. Calculate sqrt(RhoNoDim)
@@ -784,11 +785,13 @@ contains
       end do
     end subroutine get_dxi_and_xi
     !==========================================================================
-    subroutine get_reflection
+    subroutine get_res_heating(nIterIn)
       use ModCoronalHeating,  ONLY: rMinWaveReflection
+      integer, intent(in)::nIterIn
       integer:: iPoint
-      !
+      ! 11.12.20 Routine is backward compatible with the version of 10.30.19
       !------------------------------------------------------------------------
+      call get_dxi_and_xi
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 &
            )then
          !
@@ -796,38 +799,28 @@ contains
          !
          ReflCoef_I(0:nPoint) = 0
       else
-         !
          ! Calculate the reflection coefficient
-         !
-         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/&
-              (0.50*DXi_I(2) + DXi_I(1))
-         do iPoint = 2, nPoint -2
+         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
+         ReflCoef_I(0) =  ReflCoef_I(1)
+         do iPoint = 2, nPoint-2
             ReflCoef_i(iPoint) = &
                  abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
                  (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
          end do
          ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
               (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
-         !
          !  Some thread points may be below rMinWaveReflection
          if(rMinWaveReflection > 1.0)&
               ReflCoef_I(1:nPoint-1) = ReflCoef_I(1:nPoint-1)*0.5*&
               (1 + tanh(50*(1 - rMinWaveReflection*&
               BoundaryThreads_B(iBlock)%RInv_III(2-nPoint:0,j,k))))
-         ReflCoef_I(0) =  ReflCoef_I(1)
-         ReflCoef_I(nPoint) = ReflCoef_I(nPoint-1)
+         ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
       end if
-    end subroutine get_reflection
-    !==========================================================================
-    subroutine get_res_heating(nIterIn)
-      use ModCoronalHeating,  ONLY: rMinWaveReflection
-      integer, intent(in)::nIterIn
-      integer:: iPoint
-      !------------------------------------------------------------------------
-      call get_dxi_and_xi
-      call get_reflection
+
       call solve_a_plus_minus(&
            nI=nPoint,                      &
+           ReflCoef_I=ReflCoef_I(0:nPoint),&
+           Xi_I=Xi_I(0:nPoint),            &
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn,                &
@@ -968,7 +961,7 @@ contains
   ! Here each of the compenets w_i and r_i are 3-component states and
   ! m_i, l_i, u_i are 3*3 matrices                                       !
   subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-    
+
     integer, intent(in):: n
     real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
     real, intent(out):: W_VI(3,n)
@@ -1016,10 +1009,11 @@ contains
     end do
   end subroutine tridiag_3by3_block
   !============================================================================
-  subroutine solve_a_plus_minus(nI,AMinorBC,&
+  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinorBC,&
        AMajorBC, nIterIn, DoCheck)
     ! INPUT
     integer,         intent(in):: nI
+    real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
     real,            intent(in):: AMinorBC         ! BC for A-
     ! OUTPUT
     real,           intent(out):: AMajorBC          ! BC for A+
@@ -1040,7 +1034,7 @@ contains
        nIter=nIterMax
     end if
     do iIter=1,nIter
-       ! Go forward, integrate APlus_I with given AMinus_I
+       ! Go forward, integrate AMajor_I with given AMinor_I
        ADiffMax = 0.0
        do iStep=1, nI
           ! Predictor
@@ -1048,16 +1042,16 @@ contains
           Derivative = derivative_major(AP, AM, &
                ReflCoef_I(iStep-1))
           AOld = AMajor_I(iStep)
-          DeltaXi = DXi_I(iStep)
-          
+          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
+
           ! Corrector
           AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
           APMid = AP + 0.5*Derivative*DeltaXi
-          
+
           Derivative = derivative_major(&
                APMid, AMMid, &
                0.50*(ReflCoef_I(iStep-1) + ReflCoef_I(iStep)))
-          
+
           AMajor_I(iStep) = AP + Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
@@ -1074,8 +1068,8 @@ contains
           Derivative = derivative_minor(AP, AM, &
                ReflCoef_I(iStep+1))
           AOld = AMinor_I(iStep)
-          DeltaXi = DXi_I(iStep+1)
-          
+          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
+
           ! Corrector
           APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
           AMMid = AM - 0.5*Derivative*DeltaXi
@@ -1105,10 +1099,10 @@ contains
     end do
     AMajorBC = AMajor_I(nI)
   contains
-    !========================================================================
+    !==========================================================================
     real function derivative_major(AMajor, AMinor, Reflection)
       real, intent(in)         ::   AMajor, AMinor, Reflection
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       derivative_major = -AMinor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
@@ -1125,6 +1119,7 @@ contains
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            + AMinor*AMajor
     end function derivative_minor
+    !==========================================================================
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
