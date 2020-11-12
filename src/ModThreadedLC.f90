@@ -76,7 +76,6 @@ module ModThreadedLC
   ! formula is applied
   !
   integer, parameter:: Cons_ = 1, Ti_=2, LogP_ = 3
-  integer, parameter:: ConsAMajor_ = 4, ConsAMinor_ = 5
   real, allocatable, dimension(:,:):: Res_VI, DCons_VI
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
 
@@ -181,14 +180,14 @@ contains
     allocate(DissipationPlus_I(nPointThreadMax)); DissipationPlus_I = 0.0
     allocate(EnthalpyFlux_I(nPointThreadMax)); EnthalpyFlux_I = 0.0
 
-    allocate(  Res_VI(Cons_:ConsAMinor_,nPointThreadMax));      Res_VI = 0.0
-    allocate(DCons_VI(Cons_:ConsAMinor_,nPointThreadMax));    DCons_VI = 0.0
+    allocate(  Res_VI(Cons_:LogP_,nPointThreadMax));      Res_VI = 0.0
+    allocate(DCons_VI(Cons_:LogP_,nPointThreadMax));    DCons_VI = 0.0
 
-    allocate(U_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax))
+    allocate(U_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax))
     U_VVI = 0.0
-    allocate(L_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax))
+    allocate(L_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax))
     L_VVI = 0.0
-    allocate(M_VVI(Cons_:ConsAMinor_,Cons_:ConsAMinor_,nPointThreadMax))
+    allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax))
     M_VVI = 0.0
     allocate(Flux_I(nPointThreadMax)); Flux_I = 0.0
     !
@@ -869,7 +868,7 @@ contains
     end function dissipation_minor
     !==========================================================================
     subroutine get_aw_dissipation(AMajor, AMinor, Reflection, DeltaXi, &
-         DissipationPlus, DissipationMinus, M_VV)
+         DissipationPlus, DissipationMinus)
       ! Solves sources and Jacobian for solveng a system of equations:
       ! dAMajor/d Xi = DissipationPlus
       !-dAMinor/d Xi = DissipationMinus
@@ -883,8 +882,6 @@ contains
       !OUTPUTS:
       ! Sources
       real, intent(out) :: DissipationPlus, DissipationMinus
-      ! Jacobian
-      real, intent(out) :: M_VV(ConsAMajor_:ConsAMinor_,ConsAMajor_:ConsAMinor_)
       !------------------------------------------------------------------------
       if(AMajor > MaxImbalance*AMinor)then
          ! AMajor is dominant. Figure out if the
@@ -896,33 +893,9 @@ contains
             DissipationPlus = (&
                  -AMinor*(1 - MaxImbalance*AMinor/AMajor)*0.5*Reflection &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationPlus/d amajor = aminor*&
-            ! (1 + 0.5*Reflection*MaxImbalance*aMinor/aMajor**2)*DeltaXi
-            !
-            M_VV(ConsAMajor_,ConsAMajor_) = 1 + AMinor*(1 +  &
-                 0.5*Reflection*MaxImbalance*aMinor/aMajor**2)*DeltaXi
-            !
-            !-dDissipationPlus/d aminor = ( (1 - 2*MaxImbalance*aMinor/aMajor)&
-            !      *0.5*Reflection + aMajor)*DeltaXi >0
-            !
-            M_VV(ConsAMajor_,ConsAMinor_) = ((1 - 2*MaxImbalance*aMinor/aMajor)&
-                 *0.5*Reflection + aMajor)*DeltaXi
-
             DissipationMinus = (&
                  (AMajor - MaxImbalance*AMinor)*0.5*Reflection &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationMinus/d aMinor = (AMajor + MaxImbalance  &
-            !    *0.5*Reflection)*DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMinor_) = 1 + (AMajor + MaxImbalance &
-                 *0.5*Reflection)*DeltaXi
-            !
-            !-dDissipationMinus/d aMajor = (aMinor - 0.5*Reflection)*DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMajor_) = (aMinor - 0.5*Reflection) &
-                 *DeltaXi
          else
             !
             ! Limited reflection
@@ -930,32 +903,9 @@ contains
             DissipationPlus = (&
                  -AMinor*(AMajor - MaxImbalance*AMinor) &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationPlus/d amajor = 2*aminor*DeltaXi
-            !
-            M_VV(ConsAMajor_,ConsAMajor_) = 1 + 2*aminor*DeltaXi
-            !
-            !-dDissipationPlus/d aminor = 2*(AMajor - MaxImbalance*AMinor)&
-            !     *DeltaXi  >0
-            !
-            M_VV(ConsAMajor_,ConsAMinor_) = 2*(AMajor - MaxImbalance*AMinor) &
-                 *DeltaXi
-
             DissipationMinus = (&
                  AMajor*(AMajor - MaxImbalance*AMinor) &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationMinus/d aMinor = AMajor*(1 + MaxImbalance) &
-            !   *DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*(1 + MaxImbalance) &
-                 *DeltaXi
-            !
-            !-dDissipationMinus/d aMajor = (AMinor*(1 + MaxImbalance) - &
-            !       2*AMajor)*DeltaXi < 0
-            !
-            M_VV(ConsAMinor_,ConsAMajor_) = (AMinor*(1 + MaxImbalance)  &
-                 -2*AMajor)*DeltaXi
          end if
       elseif(AMinor > MaxImbalance*AMajor)then
          ! AMinor is dominant. Figure out if the
@@ -967,34 +917,9 @@ contains
             DissipationPlus = (&
                  (AMinor - MaxImbalance*AMajor)*0.5*Reflection &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationPlus/d amajor = 1 (aMinor + MaxImbalance &
-            !      *0.5*Reflection)*DeltaXi
-            !
-            M_VV(ConsAMajor_,ConsAMajor_) = 1 + (aMinor + MaxImbalance &
-                 *0.5*Reflection)*DeltaXi
-            !
-            !-dDissipationPlus/d aminor = (amajor - 0.5*Reflection)
-            !       *DeltaXi
-            !
-            M_VV(ConsAMajor_,ConsAMinor_) = (amajor - 0.5*Reflection) &
-                 *DeltaXi
-
             DissipationMinus = (&
                  -AMajor*(1 - MaxImbalance*AMajor/AMinor)*0.5*Reflection &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-d DissipationMinus/d aMinor = AMajor*(1 + 0.5*Reflection &
-            !    *MaxImbalance*AMajor/AMinor**2)*DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*(1 + 0.5*Reflection &
-                 *MaxImbalance*AMajor/AMinor**2)*DeltaXi
-            !
-            !-d DissipationMinus/d aMajor = (AMinor + (1 - 2*MaxImbalance &
-            !    *AMajor/AMinor)*0.5*Reflection)*DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMajor_) = (AMinor + (1 - 2*MaxImbalance &
-                 *AMajor/AMinor)*0.5*Reflection)*DeltaXi
          else
             !
             ! Limited reflection
@@ -1002,54 +927,16 @@ contains
             DissipationPlus = (&
                  AMinor*(AMinor - MaxImbalance*AMajor) &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationPlus/d amajor = aMinor*(1 + MaxImbalance)*DeltaXi
-            !
-            M_VV(ConsAMajor_,ConsAMajor_) = 1 + aMinor*(1 + MaxImbalance) &
-                 *DeltaXi
-            !
-            !-dDissipationPlus/d aminor = (aMajor*(1 +  MaxImbalance) &
-            ! -2*AMinor)*DeltaXi < 0
-            !
-            M_VV(ConsAMajor_,ConsAMinor_) = (aMajor*(1 +  MaxImbalance) &
-                 -2*AMinor)*DeltaXi
-
             DissipationMinus = (&
                  -AMajor*(AMinor - MaxImbalance*AMajor)  &
                  - AMinor*AMajor)*DeltaXi
-            !
-            !-dDissipationMinus/d aMinor = 2*AMajor*DeltaXi
-            !
-            M_VV(ConsAMinor_,ConsAMinor_) = 1 + 2*AMajor*DeltaXi
-            !
-            !-d/d aMajor = 2*(aMinor - MaxImbalance*AMajor)*DeltaXi >0
-            !
-            M_VV(ConsAMinor_,ConsAMajor_) = 2*(aMinor - MaxImbalance*AMajor)&
-               *DeltaXi
          end if
       else
          !
          ! No reflection
          !
          DissipationPlus = - AMinor*AMajor*DeltaXi
-         !
-         !-dDissipationPlus/d amajor = aMinor*DeltaXi
-         !
-         M_VV(ConsAMajor_,ConsAMajor_) = 1 + aMinor*DeltaXi
-         !
-         !-dDissipationPlus/d aminor = aMajor*DeltaXi
-         !
-         M_VV(ConsAMajor_,ConsAMinor_) = aMajor*DeltaXi
-
          DissipationMinus = -AMinor*AMajor*DeltaXi
-         !
-         !-dDissipationMinus /d aMinor = AMajor*DeltaXi
-         !
-         M_VV(ConsAMinor_,ConsAMinor_) = 1 + AMajor*DeltaXi
-         !
-         !-dDissipationMinus /d aMajor = aMinor*DeltaXi
-         !
-         M_VV(ConsAMinor_,ConsAMajor_) = aMinor*DeltaXi
       end if
     end subroutine get_aw_dissipation
     !==========================================================================
@@ -1083,18 +970,16 @@ contains
          if(DoCheckConvHere.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
                  ' AMinorBC=',AMinorBC
-            write(*,*)'iPoint AMajor Res_VI DCons_VI Error TeSi TiSi PSi'
+            write(*,*)'iPoint AMajor DissipationPlus TeSi TiSi PSi'
             do iPoint = 1, nPoint
-               write(*,*)iPoint, AMajor_I(iPoint), Res_VI(ConsAMajor_,iPoint)&
-                    ,Res_VI(ConsAMajor_,iPoint)-DissipationPlus_I(iPoint),&
-                    DissipationPlus_I(iPoint),DCons_VI(ConsAMajor_,iPoint),&
+               write(*,*)iPoint, AMajor_I(iPoint), &
+                    DissipationPlus_I(iPoint),     &
                     TeSi_I(iPoint), TiSi_I(iPoint), PSi_I(iPoint)
             end do
-            write(*,*)'iPoint AMinor Res_VI DCons_VI Error ReflCoef VaLog dXi'
+            write(*,*)'iPoint AMinor DissipationMinus ReflCoef VaLog dXi'
             do iPoint = 1, nPoint
-               write(*,*)iPoint, AMinor_I(iPoint), Res_VI(ConsAMinor_,iPoint)&
-                    ,Res_VI(ConsAMinor_,iPoint)-DissipationMinus_I(iPoint),  &
-                    DissipationMinus_I(iPoint), DCons_VI(ConsAMinor_,iPoint),&
+               write(*,*)iPoint, AMinor_I(iPoint),  &
+                    DissipationMinus_I(iPoint),     &
                     ReflCoef_I(iPoint), VaLog_I(iPoint), DXi_I(iPoint)
             end do
             call stop_mpi('Did not reach convergence in solve_a_plus_minus')
