@@ -353,28 +353,35 @@ contains
     AMinor_I(nPoint)    = AMinorIn
     select case(iAction)
     case(DoInit_)
-       !
        ! As a first approximation, recover Te from the analytical solution
-       !
-       call analytical_te_ti
-       !
+       TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
+       do iPoint = nPoint-1, 1, -1
+          call interpolate_lookup_table(&
+               iTable=iTableTR,         &
+               iVal=LengthPAvrSi_,      &
+               ValIn=PeSiOut/SqrtZ*     &
+               BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
+               Value_V=Value_V,         &
+               Arg1Out=TeSi_I(iPoint),  &
+               DoExtrapolate=.false.)
+       end do
+       TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
+       TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
        ! The analytical solution assumes constant pressure and
        ! no heating. Calculate the pressure distribution
-       !
        call set_pressure
-       !
        ! Get wave from analytical solution with noreflection
        call get_dxi_and_xi
        call analytical_waves
        call advance_thread(IsTimeAccurate=.false.)
-       call solve_heating(nIterIn=nIterHere)
+       call get_res_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k) = AMajor_I(0:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k) = AMinor_I(0:nPoint)
     case(Enthalpy_)
-       call solve_heating(nIterIn=nIterHere)
+       call get_res_heating(nIterIn=nIterHere)
        !
        ! Do not store temperature
        !
@@ -391,7 +398,7 @@ contains
     case(Heat_)
        call advance_thread(IsTimeAccurate=.true.)
        ! Calculate AWaves and store pressure and temperature
-       call solve_heating(nIterIn=nIterHere)
+       call get_res_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)
@@ -484,7 +491,7 @@ contains
        write(*,*)&
             'iPoint TeSi TeSiStart PSi ResHeating ResEnthalpy'
        do iPoint=1,nPoint
-          write(*,'(i4,6es15.6)')iPoint, TeSi_I(iPoint),&
+          write(*,'(i4,5es15.6)')iPoint, TeSi_I(iPoint),&
                TeSiStart_I(iPoint),&
                PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
        end do
@@ -492,24 +499,6 @@ contains
     end if
     call timing_stop(NameTiming)
   contains
-    !==========================================================================
-    subroutine analytical_te_ti
-      integer :: iPoint
-      !------------------------------------------------------------------------
-      TeSi_I(nPoint) = TeSiIn; TiSi_I(nPoint) = TiSiIn
-      do iPoint = nPoint-1, 1, -1
-         call interpolate_lookup_table(&
-              iTable=iTableTR,         &
-              iVal=LengthPAvrSi_,      &
-              ValIn=PeSiOut/SqrtZ*     &
-              BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-              Value_V=Value_V,         &
-              Arg1Out=TeSi_I(iPoint),  &
-              DoExtrapolate=.false.)
-      end do
-      TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
-      TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
-    end subroutine analytical_te_ti
     !==========================================================================
     subroutine set_pressure
       integer::iPoint
@@ -563,7 +552,6 @@ contains
       else
          DtInv = 0.0
       end if
-      ! In the equations below:
       ! Initialization
       TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
       TiSiStart_I(1:nPoint) = TiSi_I(1:nPoint)
@@ -580,7 +568,7 @@ contains
       DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0
       DeltaIonEnergy_I = 0.0
       PressureTRCoef = 1.0; FluxConst = 0.0
-      call solve_heating(nIterIn=nIterHere)
+      call get_res_heating(nIterIn=nIterHere)
       if(USi>0)then
          FluxConst    = USi * PSi_I(nPoint)/&
               ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
@@ -590,9 +578,7 @@ contains
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
       end if
-      !
       ! 5/2*U*Pi*(Z+1)
-      !
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
       call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
@@ -707,7 +693,7 @@ contains
          M_VVI(Ti_,Cons_,1:nPoint-1) = M_VVI(Ti_,Cons_,1:nPoint-1) -&
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
-         call tridiag_block_matrix3(nI=nPoint-1,     &
+         call tridiag_3by3_block(n=nPoint-1,  &
               L_VVI=L_VVI(:,:,1:nPoint-1),&
               M_VVI=M_VVI(:,:,1:nPoint-1),&
               U_VVI=U_VVI(:,:,1:nPoint-1),&
@@ -743,7 +729,7 @@ contains
          ! Set pressure for updated temperature
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
-         call solve_heating(nIterIn=nIterHere)
+         call get_res_heating(nIterIn=nIterHere)
          ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
               BoundaryThreads_B(iBlock)%DsCellOverBSi_III(1-nPoint:-1,j,k)* &
               PSi_I(1:nPoint-1)**2/(&
@@ -755,7 +741,7 @@ contains
            .and.DoCheckConvHere)then
          write(*,'(a)')'Te TeMin PSi_I Heating Enthalpy'
          do iPoint=1,nPoint
-            write(*,'(i4,6es15.6)')iPoint, TeSi_I(iPoint),&
+            write(*,'(i4,5es15.6)')iPoint, TeSi_I(iPoint),&
                  BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
                  PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
          end do
@@ -772,7 +758,6 @@ contains
     subroutine get_dxi_and_xi
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim, vAlfven
-
       !------------------------------------------------------------------------
       do iPoint=1,nPoint
          ! 1. Calculate sqrt(RhoNoDim)
@@ -834,6 +819,19 @@ contains
       end if
     end subroutine get_reflection
     !==========================================================================
+    subroutine get_res_heating(nIterIn)
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
+      integer, intent(in)::nIterIn
+      integer:: iPoint
+      !------------------------------------------------------------------------
+      call get_dxi_and_xi
+      call get_reflection
+      call solve_a_plus_minus(&
+           AMinorBC=AMinorIn,              &
+           AMajorBC=AMajorOut,             &
+           nIterIn=nIterIn)
+    end subroutine get_res_heating
+    !==========================================================================
     subroutine analytical_waves
       integer:: iPoint
       !
@@ -870,14 +868,9 @@ contains
            exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
     end subroutine analytical_waves
     !==========================================================================
-    !=================Calculation of sources and Jacobian matrices=============
-    !==========================================================================
     subroutine get_heat_cond
       !------------------------------------------------------------------------
-      M_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0
-      ResHeatCond_I = 0.0
-      U_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0
-      L_VVI(Cons_:LogP_,Cons_:LogP_,:) = 0.0
+      M_VVI = 0.0; ResHeatCond_I = 0.0; U_VVI = 0.0; L_VVI = 0.0
       !----------------
       ! Contribution from heat conduction fluxes
       ! Flux linearizations over small dCons
@@ -957,19 +950,6 @@ contains
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
     end subroutine get_heat_cond
     !==========================================================================
-    subroutine solve_heating(nIterIn)
-      use ModCoronalHeating,  ONLY: rMinWaveReflection
-      integer, intent(in)::nIterIn
-      integer:: iPoint
-      !------------------------------------------------------------------------
-      call get_dxi_and_xi
-      call get_reflection
-      call solve_a_plus_minus(&
-           AMinorBC=AMinorIn,              &
-           AMajorBC=AMajorOut,             &
-           nIterIn=nIterIn)
-    end subroutine solve_heating
-    !==========================================================================
     real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
       real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
       !------------------------------------------------------------------------
@@ -989,80 +969,6 @@ contains
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
            - AMinor*AMajor)*DeltaXi
     end function dissipation_minor
-    !==========================================================================
-    subroutine get_aw_dissipation(AMajor, AMinor, Reflection, DeltaXi, &
-         DissipationPlus, DissipationMinus)
-      ! Solves sources and Jacobian for solveng a system of equations:
-      ! dAMajor/d Xi = DissipationPlus
-      !-dAMinor/d Xi = DissipationMinus
-      !INPUTS:
-      ! Wave amplitudes
-      real, intent(in)  :: AMajor, AMinor
-      ! Reflection coefficient
-      real, intent(in)  :: Reflection
-      ! Dimensionless mesh size
-      real, intent(in)  :: DeltaXi
-      !OUTPUTS:
-      ! Sources
-      real, intent(out) :: DissipationPlus, DissipationMinus
-
-      !------------------------------------------------------------------------
-      if(AMajor > MaxImbalance*AMinor)then
-         ! AMajor is dominant. Figure out if the
-         ! reflection shoud be limited:
-         if(0.5*Reflection < AMajor)then
-            !
-            ! Unlimited reflection
-            !`
-            DissipationPlus = (&
-                 -AMinor*(1 - MaxImbalance*AMinor/AMajor)*0.5*Reflection &
-                 - AMinor*AMajor)*DeltaXi
-            DissipationMinus = (&
-                 (AMajor - MaxImbalance*AMinor)*0.5*Reflection &
-                 - AMinor*AMajor)*DeltaXi
-         else
-            !
-            ! Limited reflection
-            !
-            DissipationPlus = (&
-                 -AMinor*(AMajor - MaxImbalance*AMinor) &
-                 - AMinor*AMajor)*DeltaXi
-            DissipationMinus = (&
-                 AMajor*(AMajor - MaxImbalance*AMinor) &
-                 - AMinor*AMajor)*DeltaXi
-         end if
-      elseif(AMinor > MaxImbalance*AMajor)then
-         ! AMinor is dominant. Figure out if the
-         ! reflection shoud be limited:
-         if(0.5*Reflection < AMinor)then
-            !
-            ! Unlimited reflection
-            !`
-            DissipationPlus = (&
-                 (AMinor - MaxImbalance*AMajor)*0.5*Reflection &
-                 - AMinor*AMajor)*DeltaXi
-            DissipationMinus = (&
-                 -AMajor*(1 - MaxImbalance*AMajor/AMinor)*0.5*Reflection &
-                 - AMinor*AMajor)*DeltaXi
-         else
-            !
-            ! Limited reflection
-            !
-            DissipationPlus = (&
-                 AMinor*(AMinor - MaxImbalance*AMajor) &
-                 - AMinor*AMajor)*DeltaXi
-            DissipationMinus = (&
-                 -AMajor*(AMinor - MaxImbalance*AMajor)  &
-                 - AMinor*AMajor)*DeltaXi
-         end if
-      else
-         !
-         ! No reflection
-         !
-         DissipationPlus = - AMinor*AMajor*DeltaXi
-         DissipationMinus = -AMinor*AMajor*DeltaXi
-      end if
-    end subroutine get_aw_dissipation
     !==========================================================================
     subroutine solve_a_plus_minus(AMinorBC,&
          AMajorBC, nIterIn)
@@ -1180,27 +1086,23 @@ contains
   !  ||...                   || ||...|| ||...||                                !
   !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                                !
   ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
-  ! Here each of the compenets w_i and r_i are nDim-component states and
-  ! m_i, l_i, u_i are nDim*nDim matrices                                       !
-  subroutine tridiag_block_matrix3(nI,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-    integer, parameter:: nDim = 3
-    integer, intent(in):: nI
-    real, intent(in)   :: L_VVI(nDim,nDim,nI)
-    real, intent(in)   :: M_VVI(nDim,nDim,nI)
-    real, intent(in)   :: U_VVI(nDim,nDim,nI)
-    real, intent(in)   :: R_VI(nDim,nI)
-    real, intent(out)  :: W_VI(nDim,nI)
+  ! Here each of the compenets w_i and r_i are 3-component states and
+  ! m_i, l_i, u_i are 3*3 matrices                                       !
+  subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
+
+    integer, intent(in):: n
+    real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
+    real, intent(out):: W_VI(3,n)
 
     integer:: j
-    real   :: TildeM_VV(nDim,nDim), TildeMInv_VV(nDim,nDim)
-    real   :: TildeMInvDotU_VVI(nDim,nDim,2:nI)
+    real   :: TildeM_VV(3,3), TildeMInv_VV(3,3), TildeMInvDotU_VVI(3,3,2:n)
 
     ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation
     !      (M+L+U)W = R
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
 
-    character(len=*), parameter:: NameSub = 'tridiag_block_matrix3'
+    character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
     !--------------------------------------------------------------------------
     if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
@@ -1210,7 +1112,7 @@ contains
 
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
-    do j=2, nI
+    do j=2, n
        ! Next 3*3 blok element of the matrix, Inverted(Tilde(M)).U
        TildeMInvDotU_VVI(:,:,j) = matmul(TildeMInv_VV,U_VVI(:,:,j-1))
        ! Next 3*3 block element of matrix tilde(M), obeying the eq.
@@ -1229,12 +1131,12 @@ contains
        W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j) - &
             matmul(L_VVI(:,:,j),W_VI(:,j-1)))
     end do
-    do j = nI - 1, 1, -1
+    do j = n - 1, 1, -1
        ! Finally we solve equation
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-  end subroutine tridiag_block_matrix3
+  end subroutine tridiag_3by3_block
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock)
