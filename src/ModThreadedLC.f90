@@ -985,10 +985,9 @@ contains
     end if
     TildeM_VV = M_VVI(:,:,1)
     TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
-
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
-    do j=2, n
+    do j=2,n
        ! Next 3*3 blok element of the matrix, Inverted(Tilde(M)).U
        TildeMInvDotU_VVI(:,:,j) = matmul(TildeMInv_VV,U_VVI(:,:,j-1))
        ! Next 3*3 block element of matrix tilde(M), obeying the eq.
@@ -1007,7 +1006,7 @@ contains
        W_VI(:,j) = matmul(TildeMInv_VV,R_VI(:,j) - &
             matmul(L_VVI(:,:,j),W_VI(:,j-1)))
     end do
-    do j = n - 1, 1, -1
+    do j=n-1,1,-1
        ! Finally we solve equation
        ! (I + Inverted(Tilde(M)).U).W =  Inverted(tilde(M) + L).R
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
@@ -1024,11 +1023,10 @@ contains
     integer,optional,intent(in):: nIterIn
     logical, intent(in) :: DoCheck
     real:: DeltaXi
-    integer::iPoint,iIter
+    integer::iStep,iIter
     integer, parameter:: nIterMax = 10
     integer:: nIter
-    real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
-    real   :: DissipationPlus, DissipationMinus
+    real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !------------------------------------------------------------------------
     AMajor_I(0) = 1.0
@@ -1039,64 +1037,65 @@ contains
        nIter=nIterMax
     end if
     do iIter=1,nIter
+       ! Go forward, integrate APlus_I with given AMinus_I
        ADiffMax = 0.0
-       do iPoint=1, nI
+       do iStep=1, nI
           ! Predictor
-          AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
-          AOld = AMajor_I(iPoint)
-          DeltaXi = DXi_I(iPoint)
+          AP = AMajor_I(iStep-1); AM = AMinor_I(iStep-1)
+          Derivative = derivative_major(AP, AM, &
+               ReflCoef_I(iStep-1))
+          AOld = AMajor_I(iStep)
+          DeltaXi = DXi_I(iStep)
           
           ! Corrector
-          AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
-          APMid = AP + 0.50*dissipation_major(AP, AM, &
-               ReflCoef_I(iPoint-1),DeltaXi)
+          AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
+          APMid = AP + 0.5*Derivative*DeltaXi
           
-          DissipationPlus = dissipation_major(&
+          Derivative = derivative_major(&
                APMid, AMMid, &
-               0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
+               0.50*(ReflCoef_I(iStep-1) + ReflCoef_I(iStep)))
           
-          AMajor_I(iPoint) = AP + DissipationPlus
+          AMajor_I(iStep) = AP + Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
-               abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
+               abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
        end do
        ! Go backward, integrate AMinor_I with given AMajor_I
        ! We integrate equation,
-       !
        ! 2da_-/d\xi=
        !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
        ! *min(ReflCoef,2max(a_,a_+))-
        ! -2a_-a_+
-       !
-       do iPoint = nI - 1, 0, -1
+       do iStep=nI - 1, 0, -1
           ! Predictor
-          AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
-          AOld = AMinor_I(iPoint)
-          DeltaXi = DXi_I(iPoint+1)
+          AP = AMajor_I(iStep+1); AM = AMinor_I(iStep+1)
+          Derivative = derivative_minor(AP, AM, &
+               ReflCoef_I(iStep+1))
+          AOld = AMinor_I(iStep)
+          DeltaXi = DXi_I(iStep+1)
           
           ! Corrector
-          APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
-          AMMid = AM + 0.5*dissipation_minor(AP, AM, &
-               ReflCoef_I(iPoint+1),DeltaXi)
-          DissipationMinus = dissipation_minor(&
+          APMid = 0.5*(AMajor_I(iStep+1) + AMajor_I(iStep))
+          AMMid = AM + 0.5*Derivative*DeltaXi
+          Derivative = derivative_minor(&
                APMid, AMMid, &
-               0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
-          AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus
+               0.50*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep)))
+          AMinor_I(iStep) = AMinor_I(iStep+1) + Derivative*DeltaXi
           ADiffMax = max(ADiffMax,&
-               abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
+               abs(AOld - AMinor_I(iStep))/max(AOld, AMinor_I(iStep)))
        end do
        if(ADiffMax<cTol)EXIT
        if(DoCheck.and.iIter==nIter)then
           write(*,*)'XiTot=', Xi_I(nI),' ADiffMax=', ADiffMax,&
                ' AMinorBC=',AMinorBC
           write(*,*)'iPoint AMajor TeSi TiSi PSi'
-          do iPoint = 1, nI
-             write(*,*)iPoint, AMajor_I(iPoint), &
-                  TeSi_I(iPoint), TiSi_I(iPoint), PSi_I(iPoint)
+          do iStep = 1, nI
+             write(*,*)iStep, AMajor_I(iStep), &
+                  TeSi_I(iStep), TiSi_I(iStep), PSi_I(iStep)
           end do
           write(*,*)'iPoint AMinor DissipationMinus ReflCoef VaLog dXi'
-          do iPoint = 1, nI
-             write(*,*)iPoint, AMinor_I(iPoint),  &
-                  ReflCoef_I(iPoint), VaLog_I(iPoint), DXi_I(iPoint)
+          do iStep = 1, nI
+             write(*,*)iStep, AMinor_I(iStep),  &
+                  ReflCoef_I(iStep), VaLog_I(iStep), DXi_I(iStep)
           end do
           call stop_mpi('Did not reach convergence in solve_a_plus_minus')
        end if
@@ -1104,25 +1103,25 @@ contains
     AMajorBC = AMajor_I(nI)
   contains
     !========================================================================
-    real function dissipation_major(AMajor, AMinor, Reflection, DeltaXi)
-      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+    real function derivative_major(AMajor, AMinor, Reflection)
+      real, intent(in)         ::   AMajor, AMinor, Reflection
       !----------------------------------------------------------------------
-      dissipation_major = (-AMinor*&
+      derivative_major = -AMinor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
-           - AMinor*AMajor)*DeltaXi
-    end function dissipation_major
+           - AMinor*AMajor
+    end function derivative_major
     !==========================================================================
-    real function dissipation_minor(AMajor, AMinor, Reflection, DeltaXi)
-      real, intent(in)         ::   AMajor, AMinor, Reflection, DeltaXi
+    real function derivative_minor(AMajor, AMinor, Reflection)
+      real, intent(in)         ::   AMajor, AMinor, Reflection
       !------------------------------------------------------------------------
-      dissipation_minor = ( AMajor*&
+      derivative_minor =  AMajor*&
            (max(0.0,AMajor - MaxImbalance*AMinor)      &
            -max(0.0,AMinor - MaxImbalance*AMajor)  )*  &
            min(0.5*Reflection/max(AMinor,AMajor), 1.0) &
-           - AMinor*AMajor)*DeltaXi
-    end function dissipation_minor
+           - AMinor*AMajor
+    end function derivative_minor
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
