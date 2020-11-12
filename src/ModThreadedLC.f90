@@ -52,8 +52,7 @@ module ModThreadedLC
        TiSi_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
-       ExchangeRate_I, EnthalpyFlux_I, Flux_I, DissipationMinus_I,       &
-       DissipationPlus_I
+       ExchangeRate_I, EnthalpyFlux_I, Flux_I
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
@@ -154,8 +153,6 @@ contains
     allocate(     Xi_I(0:nPointThreadMax));     Xi_I = 0.0
     allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
     allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
-    allocate(DissipationMinus_I(nPointThreadMax)); DissipationMinus_I = 0.0
-    allocate(DissipationPlus_I(nPointThreadMax)); DissipationPlus_I = 0.0
     allocate(EnthalpyFlux_I(nPointThreadMax)); EnthalpyFlux_I = 0.0
 
     allocate(  Res_VI(Cons_:LogP_,nPointThreadMax));      Res_VI = 0.0
@@ -830,6 +827,10 @@ contains
            AMinorBC=AMinorIn,              &
            AMajorBC=AMajorOut,             &
            nIterIn=nIterIn)
+      ResHeating_I = 0.0
+      ResHeating_I(1:nPoint-1) = &
+           (AMajor_I(0:nPoint-2)**2 - AMinor_I(0:nPoint-2)**2)&
+           -(AMajor_I(1:nPoint-1  )**2 - AMinor_I(1:nPoint-1)**2)
     end subroutine get_res_heating
     !==========================================================================
     subroutine analytical_waves
@@ -982,6 +983,7 @@ contains
       integer, parameter:: nIterMax = 10
       integer:: nIter
       real   :: AOld, ADiffMax, AP, AM, APMid, AMMid
+      real   :: DissipationPlus, DissipationMinus
       character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
       !------------------------------------------------------------------------
       AMajor_I(0) = 1.0
@@ -991,37 +993,70 @@ contains
       else
          nIter=nIterMax
       end if
-      DissipationMinus_I = 0.0
-      DissipationPlus_I  = 0.0
       do iIter=1,nIter
          ADiffMax = 0.0
-         call runge_kutta(ADiffMax)
+         do iPoint=1, nPoint
+            ! Predictor
+            AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
+            AOld = AMajor_I(iPoint)
+            DeltaXi = DXi_I(iPoint)
+            
+            ! Corrector
+            AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
+            APMid = AP + 0.50*dissipation_major(AP, AM, &
+                 ReflCoef_I(iPoint-1),DeltaXi)
+            
+            DissipationPlus = dissipation_major(&
+                 APMid, AMMid, &
+                 0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
+
+            AMajor_I(iPoint) = AP + DissipationPlus
+            ADiffMax = max(ADiffMax, &
+                 abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
+         end do
+         ! Go backward, integrate AMinor_I with given AMajor_I
+         ! We integrate equation,
+         !
+         ! 2da_-/d\xi=
+         !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+         ! *min(ReflCoef,2max(a_,a_+))-
+         ! -2a_-a_+
+         !
+         do iPoint = nPoint - 1, 0, -1
+            ! Predictor
+            AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
+            AOld = AMinor_I(iPoint)
+            DeltaXi = DXi_I(iPoint+1)
+            
+            ! Corrector
+            APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
+            AMMid = AM + 0.5*dissipation_minor(AP, AM, &
+                 ReflCoef_I(iPoint+1),DeltaXi)
+            DissipationMinus = dissipation_minor(&
+                 APMid, AMMid, &
+                 0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
+            AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus
+            ADiffMax = max(ADiffMax,&
+                 abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
+         end do
          if(ADiffMax<cTol)EXIT
          if(DoCheckConvHere.and.iIter==nIter)then
             write(*,*)'XiTot=', Xi_I(nPoint),' ADiffMax=', ADiffMax,&
                  ' AMinorBC=',AMinorBC
-            write(*,*)'iPoint AMajor DissipationPlus TeSi TiSi PSi'
+            write(*,*)'iPoint AMajor TeSi TiSi PSi'
             do iPoint = 1, nPoint
                write(*,*)iPoint, AMajor_I(iPoint), &
-                    DissipationPlus_I(iPoint),     &
                     TeSi_I(iPoint), TiSi_I(iPoint), PSi_I(iPoint)
             end do
             write(*,*)'iPoint AMinor DissipationMinus ReflCoef VaLog dXi'
             do iPoint = 1, nPoint
                write(*,*)iPoint, AMinor_I(iPoint),  &
-                    DissipationMinus_I(iPoint),     &
                     ReflCoef_I(iPoint), VaLog_I(iPoint), DXi_I(iPoint)
             end do
             call stop_mpi('Did not reach convergence in solve_a_plus_minus')
          end if
       end do
       AMajorBC = AMajor_I(nPoint)
-      ResHeating_I = 0.0
-      ResHeating_I(1:nPoint-1) = &
-           -(AMajor_I(0:nPoint-2) + AMajor_I(1:nPoint-1))*&
-           DissipationPlus_I(1:nPoint-1) -&
-           (AMinor_I(0:nPoint-2) + AMinor_I(1:nPoint-1))*&
-           DissipationMinus_I(1:nPoint-1)
     end subroutine solve_a_plus_minus
     !==========================================================================
     subroutine runge_kutta(ADiffMax)
@@ -1030,50 +1065,6 @@ contains
       real   :: DeltaXi, AP, AM, APMid, AMMid, AOld
       !------------------------------------------------------------------------
       call timing_start('runge_kutta')
-      do iPoint=1, nPoint
-         ! Predictor
-         AP = AMajor_I(iPoint-1); AM = AMinor_I(iPoint-1)
-         AOld = AMajor_I(iPoint)
-         DeltaXi = DXi_I(iPoint)
-
-         ! Corrector
-         AMMid = 0.5*(AMinor_I(iPoint-1) + AMinor_I(iPoint))
-         APMid = AP + 0.50*dissipation_major(AP, AM, &
-              ReflCoef_I(iPoint-1),DeltaXi)
-
-         DissipationPlus_I(iPoint) = dissipation_major(&
-              APMid, AMMid, &
-              0.50*(ReflCoef_I(iPoint-1) + ReflCoef_I(iPoint)),DeltaXi)
-
-         AMajor_I(iPoint) = AP + DissipationPlus_I(iPoint)
-         ADiffMax = max(ADiffMax, &
-              abs(AOld - AMajor_I(iPoint))/max(AOld,AMajor_I(iPoint)))
-      end do
-      ! Go backward, integrate AMinor_I with given AMajor_I
-      ! We integrate equation,
-      !
-      ! 2da_-/d\xi=
-      !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
-      ! *min(ReflCoef,2max(a_,a_+))-
-      ! -2a_-a_+
-      !
-      do iPoint = nPoint - 1, 0, -1
-         ! Predictor
-         AP = AMajor_I(iPoint+1); AM = AMinor_I(iPoint+1)
-         AOld = AMinor_I(iPoint)
-         DeltaXi = DXi_I(iPoint+1)
-
-         ! Corrector
-         APMid = 0.5*(AMajor_I(iPoint+1) + AMajor_I(iPoint))
-         AMMid = AM + 0.5*dissipation_minor(AP, AM, &
-              ReflCoef_I(iPoint+1),DeltaXi)
-         DissipationMinus_I(iPoint+1) = dissipation_minor(&
-              APMid, AMMid, &
-              0.50*(ReflCoef_I(iPoint+1) + ReflCoef_I(iPoint)),DeltaXi)
-         AMinor_I(iPoint) = AMinor_I(iPoint+1) + DissipationMinus_I(iPoint+1)
-         ADiffMax = max(ADiffMax,&
-              abs(AOld - AMinor_I(iPoint))/max(AOld, AMinor_I(iPoint)))
-      end do
       call timing_stop('runge_kutta')
     end subroutine runge_kutta
     !==========================================================================
