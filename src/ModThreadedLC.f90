@@ -48,8 +48,8 @@ module ModThreadedLC
   !$omp threadprivate( Te_G )
   ! Arrays for 1D distributions
   real,allocatable,dimension(:):: ReflCoef_I, AMajor_I, AMinor_I,            &
-       TeSi_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                  &
-       TiSi_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,      &
+       TeSi_I, TeSiStart_I, PSi_I, Xi_I, Cons_I,                             &
+       TiSi_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,                 &
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
        ExchangeRate_I, EnthalpyFlux_I, Flux_I
@@ -800,9 +800,9 @@ contains
          ReflCoef_I(0:nPoint) = 0
       else
          ! Calculate the reflection coefficient
-         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
-         ReflCoef_I(0) =  ReflCoef_I(1)
-         do iPoint = 2, nPoint-2
+         ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/&
+              (0.50*DXi_I(2) + DXi_I(1))
+         do iPoint = 2, nPoint - 2
             ReflCoef_i(iPoint) = &
                  abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
                  (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
@@ -814,9 +814,9 @@ contains
               ReflCoef_I(1:nPoint-1) = ReflCoef_I(1:nPoint-1)*0.5*&
               (1 + tanh(50*(1 - rMinWaveReflection*&
               BoundaryThreads_B(iBlock)%RInv_III(2-nPoint:0,j,k))))
-         ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
+         ReflCoef_I(0)      =  ReflCoef_I(1)
+         ReflCoef_I(nPoint) =  ReflCoef_I(nPoint-1)
       end if
-
       call solve_a_plus_minus(&
            nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
@@ -918,8 +918,25 @@ contains
       L_VVI(LogP_,LogP_,2:nPoint-1) = -1.0
       ! Cooling
       ! 1. Source term:
+      call get_cooling(nLast=nPoint-1)
+      ! 2. Source term derivatives:
+      M_VVI(Cons_,LogP_,1:nPoint-1) = &
+           -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
+      M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+           (-DResCoolingOverDLogT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*TeSi_I(1:nPoint-1))/&
+           (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
+      M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
+           2*ResCooling_I(1:nPoint-1)/&
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
+    end subroutine get_heat_cond
+    !==========================================================================
+    subroutine get_cooling(nLast)
+      integer,intent(in) ::nLast
+      integer ::  iPoint
+      !------------------------------------------------------------------------
       ResCooling_I = 0.0;
-      do iPoint = 1, nPoint-1
+      do iPoint = 1, nLast
          if(TeSi_I(iPoint)>1.0e8)then
             write(*,*)'Failure in heat condusction setting'
             write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
@@ -937,18 +954,7 @@ contains
          DResCoolingOverDLogT_I(iPoint) = &
               ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
       end do
-      ! 2. Source term derivatives:
-      M_VVI(Cons_,LogP_,1:nPoint-1) = &
-           -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
-      M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-           (-DResCoolingOverDLogT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
-           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*TeSi_I(1:nPoint-1))/&
-           (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
-      M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
-           2*ResCooling_I(1:nPoint-1)/&
-           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/d log Ti
-    end subroutine get_heat_cond
-    !==========================================================================
+    end subroutine get_cooling
   end subroutine solve_boundary_thread
   !============================================================================
   ! This routine solves three-diagonal system of equations:                    !
