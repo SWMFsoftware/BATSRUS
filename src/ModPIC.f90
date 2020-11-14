@@ -32,7 +32,7 @@ module ModPIC
   public:: read_pic_status_file
 
   logical, public:: UsePic = .false.
-  logical, public:: UseAdaptivePic = .false.
+  logical, public:: UseAdaptivePic = .true.
   logical, public:: DoRestartPicStatus = .false.
 
   real, allocatable, public :: DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
@@ -126,17 +126,14 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case ("#PICADAPT")
-       call read_var('UseAdaptivePic', UseAdaptivePic)
-       if(UseAdaptivePic) then
-          call read_var('DoAdaptPic', AdaptPic % DoThis)
-          if(AdaptPic % DoThis) then
-             call read_var('DnAdaptPic', AdaptPic % Dn)
-             call read_var('DtAdaptPic', AdaptPic % Dt)
-             AdaptPic % nNext = AdaptPic % Dn
-             AdaptPic % tNext = AdaptPic % Dt
-          end if
+       call read_var('DoAdaptPic', AdaptPic % DoThis)
+       if(AdaptPic % DoThis) then
+          call read_var('DnAdaptPic', AdaptPic % Dn)
+          call read_var('DtAdaptPic', AdaptPic % Dt)
+          AdaptPic % nNext = AdaptPic % Dn
+          AdaptPic % tNext = AdaptPic % Dt
        end if
-
+       
     case ('#PICPATCH')
        call read_var('PatchSize', nCellPerPatch)
 

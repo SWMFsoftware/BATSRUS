@@ -7860,18 +7860,15 @@ required for the MHD-EPIC algorithm.
 </command>
 
 <command name="PICADAPT">
-  <parameter name="UseAdaptivePic" type="logical" default="T" />
-  <if expr="$UseAdaptivePic">
-    <parameter name="DoAdaptPic" type="logical" default="F" />
-    <if expr="$DoAdaptPic">
-      <parameter name="DnAdaptPic" type="integer" min="-1"
-		 default="-1" />
-      <parameter name="DtAdaptPic" type="real" min="-1"
-		 default="-1" />
-    </if>
+  <parameter name="DoAdaptPic" type="logical" default="F" />
+  <if expr="$DoAdaptPic">
+    <parameter name="DnAdaptPic" type="integer" min="-1"
+	       default="-1" />
+    <parameter name="DtAdaptPic" type="real" min="-1"
+	       default="-1" />
   </if>
+
 #PICADAPT
-T			UseAdaptivePic (rest is read if true)
 T			DoAdaptPic (rest is read if true)
 100			DnAdaptPic
 -1.			DtAdaptPic
@@ -7882,7 +7879,7 @@ covers a fixed region using PIC by the parameters set up in
 #PICGRID. If DoAdaptPic=.true., the PIC region will be recalculated
 based on the frequency (DnAdaptPic and DtAdaptPic) provided. 
 
-Default is UseAdaptivePic true and DoAdaptPic false.
+Default is DoAdaptPic false.
 </command>
 
 <command name="PICPATCH">
