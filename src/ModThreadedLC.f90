@@ -757,9 +757,10 @@ contains
     !==========================================================================
     subroutine get_dxi_and_xi
       integer:: iPoint
-      real    :: SqrtRho, RhoNoDim, vAlfven
-
+      real    :: SqrtRho, RhoNoDim
       !------------------------------------------------------------------------
+      ! Now prepare to calculate Alfven wave amplitude distribution
+      Xi_I(0) = 0.0
       do iPoint=1,nPoint
          ! 1. Calculate sqrt(RhoNoDim)
          RhoNoDim = RhoNoDimCoef*PSi_I(iPoint)/&
@@ -772,15 +773,13 @@ contains
          end if
          SqrtRho = sqrt(RhoNoDim)
          ! 2. Calculate Alfven wave speed
-         vAlfven = BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho
-         VaLog_I(iPoint) = log(vAlfven)
+         VaLog_I(iPoint) = &
+            log(BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho)
          ! 3. Calculate dimensionless length (in terms of the dissipation length
          DXi_I(iPoint) = &
-              BoundaryThreads_B(iBlock)% DXiCell_III(iPoint-nPoint,j,k)/&
-              sqrt(vAlfven)
-      end do
-      Xi_I(0) = 0.0
-      do iPoint = 1, nPoint
+              (BoundaryThreads_B(iBlock)% Xi_III(iPoint-nPoint,j,k) - &
+              BoundaryThreads_B(iBlock)% Xi_III(iPoint-1-nPoint,j,k))*&
+              sqrt(SqrtRho)
          Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
     end subroutine get_dxi_and_xi
