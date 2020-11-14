@@ -21,7 +21,7 @@ module ModRestartFile
   use ModMain,       ONLY: UseConstrainB
   use ModPIC,        ONLY: write_pic_status_file, &
        read_pic_status_file, DoRestartPicStatus, &
-       UseAdaptivePic
+       AdaptPic
   use ModImplicit, ONLY: UseImplicit, &
        n_prev, ImplOld_VCB, dt_prev
   use ModKind,       ONLY: Real4_, Real8_, Int8_
@@ -1102,7 +1102,7 @@ contains
 
     call close_file
 
-    if(UseAdaptivePic) call write_pic_status_file
+    if(AdaptPic % DoThis) call write_pic_status_file
 
     call test_stop(NameSub, DoTest)
   end subroutine write_direct_restart_file

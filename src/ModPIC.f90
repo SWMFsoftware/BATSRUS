@@ -53,7 +53,7 @@ module ModPIC
   character(len=*), parameter :: NamePicStatusFile = "picstatus.rst"
 
   type(FreqType), public :: &
-       AdaptPic = FreqType(.true.,100000,huge(1.0),-1,-1.0)
+       AdaptPic = FreqType(.false.,100000,huge(1.0),-1,-1.0)
 
   logical, public:: DoBalancePicBlock=.true.
 
