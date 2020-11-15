@@ -1158,8 +1158,7 @@ contains
     integer:: iAction
 
     integer :: i, j, k, Major_, Minor_, kStart, kEnd, jStart, jEnd
-    real :: TeSi, PeSi, BDirThread_D(3), BDirFace_D(3)! BDir_D(3),
-    real :: U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
+    real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: TiSiIn, PiSiOut
     real :: RhoNoDimOut, UAbsMax
@@ -1207,46 +1206,22 @@ contains
        call stop_mpi('Generic EOS is not applicable with threads')
     end if
     do k = kStart, kEnd; do j = jStart, jEnd
-       !
-       ! Field on thread is nothing but B0_field. On top of thread
-       ! there is the cell-centered B0:
-       !
-       BDirThread_D = B0_DGB(:, 1, j, k, iBlock)
-       !
-       ! On the other hand, the heat flux through the inner bopundary, which
-       ! needs to be set via the bondary condition is epressed in terms of
-       ! the face-averaged field:
-       !
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       BDirFace_D = B1_D + 0.50*(BDirThread_D + &
+       BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
-       BDirFace_D = BDirFace_D/max(norm2(BDirFace_D), 1e-30)
-
-       if(UseCME)then
-          !
-          ! Thread field may include a contribution from CME
-          !
-          !
-          call EEE_get_state_BC(Xyz_DGB(:,1,j,k,iBlock), &
-               RhoCme, Ucme_D, Bcme_D, pCme, &
-               time_simulation, n_step, iteration_number)
-          BDirThread_D = BDirThread_D + Bcme_D*Si2No_V(UnitB_)
-       end if
-       BDirThread_D = BDirThread_D/max(norm2(BDirThread_D), 1e-30)
-
+       BDir_D = BDir_D/max(norm2(BDir_D), 1e-30)
        DirR_D = Xyz_DGB(:,1,j,k,iBlock)
-       DirR_D = DirR_D/norm2(DirR_D)
+       DirR_D = DirR_D/max(norm2(DirR_D),1e-30)
 
-       if(sum(BDirThread_D*DirR_D) <  0.0)then
-          BDirThread_D = -BDirThread_D
+       if(BoundaryThreads_B(iBlock) % SignB_II(j, k) <  0.0)then
           Major_ = WaveLast_
           Minor_ = WaveFirst_
        else
           Major_ = WaveFirst_
           Minor_ = WaveLast_
        end if
-       if(sum(BDirFace_D*DirR_D) <  0.0)&
-            BDirFace_D = -BDirFace_D
+       if(sum(BDir_D*DirR_D) <  0.0)&
+            BDir_D = -BDir_D
        ! Calculate input parameters for solving the thread
        Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
             BoundaryThreads_B(iBlock) % TMax_II(j,k)))
@@ -1258,7 +1233,7 @@ contains
             (SqrtRho* PoyntingFluxPerB)  ))
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
-       U = sum(U_D*BDirThread_D)
+       U = sum(U_D*BDir_D)
        U = sign(min(abs(U), UAbsMax), U)
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
@@ -1275,7 +1250,7 @@ contains
           ! Solve equation: -(TeGhost-TeTrue)/DeltaR =
           ! dTe/ds*(b . DirR)
           Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&
-               sum(BDirFace_D*DirR_D),0.7)*&
+               sum(BDir_D*DirR_D),0.7)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           ! Version Easter 2015 Limit TeGhost
           Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
@@ -1296,7 +1271,7 @@ contains
        end if
 
        State_VG(Rho_, 0, j, k) = RhoNoDimOut
-       UAbsMax = min(UAbsMax,0.10*sqrt(State_VG(p_, 0, j, k)/RhoNoDimOut))
+       ! UAbsMax = min(UAbsMax,0.10*sqrt(State_VG(p_, 0, j, k)/RhoNoDimOut))
        ! Extrapolation of density
        State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2&
             /State_VG(Rho_,1,j,k)
@@ -1320,13 +1295,13 @@ contains
           ! Reflect the other components
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
           if(UseAlignedVelocity)then
-             U   = sum(U_D*BDirThread_D); U_D = U_D - U*BDirThread_D
+             U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
              U   = sign(min(abs(U), UAbsMax), U)
           else
              U = 0
           end if
           State_VG(RhoUx_:RhoUz_, i, j, k) = -U_D*State_VG(Rho_,i,j,k) &
-                + U*BDirThread_D*State_VG(Rho_,i,j,k)
+                + U*BDir_D*State_VG(Rho_,i,j,k)
 
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )

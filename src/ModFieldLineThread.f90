@@ -81,6 +81,7 @@ module ModFieldLineThread
      integer,pointer :: nPoint_II(:,:)
      ! Distance between the true and ghost cell centers.
      real, pointer :: DeltaR_II(:,:)
+     real, pointer :: SignB_II(:,:)
      ! For visualization:
      !\ Index of the last cell in radial direction
      integer :: iMin
@@ -327,6 +328,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % State_VIII)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
+    nullify(BoundaryThreads_B(iBlock) % SignB_II)
     nullify(BoundaryThreads_B(iBlock) % State_VG)
     BoundaryThreads_B(iBlock) % iAction    = Done_
     BoundaryThreads_B(iBlock) % iMin       = 0
@@ -352,6 +354,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % State_VIII)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
+    deallocate(BoundaryThreads_B(iBlock) % SignB_II)
     deallocate(BoundaryThreads_B(iBlock) % State_VG)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
@@ -444,6 +447,10 @@ contains
           allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
                jMin_:jMax_, kMin_:kMax_))
           BoundaryThreads_B(iBlock) % DeltaR_II = 0.0
+
+          allocate(BoundaryThreads_B(iBlock) % SignB_II(&
+               jMin_:jMax_, kMin_:kMax_))
+          BoundaryThreads_B(iBlock) % SignB_II = 0.0
 
           call set_gc_grid(iBlock, BoundaryThreads_B(iBlock) % iMin,&
                BoundaryThreads_B(iBlock) % dCoord1Inv)
@@ -589,7 +596,7 @@ contains
        end if
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
-
+       BoundaryThreads_B(iBlock) % SignB_II(j, k) = SignBr
        B0Start = norm2(B0Start_D)
        BoundaryThreads_B(iBlock) % B_III(0, j, k) = B0Start
 
