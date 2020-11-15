@@ -1052,11 +1052,9 @@ contains
           ! Corrector
           AMMid = 0.5*(AMinor_I(iStep-1) + AMinor_I(iStep))
           APMid = AP + 0.5*Derivative*DeltaXi
-
           Derivative = derivative_major(&
                APMid, AMMid, &
                0.50*(ReflCoef_I(iStep-1) + ReflCoef_I(iStep)))
-
           AMajor_I(iStep) = AP + Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMajor_I(iStep))/max(AOld,AMajor_I(iStep)))
