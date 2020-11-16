@@ -265,7 +265,7 @@ contains
        if(iTableB0 > 0)then
           call get_lookup_table(1, StringDescription = StringHeader, &
                nParam=nParam, Param_I=Param_I)
-          if(iProc==0)then
+          if(iProc==0 .and. nParam >= 4 )then
              CarringtonRotationNumber = (StartTime &
                   - tStartCarringtonRotation)/CarringtonSynodicPeriod
              ! If the User provided StartTime is off by over half of the
