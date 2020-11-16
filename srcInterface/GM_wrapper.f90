@@ -330,7 +330,9 @@ contains
 
     use ModMain,     ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
     use ModMain,     ONLY: UseIM
-    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_
+    use ModPIC,      ONLY: NameVersionPic
+    use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_, PC_
+    use CON_world,   ONLY: get_comp_info
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -349,6 +351,10 @@ contains
 
     ! Check if the boundary condition is properly set
     if(UsePw) TypeFaceBc_I(body1_) = 'polarwind'
+
+    if(Couple_CC(GM_, PC_) % DoThis) then
+       call get_comp_info(PC_, NameVersion=NameVersionPic)
+    endif
 
     if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeCellBc_I(2)=='coupled'))then
        if(Couple_CC(IH_,GM_) % DoThis) then

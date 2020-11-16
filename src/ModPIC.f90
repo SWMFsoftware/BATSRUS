@@ -31,8 +31,16 @@ module ModPIC
   public:: write_pic_status_file
   public:: read_pic_status_file
 
+  ! The PIC code that is coupled to MHD
+  character(len=50), public:: NameVersionPic = 'none'
+  
   logical, public:: UsePic = .false.
-  logical, public:: UseAdaptivePic = .true.
+
+  ! If UseAdaptivePic is True, the coupler will calculate the status
+  ! of the pic patch array and send to PIC. Adaptive pic only
+  ! works for FLEKS so far. 
+  logical, public:: UseAdaptivePic = .false.
+  
   logical, public:: DoRestartPicStatus = .false.
 
   real, allocatable, public :: DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
@@ -124,6 +132,7 @@ contains
     character(len=*), parameter:: NameSub = 'pic_read_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    
     select case(NameCommand)
     case ("#PICADAPT")
        call read_var('DoAdaptPic', AdaptPic % DoThis)
@@ -388,6 +397,10 @@ contains
     if(IsPicRegionInitialized) RETURN
     IsPicRegionInitialized = .true.
 
+    if(NameVersionPic == "FLEKS") then
+       UseAdaptivePic = .true. 
+    endif
+        
     if(UseSamePicUnit) then
        if(allocated(xUnitPicSi_I)) deallocate( &
             xUnitPicSi_I, uUnitPicSi_I, mUnitPicSi_I, ScalingFactor_I)
