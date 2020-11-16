@@ -367,9 +367,9 @@ contains
        ! The analytical solution assumes constant pressure and
        ! no heating. Calculate the pressure distribution
        call set_pressure
-       ! Get wave from analytical solution with noreflection
-       call get_dxi_and_xi
-       call analytical_waves
+       ! Get waves from boundary conditions
+       AMajor_I(0:nPoint) = 1.0
+       AMinor_I(0:nPoint) = AMinorIn
        call advance_thread(IsTimeAccurate=.false.)
        call get_res_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
@@ -755,9 +755,12 @@ contains
       end if
     end subroutine advance_thread
     !==========================================================================
-    subroutine get_dxi_and_xi
+    subroutine get_res_heating(nIterIn)
+      use ModCoronalHeating,  ONLY: rMinWaveReflection
+      integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
+      ! 11.12.20 Routine is backward compatible with the version of 10.30.19
       !------------------------------------------------------------------------
       ! Now prepare to calculate Alfven wave amplitude distribution
       Xi_I(0) = 0.0
@@ -782,15 +785,6 @@ contains
               sqrt(SqrtRho)
          Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
-    end subroutine get_dxi_and_xi
-    !==========================================================================
-    subroutine get_res_heating(nIterIn)
-      use ModCoronalHeating,  ONLY: rMinWaveReflection
-      integer, intent(in)::nIterIn
-      integer:: iPoint
-      ! 11.12.20 Routine is backward compatible with the version of 10.30.19
-      !------------------------------------------------------------------------
-      call get_dxi_and_xi
       if(rMinWaveReflection*BoundaryThreads_B(iBlock)%RInv_III(0,j,k) > 1.0 &
            )then
          !
@@ -829,42 +823,6 @@ contains
            (AMajor_I(0:nPoint-2)**2 - AMinor_I(0:nPoint-2)**2)&
            -(AMajor_I(1:nPoint-1  )**2 - AMinor_I(1:nPoint-1)**2)
     end subroutine get_res_heating
-    !==========================================================================
-    subroutine analytical_waves
-      integer:: iPoint
-      !
-      ! Sum of a_+ and a_- and iterative values for it
-      !
-      real    :: Sigma, SigmaOld, Aux, XiTot
-
-      ! 4.1. As zero order approximation we solve waves with no reflection
-      !
-      ! solve equation
-      !(\Sigma -1)*(\Sigma -AMinorIn) - AMinor*exp(-\Sigma*Xi_I(nPoint))=0
-      !
-      ! The sought value is in between 1 and 1 + AMinorIn
-
-      !------------------------------------------------------------------------
-      Sigma = 1 + AMinorIn; SigmaOld = 1.0; XiTot = Xi_I(nPoint)
-      do while(abs(Sigma - SigmaOld) > 0.01*cTol)
-         SigmaOld = Sigma
-         Aux = exp(-SigmaOld*XiTot)
-         Sigma = SigmaOld -( & ! Residual function
-              (SigmaOld - 1)*(SigmaOld - AMinorIn) - AMinorIn*Aux )/&
-              (2*SigmaOld - (1 - AMinorIn) + XiTot*AMinorIn*Aux)
-      end do
-      !
-      ! 4.2. Apply boundary conditions
-      !
-      AMinor_I(nPoint) = AMinorIn
-      !
-      ! 4.3. Now, apply formulae, which are valid for no-reflection case:
-      !
-      AMajor_I(1:nPoint) = Sigma/(1 + (Sigma - 1)*exp(Sigma*Xi_I(1:nPoint)))
-      AMajor_I(0) = 1
-      AMinor_I(0:nPoint-1) = AMinorIn*Sigma/(AMinorIn + (Sigma - AMinorIn)*&
-           exp(Sigma*(XiTot - Xi_I(0:nPoint-1))))
-    end subroutine analytical_waves
     !==========================================================================
     subroutine get_heat_cond
       !------------------------------------------------------------------------
