@@ -52,7 +52,7 @@ module ModThreadedLC
        TiSi_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,                 &
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I,   &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
-       ExchangeRate_I, EnthalpyFlux_I, Flux_I
+       ExchangeRate_I
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
@@ -153,7 +153,6 @@ contains
     allocate(     Xi_I(0:nPointThreadMax));     Xi_I = 0.0
     allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
     allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
-    allocate(EnthalpyFlux_I(nPointThreadMax)); EnthalpyFlux_I = 0.0
 
     allocate(  Res_VI(Cons_:LogP_,nPointThreadMax));      Res_VI = 0.0
     allocate(DCons_VI(Cons_:LogP_,nPointThreadMax));    DCons_VI = 0.0
@@ -161,7 +160,6 @@ contains
     allocate(U_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); U_VVI = 0.0
     allocate(L_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); L_VVI = 0.0
     allocate(M_VVI(Cons_:LogP_,Cons_:LogP_,nPointThreadMax)); M_VVI = 0.0
-    allocate(Flux_I(nPointThreadMax)); Flux_I = 0.0
     !
     ! Initialize transition region model:
     call init_tr(Z=Z, TeChromoSi = TeChromosphereSi)
@@ -225,7 +223,6 @@ contains
     use ModReadParam, ONLY: read_var
     character(LEN=7)::TypeBc = 'limited'
     integer :: iError
-
     character(len=*), parameter:: NameSub = 'read_threaded_bc_param'
     !--------------------------------------------------------------------------
     call read_var('UseAlignedVelocity', UseAlignedVelocity)
@@ -532,8 +529,7 @@ contains
       integer :: iPoint, iIter
       ! Enthalpy correction coefficients
       real    :: EnthalpyFlux, FluxConst
-      ! real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
-      !
+      real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
       ! Correction accounting for the Enthlpy flux from the TR
       real    :: PressureTRCoef
       !------------------------------------------------------------------------
@@ -575,7 +571,7 @@ contains
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
       end if
-      ! 5/2*U*Pi*(Z+1)
+      ! 5/2*U*Pi*(Z+1)/Ti
       EnthalpyFlux = FluxConst*(InvGammaMinus1 +1)*(1 + Z)
       ! Calculate flux to TR and its temperature derivative
       call interpolate_lookup_table(iTableTR, TeSi_I(1), Value_V, &
@@ -586,43 +582,25 @@ contains
          ! Shape the source.
          call get_heat_cond
          ! Add enthalpy correction
-         ! Limit particle flux, so that the local speed never exceeds a tenth
-         ! of the thermal speed
-         Flux_I(1:nPoint)    =sign(min(&
-              abs(FluxConst), &
-              0.1*sqrt(cBoltzmann*(Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint))/&
-              (MassIon_I(1)*cAtomicMass))*&
-              PSi_I(1:nPoint)/&
-              (  (Z*TeSi_I(1:nPoint) + TiSi_I(1:nPoint) )*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(1-nPoint:0,j,k)*&
-              No2Si_V(UnitB_))     )&
-              , FluxConst)
          ! Limit enthalpy flux at the TR:
          if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
               0.50*HeatFlux2TR/TeSi_I(1)), FluxConst)
-         ! Combine the said limitation to limit local enthalpy flux
-         EnthalpyFlux_I(1:nPoint) = sign(min(abs(EnthalpyFlux),&
-              abs(Flux_I(1:nPoint))*(InvGammaMinus1 +1)*(1 + Z)), FluxConst)
-         ! ElectronEnthalpyFlux = EnthalpyFlux*Z/(1 + Z)
+         ElectronEnthalpyFlux = EnthalpyFlux*Z/(1 + Z)
          if(USi>0)then
-            ResEnthalpy_I(2:nPoint-1) = EnthalpyFlux_I(2:nPoint-1)*Z/(Z +1) &
-                 *(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+            ResEnthalpy_I(2:nPoint-1) = &
+                ElectronEnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
             ResEnthalpy_I(1)   = 0.0
             L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
-                 - EnthalpyFlux_I(2:nPoint-1)*Z/(Z +1)*TeSi_I(2:nPoint-1)/&
-                 (3.50*Cons_I(2:nPoint-1))
+                 - ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
             M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
-                 + EnthalpyFlux_I(2:nPoint-1)*Z/(Z +1)*TeSi_I(2:nPoint-1)/&
-                 (3.50*Cons_I(2:nPoint-1))
+                 + ElectronEnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
          elseif(USi<0)then
-            ResEnthalpy_I(1:nPoint-1) = -EnthalpyFlux_I(1:nPoint-1)*Z/(Z +1)&
-                 *(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
+            ResEnthalpy_I(1:nPoint-1) = &
+                 - ElectronEnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
             U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
-                 + EnthalpyFlux_I(1:nPoint-1)*Z/(Z +1)*TeSi_I(1:nPoint-1)/&
-                 (3.50*Cons_I(1:nPoint-1))
+                 + ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
             M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
-                 - EnthalpyFlux_I(1:nPoint-1)*Z/(Z +1)*TeSi_I(1:nPoint-1)/&
-                 (3.50*Cons_I(1:nPoint-1))
+                 - ElectronEnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
          end if
          !==========Add Gravity Source================================
          ! cGravPot = cGravitation*mSun*cAtomicMass/&
@@ -633,10 +611,10 @@ contains
          !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
          !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
 
-         ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*Flux_I(2:nPoint-1)*(     &
+         ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
               - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
               + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-         ResGravity_I(1)          = 0.5*GravHydroDyn*Flux_I(1)*(     &
+         ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(     &
               - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
               + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
          ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
@@ -664,23 +642,23 @@ contains
                ExchangeRate_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/&
                (3.50*Cons_I(1:nPoint-1))
          DCons_VI = 0.0
-         ! IonEnthalpyFlux = ElectronEnthalpyFlux/Z
+         IonEnthalpyFlux = ElectronEnthalpyFlux/Z
          ResEnthalpy_I=0.0
          if(USi>0)then
-            ResEnthalpy_I(2:nPoint-1) = EnthalpyFlux_I(2:nPoint-1)/(Z +1) &
-                 *(TiSi_I(1:nPoint-2) - TiSi_I(2:nPoint-1))
+            ResEnthalpy_I(2:nPoint-1) = &
+                 IonEnthalpyFlux*(TiSi_I(1:nPoint-2) - TiSi_I(2:nPoint-1))
             ResEnthalpy_I(1)   = 0.0
             L_VVI(Ti_,Ti_,2:nPoint-1) =  L_VVI(Ti_,Ti_,2:nPoint-1)&
-                 - EnthalpyFlux_I(2:nPoint-1)/(Z +1)
+                 - IonEnthalpyFlux
             M_VVI(Ti_,Ti_,2:nPoint-1) =  M_VVI(Ti_,Ti_,2:nPoint-1)&
-                 + EnthalpyFlux_I(2:nPoint-1)/(Z +1)
+                 + IonEnthalpyFlux
          elseif(USi<0)then
-            ResEnthalpy_I(1:nPoint-1) = -EnthalpyFlux_I(1:nPoint-1)/(Z +1)&
-                 *(TiSi_I(2:nPoint) - TiSi_I(1:nPoint-1))
+            ResEnthalpy_I(1:nPoint-1) = &
+                 - IonEnthalpyFlux*(TiSi_I(2:nPoint) - TiSi_I(1:nPoint-1))
             U_VVI(Ti_,Ti_,1:nPoint-1) = U_VVI(Ti_,Ti_,1:nPoint-1)&
-                 + EnthalpyFlux_I(1:nPoint-1)/(Z +1)
+                 + IonEnthalpyFlux
             M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1)&
-                 - EnthalpyFlux_I(1:nPoint-1)/(Z +1)
+                 - IonEnthalpyFlux
          end if
          ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
               0.5*ResGravity_I(1:nPoint-1)
