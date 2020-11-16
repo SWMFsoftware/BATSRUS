@@ -352,9 +352,8 @@ contains
     ! Check if the boundary condition is properly set
     if(UsePw) TypeFaceBc_I(body1_) = 'polarwind'
 
-    if(Couple_CC(GM_, PC_) % DoThis) then
-       call get_comp_info(PC_, NameVersion=NameVersionPic)
-    endif
+    if(Couple_CC(GM_, PC_) % DoThis) &
+         call get_comp_info(PC_, NameVersion=NameVersionPic)
 
     if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeCellBc_I(2)=='coupled'))then
        if(Couple_CC(IH_,GM_) % DoThis) then

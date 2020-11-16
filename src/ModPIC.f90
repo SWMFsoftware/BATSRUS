@@ -397,9 +397,8 @@ contains
     if(IsPicRegionInitialized) RETURN
     IsPicRegionInitialized = .true.
 
-    if(NameVersionPic == "FLEKS") then
-       UseAdaptivePic = .true. 
-    endif
+    ! FLEKS requires UseAdaptivePic to be .true. 
+    UseAdaptivePic = NameVersionPic == "FLEKS"
         
     if(UseSamePicUnit) then
        if(allocated(xUnitPicSi_I)) deallocate( &
