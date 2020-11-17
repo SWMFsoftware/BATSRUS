@@ -32,6 +32,24 @@ Param/CORONA/MDI_small.dat		NameHarmonicsFile
 -1.0			PhiShift
 1.0			UnitB
 
+LOOKUPTABLE
+B0			NameTable
+save			NameCommand
+harmonics_bxyz.out		NameFile
+real8			TypeFile
+B0 from harmonics		Description
+logr lon lat bx by bz		NameVar
+3			nIndex
+100			nIndex1 r
+1.0			Index1Min
+2.5			Index2Max
+91			nIndex2 Lon
+0.0			Index2Min
+360.0			Index2Max
+91			nIndex3 Lat
+-90.0			Index3Min
++90.0			Index3Max
+
 #EMPIRICALSW
 WSA			NameModelSW
 
