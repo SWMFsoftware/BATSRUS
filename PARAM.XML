@@ -7966,12 +7966,14 @@ By default the whole domain covered by PIC grids can become active.
   <for from="1" to="$nPicCriteria">
     <parameter name="StringPicCriteria" type="string" length="$lLine"
 	       input="select" >
-		<option name="j/b" default="T"	/>
-		<option name="rho"		/>
-		<option name="divcurv"		/>
+      <option name="j/b" default="T"	/>
+      <option name="j/bperp"            />
+      <option name="rho"		/>
+      <option name="divcurv"		/>
     </parameter>
     <parameter name="MinCriteriaValue" type="real" default="0" />
     <parameter name="MaxCriteriaValue" type="real" min="$MinCriteriaValue" />
+    <parameter name="CriteriaB1" type="real" default="0" if="$StringPicCriteria =~ /j\/b/"/>
   </for>
 
 #PICCRITERIA
@@ -7979,6 +7981,7 @@ By default the whole domain covered by PIC grids can become active.
 j/b			StringPicCriteria
 0.1			MinCriteriaValue
 999.0			MaxCriteriaValue
+10.0                    CriteriaB1
 divcurv			StringPicCriteria
 5.0			MinCriteriaValue
 999.0			MaxCriteriaValue
@@ -7990,10 +7993,11 @@ The cell which satisfies all criteria will be active. This physics based
 selection can be limited geometrically by the #PICREGIONMIN and #PICREGIONMAX
 commands.
 
-The available criteria are "rho" (for testing), "j/b" (current divided
+The available criteria are "rho" (for testing), "j/b", ""j/bperp (current divided
 by magnetic field for finding current sheets) and "divcurv" (the divergence
 of the curvature of the magnetic field lines to distinguish X lines from
-flux ropes). 
+flux ropes). Criteria "j/b" and "j/bperp" requires an extra input parameter
+for B1 in the denominator to avoid dividing by 0. Default value of B1 is 0.
 
 By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 </command>

@@ -53,6 +53,7 @@ module ModPIC
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
   real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
        CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
+  real, public :: CriteriaB1
   integer, public:: nPatchExtend_D(3)=0
 
   ! Description of the region where the pic region is fixed there
@@ -164,6 +165,9 @@ contains
           call read_var('NameCriteriaPic_I', NameCriteriaPic_I(iCriteria))
           call read_var('CriteriaMinPic_I', CriteriaMinPicDim_I(iCriteria))
           call read_var('CriteriaMaxPic_I', CriteriaMaxPicDim_I(iCriteria))
+          if(NameCriteriaPic_I(iCriteria)=='j/b' .or.&
+               NameCriteriaPic_I(iCriteria)=='j/bperp')&
+               call read_var('CriteriaB1', CriteriaB1)
        end do
 
     case("#PICPATCHEXTEND")
@@ -1215,9 +1219,11 @@ contains
     ! also the unit transfer is done here
     do iCriteria=1, nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
-       case('j/b')
+       case('j/bperp')
           allocate(j_D(3))
           allocate(jxB_D(3))
+       case('j/b')
+          allocate(j_D(3))
        case('divu')
           allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
@@ -1289,11 +1295,14 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iCriteria=1, nCriteriaPic
              select case(trim(NameCriteriaPic_I(iCriteria)))
-             case('j/b')
+             case('j/bperp')
                 call get_current(i, j, k, iBlock, j_D)
-                jxB_D = cross_product(j_D, FullBfield_DGB(:,i,j,k,iBlock))
+                jxB_D = cross_product(j_D, FullBfield_DGB(:,i,j,k,iBlock) + CriteriaB1)
                 current = norm2(j_D)
                 CriteriaValue = current**2 / norm2(jxB_D) * CellSize_DB(1, iBlock)
+             case('j/b')
+                call get_current(i, j, k, iBlock, j_D)
+                CriteriaValue = norm2(j_D) / (norm2(FullBfield_DGB(:,i,j,k,iBlock)) + CriteriaB1)
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
