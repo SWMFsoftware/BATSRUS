@@ -383,6 +383,20 @@ contains
        call init_mod_nodes
 
        if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
+
+       if(UseMagnetogram)then
+          if(UseNewMagnetogram)then
+             if(i_line_command("#NEWMAGNETOGRAM") > 0)then
+                call read_new_magnetogram_file(NamePlotDir, iProc, nProc,iComm)
+             end if
+             tMagnetogram = Time_Simulation
+          end if
+          if(i_line_command("#MAGNETOGRAM") > 0)then
+             call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
+          end if
+       end if
+
+       
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
@@ -454,17 +468,6 @@ contains
        if(UseResistivity)call init_mod_resistivity
        if(UseViscosity) call viscosity_init
 
-       if(UseMagnetogram)then
-          if(UseNewMagnetogram)then
-             if(i_line_command("#NEWMAGNETOGRAM") > 0)then
-                call read_new_magnetogram_file(NamePlotDir, iProc, nProc,iComm)
-             end if
-             tMagnetogram = Time_Simulation
-          end if
-          if(i_line_command("#MAGNETOGRAM") > 0)then
-             call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
-          end if
-       end if
 
        if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
             call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
