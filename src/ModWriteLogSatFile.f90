@@ -455,6 +455,7 @@ contains
       use ModCurrent,   ONLY: get_current
       use ModWaves,     ONLY: UseWavePressure
       use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
+      use ModGeometry,  ONLY: r_BLK
       use ModIO,        ONLY: lNameLogVar
       use ModIeCoupling, ONLY: logvar_ionosphere
       use ModCoordTransform, ONLY: cross_product
@@ -487,6 +488,36 @@ contains
       case('pmax')
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = maxval_grid(tmp2_BLK)/nProc
+      case('urmin')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
+                 + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       y_,1:nI,1:nJ,1:nK,iBlock)   &
+                 + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
+                 / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
+                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+         end do
+         ! Divide by nProc so that adding up the processors can work
+         LogVar_I(iVarTot) = minval_grid(tmp1_BLK)/nProc
+      case('urmax')
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 ( State_VGB(iRhoUx, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       x_,1:nI,1:nJ,1:nK,iBlock)   &
+                 + State_VGB(iRhoUy, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       y_,1:nI,1:nJ,1:nK,iBlock)   &
+                 + State_VGB(iRhoUz, 1:nI,1:nJ,1:nK,iBlock)   &
+                 * Xyz_DGB(       z_,1:nI,1:nJ,1:nK,iBlock) ) &
+                 / State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)      &
+                 / r_BLK(1:nI,1:nJ,1:nK,iBlock)
+         end do
+         ! Divide by nProc so that adding up the processors can work
+         LogVar_I(iVarTot) = maxval_grid(tmp1_BLK)/nProc
       case('ux')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -1161,7 +1192,7 @@ contains
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
        case('p','ppnt','pmin','pmax','pperp')
           LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
-       case('ux','uy','uz','uxpnt','uypnt','uzpnt')
+       case('ux','uy','uz','uxpnt','uypnt','uzpnt','urmin','urmax')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitU_)
        case('ekinx','ekiny','ekinz','ekin')
           LogVar_I(iVarTot)= LogVar_I(iVarTot) &
