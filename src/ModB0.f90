@@ -4,7 +4,7 @@
 module ModB0
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   !  use ModUtilities, ONLY: norm2
 
   ! The magnetic field can be split into an analytic and numeric part.
@@ -623,18 +623,17 @@ contains
 
     ! Get B0 at location Xyz_D
 
-    use ModMain,          ONLY : Time_Simulation, NameThisComp, &
+    use ModMain,           ONLY : Time_Simulation, NameThisComp, &
          TypeCoordSystem
-    use ModPhysics,       ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
+    use ModPhysics,        ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
-    use CON_planet_field, ONLY: get_planet_field
-    use ModMain,          ONLY: UseBody2
-    use ModMain,          ONLY: UseUserB0, UseMagnetogram
-    use ModMagnetogram,   ONLY: get_magnetogram_field
-    use ModLookupTable,   ONLY: interpolate_lookup_table
-    use ModCoordTransform, ONLY: xyz_to_rlonlat, rot_matrix_z
-    use ModNumConst,      ONLY: cTwoPi
-    use ModNumConst, ONLY: cDegToRad
+    use CON_planet_field,  ONLY: get_planet_field
+    use ModMain,           ONLY: UseBody2
+    use ModMain,           ONLY: UseUserB0, UseMagnetogram
+    use ModMagnetogram,    ONLY: get_magnetogram_field
+    use ModLookupTable,    ONLY: interpolate_lookup_table
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
+    use ModNumConst,       ONLY: cTwoPi, cRadToDeg
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
@@ -651,6 +650,8 @@ contains
        if(dLonB0 /= 0.0 .or. LonMinB0 /= 0.0) rLonLat_D(2) = &
             modulo(rLonLat_D(2) - dLonB0 - LonMinB0, cTwoPi) + LonMinB0
        r = rLonLat_D(1)
+       ! Lookup table uses degrees
+       rLonLat_D(2:3) = cRadToDeg*rLonLat_D(2:3)
        ! Extrapolate for r < rMinB0
        call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
             DoExtrapolate=(r<rMinB0) )
