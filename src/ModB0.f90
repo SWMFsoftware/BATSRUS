@@ -125,7 +125,9 @@ contains
   !============================================================================
   subroutine init_mod_b0
 
-    use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
+    use BATL_lib, ONLY: iComm
+    use ModLookupTable, ONLY: &
+         i_lookup_table, make_lookup_table_3d, get_lookup_table
     use ModNumConst, ONLY: cDegToRad
 
     integer:: nParam
@@ -178,6 +180,9 @@ contains
     ! shift. Create the rotation matrix based on the shift
     iTableB0 = i_lookup_table('B0')
     if(iTableB0 > 0)then
+       ! If lookup table is not loaded, make it (and save it)
+       call make_lookup_table_3d(iTableB0, calc_b0_table, iComm)
+       
        call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I, &
             IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
        rMinB0 = Param_I(1)
@@ -193,6 +198,38 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
   !============================================================================
+  subroutine calc_b0_table(iTable, Arg1, Arg2, Arg3, b_D)
+
+    use ModNumConst, ONLY: cDegToRad
+    use ModMagnetogram, ONLY: get_pfss_field
+    use ModCoordTransform, ONLY: rot_xyz_sph
+    
+    ! Calculate B0 at the location
+
+    integer, intent(in):: iTable
+    real, intent(in)   :: Arg1, Arg2, Arg3
+    real, intent(out)  :: b_D(:)
+
+    real:: r, Theta, Phi, Bsph_D(3), XyzSph_DD(3,3)
+    
+    character(len=*), parameter:: NameSub = 'calc_b0_table'
+    !-----------------------------------------------------------------------
+    if(iTable /= iTableB0) call stop_mpi(NameSub//': incorrect table index')
+    
+    r     = Arg1
+    Phi   = Arg2*cDegToRad
+    Theta = (90-Arg3)*cDegToRad
+
+    call get_pfss_field(r, Theta, Phi, Bsph_D)
+
+    ! Convert to Cartesian
+    XyzSph_DD = rot_xyz_sph(Theta, Phi)
+    
+    b_D = matmul(XyzSph_DD, Bsph_D)
+    
+  end subroutine calc_b0_table
+  !============================================================================
+  
   subroutine clean_mod_b0
 
     !--------------------------------------------------------------------------
