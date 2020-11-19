@@ -132,6 +132,7 @@ contains
 
     integer:: nParam
     real:: Param_I(4), IndexMin_I(3), IndexMax_I(3)
+    logical:: IsLogIndex_I(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_b0'
@@ -185,14 +186,21 @@ contains
        call make_lookup_table_3d(iTableB0, calc_b0_table, iComm)
 
        call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I, &
-            IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
-       rMinB0 = Param_I(1)
-       rMaxB0 = Param_I(2)
+            IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I, &
+            IsLogIndex_I=IsLogIndex_I)
+
+
+       if(IsLogIndex_I(1))then
+          rMinB0 = 10**IndexMin_I(1); rMaxB0 = 10**IndexMax_I(1)
+       else
+          rMinB0 = IndexMin_I(1); rMaxB0 = IndexMax_I(1)
+       end if
+       LonMinB0 = IndexMin_I(2)*cDegToRad
        if(nParam > 2) then
           dLonB0 = (Param_I(3) - dLongitudeHgrDeg)*cDegToRad
           RotB0_DD = rot_matrix_z(dLonB0)
        end if
-       LonMinB0 = IndexMin_I(2)*cDegToRad
+       
     endif
 
     call test_stop(NameSub, DoTest)
@@ -656,6 +664,7 @@ contains
 
        ! Extrapolate for r < rMinB0
        r = rLonLat_D(1)
+       
        call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
             DoExtrapolate=(r<rMinB0) )
 
@@ -664,11 +673,11 @@ contains
 
        ! Convert from Gauss to Tesla then to normalized units.
        ! Multiply with B0 factor
-
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
 
        ! Scale with r^2 for r > rMaxB0
        if(r > rMaxB0) B0_D = (rMaxB0/r)**2 * B0_D
+
     elseif(UseMagnetogram)then
        call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
