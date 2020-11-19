@@ -76,7 +76,7 @@ module ModB0
   ! Lookup table related variables
   integer:: iTableB0 = -1
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0, RotB0_DD(3,3)
-  real:: LonMinB0 = 0.0, LonMaxB0 = 0.0
+  real:: LonMinB0 = 0.0
 
 contains
   !============================================================================
@@ -132,6 +132,7 @@ contains
 
     integer:: nParam
     real:: Param_I(4), IndexMin_I(3), IndexMax_I(3)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_b0'
     !--------------------------------------------------------------------------
@@ -182,17 +183,16 @@ contains
     if(iTableB0 > 0)then
        ! If lookup table is not loaded, make it (and save it)
        call make_lookup_table_3d(iTableB0, calc_b0_table, iComm)
-       
+
        call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I, &
             IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I)
        rMinB0 = Param_I(1)
        rMaxB0 = Param_I(2)
        if(nParam > 2) then
-          dLonB0 = (Param_I(3)-dLongitudeHgrDeg)*cDegToRad
+          dLonB0 = (Param_I(3) - dLongitudeHgrDeg)*cDegToRad
           RotB0_DD = rot_matrix_z(dLonB0)
        end if
-       LonMinB0 = IndexMin_I(2)
-       LonMaxB0 = IndexMax_I(2)
+       LonMinB0 = IndexMin_I(2)*cDegToRad
     endif
 
     call test_stop(NameSub, DoTest)
@@ -203,7 +203,7 @@ contains
     use ModNumConst, ONLY: cDegToRad
     use ModMagnetogram, ONLY: get_pfss_field
     use ModCoordTransform, ONLY: rot_xyz_sph
-    
+
     ! Calculate B0 at the location
 
     integer, intent(in):: iTable
@@ -211,11 +211,11 @@ contains
     real, intent(out)  :: b_D(:)
 
     real:: r, Theta, Phi, Bsph_D(3), XyzSph_DD(3,3)
-    
+
     character(len=*), parameter:: NameSub = 'calc_b0_table'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(iTable /= iTableB0) call stop_mpi(NameSub//': incorrect table index')
-    
+
     r     = Arg1
     Phi   = Arg2*cDegToRad
     Theta = (90-Arg3)*cDegToRad
@@ -224,12 +224,12 @@ contains
 
     ! Convert to Cartesian
     XyzSph_DD = rot_xyz_sph(Theta, Phi)
-    
+
     b_D = matmul(XyzSph_DD, Bsph_D)
-    
+
   end subroutine calc_b0_table
   !============================================================================
-  
+
   subroutine clean_mod_b0
 
     !--------------------------------------------------------------------------
@@ -643,23 +643,30 @@ contains
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
-       ! Converting BATSRUS grid to rlonlat
+       ! Converting BATSRUS grid to rlonlat (radians)
        call xyz_to_rlonlat(Xyz_D, rLonLat_D)
+
        ! Include the shift in Phi coordinate and make sure that it is
        ! in the range provided by the lookup table
        if(dLonB0 /= 0.0 .or. LonMinB0 /= 0.0) rLonLat_D(2) = &
             modulo(rLonLat_D(2) - dLonB0 - LonMinB0, cTwoPi) + LonMinB0
-       r = rLonLat_D(1)
+
        ! Lookup table uses degrees
        rLonLat_D(2:3) = cRadToDeg*rLonLat_D(2:3)
+
        ! Extrapolate for r < rMinB0
+       r = rLonLat_D(1)
        call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
             DoExtrapolate=(r<rMinB0) )
+
        ! Rotate Bx, By based on shifted coordinates
        if(dLonB0 /= 0.0) B0_D = matmul(RotB0_DD, B0_D)
+
        ! Convert from Gauss to Tesla then to normalized units.
        ! Multiply with B0 factor
+
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
+
        ! Scale with r^2 for r > rMaxB0
        if(r > rMaxB0) B0_D = (rMaxB0/r)**2 * B0_D
     elseif(UseMagnetogram)then
