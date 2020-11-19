@@ -425,7 +425,7 @@ contains
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
 
-    integer :: iFluid, iError
+    integer :: iFluid
 
     character(len=*), intent(in):: NameCommand
     logical:: DoTest
@@ -464,13 +464,8 @@ contains
           call read_var('UseWaveReflection', UseWaveReflection)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
-             call read_var('rMinWaveReflection', rMinWaveReflection, iError)
-             if(iError/=0)then
-                rMinWaveReflection = 0.0
-                RETURN
-             end if
-             call read_var('UseSurfaceWaveRefl', UseSurfaceWaveRefl, iError)
-             if(iError/=0)UseSurfaceWaveRefl = .false.
+             call read_var('rMinWaveReflection', rMinWaveReflection)
+             call read_var('UseSurfaceWaveRefl', UseSurfaceWaveRefl)
           end if
        case default
           call stop_mpi(NameSub//': unknown TypeCoronalHeating = ' &

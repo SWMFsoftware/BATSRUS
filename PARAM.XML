@@ -5174,7 +5174,7 @@ Only useful if the initial condition has a non-trivial analytic form.
 		</part>
 		<part name="TaperArea" type="string" input="select"
 		        required="F"
-			if="$NameShape !~ /user/ and $_command =~ /REGION/">>
+			if="$NameShape !~ /user/ and $_command =~ /REGION/">
 			<option name="tapered" />
 		</part>
 	</parameter>
@@ -8477,7 +8477,7 @@ even when there is no BODY boundary condition. This should be removed.
 For now multiple use is allowed.
 </command>
 
-<command name="STAR" if="$_IsFirstSession">>
+<command name="STAR" if="$_IsFirstSession">
 	<parameter name="RadiusStar" type="real" minimum="0" default="1"/>
 	<parameter name="MassStar"   type="real" minimum="0" default="1"/>
 	<parameter name="RotationPeriodStar" type="real"/>
@@ -9532,7 +9532,10 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
 	<if expr="$TypeCoronalHeating =~ /turbulentcascade/">
 	    <parameter name="UseWaveReflection" type="logical" default="T"/>
 	    <parameter name="LperpTimesSqrtBSi" type="real" default="1.5E5"/>
-	    <parameter name="rMinWaveReflection" type = "real" default="0"/>
+	    <parameter name="rMinWaveReflection" type = "real" default="0"
+		       if="$UseWaveReflection"/>
+	    <parameter name="UseSurfaceWaveRefl" type = "logical" default="F"
+		       if="$UseWaveReflection"/>
 	</if>
 
 #CORONALHEATING
@@ -9554,9 +9557,8 @@ alfvenwavedissipation	TypeCoronalHeating
 turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
-1.2			rMinWaveReflection (read for turbulentcascade if 
-                                                   UseWaveReflection is .true.)
-
+1.2			rMinWaveReflection (read if UseWaveReflection is true)
+T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale
@@ -9595,6 +9597,8 @@ $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
 off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection. 
+If UseSurfaceWaveRefl is set true, an extra reflection acts if the transverse
+gradient of density is sufficiently high. 
 
 The default is TypeCoronalHeating="none"
 </command>
