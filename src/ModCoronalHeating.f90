@@ -958,7 +958,7 @@ contains
           ! coefficient:
           !
           ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl +&
-             max(EwavePlus,EwaveMinus)*sum(GradLogRho_D**2)/Rho)
+             0.250*max(EwavePlus,EwaveMinus)*sum(GradLogRho_D**2)/Rho)
        else
 
           ReflectionRateImb = sqrt( (sum(b_D*CurlU_D))**2 + AlfvenGradRefl )
