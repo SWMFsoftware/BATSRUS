@@ -9532,7 +9532,10 @@ Default value for PoyntingFluxPerBSi is 1.0E-6.
 	<if expr="$TypeCoronalHeating =~ /turbulentcascade/">
 	    <parameter name="UseWaveReflection" type="logical" default="T"/>
 	    <parameter name="LperpTimesSqrtBSi" type="real" default="1.5E5"/>
-	    <parameter name="rMinWaveReflection" type = "real" default="0"/>
+	    <parameter name="rMinWaveReflection" type = "real"
+		                                 required="F"  default="0"/>
+	    <parameter name="UseSurfaceWaveRefl" type = "logical"
+		                                 required="F" default="F"/>
 	</if>
 
 #CORONALHEATING
@@ -9555,7 +9558,8 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection (read for turbulentcascade only)
 1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
 1.2			rMinWaveReflection (read for turbulentcascade if 
-				      UseWaveReflection is .true.)
+T                       UseSurfaceWaveRefl        UseWaveReflection is .true.)
+
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale
@@ -9593,7 +9597,9 @@ law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
 $L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
 The UseWaveReflection logical is obsolete, but kept for compatibility.
 If rMinWaveReflection > rBody is set, then the wave reflection is switched 
-off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection 
+off in the cells, at which R_BLK(i,j,k,iBlock) &lt; rMinWaveReflection. If
+UseSurfaceWaveRefl is set true, an extra reflection acts if the transverse
+gradient of density is sufficiently high.
 
 The default is TypeCoronalHeating="none"
 </command>
