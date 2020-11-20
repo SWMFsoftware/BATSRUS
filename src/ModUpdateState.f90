@@ -1727,9 +1727,8 @@ contains
 
   subroutine update_b0
 
-    use ModMain,          ONLY: nBlock, Unused_B, UseNewMagnetogram,      &
-         time_simulation, NameThisComp, t_max, tMagnetogram, &
-         time_accurate
+    use ModMain,          ONLY: nBlock, Unused_B,      &
+         time_simulation, NameThisComp, time_accurate
     use ModPhysics,       ONLY: ThetaTilt
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
     use ModGeometry,      ONLY: true_cell, body_BLK
@@ -1739,7 +1738,6 @@ contains
     use ModEnergy,        ONLY: calc_energy_ghost
     use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
-    use ModMagnetogram,   ONLY: update_magnetogram
     use ModMessagePass,   ONLY: exchange_messages
 
     integer :: iBlock
@@ -1764,8 +1762,7 @@ contains
        end if
     end if
     call timing_start(NameSub)
-    if(UseNewMagnetogram)&
-         call update_magnetogram(time_simulation, t_max, tMagnetogram)
+
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
 
