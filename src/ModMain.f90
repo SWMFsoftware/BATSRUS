@@ -109,7 +109,6 @@ module ModMain
   logical :: UseB0        = UseB
 
   ! Coronal magnetic field (magnetogram + EE generator)
-  logical :: UseMagnetogram=.false., UseNewMagnetogram = .false.
   real    :: tMagnetogram
   logical :: UseEmpiricalSW = .false.
 

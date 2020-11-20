@@ -37,12 +37,12 @@ B0			NameTable
 use			NameCommand
 harmonics_bxyz.out		NameFile
 real8			TypeFile
-B0 from harmonics		StringDescription
+B0 from harmonics		Description
 r lon lat bx by bz		NameVar
 3			nIndex
 29			nIndex1 r
 1.0			Index1Min
-2.5			Index1Max
+2.5			Index2Max
 73			nIndex2 Lon
 0.0			Index2Min
 360.0			Index2Max
@@ -50,11 +50,64 @@ r lon lat bx by bz		NameVar
 -90.0			Index3Min
 +90.0			Index3Max
 
-#EMPIRICALSW
-WSA			NameModelSW
 
-#GAMMA
-1.5000E+00		Gamma
+#USERSWITCH
++init +ic		StringSwitch
+
+#POYNTINGFLUX
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.17			StochasticExponent
+0.18			StochasticAmplitude
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#HEATFLUXREGION
+T			UseHeatFluxRegion
+5.0			rCollisional
+-8.0			rCollisionless
+
+#HEATFLUXCOLLISIONLESS
+T			UseHeatFluxCollisionless
+1.05			CollisionlessAlpha
+
+#TEST
+krylov radiative_cooling		StringTest
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+Param/CORONA/TR.dat		NameFile
+ascii			TypeFile
 
 #OUTERBOUNDARY
 float			TypeBc1
@@ -86,7 +139,7 @@ spherical_lnr		TypeGeometry
 3000			MaxBlock
 
 #LIMITRADIUS
-1.0			rMin
+1.15			rMin
 24.0			rMax
 
 #GRIDLEVEL
@@ -113,12 +166,14 @@ Level +shell1		StringRefine
 3			RefineTo
 3			CoarsenFrom
 
-
 #BODY
 T			UseBody
 1.0			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
 
 #INNERBOUNDARY
 ionosphere		TypeBcBody
@@ -130,6 +185,14 @@ T			UseCurlB0
 #AMR
 20			DnRefine
 F			DoAutoRefine
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
 
 #SCHEME
 2			nOrder (1 or 2)

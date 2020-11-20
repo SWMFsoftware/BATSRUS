@@ -73,11 +73,6 @@ module ModB0
   real, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
   real, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
 
-  ! Lookup table related variables
-  integer:: iTableB0 = -1
-  real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0, RotB0_DD(3,3)
-  real:: LonMinB0 = 0.0
-
 contains
   !============================================================================
   subroutine read_b0_param(NameCommand)
@@ -111,9 +106,6 @@ contains
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
-    case("#B0FACTOR")
-       call read_var('FactorB0', FactorB0)
-
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -126,13 +118,7 @@ contains
   subroutine init_mod_b0
 
     use BATL_lib, ONLY: iComm
-    use ModLookupTable, ONLY: &
-         i_lookup_table, make_lookup_table_3d, get_lookup_table
-    use ModNumConst, ONLY: cDegToRad
-
-    integer:: nParam
-    real:: Param_I(4), IndexMin_I(3), IndexMax_I(3)
-    logical:: IsLogIndex_I(3)
+    use ModMagnetogram, ONLY: init_magnetogram_lookup_table
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_b0'
@@ -178,66 +164,12 @@ contains
 
     !$omp end parallel
 
-    ! Read the FDIPS Lookup Table and get the Longitude
-    ! shift. Create the rotation matrix based on the shift
-    iTableB0 = i_lookup_table('B0')
-    if(iTableB0 > 0)then
-       ! If lookup table is not loaded, make it (and save it)
-       call make_lookup_table_3d(iTableB0, calc_b0_table, iComm)
-
-       call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I, &
-            IndexMin_I=IndexMin_I, IndexMax_I=IndexMax_I, &
-            IsLogIndex_I=IsLogIndex_I)
-
-
-       if(IsLogIndex_I(1))then
-          rMinB0 = 10**IndexMin_I(1); rMaxB0 = 10**IndexMax_I(1)
-       else
-          rMinB0 = IndexMin_I(1); rMaxB0 = IndexMax_I(1)
-       end if
-       LonMinB0 = IndexMin_I(2)*cDegToRad
-       if(nParam > 2) then
-          dLonB0 = (Param_I(3) - dLongitudeHgrDeg)*cDegToRad
-          RotB0_DD = rot_matrix_z(dLonB0)
-       end if
-       
-    endif
-
+    call init_magnetogram_lookup_table(iComm)
+    
     call test_stop(NameSub, DoTest)
+
   end subroutine init_mod_b0
   !============================================================================
-  subroutine calc_b0_table(iTable, Arg1, Arg2, Arg3, b_D)
-
-    use ModNumConst, ONLY: cDegToRad
-    use ModMagnetogram, ONLY: get_pfss_field
-    use ModCoordTransform, ONLY: rot_xyz_sph
-
-    ! Calculate B0 at the location
-
-    integer, intent(in):: iTable
-    real, intent(in)   :: Arg1, Arg2, Arg3
-    real, intent(out)  :: b_D(:)
-
-    real:: r, Theta, Phi, Bsph_D(3), XyzSph_DD(3,3)
-
-    character(len=*), parameter:: NameSub = 'calc_b0_table'
-    !--------------------------------------------------------------------------
-    if(iTable /= iTableB0) call stop_mpi(NameSub//': incorrect table index')
-
-    r     = Arg1
-    Phi   = Arg2*cDegToRad
-    Theta = (90-Arg3)*cDegToRad
-
-    call get_pfss_field(r, Theta, Phi, Bsph_D)
-
-    ! Convert to Cartesian
-    XyzSph_DD = rot_xyz_sph(Theta, Phi)
-
-    b_D = matmul(XyzSph_DD, Bsph_D)
-
-  end subroutine calc_b0_table
-  !============================================================================
-
   subroutine clean_mod_b0
 
     !--------------------------------------------------------------------------
@@ -636,51 +568,22 @@ contains
     use ModPhysics,        ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
     use CON_planet_field,  ONLY: get_planet_field
-    use ModMain,           ONLY: UseBody2
-    use ModMain,           ONLY: UseUserB0, UseMagnetogram
-    use ModMagnetogram,    ONLY: get_magnetogram_field
-    use ModLookupTable,    ONLY: interpolate_lookup_table
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
-    use ModNumConst,       ONLY: cTwoPi, cRadToDeg
+    use ModMain,           ONLY: UseBody2, UseUserB0
+    use ModMagnetogram,    ONLY: iTableB0, get_magnetogram_field
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
 
-    real:: rLonLat_D(3), r
-
+    real:: r
+    
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
-       ! Converting BATSRUS grid to rlonlat (radians)
-       call xyz_to_rlonlat(Xyz_D, rLonLat_D)
-
-       ! Include the shift in Phi coordinate and make sure that it is
-       ! in the range provided by the lookup table
-       if(dLonB0 /= 0.0 .or. LonMinB0 /= 0.0) rLonLat_D(2) = &
-            modulo(rLonLat_D(2) - dLonB0 - LonMinB0, cTwoPi) + LonMinB0
-
-       ! Lookup table uses degrees
-       rLonLat_D(2:3) = cRadToDeg*rLonLat_D(2:3)
-
-       ! Extrapolate for r < rMinB0
-       r = rLonLat_D(1)
+       call get_magnetogram_field(Xyz_D, B0_D)
        
-       call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
-            DoExtrapolate=(r<rMinB0) )
-
-       ! Rotate Bx, By based on shifted coordinates
-       if(dLonB0 /= 0.0) B0_D = matmul(RotB0_DD, B0_D)
-
-       ! Convert from Gauss to Tesla then to normalized units.
-       ! Multiply with B0 factor
-       B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
-
-       ! Scale with r^2 for r > rMaxB0
-       if(r > rMaxB0) B0_D = (rMaxB0/r)**2 * B0_D
-
-    elseif(UseMagnetogram)then
-       call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+       ! Convert from Tesla to normalized units.
        B0_D = B0_D*Si2No_V(UnitB_)
+       
     elseif(MonopoleStrength /= 0.0)then
        r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim

@@ -119,7 +119,8 @@ contains
     use ModFaceBoundary, ONLY: read_face_boundary_param
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
-    use ModMagnetogram, ONLY: set_parameters_magnetogram, &
+    use ModMagnetogram, ONLY: read_magnetogram_param, &
+         UseMagnetogram, UseNewMagnetogram, &
          read_magnetogram_file, read_new_magnetogram_file
     use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
@@ -1692,7 +1693,7 @@ contains
           ! reinitialize constrained transport if needed
           DoInitConstrainB = .true.
 
-       case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0", "#B0FACTOR")
+       case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0")
           if(.not.is_first_session())CYCLE READPARAM
           call read_b0_param(NameCommand)
 
@@ -2554,18 +2555,8 @@ contains
 
           ! CORONA SPECIFIC COMMANDS
 
-       case("#MAGNETOGRAM")
-          call read_var('UseMagnetogram', UseMagnetogram)
-          if(UseMagnetogram)&
-               call set_parameters_magnetogram(NameCommand)
-
-       case("#NEWMAGNETOGRAM")
-          call read_var('UseNewMagnetogram', UseNewMagnetogram)
-          if(UseNewMagnetogram)&
-               call set_parameters_magnetogram(NameCommand)
-
-       case("#B0GRID")
-          call set_parameters_magnetogram(NameCommand)
+       case("#MAGNETOGRAM", "#NEWMAGNETOGRAM", "#B0FACTOR")
+          call read_magnetogram_param(NameCommand)
 
        case('#LDEM')
           call read_var('UseLdem', UseLdem)

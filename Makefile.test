@@ -722,7 +722,7 @@ test_coronasph:
 	$(MAKE) test_coronasph_check
 
 test_coronasph_compile:
-	./Config.pl ${OPENMP} -u=Sc -e=MhdCorona -g=4,4,4
+	./Config.pl ${OPENMP} -u=AwsomR -e=Awsom -g=4,4,4
 	$(MAKE) BATSRUS
 	make PIDL
 
