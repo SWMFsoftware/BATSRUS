@@ -8135,10 +8135,10 @@ This default is backwards compatible with previous versions of the code.
 							  length="$lLine"/>
 		<parameter name="NameVar"   type="string" length="$lLine"/>
 		<parameter name="nIndex"    type="integer" min="1"/>
-		<for from="1" to="$nIndex">
-			<parameter name="nIndex_I" type="integer" min="2"/>
-			<parameter name="IndexMin" type="real"/>
-			<parameter name="IndexMax" type="real" min="$IndexMin"/>
+		<for name="i" from="1" to="$nIndex">
+			<parameter name="nIndex$i" type="integer" min="2"/>
+			<parameter name="Index${i}Min" type="real"/>
+			<parameter name="Index${i}Max" type="real" min="$IndexMin"/>
 		</for>
 	</if>
 
