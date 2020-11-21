@@ -125,7 +125,6 @@ test_extra:
 	-@($(MAKE) test_laserpackage TESTDIR=run_test_laserpackage)
 	./Config.pl -nohypre
 	-@($(MAKE) test_graydiffusion TESTDIR=run_test_graydiffusion)
-	-@($(MAKE) test_coronasph TESTDIR=run_test_coronasph)
 	-@($(MAKE) test_outerhelio2d TESTDIR=run_test_outerhelio2d)
 	-@($(MAKE) test_outerhelio TESTDIR=run_test_outerhelio)
 	-@($(MAKE) test_outerheliopui TESTDIR=run_test_outerheliopui)
