@@ -9,9 +9,9 @@ EvMin EvMax		NameTableParam
 Opacity(rho,Te) for Pl		StringDescription
 logrho logT Planck(30) Ross(30)		NameVar
 2			nIndex
-201			nIndex_I
-1.62789127801646E-02		IndexMin [kg/m3]
-2.44183691702469E+03		IndexMax [kg/m3]
-201			nIndex_I
-5.0E-2			IndexMin [eV]
-1.0E+2			IndexMax [eV]
+201			nIndex1
+1.62789127801646E-02		Index1Min [kg/m3]
+2.44183691702469E+03		Index1Max [kg/m3]
+201			nIndex2
+5.0E-2			Index2Min [eV]
+1.0E+2			Index2Max [eV]
