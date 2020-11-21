@@ -9872,7 +9872,6 @@ boundary of the interpolation stencil.
 	 </parameter>
 	 <parameter name="Tolerance" type="real" min="0" default="1e-6"/>
 	 <parameter name="MaxIter" type="integer" min="1" default="20"/>
-	 <parameter name="UseThomasAlg" type="logical" default="F"/>
 	 
 #THREADEDBC
 T	  UseAlignedVelocity
@@ -9880,7 +9879,6 @@ F         DoConvergenceCheck
 limited   TypeBc             first/second/limited
 1e-6      Tolerance          (optional)
 20        MaxIteration       (optional)
-F         UseThomasAlgorithm (optional)
 
 This command sets things for the threaded field line algorithm.
 Ask Igor Sokolov if you want to learn more.
