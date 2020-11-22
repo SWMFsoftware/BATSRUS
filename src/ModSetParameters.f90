@@ -383,16 +383,12 @@ contains
 
        if(UseMagnetogram)then
           if(UseNewMagnetogram)then
-             if(i_line_command("#NEWMAGNETOGRAM") > 0)then
-                call read_new_magnetogram_file(NamePlotDir, iProc, nProc,iComm)
-             end if
-             tMagnetogram = Time_Simulation
+             if(i_line_command("#NEWMAGNETOGRAM") > 0)&
+                  call read_new_magnetogram_file
           end if
-          if(i_line_command("#MAGNETOGRAM") > 0)then
-             call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
-          end if
-       end if
+          if(i_line_command("#MAGNETOGRAM") > 0) call read_magnetogram_file
 
+       end if
        
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
