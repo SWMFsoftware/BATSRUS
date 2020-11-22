@@ -12,7 +12,6 @@ module ModCoronalHeating
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
-  use ModExpansionFactors, ONLY: get_bernoulli_integral
   use omp_lib
 
   implicit none
@@ -22,7 +21,6 @@ module ModCoronalHeating
 
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
-  public :: get_cell_heating
   public :: get_block_heating
   public :: apportion_coronal_heating
   public :: get_wave_reflection
@@ -51,12 +49,6 @@ module ModCoronalHeating
   real :: ArHeatB0 = 30.0
   real :: DeltaArHeatB0 = 5.0
   real :: ArHeatFactorCgs = 4.03E-05  ! cgs energy density = [ergs cm-3 s-1]
-
-  ! open closed heat is if you want to have different heating
-  ! between open and closed field lines. The routines for the WSA
-  ! model in the ExpansionFactors module essentially do this, so will
-  ! need to call them
-  logical, public :: DoOpenClosedHeat = .false.
 
   ! Abbett's model -------------
 
@@ -577,109 +569,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_coronal_heating
   !============================================================================
-  subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
-
-    use ModGeometry,       ONLY: r_BLK
-    use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
-         No2Io_V, UnitB_
-    use ModExpansionFactors, ONLY: UMin
-    use ModMain,       ONLY: x_, z_, UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModAdvance,    ONLY: State_VGB
-    use ModB0,         ONLY: B0_DGB
-    use BATL_lib,      ONLY: Xyz_DGB
-
-    integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: CoronalHeating
-
-    real :: HeatCh
-
-    ! parameters for open/closed. This uses WSA model to determine if
-    ! cell is in an 'open' or 'closed' field region.
-    !
-    ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
-    ! should really be using the computational domain, but global
-    ! field line tracing for this purpose is not easily implemented
-    real :: Ufinal
-    real :: UminIfOpen
-    real :: UmaxIfOpen
-    real :: Weight
-    real :: B_D(3)
-
-    ! local variables for ArHeating (Active Region Heating)
-    real :: FractionB, Bcell
-
-    real :: WaveDissipation_V(WaveFirst_:WaveLast_)
-
-    character(len=*), parameter:: NameSub = 'get_cell_heating'
-    !--------------------------------------------------------------------------
-    if(UseB0)then
-       B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
-    else
-       B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-    end if
-
-    if(UseAlfvenWaveDissipation)then
-
-       if(UseTurbulentCascade)then
-          call turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
-               CoronalHeating)
-       else
-          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-               WaveDissipation_V, CoronalHeating)
-       end if
-
-    elseif(UseUnsignedFluxModel)then
-
-       call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
-       CoronalHeating = CoronalHeating * HeatNormalization
-
-    elseif(UseExponentialHeating)then
-
-       CoronalHeating = HeatingAmplitude &
-            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
-    else
-       CoronalHeating = 0.0
-    end if
-
-    if(DoOpenClosedHeat)then
-       ! If field is less than 1.05 times the minimum speed, mark as closed
-       ! Interpolate between 1.05 and 1.10 for smoothness
-       UminIfOpen = UMin*1.05
-       UmaxIfOpen = UMin*1.1
-       call get_bernoulli_integral( &
-            Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
-       if(UFinal <= UminIfOpen) then
-          Weight = 0.0
-       else if (UFinal >= UmaxIfOpen) then
-          Weight = 1.0
-       else
-          Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
-       end if
-
-       CoronalHeating = (1.0 - Weight) * CoronalHeating
-    end if
-
-    if(DoChHeat) then
-       HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-       CoronalHeating = CoronalHeating + HeatCh &
-            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
-    end if
-
-    if(UseExponentialHeating.and.UseArComponent) then
-
-       Bcell = No2Io_V(UnitB_) * norm2(B_D)
-
-       FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-       CoronalHeating = max(CoronalHeating, &
-            FractionB * ArHeatFactorCgs * Bcell &
-            * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
-
-    endif
-
-  end subroutine get_cell_heating
-  !============================================================================
-
   subroutine get_block_heating(iBlock)
 
     use ModGeometry,       ONLY: r_BLK
@@ -749,26 +638,6 @@ contains
        end do; end do; end do
     else
        CoronalHeating_C = 0.0
-    end if
-
-    if(DoOpenClosedHeat)then
-       ! If field is less than 1.05 times the minimum speed, mark as closed
-       ! Interpolate between 1.05 and 1.10 for smoothness
-       UminIfOpen = UMin*1.05
-       UmaxIfOpen = UMin*1.1
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          call get_bernoulli_integral( &
-               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
-          if(UFinal <= UminIfOpen) then
-             Weight = 0.0
-          else if (UFinal >= UmaxIfOpen) then
-             Weight = 1.0
-          else
-             Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
-          end if
-
-          CoronalHeating_C(i,j,k) = (1.0 - Weight) * CoronalHeating_C(i,j,k)
-       end do; end do; end do
     end if
 
     if(DoChHeat) then

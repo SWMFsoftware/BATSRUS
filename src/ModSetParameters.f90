@@ -3,8 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iVarTest
+  use BATL_lib, ONLY: 
 
   implicit none
 
@@ -70,7 +69,7 @@ contains
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
          read_boundary_geometry_param
     use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit, &
-         IsDynamicPointImplicit, init_mod_point_impl
+         init_mod_point_impl
     use ModRestartFile, ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
@@ -122,11 +121,8 @@ contains
     use ModMagnetogram, ONLY: read_magnetogram_param, &
          UseMagnetogram, UseNewMagnetogram, &
          read_magnetogram_file, read_new_magnetogram_file
-    use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
-         read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
-         init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat, &
-         UseAlfvenWaveDissipation
+         init_coronal_heating, UseCoronalHeating, UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc_param
     use ModRadiativeCooling, ONLY: UseRadCooling,&
@@ -469,10 +465,6 @@ contains
        if(UseResistivity)call init_mod_resistivity
        if(UseViscosity) call viscosity_init
 
-
-       if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
-            call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
-
        if(UseCoronalHeating)call init_coronal_heating
        call check_cooling_param
 
@@ -481,10 +473,6 @@ contains
 
        ! Initialize user module and allow user to modify things
        if(UseUserInitSession)call user_init_session
-
-       ! if using open closed heating initialize auxilary WSA grid
-       if(DoOpenClosedHeat .and. i_line_command("#OPENCLOSEDHEAT")>0)&
-            call set_empirical_model('WSA', CoronalT0Dim)
 
        call check_waves
 
@@ -2566,20 +2554,10 @@ contains
              call read_ldem(NamePlotDir)
           end if
 
-       case("#EMPIRICALSW")
-          call read_var('NameModelSW', NameModelSW)
-          UseEmpiricalSW = NameModelSW /= 'none'
-
-       case("#WSACOEFF")
-          call read_wsa_coeff
-
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
             "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
             "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE")
           call read_coronal_heating_param(NameCommand)
-
-       case("#OPENCLOSEDHEAT")
-          call read_var('DoOpenClosedHeat', DoOpenClosedHeat)
 
        case("#RADIATIVECOOLING")
           call read_var('UseRadCooling', UseRadCooling)
@@ -3311,15 +3289,6 @@ contains
            optimize_message_pass = 'all'
 
       ! Check for magnetogram
-
-      if(UseEmpiricalSW.and..not.UseMagnetogram)&
-           call stop_mpi(&
-           'Empirical Solar Wind model requires magnetogram')
-
-      if(DoOpenClosedHeat.and.(.not.UseMagnetogram.and.&
-           (IsFirstSession .and. i_line_command('#PFSSM')<0)))&
-           call stop_mpi(&
-           'The heating in the closed field region requires magnetogram')
 
       if(nOrder == 1)then
          BetaProlongOrig = BetaProlong
