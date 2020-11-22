@@ -48,7 +48,6 @@ OBJECTS = \
 	ModEnergy.o \
 	ModElectricField.o \
 	ModEquation.o \
-	ModExpansionFactors.o \
 	ModExtraVariables.o \
 	ModFaceBoundary.o \
 	ModFaceFlux.o \
