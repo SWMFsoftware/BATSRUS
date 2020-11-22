@@ -123,11 +123,10 @@ contains
 
     use ModAdvance,     ONLY: State_VGB, Bz_
     use ModGeometry,    ONLY: true_BLK, true_cell, TypeGeometry
-    use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
-         get_magnetogram_field
+    use ModMagnetogram, ONLY: get_magnetogram_field
     use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, Time_Simulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
-    use ModNumConst,    ONLY: cHalfPi
+    use ModNumConst,    ONLY: cHalfPi, cTwoPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
     use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB, nProc, iComm
@@ -143,7 +142,10 @@ contains
     logical :: DoFirst = .true.
     !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
 
-    real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
+
+    integer, parameter:: nTheta = 72, nPhi=90
+    real, parameter:: dSinTheta = 2.0/nTheta, dPhi = cTwoPi/nPhi
+    real, parameter:: HeatExponent = 1.1488, HeatCoef = 89.4
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_coronal_heat_factor'
@@ -574,28 +576,16 @@ contains
     use ModGeometry,       ONLY: r_BLK
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_
-    use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
-    use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
     integer             :: i, j, k
     real :: HeatCh
 
-    ! parameters for open/closed. This uses WSA model to determine if
-    ! cell is in an 'open' or 'closed' field region.
-    !
-    ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
-    ! should really be using the computational domain, but global
-    ! feild line tracing for this purpose is not easily implemented
-    real :: Ufinal
-    real :: UminIfOpen
-    real :: UmaxIfOpen
-    real :: Weight
     real :: B_D(3)
 
     ! local variables for ArHeating (Active Region Heating)
