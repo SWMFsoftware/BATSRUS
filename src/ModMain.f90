@@ -108,10 +108,6 @@ module ModMain
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
 
-  ! Coronal magnetic field (magnetogram + EE generator)
-  real    :: tMagnetogram
-  logical :: UseEmpiricalSW = .false.
-
   ! Inner and outer boundaries
 
   ! Indexes for boundaries
