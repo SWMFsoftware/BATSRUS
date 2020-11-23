@@ -7,6 +7,7 @@ module ModWriteLogSatFile
        test_start, test_stop, StringTest, XyzTestCell_D, &
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
        iProc, nProc, iComm
+  use,intrinsic :: ieee_arithmetic
 !  use ModUtilities, ONLY: norm2
 
   implicit none
@@ -318,6 +319,14 @@ contains
        if(DoWritePosition) &
             write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
 
+       ! Do a check if any variable is NaN and STOP with an error message.
+       do iVar=1,nLogTot
+          if (ieee_is_nan(LogVar_I(iVar))) then
+             call stop_mpi('ERROR: NaN in Log file. '//&
+                  'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
+          end if
+       end do
+       
        ! Finally write out the data variables
        write(iUnit,'(100es14.5e3)') LogVar_I(1:nLogTot)
 
