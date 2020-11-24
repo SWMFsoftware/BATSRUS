@@ -118,9 +118,7 @@ contains
     use ModFaceBoundary, ONLY: read_face_boundary_param
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
-    use ModMagnetogram, ONLY: read_magnetogram_param, &
-         UseMagnetogram, UseNewMagnetogram, &
-         read_magnetogram_file, read_new_magnetogram_file
+    use ModMagnetogram, ONLY: read_magnetogram_param
     use ModCoronalHeating,  ONLY: read_coronal_heating_param, &
          init_coronal_heating, UseCoronalHeating, UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_thread_param
@@ -380,16 +378,6 @@ contains
        call init_mod_nodes
 
        if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
-
-       if(UseMagnetogram)then
-          if(UseNewMagnetogram)then
-             if(i_line_command("#NEWMAGNETOGRAM") > 0)&
-                  call read_new_magnetogram_file
-          end if
-          if(i_line_command("#MAGNETOGRAM") > 0) call read_magnetogram_file
-
-       end if
-       
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
@@ -2539,7 +2527,8 @@ contains
 
           ! CORONA SPECIFIC COMMANDS
 
-       case("#MAGNETOGRAM", "#NEWMAGNETOGRAM", "#B0FACTOR")
+       case("#HARMONICSFILE", "#NEWHARMONICSFILE", "#FACTORB0", &
+            "#MAGNETOGRAM") ! this one kept for compatibility only
           call read_magnetogram_param(NameCommand)
 
        case('#LDEM')
