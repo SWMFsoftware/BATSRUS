@@ -1,15 +1,8 @@
-Coefficients order=180 Central=CT2077:180
-Observation time: 2006.06.17_23:05:48
-B0 angle & Nmax:        0          180
-
-
-
-
-
-Max Harmonic Order:180              Units: Gauss
- 
-  l   m      g(uT)      h(uT)
- 
+CR2077_MDI_180.dat
+   0    0.0    -2  3  2
+   16471    1
+   180    2077    180.0
+n m g h nOrder CR LonCentral
     0    0          0.000          0.000
     1    0         -1.635          0.000
     1    1         -0.096         -0.000

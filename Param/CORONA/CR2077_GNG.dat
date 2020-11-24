@@ -1,15 +1,8 @@
-Coefficients order= 30 center=CT2077:180
-Observation time
-          B0 angle & Nmax:        0           30
-
-
-
-
-
-Max Harmonic Order: 30              Units: Gauss
- 
-  l   m      g(uT)      h(uT)
- 
+CR2077_GNG.dat
+   0    0.0    -2  3  2
+   496    1
+   30    2077    180.0
+n m g h nOrder CR LonCentral
     0    0        0.0000000000        0.0000000000
     1    0       -1.4163869786        0.0000000000
     1    1       -0.1831840780       -0.0004941872
