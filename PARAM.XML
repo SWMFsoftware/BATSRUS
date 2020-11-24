@@ -9338,33 +9338,86 @@ Default is no dipole field for the second body.
 !!!!!!!!!! CORONA SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+<command name="FACTORB0">
+  <parameter name="FactorB0" type="real" min="0.0" default="1.0"/>
+
+#FACTORB0
+1e-4                    FactorB0  
+
+FactorB0 is a multiplication factor for the magnetogram based potential
+field B0. It can be used to correct the magnetic field units
+(default is Gauss) or to change the strength of the field.
+
+Default value is 1.
+</command>
+
+<command name="HARMONICSFILE">
+  <parameter name="NameHarmonicsFile" type="string" length="$lLine" />
+  <parameter name="rMagnetogram" type="real" default="1.0" />
+  <parameter name="rSourceSurface" type="real" default="2.5" />
+
+#HARMONICSFILE
+Param/CORONA/CR1935_WSO.dat           NameHarmonicsFile
+1.0			rMagnetogram
+2.5			rSourceSurface
+
+NameHarmonicsFile is the name of the file containing the harmonics
+coefficients.
+
+rMagnetogram and rSourceSurface are the photosphere and source surface
+heliocentric radii, respectively. B0 becomes radial at rSourceSurface.
+
+After reading the harmonics file, the B0 lookup table is generated and saved.
+By default this lookup table is saved into "harmonics_bxyz.out" file.
+The defaults can be changed with the #LOOKUPTABLE command. Once the
+lookup table file is created, it can be loaded directly and there is
+no need for this command.
+
+The temporal evolution of the magnetogram can be captured by using
+an additional B0NEW lookup table. See also the #NEWHARMONICSFILE command.
+
+By default there is no B0 lookup table.
+</command>
+
+<command name="NEWHARMONICSFILE">
+  <parameter name="NameHarmonicsFileNew" type="string" length="$lLine"/>
+
+#NEWHARMONICSFILE
+Param/CORONA/CR1936_WSO.dat    NameHarmonicsFileNew
+
+NameHarmonicsFileNew is the name of the file containing the harmonics
+coefficients for the time at the end of the session.
+
+After reading the harmonics file, the B0NEW lookup table is generated
+and saved. By default this lookup table is saved into the
+"harmonics_bxyz_new.out" file.
+The default parameters of the lookup table can be changed with the
+#LOOKUPTABLE command. Once the lookup table file is created,
+it can be loaded directly and there is no need for this command.
+
+The potential field contained in the B0 and B0NEW lookup tables
+will be interpolated in time during the session. 
+
+By default there is no B0NEW lookup tables.
+</command>
+
 <command name="MAGNETOGRAM">
-	<parameter name="UseMagnetogram" type="logical" default="F"	/>
-	<if expr="$UseMagnetogram">
-		<parameter name="rMagnetogram" type="real"
-						default="1.0" />
-		<parameter name="rSourceSurface" type="real"
-						default="2.5" />
-		<parameter name="HeightInnerBc" type="real"
-						default="0.0" />
-		<parameter name="NameHarmonicsFile" type="string"
-						length="$lLine" />
-		<parameter name="nHeaderLine" type="integer" min="0"
-						default="12" />
-		<parameter name="PhiShift" type="real"
-						default="-1.0" />
-		<parameter name="UnitB" type="real"
-						default="3.0" />
-	</if>
+  <parameter name="UseMagnetogram" type="logical" default="F"	/>
+  <if expr="$UseMagnetogram">
+    <parameter name="rMagnetogram" type="real" default="1.0" />
+    <parameter name="rSourceSurface" type="real" default="2.5" />
+    <parameter name="HeightInnerBc" type="real" default="0.0" />
+    <parameter name="NameHarmonicsFile" type="string" length="$lLine" />
+  </if>
+
 #MAGNETOGRAM
 T			UseMagnetogram (rest of parameters read if true)
 1.0			rMagnetogram
 2.5			rSourceSurface
-0.0			HeightInnerBc
+0.0			HeightInnerBc (not used)
 Param/CORONA/CR1935_WSO.dat    NameHarmonicsFile
-12			nHeaderLine
--1.0			PhiShift
-0.01			UnitB
+
+This command is obsolete and has been replaced with the #HARMONICSFILE command.
 
 If UseMagnetogram=T then read the harmonics file for the coronal
 magnetic field and use it to set B0 to the potential field solution.
@@ -9377,21 +9430,8 @@ HeightInnerBc is the height above the photosphere of the boundary surface,
 non-zero values for this parameter are not recommended to unexperienced users.
 
 NameHarmonicsFile is the name of the file containing the harmonics.
-nHeaderLine is the number of header lines in the harmonics file.
-
-PhiShift is the offset in the longitude (calculated as the diffference in
-lonigitude of the magnetogram central meridian and 180 degrees. PhiShift=0
-means that the synoptic map is averaged over the whole Carrington rotation.
-With PhiShift = -1.0 the code calculates the actual value for PhiShift by
-exctracting the central meridian coordinate from the harmonics file.
-
-UnitB may be used both as a fudge-factor to upscale the (usually reduced)
-observational data and to accomodate data measured in the units
-different from Gauss.
-Wilcox data (in micro-Tesla) may be only used with UnitB=0.01-0.03.
 
 Default is UseMagnetogram=F.
-
 </command>
 
 <command name="LDEM">
