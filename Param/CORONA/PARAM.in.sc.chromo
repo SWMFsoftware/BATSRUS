@@ -49,8 +49,15 @@ potentialfield.out		NamePotentialFieldFile
 
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
+
+HARMONICSGRID
 1.0			rMagnetogram
-2.5			rSourceSurface
+25.0			rSourceSurface
+T			IsLogRadius
+180			MaxOrder
+100			nR
+180			nLon
+90			nLat
 
 FACTORB0
 2.0			FactorB0
