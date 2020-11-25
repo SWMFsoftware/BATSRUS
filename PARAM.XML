@@ -9351,15 +9351,69 @@ field B0. It can be used to correct the magnetic field units
 Default value is 1.
 </command>
 
+<command name="HARMONICSGRID">
+  <parameter name="rMagnetogram" type="real" default="1" min="0" />
+  <parameter name="rSourceSurface" type="real" default="2.5"
+	     min="$rMagnetogram"/>
+  <parameter name="IsLogRadius" type="logical" default="F" />
+  <parameter name="nOrder" type="integer" min="1"  default="30" />
+  <parameter name="nR"     type="integer" min="10" default="30" />
+  <parameter name="nLon"   type="integer" min="10" default="72" />
+  <parameter name="nLat"   type="integer" min="10" default="30" />
+
+#HARMONICSGRID
+1.0			rMagnetogram
+2.5			rSourceSurface
+F                       IsLogRadius
+30                      MaxOrder
+30                      nR
+72                      nLon
+30                      nLat
+
+#HARMONICSGRID
+1.0			rMagnetogram
+25.0			rSourceSurface
+T                       IsLogRadius
+180                     MaxOrder
+400                     nR
+180                     nLon
+90                      nLat
+
+This command determines the grid used in the B0 and B0New lookup tables
+generated from the spherical harmonics.
+
+The radial grid goes from the inner boundary at rMagnetogram (typically 1)
+to the source surface radius rSourceSurface where B0 becomes radial.
+The longitude goes from 0 to 360 degrees, while the latitude from -90 to 90
+degrees. Both angular coordinates are uniform (no sine latitude grid).
+
+Traditionally rSourceSurface is 2.5, but this may not be the best choice.
+Setting rSourceSurface to 25.0 eliminates the non-zero curl of B0
+inside the SC domain, so #USECURLB0 command is not needed
+and numerical artifacts are minimized. In essense, B0 should capture
+the field near the active regions but it does not need to represent
+the helmet streamer or the heliospheric current sheet. Those features
+are best captured by the B1 field obtained from solving the MHD equations.
+When rSourceSurface is much larger than rMagnetogram, it is
+recommended to use a logarithmic radial grid with IsLogRadius set to true.
+
+MaxOrder sets the maximum harmonics order used. This may get reduced to the
+order present in the harmonics files read by #HARMONICSFILE and
+#NEWHARMONICSFILE. If MaxOrder is less than the order present in the files,
+then the higher order harmonics are ignored.
+
+nR, nLon and nLat give number of grid cells in the radial, longitudinal and
+latitudinal directions, respectively. The B0 field is stored on the grid
+(nR+1)*(nLon+1)*(nLat+1) grid nodes.
+
+Default values are shown by the first example.
+</command>
+
 <command name="HARMONICSFILE">
   <parameter name="NameHarmonicsFile" type="string" length="$lLine" />
-  <parameter name="rMagnetogram" type="real" default="1.0" />
-  <parameter name="rSourceSurface" type="real" default="2.5" />
 
 #HARMONICSFILE
 Param/CORONA/CR1935_WSO.dat           NameHarmonicsFile
-1.0			rMagnetogram
-2.5			rSourceSurface
 
 NameHarmonicsFile is the name of the file containing the harmonics
 coefficients.
