@@ -2527,8 +2527,8 @@ contains
 
           ! CORONA SPECIFIC COMMANDS
 
-       case("#HARMONICSFILE", "#NEWHARMONICSFILE", "#FACTORB0", &
-            "#MAGNETOGRAM") ! this one kept for compatibility only
+       case("#HARMONICSFILE", "#NEWHARMONICSFILE", "#HARMONICSGRID", &
+            "#FACTORB0", "#MAGNETOGRAM") ! last one kept for compatibility only
           call read_magnetogram_param(NameCommand)
 
        case('#LDEM')
