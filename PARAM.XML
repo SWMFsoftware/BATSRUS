@@ -9352,14 +9352,14 @@ Default value is 1.
 </command>
 
 <command name="HARMONICSGRID">
-  <parameter name="rMagnetogram" type="real" default="1" min="0" />
-  <parameter name="rSourceSurface" type="real" default="2.5"
-	     min="$rMagnetogram"/>
-  <parameter name="IsLogRadius" type="logical" default="F" />
-  <parameter name="nOrder" type="integer" min="1"  default="30" />
-  <parameter name="nR"     type="integer" min="10" default="30" />
-  <parameter name="nLon"   type="integer" min="10" default="72" />
-  <parameter name="nLat"   type="integer" min="10" default="30" />
+  <parameter name="rMagnetogram"   type="real" min="0"  default="1"  />
+  <parameter name="rSourceSurface" type="real"          default="2.5"
+	                                       min="$rMagnetogram"   />
+  <parameter name="IsLogRadius" type="logical"          default="F"  />
+  <parameter name="MaxOrder"    type="integer" min="1"  default="30" />
+  <parameter name="nR"          type="integer" min="10" default="30" />
+  <parameter name="nLon"        type="integer" min="10" default="72" />
+  <parameter name="nLat"        type="integer" min="10" default="30" />
 
 #HARMONICSGRID
 1.0			rMagnetogram
