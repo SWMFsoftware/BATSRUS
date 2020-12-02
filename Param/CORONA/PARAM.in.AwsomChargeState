@@ -85,6 +85,15 @@ F			UseConstantTau
 -1.0			TauInstabilitySi
 1e5			TauGlobalSi
 
+#HEATFLUXREGION
+T                       UseHeatFluxRegion
+5.0                     rCollisional
+-8.0                    rCollisionless
+
+#HEATFLUXCOLLISIONLESS
+T                       UseHeatFluxCollisionless
+1.05                    CollisionlessAlpha
+
 #HEATCONDUCTION
 T			UseHeatConduction
 spitzer			TypeHeatConduction

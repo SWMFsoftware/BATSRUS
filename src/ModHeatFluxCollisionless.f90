@@ -19,11 +19,11 @@ module ModHeatFluxCollisionless
   public :: update_heatflux_collisionless
 
   ! Parameters for heat flux region
-  logical, public :: UseHeatFluxRegion = .true. .and. Ehot_>1
+  logical, public :: UseHeatFluxRegion = .false.
   real, public :: rCollisional = 5.0, rCollisionless = -8.0
 
   ! Parameters for collisionless heat conduction
-  logical, public :: UseHeatFluxCollisionless = .true. .and. Ehot_>1
+  logical, public :: UseHeatFluxCollisionless = .false.
   real :: CollisionlessAlpha = 1.05
 
 contains

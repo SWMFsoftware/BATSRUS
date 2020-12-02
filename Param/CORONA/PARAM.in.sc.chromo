@@ -91,9 +91,6 @@ T			UseHeatFluxRegion
 5.0			rCollisional
 8.0			rCollisionless
 
-#HEATFLUXCOLLISIONLESS
-F                       UseHeatFluxCollisionless
-
 #TEST
 update_b0		StringTest
 
