@@ -4,7 +4,8 @@
 
 module ModHeatFluxCollisionless
 
-  use BATL_lib,     ONLY: test_start, test_stop
+  use BATL_lib,      ONLY: test_start, test_stop
+  use ModVarIndexes, ONLY: Ehot_
 !  use ModUtilities, ONLY: norm2
 
   implicit none
@@ -18,11 +19,11 @@ module ModHeatFluxCollisionless
   public :: update_heatflux_collisionless
 
   ! Parameters for heat flux region
-  logical, public :: UseHeatFluxRegion = .false.
-  real, public :: rCollisional, rCollisionless
+  logical, public :: UseHeatFluxRegion = .true. .and. Ehot_>1
+  real, public :: rCollisional = 5.0, rCollisionless = -8.0
 
   ! Parameters for collisionless heat conduction
-  logical, public :: UseHeatFluxCollisionless = .false.
+  logical, public :: UseHeatFluxCollisionless = .true. .and. Ehot_>1
   real :: CollisionlessAlpha = 1.05
 
 contains
