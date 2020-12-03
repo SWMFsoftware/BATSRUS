@@ -231,6 +231,7 @@ Begin session: 2
 #TIMEACCURATE
 T			IsTimeAccurate
 
+! Perturb with GL CME
 #USERSWITCH
 +perturb -ic		StringSwitch
 
@@ -246,37 +247,43 @@ GL			TypeCme
 0.7			Stretch
 1.13			ApexHeight
 
-
-!#STOP
-!51			MaxIteration
-!-1.0			tSimulationMax
-
-!#RUN #####################################################
-!begin session 3
-
-!#USERSWITCH
-!+perturb		StringSwitch
-
-!#CME
-!T			UseCme
-!T			DoAddFluxRope
-!270.0			LongitudeCme
-!5.0			LatitudeCme
-!60.0			OrientationCme
-!TD14			TypeCme
-!1.0			AnalyticTdCoordScale
-!1.0			AnalyticTdFieldScale
-!1.83			AnalyticTdCoeffR
-!0.75			AnalyticTdCoeffA
-!0.83			AnalyticTdCoeffD
-
 #STOP
 -1			MaxIteration
 5.0			tSimulationMax
-!
+
 #RUN ##########################################################################
 
-! perturb again with new CME
+! Perturb with TD CME
+#USERSWITCH
++perturb		StringSwitch
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+270.0			LongitudeCme
+15.0			LatitudeCme
+30.0			OrientationCme
+TD			TypeCme
+1			Current
+1.005747126436782		RadiusMajor
+0.431034482758621		RadiusMinor
+0.1436781609195402		Depth
+T			UsePlsamaBeta
+0.1			PlasmaBeta
+5.0e4			EjectaTemperature
+readbstrap		TypeCharge
+11.976710014764566		bStrapping
+
+#HELIOUPDATEB0
+1.0			DtUpdateB0
+
+#STOP
+-1			MaxIteration
+8.0			tSimulationMax
+
+#RUN ##########################################################################
+
+! perturb again with new TD14 CME
 #USERSWITCH
 +perturb		StringSwitch
 
@@ -296,14 +303,11 @@ cancelflux		TypeBStrap
 0.4			qDistance
 10			UChargeX
 
-#HELIOUPDATEB0
-2.0			DtUpdateB0
-
 #STOP
 -1			MaxIteration
 10.0			tSimulationMax
 
-#RUN ##########################################################################
+!#RUN #####################################################
 
 #HELIOUPDATEB0
 -1.0			DtUpdateB0
@@ -326,4 +330,3 @@ F			UseUpdateCheck
 #STOP
 -1			MaxIteration
 600.0			tSimulationMax
-
