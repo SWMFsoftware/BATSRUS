@@ -61,7 +61,6 @@ test_extra_help:
 	@echo "    test_cometfluids_restart   (run 3-fluid+Pe comet restart test)"
 	@echo "    test_cometCGhd             (run comet CG hd test)"
 	@echo "    test_cometCGfluids         (run comet CG fluids test)"
-	@echo "    test_coronasph             (run spherical corona test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_europa2fluidspe       (run 2-ion-fluid+Pe Europa test)"
 	@echo "    test_europa3fluidspe       (run 3-ion-fluid+Pe Europa test)"
@@ -708,39 +707,7 @@ test_graydiffusion_check:
 
 ### END OF CRASH RELATED TESTS #############################################
 
-### STANDALONE SOLAR CORONA TEST ###
-
-test_coronasph:
-	@echo "test_coronasph_compile..." > test_coronasph.diff
-	$(MAKE) test_coronasph_compile
-	@echo "test_coronasph_rundir..." >> test_coronasph.diff
-	$(MAKE) test_coronasph_rundir
-	@echo "test_coronasph_run..." >> test_coronasph.diff
-	$(MAKE) test_coronasph_run
-	@echo "test_coronasph_check..." >> test_coronasph.diff
-	$(MAKE) test_coronasph_check
-
-test_coronasph_compile:
-	./Config.pl ${OPENMP} -u=AwsomR -e=Awsom -g=4,4,4
-	$(MAKE) BATSRUS
-	make PIDL
-
-test_coronasph_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
-	-./TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test_coronasph_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test_coronasph_check:
-	-@(${DIFFNUM} -t -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/log_n000001.log \
-		Param/CORONA/TestOutput/log_n000001.sph \
-		> test_coronasph.diff)
-	ls -l test_coronasph.diff
+### STANDALONE SOLAR CORONA TESTS ###
 
 # TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
 
