@@ -8,9 +8,9 @@ program interpolate_output
   ! then interpolate the *.outs to the trajectory from the satellite file.
 
   use ModPlotFile,       ONLY: read_plot_file
-  use ModTimeConvert,    ONLY: time_int_to_real
-  use ModConst,          ONLY: cRadToDeg
-  use ModInterpolate,    ONLY: interpolate_vector
+  use ModTimeConvert,    ONLY: time_int_to_real, time_real_to_int
+  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
+  use ModInterpolate,    ONLY: interpolate_vector, bilinear
   use ModCoordTransform, ONLY: atan2_check
   use ModUtilities,      ONLY: open_file, close_file
   use ModIoUnit,         ONLY: UnitTmp_
@@ -20,6 +20,7 @@ program interpolate_output
   integer:: iError      ! I/O error
   integer:: iTime_I(7)  ! array for year, month ... msec
   real   :: Time        ! time in number of seconds since 00UT 1965/1/1
+  real   :: StartTime   ! start time in seconds since 00UT 1965/1/1
 
   ! Point position file
   character(len=100):: NameFilePoints ! name of position file
@@ -27,9 +28,10 @@ program interpolate_output
   character(len=3)  :: NameCoordPoint ! coordinate system of the points
   real, allocatable :: TrajTime_I(:)  ! simulation time from trajectory file
   character(len=3), allocatable:: NameMag_I(:) ! name of magnetic stations
-  real, allocatable :: Coord_DI(:,:)  ! positions at each timestamp
+  real, allocatable :: CoordPoint_DI(:,:) ! positions
+  real, allocatable :: CoordIn_DI(:,:)    ! positions in the input file system
+  real, allocatable :: CoordNorm_DI(:,:)  ! normalized positions 
   integer           :: nPoint         ! number of points for interpolation
-  real              :: StartTime      ! simulation start time
   
   ! Input mulit-D file
   character(len=100):: NameFileIn     ! name of input data file
@@ -46,7 +48,7 @@ program interpolate_output
   real, allocatable :: InterpData_VI(:,:) ! fully interpolated output
   real :: InterpCoord_D(2) ! interpolated trajectory coordinates
   integer :: MaxSnapshot ! limit of snapshots in .outs file
-  integer :: nSnapshots ! number of snapshots contained in .outs file
+  integer :: nSnapshot ! number of snapshots contained in .outs file
   real :: RadMin, RadMax, PhiMin, PhiMax
   integer :: Weight
   real    :: dPhi
@@ -61,11 +63,13 @@ program interpolate_output
   character(len=*), parameter:: NameProgram = 'interpolate_output'
   !-------------------------------------------------------------------------
 
+  write(*,*) NameProgram,': start read_parameters'
   call read_parameters
-  write(*,*) NameProgram,': finished read parameters'
+  write(*,*) NameProgram,': start read_positions'
   call read_positions
-  write(*,*) NameProgram,': finished read position'
-  
+  write(*,*) NameProgram,': start read_through_first'
+  call read_through_first
+
   if(IsTrajectory)then
      write(*,*) NameProgram,': start interpolate_trajectory'
      call interpolate_trajectory
@@ -74,9 +78,8 @@ program interpolate_output
   elseif(IsMagStation)then
      write(*,*) NameProgram,': start interpolate_mag_station'
      call interpolate_mag_station
-     write(*,*) NameProgram,': start write_mag_station'
-     call write_mag_station
   end if
+  write(*,*) NameProgram,' finished'
 
 contains
   !===========================================================================
@@ -158,32 +161,36 @@ contains
     ! ...
 
     integer:: iPoint         ! line number in position file
+    real:: Lon, Lat
     !--------------------------------------------------------------------------
     ! Open the position file
     call open_file(File=NameFilePoints, Status="old", NameCaller=NameProgram)
 
     ! Find the number of points in the point position file
-    nPoint = 0
-    COUNTPOINTS: do
+    ! Read the header first
+    do
        read(UnitTmp_,'(a)',iostat=iError) StringLine
        if(iError /= 0) stop NameProgram//': no #START in position file'
        if(StringLine(1:5) == '#COOR') &
             read(UnitTmp_,'(a3)') NameCoordPoint
-       if(index(StringLine, '#START')>0)then
-          do
-             read(UnitTmp_, '(a)', iostat=iError) StringLine
-             if(iError/=0) EXIT COUNTPOINTS
-             nPoint = nPoint + 1
-          enddo
-       endif
-    enddo COUNTPOINTS
+       if(index(StringLine, '#START') > 0) EXIT
+    end do
+    ! Count points
+    nPoint = 0
+    do
+       read(UnitTmp_, '(a)', iostat=iError) StringLine
+       if(iError /= 0) EXIT
+       ! DST is not a real magnetometer station
+       if(IsMagStation .and. StringLine(1:3) == 'DST') CYCLE
+       nPoint = nPoint + 1
+    enddo
 
     write(*,*) NameProgram, ': nPoint=', nPoint,', CoordPoint=', NameCoordPoint
 
     ! Allocate arrays to hold times/positions
     if(IsTrajectory) allocate(TrajTime_I(nPoint))
     if(IsMagStation) allocate(NameMag_I(nPoint))
-    allocate(Coord_DI(2,nPoint))
+    allocate(CoordPoint_DI(2,nPoint), CoordIn_DI(2,nPoint))
 
     ! Rewind to start of file for reading times/positions.
     rewind(unit=UnitTmp_) 
@@ -196,12 +203,15 @@ contains
 
     ! Read point information
     do iPoint = 1, nPoint
-       read(UnitTmp_,'(a)',iostat=iError) StringLine
+       read(UnitTmp_,'(a)') StringLine
        if(IsMagStation)then
-          read(StringLine, *, iostat=iError) &
-               NameMag_I(iPoint), Coord_DI(:,iPoint)
+          ! DST is not a real station, so skip it
+          if(StringLine(1:3) == 'DST') read(UnitTmp_,'(a)') StringLine
+
+          read(StringLine, *, iostat=iError) NameMag_I(iPoint), Lat, Lon
+          CoordPoint_DI(:,iPoint) = [ Lon, Lat ]
        else
-          read(StringLine, *, iostat=iError) iTime_I, Coord_DI(:,iPoint)
+          read(StringLine, *, iostat=iError) iTime_I, CoordPoint_DI(:,iPoint)
        end if
        if(iError /= 0)then
           write(*,*) NameProgram,': error reading line ',iPoint,':'
@@ -221,12 +231,174 @@ contains
 
   end subroutine read_positions
   !============================================================================
+  subroutine read_through_first
+
+    ! Read first snapshot to figure out start time, coordinates,
+    ! coordinate system, number of snapshots
+    
+    use ModCoordTransform, ONLY: xyz_to_lonlat, lonlat_to_xyz
+    use CON_planet, ONLY: init_planet_const, set_planet_defaults
+    use CON_axes, ONLY: init_axes, transform_matrix
+
+    integer:: iPoint
+    real:: Time, CoordMax_D(2), CoordMin_D(2), dCoord_D(2)
+    real:: PointToIn_DD(3,3), XyzPoint_D(3), XyzIn_D(3)
+    !-------------------------------------------------------------------------
+    call read_plot_file(&
+         NameFile = NameFileIn,          &
+         TypeFileIn = TypeFileIn,        &
+         StringHeaderOut = StringHeader, &
+         NameVarOut = NameVar,           &
+         TimeOut = Time,                 & ! simulation time
+         nDimOut = nDim,                 & ! number of dimensions
+         IsCartesianOut = IsCartesian,   &
+         nVarOut = nVar,                 & ! number of variables
+         n1Out = n1,                     & ! grid sizes
+         n2Out = n2 )
+
+    write(*,*) NameProgram,': initial Time=', Time,', n1=', n1, ', n2=', n2
+    write(*,*) NameProgram,': nDim=', nDim, ', nVar=', nVar, ', NameVar=', &
+         trim(NameVar)
+
+    if(nDim /= 2) stop NameProgram//' only works for 2D input file for now'
+    
+    if(IsMagStation)then
+       ! Extract coordinate system
+       if(index(StringHeader, 'GEO') > 0) NameCoordIn = 'GEO'
+       if(index(StringHeader, 'MAG') > 0) NameCoordIn = 'MAG'
+       if(index(StringHeader, 'SMG') > 0) NameCoordIn = 'SMG'
+       if(index(StringHeader, 'GSM') > 0) NameCoordIn = 'GSM'
+       write(*,*) NameProgram,': CoordIn=', NameCoordIn
+    end if
+
+    ! Fix start time (subtract simulation time)
+    StartTime = StartTime - Time
+
+    ! Convert point coordinates into the input coordinates
+    if(NameCoordIn /= NameCoordPoint)then
+       ! This works when the two coordinates systems don't move relative
+       ! to each other, like GEO and MAG
+       call init_planet_const
+       call set_planet_defaults
+       call init_axes(StartTime)
+       
+       PointToIn_DD = transform_matrix(0.0, NameCoordPoint, NameCoordIn)
+       write(*,*) NameProgram, &
+            ': convert from ', NameCoordPoint, ' to ', NameCoordIn
+       do iPoint = 1, nPoint
+          call lonlat_to_xyz(CoordPoint_DI(:,iPoint)*cDegToRad, XyzPoint_D)
+          XyzIn_D = matmul(PointToIn_DD, XyzPoint_D)
+          call xyz_to_lonlat(XyzIn_D, CoordIn_DI(:,iPoint))
+       end do
+       CoordIn_DI = cRadToDeg*CoordIn_DI
+    else
+       CoordIn_DI = CoordPoint_DI
+    end if
+
+    ! Allocate variable array
+    allocate(Var_VII(nVar,n1,n2))
+
+    ! Get coordinate limits
+    call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
+         CoordMinOut_D=CoordMin_D, CoordMaxOut_D=CoordMax_D, iErrorOut=iError)
+
+    if(iError /= 0) stop NameProgram//': could not read first snapshot'
+    
+    dCoord_D = (CoordMax_D - CoordMin_D)/ [n1-1, n2-1]
+
+    write(*,*) NameProgram,': CoordMin_D=', CoordMin_D
+    write(*,*) NameProgram,': CoordMax_D=', CoordMax_D
+    write(*,*) NameProgram,': dCoord_D  =', dCoord_D
+    
+    ! Normalize point coordinates
+    allocate(CoordNorm_DI(2,nPoint))
+    do iPoint = 1, nPoint
+       CoordNorm_DI(:,iPoint) = &
+            1 + (CoordIn_DI(:,iPoint) - CoordMin_D) / dCoord_D
+    end do
+
+    ! Read the whole file through to get the number of snapshots
+    nSnapshot = 1
+    do
+       call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
+            iErrorOut=iError)
+       if(iError /= 0) EXIT
+       nSnapshot = nSnapshot + 1
+    end do
+    close(UnitTmp_)
+
+    write(*,*) NameProgram,': nSnapshot=', nSnapshot
+    
+  end subroutine read_through_first
+  !============================================================================
+  subroutine interpolate_mag_station
+
+    ! Interpolate dB to the position of the magnetometer stations
+
+    real,    allocatable:: dB_DG(:,:,:)  ! deltaB on Lon-Lat grid
+    real,    allocatable:: dB_DII(:,:,:) ! deltaB per snapshot and station
+    integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
+
+    real:: Time ! simulation time
+    integer:: iSnapshot, iPoint
+    !-------------------------------------------------------------------------
+    ! Extra cell for periodic longitudes
+    allocate(dB_DG(3,n1+1,n2), dB_DII(3,nSnapshot,nPoint), &
+         iTime_II(6,nSnapshot))
+
+    do iSnapshot = 1, nSnapshot
+       ! Read variable and time
+       call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, &
+            TimeOut = Time, VarOut_VII=Var_VII, iErrorOut=iError)
+
+       call time_real_to_int(StartTime + Time, iTime_I)
+       iTime_II(:,iSnapshot) = iTime_I(1:6)
+
+       ! Copy the first three variables (dBn dBe dBd)
+       dB_DG(:,1:n1,:) = Var_VII(1:3,:,:)
+
+       ! Apply periodic longitudes
+       dB_DG(:,n1+1,:) = dB_DG(:,1,:)
+
+       do iPoint = 1, nPoint
+          dB_DII(:,iSnapshot,iPoint) = &
+               bilinear(dB_DG, 3, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint))
+       end do
+    end do
+    close(UnitTmp_)
+    
+    do iPoint = 1, nPoint
+       call open_file(FILE=trim(NameFileOut)//NameMag_I(iPoint)//'.txt')
+       write(UnitTmp_, '(a)') &
+            '# North, East and vertical components of magnetic field in nT'
+       write(UnitTmp_, '(a)') &
+            '# computed from magnetosphere and ionosphere currents'
+       write(UnitTmp_, '(a,2f10.3)') &
+            '# '//NameCoordPoint//' lon, lat=', CoordPoint_DI(:,iPoint)
+       if(NameCoordIn /= NameCoordPoint) write(UnitTmp_, '(a,2f10.3)') &
+            '# '//NameCoordIn//' lon, lat=', CoordIn_DI(:,iPoint)
+       write(UnitTmp_, '(a)') &
+            '# Station: '//NameMag_I(iPoint)
+       write(UnitTmp_, '(a)') &
+            'Year Month Day Hour Min Sec '// &
+            'B_NorthGeomag B_EastGeomag B_DownGeomag'       
+       do iSnapshot = 1, nSnapshot
+          write(UnitTmp_,'(i4,5i3,3f10.3)') &
+               iTime_II(:,iSnapshot), dB_DII(:,iSnapshot,iPoint)
+       end do
+       call close_file
+    end do
+
+    deallocate(iTime_II, dB_DG, dB_DII)
+    
+  end subroutine interpolate_mag_station
+  !============================================================================
   subroutine interpolate_trajectory
 
     integer:: i, iTrajTimestamp ! loop indices
     !-------------------------------------------------------------------------
     MaxSnapshot = 100000
-    nSnapshots = 0
+    nSnapshot = 0
     iTrajTimestamp = 1
     do i = 1, MaxSnapshot
        ! Read header info from .outs file.
@@ -274,12 +446,13 @@ contains
           iTrajTimestamp = iTrajTimestamp + 1
        enddo
        if(Time == TrajTime_I(iTrajTimestamp))then
-          InterpCoord_D = Coord_DI(:,iTrajTimestamp)
+          InterpCoord_D = CoordPoint_DI(:,iTrajTimestamp)
        else
           Weight = (TrajTime_I(iTrajTimestamp) - Time)/ &
                (TrajTime_I(iTrajTimestamp)-TrajTime_I(iTrajTimestamp-1))
-          InterpCoord_D = Coord_DI(:,iTrajTimestamp-1)*Weight + &
-               Coord_DI(:,iTrajTimestamp)*(1-Weight)
+          InterpCoord_D = &
+               CoordPoint_DI(:,iTrajTimestamp-1)*Weight + &
+               CoordPoint_DI(:,iTrajTimestamp)*(1-Weight)
        endif
 
        ! Convert coordinates to curvilinear.
@@ -318,7 +491,7 @@ contains
        InterpCoord_DI(:,i) = InterpCoord_D
        TimeOut_I(i) = Time
 
-       nSnapshots = i ! Update number of snapshots in .outs file
+       nSnapshot = i ! Update number of snapshots in .outs file
     enddo
 
     call close_file(NameCaller=NameProgram)
@@ -338,21 +511,14 @@ contains
     write(UnitTmp_,*)'t ',NameVar
 
     ! Write data. For now, time is in simulation time
-    do iPoint=1,nSnapshots
+    do iPoint=1,nSnapshot
        write(UnitTmp_,*)TimeOut_I(iPoint), &
             InterpCoord_DI(:,iPoint), InterpData_VI(:,iPoint)
     enddo
     
     call close_file(NameCaller=NameProgram)
+    
   end subroutine write_trajectory
-  !============================================================================
-  subroutine interpolate_mag_station
-
-  end subroutine interpolate_mag_station
-  !============================================================================
-  subroutine write_mag_station
-
-  end subroutine write_mag_station
   !============================================================================
 
 end program
