@@ -37,26 +37,16 @@ program interpolate_output
   character(len=100):: NameFileIn     ! name of input data file
   character(len=10) :: TypeFileIn     ! ascii/real4/real8
   character(len=3)  :: NameCoordIn    ! coordinate system of input data file
-  character(len=500):: StringHeader
   character(len=500):: NameVar
-  integer           :: nStep, nDim, nParam, nVar
+  integer           :: nDim, nVar
   logical           :: IsCartesian
-  real              :: Param_I(100) ! parameters
-  real, allocatable :: Coord_DII(:,:,:), Var_VII(:,:,:)
-  integer :: n_D(0:3), n1, n2, n3
+  real, allocatable :: Var_VII(:,:,:)
+  integer           :: n1, n2, n3     ! grid size
+  integer           :: nSnapshot      ! number of snapshots to be read
 
-  real, allocatable :: InterpData_VI(:,:) ! fully interpolated output
-  real :: InterpCoord_D(2) ! interpolated trajectory coordinates
-  integer :: MaxSnapshot ! limit of snapshots in .outs file
-  integer :: nSnapshot ! number of snapshots contained in .outs file
-  real :: RadMin, RadMax, PhiMin, PhiMax
-  integer :: Weight
-  real    :: dPhi
-  
   ! Interpolated file
-  character(len=100):: NameFileOut      ! name of output file or directory
-  real, allocatable :: TimeOut_I(:)
-  real, allocatable :: InterpCoord_DI(:,:)
+  character(len=100):: NameFileOut      ! name of output file
+  character(len=100):: NameDirOut       ! name of output directory
 
   logical:: IsMagStation = .false., IsTrajectory = .true.
 
@@ -73,8 +63,6 @@ program interpolate_output
   if(IsTrajectory)then
      write(*,*) NameProgram,': start interpolate_trajectory'
      call interpolate_trajectory
-     write(*,*) NameProgram,': start write_trajectory'
-     call write_trajectory
   elseif(IsMagStation)then
      write(*,*) NameProgram,': start interpolate_mag_station'
      call interpolate_mag_station
@@ -85,6 +73,8 @@ contains
   !===========================================================================
   subroutine read_parameters
 
+    use ModUtilities, ONLY: fix_dir_name, make_dir
+    
     ! Read  file names and types from STDIN (can be piped in from a file):
     !
     ! z=0_mhd_1_e19970517-033600-000.outs
@@ -106,15 +96,6 @@ contains
     IsTrajectory = .not. IsMagStation
 
     write(*,'(a,a,l1)') trim(NameFileIn), ', IsMagStation=', IsMagStation
-    write(*,'(a)', ADVANCE='NO') 'Type of input file (ascii/real4/real8): '
-    read(*,'(a)',iostat=iError) TypeFileIn
-    write(*,'(a)') TypeFileIn
-    write(*,'(a)', ADVANCE='NO') 'Name of file containing positions:      '
-    read(*,'(a)',iostat=iError) NameFilePoints
-    write(*,'(a)') NameFilePoints
-    write(*,'(a)', ADVANCE='NO') 'Name of output file/directory:          '
-    read(*,'(a)',iostat=iError) NameFileOut
-    write(*,'(a)') NameFileOut
 
     ! Get simulation start date-time from filename *_e(....)
     i = index(NameFileIn, '_e') + 2
@@ -137,6 +118,31 @@ contains
        NameCoordPoint = 'HGI'
     end if
 
+    write(*,'(a)', ADVANCE='NO') 'Type of input file (ascii/real4/real8): '
+    read(*,'(a)',iostat=iError) TypeFileIn
+    select case(TypeFileIn)
+    case('ascii','real4','real8')
+       write(*,'(a)') trim(TypeFileIn)
+    case default
+       stop NameProgram//': incorrect TypeFileIn='//TypeFileIn
+    end select
+    write(*,'(a)', ADVANCE='NO') 'Name of file containing positions:      '
+    read(*,'(a)',iostat=iError) NameFilePoints
+    write(*,'(a)') trim(NameFilePoints)
+    if(IsMagStation)then
+       write(*,'(a)', ADVANCE='NO') 'Name of output directory:               '
+       read(*,'(a)',iostat=iError) NameDirOut
+       if(NameDirOut == '' .or. NameDirOut == '.')then
+          NameDirOut = './'
+       else
+          call fix_dir_name(NameDirOut)
+          call make_dir(NameDirOut)
+       end if
+    else
+       write(*,'(a)', ADVANCE='NO') 'Name of output file:                    '
+       read(*,'(a)',iostat=iError) NameFileOut
+    end if
+
   end subroutine read_parameters
   !============================================================================
   subroutine read_positions
@@ -153,9 +159,11 @@ contains
     !  ...
     !
     ! Magnetometer station file:
+    !
     ! #COORD
     ! MAG
-    ! 
+    !
+    ! name lat lon
     ! #START
     ! YKC 68.93 299.36
     ! ...
@@ -209,6 +217,9 @@ contains
           if(StringLine(1:3) == 'DST') read(UnitTmp_,'(a)') StringLine
 
           read(StringLine, *, iostat=iError) NameMag_I(iPoint), Lat, Lon
+          if(Lon < 0 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90) stop &
+               NameProgram//': incorrent Lat, Lon values in '//trim(StringLine)
+
           CoordPoint_DI(:,iPoint) = [ Lon, Lat ]
        else
           read(StringLine, *, iostat=iError) iTime_I, CoordPoint_DI(:,iPoint)
@@ -240,6 +251,7 @@ contains
     use CON_planet, ONLY: init_planet_const, set_planet_defaults
     use CON_axes, ONLY: init_axes, transform_matrix
 
+    character(len=500):: StringHeader
     integer:: iPoint
     real:: Time, CoordMax_D(2), CoordMin_D(2), dCoord_D(2)
     real:: PointToIn_DD(3,3), XyzPoint_D(3), XyzIn_D(3)
@@ -321,8 +333,12 @@ contains
     nSnapshot = 1
     do
        call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
-            iErrorOut=iError)
+            TimeOut = Time, iErrorOut=iError)
        if(iError /= 0) EXIT
+       if(IsTrajectory)then
+          if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
+          if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
+       end if
        nSnapshot = nSnapshot + 1
     end do
     close(UnitTmp_)
@@ -368,7 +384,7 @@ contains
     close(UnitTmp_)
     
     do iPoint = 1, nPoint
-       call open_file(FILE=trim(NameFileOut)//NameMag_I(iPoint)//'.txt')
+       call open_file(FILE=trim(NameDirOut)//NameMag_I(iPoint)//'.txt')
        write(UnitTmp_, '(a)') &
             '# North, East and vertical components of magnetic field in nT'
        write(UnitTmp_, '(a)') &
@@ -395,52 +411,45 @@ contains
   !============================================================================
   subroutine interpolate_trajectory
 
-    integer:: i, iTrajTimestamp ! loop indices
+    ! Interpolate trajectory position to snapshot time and
+    ! then interpolate state variables to this position and write it out
+
+    real, allocatable:: Coord_DII(:,:,:)
+    real, allocatable:: InterpData_VI(:,:) ! fully interpolated output
+    real, allocatable:: InterpCoord_DI(:,:)! time interpolated trajectory
+    real, allocatable:: TimeOut_I(:)       ! time of snapshots
+
+    real   :: InterpCoord_D(2) ! interpolated trajectory coordinates
+    real   :: RadMin, RadMax, PhiMin, PhiMax, dPhi
+    integer:: Weight
+    integer:: iTrajTimestamp, iSnapshot ! loop indices
     !-------------------------------------------------------------------------
-    MaxSnapshot = 100000
-    nSnapshot = 0
+
+    ! Create arrays to hold interpolated data.
+    allocate(                               & 
+         Coord_DII(nDim, n1, 0:n2+1),       &
+         Var_VII(nVar, n1, 0:n2+1),         &
+         TimeOut_I(nSnapshot),              &
+         InterpData_VI(nVar,nSnapshot),     &
+         InterpCoord_DI(nDim,nSnapshot))
+
+    iSnapshot = 0
     iTrajTimestamp = 1
-    do i = 1, MaxSnapshot
-       ! Read header info from .outs file.
-       call read_plot_file(NameFile = NameFileIn, iUnitIn = UnitTmp_, &
-            TypeFileIn = TypeFileIn, &
-            StringHeaderOut = StringHeader, &
-            NameVarOut = NameVar, &
-            nStepOut = nStep, &
-            TimeOut = Time, &       ! simulation time
-            nDimOut = nDim, &       ! number of dimensions
-            IsCartesianOut = IsCartesian, &
-            nParamOut = nParam, &   ! number of parameters
-            nVarOut = nVar, &       ! number of variables
-            n1Out = n1, &           ! grid sizes
-            n2Out = n2, &
-            n3Out = n3, &
-            nOut_D = n_D, &         ! nOut_D grid size array
-            ParamOut_I = Param_I)   ! parameters
-
-       if(IsTrajectory)then
-          if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
-          if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
-       end if
-
-       ! Create array to hold interpolated data.
-       if(.not.allocated(InterpData_VI))then
-          allocate(TimeOut_I(MaxSnapshot), InterpData_VI(nVar,MaxSnapshot), &
-               InterpCoord_DI(nDim,MaxSnapshot))
-       endif
-
-       ! Determine the shape of arrays from the header. Include ghost cells.
-       !   Note: assumes no AMR/constant grid
-       if(.not. allocated(Coord_DII)) &
-            allocate(Coord_DII(nDim, n1, 0:n2+1), &
-            Var_VII(nVar, n1, 0:n2+1))
-
-       ! Read the data at the snapshot.
-       call read_plot_file(NameFile=NameFileIn, iUnitIn=UnitTmp_, &
-            TypeFileIn = TypeFileIn, &
+    do
+       ! Read next snapshot from .outs file
+       call read_plot_file( &
+            NameFile = NameFileIn,              &
+            iUnitIn = UnitTmp_,                 &
+            TypeFileIn = TypeFileIn,            &
             CoordOut_DII = Coord_DII(:,:,1:n2), &
-            VarOut_VII = Var_VII(:,:,1:n2))
+            VarOut_VII = Var_VII(:,:,1:n2),     &
+            TimeOut = Time)                        ! simulation time
 
+       if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
+       if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
+
+       iSnapshot = iSnapshot + 1
+       
        ! Interpolate location of trajectory file in time to snapshot.
        do while(Time > TrajTime_I(iTrajTimestamp))
           iTrajTimestamp = iTrajTimestamp + 1
@@ -455,7 +464,7 @@ contains
                CoordPoint_DI(:,iTrajTimestamp)*(1-Weight)
        endif
 
-       ! Convert coordinates to curvilinear.
+       ! Convert (x,y) coordinates to (logr,phi) [deg]
        if(.not.IsCartesian)then
           ! Coordinates converted from [x,y] to [ln(r),phi]
           InterpCoord_D = [log(sqrt(sum(InterpCoord_D(1:2)**2))), &
@@ -470,16 +479,16 @@ contains
           PhiMax = PhiMax + dPhi
        endif
 
-       ! Fill in ghost cells in phi.
-       Var_VII(:,:,0) = Var_VII(:,:,n2)
+       ! Fill in ghost cells in phi
+       Var_VII(:,:,0)    = Var_VII(:,:,n2)
        Var_VII(:,:,n2+1) = Var_VII(:,:,1)
 
-       ! Normalize coordinates.
+       ! Normalize coordinates
        InterpCoord_D(1) = (InterpCoord_D(1)-RadMin)*(n1-1)/(RadMax-RadMin) + 1
        InterpCoord_D(2) = (InterpCoord_D(2)-PhiMin)*(n2+1)/(PhiMax-PhiMin)
 
-       ! Interpolate snapshot to trajectory location.
-       InterpData_VI(:,i) = interpolate_vector( &
+       ! Interpolate snapshot to trajectory location
+       InterpData_VI(:,iSnapshot) = interpolate_vector( &
             a_VC = Var_VII, & ! variable array
             nVar = nVar, &    ! number of variables (11)
             nDim = 2, &       ! number of dimensions
@@ -488,37 +497,29 @@ contains
             x_D = InterpCoord_D, & ! desired position
             DoExtrapolate = .false.)
 
-       InterpCoord_DI(:,i) = InterpCoord_D
-       TimeOut_I(i) = Time
+       InterpCoord_DI(:,iSnapshot) = InterpCoord_D
+       TimeOut_I(iSnapshot) = Time
 
-       nSnapshot = i ! Update number of snapshots in .outs file
     enddo
 
     call close_file(NameCaller=NameProgram)
     deallocate(Coord_DII, Var_VII)
 
-  end subroutine interpolate_trajectory
-  !============================================================================
-  subroutine write_trajectory
-
-    integer:: iPoint
-    !-------------------------------------------------------------------------
-    
     ! Open file for interpolated output
     call open_file(file=NameFileOut, NameCaller=NameProgram) 
 
     ! Include header
-    write(UnitTmp_,*)'t ',NameVar
+    write(UnitTmp_,'(a,a)')'t ', trim(NameVar)
 
     ! Write data. For now, time is in simulation time
-    do iPoint=1,nSnapshot
-       write(UnitTmp_,*)TimeOut_I(iPoint), &
-            InterpCoord_DI(:,iPoint), InterpData_VI(:,iPoint)
+    do iSnapshot = 1, nSnapshot
+       write(UnitTmp_,'(100es13.6)') TimeOut_I(iSnapshot), &
+            InterpCoord_DI(:,iSnapshot), InterpData_VI(:,iSnapshot)
     enddo
     
     call close_file(NameCaller=NameProgram)
     
-  end subroutine write_trajectory
+  end subroutine interpolate_trajectory
   !============================================================================
 
 end program
