@@ -307,7 +307,7 @@ cancelflux		TypeBStrap
 -1			MaxIteration
 10.0			tSimulationMax
 
-#RUN #####################################################
+#RUN ##########################################################################
 
 #HELIOUPDATEB0
 -1.0			DtUpdateB0
