@@ -2842,6 +2842,9 @@ contains
 
     subroutine set_defaults
 
+      use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+           UseHeatFluxRegion
+
       ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp
@@ -2962,6 +2965,16 @@ contains
          if(NameThisComp == "OH")then
             TypeNormalization = "OUTERHELIO"
             TypeIoUnit        = "OUTERHELIO"
+         end if
+
+         ! Some defaults for AWSoM and AWSoM-R
+         ! If Ehot_>1, then we assume we use these models
+         if(Ehot_ > 1)then
+            UseHeatFluxCollisionless = .true.
+            if(NameThisComp == 'SC')then
+               UseHeatFluxRegion = .true.
+               UseHeatConduction = .true.
+            end if
          end if
 
       case('GM')

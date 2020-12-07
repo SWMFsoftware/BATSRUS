@@ -86,6 +86,9 @@ F			UseHyperbolicDivb
 T			UseHeatConduction
 spitzer			TypeHeatConduction
 
+#HEATFLUXCOLLISIONLESS
+F                       UseHeatFluxCollisionless
+
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
