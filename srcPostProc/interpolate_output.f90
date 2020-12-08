@@ -217,9 +217,9 @@ contains
           if(StringLine(1:3) == 'DST') read(UnitTmp_,'(a)') StringLine
 
           read(StringLine, *, iostat=iError) NameMag_I(iPoint), Lat, Lon
-          if(Lon < 0 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90) stop &
-               NameProgram//': incorrent Lat, Lon values in '//trim(StringLine)
-
+          if(Lon < -360 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90) stop &
+               NameProgram//': incorrect Lat, Lon values in '//trim(StringLine)
+          if(Lon < 0) Lon = Lon + 360
           CoordPoint_DI(:,iPoint) = [ Lon, Lat ]
        else
           read(StringLine, *, iostat=iError) iTime_I, CoordPoint_DI(:,iPoint)
@@ -378,7 +378,8 @@ contains
 
        do iPoint = 1, nPoint
           dB_DII(:,iSnapshot,iPoint) = &
-               bilinear(dB_DG, 3, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint))
+               bilinear(dB_DG, 3, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint), &
+               DoExtrapolate=.false.)
        end do
     end do
     close(UnitTmp_)
