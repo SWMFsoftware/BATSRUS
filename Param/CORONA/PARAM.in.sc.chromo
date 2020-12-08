@@ -87,7 +87,7 @@ T			UseHeatConduction
 spitzer			TypeHeatConduction
 
 #HEATFLUXCOLLISIONLESS
-F                       UseHeatFluxCollisionless
+F			UseHeatFluxCollisionless
 
 #HEATFLUXREGION
 T			UseHeatFluxRegion
