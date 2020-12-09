@@ -2983,7 +2983,7 @@ contains
 
                SemiParam%TypeKrylov = "GMRES"
                SemiParam%ErrorMax = 1.0e-5
-               SemiParam%MaxMatvec = 10
+               SemiParam%MaxMatvec = 20
                SemiParam%nKrylovVector = SemiParam%MaxMatvec
             end if
          end if
