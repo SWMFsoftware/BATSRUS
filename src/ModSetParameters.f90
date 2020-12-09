@@ -2846,6 +2846,8 @@ contains
            UseHeatFluxRegion
       use ModSemiImplVar, ONLY: UseSemiImplicit, TypeSemiImplicit
       use ModSemiImplicit, ONLY: SemiParam
+      use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
+           UseResistiveFlux, UseJouleHeating, UseHeatExchange
 
       ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
@@ -2994,6 +2996,18 @@ contains
                UseConstantTau_I(IonFirst_) = .false.
                TauInstabilitySi_I(IonFirst_) = -1.0
                TauGlobalSi_I(IonFirst_) = 1e5
+            end if
+         end if
+
+         ! Set heat exchange for IH (it shouldn't do much)
+         if(NameThisComp == 'IH')then
+            if(UseElectronPressure .and. nIonFluid == 1)then
+               UseResistivity = .true.
+               TypeResistivity = 'user'
+               Eta0Si = 0.0
+               UseResistiveFlux = .false. ! ignore setting DoResistiveFlux 
+               UseJouleHeating = .false.
+               UseHeatExchange = .true.
             end if
          end if
 

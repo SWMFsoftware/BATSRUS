@@ -34,6 +34,7 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .false.
+  logical, public           :: UseJouleHeating  = .true.
   logical, public           :: UseHeatExchange  = .true.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
@@ -41,7 +42,6 @@ module ModResistivity
   real, public              :: Si2NoEta
 
   ! Local variables
-  logical :: UseJouleHeating=.true.
   logical :: DoMessagePassResistivity=.false.
   logical :: UseCentralDifference =.false.
 
