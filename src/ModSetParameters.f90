@@ -2988,6 +2988,15 @@ contains
             end if
          end if
 
+         ! Set anisotropic pressure instability defaults for first ion fluid
+         if(NameThisComp == 'SC' .or. NameThisComp == 'IH')then
+            if(UseAnisoPressure)then
+               UseConstantTau_I(IonFirst_) = .false.
+               TauInstabilitySi_I(IonFirst_) = -1.0
+               TauGlobalSi_I(IonFirst_) = 1e5
+            end if
+         end if
+
       case('GM')
          ! Body Parameters
          UseGravity = .false.
