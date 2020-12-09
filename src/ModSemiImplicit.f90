@@ -41,7 +41,7 @@ module ModSemiImplicit
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
 
   ! Default parameters for the semi-implicit linear solver
-  type(LinearSolverParamType):: SemiParam = LinearSolverParamType( &
+  type(LinearSolverParamType), public:: SemiParam = LinearSolverParamType( &
        .true.,      &! DoPrecond
        'left',      &! TypePrecondSide
        'BILU',      &! TypePrecond

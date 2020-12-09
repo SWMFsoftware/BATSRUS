@@ -2844,6 +2844,8 @@ contains
 
       use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
            UseHeatFluxRegion
+      use ModSemiImplVar, ONLY: UseSemiImplicit, TypeSemiImplicit
+      use ModSemiImplicit, ONLY: SemiParam
 
       ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
@@ -2974,6 +2976,15 @@ contains
             if(NameThisComp == 'SC')then
                UseHeatFluxRegion = .true.
                UseHeatConduction = .true.
+
+               ! defaults for semi-implicit heat conduction
+               UseSemiImplicit = .true.
+               TypeSemiImplicit = "parcond"
+
+               SemiParam%TypeKrylov = "GMRES"
+               SemiParam%ErrorMax = 1.0e-5
+               SemiParam%MaxMatvec = 10
+               SemiParam%nKrylovVector = SemiParam%MaxMatvec
             end if
          end if
 
