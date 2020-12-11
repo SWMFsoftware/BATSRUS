@@ -2847,7 +2847,7 @@ contains
       use ModSemiImplVar, ONLY: UseSemiImplicit, TypeSemiImplicit
       use ModSemiImplicit, ONLY: SemiParam
       use ModResistivity, ONLY: UseResistivity, TypeResistivity, Eta0Si, &
-           UseResistiveFlux, UseJouleHeating, UseHeatExchange
+           DoResistiveFlux, UseJouleHeating, UseHeatExchange
 
       ! Default plot and restart directories depend on NameThisComp
       !------------------------------------------------------------------------
@@ -3005,7 +3005,7 @@ contains
                UseResistivity = .true.
                TypeResistivity = 'user'
                Eta0Si = 0.0
-               UseResistiveFlux = .false. ! ignore setting DoResistiveFlux 
+               DoResistiveFlux = .false.
                UseJouleHeating = .false.
                UseHeatExchange = .true.
             end if

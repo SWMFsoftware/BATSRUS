@@ -72,7 +72,7 @@ module ModResistivity
   integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
   ! Include resistive fluxes at all?
-  logical :: DoResistiveFlux=.true.
+  logical, public :: DoResistiveFlux=.true.
 
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 contains
