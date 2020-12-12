@@ -1297,12 +1297,12 @@ contains
              select case(trim(NameCriteriaPic_I(iCriteria)))
              case('j/bperp')
                 call get_current(i, j, k, iBlock, j_D)
-                jxB_D = cross_product(j_D, FullBfield_DGB(:,i,j,k,iBlock) + CriteriaB1)
+                jxB_D = cross_product(j_D, FullBfield_DGB(:,i,j,k,iBlock))
                 current = norm2(j_D)
-                CriteriaValue = current**2 / norm2(jxB_D) * CellSize_DB(1, iBlock)
+                CriteriaValue = current**2 / (norm2(jxB_D) + current*CriteriaB1) * CellSize_DB(1, iBlock)
              case('j/b')
                 call get_current(i, j, k, iBlock, j_D)
-                CriteriaValue = norm2(j_D) / norm2(FullBfield_DGB(:,i,j,k,iBlock) + CriteriaB1) *&
+                CriteriaValue = norm2(j_D) / (norm2(FullBfield_DGB(:,i,j,k,iBlock)) + CriteriaB1) *&
                      CellSize_DB(1, iBlock)
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
