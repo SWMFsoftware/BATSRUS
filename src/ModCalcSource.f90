@@ -95,7 +95,7 @@ contains
     real :: InvElectronDens, uPlus_D(3), U_D(3)
 
     ! Variables for Minimum radial speed
-    real :: Ur, Rho, rUnit_D(3)
+    real :: Ur, Rho, rUnit_D(3), Force_D(3)
 
     logical:: DoTestCell
 
@@ -233,14 +233,17 @@ contains
              Rho = State_VGB(iRho,i,j,k,iBlock)
              u_D = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)/Rho
              Ur =  sum(u_D *rUnit_D)
-             if (Ur < SpeedMin) &
-                  Source_VC(iRhoUx:iRhoUz,i,j,k) = &
-                  Source_VC(iRhoUx:iRhoUz,i,j,k) &
-                  + rUnit_D * Rho*(SpeedMin - Ur)/TauSpeedMin
+             if (Ur < SpeedMin) then
+                Force_D = rUnit_D * Rho*(SpeedMin - Ur)/TauSpeedMin
+                Source_VC(iRhoUx:iRhoUz,i,j,k) = &
+                     Source_VC(iRhoUx:iRhoUz,i,j,k) + Force_D
+                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+                     + sum(Force_D * u_D)
+             end if
           end do; end do; end do
        end do
     end if ! UseSpeedMin
-
+    
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
