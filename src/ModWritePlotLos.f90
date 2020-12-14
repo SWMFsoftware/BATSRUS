@@ -73,7 +73,7 @@ contains
     use ModAdvance, ONLY : State_VGB
     use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
     use ModMpi
-    use CON_axes, ONLY : transform_matrix
+    use CON_axes, ONLY : transform_matrix, rot_matrix_z, dLongitudeHgi
     use ModCoordTransform, ONLY : rot_matrix_z, cross_product
     use ModUtilities, ONLY: lower_case, split_string, join_string, &
          open_file, close_file
@@ -118,8 +118,8 @@ contains
     real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
     real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0, CoordMinBlock_D(3)
 
-    real, dimension(3,3) :: FromHgi_DD
-    real, dimension(3) :: Los_D, ObsPos_D
+    real    :: FromObs_DD(3,3)
+    real    :: Los_D(3), ObsPos_D(3)
 
     ! rInner in IH and rOuter in SC should be identical!
     ! rInner in SC should be smaller than the occulting radius
@@ -191,10 +191,12 @@ contains
 
     if(NameThisComp == 'GM')then
        ! Do not convert to HGI
-       FromHgi_DD = cUnit_DD
+       FromObs_DD = cUnit_DD
     else
        ! Convert to HGI
-       FromHgi_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+       FromObs_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+       if(dLongitudeHgi /= 0)&
+            FromObs_DD = matmul(FromObs_DD, rot_matrix_z(-dLongitudeHgi))
     end if
 
     iSat = 0
@@ -236,7 +238,7 @@ contains
     end select
 
     ! Rotate observation point from HGI system to the current coordinate system
-    ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,iFile))
+    ObsPos_D    = matmul(FromObs_DD, ObsPos_DI(:,iFile))
     ObsDistance = norm2(ObsPos_D)
     ! Normalize line of sight vector pointing towards the origin
     Los_D       = -ObsPos_D/ObsDistance
