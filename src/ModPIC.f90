@@ -692,13 +692,11 @@ contains
          iP, jP, kP, iPExt, jPExt, kPExt
 
     real:: r
-    real:: XyzPic_D(nDim), XyzMhd_D(MaxDim), &
-         XyzMhdExtend_D(nDim)
+    real:: XyzPic_D(nDim)=0.0, XyzMhd_D(MaxDim)=0.0, &
+         XyzMhdExtend_D(nDim)=0.0
     integer:: iBlock, iProcFound, iCell_D(MaxDim)
     integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
-    integer:: iPatch_D(3) = 0
-    logical:: IsInsidePicLimit = .true. ! logical value for PICREGIONMAX
-    logical:: IsInsidePicCrit = .true. ! logical value for PICCRITERIA
+    integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
@@ -742,7 +740,9 @@ contains
              XyzMhd_D(1:nDim) = iPatch_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)*&
                   nCellPerPatch + XyzMinPic_DI(1:nDim, iRegion)
              ! cell coordinate of i,j,k
-             XyzMhd_D = XyzMhd_D + ([i, j, k] + 0.5) * DxyzPic_DI(:,iRegion) 
+             iPatchCell_D = [i, j, k]
+             XyzMhd_D(1:nDim) = XyzMhd_D(1:nDim) +&
+                  (iPatchCell_D(1:nDim) + 0.5) * DxyzPic_DI(1:nDim,iRegion) 
 
              call find_grid_block(XyzMhd_D, iProcFound, iBlock, iCellOut_D=iCell_D)
 
