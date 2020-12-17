@@ -1,9 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModSetParameters
-
-  use BATL_lib, ONLY: 
+module ModSetParameters  
 
   implicit none
 
@@ -3670,6 +3668,7 @@ contains
            IsRotatedCartesian
 
       character(len=20):: TypeGeometryBatl
+      character(len=20) :: TypeCellBcTmp_D(nDim)='none'
 
       character(len=*), parameter:: NameSub = 'correct_grid_geometry'
       !------------------------------------------------------------------------
@@ -3761,8 +3760,12 @@ contains
          TypeGeometryBatl = TypeGeometry
       end if
 
+
+      ! PGI can not handle "TypeCellBc_I(1:2*nDim-1:2) == 'periodic' " correctly.
+      TypeCellBcTmp_D = TypeCellBc_I(1:2*nDim-1:2)
+      
       call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
-           TypeGeometryBatl, TypeCellBc_I(1:2*nDim-1:2) == 'periodic', &
+           TypeGeometryBatl, TypeCellBcTmp_D == 'periodic', &
            nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
            RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
            UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
