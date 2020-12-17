@@ -2348,15 +2348,14 @@ contains
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
     associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
       CmaxDt => FFV%CmaxDt, Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
     call test_start(NameSub, DoTest, iBlock)
 
     ! The electron speed is set to zero (I can't remember why)
-    UnLeft_I(eFluid_)  = 0.0
-    UnRight_I(eFluid_) = 0.0
+    FFV%UnLeft_I(eFluid_)  = 0.0
+    FFV%UnRight_I(eFluid_) = 0.0
 
     call set_block_values(iBlock, iDim, FFV)
 

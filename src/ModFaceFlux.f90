@@ -352,12 +352,7 @@ contains
          IsBoundary => FFV%IsBoundary, &
          DeltaBnR => FFV%DeltaBnR, DeltaBnL => FFV%DeltaBnL, &
          Enormal => FFV%Enormal, &
-         Unormal_I => FFV%Unormal_I, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         bCrossArea_D => FFV%bCrossArea_D, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         Normal_D => FFV%Normal_D, &
          Area => FFV%Area, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
@@ -383,26 +378,26 @@ contains
           if(UseRS7.and..not.IsBoundary)then
             DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                 Normal_D)
+                 FFV%Normal_D)
             RightState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
                  RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnR* Normal_D
+                 DeltaBnR* FFV%Normal_D
             DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
-                 Normal_D)
+                 FFV%Normal_D)
             LeftState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
                  LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnL* Normal_D
+                 DeltaBnL* FFV%Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
-         StateRight_V = RightState_VX(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
+         FFV%StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace), FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
@@ -411,15 +406,15 @@ contains
 
          VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
 
-         ! Correct Unormal_I to make div(u) achieve 6th order.
+         ! Correct FFV%Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_XI(iFace,jFace,kFace,:)   = Unormal_I*Area
+         uDotArea_XI(iFace,jFace,kFace,:)   = FFV%Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
+              bCrossArea_DX(:,iFace,jFace,kFace) = FFV%bCrossArea_D
       end do; end do; end do
 
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
@@ -456,12 +451,7 @@ contains
          IsBoundary => FFV%IsBoundary, &
          DeltaBnR => FFV%DeltaBnR, DeltaBnL => FFV%DeltaBnL, &
          Enormal => FFV%Enormal, &
-         Unormal_I => FFV%Unormal_I, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         bCrossArea_D => FFV%bCrossArea_D, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         Normal_D => FFV%Normal_D, &
          Area => FFV%Area, &
          DoTestCell => FFV%DoTestCell, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
@@ -491,26 +481,26 @@ contains
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR = sum((RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
-                 Normal_D)
+                 FFV%Normal_D)
             RightState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
                  RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
-                 DeltaBnR* Normal_D
+                 DeltaBnR* FFV%Normal_D
             DeltaBnL = sum((LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
-                 Normal_D)
+                 FFV%Normal_D)
             LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
                  LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
-                 DeltaBnL* Normal_D
+                 DeltaBnL* FFV%Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VY( :,iFace,jFace,kFace)
-         StateRight_V = RightState_VY(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VY( :,iFace,jFace,kFace)
+         FFV%StateRight_V = RightState_VY(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VY(:,iFace,jFace,kFace), FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VY(:,iFace,jFace,kFace) = MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VY(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
@@ -520,13 +510,13 @@ contains
          VdtFace_y(iFace,jFace,kFace) = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_YI(iFace,jFace,kFace, :)  = Unormal_I*Area
+         uDotArea_YI(iFace,jFace,kFace, :)  = FFV%Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DY(:,iFace,jFace,kFace) = bCrossArea_D
+              bCrossArea_DY(:,iFace,jFace,kFace) = FFV%bCrossArea_D
 
       end do; end do; end do
 
@@ -565,12 +555,7 @@ contains
          IsBoundary => FFV%IsBoundary, &
          DeltaBnR => FFV%DeltaBnR, DeltaBnL => FFV%DeltaBnL, &
          Enormal => FFV%Enormal, &
-         Unormal_I => FFV%Unormal_I, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         bCrossArea_D => FFV%bCrossArea_D, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         Normal_D => FFV%Normal_D, &
          Area => FFV%Area, &
          DoTestCell => FFV%DoTestCell, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
@@ -599,25 +584,25 @@ contains
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR = sum((RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) -&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                 Normal_D)
+                 FFV%Normal_D)
             RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
                  RightState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnR* Normal_D
+                 DeltaBnR* FFV%Normal_D
             DeltaBnL = sum((LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) -&
-                 State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*Normal_D)
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*FFV%Normal_D)
             LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
                  LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnL* Normal_D
+                 DeltaBnL* FFV%Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VZ( :,iFace,jFace,kFace)
-         StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VZ( :,iFace,jFace,kFace)
+         FFV%StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VZ(:,iFace,jFace,kFace), FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VZ(:,iFace,jFace,kFace) = MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VZ(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
@@ -627,13 +612,13 @@ contains
          VdtFace_z(iFace,jFace,kFace)       = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_ZI(iFace,jFace,kFace, :)  = Unormal_I*Area
+         uDotArea_ZI(iFace,jFace,kFace, :)  = FFV%Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DZ(:,iFace,jFace,kFace)= bCrossArea_D
+              bCrossArea_DZ(:,iFace,jFace,kFace)= FFV%bCrossArea_D
 
       end do; end do; end do
 
@@ -749,7 +734,6 @@ contains
       Area2 => FFV%Area2, Area => FFV%Area, &
       AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
       InvDxyz => FFV%InvDxyz, &
-      Normal_D => FFV%Normal_D, &
       NormalX => FFV%NormalX, NormalY => FFV%NormalY, NormalZ =>FFV%NormalZ )
 
     call test_start(NameSub, DoTest, iBlock)
@@ -760,8 +744,8 @@ contains
     if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN
 
     ! Calculate face normal and area vectors for Cartesian grid
-    Normal_D = 0.0; Normal_D(iDim) = 1.0
-    NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
+    FFV%Normal_D = 0.0; FFV%Normal_D(iDim) = 1.0
+    NormalX = FFV%Normal_D(x_); NormalY = FFV%Normal_D(y_); NormalZ = FFV%Normal_D(z_)
 
     Area = CellFace_DB(iDim,iBlockFace)
     InvDxyz = 1./CellSize_DB(iDim,iBlockFace)
@@ -923,7 +907,6 @@ contains
       HallCoeff => FFV%HallCoeff, &
       BiermannCoeff => FFV%BiermannCoeff, &
       UseHallGradPe => FFV%UseHallGradPe, &
-      Normal_D => FFV%Normal_D, &
       NormalX => FFV%NormalX, &
       NormalY => FFV%NormalY, &
       NormalZ => FFV%NormalZ, &
@@ -934,19 +917,19 @@ contains
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
        ! The face is at the pole
-       Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+       FFV%Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
             -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
-       Normal_D = Normal_D/norm2(Normal_D)
+       FFV%Normal_D = FFV%Normal_D/norm2(FFV%Normal_D)
        Area  = 0.0
        Area2 = 0.0
     else
        Area = sqrt(Area2)
-       Normal_D = [AreaX, AreaY, AreaZ]/Area
+       FFV%Normal_D = [AreaX, AreaY, AreaZ]/Area
     end if
 
     if(DoTestCell .and. .not.IsCartesian) &
-         write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,Normal_D=', &
-         Area2, AreaX, AreaY, AreaZ, Normal_D
+         write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,FFV%Normal_D=', &
+         Area2, AreaX, AreaY, AreaZ, FFV%Normal_D
 
     iRight = iFace; jRight = jFace; kRight = kFace
 
@@ -995,7 +978,7 @@ contains
          + Eta_GB(iRight,jRight,kRight,iBlockFace))
 
     if(.not.IsCartesian)then
-       NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
+       NormalX = FFV%Normal_D(x_); NormalY = FFV%Normal_D(y_); NormalZ = FFV%Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
        ! InvDxyz is needed for the time step limit of the explicit evaluation
@@ -1072,26 +1055,17 @@ contains
       DiffBb => FFV%DiffBb, &
       ViscoCoeff => FFV%ViscoCoeff, &
       Enormal => FFV%Enormal, &
-      Unormal_I => FFV%Unormal_I, &
-      UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
       B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      bCrossArea_D => FFV%bCrossArea_D, &
       EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
       Eta => FFV%Eta, &
-      StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
       InvDxyz => FFV%InvDxyz, &
       HallCoeff => FFV%HallCoeff, &
       HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
-      FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-      MhdFlux_V => FFV%MhdFlux_V, &
-      MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-      MhdFluxRight_V => FFV%MhdFluxRight_V, &
       BiermannCoeff => FFV%BiermannCoeff, &
       UseHallGradPe => FFV%UseHallGradPe, &
       GradXPeNe => FFV%GradXPeNe, &
       GradYPeNe => FFV%GradYPeNe, &
       GradZPeNe => FFV%GradZPeNe, &
-      Normal_D => FFV%Normal_D, &
       DiffCoef => FFV%DiffCoef, RadDiffCoef => FFV%RadDiffCoef, &
       HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
       DoTestCell => FFV%DoTestCell, &
@@ -1102,8 +1076,8 @@ contains
     DiffCoef = 0.0
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
-       StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
-       StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
+       FFV%StateLeft_V (Rho_)=sum( FFV%StateLeft_V(SpeciesFirst_:SpeciesLast_) )
+       FFV%StateRight_V(Rho_)=sum( FFV%StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
     ! Calculate current for the face if needed for (Hall) resistivity
@@ -1166,11 +1140,11 @@ contains
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
           InvElectronDens = BiermannCoeff/(0.5* &
-               sum((StateLeft_V(iRhoIon_I) + StateRight_V(iRhoIon_I))&
+               sum((FFV%StateLeft_V(iRhoIon_I) + FFV%StateRight_V(iRhoIon_I))&
                *ChargeIon_I/MassIon_I))
        else
           InvElectronDens = BiermannCoeff &
-               /(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
+               /(0.5*(FFV%StateLeft_V(Rho_) + FFV%StateRight_V(Rho_)))
        end if
 
        ! Calculate grad(Pe)/(n_e * e)
@@ -1198,8 +1172,8 @@ contains
     if(UseB)then
        if(DoRoe)then
           if(IsBoundary)then
-             uLeft_D  = StateLeft_V(Ux_:Uz_)
-             uRight_D = StateRight_V(Ux_:Uz_)
+             uLeft_D  = FFV%StateLeft_V(Ux_:Uz_)
+             uRight_D = FFV%StateRight_V(Ux_:Uz_)
           else
              ! Since the divB source term is calculated using the
              ! cell centered velocity, the numerical diffusion
@@ -1222,42 +1196,42 @@ contains
 
           B0_D = [B0x,B0y,B0z]
 
-          call get_dissipation_flux_mhd(Normal_D,         &
-               StateLeft_V, StateRight_V,                 &
+          call get_dissipation_flux_mhd(FFV%Normal_D,         &
+               FFV%StateLeft_V, FFV%StateRight_V,                 &
                B0_D, dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
-               DissipationFlux_V, cMax, Unormal_I(1))
+               DissipationFlux_V, cMax, FFV%Unormal_I(1))
 
-          Unormal_I=Unormal_I(1)
+          FFV%Unormal_I=FFV%Unormal_I(1)
        end if
        if(UseRS7 .or. UseLindeFix)then
           ! Sokolov's algorithm
           ! Calculate the jump in the normal magnetic field vector
-          DiffBn_D = Normal_D* &
-               0.5*sum((StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_))*Normal_D)
+          DiffBn_D = FFV%Normal_D* &
+               0.5*sum((FFV%StateRight_V(Bx_:Bz_) - FFV%StateLeft_V(Bx_:Bz_))*FFV%Normal_D)
 
           ! Remove the jump in the normal magnetic field
-          StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
-          StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
+          FFV%StateLeft_V(Bx_:Bz_)  =  FFV%StateLeft_V(Bx_:Bz_)  + DiffBn_D
+          FFV%StateRight_V(Bx_:Bz_) =  FFV%StateRight_V(Bx_:Bz_) - DiffBn_D
 
           ! The energy jump is also modified by
           ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
           ! We store half of this in DiffE
           DiffE = &
-               0.5*sum((StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_))*DiffBn_D)
+               0.5*sum((FFV%StateRight_V(Bx_:Bz_) + FFV%StateLeft_V(Bx_:Bz_))*DiffBn_D)
 
           DiffBb = sum(DiffBn_D**2)
        end if
     end if
 
-    ! Calculate average state (used by most solvers and also by bCrossArea_D)
+    ! Calculate average state (used by most solvers and also by FFV%bCrossArea_D)
     if(DoSimple)then
-       State_V = StateLeft_V
+       State_V = FFV%StateLeft_V
        call get_physical_flux(State_V, FFV, &
-            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+            StateLeftCons_V, Flux_V, FFV%Unormal_I, Enormal, Pe, Pwave)
     else
-       State_V = 0.5*(StateLeft_V + StateRight_V)
+       State_V = 0.5*(FFV%StateLeft_V + FFV%StateRight_V)
     end if
 
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
@@ -1265,30 +1239,30 @@ contains
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
          DoHlldwNeutral .or. DoAwNeutral .or. DoHllcNeutral)then
        ! These solvers use left and right fluxes
-       call get_physical_flux(StateLeft_V, FFV, &
-            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
-       if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
+       call get_physical_flux(FFV%StateLeft_V, FFV, &
+            StateLeftCons_V, FFV%FluxLeft_V, FFV%UnLeft_I, EnLeft, PeLeft, PwaveLeft)
+       if(UseMhdMomentumFlux) FFV%MhdFluxLeft_V  = FFV%MhdFlux_V
 
-       call get_physical_flux(StateRight_V, FFV, &
-            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
+       call get_physical_flux(FFV%StateRight_V, FFV, &
+            StateRightCons_V, FFV%FluxRight_V, FFV%UnRight_I, EnRight, PeRight, &
             PwaveRight)
-       if(UseMhdMomentumFlux) MhdFluxRight_V = MhdFlux_V
+       if(UseMhdMomentumFlux) FFV%MhdFluxRight_V = FFV%MhdFlux_V
 
        if(UseRS7)then
-          call modify_flux(FluxLeft_V,  UnLeft_I(1) , MhdFluxLeft_V)
-          call modify_flux(FluxRight_V, UnRight_I(1), MhdFluxRight_V)
+          call modify_flux(FFV%FluxLeft_V,  FFV%UnLeft_I(1) , FFV%MhdFluxLeft_V)
+          call modify_flux(FFV%FluxRight_V, FFV%UnRight_I(1), FFV%MhdFluxRight_V)
        end if
     end if
 
     if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
-       ! Calculate bCrossArea_D to be used for J in the J x B source term
+       ! Calculate FFV%bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
        ! The upwinded discretization of the current is J = sum(A x B) / V
 
-       bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
+       FFV%bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
 
        if(DoTestCell)then
-          write(*,'(a,3es13.5)')'bCrossArea_D        =',bCrossArea_D
+          write(*,'(a,3es13.5)')'FFV%bCrossArea_D        =',FFV%bCrossArea_D
           write(*,'(a,3es13.5)')'AreaX, AreaY, AreaZ =',AreaX, AreaY, AreaZ
           write(*,'(a,3es13.5)')'State_V(Bx_:Bz_)    =',State_V(Bx_:Bz_)
        end if
@@ -1328,8 +1302,8 @@ contains
        if(UseHyperbolicDivb) then
           ! Overwrite the flux of the Hyp field with the Lax-Friedrichs flux
           Cmax = max(Cmax, SpeedHyp)
-          Flux_V(Hyp_) = 0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
-               - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
+          Flux_V(Hyp_) = 0.5*(FFV%FluxLeft_V(Hyp_) + FFV%FluxRight_V(Hyp_) &
+               - Cmax*(FFV%StateRight_V(Hyp_) - FFV%StateLeft_V(Hyp_)))
        end if
 
        if(.not.UseRS7)then
@@ -1344,7 +1318,7 @@ contains
     if(UseEfield)then
        Cmax = max(Cmax, clight)
        Flux_V(iVarUseCmax_I) = &
-            0.5*(FluxLeft_V(iVarUseCmax_I) + FluxRight_V(iVarUseCmax_I) &
+            0.5*(FFV%FluxLeft_V(iVarUseCmax_I) + FFV%FluxRight_V(iVarUseCmax_I) &
             - Cmax*(StateRightCons_V(iVarUseCmax_I)                     &
             -       StateLeftCons_V(iVarUseCmax_I)))
     end if
@@ -1378,7 +1352,7 @@ contains
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
     Flux_V = Flux_V*Area
-    if(UseMhdMomentumFlux) MhdFlux_V = MhdFlux_V*Area
+    if(UseMhdMomentumFlux) FFV%MhdFlux_V = FFV%MhdFlux_V*Area
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
@@ -1398,11 +1372,11 @@ contains
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(RhoUx_:RhoUz_)
 
       !------------------------------------------------------------------------
-      associate( DiffBb => FFV%DiffBb, Normal_D => FFV%Normal_D )
+      associate( DiffBb => FFV%DiffBb)
 
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*FFV%Normal_D
 !      if(.not.UseJCrossBForce) MhdFlux_V(RhoUx_:RhoUz_) = &
-!           MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
+!           MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*FFV%Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
       end associate
@@ -1410,12 +1384,11 @@ contains
     !==========================================================================
     subroutine roe_solver_new
       !------------------------------------------------------------------------
-      associate( CmaxDt => FFV%CmaxDt, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V )
+      associate( CmaxDt => FFV%CmaxDt)
 
-        Flux_V(1:p_) = 0.5*(FluxLeft_V(1:p_) + FluxRight_V(1:p_)) &
+        Flux_V(1:p_) = 0.5*(FFV%FluxLeft_V(1:p_) + FFV%FluxRight_V(1:p_)) &
              + DissipationFlux_V(1:p_)
-        Flux_V(Energy_) = 0.5*(FluxLeft_V(Energy_) + FluxRight_V(Energy_)) &
+        Flux_V(Energy_) = 0.5*(FFV%FluxLeft_V(Energy_) + FFV%FluxRight_V(Energy_)) &
              + DissipationFlux_V(p_+1)
 
         CmaxDt = Cmax
@@ -1448,41 +1421,35 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
          Enormal => FFV%Enormal, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-         MhdFluxRight_V => FFV%MhdFluxRight_V, &
          DoTestCell => FFV%DoTestCell )
 
       call get_speed_max(State_V, FFV, Cmax_I = Cmax_I)
 
       Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
       Flux_V(iVarMin:iVarMax) = &
-           0.5*(FluxLeft_V(iVarMin:iVarMax) + FluxRight_V(iVarMin:iVarMax) &
+           0.5*(FFV%FluxLeft_V(iVarMin:iVarMax) + FFV%FluxRight_V(iVarMin:iVarMax) &
            - Cmax*(StateRightCons_V(iVarMin:iVarMax) &
            -       StateLeftCons_V(iVarMin:iVarMax)))
       ! energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
-           0.5*(FluxLeft_V(iEnergyMin:iEnergyMax) + &
-           FluxRight_V(iEnergyMin:iEnergyMax) &
+           0.5*(FFV%FluxLeft_V(iEnergyMin:iEnergyMax) + &
+           FFV%FluxRight_V(iEnergyMin:iEnergyMax) &
            - Cmax*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -       StateLeftCons_V(iEnergyMin:iEnergyMax)))
 
-      Unormal_I(iFluidMin:iFluidMax) = 0.5* &
-           (UnLeft_I(iFluidMin:iFluidMax) + UnRight_I(iFluidMin:iFluidMax))
+      FFV%Unormal_I(iFluidMin:iFluidMax) = 0.5* &
+           (FFV%UnLeft_I(iFluidMin:iFluidMax) + FFV%UnRight_I(iFluidMin:iFluidMax))
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
               ! Calculate the MHD momentum  flux (may be used to calculate
               ! electric field)
-              MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
+              FFV%MhdFlux_V = 0.5*(FFV%MhdFluxLeft_V + FFV%MhdFluxRight_V)
          Enormal   = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) &
-              Unormal_I(eFluid_) = 0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
+              FFV%Unormal_I(eFluid_) = 0.5*(FFV%UnLeft_I(eFluid_) + FFV%UnRight_I(eFluid_))
          if(UseMultiIon)&
               Pe = 0.5*(PeLeft + PeRight)
       end if
@@ -1505,19 +1472,12 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-         Enormal => FFV%Enormal, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-         MhdFluxRight_V => FFV%MhdFluxRight_V )
+         Enormal => FFV%Enormal)
 
-      call get_speed_max(StateLeft_V,  FFV, &
+      call get_speed_max(FFV%StateLeft_V,  FFV, &
            Cleft_I =CleftStateLeft_I)
 
-      call get_speed_max(StateRight_V, FFV, &
+      call get_speed_max(FFV%StateRight_V, FFV, &
            Cright_I=CrightStateRight_I)
 
       call get_speed_max(State_V, FFV, &
@@ -1537,32 +1497,32 @@ contains
       Diffusion   = Cright*WeightRight
 
       Flux_V(iVarMin:iVarMax) = &
-           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
-           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           ( WeightRight*FFV%FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
-           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
-           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           ( WeightRight*FFV%FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iEnergyMin:iEnergyMax)       &
            - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
 
       ! Weighted average of the normal speed
-      Unormal_I(iFluidMin:iFluidMax) = &
-           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
-           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
+      FFV%Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*FFV%UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*FFV%UnLeft_I(iFluidMin:iFluidMax)
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
               ! Calculate MHD momentum flux (may be used to calculate
               ! electric field)
-              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
-              +           WeightRight*MhdFluxRight_V
+              FFV%MhdFlux_V = WeightLeft *FFV%MhdFluxLeft_V  &
+              +           WeightRight*FFV%MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
-         if(UseElectronPressure) Unormal_I(eFluid_) = &
-              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseElectronPressure) FFV%Unormal_I(eFluid_) = &
+              WeightRight*FFV%UnRight_I(eFluid_) + WeightLeft*FFV%UnLeft_I(eFluid_)
          if(UseMultiIon)&
               Pe = WeightRight*PeRight   + WeightLeft*PeLeft
       end if
@@ -1590,15 +1550,8 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-         Enormal => FFV%Enormal, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-         MhdFluxRight_V => FFV%MhdFluxRight_V )
-
+         Enormal => FFV%Enormal)
+        
       call get_speed_max(State_V, FFV, &
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
@@ -1606,15 +1559,15 @@ contains
 
       ! Andrea Mignone's hybridization parameters
       ! Pressure jump detector
-      Nu1 = 1.0 - min(StateLeft_V(p_), StateRight_V(p_)) &
-           /max(StateLeft_V(p_), StateRight_V(p_))
+      Nu1 = 1.0 - min(FFV%StateLeft_V(p_), FFV%StateRight_V(p_)) &
+           /max(FFV%StateLeft_V(p_), FFV%StateRight_V(p_))
 
       ! Maybe the max speed from get_speed_max is better
-      CsoundL = sqrt(Gamma_I(1)*StateLeft_V(p_)/StateLeft_V(Rho_))
-      CsoundR = sqrt(Gamma_I(1)*StateRight_V(p_)/StateRight_V(Rho_))
+      CsoundL = sqrt(Gamma_I(1)*FFV%StateLeft_V(p_)/FFV%StateLeft_V(Rho_))
+      CsoundR = sqrt(Gamma_I(1)*FFV%StateRight_V(p_)/FFV%StateRight_V(Rho_))
 
       ! Rarefaction (and shock) detector ?!
-      Nu2 = min(0.5*abs(UnRight_I(1) - UnLeft_I(1)) &
+      Nu2 = min(0.5*abs(FFV%UnRight_I(1) - FFV%UnLeft_I(1)) &
            /(CsoundL + CsoundR), 1.0)
 
       ! HLLE flux weight is Nu, dominant wave flux has weight (1-Nu)
@@ -1625,10 +1578,10 @@ contains
       if(Nu > 1-1e-6) Nu = 1.0
 
       if(Nu < 1.0 .or. (Nu > 0.0 .and. .not.DoLf))then
-         call get_speed_max(StateLeft_V,  FFV, &
+         call get_speed_max(FFV%StateLeft_V,  FFV, &
               Cleft_I =CleftStateLeft_I)
 
-         call get_speed_max(StateRight_V, FFV, &
+         call get_speed_max(FFV%StateRight_V, FFV, &
               Cright_I=CrightStateRight_I)
 
          Cleft  =min(0.0, &
@@ -1667,12 +1620,12 @@ contains
 
          ! Jump in flux
          DeltaFlux_V(iVarMin:iVarMax) = &
-              FluxRight_V(iVarMin:iVarMax) - &
-              FluxLeft_V( iVarMin:iVarMax)
+              FFV%FluxRight_V(iVarMin:iVarMax) - &
+              FFV%FluxLeft_V( iVarMin:iVarMax)
 
          DeltaFlux_V(iP_I(iFluidMin:iFluidMax)) = &
-              FluxRight_V(iEnergyMin:iEnergyMax) - &
-              FluxLeft_V(iEnergyMin:iEnergyMax)
+              FFV%FluxRight_V(iEnergyMin:iEnergyMax) - &
+              FFV%FluxLeft_V(iEnergyMin:iEnergyMax)
 
          ! Dominant wave diffusion coefficient 0.5*dF.dU/||dU||
          Cdw = dot_product(DeltaFlux_V(iVarMin:iVarMax), &
@@ -1689,33 +1642,33 @@ contains
 
       ! LF-DW or HLL-DW flux
       Flux_V(iVarMin:iVarMax) = &
-           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
-           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           ( WeightRight*FFV%FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
 
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
-           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
-           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           ( WeightRight*FFV%FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iEnergyMin:iEnergyMax)       &
            - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
 
       ! Weighted average of the normal speed
-      Unormal_I(iFluidMin:iFluidMax) = &
-           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
-           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
+      FFV%Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*FFV%UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*FFV%UnLeft_I(iFluidMin:iFluidMax)
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
               ! Calculate the MHD momentum flux (may be used to
               ! calculate electric field)
-              MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
-              +           WeightRight*MhdFluxRight_V
+              FFV%MhdFlux_V = WeightLeft *FFV%MhdFluxLeft_V   &
+              +           WeightRight*FFV%MhdFluxRight_V
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
-         if(UseElectronPressure) Unormal_I(eFluid_) = &
-              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseElectronPressure) FFV%Unormal_I(eFluid_) = &
+              WeightRight*FFV%UnRight_I(eFluid_) + WeightLeft*FFV%UnLeft_I(eFluid_)
          if(UseMultiIon)&
               Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
@@ -1735,13 +1688,7 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-         Enormal => FFV%Enormal, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         MhdFluxLeft_V => FFV%MhdFluxLeft_V, &
-         MhdFluxRight_V => FFV%MhdFluxRight_V )
+         Enormal => FFV%Enormal)
 
       call get_speed_max(State_V, FFV,  &
            Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
@@ -1756,32 +1703,32 @@ contains
       Diffusion   = Cright*WeightRight
 
       Flux_V(iVarMin:iVarMax) = &
-           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
-           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           ( WeightRight*FFV%FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iVarMin:iVarMax)       &
            - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
            -            StateLeftCons_V(iVarMin:iVarMax)) )
       ! Energy flux
       Flux_V(iEnergyMin:iEnergyMax) = &
-           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
-           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           ( WeightRight*FFV%FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FFV%FluxLeft_V(iEnergyMin:iEnergyMax)       &
            - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
            -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
 
       ! Weighted average of the normal speed and electric field
-      Unormal_I(iFluidMin:iFluidMax) = &
-           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
-           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
+      FFV%Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*FFV%UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*FFV%UnLeft_I(iFluidMin:iFluidMax)
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
          if(UseMhdMomentumFlux)&
               ! Calculate MHD momentum flux (may be used to calculate
               ! electric field)
-              MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
-              +           WeightRight*MhdFluxRight_V
+              FFV%MhdFlux_V = WeightLeft *FFV%MhdFluxLeft_V  &
+              +           WeightRight*FFV%MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
-         if(UseElectronPressure) Unormal_I(eFluid_) = &
-              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseElectronPressure) FFV%Unormal_I(eFluid_) = &
+              WeightRight*FFV%UnRight_I(eFluid_) + WeightLeft*FFV%UnLeft_I(eFluid_)
          if(UseMultiIon)&
               Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
@@ -1829,16 +1776,12 @@ contains
       associate( &
          iDimFace => FFV%iDimFace, &
          CmaxDt => FFV%CmaxDt, &
-         Enormal => FFV%Enormal, Unormal_I => FFV%Unormal_I, &
+         Enormal => FFV%Enormal, &
          EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
          Eta => FFV%Eta, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         MhdFlux_V => FFV%MhdFlux_V, &
-         Normal_D => FFV%Normal_D, &
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
-         Tangent1_D => FFV%Tangent1_D, Tangent2_D => FFV%Tangent2_D, &
          B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
          UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
          B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
@@ -1847,10 +1790,10 @@ contains
          DoTestCell => FFV%DoTestCell )
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
-      call get_speed_max(StateLeft_V,  FFV, &
+      call get_speed_max(FFV%StateLeft_V,  FFV, &
            Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
 
-      call get_speed_max(StateRight_V, FFV, &
+      call get_speed_max(FFV%StateRight_V, FFV, &
            Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
       sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
@@ -1860,30 +1803,30 @@ contains
       CmaxDt = Cmax
 
       if(DoTestCell)then
-         write(*,*)'hlld: StateLeft =',StateLeft_V
-         write(*,*)'hlld: StateRight=',StateRight_V
+         write(*,*)'hlld: StateLeft =',FFV%StateLeft_V
+         write(*,*)'hlld: StateRight=',FFV%StateRight_V
          write(*,*)'hlld: sL, sR    =',sL,sR
       endif
 
       if(sL >= 0.) then
-         call get_physical_flux(StateLeft_V, FFV, &
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
+         call get_physical_flux(FFV%StateLeft_V, FFV, &
+              StateCons_V, Flux_V, FFV%Unormal_I, Enormal, Pe, Pwave)
+         if(UseRs7)call modify_flux(Flux_V, FFV%Unormal_I(1), FFV%MhdFlux_V)
          RETURN
       end if
 
       if(sR <= 0.) then
-         call get_physical_flux(StateRight_V, FFV, &
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
-         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
+         call get_physical_flux(FFV%StateRight_V, FFV, &
+              StateCons_V, Flux_V, FFV%Unormal_I, Enormal, Pe, Pwave)
+         if(UseRs7)call modify_flux(Flux_V, FFV%Unormal_I(1), FFV%MhdFlux_V)
          RETURN
       end if
 
       ! Scalar variables
-      RhoL = StateLeft_V(Rho_)
-      pL   = StateLeft_V(p_)
-      RhoR = StateRight_V(Rho_)
-      pR   = StateRight_V(p_)
+      RhoL = FFV%StateLeft_V(Rho_)
+      pL   = FFV%StateLeft_V(p_)
+      RhoR = FFV%StateRight_V(Rho_)
+      pR   = FFV%StateRight_V(p_)
 
       ! Rotate vector variables into a coordinate system orthogonal to the face
       call rotate_state_vectors(FFV)
@@ -2093,9 +2036,9 @@ contains
       call rotate_flux_vector(FluxRot_V, Flux_V, FFV)
 
       ! Set normal velocity for all fluids (HLLD is for 1 fluid only)
-      Unormal_I = Un
+      FFV%Unormal_I = Un
 
-      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
+      if(UseRs7)call modify_flux(Flux_V, FFV%Unormal_I(1), FFV%MhdFlux_V)
 
       if(Eta > 0.0)then
          ! Add flux corresponding to -curl Eta.J to induction equation
@@ -2108,9 +2051,9 @@ contains
          Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
 
          ! Rotate back B1 of the HLLD state into the grid coordinates
-         B1x = Normal_D(x_)*B1n + Tangent1_D(x_)*B1t1 + Tangent2_D(x_)*B1t2
-         B1y = Normal_D(y_)*B1n + Tangent1_D(y_)*B1t1 + Tangent2_D(y_)*B1t2
-         B1z = Normal_D(z_)*B1n + Tangent1_D(z_)*B1t1 + Tangent2_D(z_)*B1t2
+         B1x = FFV%Normal_D(x_)*B1n + FFV%Tangent1_D(x_)*B1t1 + FFV%Tangent2_D(x_)*B1t2
+         B1y = FFV%Normal_D(y_)*B1n + FFV%Tangent1_D(y_)*B1t1 + FFV%Tangent2_D(y_)*B1t2
+         B1z = FFV%Normal_D(z_)*B1n + FFV%Tangent1_D(z_)*B1t1 + FFV%Tangent2_D(z_)*B1t2
 
          ! add B1.dB1/dt = div(B1 x EtaJ) term to the energy equation
          Flux_V(Energy_) = Flux_V(Energy_) &
@@ -2146,20 +2089,15 @@ contains
          iEnergyMin => FFV%iEnergyMin, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
          CmaxDt => FFV%CmaxDt, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
-         Normal_D => FFV%Normal_D, &
          EradFlux => FFV%EradFlux )
 
-      RhoL = StateLeft_V(iRho)
-      pL   = StateLeft_V(iP)
-      RhoR = StateRight_V(iRho)
-      pR   = StateRight_V(iP)
+      RhoL = FFV%StateLeft_V(iRho)
+      pL   = FFV%StateLeft_V(iP)
+      RhoR = FFV%StateRight_V(iRho)
+      pR   = FFV%StateRight_V(iP)
 
-      UnL  = sum( StateLeft_V(iUx:iUz) *Normal_D )
-      UnR  = sum( StateRight_V(iUx:iUz)*Normal_D )
+      UnL  = sum( FFV%StateLeft_V(iUx:iUz) *FFV%Normal_D )
+      UnR  = sum( FFV%StateRight_V(iUx:iUz)*FFV%Normal_D )
 
       call exact_rs_set_gamma(Gamma_I(iFluid))
 
@@ -2167,8 +2105,8 @@ contains
          ! Add the radiation/wave pressure to the total pressure
          ! This is for radiation pressure in CRASH applications.
          ! Increase maximum speed due to isotropic wave pressure
-         pWaveL = (GammaWave - 1)*sum(StateLeft_V(WaveFirst_:WaveLast_))
-         pWaveR = (GammaWave - 1)*sum(StateRight_V(WaveFirst_:WaveLast_))
+         pWaveL = (GammaWave - 1)*sum(FFV%StateLeft_V(WaveFirst_:WaveLast_))
+         pWaveR = (GammaWave - 1)*sum(FFV%StateRight_V(WaveFirst_:WaveLast_))
          pL = pL + pWaveL
          pR = pR + pWaveR
       else
@@ -2180,12 +2118,12 @@ contains
          ! This is for ions coupled to electrons by collisions
          ! but there is no magnetic field (e.g. CRASH applications)
          ! GammaElectron=Gamma (ion) is assumed by the Godunov solver.
-         PeL = StateLeft_V(Pe_)
-         PeR = StateRight_V(Pe_)
+         PeL = FFV%StateLeft_V(Pe_)
+         PeR = FFV%StateRight_V(Pe_)
          pL = pL + PeL
          pR = pR + PeR
       else
-         ! StateLeft_V(iP) and StateRight_V(iP) already include the electron
+         ! FFV%StateLeft_V(iP) and FFV%StateRight_V(iP) already include the electron
          ! pressure
          PeL = 0.0; PeR = 0.0
       end if
@@ -2196,13 +2134,13 @@ contains
       ! At strong shocks use the artificial wind scheme
       if((pStar > 2*pL .and. wL < 0.0).or.(pStar > 2*pR .and. wR > 0.0))then
          ! Temporary solution, should be the monotone numerical flux with
-         ! modified StateLeft_V and/or StateRight_V
-         call get_physical_flux(StateLeft_V, FFV, &
-              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, &
+         ! modified FFV%StateLeft_V and/or FFV%StateRight_V
+         call get_physical_flux(FFV%StateLeft_V, FFV, &
+              StateLeftCons_V, FFV%FluxLeft_V, FFV%UnLeft_I, EnLeft, PeLeft, &
               PwaveLeft)
 
-         call get_physical_flux(StateRight_V, FFV, &
-              StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
+         call get_physical_flux(FFV%StateRight_V, FFV, &
+              StateRightCons_V, FFV%FluxRight_V, FFV%UnRight_I, EnRight, PeRight, &
               PwaveRight)
 
          call artificial_wind
@@ -2214,7 +2152,7 @@ contains
          ! The Left gas passes through the face
          RhoSide     = RhoL
          UnSide      = UnL
-         StateStar_V = StateLeft_V
+         StateStar_V = FFV%StateLeft_V
          pWaveSide   = pWaveL
          PeSide      = PeL
       else
@@ -2222,7 +2160,7 @@ contains
          ! The Right gas passes through the face
          RhoSide     = RhoR
          UnSide      = UnR
-         StateStar_V = StateRight_V
+         StateStar_V = FFV%StateRight_V
          pWaveSide   = pWaveR
          PeSide      = PeR
       end if
@@ -2245,7 +2183,7 @@ contains
       p                    = pTotal - pWaveStar - PeStar
 
       StateStar_V(iRho)    = Rho
-      StateStar_V(iUx:iUz) = StateStar_V(iUx:iUz) + (Un-UnSide)*Normal_D
+      StateStar_V(iUx:iUz) = StateStar_V(iUx:iUz) + (Un-UnSide)*FFV%Normal_D
       StateStar_V(P_)      = p
       do iVar=ScalarFirst_, ScalarLast_
          StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
@@ -2260,7 +2198,7 @@ contains
 
       ! (3) add the pressure gradient
       ! also add the force due to the radiation and electron pressure gradient
-      Flux_V(iRhoUx:iRhoUz) = Flux_V(iRhoUx:iRhoUz) + pTotal*Normal_D
+      Flux_V(iRhoUx:iRhoUz) = Flux_V(iRhoUx:iRhoUz) + pTotal*FFV%Normal_D
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
@@ -2270,7 +2208,7 @@ contains
 
       Cmax                 = max(wR, -wL)
       CmaxDt               = Cmax
-      Unormal_I(iFluid)    = Un
+      FFV%Unormal_I(iFluid)    = Un
 
       if(iFluid == 1)then
          if(UseWavePressure)then
@@ -2307,16 +2245,12 @@ contains
       associate( &
          iDimFace => FFV%iDimFace, &
          CmaxDt => FFV%CmaxDt, &
-         Unormal_I => FFV%Unormal_I, &
-         UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
          UnL => FFV%UnL, UnR => FFV%UnR )
 
-      call get_speed_max(StateLeft_V,  FFV, &
+      call get_speed_max(FFV%StateLeft_V,  FFV, &
            Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
 
-      call get_speed_max(StateRight_V, FFV, &
+      call get_speed_max(FFV%StateRight_V, FFV, &
            Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
       sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
@@ -2327,10 +2261,10 @@ contains
 
       ! Calculate intermediate states
 
-      RhoL = StateLeft_V(Rho_)
-      RhoR = StateRight_V(Rho_)
-      totalPresL = StateLeft_V(p_)  + PeLeft  + PwaveLeft
-      totalPresR = StateRight_V(p_) + PeRight + PwaveRight
+      RhoL = FFV%StateLeft_V(Rho_)
+      RhoR = FFV%StateRight_V(Rho_)
+      totalPresL = FFV%StateLeft_V(p_)  + PeLeft  + PwaveLeft
+      totalPresR = FFV%StateRight_V(p_) + PeRight + PwaveRight
 
       ! Rotate vector variables into a coordinate system orthogonal to the face
       call rotate_state_vectors(FFV)
@@ -2341,27 +2275,27 @@ contains
            /(RhoR*(sR-UnR) - RhoL*(sL-UnL))
 
       if(sL >= 0.)then
-         Flux_V    = FluxLeft_V
-         Unormal_I = UnLeft_I
+         Flux_V    = FFV%FluxLeft_V
+         FFV%Unormal_I = FFV%UnLeft_I
       elseif(sL < 0. .and. UnStar >= 0.)then
          StateStarCons_V = StateLeftCons_V
          StateStarCons_V(RhoUx_+iDimFace-x_) = StateLeftCons_V(Rho_)*UnStar
          StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
               + (UnStar-UnL)*(RhoL*UnStar + totalPresL/(sL-UnL))
          StateStarCons_V = StateStarCons_V*(sL-UnL)/(sL-UnStar)
-         Flux_V    = FluxLeft_V  + sL*(StateStarCons_V - StateLeftCons_V)
-         Unormal_I = UnStar
+         Flux_V    = FFV%FluxLeft_V  + sL*(StateStarCons_V - StateLeftCons_V)
+         FFV%Unormal_I = UnStar
       elseif(UnStar < 0. .and. sR >= 0.)then
          StateStarCons_V = StateRightCons_V
          StateStarCons_V(RhoUx_+iDimFace-x_) = StateRightCons_V(Rho_)*UnStar
          StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
               + (UnStar-UnR)*(RhoR*UnStar + totalPresR/(sR-UnR))
          StateStarCons_V = StateStarCons_V*(sR-UnR)/(sR-UnStar)
-         Flux_V    = FluxRight_V + sR*(StateStarCons_V - StateRightCons_V)
-         Unormal_I = UnStar
+         Flux_V    = FFV%FluxRight_V + sR*(StateStarCons_V - StateRightCons_V)
+         FFV%Unormal_I = UnStar
       else
-         Flux_V    = FluxRight_V
-         Unormal_I = UnRight_I
+         Flux_V    = FFV%FluxRight_V
+         FFV%Unormal_I = FFV%UnRight_I
       endif
 
       end associate
@@ -2375,21 +2309,19 @@ contains
          iDimFace => FFV%iDimFace, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-         FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
          Area => FFV%Area, &
          CmaxDt => FFV%CmaxDt )
 
       write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
-      write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
-      write(*,*)'Un =',0.5*(StateLeft_V(U_+iDimFace)+StateRight_V(U_+iDimFace))
-      write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
+      write(*,*)'rho=',0.5*(FFV%StateLeft_V(Rho_)+FFV%StateRight_V(Rho_))
+      write(*,*)'Un =',0.5*(FFV%StateLeft_V(U_+iDimFace)+FFV%StateRight_V(U_+iDimFace))
+      write(*,*)'P  =',0.5*(FFV%StateLeft_V(P_)+FFV%StateRight_V(P_))
       if(UseB)then
          write(*,*)'B  =', &
-              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z]
+              0.5*(FFV%StateLeft_V(Bx_:Bz_) + FFV%StateRight_V(Bx_:Bz_)) + [B0x,B0y,B0z]
          write(*,*)'BB =', &
-              sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
+              sum( (0.5*(FFV%StateLeft_V(Bx_:Bz_) + FFV%StateRight_V(Bx_:Bz_)) &
               + [B0x,B0y,B0z])**2)
       end if
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
@@ -2404,8 +2336,8 @@ contains
          write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
               NameVar_V(iVar),&
               Flux_V(iVar), &
-              FluxLeft_V(iVar)*Area, &
-              FluxRight_V(iVar)*Area,&
+              FFV%FluxLeft_V(iVar)*Area, &
+              FFV%FluxRight_V(iVar)*Area,&
               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
       end do
@@ -2458,11 +2390,9 @@ contains
       B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
       Eta => FFV%Eta, &
-      MhdFlux_V => FFV%MhdFlux_V, &
       GradXPeNe => FFV%GradXPeNe, &
       GradYPeNe => FFV%GradYPeNe, &
-      GradZPeNe => FFV%GradZPeNe, &
-      Normal_D => FFV% Normal_D, &
+      GradZPeNe => FFV%GradZPeNe, &    
       NormalX => FFV%NormalX, &
       NormalY => FFV%NormalY, &
       NormalZ => FFV%NormalZ, &
@@ -2577,9 +2507,9 @@ contains
 
        if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
     elseif(UseMhdMomentumFlux)then
-       MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
-       MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
-       MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + Pe*NormalZ
+       FFV%MhdFlux_V(RhoUx_) = FFV%MhdFlux_V(RhoUx_) + Pe*NormalX
+       FFV%MhdFlux_V(RhoUy_) = FFV%MhdFlux_V(RhoUy_) + Pe*NormalY
+       FFV%MhdFlux_V(RhoUz_) = FFV%MhdFlux_V(RhoUz_) + Pe*NormalZ
     end if
 
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
@@ -2599,18 +2529,18 @@ contains
     if(ViscoCoeff > 0.0)then
        do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
-          FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
+          FluxViscoX     = sum(FFV%Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
           Flux_V(Energy_)= Flux_V(Energy_) - &
                State_V(iRho)*State_V(iUx)*FluxViscoX
           if(nDim == 1) CYCLE
-          FluxViscoY     = sum(Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
+          FluxViscoY     = sum(FFV%Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
           Flux_V(iRhoUy) = Flux_V(iRhoUy) - &
                State_V(iRho)*FluxViscoY
           Flux_V(Energy_)= Flux_V(Energy_) - &
                State_V(iRho)*State_V(iUy)*FluxViscoY
           if(nDim == 2) CYCLE
-          FluxViscoZ     = sum(Normal_D(1:nDim)*Visco_DDI(:,z_,iFluid))
+          FluxViscoZ     = sum(FFV%Normal_D(1:nDim)*Visco_DDI(:,z_,iFluid))
           Flux_V(iRhoUz) = Flux_V(iRhoUz) - State_V(iRho)*FluxViscoZ
           Flux_V(Energy_)= Flux_V(Energy_) - &
                State_V(iRho)*State_V(iUz)*FluxViscoZ
@@ -2654,7 +2584,7 @@ contains
        if(UseHyperbolicDivb)then
           Hyp  = State_V(Hyp_)
 
-          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + SpeedHyp*Normal_D*Hyp
+          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + SpeedHyp*FFV%Normal_D*Hyp
           Flux_V(Hyp_)    = SpeedHyp*Bn
 
           if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + SpeedHyp*Bn*Hyp
@@ -2702,7 +2632,6 @@ contains
       !------------------------------------------------------------------------
       associate( &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         MhdFlux_V => FFV%MhdFlux_V, &
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
@@ -2780,13 +2709,13 @@ contains
       Flux_V(RhoUy_) = Un*Rho*Uy + p*NormalY
       Flux_V(RhoUz_) = Un*Rho*Uz + p*NormalZ
 
-      MhdFlux_V(RhoUx_) = &
+      FFV%MhdFlux_V(RhoUx_) = &
            - Bn*FullBx - B0n*Bx - En*Ex + pTotal2*Normalx
-      MhdFlux_V(RhoUy_) = &
+      FFV%MhdFlux_V(RhoUy_) = &
            - Bn*FullBy - B0n*By - En*Ey + pTotal2*Normaly
-      MhdFlux_V(RhoUz_) = &
+      FFV%MhdFlux_V(RhoUz_) = &
            - Bn*FullBz - B0n*Bz - En*Ez + pTotal2*Normalz
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + FFV%MhdFlux_V
 
       pTotal = p + pTotal
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
@@ -2846,7 +2775,6 @@ contains
       associate( &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
          HallCoeff => FFV%HallCoeff, &
-         MhdFlux_V => FFV%MhdFlux_V, &
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
@@ -2969,18 +2897,18 @@ contains
       MagneticForce_D(RhoUy_) =  - Bn*FullBy - B0n*By + pTotal*NormalY
       MagneticForce_D(RhoUz_) =  - Bn*FullBz - B0n*Bz + pTotal*NormalZ
       ! Add a gradient of extra pressure to momentum flux
-      MhdFlux_V(RhoUx_) =  pExtra*NormalX
-      MhdFlux_V(RhoUy_) =  pExtra*NormalY
-      MhdFlux_V(RhoUz_) =  pExtra*NormalZ
+      FFV%MhdFlux_V(RhoUx_) =  pExtra*NormalX
+      FFV%MhdFlux_V(RhoUy_) =  pExtra*NormalY
+      FFV%MhdFlux_V(RhoUz_) =  pExtra*NormalZ
       if(.not.UseJCrossBForce)&
-           MhdFlux_V = MhdFlux_V + MagneticForce_D
+           FFV%MhdFlux_V = FFV%MhdFlux_V + MagneticForce_D
       ! Correction for anisotropic electron pressure
       if(UseAnisoPe)then
          if (DoTestCell) then
             write(*,*) NameSub, ' before anisoPe flux:'
-            write(*,*) ' Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
-            write(*,*) ' Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
-            write(*,*) ' Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+            write(*,*) ' Flux_V(RhoUx_) =', FFV%MhdFlux_V(RhoUx_)
+            write(*,*) ' Flux_V(RhoUy_) =', FFV%MhdFlux_V(RhoUy_)
+            write(*,*) ' Flux_V(RhoUz_) =', FFV%MhdFlux_V(RhoUz_)
          end if
 
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
@@ -2989,9 +2917,9 @@ contains
          DpPerB = 1.5*(State_V(Pepar_) - State_V(Pe_))*FullBn&
               /max(1e-30, FullB2)
 
-         MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
-         MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
-         MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
+         FFV%MhdFlux_V(RhoUx_) = FFV%MhdFlux_V(RhoUx_) + FullBx*DpPerB
+         FFV%MhdFlux_V(RhoUy_) = FFV%MhdFlux_V(RhoUy_) + FullBy*DpPerB
+         FFV%MhdFlux_V(RhoUz_) = FFV%MhdFlux_V(RhoUz_) + FullBz*DpPerB
          Flux_V(Energy_)= Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
          ! Don't we need Flux_V(PePar_)?
@@ -3001,15 +2929,15 @@ contains
             write(*,*) 'FullBx      =', FullBx
             write(*,*) 'FullBy      =', FullBy
             write(*,*) 'FullBz      =', FullBz
-            write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
-            write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
-            write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
+            write(*,*) 'Flux_V(RhoUx_) =', FFV%MhdFlux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', FFV%MhdFlux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', FFV%MhdFlux_V(RhoUz_)
          end if
       end if
 
       call get_magnetic_flux
       if(.not.IsMhd)RETURN
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + FFV%MhdFlux_V
       if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
            Flux_V(RhoUx_:RhoUz_) + MagneticForce_D
       ! Add magnetic energy
@@ -3116,7 +3044,6 @@ contains
 
       !------------------------------------------------------------------------
       associate( &
-         Normal_D => FFV%Normal_D, &
          NormalX => FFV%NormalX, &
          NormalY => FFV%NormalY, &
          NormalZ => FFV%NormalZ, &
@@ -3136,7 +3063,7 @@ contains
       Flux_V(Ez_) = -C2light*(NormalX*By - NormalY*Bx)
 
       ! dE/dt + c*grad PhiE ...
-      Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Clight*Normal_D*State_V(HypE_)
+      Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Clight*FFV%Normal_D*State_V(HypE_)
 
       ! Flux part of dPhiE/dt + c*(div E - chargedensity/eps0)
       Flux_V(HypE_) = Clight*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
@@ -3144,7 +3071,7 @@ contains
       if(DoTestCell)then
          write(*,'(a,99es13.5)')'ChargeDens_I    =', &
               ChargePerMass_I*State_V(iRhoIon_I)
-         write(*,'(a,3es13.5)') 'Normal_D        =', Normal_D
+         write(*,'(a,3es13.5)') 'FFV%Normal_D        =', FFV%Normal_D
          write(*,'(a,3es13.5)') 'Bx,By,Bz        =', Bx,By,Bz
          write(*,'(a,3es13.5)') 'Ex,Ey,Ez        =', Ex,Ey,Ez
          write(*,'(a,3es13.5)') 'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
@@ -3551,8 +3478,7 @@ contains
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
       iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
       CmaxDt => FFV%CmaxDt, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      UnLeft_I => FFV%UnLeft_I, UnRight_I => FFV%UnRight_I )
+      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z)
 
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
@@ -3561,10 +3487,10 @@ contains
 
        if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
-             ! For AW flux UnLeft_I,UnRight_I
+             ! For AW flux FFV%UnLeft_I,FFV%UnRight_I
              ! are already set by get_physical_flux
-             UnLeft = minval(UnLeft_I(1:nIonFluid))
-             UnRight= maxval(UnRight_I(1:nIonFluid))
+             UnLeft = minval(FFV%UnLeft_I(1:nIonFluid))
+             UnRight= maxval(FFV%UnRight_I(1:nIonFluid))
           end if
 
           if(UseBorisCorrection .or. (UseEfield .and. nTrueIon ==1))then
@@ -3591,8 +3517,8 @@ contains
           call get_burgers_speed
        else
           if(UseAwSpeed)then
-             UnLeft = UnLeft_I(iFluid)
-             UnRight= UnRight_I(iFluid)
+             UnLeft = FFV%UnLeft_I(iFluid)
+             UnRight= FFV%UnRight_I(iFluid)
           end if
           call select_fluid(iFluid)
           call get_hd_speed
@@ -4168,7 +4094,6 @@ contains
          iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
          iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-         Normal_D => FFV%Normal_D, &
          DoTestCell => FFV%DoTestCell )
 
       if(DoTestCell) then
@@ -4217,7 +4142,7 @@ contains
       end if
 
       Sound = sqrt(Sound2)
-      Un    = sum(State_V(iUx:iUz)*Normal_D)
+      Un    = sum(State_V(iUx:iUz)*FFV%Normal_D)
 
       if(DoAw)then
          Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
@@ -4280,12 +4205,11 @@ contains
     associate( &
       iDim => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
-      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      Unormal_I => FFV%Unormal_I )
+      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace)
 
     do iFluid = iFluidMin, iFluidMax
 
-       Unormal = Unormal_I(iFluid)
+       Unormal = FFV%Unormal_I(iFluid)
        iRho = iRho_I(iFluid)
        iRhoUx = iRhoUx_I(iFluid)
        iRhoUz = iRhoUz_I(iFluid)
@@ -4349,7 +4273,7 @@ contains
                   State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
           endif
        endif
-       Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
+       FFV%Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
     enddo
 
     end associate
@@ -4411,19 +4335,16 @@ contains
     associate( &
       iDimFace => FFV%iDimFace, &
       CmaxDt => FFV%CmaxDt, IsBoundary => FFV%IsBoundary, &
-      Unormal_I => FFV%Unormal_I, &
-      StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-      FluxLeft_V => FFV%FluxLeft_V, FluxRight_V => FFV%FluxRight_V, &
       B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
       UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
       B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
       UnR => FFV%UnR, Ut1R => FFV%Ut1R, Ut2R => FFV%Ut2R, &
       B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R)
 
-    RhoL  =  StateLeft_V(Rho_)
-    pL    =  StateLeft_V(p_ )
-    RhoR  =  StateRight_V(Rho_)
-    pR    =  StateRight_V(p_  )
+    RhoL  =  FFV%StateLeft_V(Rho_)
+    pL    =  FFV%StateLeft_V(p_ )
+    RhoR  =  FFV%StateRight_V(Rho_)
+    pR    =  FFV%StateRight_V(p_  )
 
     ! Rotate vector variables into a coordinate system orthogonal to the face
     call rotate_state_vectors(FFV)
@@ -4887,10 +4808,10 @@ contains
     end do
 
     ! Roe flux = average of left and right flux plus the diffusive flux
-    Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Flux_V)
+    Flux_V  = 0.5*(FFV%FluxLeft_V + FFV%FluxRight_V - Flux_V)
 
     ! Normal velocity and maximum wave speed
-    Unormal_I = UnH
+    FFV%Unormal_I = UnH
     CmaxDt    = abs(UnH) + CfH
 
     end associate
@@ -4902,8 +4823,8 @@ contains
 
     type(FaceFluxVarType), intent(inout) :: FFV
 
-    ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
-    ! StateRight_V(B*_), StateRight_V(U*_) into normal and
+    ! Rotate the vector variables B0*, FFV%StateLeft_V(B*_), FFV%StateLeft_V(U*_)
+    ! FFV%StateRight_V(B*_), FFV%StateRight_V(U*_) into normal and
     ! tangential components with respect to the face.
     ! Store the rotated vector components in scalar variables UnL, Ut1L, ....
     ! Also store the transformation for rotating back.
@@ -4913,9 +4834,6 @@ contains
     associate( &
       iDimFace => FFV%iDimFace, &
       B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      StateLeft_V => FFV%StateLeft_V, StateRight_V => FFV%StateRight_V, &
-      Normal_D => FFV%Normal_D, &
-      Tangent1_D => FFV%Tangent1_D, Tangent2_D => FFV%Tangent2_D, &
       B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
       UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
       B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
@@ -4930,93 +4848,93 @@ contains
           B0t1 = B0y
           B0t2 = B0z
           ! Left face
-          UnL   =  StateLeft_V(Ux_)
-          Ut1L  =  StateLeft_V(Uy_)
-          Ut2L  =  StateLeft_V(Uz_)
-          B1nL  =  StateLeft_V(Bx_)
-          B1t1L =  StateLeft_V(By_)
-          B1t2L =  StateLeft_V(Bz_)
+          UnL   =  FFV%StateLeft_V(Ux_)
+          Ut1L  =  FFV%StateLeft_V(Uy_)
+          Ut2L  =  FFV%StateLeft_V(Uz_)
+          B1nL  =  FFV%StateLeft_V(Bx_)
+          B1t1L =  FFV%StateLeft_V(By_)
+          B1t2L =  FFV%StateLeft_V(Bz_)
           ! Right face
-          UnR   =  StateRight_V(Ux_)
-          Ut1R  =  StateRight_V(Uy_)
-          Ut2R  =  StateRight_V(Uz_)
-          B1nR  =  StateRight_V(Bx_)
-          B1t1R =  StateRight_V(By_)
-          B1t2R =  StateRight_V(Bz_)
+          UnR   =  FFV%StateRight_V(Ux_)
+          Ut1R  =  FFV%StateRight_V(Uy_)
+          Ut2R  =  FFV%StateRight_V(Uz_)
+          B1nR  =  FFV%StateRight_V(Bx_)
+          B1t1R =  FFV%StateRight_V(By_)
+          B1t2R =  FFV%StateRight_V(Bz_)
        case (y_) ! y face
           ! B0 on the face
           B0n  = B0y
           B0t1 = B0z
           B0t2 = B0x
           ! Left face
-          UnL   =  StateLeft_V(Uy_)
-          Ut1L  =  StateLeft_V(Uz_)
-          Ut2L  =  StateLeft_V(Ux_)
-          B1nL  =  StateLeft_V(By_)
-          B1t1L =  StateLeft_V(Bz_)
-          B1t2L =  StateLeft_V(Bx_)
+          UnL   =  FFV%StateLeft_V(Uy_)
+          Ut1L  =  FFV%StateLeft_V(Uz_)
+          Ut2L  =  FFV%StateLeft_V(Ux_)
+          B1nL  =  FFV%StateLeft_V(By_)
+          B1t1L =  FFV%StateLeft_V(Bz_)
+          B1t2L =  FFV%StateLeft_V(Bx_)
           ! Right face
-          UnR   =  StateRight_V(Uy_)
-          Ut1R  =  StateRight_V(Uz_)
-          Ut2R  =  StateRight_V(Ux_)
-          B1nR  =  StateRight_V(By_)
-          B1t1R =  StateRight_V(Bz_)
-          B1t2R =  StateRight_V(Bx_)
+          UnR   =  FFV%StateRight_V(Uy_)
+          Ut1R  =  FFV%StateRight_V(Uz_)
+          Ut2R  =  FFV%StateRight_V(Ux_)
+          B1nR  =  FFV%StateRight_V(By_)
+          B1t1R =  FFV%StateRight_V(Bz_)
+          B1t2R =  FFV%StateRight_V(Bx_)
        case (z_) ! z face
           ! B0 on the face
           B0n  = B0z
           B0t1 = B0x
           B0t2 = B0y
           ! Left face
-          UnL   =  StateLeft_V(Uz_)
-          Ut1L  =  StateLeft_V(Ux_)
-          Ut2L  =  StateLeft_V(Uy_)
-          B1nL  =  StateLeft_V(Bz_)
-          B1t1L =  StateLeft_V(Bx_)
-          B1t2L =  StateLeft_V(By_)
+          UnL   =  FFV%StateLeft_V(Uz_)
+          Ut1L  =  FFV%StateLeft_V(Ux_)
+          Ut2L  =  FFV%StateLeft_V(Uy_)
+          B1nL  =  FFV%StateLeft_V(Bz_)
+          B1t1L =  FFV%StateLeft_V(Bx_)
+          B1t2L =  FFV%StateLeft_V(By_)
           ! Right face
-          UnR   =  StateRight_V(Uz_)
-          Ut1R  =  StateRight_V(Ux_)
-          Ut2R  =  StateRight_V(Uy_)
-          B1nR  =  StateRight_V(Bz_)
-          B1t1R =  StateRight_V(Bx_)
-          B1t2R =  StateRight_V(By_)
+          UnR   =  FFV%StateRight_V(Uz_)
+          Ut1R  =  FFV%StateRight_V(Ux_)
+          Ut2R  =  FFV%StateRight_V(Uy_)
+          B1nR  =  FFV%StateRight_V(Bz_)
+          B1t1R =  FFV%StateRight_V(Bx_)
+          B1t2R =  FFV%StateRight_V(By_)
        end select
     else
-       if(Normal_D(z_) < 0.5)then
+       if(FFV%Normal_D(z_) < 0.5)then
           ! Tangent1 = Normal x (0,0,1)
-          Tangent1_D(x_) =  Normal_D(y_)
-          Tangent1_D(y_) = -Normal_D(x_)
-          Tangent1_D(z_) = 0.0
+          FFV%Tangent1_D(x_) =  FFV%Normal_D(y_)
+          FFV%Tangent1_D(y_) = -FFV%Normal_D(x_)
+          FFV%Tangent1_D(z_) = 0.0
        else
           ! Tangent1 = Normal x (1,0,0)
-          Tangent1_D(x_) = 0.0
-          Tangent1_D(y_) =  Normal_D(z_)
-          Tangent1_D(z_) = -Normal_D(y_)
+          FFV%Tangent1_D(x_) = 0.0
+          FFV%Tangent1_D(y_) =  FFV%Normal_D(z_)
+          FFV%Tangent1_D(z_) = -FFV%Normal_D(y_)
        end if
        ! Normalize Tangent1 vector
-       Tangent1_D = Tangent1_D/norm2(Tangent1_D)
+       FFV%Tangent1_D = FFV%Tangent1_D/norm2(FFV%Tangent1_D)
        ! Tangent2 = Normal x Tangent1
-       Tangent2_D = cross_product(Normal_D, Tangent1_D)
+       FFV%Tangent2_D = cross_product(FFV%Normal_D, FFV%Tangent1_D)
 
        ! B0 on the face
-       B0n   = sum(Normal_D  *[B0x, B0y, B0z])
-       B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
-       B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
+       B0n   = sum(FFV%Normal_D  *[B0x, B0y, B0z])
+       B0t1  = sum(FFV%Tangent1_D*[B0x, B0y, B0z])
+       B0t2  = sum(FFV%Tangent2_D*[B0x, B0y, B0z])
        ! Left face
-       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
-       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
-       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
-       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
-       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
-       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
+       UnL   = sum(FFV%Normal_D  *FFV%StateLeft_V(Ux_:Uz_))
+       Ut1L  = sum(FFV%Tangent1_D*FFV%StateLeft_V(Ux_:Uz_))
+       Ut2L  = sum(FFV%Tangent2_D*FFV%StateLeft_V(Ux_:Uz_))
+       B1nL  = sum(FFV%Normal_D  *FFV%StateLeft_V(Bx_:Bz_))
+       B1t1L = sum(FFV%Tangent1_D*FFV%StateLeft_V(Bx_:Bz_))
+       B1t2L = sum(FFV%Tangent2_D*FFV%StateLeft_V(Bx_:Bz_))
        ! Right face
-       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
-       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
-       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
-       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
-       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
-       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
+       UnR   = sum(FFV%Normal_D  *FFV%StateRight_V(Ux_:Uz_))
+       Ut1R  = sum(FFV%Tangent1_D*FFV%StateRight_V(Ux_:Uz_))
+       Ut2R  = sum(FFV%Tangent2_D*FFV%StateRight_V(Ux_:Uz_))
+       B1nR  = sum(FFV%Normal_D  *FFV%StateRight_V(Bx_:Bz_))
+       B1t1R = sum(FFV%Tangent1_D*FFV%StateRight_V(Bx_:Bz_))
+       B1t2R = sum(FFV%Tangent2_D*FFV%StateRight_V(Bx_:Bz_))
     end if
 
     end associate
@@ -5031,9 +4949,8 @@ contains
     ! Rotate n,t1,t2 components back to x,y,z components
     !--------------------------------------------------------------------------
     associate( &
-       iDimFace => FFV%iDimFace, &
-       Tangent1_D => FFV%Tangent1_D, Tangent2_D => FFV%Tangent2_D, &
-       Normal_D => FFV%Normal_D )
+       iDimFace => FFV%iDimFace)
+
 
     if(IsCartesianGrid)then
        select case (iDimFace)
@@ -5060,25 +4977,25 @@ contains
           Flux_V(Bz_    ) = FluxRot_V(B1n_)
        end select
     else
-       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
-       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
-       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUx_) = FFV%Normal_D(x_)  *FluxRot_V(RhoUn_)  &
+            +           FFV%Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
+            +           FFV%Tangent2_D(x_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUy_) = FFV%Normal_D(y_)  *FluxRot_V(RhoUn_)  &
+            +           FFV%Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
+            +           FFV%Tangent2_D(y_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUz_) = FFV%Normal_D(z_)  *FluxRot_V(RhoUn_)  &
+            +           FFV%Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
+            +           FFV%Tangent2_D(z_)*FluxRot_V(RhoUt2_)
 
-       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
-       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
-       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
+       Flux_V(Bx_   ) = FFV%Normal_D(x_)  *FluxRot_V(B1n_)  &
+            +           FFV%Tangent1_D(x_)*FluxRot_V(B1t1_) &
+            +           FFV%Tangent2_D(x_)*FluxRot_V(B1t2_)
+       Flux_V(By_   ) = FFV%Normal_D(y_)  *FluxRot_V(B1n_)  &
+            +           FFV%Tangent1_D(y_)*FluxRot_V(B1t1_) &
+            +           FFV%Tangent2_D(y_)*FluxRot_V(B1t2_)
+       Flux_V(Bz_   ) = FFV%Normal_D(z_)  *FluxRot_V(B1n_)  &
+            +           FFV%Tangent1_D(z_)*FluxRot_V(B1t1_) &
+            +           FFV%Tangent2_D(z_)*FluxRot_V(B1t2_)
     end if
 
     end associate

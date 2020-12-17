@@ -360,9 +360,6 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      StateLeft_V => FFV%StateLeft_V, &
-      StateRight_V => FFV%StateRight_V, &
-      Normal_D => FFV%Normal_D, &
       HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
       HeatFlux => FFV%HeatFlux, &
       IsNewBlockHeatCond => FFV%IsNewBlockHeatCond )
@@ -413,16 +410,16 @@ contains
 
     if(UseLeftStateOnly)then
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-            StateLeft_V, Normal_D, HeatCond_D)
+            FFV%StateLeft_V, FFV%Normal_D, HeatCond_D)
     elseif(UseRightStateOnly)then
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-            StateRight_V, Normal_D, HeatCond_D)
+            FFV%StateRight_V, FFV%Normal_D, HeatCond_D)
     else
 
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-            StateLeft_V, Normal_D, HeatCondL_D)
+            FFV%StateLeft_V, FFV%Normal_D, HeatCondL_D)
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-            StateRight_V, Normal_D, HeatCondR_D)
+            FFV%StateRight_V, FFV%Normal_D, HeatCondR_D)
 
        HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
@@ -439,11 +436,11 @@ contains
     ! time step restriction
     if(UseIdealEos)then
        if(UseMultiIon)then
-          NumDensL = sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
-          NumDensR = sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
+          NumDensL = sum(ChargeIon_I*FFV%StateLeft_V(iRhoIon_I)/MassIon_I)
+          NumDensR = sum(ChargeIon_I*FFV%StateRight_V(iRhoIon_I)/MassIon_I)
        else
-          NumDensL = StateLeft_V(Rho_)/TeFraction
-          NumDensR = StateRight_V(Rho_)/TeFraction
+          NumDensL = FFV%StateLeft_V(Rho_)/TeFraction
+          NumDensR = FFV%StateRight_V(Rho_)/TeFraction
        end if
        if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
           call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
@@ -456,20 +453,20 @@ contains
           CvR = InvGammaElectronMinus1*NumDensR
        end if
     else
-       call user_material_properties(StateLeft_V, &
+       call user_material_properties(FFV%StateLeft_V, &
             iFace, jFace, kFace, iBlock, iDir, CvOut = CvSi)
        CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-       call user_material_properties(StateRight_V, &
+       call user_material_properties(FFV%StateRight_V, &
             iFace, jFace, kFace, iBlock, iDir, CvOut = CvSi)
        CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
 
     if(UseLeftStateOnly)then
-       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/CvL
+       HeatCondCoefNormal = sum(HeatCond_D*FFV%Normal_D)/CvL
     elseif(UseRightStateOnly)then
-       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/CvR
+       HeatCondCoefNormal = sum(HeatCond_D*FFV%Normal_D)/CvR
     else
-       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
+       HeatCondCoefNormal = sum(HeatCond_D*FFV%Normal_D)/min(CvL,CvR)
     end if
 
     end associate
@@ -607,9 +604,6 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      StateLeft_V => FFV%StateLeft_V, &
-      StateRight_V => FFV%StateRight_V, &
-      Normal_D => FFV%Normal_D, &
       HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
       HeatFlux => FFV%HeatFlux, &
       IsNewBlockIonHeatCond => FFV%IsNewBlockIonHeatCond )
@@ -630,9 +624,9 @@ contains
          IsNewBlockIonHeatCond, Ti_G, FaceGrad_D)
 
     call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-         StateLeft_V, Normal_D, HeatCondL_D)
+         FFV%StateLeft_V, FFV%Normal_D, HeatCondL_D)
     call get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-         StateRight_V, Normal_D, HeatCondR_D)
+         FFV%StateRight_V, FFV%Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
@@ -646,13 +640,13 @@ contains
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
     if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
-       CvL = InvGammaMinus1*StateLeft_V(Rho_)/TiFraction
-       CvR = InvGammaMinus1*StateRight_V(Rho_)/TiFraction
+       CvL = InvGammaMinus1*FFV%StateLeft_V(Rho_)/TiFraction
+       CvR = InvGammaMinus1*FFV%StateRight_V(Rho_)/TiFraction
     else
        call stop_mpi(NameSub// &
             ': no ion heat conduction yet for non-ideal eos')
     end if
-    HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
+    HeatCondCoefNormal = sum(HeatCond_D*FFV%Normal_D)/min(CvL,CvR)
 
     end associate
   end subroutine get_ion_heat_flux

@@ -305,9 +305,6 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
-      StateLeft_V => FFV%StateLeft_V, &
-      StateRight_V => FFV%StateRight_V, &
-      Normal_D => FFV%Normal_D, &
       RadDiffCoef => FFV%RadDiffCoef, &
       EradFlux => FFV%EradFlux, &
       IsNewBlockRadDiffusion => FFV%IsNewBlockRadDiffusion )
@@ -319,8 +316,8 @@ contains
          Erad_WG, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
-       call get_diffusion_coef(StateLeft_V, DiffCoefL)
-       call get_diffusion_coef(StateRight_V, DiffCoefR)
+       call get_diffusion_coef(FFV%StateLeft_V, DiffCoefL)
+       call get_diffusion_coef(FFV%StateRight_V, DiffCoefR)
 
        RadDiffCoef = 0.5*(DiffCoefL + DiffCoefR)
        DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = RadDiffCoef
@@ -328,7 +325,7 @@ contains
        RadDiffCoef = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
+    EradFlux = -RadDiffCoef*sum(FFV%Normal_D*FaceGrad_D)
 
     end associate
   contains
