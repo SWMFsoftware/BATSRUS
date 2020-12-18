@@ -165,6 +165,8 @@ contains
     if(DoTest)write(*,*) &
          NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
+    !$acc update device(State_VGB)
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_initial_condition
   !============================================================================

@@ -233,6 +233,8 @@ contains
             true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
     end if
 
+    !$acc update device(true_cell)
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_block_geometry
   !============================================================================

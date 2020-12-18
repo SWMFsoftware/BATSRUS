@@ -52,6 +52,7 @@ module ModMain
   real :: Cfl
   real :: CflOrig
   real, allocatable :: Dt_BLK(:)
+  !$acc declare create(Dt_BLK)
   logical :: time_accurate = .true.,  time_loop = .false.
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
@@ -107,6 +108,7 @@ module ModMain
 
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
+  !$acc declare create(UseB0)
 
   ! Inner and outer boundaries
 
@@ -199,6 +201,7 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
+  !$acc declare create(SpeedHyp, UseHyperbolicDivb)
 
   ! More numerical scheme parameters
   ! Prolongation order
@@ -330,6 +333,7 @@ contains
     if(.not.allocated(dt_BLK))then
        allocate(dt_BLK(MaxBlock))
        dt_BLK = 0.0
+       !$acc update device(Dt_BLK)
     end if
   end subroutine init_mod_main
   !============================================================================

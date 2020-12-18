@@ -36,11 +36,13 @@ module ModPhysics
   real:: Gamma_I(nFluid)          = Gamma0
   real:: GammaMinus1_I(nFluid)    = Gamma0 - 1.0
   real:: InvGammaMinus1_I(nFluid) = 1.0/(Gamma0 - 1.0)
+  !$acc declare create(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
 
   ! adiabatic index (gamma) and derived values for the first/total fluid
   real :: Gamma          = Gamma0
   real :: GammaMinus1    = Gamma0 - 1.0
   real :: InvGammaMinus1 = 1.0/(Gamma0 - 1.0)
+  !$acc declare create(Gamma, GammaMinus1, InvGammaMinus1)
 
   ! adiabatic index (gamma) and derived values for electrons
   real :: GammaElectron          = Gamma0
@@ -712,6 +714,8 @@ contains
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
+    !$acc update device(SpeedHyp)
+    
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================

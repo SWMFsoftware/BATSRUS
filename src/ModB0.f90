@@ -56,10 +56,12 @@ module ModB0
 
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
+  !$acc declare create(B0_DGB)
 
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
+  !$acc declare create(B0_DX, B0_DY, B0_DZ)  
 
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)

@@ -156,16 +156,19 @@ module ModAdvance
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
   real, allocatable :: Energy_GBI(:,:,:,:,:)
+  !$acc declare create(State_VGB, Energy_GBI)
 
   ! Block cell-centered MHD solution old state
   real, allocatable :: StateOld_VGB(:,:,:,:,:)
   real, allocatable :: EnergyOld_CBI(:,:,:,:,:)
+  !$acc declare create(StateOld_VGB, EnergyOld_CBI)
 
   ! Block cell-centered intrinsic magnetic field, time, and temporary storage
   real, allocatable :: tmp1_BLK(:,:,:,:)
   real, allocatable :: tmp2_BLK(:,:,:,:)
 
   real, allocatable :: time_BLK(:,:,:,:)
+  !$acc declare create(time_BLK)
 
   ! Electric field including numerical flux
   real, allocatable :: ExNum_CB(:,:,:,:)
@@ -178,6 +181,7 @@ module ModAdvance
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
   real :: SourceMhd_VC(RhoUx_:RhoUz_, nI, nJ, nK)
   !$omp threadprivate( Source_VC, SourceMhd_VC )
+  !$acc declare create( Source_VC, SourceMhd_VC )
 
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -207,6 +211,10 @@ module ModAdvance
   !$omp threadprivate( LeftState_VX, RightState_VX )
   !$omp threadprivate( LeftState_VY, RightState_VY )
   !$omp threadprivate( LeftState_VZ, RightState_VZ )
+  !$acc declare create(LeftState_VX,RightState_VX)
+  !$acc declare create(LeftState_VY,RightState_VY)
+  !$acc declare create(LeftState_VZ,RightState_VZ)
+
 
   ! Face centered div(U)*dl
   real, allocatable:: FaceDivU_IX(:,:,:,:)
@@ -217,11 +225,13 @@ module ModAdvance
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
   !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
-
+  !$acc declare create(VdtFace_X, VdtFace_Y, VdtFace_Z)
+  
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
   !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
-
+  !$acc declare create( Flux_VX, Flux_VY, Flux_VZ )
+  
   ! Cell centered fluxes
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
@@ -241,6 +251,7 @@ module ModAdvance
   real, allocatable:: &
        uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)
   !$omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
+  !$acc declare create( uDotArea_XI, uDotArea_YI, uDotArea_ZI )  
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
   real, allocatable:: &
@@ -260,6 +271,7 @@ module ModAdvance
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
        MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), MhdFlux_VZ(:,:,:,:)
   !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
+  !$acc declare create(MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ)  
 
   ! Merge cells around the polar axis in spherical geometry
   logical :: DoFixAxis = .false.
@@ -378,6 +390,8 @@ contains
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
     end if
 
+    !$acc update device(State_VGB, Energy_GBI, StateOld_VGB, Energy_GBI)
+    
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_advance
   !============================================================================

@@ -27,7 +27,7 @@ contains
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
-    use ModGeometry,   ONLY: Body_BLK
+    use ModGeometry,   ONLY: Body_BLK, true_BLK
     use ModBlockData,  ONLY: set_block_data
     use ModImplicit,   ONLY: UsePartImplicit
     use ModPhysics,    ONLY: No2Si_V, UnitT_, UseBody2Orbit
@@ -63,6 +63,9 @@ contains
     ! Perform multi-stage update of solution for this time (iteration) step
     call timing_start(NameSub)
 
+    !OPTIMIZE: Is there a better place to update true_BLK? --Yuxi
+    !$acc update device(true_BLK)
+    
     if(UseBody2Orbit) call update_secondbody
 
     STAGELOOP: do iStage = 1, nStage

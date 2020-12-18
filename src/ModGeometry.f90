@@ -50,6 +50,7 @@ module ModGeometry
 
   ! true when all cells in block (not including ghost cells) are true_cells
   logical, allocatable :: true_BLK(:)
+  !$acc declare create(true_BLK)
 
   ! Number of true cells (collected for processor 0)
   integer :: nTrueCells = -1
