@@ -679,8 +679,9 @@ contains
   subroutine pic_set_cell_status
 
     use BATL_lib, ONLY: &
-         nDim, x_, y_, z_, find_grid_block, iNode_B, &
-         nI, nJ, nK, Xyz_DGB, block_inside_regions
+         nDim, x_, y_, z_, find_grid_block, iNode_B,&
+         nI, nJ, nK, Xyz_DGB, nBlock, Unused_B,&
+         block_inside_regions, CoordMin_DB, CoordMax_DB
     use BATL_Region, ONLY: points_inside_region, &
          is_point_inside_regions
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
@@ -692,13 +693,15 @@ contains
          iP, jP, kP, iPExt, jPExt, kPExt
 
     real:: r
+    real:: CoordMinPic_D(nDim), CoordMaxPic_D(nDim)
     real:: XyzPic_D(nDim)=0.0, XyzMhd_D(MaxDim)=0.0, &
-         XyzMhdExtend_D(nDim)=0.0
-    integer:: iBlock, iProcFound, iCell_D(MaxDim)
+         XyzPatchMhd_D(MaxDim)=0.0, XyzMhdExtend_D(nDim)=0.0
+    integer:: iBlock, iBlockFound, iProcFound, iCell_D(MaxDim)
     integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
-    integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0
+    integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
+         IndPatchMin_D(3) = 0, IndPatchMax_D(3) = 0
 
-    logical:: DoTest
+    logical:: DoTest, IsTestPoint
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -713,81 +716,108 @@ contains
        RETURN
     end if
 
-    ! TODO: A better algorithm: Loop through MHD cells,
-    ! find the intersecting PIC pacthes and limit the
-    ! loop range of PIC patches to make it scale
     do iRegion = 1, nRegionPic
+
        nX = PatchSize_DI(x_, iRegion)
        nY = PatchSize_DI(y_, iRegion)
        nZ = PatchSize_DI(z_, iRegion)
 
-       ! loop through FLEKS patches
-       do iP = 0, nX - 1; do jP = 0, nY - 1; do kP = 0, nZ - 1
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
 
-          call get_point_status(Status_I(&                                                             
-               StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-               nX, nY, nZ, iP, jP, kP, iStatus)
-          ! if this patch is turned on, skip
-          if(iStatus==iPicOn_) CYCLE
+          ! Then convert to PIC xyz
+          call mhd_to_pic_vec(iRegion, CoordMin_DB(:, iBlock),&
+               CoordMinPic_D(1:nDim))
+          call mhd_to_pic_vec(iRegion, CoordMax_DB(:, iBlock),&
+               CoordMaxPic_D(1:nDim))
+          ! Then convert to patch indices
+          call coord_to_patch_index(iRegion, CoordMinPic_D(1:nDim),&
+               IndPatchMin_D(1:nDim))
+          call coord_to_patch_index(iRegion, CoordMaxPic_D(1:nDim),&
+               IndPatchMax_D(1:nDim))
 
-          ! current working patch 
-          iPatch_D = [iP, jP, kP]
+          ! loop through FLEKS patches in this MHD block
+          do iP = max(IndPatchMin_D(x_), 0), min(IndPatchMax_D(x_), nX - 1)
+             do jP = max(IndPatchMin_D(y_), 0), min(IndPatchMax_D(y_), nY - 1)
+                do kP = max(IndPatchMin_D(z_), 0), min(IndPatchMax_D(z_), nZ - 1)
 
-          ! loop through cells in this patch
-          do i = 0, nCellPerPatch - 1; do j =0, nCellPerPatch - 1; do k = 0, nCellPerPatch - 1
-
-             ! get coordinate of patch coordinate
-             XyzMhd_D(1:nDim) = iPatch_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)*&
-                  nCellPerPatch + XyzMinPic_DI(1:nDim, iRegion)
-             ! cell coordinate of i,j,k
-             iPatchCell_D = [i, j, k]
-             XyzMhd_D(1:nDim) = XyzMhd_D(1:nDim) +&
-                  (iPatchCell_D(1:nDim) + 0.5) * DxyzPic_DI(1:nDim,iRegion) 
-
-             call find_grid_block(XyzMhd_D, iProcFound, iBlock, iCellOut_D=iCell_D)
-
-             if(iProcFound /= iProc) CYCLE
-
-             ! first check if #PICREGIONMIN is defined and turn on cell inside it
-             if(allocated(iRegionPic_I)) then
-                if(is_point_inside_regions(iRegionPic_I, XyzMhd_D)) then
-                   call set_point_status(Status_I(&
+                   call get_point_status(Status_I(&
                         StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-                        nX, nY, nZ, iP, jP, kP, iPicOn_)
-                   CYCLE
-                endif
-             end if ! end check #PICREGIONMIN
+                        nX, nY, nZ, iP, jP, kP, iStatus)
+                   ! if this patch is turned on, skip
+                   if(iStatus==iPicOn_) CYCLE
 
-             ! set logical value for #PICREGIONMAX
-             if(allocated(iRegionPicLimit_I)) then
-                if(.not. is_point_inside_regions(iRegionPicLimit_I, XyzMhd_D)) CYCLE
-             end if
+                   ! current patch 
+                   iPatch_D = [iP, jP, kP]
+                   call patch_index_to_coord(iRegion, iPatch_D, "Mhd", XyzPatchMhd_D)
+                   
+                   ! loop through cells in this patch
+                   do i = 0, nCellPerPatch - 1; do j = 0, nCellPerPatch - 1; do k = 0, nCellPerPatch - 1
 
-             if(allocated(IsPicCrit_CB)) then
-                if(.not. IsPicCrit_CB(iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock)>0.0)&
-                     CYCLE
-             end if
+                      ! cell coordinate of i,j,k
+                      iPatchCell_D = [i, j, k]
+                      ! get cell coordinate in the patch
+                      XyzMhd_D(1:nDim) = XyzPatchMhd_D(1:nDim)+&
+                           (iPatchCell_D(1:nDim)+0.5)*DxyzPic_DI(1:nDim, iRegion) 
 
-             ! Also switching on the surrounding patches. 
-             do iPExt = max(iP - nPatchExtend_D(x_), 0), &
-                  min(iP + nPatchExtend_D(x_), nX-1)
-                do jPExt = max(jP - nPatchExtend_D(y_), 0), &
-                     min(jP + nPatchExtend_D(y_), nY-1)
-                   do kPExt = max(kP - nPatchExtend_D(z_), 0), &
-                        min(kP + nPatchExtend_D(z_), nZ-1)                            
+                      call find_grid_block(XyzMhd_D, iProcFound, iBlockFound,&
+                           iCellOut_D=iCell_D)
 
-                      call set_point_status(Status_I(&
-                           StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-                           nX, nY, nZ, iPExt, jPExt, kPExt, iPicOn_)
+                      ! IsTestPoint = .false.
+                      ! if(abs(XyzMhd_D(x_)+5.0)<0.1 .and. abs(XyzMhd_D(y_)+6.5)<0.1) IsTestPoint = .true.
+                      ! if(IsTestPoint) print*, "!!",&
+                      !      Xyz_DGB(:, iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock),&
+                      !      iCell_D, iBlock, iBlockFound
 
-                   enddo
-                enddo
-             enddo
+                      ! This seems to be neccessary
+                      ! find_grid_block returns two different blocks for some points
+                      if(iBlock /= iBlockFound) CYCLE
+                      
+                      ! first check if #PICREGIONMIN is defined and turn on cell inside it
+                      if(allocated(iRegionPic_I)) then
+                         if(is_point_inside_regions(iRegionPic_I, XyzMhd_D)) then
+                            call set_point_status(Status_I(&
+                                 StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                 nX, nY, nZ, iP, jP, kP, iPicOn_)
+                            CYCLE
+                         endif
+                      end if ! end check #PICREGIONMIN
 
+                      if(allocated(iRegionPicLimit_I)) then
+                         if(.not. is_point_inside_regions(iRegionPicLimit_I, XyzMhd_D)) CYCLE
+                      end if
 
-          end do; end do; end do ! end looping cells
-       end do; end do; end do ! end looping patches
+                      if(allocated(IsPicCrit_CB)) then
+                         if(IsPicCrit_CB(iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock)/=iPicOn_)&
+                              CYCLE
+                      end if
 
+                      ! In case just use #PICREGIONMIN to control the PIC shape
+                      if(.not. allocated(IsPicCrit_CB)) CYCLE
+
+                      ! Also switching on the surrounding patches. 
+                      do iPExt = max(iP - nPatchExtend_D(x_), 0), &
+                           min(iP + nPatchExtend_D(x_), nX-1)
+                         do jPExt = max(jP - nPatchExtend_D(y_), 0), &
+                              min(jP + nPatchExtend_D(y_), nY-1)
+                            do kPExt = max(kP - nPatchExtend_D(z_), 0), &
+                                 min(kP + nPatchExtend_D(z_), nZ-1)                            
+
+                               call set_point_status(Status_I(&
+                                    StatusMin_I(iRegion):StatusMax_I(iRegion)),&
+                                    nX, nY, nZ, iPExt, jPExt, kPExt, iPicOn_)
+
+                            enddo
+                         enddo
+                      enddo
+                      
+                   end do; end do; end do ! end looping cells
+
+                end do
+             end do
+          end do
+
+       end do ! end loop blocks
     end do ! end loop thorugh regions
 
     ! Global MPI reduction for Status_I array
@@ -1086,8 +1116,10 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
-    IndexPatchOut_D(1:nDim) = floor( (CoordPicIn_D - XyzMinPic_DI(1:nDim, iRegion))/ &
-         (DxyzPic_DI(1:nDim, iRegion) * nCellPerPatch) )
+    IndexPatchOut_D(1:nDim) = floor(&
+         CoordPicIn_D/&
+         (DxyzPic_DI(1:nDim, iRegion) * nCellPerPatch)&
+         )
 
     call test_stop(NameSub, DoTest)
   end subroutine coord_to_patch_index
@@ -1163,6 +1195,8 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
+    if(.not. allocated(IsPicCrit_CB)) RETURN
+    
     if(nCriteriaPic==0) then
        IsPicCrit_CB = iPicOn_
        RETURN
