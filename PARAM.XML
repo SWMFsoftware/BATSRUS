@@ -8104,49 +8104,47 @@ This default is backwards compatible with previous versions of the code.
 </command>
 
 <command name="LOOKUPTABLE" multiple="T">
-	<parameter name="NameTable" type="string" length="$lLine"/>
-	<parameter name="NameCommand" type="string" case="lower"
-	    input="select">
-		<option name="load" default="T"/>
-		<option name="use"/>
-		<option name="use param"/>
-		<option name="save"/>
-		<option name="save param"/>
-		<option name="make"/>
-		<option name="make param"/>
-		<option name="param"/>
-	</parameter>
-	<if expr="$NameCommand =~ /load|save|use/">
-		<parameter name="NameFile" type="string" length="$lLine"/>
-		<parameter name="TypeFile" type="string" input="select">
-			<option name="real8"  default="T"/>
-			<option name="real4"/>
-			<option name="ascii"/>
-		</parameter>
-	</if>
-	<if expr="$NameCommand =~ /param/">
-	        <parameter name="NameTableParam" type="string" length="$lLine"/>
-		<for from="1" to="count_split($NameTableParam)">
-		     <parameter name="TableParam" type="real"/>
-		</for>
-	</if>
-	<if expr="$NameCommand =~ /make|save|use/">
-		<parameter name="StringDescription" type="string"
-							  length="$lLine"/>
-		<parameter name="NameVar"   type="string" length="$lLine"/>
-		<parameter name="nIndex"    type="integer" min="1"/>
-		<for name="i" from="1" to="$nIndex">
-			<parameter name="nIndex$i" type="integer" min="2"/>
-			<parameter name="Index${i}Min" type="real"/>
-			<parameter name="Index${i}Max" type="real"/>
-		</for>
-	</if>
+  <parameter name="NameTable" type="string" length="$lLine"/>
+  <parameter name="NameCommand" type="string" case="lower" input="select">
+    <option name="load" default="T"/>
+    <option name="use"/>
+    <option name="use param"/>
+    <option name="save"/>
+    <option name="save param"/>
+    <option name="make"/>
+    <option name="make param"/>
+    <option name="param"/>
+  </parameter>
+  <parameter name="NameFile" type="string" length="$lLine"
+	     if="$NameCommand =~ /load|save|use/" />
+  <parameter name="TypeFile" type="string" input="select"
+	     if="$NameCommand ne 'param'">
+    <option name="real8"/>
+    <option name="real4" default="T"/>
+    <option name="ascii"/>
+  </parameter>
+  <if expr="$NameCommand =~ /param/">
+    <parameter name="NameTableParam" type="string" length="$lLine"/>
+    <for from="1" to="count_split($NameTableParam)">
+      <parameter name="TableParam" type="real"/>
+    </for>
+  </if>
+  <if expr="$NameCommand =~ /make|save|use/">
+    <parameter name="StringDescription" type="string" length="$lLine"/>
+    <parameter name="NameVar"           type="string" length="$lLine"/>
+    <parameter name="nIndex"            type="integer" min="1"/>
+    <for name="i" from="1" to="$nIndex">
+      <parameter name="nIndex$i" type="integer" min="2"/>
+      <parameter name="Index${i}Min" type="real"/>
+      <parameter name="Index${i}Max" type="real"/>
+    </for>
+  </if>
 
 #LOOKUPTABLE
 p(rho,e)			NameTable
 use param			NameCommand (use, load, save, make, param)
-table1.out			NameFile (read this unless "make")
-ascii				TypeFile (read this unless "make")
+table1.out			NameFile (read this if use/load/save)
+real4				TypeFile (read this unless "param")
 zXe zBe nPl			NameTableParam (if NameCommand has "param")
 54.0				TableParam number of protons in Xenon
 4.0				TableParam number of protons in Beryllium
@@ -8174,7 +8172,11 @@ then the NameTableParam variable and the TableParam values of table
 parameters are read from the input file and stored into the table.
 
 The file name and file type ("ascii", "real4" or "real8") of the table
-are read when NameCommand contains "load", "save", or "use".
+are read when NameCommand contains "load", "save", or "use". The TypeFile
+is also read for "make", because setting it to "real4" implies the
+use of single precision storage internally as well. This saves a factor
+of two in storage (both disk and memory), which may be very significant
+for large lookup tables. In fact, TypeFile=real4 is the recommended setting.
 
 The rest of the parameters are read for commands "make", "save" or "use".
 The NameVar string contains the space separated list of the names of
