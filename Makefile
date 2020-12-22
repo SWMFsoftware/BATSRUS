@@ -36,6 +36,7 @@ help:
 	@echo '    CRASH   (Code for Radiative Shock Hydrodynamics)'
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
+	@echo '    INTERPOLATE (INTERPOLATE.exe interpolates points from *.outs movies)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
 	@echo '    TIME_CONV (TIME_CONV.exe converts the Carrington time to the usual one)'
@@ -109,6 +110,13 @@ PIDL:
 	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.
+	@echo ' '
+
+INTERPOLATE:
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd srcPostProc; make INTERPOLATE
+	@echo ' '
+	@echo Program INTERPOLATE has been brought up to date.
 	@echo ' '
 
 SNAPSHOT:
