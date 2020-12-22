@@ -320,11 +320,12 @@ contains
     allocate(Var_VII(nVar,n1,n2))
 
     ! Get coordinate limits
-    call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
+    call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
+         VarOut_VII=Var_VII, &
          CoordMinOut_D=CoordMin_D, CoordMaxOut_D=CoordMax_D, iErrorOut=iError)
 
     if(iError /= 0)then
-       write(*,*) NameProgram//': could not read first snapshot'
+       write(*,*) NameProgram//': could not read first snapshot, iError=', iError
        STOP
     end if
     
@@ -344,7 +345,8 @@ contains
     ! Read the whole file through to get the number of snapshots
     nSnapshot = 1
     do
-       call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
+       call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
+            VarOut_VII=Var_VII, &
             TimeOut = Time, iErrorOut=iError)
        if(iError /= 0) EXIT
        if(IsTrajectory)then
@@ -452,8 +454,8 @@ contains
        ! Read next snapshot from .outs file
        call read_plot_file( &
             NameFile = NameFileIn,              &
-            iUnitIn = UnitTmp_,                 &
             TypeFileIn = TypeFileIn,            &
+            iUnitIn = UnitTmp_,                 &
             CoordOut_DII = Coord_DII(:,:,1:n2), &
             VarOut_VII = Var_VII(:,:,1:n2),     &
             TimeOut = Time)                        ! simulation time
