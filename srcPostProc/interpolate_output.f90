@@ -104,7 +104,7 @@ contains
     if(iError /= 0)then
        write(*,*) NameProgram,': could not read date from file name ', &
             trim(NameFileIn)
-       stop
+       STOP
     end if
     call time_int_to_real(iTime_I, StartTime)
     write(*,*) NameProgram,': StartTime=', iTime_I
@@ -124,7 +124,8 @@ contains
     case('ascii','real4','real8')
        write(*,'(a)') trim(TypeFileIn)
     case default
-       stop NameProgram//': incorrect TypeFileIn='//TypeFileIn
+       write(*,*) NameProgram//': incorrect TypeFileIn='//TypeFileIn
+       STOP
     end select
     write(*,'(a)', ADVANCE='NO') 'Name of file containing positions:      '
     read(*,'(a)',iostat=iError) NameFilePoints
@@ -178,7 +179,10 @@ contains
     ! Read the header first
     do
        read(UnitTmp_,'(a)',iostat=iError) StringLine
-       if(iError /= 0) stop NameProgram//': no #START in position file'
+       if(iError /= 0)then
+          write(*,*) NameProgram//': no #START in position file'
+          STOP
+       end if
        if(StringLine(1:5) == '#COOR') &
             read(UnitTmp_,'(a3)') NameCoordPoint
        if(index(StringLine, '#START') > 0) EXIT
@@ -217,8 +221,10 @@ contains
           if(StringLine(1:3) == 'DST') read(UnitTmp_,'(a)') StringLine
 
           read(StringLine, *, iostat=iError) NameMag_I(iPoint), Lat, Lon
-          if(Lon < -360 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90) stop &
-               NameProgram//': incorrect Lat, Lon values in '//trim(StringLine)
+          if(Lon < -360 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90)then
+             write(*,*) NameProgram//': incorrect Lat, Lon values in '//trim(StringLine)
+             STOP
+          end if
           if(Lon < 0) Lon = Lon + 360
           CoordPoint_DI(:,iPoint) = [ Lon, Lat ]
        else
@@ -227,7 +233,7 @@ contains
        if(iError /= 0)then
           write(*,*) NameProgram,': error reading line ',iPoint,':'
           write(*,*) trim(StringLine)
-          stop
+          STOP
        end if
 
        if(IsTrajectory)then
@@ -272,8 +278,11 @@ contains
     write(*,*) NameProgram,': nDim=', nDim, ', nVar=', nVar, ', NameVar=', &
          trim(NameVar)
 
-    if(nDim /= 2) stop NameProgram//' only works for 2D input file for now'
-    
+    if(nDim /= 2)then
+       write(*,*) NameProgram//' only works for 2D input file for now'
+       STOP
+    end if
+
     if(IsMagStation)then
        ! Extract coordinate system
        if(index(StringHeader, 'GEO') > 0) NameCoordIn = 'GEO'
@@ -314,7 +323,10 @@ contains
     call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, VarOut_VII=Var_VII, &
          CoordMinOut_D=CoordMin_D, CoordMaxOut_D=CoordMax_D, iErrorOut=iError)
 
-    if(iError /= 0) stop NameProgram//': could not read first snapshot'
+    if(iError /= 0)then
+       write(*,*) NameProgram//': could not read first snapshot'
+       STOP
+    end if
     
     dCoord_D = (CoordMax_D - CoordMin_D)/ [n1-1, n2-1]
 
