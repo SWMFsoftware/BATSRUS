@@ -1,8 +1,8 @@
 MDI_small.dat
    0    0.0    -2  3  2
    3    1
-   1    2044    180.0
-n m g h nOrder CR LonCentral
+   1    2044    0.0
+n m g h nOrder CR dLon
        0       0      0.00000      0.00000
        1       0     20.00000      0.00000
        1       1     10.00000      0.00000
