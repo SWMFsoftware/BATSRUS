@@ -348,6 +348,7 @@ contains
        call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
             VarOut_VII=Var_VII, &
             TimeOut = Time, iErrorOut=iError)
+
        if(iError /= 0) EXIT
        if(IsTrajectory)then
           if(Time < TrajTime_I(1)) CYCLE  ! before start of trajectory file
@@ -378,8 +379,13 @@ contains
 
     do iSnapshot = 1, nSnapshot
        ! Read variable and time
-       call read_plot_file(NameFileIn, iUnitIn=UnitTmp_, &
+       call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
             TimeOut = Time, VarOut_VII=Var_VII, iErrorOut=iError)
+
+       if(iError /= 0)then
+          write(*,*) NameProgram,' ERROR reading iSnapshot,iError=', iSnapshot,iError
+          EXIT
+       end if
 
        call time_real_to_int(StartTime + Time, iTime_I)
        iTime_II(:,iSnapshot) = iTime_I(1:6)
