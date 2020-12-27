@@ -1,0 +1,118 @@
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#CHECKGRIDSIZE
+1024			nI
+1			nJ
+1			nK
+1			MinBlockALL
+
+#UPDATECHECK
+F			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-128.			xMin
+ 128.			xMax
+-0.125			yMin
+ 0.125			yMax
+-0.125			zMin
+ 0.125			zMax
+
+Brio-Wu MHD shock tube problem rotated around Z axis
+#GAMMA
+2.0			Gamma
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+4.0			SpeedHypDim
+0.1			HypDecay
+
+#DIVB
+F			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#SHOCKTUBE
+1.			Rho (left state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+1.			By
+0.			Bz
+0.			Hyp
+1.			P
+0.125			rho (right state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+-1.			By
+0.			Bz
+0.0			Hyp
+0.1			P
+
+
+Sheared boundary condition is used for non-zero shock slope
+#OUTERBOUNDARY
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#TIMESTEPPING
+1			nStage
+0.8			CflExpl
+
+#FIXEDTIMESTEP
+T                       UseDtFixed
+0.05                    DtFixedDim [sec] (read if UseDtFixed is true)
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+
+#SAVELOGFILE
+F			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+
+#SAVEPLOT
+1			nPlotFile
+1d mhd idl_ascii	StringPlot
+-1			DnSavePlot
+30.0			DtSavePlot
+0.0			DxSavePlot
+
+The grid size is 256, so the final time corresponds to the usual 0.1
+#STOP
+-1			MaxIteration
+25.6			tSimulationMax
+

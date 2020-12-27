@@ -46,6 +46,7 @@ test_help:
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_shocktube             (run shocktube test)"
+	@echo "    test_shocktube_1d          (run 1D shocktube test)"	
 	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
@@ -237,6 +238,38 @@ test_shocktube_check:
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
 	ls -l test_shocktube.diff
+
+### 1D SHOCK TUBE TEST ###
+
+test_shocktube_1d:
+	@echo "test_shocktube_1d_compile..." > test_shocktube_1d.diff
+	$(MAKE) test_shocktube_1d_compile
+	@echo "test_shocktube_1d_rundir..." >> test_shocktube_1d.diff
+	$(MAKE) test_shocktube_1d_rundir
+	@echo "test_shocktube_1d_run..." >> test_shocktube_1d.diff
+	$(MAKE) test_shocktube_1d_run
+	@echo "test_shocktube_1d_check..." >> test_shocktube_1d.diff
+	$(MAKE) test_shocktube_1d_check
+
+test_shocktube_1d_compile:
+	./Config.pl -noopenmp -u=Default -e=MhdHyp -g=1024,1,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_shocktube_1d_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp.1d PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_shocktube_1d_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+
+test_shocktube_1d_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/1d_*t25.6*.out \
+		Param/SHOCKTUBE/TestOutput/mhdhyp_1d_ref.out \
+		> test_shocktube_1d.diff)
+	ls -l test_shocktube_1d.diff
 
 
 ### SHOCKRAMP TEST ###
