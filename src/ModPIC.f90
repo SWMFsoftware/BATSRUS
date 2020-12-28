@@ -744,8 +744,6 @@ contains
                    call get_point_status(Status_I(&
                         StatusMin_I(iRegion):StatusMax_I(iRegion)),&
                         nX, nY, nZ, iP, jP, kP, iStatus)
-                   ! if this patch is turned on, skip
-                   if(iStatus==iPicOn_) CYCLE
 
                    ! current patch 
                    iPatch_D = [iP, jP, kP]
