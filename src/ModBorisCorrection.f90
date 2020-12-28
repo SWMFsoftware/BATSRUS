@@ -32,7 +32,7 @@ module ModBorisCorrection
   logical, public:: UseBorisRegion = .false.
   logical, public:: UseBorisCorrection = .false.
   logical, public:: UseBorisSimple = .false.
-  !$acc declare create(UseBorisRegion)
+  !$acc declare create(UseBorisRegion, UseBorisCorrection, UseBorisSimple)
 
   ! Electric field . area vector for div(E) in Boris correction
   real, allocatable, public:: &
@@ -42,7 +42,7 @@ module ModBorisCorrection
   ! Speed of light at cell centers and cell faces
   real, allocatable, public:: Clight_G(:,:,:), Clight_DF(:,:,:,:)
   !$omp threadprivate( Clight_G, Clight_DF )
-  !$acc declare create(Clight_G)
+  !$acc declare create(Clight_G, Clight_DF)
 
   ! Local variables ---------------
 
@@ -73,6 +73,7 @@ contains
     end if
     !$omp end parallel
 
+    !$acc update device(UseBorisCorrection)
   end subroutine init_mod_boris_correction
   !============================================================================
 
@@ -128,6 +129,7 @@ contains
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
     end select
 
+    !$acc update device(UseBorisRegion, UseBorisCorrection, UseBorisSimple)
   end subroutine read_boris_param
   !============================================================================
   subroutine mhd_to_boris(iBlock)
@@ -689,7 +691,7 @@ contains
     else
        Clight_DF = cLightSpeed * Si2No_V(UnitU_)
     end if
-
+    !$acc update device(Clight_DF)
   end subroutine set_clight_face
   !============================================================================
 

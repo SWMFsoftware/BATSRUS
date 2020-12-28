@@ -34,10 +34,12 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .false.
+  !$acc declare create(UseResistiveFlux)
   logical, public           :: UseJouleHeating  = .true.
   logical, public           :: UseHeatExchange  = .true.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
+  !$acc declare create(Eta_GB)
   real, public              :: Eta0=0.0, Eta0Si=0.0
   real, public              :: Si2NoEta
 
@@ -188,6 +190,7 @@ contains
        write(*,*)NameSub, ': JcritInv = ', JcritInv
     end if
 
+    !$acc update device(UseResistiveFlux, Eta_GB)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_resistivity
   !============================================================================

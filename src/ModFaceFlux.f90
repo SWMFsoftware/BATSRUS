@@ -5,7 +5,7 @@ module ModFaceFlux
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iDimTest, iProc
-!  use ModUtilities, ONLY: norm2
+  use ModUtilities, ONLY: norm2
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: UseB, UseB0, cLimit
@@ -46,7 +46,7 @@ module ModFaceFlux
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
   use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
   use omp_lib
-
+  
   implicit none
   save
 
@@ -70,17 +70,25 @@ module ModFaceFlux
   ! Logicals so we don't need string comparisons
   logical, public:: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
+  !$acc declare create(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
+  !$acc declare create(DoAw, DoRoeOld, DoRoe)
+  
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
-
+  !$acc declare create(DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
+  !$acc declare create(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
+  
   ! 1D Burgers' equation, works for Hd equations.
   logical, public:: DoBurgers = .false.
+  !$acc declare create(DoBurgers)
 
   logical :: UseLindeFix
+  !$acc declare create(UseLindeFix)
 
   ! Variables needed for Biermann battery term
   real, allocatable, public:: Pe_G(:,:,:)
   !$omp threadprivate( Pe_G )
+  !$acc declare create(Pe_G)
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -93,6 +101,7 @@ module ModFaceFlux
   ! Limit propagation speeds to reduce numerical diffusion
   logical, public:: UseClimit = .false.
   real :: ClimitDim = -1.0, rClimit = -1.0
+  !$acc declare create(UseClimit, ClimitDim, rClimit)
 
   ! One of the two possible ways to treat the MHD-like systems
   ! (partially symmetrizable, following the Godunov definition).
@@ -102,11 +111,14 @@ module ModFaceFlux
   ! to the number of waves, resulting in a well-posed Riemann problem.
   ! This approach is an alternative to the 8-wave scheme.
   logical :: UseRS7 = .false.
+  !$acc declare create(UseRS7)
 
   ! Local logical variables for various terms that may be switched off
   ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
        DoIonHeatConduction = .false., DoHallInduction = .false.
+  !$acc declare create(DoRadDiffusion,DoHeatConduction)
+  !$acc declare create(DoIonHeatConduction,DoHallInduction)
 
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
@@ -184,8 +196,72 @@ contains
 
     DoHallInduction = UseHallResist .and. .not. UseSemiHallResist
 
+    if(.not.allocated(Pe_G)) &
+         allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    
+    !$acc update device(DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld)
+    !$acc update device(DoAw, DoRoeOld, DoRoe)
+  
+    !$acc update device(DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral)
+    !$acc update device(DoAwNeutral, DoGodunovNeutral, DoHllcNeutral)
+
+    !$acc update device(UseLindeFix, UseRS7)
+
+    !$acc update device(DoRadDiffusion,DoHeatConduction)
+    !$acc update device(DoIonHeatConduction,DoHallInduction)
+    
+    !$acc update device(DoHallInduction, UseClimit, ClimitDim, rClimit)
   end subroutine init_mod_face_flux
   !============================================================================
+
+  subroutine set_block_values(iBlock, iDim, FFV)
+    !$acc routine seq
+    
+    integer, intent(in) :: iBlock, iDim
+    type(FaceFluxVarType), intent(inout) :: FFV
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_values'
+    !--------------------------------------------------------------------------
+    associate( &
+      iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
+      Area2 => FFV%Area2, Area => FFV%Area, &
+      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
+      InvDxyz => FFV%InvDxyz, &
+      NormalX => FFV%NormalX, NormalY => FFV%NormalY, NormalZ =>FFV%NormalZ )
+#ifndef OPENACC
+      call test_start(NameSub, DoTest, iBlock)
+#endif
+    iBlockFace = iBlock
+    iDimFace   = iDim
+
+    ! For generalized coordinates the values below are calculated cell by cell
+    if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN
+
+    ! Calculate face normal and area vectors for Cartesian grid
+    FFV%Normal_D = 0.0; FFV%Normal_D(iDim) = 1.0
+    NormalX = FFV%Normal_D(x_); NormalY = FFV%Normal_D(y_); NormalZ = FFV%Normal_D(z_)
+
+    Area = CellFace_DB(iDim,iBlockFace)
+    InvDxyz = 1./CellSize_DB(iDim,iBlockFace)
+    select case(iDim)
+    case(x_)
+       AreaX = Area; AreaY = 0.0; AreaZ = 0.0
+    case(y_)
+       AreaY = Area; AreaX = 0.0; AreaZ = 0.0
+    case(z_)
+       AreaZ = Area; AreaX = 0.0; AreaY = 0.0
+    end select
+    Area2 = Area**2
+
+#ifndef OPENACC
+    call test_stop(NameSub, DoTest, iBlock)
+#endif
+
+    end associate
+  end subroutine set_block_values
+  !============================================================================
+
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
     use ModAdvance,  ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
@@ -344,7 +420,21 @@ contains
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
+      !$acc declare create(FFV)
       !------------------------------------------------------------------------
+
+      !$acc update host(LeftState_VX, RightState_VX)
+      !$acc data present(uDotArea_XI, VdtFace_X, &
+      !$acc& LeftState_VX,RightState_VX, &
+      !$acc& Xyz_DGB, &
+      !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
+      !$acc& UseLindeFix, UseRS7, &
+      !$acc& CellFace_DB, &
+      !$acc& CellSize_DB, &
+      !$acc& true_cell, &
+      !$acc& Flux_VX)
+
+      
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
          iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
@@ -354,14 +444,18 @@ contains
          Enormal => FFV%Enormal, &
          B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
          Area => FFV%Area, &
-         iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
+         iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )      
 
-        !$acc update host(LeftState_VX, RightState_VX)
-        
+#ifndef OPENACC
        call set_block_values(iBlock, x_, FFV)
-
+#endif
+             
+       !$acc parallel loop collapse(3) private(FFV) independent
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
-
+          
+#ifdef OPENACC
+          call set_block_values(iBlock, x_, FFV)
+#endif         
           call set_cell_values_x(FFV)
 
           if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
@@ -402,8 +496,10 @@ contains
          if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
+#ifndef OPENACC
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VX(:,iFace,jFace,kFace), FFV)
+#endif
          endif
 
          VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
@@ -435,7 +531,13 @@ contains
          end do; end do; enddo
       endif
 
-      end associate
+    end associate
+
+    !$acc end data
+    !$acc update host(Flux_VX, VdtFace_x, uDotArea_XI)
+    !$acc update host(VdtFace_x)
+    !$acc update host(uDotArea_XI)
+
     end subroutine get_flux_x
     !==========================================================================
 
@@ -446,6 +548,7 @@ contains
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
          iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
@@ -505,8 +608,10 @@ contains
          if(UseMhdMomentumFlux) MhdFlux_VY(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
+#ifndef OPENACC
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VY(:,iFace,jFace,kFace), FFV)
+#endif
          endif
 
          VdtFace_y(iFace,jFace,kFace) = CmaxDt*Area
@@ -539,7 +644,8 @@ contains
          end do; end do; enddo
       end if
 
-      end associate
+    end associate
+#endif
     end subroutine get_flux_y
     !==========================================================================
 
@@ -550,6 +656,7 @@ contains
       integer:: iFlux
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( &
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
          iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
@@ -562,10 +669,10 @@ contains
          DoTestCell => FFV%DoTestCell, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
-      call set_block_values(iBlock, z_, FFV)
+        call set_block_values(iBlock, z_, FFV)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-
+         
          DoTestCell = DoTest .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 
@@ -607,8 +714,10 @@ contains
          if(UseMhdMomentumFlux) MhdFlux_VZ(:,iFace,jFace,kFace) = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
+#ifndef OPENACC
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VZ(:,iFace,jFace,kFace), FFV)
+#endif
          endif
 
          VdtFace_z(iFace,jFace,kFace)       = CmaxDt*Area
@@ -638,11 +747,12 @@ contains
             enddo
          end do; end do; enddo
       end if
-      end associate
+    end associate
+#endif
     end subroutine get_flux_z
     !==========================================================================
 
-    subroutine add_artificial_viscosity(Flux_V, FFV)
+    subroutine add_artificial_viscosity(Flux_V, FFV)     
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
       ! equations.
@@ -724,49 +834,8 @@ contains
   end subroutine calc_face_flux
   !============================================================================
 
-  subroutine set_block_values(iBlock, iDim, FFV)
-    integer, intent(in) :: iBlock, iDim
-    type(FaceFluxVarType), intent(inout) :: FFV
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_block_values'
-    !--------------------------------------------------------------------------
-    associate( &
-      iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
-      Area2 => FFV%Area2, Area => FFV%Area, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
-      InvDxyz => FFV%InvDxyz, &
-      NormalX => FFV%NormalX, NormalY => FFV%NormalY, NormalZ =>FFV%NormalZ )
-
-    call test_start(NameSub, DoTest, iBlock)
-    iBlockFace = iBlock
-    iDimFace   = iDim
-
-    ! For generalized coordinates the values below are calculated cell by cell
-    if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN
-
-    ! Calculate face normal and area vectors for Cartesian grid
-    FFV%Normal_D = 0.0; FFV%Normal_D(iDim) = 1.0
-    NormalX = FFV%Normal_D(x_); NormalY = FFV%Normal_D(y_); NormalZ = FFV%Normal_D(z_)
-
-    Area = CellFace_DB(iDim,iBlockFace)
-    InvDxyz = 1./CellSize_DB(iDim,iBlockFace)
-    select case(iDim)
-    case(x_)
-       AreaX = Area; AreaY = 0.0; AreaZ = 0.0
-    case(y_)
-       AreaY = Area; AreaX = 0.0; AreaZ = 0.0
-    case(z_)
-       AreaZ = Area; AreaX = 0.0; AreaY = 0.0
-    end select
-    Area2 = Area**2
-
-    call test_stop(NameSub, DoTest, iBlock)
-
-    end associate
-  end subroutine set_block_values
-  !============================================================================
   subroutine set_cell_values(FFV)
+    !$acc routine seq
     type(FaceFluxVarType), intent(inout) :: FFV
     !--------------------------------------------------------------------------
     select case(FFV%iDimFace)
@@ -781,7 +850,7 @@ contains
   end subroutine set_cell_values
   !============================================================================
   subroutine set_cell_values_x(FFV)
-
+    !$acc routine seq
     type(FaceFluxVarType), intent(inout) :: FFV
 
     character(len=*), parameter:: NameSub = 'set_cell_values_x'
@@ -822,7 +891,7 @@ contains
   !============================================================================
 
   subroutine set_cell_values_y(FFV)
-
+    !$acc routine seq
     type(FaceFluxVarType), intent(inout) :: FFV
 
     character(len=*), parameter:: NameSub = 'set_cell_values_y'
@@ -859,7 +928,7 @@ contains
   !============================================================================
 
   subroutine set_cell_values_z(FFV)
-
+    !$acc routine seq
     type(FaceFluxVarType), intent(inout) :: FFV
 
     character(len=*), parameter:: NameSub = 'set_cell_values_z'
@@ -885,7 +954,7 @@ contains
   !============================================================================
 
   subroutine set_cell_values_common(FFV)
-
+    !$acc routine seq
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
 
@@ -929,9 +998,9 @@ contains
        FFV%Normal_D = [AreaX, AreaY, AreaZ]/Area
     end if
 
-    if(DoTestCell .and. .not.IsCartesian) &
-         write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,FFV%Normal_D=', &
-         Area2, AreaX, AreaY, AreaZ, FFV%Normal_D
+    ! if(DoTestCell .and. .not.IsCartesian) &
+    !      write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,FFV%Normal_D=', &
+    !      Area2, AreaX, AreaY, AreaZ, FFV%Normal_D
 
     iRight = iFace; jRight = jFace; kRight = kFace
 
@@ -998,7 +1067,7 @@ contains
           Climit = -1.0
        end if
 
-       if(DoTestCell)write(*,*) NameSub,': Climit=', Climit
+       ! if(DoTestCell)write(*,*) NameSub,': Climit=', Climit
     end if
 
     end associate
@@ -1006,20 +1075,23 @@ contains
   !============================================================================
 
   subroutine get_numerical_flux(Flux_V, FFV)
-
+    !$acc routine seq    
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
-    use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
-    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK    
+    
     use ModMultiFluid, ONLY: UseMultiIon, NeutralFirst_, ChargeIon_I, &
        iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
 
     use ModUserInterface ! user_material_properties
 
+#ifndef OPENACC
+    use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
+#endif
+    
     real, intent(out):: Flux_V(nFlux)
     type(FaceFluxVarType), intent(inout) :: FFV
 
@@ -1085,14 +1157,18 @@ contains
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) then
        if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
+#ifndef OPENACC
        call get_face_curl(iDimFace, iFace,jFace,kFace, iBlockFace, &
             IsNewBlockCurrent, b_DG, Current_D)
+#endif
        Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
-
+    
     ! Calculateing stress tensor for viscosity Visco_DDI
     if(ViscoCoeff > 0.0)then
+#ifndef OPENACC
        call get_viscosity_tensor(FFV)
+#endif
     end if
 
     if(Eta > 0.0)then
@@ -1110,10 +1186,6 @@ contains
     if(UseHallGradPe)then
 
        if(IsNewBlockGradPe)then
-
-          if(.not.allocated(Pe_G)) &
-               allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-
           ! Obtain electron pressure
           if(.not.UseIdealEos .and. .not.UseElectronPressure)then
              do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
@@ -1135,9 +1207,11 @@ contains
           end if
        end if
 
+#ifndef OPENACC
        ! Calculate face centered grad(Pe)
        call get_face_gradient(iDimFace, iFace,jFace,kFace, iBlockFace, &
             IsNewBlockGradPe, Pe_G, GradPe_D)
+#endif
 
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
@@ -1157,17 +1231,23 @@ contains
     end if
 
     if(DoRadDiffusion)then
+#ifndef OPENACC
        call get_radiation_energy_flux(FFV)
+#endif
        DiffCoef = DiffCoef + RadDiffCoef
     end if
 
     if(DoHeatConduction)then
+#ifndef OPENACC
        call get_heat_flux(FFV)
+#endif
        DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
     if(DoIonHeatConduction)then
+#ifndef OPENACC
        call get_ion_heat_flux(FFV)
+#endif
        DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
@@ -1198,12 +1278,14 @@ contains
 
           B0_D = [B0x,B0y,B0z]
 
+#ifndef OPENACC
           call get_dissipation_flux_mhd(FFV%Normal_D,         &
                FFV%StateLeft_V, FFV%StateRight_V,                 &
                B0_D, dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
                IsBoundary, .false.,                       &
                DissipationFlux_V, cMax, FFV%Unormal_I(1))
+#endif
 
           FFV%Unormal_I=FFV%Unormal_I(1)
        end if
@@ -1282,7 +1364,7 @@ contains
        if(DoSimple)then
           call simple_flux
        elseif(DoLf)then
-          call lax_friedrichs_flux
+          call lax_friedrichs_flux(State_V, Flux_V, StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight, FFV)
        elseif(DoHll)then
           call harten_lax_vanleer_flux
        elseif(DoLfdw .or. DoHlldw)then
@@ -1296,7 +1378,9 @@ contains
        elseif(DoRoe)then
           call roe_solver_new
        else
+#ifndef OPENACC
           call stop_mpi(NameSub//': Unknown flux type for ions')
+#endif
        end if
     end if
 
@@ -1333,7 +1417,7 @@ contains
        iVarMin = iRho; iVarMax = iP
        iEnergyMin = iEnergy; iEnergyMax = iEnergy
        if(DoLfNeutral)then
-          call lax_friedrichs_flux
+          call lax_friedrichs_flux(State_V, Flux_V, StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight, FFV)
        elseif(DoHllNeutral)then
           call harten_lax_vanleer_flux
        elseif(DoLfdwNeutral .or. DoHlldwNeutral)then
@@ -1345,7 +1429,9 @@ contains
        elseif(DoHllcNeutral)then
           call hllc_flux
        else
+#ifndef OPENACC
           call stop_mpi(NameSub//': Unknown flux type for neutrals')
+#endif
        end if
     end do
 
@@ -1369,11 +1455,13 @@ contains
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V,Un,MhdFlux_V)
-
+      !$acc routine seq
+      
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(RhoUx_:RhoUz_)
 
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( DiffBb => FFV%DiffBb)
 
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*FFV%Normal_D
@@ -1381,11 +1469,15 @@ contains
 !           MhdFlux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*FFV%Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
-      end associate
+    end associate
+#endif
     end subroutine modify_flux
     !==========================================================================
     subroutine roe_solver_new
+      !$acc routine seq
+      
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( CmaxDt => FFV%CmaxDt)
 
         Flux_V(1:p_) = 0.5*(FFV%FluxLeft_V(1:p_) + FFV%FluxRight_V(1:p_)) &
@@ -1396,12 +1488,15 @@ contains
         CmaxDt = Cmax
 
       end associate
+#endif
     end subroutine roe_solver_new
     !==========================================================================
     subroutine simple_flux
-
+      !$acc routine seq
+      
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( CmaxDt => FFV%CmaxDt )
 
       ! This is needed for the time step constraint only (CmaxDt)
@@ -1411,12 +1506,20 @@ contains
          call get_speed_max(State_V, FFV, Cmax_I = Cmax_I)
       end if
 
-      end associate
+    end associate
+#endif
     end subroutine simple_flux
     !==========================================================================
+    subroutine lax_friedrichs_flux(State_V, Flux_V, StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight, FFV)
+      !$acc routine seq
 
-    subroutine lax_friedrichs_flux
-
+      real, intent(in) :: State_V(:)
+      real, intent(out) :: Flux_V(:)
+      real, intent(in) :: StateLeftCons_V(:), StateRightCons_V(:)
+      real, intent(out) :: Cmax
+      real, intent(in) :: EnLeft, EnRight
+      type(FaceFluxVarType), intent(inout) :: FFV
+      
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
       associate( &
@@ -1465,11 +1568,13 @@ contains
     end subroutine lax_friedrichs_flux
     !==========================================================================
     subroutine harten_lax_vanleer_flux
-
+      !$acc routine seq
+      
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( &
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
@@ -1529,10 +1634,13 @@ contains
               Pe = WeightRight*PeRight   + WeightLeft*PeLeft
       end if
 
-      end associate
+    end associate
+#endif
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
     subroutine dominant_wave_flux(DoLf)
+      !$acc routine seq
+      
       use ModPhysics,  ONLY: Gamma_I
 
       logical, intent(in):: DoLf
@@ -1548,6 +1656,8 @@ contains
       ! Get the max, left and right speeds for HLL (and DW?)
 
       !------------------------------------------------------------------------
+
+#ifndef OPENACC
       associate( &
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
@@ -1675,17 +1785,20 @@ contains
               Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
 
-      end associate
+    end associate
+#endif
     end subroutine dominant_wave_flux
     !==========================================================================
     subroutine artificial_wind
-
+      !$acc routine seq
+      
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
 
       ! The propagation speeds are modified by the DoAw = .true. !
 
       !------------------------------------------------------------------------
+#ifndef OPENACC
       associate( &
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
@@ -1735,11 +1848,14 @@ contains
               Pe = WeightRight*PeRight + WeightLeft*PeLeft
       end if
 
-      end associate
+    end associate
+#endif
     end subroutine artificial_wind
     !==========================================================================
     subroutine hlld_flux
-
+      !$acc routine seq
+#ifndef OPENACC
+      
       ! The HLLD scheme works for single ion fluid only
 
       use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1
@@ -2063,11 +2179,14 @@ contains
       end if
 
       end associate
+#endif
     end subroutine hlld_flux
     !==========================================================================
 
     subroutine godunov_flux
-
+      !$acc routine seq
+#ifndef OPENACC
+      
       ! The Godunov flux works for hydro fluid (no magnetic field)
       ! Called for each fluid separately. Uses iFluid, iRho, ...
 
@@ -2227,10 +2346,14 @@ contains
       end if
 
       end associate
+#endif
     end subroutine godunov_flux
     !==========================================================================
 
     subroutine hllc_flux
+      !$acc routine seq
+#ifndef OPENACC
+      
       ! The HLLC scheme works for single ion fluid only
       ! HYDRO ONLY (NO MHD)
 
@@ -2301,10 +2424,14 @@ contains
       endif
 
       end associate
+#endif
     end subroutine hllc_flux
     !==========================================================================
 
     subroutine write_test_info
+      !$acc routine seq
+      
+#ifndef OPENACC
       integer :: iVar
       !------------------------------------------------------------------------
       associate( &
@@ -2344,7 +2471,8 @@ contains
               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
       end do
 
-      end associate
+    end associate
+#endif
     end subroutine write_test_info
     !==========================================================================
 
@@ -2353,7 +2481,8 @@ contains
 
   subroutine get_physical_flux(State_V, FFV, &
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
-
+    !$acc routine seq
+    
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy, UseAnisoPe
@@ -2456,7 +2585,8 @@ contains
           if(UseBorisCorrection)then
              call get_boris_flux
           else
-             call get_mhd_flux
+             call get_mhd_flux(State_V, Un, Flux_V, StateCons_V, Bx, By, Bz,&
+                  Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn, FFV)
           end if
        elseif(DoBurgers) then
           call get_burgers_flux
@@ -2472,7 +2602,8 @@ contains
              else
                 ! Momentum and energy fluxes now include the electric field
                 ! They need to be reassigned to HDFlux_V accordingly
-                call get_mhd_flux
+                call get_mhd_flux(State_V, Un, Flux_V, StateCons_V, Bx, By, Bz, &
+                     Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn, FFV)
              end if
           else
              ! Calculate HD flux for individual ion and neutral fluids
@@ -2620,7 +2751,8 @@ contains
     !==========================================================================
 
     subroutine get_boris_flux
-
+      !$acc routine seq
+#ifndef OPENACC
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
@@ -2755,12 +2887,23 @@ contains
       HallUn = Un
 
       end associate
+#endif
     end subroutine get_boris_flux
     !==========================================================================
-    subroutine get_mhd_flux
+    subroutine get_mhd_flux(State_V, Un, Flux_V, StateCons_V, Bx, By, Bz, Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn, FFV)
+      !$acc routine seq
+      
       use ModElectricField, ONLY: UseJCrossBForce
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
+
+      real, intent(in) :: State_V(:)
+      real, intent(out) :: Un
+      real, intent(out) :: Flux_V(:)
+      real, intent(out) :: StateCons_V(:)
+      real, intent(in) :: Bx, By, Bz, Bn, B0n, FullBx, FullBy, FullBz, FullBn
+      real, intent(inout) :: HallUn
+      type(FaceFluxVarType), intent(inout) :: FFV      
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -2936,8 +3079,8 @@ contains
             write(*,*) 'Flux_V(RhoUz_) =', FFV%MhdFlux_V(RhoUz_)
          end if
       end if
-
-      call get_magnetic_flux
+      
+      call get_magnetic_flux(State_V, Flux_V, FullBx, FullBy, FullBz, FullBn, HallUn, FFV)
       if(.not.IsMhd)RETURN
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + FFV%MhdFlux_V
       if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
@@ -2966,9 +3109,15 @@ contains
       end associate
     end subroutine get_mhd_flux
     !==========================================================================
-
-    subroutine get_magnetic_flux
-
+    subroutine get_magnetic_flux(State_V, Flux_V, FullBx, FullBy, FullBz, FullBn, HallUn, FFV)
+      !$acc routine seq
+   
+      real, intent(in) :: State_V(:)
+      real, intent(inout) :: Flux_V(:)
+      real, intent(in) :: FullBx, FullBy, FullBz, FullBn
+      real, intent(inout) :: HallUn
+      type(FaceFluxVarType), intent(inout) :: FFV
+      
       ! Calculate magnetic flux for multi-ion equations
       ! without a global ion fluid
 
@@ -3024,6 +3173,7 @@ contains
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
 
+#ifndef OPENACC
       if(DoTestCell)then
          write(*,*)'ChargeDens_I,InvElectronDens,InvRho=', &
               ChargeDens_I, InvElectronDens,InvRho
@@ -3033,13 +3183,15 @@ contains
          write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
       end if
+#endif      
 
       end associate
     end subroutine get_magnetic_flux
     !==========================================================================
 
     subroutine get_electro_magnetic_flux
-
+      !$acc routine seq
+#ifndef OPENACC      
       use ModPhysics, ONLY: Clight, C2light
 
       real :: Ex, Ey, Ez
@@ -3083,10 +3235,13 @@ contains
       end if
 
       end associate
+#endif
     end subroutine get_electro_magnetic_flux
     !==========================================================================
     subroutine get_hd_flux
-
+      !$acc routine seq
+#ifndef OPENACC
+      
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGammaMinus1_I
       use ModMultiFluid, ONLY: iPpar
@@ -3201,13 +3356,17 @@ contains
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
 
       end associate
+#endif
     end subroutine get_hd_flux
     !==========================================================================
 
     subroutine get_burgers_flux
+      !$acc routine seq
+#ifndef OPENACC
       !------------------------------------------------------------------------
       Flux_V = 0.0
       Flux_V(iRho) = 0.5*State_V(iRho)**2
+#endif      
     end subroutine get_burgers_flux
     !==========================================================================
 
@@ -3446,7 +3605,8 @@ contains
 
   subroutine get_speed_max(State_V, FFV, cMax_I, cLeft_I, cRight_I,&
        UseAwSpeedIn)
-
+    !$acc routine seq
+    
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
        iRhoIon_I, iUxIon_I, iUzIon_I, iPIon_I, &
        ElectronFirst_, IonFirst_, &
@@ -3505,7 +3665,8 @@ contains
              ! displacement current.
              call get_boris_speed
           else
-             call get_mhd_speed
+             call get_mhd_speed(State_V, FFV, CmaxDt_I, Cmax_I, Cleft_I, &
+                  Cright_I, UnLeft, UnRight, UseAwSpeed)
           endif
 
        elseif(iFluid > 1 .and. iFluid <= IonLast_)then
@@ -3639,7 +3800,9 @@ contains
     !==========================================================================
 
     subroutine get_boris_speed
+      !$acc routine seq
 
+#ifndef OPENACC
       use ModPhysics, ONLY: Gamma, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
@@ -3761,10 +3924,13 @@ contains
       end if
 
       end associate
+#endif
     end subroutine get_boris_speed
     !==========================================================================
 
-    subroutine get_mhd_speed
+    subroutine get_mhd_speed(State_V, FFV, CmaxDt_I, Cmax_I, Cleft_I, Cright_I,&
+         UnLeft, UnRight, UseAwSpeed)
+      !$acc routine seq
 
       use ModB0,       ONLY: UseCurlB0
       use ModPhysics,  ONLY: ElectronPressureRatio, &
@@ -3773,6 +3939,15 @@ contains
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe
 
+      real, intent(in) :: State_V(:)
+      type(FaceFluxVarType), intent(inout) :: FFV
+      real, optional, intent(out) :: CmaxDt_I(:)
+      real, optional, intent(out) :: Cmax_I(:)
+      real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
+      real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
+      real, optional, intent(in) :: UnLeft, UnRight      
+      logical, optional, intent(in) :: UseAwSpeed
+      
       real:: UnMin, UnMax
       real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
@@ -3963,6 +4138,7 @@ contains
       endif
 
       if(Fast2 + Discr < 0.0)then
+#ifndef OPENACC
          write(*,*) &
               ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
          write(*,*) &
@@ -3998,8 +4174,9 @@ contains
               FFV%iDimFace, FFV%iFace,FFV%jFace,FFV%kFace, FFV%iBlockFace
 
          call stop_mpi('negative fast speed squared')
+#endif
       end if
-
+      
       ! Fast speed multiplied by the face area
       if(UseBorisSimple .or. (UseEfield))then
          Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*FFV%InvClight2Face) )
@@ -4083,7 +4260,8 @@ contains
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_hd_speed
-
+      !$acc routine seq
+#ifndef OPENACC
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
       use ModPhysics, ONLY: Gamma_I, GammaElectron
 
@@ -4167,10 +4345,12 @@ contains
       end if
 
       end associate
+#endif
     end subroutine get_hd_speed
     !==========================================================================
     subroutine get_burgers_speed
-
+      !$acc routine seq
+#ifndef OPENACC
       real :: Rho
       !------------------------------------------------------------------------
       Rho = State_V(Rho_)
@@ -4181,6 +4361,7 @@ contains
       if(present(Cleft_I))  Cleft_I(1)  = Rho
       if(present(Cright_I)) Cright_I(1) = Rho
 
+#endif
     end subroutine get_burgers_speed
     !==========================================================================
 
@@ -4188,7 +4369,8 @@ contains
   !============================================================================
 
   subroutine correct_u_normal(FFV)
-
+    !$acc routine seq 
+    
     ! Make Unormal 6th order accuracte
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
@@ -4282,7 +4464,8 @@ contains
   end subroutine correct_u_normal
   !============================================================================
   subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V, FFV)
-
+    !$acc routine seq
+    
     use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
 
     real, intent(out):: Flux_V(nFlux)
@@ -4334,6 +4517,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'roe_solver'
     !--------------------------------------------------------------------------
+#ifndef OPENACC
     associate( &
       iDimFace => FFV%iDimFace, &
       CmaxDt => FFV%CmaxDt, IsBoundary => FFV%IsBoundary, &
@@ -4817,6 +5001,7 @@ contains
     CmaxDt    = abs(UnH) + CfH
 
     end associate
+#endif
   end subroutine roe_solver
   !============================================================================
   subroutine rotate_state_vectors(FFV)

@@ -66,6 +66,8 @@ module ModMultiFluid
        iEnergy= nVar+1
   !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
   !$omp threadprivate( iUx, iUy, iUz )
+  !$acc declare create( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
+  !$acc declare create( iUx, iUy, iUz )
 
   character (len=20) :: NameFluid = ''
   !$omp threadprivate( NameFluid )
@@ -87,6 +89,7 @@ contains
   !============================================================================
 
   subroutine select_fluid(iFluidIn)
+    !$acc routine seq 
     integer :: iFluidIn
     !--------------------------------------------------------------------------
 

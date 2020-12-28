@@ -60,6 +60,7 @@ module ModGeometry
 
   ! Radial distance from origin and second body
   real, allocatable :: R_BLK(:,:,:,:)
+  !$acc declare create(R_BLK)
   real, allocatable :: R2_BLK(:,:,:,:)
 
   ! Smallest value of r_BLK and r2_BLK within a block

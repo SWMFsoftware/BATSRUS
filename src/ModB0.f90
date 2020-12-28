@@ -50,6 +50,7 @@ module ModB0
   ! Use source terms related to finite curl(B0) for non-force-free B0 field
   ! If UseCurlB0 is true, then UseB0Source must be true!
   logical, public:: UseCurlB0 = .false.
+  !$acc declare create(UseCurlB0)
 
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
@@ -114,6 +115,7 @@ contains
 
     if(UseCurlB0) UseB0Source = .true.
 
+    !$acc update device(UseCurlB0)
     call test_stop(NameSub, DoTest)
   end subroutine read_b0_param
   !============================================================================

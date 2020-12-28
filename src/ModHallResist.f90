@@ -25,23 +25,28 @@ module ModHallResist
 
   ! Logical for adding the Biermann battery term
   logical, public :: UseBiermannBattery = .false.
+  !$acc declare create(UseBiermannBattery)
 
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
+  !$acc declare create(UseHallResist)
   logical, public:: IsNewBlockCurrent=.true.
   !$omp threadprivate( IsNewBlockCurrent )
 
   ! Coefficient for taking whistler wave speed into account
   real, public:: HallCmaxFactor = 1.0
+  !$acc declare create(HallCmaxFactor)
 
   ! Adjustable coefficient for the Hall term
   ! (similar effect as changing the ion mass per charge)
   real, public:: HallFactorMax = 1.0
+  !$acc declare create(HallFactorMax)
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
   real:: IonMassPerChargeCoef
   !$omp threadprivate( IonMassPerCharge_G )
+  !$acc declare create( IonMassPerCharge_G )
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:)
@@ -50,6 +55,7 @@ module ModHallResist
   ! Hall factor on the faces and in the cell centers
   real, public, allocatable:: HallFactor_DF(:,:,:,:), HallFactor_C(:,:,:)
   !$omp threadprivate( HallFactor_DF, HallFactor_C )
+  !$acc declare create( HallFactor_DF, HallFactor_C )
 
   ! Logical is true if call set_hall_factor* sets any non-zero hall factors
   logical, public:: IsHallBlock
@@ -107,6 +113,8 @@ contains
     ! Get signed indexes for Hall region(s)
     call get_region_indexes(StringHallRegion, iRegionHall_I)
 
+
+    !$acc update device(UseHallResist, UseBiermannBattery)
     call test_stop(NameSub, DoTest)
   end subroutine init_hall_resist
   !============================================================================
@@ -137,6 +145,7 @@ contains
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select
 
+    !$acc update device(UseHallResist, HallFactorMax, HallCmaxFactor)
     call test_stop(NameSub, DoTest)
   end subroutine read_hall_param
   !============================================================================

@@ -22,15 +22,18 @@ module ModViscosity
 
   ! Use viscosity or not
   logical, public :: UseViscosity=.false.
+  !$acc declare create(UseViscosity)
 
   ! Visosity tensor for each fluid
   real, public, allocatable:: Visco_DDI(:,:,:)
   !$omp threadprivate( Visco_DDI )
+  !$acc declare create(Visco_DDI)
 
   ! Viscosity factor on the faces and in the cell centers
   real, public, allocatable:: &
        ViscoFactor_DF(:,:,:,:), ViscoFactor_C(:,:,:)
   !$omp threadprivate( ViscoFactor_DF, ViscoFactor_C )
+  !$acc declare create( ViscoFactor_DF, ViscoFactor_C )
 
   ! Local variables
 
@@ -96,6 +99,8 @@ contains
     character(len=*), parameter:: NameSub = 'viscosity_init'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    !$acc update device(UseViscosity)
     if(.not.UseViscosity) RETURN
 
     ViscoCoeff = ViscoCoeffSi*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
@@ -209,6 +214,7 @@ contains
        if(ViscoCoeff /= 1) ViscoFactor_DF = ViscoCoeff*ViscoFactor_DF
     end if
 
+    !$acc update device(ViscoFactor_DF)
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_visco_factor_face
   !============================================================================

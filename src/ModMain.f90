@@ -57,6 +57,7 @@ module ModMain
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0
+  !$acc declare create(Climit)
 
   ! Fixed time step (only for time accurate and for implicit scheme mostly)
   logical :: UseDtFixed
@@ -316,6 +317,7 @@ module ModMain
   ! Use resistivity planetary interior. It may be set to true in the
   ! ModUserMercury.f90.
   logical :: UseResistivePlanet = .false.
+  !$acc declare create(UseResistivePlanet)
 
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2

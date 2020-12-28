@@ -51,6 +51,7 @@ module ModElectricField
   ! conservative manner) or as J x B force.
   logical, public :: UseJCrossBForce = UseB .and. &
        (UseMultiIon .or. .not.IsMhd)
+  !$acc declare create(UseJCrossBForce)
 
   ! Make Efield available through this module too
   public:: Efield_DGB

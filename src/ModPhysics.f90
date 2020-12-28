@@ -69,6 +69,7 @@ module ModPhysics
   real :: ElectronPressureRatio    = 0.0
   real :: PePerPtotal              = 0.0
   real :: IonMassPerCharge         = 1.0
+  !$acc declare create(ElectronPressureRatio, PePerPtotal)
 
   ! Ion charge for multi-species.
   real :: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
@@ -82,7 +83,7 @@ module ModPhysics
   ! speed of light, inverse, square, inverse of square, reduction factor
   real :: Clight, InvClight, C2light, InvClight2
   real :: ClightFactor = 1.0
-  !$acc declare create(InvClight2)
+  !$acc declare create(InvClight, InvClight2)
 
   ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
   real :: cRadiationNo
@@ -242,6 +243,7 @@ module ModPhysics
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
   real, dimension(nIoUnit) :: &
        Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
+  !$acc declare create(Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V)
 
   ! Mapping between state array indices and unit conversion array indices
   integer, dimension(nVar) :: iUnitCons_V
@@ -716,7 +718,7 @@ contains
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
-    !$acc update device(SpeedHyp, InvClight2)
+    !$acc update device(SpeedHyp, InvClight, InvClight2)
     
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
@@ -978,6 +980,8 @@ contains
     No2Io_V = No2Si_V*Si2Io_V
     Io2No_V = 1/No2Io_V
 
+    !$acc update device(Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V)
+    
     call test_stop(NameSub, DoTest)
   end subroutine set_units
   !============================================================================

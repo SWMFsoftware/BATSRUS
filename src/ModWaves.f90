@@ -15,13 +15,14 @@ module ModWaves
   implicit none
 
   logical:: DoAdvectWaves = .true.
-
+  
   !
   ! Intended to simulate waves and wave turbulences. The wave propagate
   ! with respect to the background with some speed. The only implemented
   ! case is the propagation with Alfven speed, \pm V_A=\sqrt{B^2/rho}
 
   logical:: UseAlfvenWaves = .false.
+  !$acc declare create(UseAlfvenWaves)
 
   integer, private, parameter :: nWaveHalf = max(nWave/2, 1)
 
@@ -62,6 +63,7 @@ module ModWaves
   ! pressure therefore, it is reasonble to collect the total wave pressure
   ! and limit it accordingly
   logical:: UseWavePressureLtd = .false.
+  !$acc declare create(UseWavePressureLtd)
 
   ! Spectral functions: all functions are normalized by unity
 
@@ -105,6 +107,7 @@ contains
        call read_var('DoAdvectWaves', DoAdvectWaves)
     case("#ALFVENWAVES")
        call read_var('UseAlfvenWaves', UseAlfvenWaves)
+       !$acc update device(UseAlfvenWaves)
     case("#SPECTRUM")
 
        ! Set type of spectral function.
@@ -120,6 +123,7 @@ contains
     case("#WAVEPRESSURE")
        call read_var('UseWavePressure'   ,UseWavePressure)
        call read_var('UseWavePressureLtd',UseWavePressureLtd)
+       !$acc update device(UseWavePressure, UseWavePressureLtd)
     case("#FREQUENCY")
        call read_var('FreqMinSI',FreqMinSI)
        call read_var('FreqMaxSI',FreqMaxSI)
