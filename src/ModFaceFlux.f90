@@ -356,6 +356,8 @@ contains
          Area => FFV%Area, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
+        !$acc update host(LeftState_VX, RightState_VX)
+        
        call set_block_values(iBlock, x_, FFV)
 
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax

@@ -52,6 +52,7 @@ module ModPhysics
 
   ! gamma of the waves
   real :: GammaWave = 1.5
+  !$acc declare create(GammaWave)
 
   ! electron charge in normalized units (actually proton charge/mass)
   real :: ElectronCharge
@@ -81,6 +82,7 @@ module ModPhysics
   ! speed of light, inverse, square, inverse of square, reduction factor
   real :: Clight, InvClight, C2light, InvClight2
   real :: ClightFactor = 1.0
+  !$acc declare create(InvClight2)
 
   ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
   real :: cRadiationNo
@@ -714,7 +716,7 @@ contains
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
-    !$acc update device(SpeedHyp)
+    !$acc update device(SpeedHyp, InvClight2)
     
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants

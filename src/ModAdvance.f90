@@ -94,6 +94,15 @@ module ModAdvance
      logical :: IsNewBlockAlfven = .true.
   end type FaceFluxVarType
 
+  type, public :: FaceValueVarType
+     integer :: i, j, k
+     ! Logicals for limiting the logarithm of variables
+     logical :: UseLogLimiter, UseLogLimiter_V(nVar)
+     ! Logicals for limiting the total pressure
+     logical :: UsePtotalLimiter
+
+  end type FaceValueVarType
+  
   ! Numerical flux type
   character (len=10) :: FluxType
 
@@ -118,6 +127,7 @@ module ModAdvance
   logical:: UseElectronEntropy = .false. !!! UseElectronPressure
 
   logical:: UseWavePressure = .false.
+  !$acc declare create(UseWavePressure)
 
   logical:: DoCalcElectricField = .false.
 

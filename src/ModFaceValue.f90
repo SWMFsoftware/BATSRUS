@@ -36,6 +36,7 @@ module ModFaceValue
   logical, public :: UseFaceIntegral4     = .false.
   logical, public :: UseLimiter4          = .false.
   integer, public :: nGUsed               = nG
+  !$acc declare create(DoLimitMomentum)
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -72,9 +73,11 @@ module ModFaceValue
 
   ! Parameters for limiting the variable divided by density
   logical :: UseScalarToRhoRatioLtd = .false.
+  !$acc declare  create(UseScalarToRhoRatioLtd)
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
   !$omp threadprivate( iVarLimitRatio_I )
+  !$acc declare create(iVarLimitRatio_I)
 
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
@@ -96,15 +99,19 @@ module ModFaceValue
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
   !$omp threadprivate( Primitive_VG )
+  !$acc declare create(Primitive_VG)
 
+  real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  !$acc declare create(B0_DG)
+  
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
 
   ! Low order switch for 1D stencil
-  logical:: UseLowOrder_I(1:MaxIJK+1)
-
+  logical:: UseLowOrder_I(1:MaxIJK+1)  
+  
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
@@ -195,7 +202,7 @@ contains
           if(iVar > nVar) call stop_mpi(NameSub// &
                ' could not find NameVarLimitRatio='//NameVar_I(i))
        end do
-
+       !$acc update device(iVarLimitRatio_I)
     case("#LIMITPTOTAL")
        call read_var('UsePtotalLtd', UsePtotalLtd)
 
@@ -261,7 +268,8 @@ contains
          RightState_VY,     &  ! Face Right Y
          LeftState_VZ,      &  ! Face Left  Z
          RightState_VZ,     &  ! Face Right Z
-         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
+         FaceValueVarType
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -276,11 +284,7 @@ contains
     logical, intent(in):: DoMonotoneRestrict
     integer, intent(in):: iBlock
 
-    integer:: i, j, k, iSide, iFluid, iFlux
-    real:: RhoInv
-
-    real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer:: i, j, k, iSide, iFluid, iFlux, iVar
 
     ! Number of cells needed to get the face values
     integer:: nStencil
@@ -292,11 +296,8 @@ contains
     real:: State_V(nVar), Energy
     integer:: iVarSmoothLast, iVarSmooth
 
-    ! Logicals for limiting the logarithm of variables
-    logical :: UseLogLimiter, UseLogLimiter_V(nVar)
-    ! Logicals for limiting the total pressure
-    logical :: UsePtotalLimiter
-
+    type(FaceValueVarType) :: FVV 
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
@@ -305,6 +306,9 @@ contains
     else
        DoTest=.false.
     end if
+
+    !$acc update device(DoLimitMomentum, UseBorisRegion, UseWavePressure)
+    !$acc update device(GammaWave, UseScalarToRhoRatioLtd)
 
     if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
@@ -330,9 +334,10 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
-
-    if(.not.allocated(Primitive_VG))&
-         allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    
+    if(.not.allocated(Primitive_VG)) then 
+       allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    endif
 
     if(.not.allocated(FaceL_I)) then
        allocate(FaceL_I(1:MaxIJK+2))
@@ -343,30 +348,30 @@ contains
 
     UseTrueCell = body_BLK(iBlock)
 
-    UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
-    UseLogLimiter_V = .false.
-    if(UseLogLimiter)then
+    FVV%UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    FVV%UseLogLimiter_V = .false.
+    if(FVV%UseLogLimiter)then
        if(UseLogRhoLimiter)then
           do iFluid = 1, nFluid
-             UseLogLimiter_V(iRho_I(iFluid)) = .true.
+             FVV%UseLogLimiter_V(iRho_I(iFluid)) = .true.
           end do
        end if
        if(UseLogPLimiter)then
           do iFluid = 1, nFluid
-             UseLogLimiter_V(iP_I(iFluid))   = .true.
+             FVV%UseLogLimiter_V(iP_I(iFluid))   = .true.
           end do
           if(UseAnisoPressure)then
              do iFluid = IonFirst_, IonLast_
-                UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
+                FVV%UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
              end do
           end if
-          if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
-          if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
+          if(UseElectronPressure) FVV%UseLogLimiter_V(Pe_) = .true.
+          if(UseAnisoPe)          FVV%UseLogLimiter_V(Pepar_) = .true.
        end if
     end if
 
-    UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
-
+    FVV%UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
+    
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
@@ -398,12 +403,27 @@ contains
        end if
     end if
 
-    primitive_VG = State_VGB(:,:,:,:,iBlock)
+    !TODO: to be removed. 
+    !$acc update device(State_VGB)
+
+    !$acc data present(Primitive_VG, State_VGB)
+    !$acc parallel loop collapse(4) independent
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar      
+       Primitive_VG(iVar,i,j,k) = State_VGB(iVar,i,j,k,iBlock)
+    end do; end do; end do; end do
+    !$acc end data
 
     if(UseAccurateResChange .or. nOrder==4)then
+       !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
+       !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
+       
+       !$acc parallel loop collapse(3) private(FVV) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          call calc_primitives         ! all cells
+          FVV%i = i; FVV%j = j; FVV%k = k
+          call calc_primitives(FVV)         ! all cells
        end do; end do; end do
+       !$acc end data
+       
        if(nOrder == 4 .and. UseVolumeIntegral4)then
           ! Calculate 4th order accurate cell averaged primitive variables
 
@@ -456,7 +476,8 @@ contains
              end do
 
              ! Convert to pointwise primitive variables
-             call calc_primitives
+             FVV%i = i; FVV%j = j; FVV%k = k
+             call calc_primitives(FVV)
 
              ! Convert to cell averaged primitive variables (eq. 16)
              Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
@@ -473,30 +494,41 @@ contains
           end do; end do; end do
        end if
     else
+       !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
+       !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
+       
+       !$acc parallel loop collapse(3) private(FVV) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
-                call calc_primitives   ! for x-faces
+                FVV%i = i; FVV%j = j; FVV%k = k
+                call calc_primitives(FVV)   ! for x-faces
              end do
           end do
        end do
+       !$acc end data
+       
        if(nJ > 1)then
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
-                call calc_primitives   ! for lower y-faces
+                FVV%i = i; FVV%j = j; FVV%k = k
+                call calc_primitives(FVV)   ! for lower y-faces
              end do
              do j=jMaxFace+1,nJ+nStencil
-                call calc_primitives   ! for upper  y-faces
+                FVV%i = i; FVV%j = j; FVV%k = k
+                call calc_primitives(FVV)   ! for upper  y-faces
              end do
           end do; end do
        end if
        if(nK > 1)then
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
-                call calc_primitives   ! for lower z-faces
+                FVV%i = i; FVV%j = j; FVV%k = k
+                call calc_primitives(FVV)   ! for lower z-faces
              end do
              do k=kMaxFace+1,nK+nStencil
-                call calc_primitives   ! for upper z-faces
+                FVV%i = i; FVV%j = j; FVV%k = k
+                call calc_primitives(FVV)   ! for upper z-faces
              end do
           end do; end do
        end if
@@ -625,7 +657,7 @@ contains
           end if
        endif
 
-       if(UseLogLimiter .and. .not.DoLimitMomentum)then
+       if(FVV%UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call logfaceX_to_faceX(1,1,1,nJ,1,nK)
@@ -673,7 +705,7 @@ contains
           end if
        end if
 
-       if(UsePtotalLimiter)then
+       if(FVV%UsePtotalLimiter)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call ptotal_to_p_faceX(1,1,1,nJ,1,nK)
@@ -781,7 +813,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar = 1, nVar
-         if(.not.UseLogLimiter_V(iVar))CYCLE
+         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
               exp(LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
@@ -798,7 +830,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar = 1, nVar
-         if(.not.UseLogLimiter_V(iVar))CYCLE
+         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
               exp(LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
@@ -815,7 +847,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar=1,nVar
-         if(.not.UseLogLimiter_V(iVar))CYCLE
+         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
               exp(LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
@@ -946,13 +978,18 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives
-
+    subroutine calc_primitives(FVV)      
+      !$acc routine seq      
       use ModPhysics, ONLY: InvClight2
 
-      integer:: iVar
-
+      type(FaceValueVarType), intent(in):: FVV
+      
+      real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+      integer:: i, j, k, iVar, iFluid
+      real:: RhoInv
       !------------------------------------------------------------------------
+      i = FVV%i; j = FVV%j; k = FVV%k
+      
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
 
       if(DoLimitMomentum)then
@@ -982,16 +1019,23 @@ contains
          Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
               Ga2Boris - BzFull*uBC2Inv
       else
-         Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+         !$acc loop seq
+         do iVar = Ux_, Uz_
+            Primitive_VG(iVar,i,j,k)=RhoInv*Primitive_VG(RhoUx_+iVar-Ux_,i,j,k)
+         enddo
+         !$acc loop seq
          do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
             RhoInv = 1/Primitive_VG(iRho,i,j,k)
-            Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
+            !$acc loop seq 
+            do iVar = iUx, iUz 
+               Primitive_VG(iVar,i,j,k)=RhoInv*Primitive_VG(iVar,i,j,k)
+            enddo
          end do
       end if
 
       ! Transform p to Ptotal
-      if(UsePtotalLimiter)then
+      if(FVV%UsePtotalLimiter)then
          if(UseElectronPressure)then
             Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
                  + Primitive_VG(Pe_,i,j,k)
@@ -1005,9 +1049,9 @@ contains
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
            RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
 
-      if(UseLogLimiter)then
+      if(FVV%UseLogLimiter)then
          do iVar = 1, nVar
-            if(UseLogLimiter_V(iVar)) &
+            if(FVV%UseLogLimiter_V(iVar)) &
                  Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
          end do
       end if
@@ -1488,11 +1532,14 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VX(:,i,j,k)=Primitive_VG(:,i-1,j,k)
-         RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)
-      end do; end do; end do
-
+      !$acc data present(Primitive_VG,LeftState_VX,RightState_VX)
+      !$acc parallel loop collapse(4) independent
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar 
+         LeftState_VX(iVar,i,j,k)=Primitive_VG(iVar,i-1,j,k)
+         RightState_VX(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)
+      end do; end do; end do; end do
+      !$acc end data
+      
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
