@@ -418,7 +418,7 @@ contains
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-      integer:: iFlux
+      integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !$acc declare create(FFV)
       !------------------------------------------------------------------------
@@ -435,57 +435,51 @@ contains
       !$acc& Flux_VX)
 
       
-      associate( &
-         iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
-         iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
-         iBlockFace => FFV%iBlockFace, CmaxDt => FFV%CmaxDt, &
-         IsBoundary => FFV%IsBoundary, &
-         DeltaBnR => FFV%DeltaBnR, DeltaBnL => FFV%DeltaBnL, &
-         Enormal => FFV%Enormal, &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         Area => FFV%Area, &
-         iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )      
-
+     
 #ifndef OPENACC
        call set_block_values(iBlock, x_, FFV)
 #endif
              
        !$acc parallel loop collapse(3) private(FFV) independent
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
-          
+          FFV%iFace = iFace
+          FFV%jFace = jFace
+          FFV%kFace = kFace
+          FFV%iBlockFace = iBlock
+          FFV%iDimFace = x_
 #ifdef OPENACC
-          call set_block_values(iBlock, x_, FFV)
+          call set_block_values(FFV%iBlockFace, FFV%iDimFace, FFV)
 #endif         
           call set_cell_values_x(FFV)
 
-          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-               .not. true_cell(iRight,jRight,kRight,iBlock)) then
+          if(  .not. true_cell(FFV%iLeft,FFV%jLeft,FFV%kLeft,iBlock) .and. &
+               .not. true_cell(FFV%iRight,FFV%jRight,FFV%kRight,iBlock)) then
              uDotArea_XI(iFace,jFace,kFace,:) = 0.0
              VdtFace_X(iFace,jFace,kFace) = 0.0
              CYCLE
           endif
 
           if(UseB0)then
-             B0x = B0_DX(x_,iFace,jFace,kFace)
-             B0y = B0_DX(y_,iFace,jFace,kFace)
-             B0z = B0_DX(z_,iFace,jFace,kFace)
+             FFV%B0x = B0_DX(x_,iFace,jFace,kFace)
+             FFV%B0y = B0_DX(y_,iFace,jFace,kFace)
+             FFV%B0z = B0_DX(z_,iFace,jFace,kFace)
           end if
 
-          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+          if(UseRS7.and..not.FFV%IsBoundary)then
+             FFV%DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace))*&
                  FFV%Normal_D)
             RightState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
                  RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnR* FFV%Normal_D
-            DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
+                 FFV%DeltaBnR* FFV%Normal_D
+            FFV%DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+                 State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,FFV%iBlockFace))*&
                  FFV%Normal_D)
             LeftState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
                  LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
-                 DeltaBnL* FFV%Normal_D
+                 FFV%DeltaBnL* FFV%Normal_D
          else
-            DeltaBnL = 0.0; DeltaBnR = 0.0
+            FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
          FFV%StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
@@ -502,25 +496,25 @@ contains
 #endif
          endif
 
-         VdtFace_x(iFace,jFace,kFace) = CmaxDt*Area
+         VdtFace_x(iFace,jFace,kFace) = FFV%CmaxDt*FFV%Area
 
          ! Correct FFV%Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_XI(iFace,jFace,kFace,:)   = FFV%Unormal_I*Area
+         uDotArea_XI(iFace,jFace,kFace,:)   = FFV%Unormal_I*FFV%Area
 
          if(UseB .and. UseBorisCorrection) &
-              EDotFA_X(iFace,jFace,kFace) = Enormal*Area
+              EDotFA_X(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DX(:,iFace,jFace,kFace) = FFV%bCrossArea_D
       end do; end do; end do
 
-      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(FFV%iBlockFace)) then
          ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
          ! is 6th order.
          do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
             if(UseLowOrder)then
-               if(LowOrderCrit_XB(iFace,jFace,kFace,iBlockFace) &
+               if(LowOrderCrit_XB(iFace,jFace,kFace,FFV%iBlockFace) &
                     >=cLowOrder-cSmall) CYCLE
             endif
             do iFlux = 1, nFlux
@@ -531,7 +525,7 @@ contains
          end do; end do; enddo
       endif
 
-    end associate
+    !end associate
 
     !$acc end data
     !$acc update host(Flux_VX, VdtFace_x, uDotArea_XI)
