@@ -418,12 +418,18 @@ contains
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-      integer:: iFlux, iFace, jFace, kFace
+      integer:: iFlux, iFace, jFace, kFace, iVar
       type(FaceFluxVarType) :: FFV
       !$acc declare create(FFV)
       !------------------------------------------------------------------------
 
+
+      
       !$acc update host(LeftState_VX, RightState_VX)
+
+      write(*,*)'leftstate_vx = ', LeftState_VX
+      write(*,*)'rightstate_vx= ', RightState_VX
+      
       !$acc data present(uDotArea_XI, VdtFace_X, &
       !$acc& LeftState_VX,RightState_VX, &
       !$acc& Xyz_DGB, &
@@ -482,8 +488,11 @@ contains
             FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
-         FFV%StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
-         FFV%StateRight_V = RightState_VX(:,iFace,jFace,kFace)
+         !$acc loop seq
+         do iVar = 1, nVar
+            FFV%StateLeft_V(iVar)  = LeftState_VX(iVar,iFace,jFace,kFace)
+            FFV%StateRight_V(iVar) = RightState_VX(iVar,iFace,jFace,kFace)
+         end do
 
          call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace), FFV)
 
@@ -529,8 +538,10 @@ contains
 
     !$acc end data
     !$acc update host(Flux_VX, VdtFace_x, uDotArea_XI)
-    !$acc update host(VdtFace_x)
-    !$acc update host(uDotArea_XI)
+
+      write(*,*)"flux_vx     = ", Flux_VX
+      write(*,*)"vdtface_x   = ", VdtFace_X
+      write(*,*)"udotarea_xi = ", uDotArea_XI
 
     end subroutine get_flux_x
     !==========================================================================
