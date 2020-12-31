@@ -22,6 +22,7 @@ module ModAdvance
 
   public :: init_mod_advance
   public :: clean_mod_advance
+  public :: init_face_flux_var_type
 
   type, public :: FaceFluxVarType
      ! index of cell in the negative and positive directions from face
@@ -469,5 +470,42 @@ contains
   end subroutine clean_mod_advance
   !============================================================================
 
+  subroutine init_face_flux_var_type(FFV)
+    !$acc routine seq
+    type(FaceFluxVarType), intent(inout) :: FFV
+    !--------------------------------------------------------------------------
+
+    ! When openacc creates a derived type on GPU, the variables are
+    ! not correctly initialized. So, they are explicitly initialized
+    ! here. 
+
+    FFV%iFluidMin = 1
+    FFV%iFluidMax = nFluid
+    FFV%iVarMin = 1
+    FFV%iVarMax = nVar
+    FFV%iEnergyMin = nVar + 1
+    FFV%iEnergyMax = nVar + nFluid
+
+    FFV%Unormal_I = 0.0
+    FFV%EradFlux = 0.0
+    FFV%bCrossArea_D = 0.0
+    FFV%B0x = 0.0
+    FFV%B0y = 0.0
+    FFV%B0z = 0.0 
+    
+    FFV%UseHallGradPe = .false.
+
+    FFV%DoTestCell = .false.
+
+    FFV%IsNewBlockVisco = .true.
+    FFV%IsNewBlockGradPe = .true.
+    FFV%IsNewBlockCurrent = .true.
+    FFV%IsNewBlockHeatCond = .true.
+    FFV%IsNewBlockIonHeatCond = .true.
+    FFV%IsNewBlockRadDiffusion = .true.
+    FFV%IsNewBlockAlfven = .true.
+        
+  end subroutine init_face_flux_var_type
+  !============================================================================
 end module ModAdvance
 !==============================================================================

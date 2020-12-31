@@ -256,8 +256,8 @@ contains
 
 #ifndef OPENACC
     call test_stop(NameSub, DoTest, iBlock)
-#endif
-
+#endif    
+    
     end associate
   end subroutine set_block_values
   !============================================================================
@@ -416,19 +416,13 @@ contains
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IX
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IX, init_face_flux_var_type
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux, iFace, jFace, kFace, iVar
       type(FaceFluxVarType) :: FFV
-      !$acc declare create(FFV)
       !------------------------------------------------------------------------
-
-
       
       !$acc update host(LeftState_VX, RightState_VX)
-
-      write(*,*)'leftstate_vx = ', LeftState_VX
-      write(*,*)'rightstate_vx= ', RightState_VX
       
       !$acc data present(uDotArea_XI, VdtFace_X, &
       !$acc& LeftState_VX,RightState_VX, &
@@ -439,15 +433,14 @@ contains
       !$acc& CellSize_DB, &
       !$acc& true_cell, &
       !$acc& Flux_VX)
-
-      
-     
+          
 #ifndef OPENACC
        call set_block_values(iBlock, x_, FFV)
 #endif
              
        !$acc parallel loop collapse(3) private(FFV) independent
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+          call init_face_flux_var_type(FFV)
           FFV%iFace = iFace
           FFV%jFace = jFace
           FFV%kFace = kFace
@@ -538,10 +531,6 @@ contains
 
     !$acc end data
     !$acc update host(Flux_VX, VdtFace_x, uDotArea_XI)
-
-      write(*,*)"flux_vx     = ", Flux_VX
-      write(*,*)"vdtface_x   = ", VdtFace_X
-      write(*,*)"udotarea_xi = ", uDotArea_XI
 
     end subroutine get_flux_x
     !==========================================================================
