@@ -3515,7 +3515,7 @@ contains
       real, intent(in) :: State_V(:)
       real, intent(out) :: Un
       real, intent(out) :: Flux_V(:)
-      real, intent(out) :: StateCons_V(:)
+      real, intent(inout) :: StateCons_V(:)
       real, intent(in) :: Bx, By, Bz, Bn, B0n, FullBx, FullBy, FullBz, FullBn
       real, intent(inout) :: HallUn
       type(FaceFluxVarType), intent(inout) :: FFV      
