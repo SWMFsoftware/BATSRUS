@@ -102,6 +102,7 @@ module ModFaceValue
   !$acc declare create(Primitive_VG)
 
   real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  !$omp threadprivate(B0_DG)
   !$acc declare create(B0_DG)
   
   ! Variables for "body" blocks with masked cells
