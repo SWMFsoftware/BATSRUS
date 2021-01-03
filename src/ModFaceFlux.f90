@@ -440,7 +440,9 @@ contains
              
        !$acc parallel loop collapse(3) private(FFV) independent
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+#ifdef OPENACC
           call init_face_flux_var_type(FFV)
+#endif                   
           FFV%iFace = iFace
           FFV%jFace = jFace
           FFV%kFace = kFace
