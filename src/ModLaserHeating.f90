@@ -5,7 +5,9 @@ module ModLaserHeating
 
   use BATL_lib, ONLY: &
        test_start, test_stop, nDim ,iProc, nProc, iComm
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   ! Calculate heating due to irradiation by a laser. The laser is represented
   ! by a finite number of laser beams. The laser beams are traced through
   ! the plasa following the rules of geometrical optics. The laser energy is

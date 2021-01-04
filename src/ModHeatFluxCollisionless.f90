@@ -6,7 +6,9 @@ module ModHeatFluxCollisionless
 
   use BATL_lib,      ONLY: test_start, test_stop
   use ModVarIndexes, ONLY: Ehot_
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
 
   implicit none
   save

@@ -3,7 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModCharacteristicMhd
 
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use ModCoordTransform, ONLY: cross_product
   use ModVarIndexes, nVarAll => nVar
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1

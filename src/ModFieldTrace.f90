@@ -11,7 +11,9 @@ module ModFieldTrace
        MaxBlock, x_, y_, z_, IsCartesianGrid
   use ModMain, ONLY: iNewDecomposition, TypeCoordSystem
   use ModPhysics, ONLY: rBody
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use ModNumConst, ONLY: i_DD
   use ModKind, ONLY: Real8_
   use ModIO,   ONLY: iUnitOut, write_prefix

@@ -5,7 +5,9 @@ module ModResistivity
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  !  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   ! Resistivity related variables and methods
 
   use ModSize,   ONLY: MaxBlock

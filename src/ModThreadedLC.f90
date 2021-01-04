@@ -2,7 +2,9 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use BATL_lib,            ONLY: test_start, test_stop, iProc
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
        HeatCondParSi, LengthPAvrSi_, UHeat_, HeatFluxLength_, &

@@ -5,7 +5,9 @@
 module ModAdvectPoints
 
   use BATL_lib,     ONLY: test_start, test_stop
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
 
   implicit none
 

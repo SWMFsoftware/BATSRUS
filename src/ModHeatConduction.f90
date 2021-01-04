@@ -5,7 +5,9 @@
 module ModHeatConduction
 
   use BATL_lib,     ONLY: test_start, test_stop
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
   use BATL_size, ONLY: nDim, MaxDim

@@ -5,7 +5,9 @@ module ModSatelliteFile
 
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, iComm
-  !  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use ModUtilities, ONLY: open_file, close_file
   use ModMain, ONLY: StartTime
   use ModTimeConvert,   ONLY: time_int_to_real

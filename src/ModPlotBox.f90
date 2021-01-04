@@ -5,7 +5,9 @@ module ModPlotBox
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iBlockTest, iProc, nProc, iComm
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I, plot_type, ObsPos_DI, IsObsBox_I, nPlotVarMax, &
        plot_vars1, DimFactor_V, plot_vars

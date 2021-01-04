@@ -6,7 +6,9 @@ module ModCalcSource
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
 
   implicit none
   SAVE

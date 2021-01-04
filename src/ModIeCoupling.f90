@@ -7,7 +7,9 @@ module ModIeCoupling
   use BATL_lib,      ONLY: test_start, test_stop, iProc, nProc
   use ModAdvance,    ONLY: nSpecies
   use ModMultiFluid, ONLY: nIonFluid
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
 
   implicit none
   save

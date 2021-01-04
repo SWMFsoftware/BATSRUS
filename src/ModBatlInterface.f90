@@ -4,7 +4,9 @@
 module ModBatlInterface
 
   use BATL_lib, ONLY: test_start, test_stop
-!  use ModUtilities, ONLY: norm2
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2 
+#endif
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
   implicit none
 
