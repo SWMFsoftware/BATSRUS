@@ -212,5 +212,5 @@ clean: cleanfiles
 
 distclean: clean
 	rm -f ModUser.f90.safe
-	mv ModUser.f90 ModUser.f90.safe
+	-mv ModUser.f90 ModUser.f90.safe
 	rm -f ModEquation.f90 ModHdf5.f90 ModImplHypre.f90
