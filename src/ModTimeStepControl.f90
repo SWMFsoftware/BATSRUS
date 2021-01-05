@@ -152,6 +152,8 @@ contains
     if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
+    !$acc parallel loop collapse(3) present(true_cell, VdtFace_x,&
+    !$acc VdtFace_y, VdtFace_z, time_BLK, CellVolume_GB)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
@@ -283,8 +285,15 @@ contains
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
     ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
-    if(UseDtFixed) &
-         time_BLK(:,:,:,iBlock) = DtFixed
+    if(UseDtFixed) then
+       !TODO: optimize 'copyin'       
+       !$acc data present(time_BLK) copyin(DtFixed)
+       !$acc parallel loop collapse(3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          time_BLK(i,j,k,iBlock) = DtFixed
+       end do; end do; end do
+       !$acc end data
+    endif
 
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
     if(UseDtLimit) &
@@ -303,7 +312,6 @@ contains
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
             time_BLK(:,:,:,iBlock) = 0.0
     end if
-
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
   !============================================================================
@@ -470,7 +478,12 @@ contains
           end if
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
-          time_BLK(:,:,:,iBlock) = Dt
+          !$acc data present(time_BLK)
+          !$acc parallel loop collapse(4) copyin(Dt)
+          do iBlock = 1, nBlock; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             time_BLK(i,j,k,iBlock) = Dt
+          enddo; end do; end do; end do
+          !$acc end data       
        end if
 
        ! Reset time step to zero inside body.
