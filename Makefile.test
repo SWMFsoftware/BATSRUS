@@ -17,7 +17,8 @@ test_help:
 	@echo "    test PARALLEL=aprun        (run tests with aprun instead of mpiexec)"
 	@echo "    test NPFLAG=-np            (run tests with -np instead of -n)"
 	@echo "    test MPIRUN=               (run tests without MPI)"
-	@echo "    test OPENMP=               (run tests without OpenMP)"
+	@echo "    test OPENMP=-noopenmp      (run tests without OpenMP)"
+	@echo "    test OPENACC=-noacc        (run tests without OpenACC)"
 	@echo "    test_amr_compile           (compile test_amr)"
 	@echo "    test_amr_rundir            (create run directory for test_amr)"
 	@echo "    test_amr_run NP=4          (run test_amr with 4 MPI processes)"
@@ -91,6 +92,8 @@ test:
 	@rm -f *.diff
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
+	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
+	./Config.pl -noacc
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
 	./Config.pl -ng=2
@@ -153,6 +156,7 @@ TESTDIR = run_test
 REFDIR = run_test_ref
 
 OPENMP = -openmp
+OPENACC = -acc
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -252,7 +256,7 @@ test_shocktube_1d:
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
-	./Config.pl -noopenmp -u=Default -e=MhdHyp -g=1024,1,1
+	./Config.pl -noopenmp ${OPENACC} -u=Default -e=MhdHyp -g=1024,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -261,7 +265,7 @@ test_shocktube_1d_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_shocktube_1d_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_1d_check:
