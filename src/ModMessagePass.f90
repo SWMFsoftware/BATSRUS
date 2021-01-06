@@ -82,6 +82,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$acc update host(State_VGB)
+    
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
        ! Switch off request
@@ -238,6 +240,7 @@ contains
 
     if(DoTest)write(*,*) NameSub,' finished'
 
+    !$acc update device(State_VGB)
     call test_stop(NameSub, DoTest)
   end subroutine exchange_messages
   !============================================================================

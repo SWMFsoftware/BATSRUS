@@ -659,8 +659,6 @@ contains
       ! Update energy or pressure based on UseConservative and IsConserv_CB
       call calc_energy_or_pressure(iBlock)
 
-      !$acc update host(State_VGB, Energy_GBI)
-
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &

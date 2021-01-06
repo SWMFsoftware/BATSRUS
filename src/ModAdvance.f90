@@ -400,8 +400,6 @@ contains
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
     end if
-
-    !$acc update device(State_VGB, Energy_GBI, StateOld_VGB, Energy_GBI)
     
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_advance
