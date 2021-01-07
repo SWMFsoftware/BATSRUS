@@ -970,25 +970,21 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    associate( VarsGhostFace_V => FBC%VarsGhostFace_V, &
-               VarsTrueFace_V => FBC%VarsTrueFace_V, &
-               FaceCoords_D => FBC%FaceCoords_D, &
-               B0Face_D => FBC%B0Face_D, &
-               TimeBc => FBC%TimeBc )    
+    associate( TimeBc => FBC%TimeBc )    
 
 
-    rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
+    rUnit_D = FBC%FaceCoords_D/sqrt(sum(FBC%FaceCoords_D**2))
     !\
     ! Magnetic field: radial magnetic field is set to zero, the other are floating
     ! Density is fixed,
     !/
-    B1_D  = VarsTrueFace_V(Bx_:Bz_)
+    B1_D  = FBC%VarsTrueFace_V(Bx_:Bz_)
     B1r_D = sum(rUnit_D*B1_D)*rUnit_D
     B1t_D = B1_D - B1r_D
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D
+    FBC%VarsGhostFace_V(Bx_:Bz_) = B1t_D
 
     ! Fix density
-    VarsGhostFace_V(Rho_) = RhoChromo
+    FBC%VarsGhostFace_V(Rho_) = RhoChromo
 
     !\
     ! The perpendicular to the mf components of velocity are reflected.
@@ -996,12 +992,12 @@ contains
     !/
     if (UseUparBc) then
        ! Use line-tied boundary conditions
-       U_D = VarsTrueFace_V(Ux_:Uz_)
+       U_D = FBC%VarsTrueFace_V(Ux_:Uz_)
 
-       RhoTrue = VarsTrueFace_V(Rho_)
-       RhoGhost = VarsGhostFace_V(Rho_)
-       FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
-       FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
+       RhoTrue = FBC%VarsTrueFace_V(Rho_)
+       RhoGhost = FBC%VarsGhostFace_V(Rho_)
+       FullBGhost_D = FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_)
+       FullBTrue_D  = FBC%B0Face_D + FBC%VarsTrueFace_V(Bx_:Bz_)
 
        bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
        bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
@@ -1010,17 +1006,17 @@ contains
        ! the induction equation under steady state conditions.
        ! The density ratio is to satisfy mass conservation along the field
        ! line as well.
-       VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
+       FBC%VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
             sum(U_D*bUnitTrue_D)*bUnitGhost_D
     else
        ! zero velocity at inner boundary
-       VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
+       FBC%VarsGhostFace_V(Ux_:Uz_) = -FBC%VarsTrueFace_V(Ux_:Uz_)
     end if
 
     ! Apply corotation if needed
     if(.not.UseRotatingFrame)then
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)-2*OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)+2*OmegaBody*FaceCoords_D(x_)
+       FBC%VarsGhostFace_V(Ux_) = FBC%VarsGhostFace_V(Ux_)-2*OmegaBody*FBC%FaceCoords_D(y_)
+       FBC%VarsGhostFace_V(Uy_) = FBC%VarsGhostFace_V(Uy_)+2*OmegaBody*FBC%FaceCoords_D(x_)
     end if
     !\
     ! Temperature is fixed
@@ -1041,52 +1037,52 @@ contains
        pCme   = pCme*Si2No_V(UnitP_)
 
        ! Add CME density
-       VarsGhostFace_V(Rho_) = VarsGhostFace_V(Rho_) + RhoCme
+       FBC%VarsGhostFace_V(Rho_) = FBC%VarsGhostFace_V(Rho_) + RhoCme
 
        ! Fix the normal component of the CME field to BrCme_D at the Sun
        BrCme   = sum(Runit_D*Bcme_D)
        BrCme_D = BrCme*Runit_D
-       VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) + BrCme_D
+       FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) + BrCme_D
 
        ! Fix the tangential components of the CME velocity at the Sun
        UrCme   = sum(Runit_D*Ucme_D)
        UrCme_D = UrCme*Runit_D
        UtCme_D = UCme_D - UrCme_D
-       VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*UtCme_D
+       FBC%VarsGhostFace_V(Ux_:Uz_) = FBC%VarsGhostFace_V(Ux_:Uz_) + 2*UtCme_D
 
        Pressure = RhoChromo/MassIon_I(1)*(1 + AverageIonCharge)*tChromo
        Temperature = (Pressure + pCme) &
-            / (VarsGhostFace_V(Rho_)/MassIon_I(1)*(1 + AverageIonCharge))
+            / (FBC%VarsGhostFace_V(Rho_)/MassIon_I(1)*(1 + AverageIonCharge))
     end if
 
-    FullBr = sum((B0Face_D + VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
+    FullBr = sum((FBC%B0Face_D + FBC%VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
 
     ! Ewave \propto sqrt(rho) for U << Ualfven
-    Ewave = PoyntingFluxPerB*sqrt(VarsGhostFace_V(Rho_))
+    Ewave = PoyntingFluxPerB*sqrt(FBC%VarsGhostFace_V(Rho_))
     if (FullBr > 0. ) then
-       VarsGhostFace_V(WaveFirst_) = Ewave
-       VarsGhostFace_V(WaveLast_) = 0.0
+       FBC%VarsGhostFace_V(WaveFirst_) = Ewave
+       FBC%VarsGhostFace_V(WaveLast_) = 0.0
     else
-       VarsGhostFace_V(WaveFirst_) = 0.0
-       VarsGhostFace_V(WaveLast_) = Ewave
+       FBC%VarsGhostFace_V(WaveFirst_) = 0.0
+       FBC%VarsGhostFace_V(WaveLast_) = Ewave
     end if
 
     ! Fix temperature
-    NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
+    NumDensIon = FBC%VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
-       VarsGhostFace_V(p_) = NumDensIon*Temperature
-       VarsGhostFace_V(Pe_) = NumDensElectron*Temperature
-       if(UseAnisoPressure) VarsGhostFace_V(Ppar_) = VarsGhostFace_V(p_)
+       FBC%VarsGhostFace_V(p_) = NumDensIon*Temperature
+       FBC%VarsGhostFace_V(Pe_) = NumDensElectron*Temperature
+       if(UseAnisoPressure) FBC%VarsGhostFace_V(Ppar_) = FBC%VarsGhostFace_V(p_)
     else
-       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
+       FBC%VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
     end if
 
-    if(Hyp_>1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
+    if(Hyp_>1) FBC%VarsGhostFace_V(Hyp_) = FBC%VarsTrueFace_V(Hyp_)
 
     if(Ehot_ > 1)then
        if(UseHeatFluxCollisionless)then
-          call get_gamma_collisionless(FaceCoords_D, GammaHere)
+          call get_gamma_collisionless(FBC%FaceCoords_D, GammaHere)
           if(UseElectronPressure) then
              iP = Pe_
              InvGammaMinus1Fluid = InvGammaElectronMinus1
@@ -1094,10 +1090,10 @@ contains
              iP = p_
              InvGammaMinus1Fluid = InvGammaMinus1
           end if
-          VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(iP)*(1.0/(GammaHere - 1) - InvGammaMinus1Fluid)
+          FBC%VarsGhostFace_V(Ehot_) = &
+               FBC%VarsGhostFace_V(iP)*(1.0/(GammaHere - 1) - InvGammaMinus1Fluid)
        else
-          VarsGhostFace_V(Ehot_) = 0.0
+          FBC%VarsGhostFace_V(Ehot_) = 0.0
        end if
     end if
 

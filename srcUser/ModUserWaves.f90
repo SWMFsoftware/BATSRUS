@@ -1052,9 +1052,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    associate( TimeBc => FBC%TimeBc, &
-               VarsGhostFace_V => FBC%VarsGhostFace_V, &
-               FaceCoords_D => FBC%FaceCoords_D, &
+    associate( TimeBc => FBC%TimeBc, &               
                iBlockBc => FBC%iBlockBc )
 
     call test_start(NameSub, DoTest, iBlockBc)
@@ -1063,11 +1061,11 @@ contains
 
     do iVar=1,nVar
        ! Both of these are primitive variables
-       VarsGhostFace_V(iVar) = PrimInit_V(iVar)         &
+       FBC%VarsGhostFace_V(iVar) = PrimInit_V(iVar)         &
             + Ampl_V(iVar)*cos(Phase_V(iVar)            &
-            + KxWave_V(iVar)*(FaceCoords_D(x_) - Dx)    &
-            + KyWave_V(iVar)*FaceCoords_D(y_)           &
-            + KzWave_V(iVar)*FaceCoords_D(z_))
+            + KxWave_V(iVar)*(FBC%FaceCoords_D(x_) - Dx)    &
+            + KyWave_V(iVar)*FBC%FaceCoords_D(y_)           &
+            + KzWave_V(iVar)*FBC%FaceCoords_D(z_))
     end do
 
     call test_stop(NameSub, DoTest, iBlockBc)
