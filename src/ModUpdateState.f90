@@ -35,7 +35,7 @@ contains
     use ModMessagePass, ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
-    integer :: iVar, iFluid
+    integer :: iVar, iFluid, i, j, k
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
@@ -79,9 +79,18 @@ contains
     end if
 
     ! Note must copy state to old state only if iStage is 1.
-    if(iStage==1) then
-       StateOld_VGB(:,:,:,:,iBlock) = State_VGB(:,:,:,:,iBlock)
-       EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
+    if(iStage==1) then       
+       !$acc data present(StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI)
+       !$acc parallel loop collapse(4)
+       do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
+         StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
+       enddo; enddo; enddo; enddo
+
+       !$acc parallel loop collapse(4)
+       do iFluid = 1, nFluid; do k = 1,nK; do j = 1,nJ; do i = 1,nI
+          EnergyOld_CBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid)
+       enddo; enddo; enddo; enddo
+       !$acc end data
     end if
 
     ! The first call may set UseUserUpdateStates to false
@@ -104,7 +113,7 @@ contains
                'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
     end if
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
@@ -138,7 +147,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: i, j, k
+    integer :: i, j, k, iVar
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
@@ -185,6 +194,7 @@ contains
        DtFactor = Cfl
     end if
 
+    
     ! Modify electron pressure source term to electron entropy if necessary
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
@@ -193,17 +203,22 @@ contains
                * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
+    
+    !$acc data present(Source_VC,Flux_VX,Flux_VY,Flux_VZ, CellVolume_GB, &
+    !$acc& time_BLK) 
 
-    do k = 1,nK; do j = 1,nJ; do i = 1,nI
+    !$acc parallel loop collapse(4)
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
-       Source_VC(:,i,j,k) = &
-            DtLocal* (Source_VC(:,i,j,k) + &
-            ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
-            + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
-            + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
+       Source_VC(iVar,i,j,k) = &
+            DtLocal* (Source_VC(iVar,i,j,k) + &
+            ( Flux_VX(iVar,i,j,k) - Flux_VX(iVar,i+1,j,k) &
+            + Flux_VY(iVar,i,j,k) - Flux_VY(iVar,i,j+1,k) &
+            + Flux_VZ(iVar,i,j,k) - Flux_VZ(iVar,i,j,k+1) ) &
             /CellVolume_GB(i,j,k,iBlock) )
-    end do; end do; end do
-
+    end do; end do; end do; end do 
+    !$acc end data
+    
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
        ! Integrate fluxes in the transverse direction (eq. 20)
        ! <F> = F + Laplace_transverse(F)/24
@@ -420,17 +435,22 @@ contains
 
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            State_VGB(:,i,j,k,iBlock) = &
-                 StateOld_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
-         end do; end do; end do
+         
+         !$acc data present(Source_VC, State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI)
+         !$acc parallel loop collapse(4) 
+         do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
+            State_VGB(iVar,i,j,k,iBlock) = &
+                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VC(iVar,i,j,k)
+         end do; end do; end do; end do
 
          ! Update energy variables
+         !$acc parallel loop collapse(4) 
          do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
                  + Source_VC(nVar+iFluid,i,j,k)
          end do; end do; end do; end do
+         !$acc end data
       else
          ! Update state variables starting from previous stage
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -631,7 +651,7 @@ contains
             end do; end do; end do
          end if
       end if
-
+      
       ! Update energy or pressure based on UseConservative and IsConserv_CB
       call calc_energy_or_pressure(iBlock)
 

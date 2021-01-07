@@ -423,9 +423,7 @@ contains
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux, iFace, jFace, kFace, iVar
       type(FaceFluxVarType) :: FFV
-      !------------------------------------------------------------------------
-      
-      !$acc update host(LeftState_VX, RightState_VX)
+      !------------------------------------------------------------------------           
       
       !$acc data present(uDotArea_XI, VdtFace_X, &
       !$acc& LeftState_VX,RightState_VX, &
@@ -535,7 +533,6 @@ contains
     !end associate
 
     !$acc end data
-    !$acc update host(Flux_VX, VdtFace_x, uDotArea_XI)
 
     end subroutine get_flux_x
     !==========================================================================

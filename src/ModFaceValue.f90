@@ -310,9 +310,6 @@ contains
        DoTest=.false.
     end if
 
-    !$acc update device(DoLimitMomentum, UseBorisRegion, UseWavePressure)
-    !$acc update device(GammaWave, UseScalarToRhoRatioLtd)
-
     if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1)then
@@ -405,9 +402,6 @@ contains
           call set_clight_face(iBlock)
        end if
     end if
-
-    !TODO: to be removed. 
-    !$acc update device(State_VGB)
 
     !$acc data present(Primitive_VG, State_VGB)
     !$acc parallel loop collapse(4) independent

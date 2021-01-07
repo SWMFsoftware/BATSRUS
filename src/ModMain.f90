@@ -52,7 +52,7 @@ module ModMain
   real :: Cfl
   real :: CflOrig
   real, allocatable :: Dt_BLK(:)
-  !$acc declare create(Dt_BLK)
+  !$acc declare create(Dt_BLK, DtFixed)
   logical :: time_accurate = .true.,  time_loop = .false.
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)

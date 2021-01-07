@@ -106,7 +106,17 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    Source_VC = 0.0; SourceMhd_VC = 0.0
+    !$acc data present(Source_VC, SourceMhd_VC)
+    !$acc parallel loop collapse(4) 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar+nFluid
+       Source_VC(iVar,i,j,k) = 0
+    end do; end do; end do; end do 
+
+    !$acc parallel loop collapse(4) 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
+       SourceMhd_VC(iVar,i,j,k) = 0
+    end do; end do; end do; end do 
+    !$acc end data
 
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
@@ -674,8 +684,16 @@ contains
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
             call write_source('After E div E')
     end if
-    if(IsMhd)Source_VC(RhoUx_:RhoUz_,:,:,:) = &
-         Source_VC(RhoUx_:RhoUz_,:,:,:) + SourceMhd_VC
+
+    if(IsMhd) then
+       !$acc data present(Source_VC, SourceMhd_VC)
+       !$acc parallel loop collapse(4) 
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
+          Source_VC(iVar,i,j,k) = &
+               Source_VC(iVar,i,j,k) + SourceMhd_VC(iVar,i,j,k)
+       end do; end do; end do; end do 
+       !$acc end data
+    endif
 
     ! The electric field in the comoving frame is needed
     if(UseMhdMomentumFlux)&
@@ -824,7 +842,7 @@ contains
     end if
 
     if(DoTest) call write_source('final')
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
