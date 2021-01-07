@@ -681,7 +681,8 @@ contains
     use BATL_lib, ONLY: &
          nDim, x_, y_, z_, find_grid_block, iNode_B,&
          nI, nJ, nK, Xyz_DGB, nBlock, Unused_B,&
-         block_inside_regions, CoordMin_DB, CoordMax_DB
+         block_inside_regions, CoordMin_DB, CoordMax_DB,&
+         nIJK_D
     use BATL_Region, ONLY: points_inside_region, &
          is_point_inside_regions
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
@@ -701,7 +702,7 @@ contains
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
          IndPatchMin_D(3) = 0, IndPatchMax_D(3) = 0
 
-    logical:: DoTest, IsTestPoint
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_set_cell_status'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -741,14 +742,10 @@ contains
              do jP = max(IndPatchMin_D(y_), 0), min(IndPatchMax_D(y_), nY - 1)
                 do kP = max(IndPatchMin_D(z_), 0), min(IndPatchMax_D(z_), nZ - 1)
 
-                   call get_point_status(Status_I(&
-                        StatusMin_I(iRegion):StatusMax_I(iRegion)),&
-                        nX, nY, nZ, iP, jP, kP, iStatus)
-
                    ! current patch 
                    iPatch_D = [iP, jP, kP]
                    call patch_index_to_coord(iRegion, iPatch_D, "Mhd", XyzPatchMhd_D)
-                   
+
                    ! loop through cells in this patch
                    do i = 0, nCellPerPatch - 1; do j = 0, nCellPerPatch - 1; do k = 0, nCellPerPatch - 1
 
@@ -758,19 +755,6 @@ contains
                       XyzMhd_D(1:nDim) = XyzPatchMhd_D(1:nDim)+&
                            (iPatchCell_D(1:nDim)+0.5)*DxyzPic_DI(1:nDim, iRegion) 
 
-                      call find_grid_block(XyzMhd_D, iProcFound, iBlockFound,&
-                           iCellOut_D=iCell_D)
-
-                      ! IsTestPoint = .false.
-                      ! if(abs(XyzMhd_D(x_)+5.0)<0.1 .and. abs(XyzMhd_D(y_)+6.5)<0.1) IsTestPoint = .true.
-                      ! if(IsTestPoint) print*, "!!",&
-                      !      Xyz_DGB(:, iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock),&
-                      !      iCell_D, iBlock, iBlockFound
-
-                      ! This seems to be neccessary
-                      ! find_grid_block returns two different blocks for some points
-                      if(iBlock /= iBlockFound) CYCLE
-                      
                       ! first check if #PICREGIONMIN is defined and turn on cell inside it
                       if(allocated(iRegionPic_I)) then
                          if(is_point_inside_regions(iRegionPic_I, XyzMhd_D)) then
@@ -785,13 +769,21 @@ contains
                          if(.not. is_point_inside_regions(iRegionPicLimit_I, XyzMhd_D)) CYCLE
                       end if
 
+                      iCell_D = 1 + nIJK_D * (XyzMhd_D - CoordMin_DB(:, iBlock)) /&
+                           (CoordMax_DB(:, iBlock) - CoordMin_DB(:, iBlock))
+
+                      ! in case point outside block
+                      if(iCell_D(x_)>nIJK_D(x_) .or. iCell_D(y_)>nIJK_D(y_)&
+                           .or. iCell_D(z_)>nIJK_D(z_) .or. iCell_D(x_) < 1&
+                           .or. iCell_D(y_)<1 .or. iCell_D(z_)<1) CYCLE
+
+                      ! In case just use #PICREGIONMIN to control the PIC shape
+                      if(.not. allocated(IsPicCrit_CB)) CYCLE
+
                       if(allocated(IsPicCrit_CB)) then
                          if(IsPicCrit_CB(iCell_D(x_),iCell_D(y_),iCell_D(z_), iBlock)/=iPicOn_)&
                               CYCLE
                       end if
-
-                      ! In case just use #PICREGIONMIN to control the PIC shape
-                      if(.not. allocated(IsPicCrit_CB)) CYCLE
 
                       ! Also switching on the surrounding patches. 
                       do iPExt = max(iP - nPatchExtend_D(x_), 0), &
@@ -808,7 +800,7 @@ contains
                             enddo
                          enddo
                       enddo
-                      
+
                    end do; end do; end do ! end looping cells
 
                 end do
