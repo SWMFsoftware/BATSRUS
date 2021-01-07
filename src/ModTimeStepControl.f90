@@ -479,10 +479,10 @@ contains
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
           !$acc data present(time_BLK)
-          !$acc parallel loop collapse(4) copyin(Dt)
-          do iBlock = 1, nBlock; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          !$acc parallel loop collapse(3) copyin(Dt)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              time_BLK(i,j,k,iBlock) = Dt
-          enddo; end do; end do; end do
+          end do; end do; end do
           !$acc end data       
        end if
 
