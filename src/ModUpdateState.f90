@@ -79,11 +79,7 @@ contains
     end if
 
     ! Note must copy state to old state only if iStage is 1.
-    if(iStage==1) then
-
-       !TODO: to be removed. 
-       !$acc update device(Energy_GBI)       
-       
+    if(iStage==1) then       
        !$acc data present(StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI)
        !$acc parallel loop collapse(4)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar

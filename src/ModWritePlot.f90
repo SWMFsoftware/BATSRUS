@@ -124,7 +124,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     
-    !!!$acc update host(State_VGB, Energy_GBI)
+    !$acc update host(State_VGB, Energy_GBI)
     
     ! Initialize stuff
 

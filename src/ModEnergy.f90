@@ -355,7 +355,6 @@ contains
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
     call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
-    !$acc update host(State_VGB)
   end subroutine calc_pressure_cell
   !============================================================================
 
@@ -363,7 +362,6 @@ contains
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
     call calc_pressure(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-    !$acc update host(State_VGB)
   end subroutine calc_pressure_ghost
   !============================================================================
 
@@ -371,7 +369,6 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     !--------------------------------------------------------------------------
     call calc_pressure(i,i,j,j,k,k,iBlock,1,nFluid)
-    !$acc update host(State_VGB)
   end subroutine calc_pressure_point
   !============================================================================
 
@@ -382,15 +379,19 @@ contains
   end subroutine calc_energy_cell
   !============================================================================
 
-  subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn)
+  subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn, UseOpenACCIn)
 
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock
     logical, optional, intent(in) :: DoResChangeOnlyIn
+    
+    ! TOD0: This command is introduced as a temporary solution. It needs
+    ! to be reoved when more code is ported to GPU.
+    logical, optional, intent(in) :: UseOpenACCIn
 
     integer :: i, j, k, iFluid
-    logical :: DoResChangeOnly
+    logical :: DoResChangeOnly, UseOpenACC 
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_energy_ghost'
@@ -399,10 +400,12 @@ contains
     DoResChangeOnly =.false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
+    UseOpenACC = .false.
+    if(present(UseOpenACCIn)) UseOpenACC = UseOpenACCIn
+
     if( DoResChangeOnly ) then
        if( .not.any(abs(DiLevelNei_IIIB(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
     end if
-
     call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
 
     do iFluid = 1, nFluid
@@ -410,23 +413,53 @@ contains
 
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
-                Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
-             else
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
-                     + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
-                     /State_VGB(Rho_,i,j,k,iBlock) + &
-                     0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
-                if(Hyp_ > 1 .and. UseHypEnergy) &
-                     Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) &
-                     + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+          if(UseOpenACC) then 
+             !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
+                   Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
+                else
+                   Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + 0.5*(&
+                        State_VGB(RhoUx_,i,j,k,iBlock)**2 + &
+                        State_VGB(RhoUy_,i,j,k,iBlock)**2 + &
+                        State_VGB(RhoUz_,i,j,k,iBlock)**2) &
+                        /State_VGB(Rho_,i,j,k,iBlock) + &
+                        0.5*(&
+                        State_VGB(Bx_,i,j,k,iBlock)**2 + &
+                        State_VGB(By_,i,j,k,iBlock)**2 + &
+                        State_VGB(Bz_,i,j,k,iBlock)**2)
 
-             end if
-          end do; end do; end do
+
+
+                   if(Hyp_ > 1 .and. UseHypEnergy) &
+                        Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        Energy_GBI(i,j,k,iBlock,iFluid) &
+                        + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+
+                end if
+             end do; end do; end do
+          else 
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
+                   Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
+                else
+                   Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
+                        + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
+                        /State_VGB(Rho_,i,j,k,iBlock) + &
+                        0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+
+                   if(Hyp_ > 1 .and. UseHypEnergy) &
+                        Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        Energy_GBI(i,j,k,iBlock,iFluid) &
+                        + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+
+                end if
+             end do; end do; end do
+          endif
+
        else
           ! HD energy
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -440,8 +473,8 @@ contains
              end if
           end do; end do; end do
        end if
-    end do
-
+    end do    
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_ghost
   !============================================================================

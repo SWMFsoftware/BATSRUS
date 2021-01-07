@@ -469,7 +469,7 @@ contains
       ! Continuous: ghost = phys1
       integer, intent(in) :: iVarMin, iVarMax
 
-      integer:: i, j, k
+      integer:: i, j, k, iVar
 
       !------------------------------------------------------------------------
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
@@ -478,14 +478,18 @@ contains
 
       select case(iSide)
       case(1)
+         !$acc parallel loop collapse(4) present(State_VG)         
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            State_VG(iVarMin:iVarMax,i,j,k) = &
-                 State_VG(iVarMin:iVarMax,1,j,k)
+            do iVar = iVarMin, iVarMax 
+               State_VG(iVar,i,j,k) = State_VG(iVar,1,j,k)
+            end do
          end do; end do; end do
       case(2)
+         !$acc parallel loop collapse(4) present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            State_VG(iVarMin:iVarMax,i,j,k) = &
-                 State_VG(iVarMin:iVarMax,nI,j,k)
+            do iVar = iVarMin, iVarMax
+               State_VG(iVar,i,j,k) = State_VG(iVar,nI,j,k)
+            end do 
          end do; end do; end do
       case(3)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax

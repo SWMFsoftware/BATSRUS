@@ -81,9 +81,6 @@ contains
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
-    !$acc update host(State_VGB)
-    
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
        ! Switch off request
@@ -119,7 +116,7 @@ contains
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
-
+    
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
@@ -222,7 +219,7 @@ contains
                call fill_in_from_buffer(iBlock)
        end if
 
-       call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
+       call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
 
        if(UseResistivePlanet) then
           CBC%TypeBc = 'ResistivePlanet'
@@ -240,7 +237,6 @@ contains
 
     if(DoTest)write(*,*) NameSub,' finished'
 
-    !$acc update device(State_VGB)
     call test_stop(NameSub, DoTest)
   end subroutine exchange_messages
   !============================================================================
