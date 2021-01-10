@@ -4844,12 +4844,20 @@ The default is to flush the output, i.e. DoFlush=T.
     <option name="TD "	      />
     <option name="TITOV-DEMOULIN" />
     <option name="TD14"	      />
+    <option name="SPHEROMAK"	      />
   </parameter>
   <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
     <parameter name="BStrength" type="real" default="0" />
     <parameter name="Radius" type="real" min="0" default="0" />
     <parameter name="Stretch" type="real" min="0" default="0" />
     <parameter name="ApexHeight" type="real" min="0" default="0" />
+  </if>
+  <if expr="$TypeCme =~ /SPHEROMAK/">
+    <parameter name="BStrength" type="real" default="0" />
+    <parameter name="Radius" type="real" min="0" default="0" />
+    <parameter name="Stretch" type="real" min="0" default="0" />
+    <parameter name="ApexHeight" type="real" min="0" default="0" />
+    <parameter name="uCme" type="real" min="0" default="0" />
   </if>
   <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
     <parameter name="BcTubeDim" type="real" default="0" />
@@ -4971,6 +4979,19 @@ GL			TypeCme    GL/GIBSON-LOW
 0.3			Stretch        [Rs]
 1.8			ApexHeight     [Rs]
 
+#CME
+T			UseCme
+T			DoAddFluxRope
+0			LongitudeCme   [deg]
+0			LatitudeCme    [deg]
+0			OrientationCme [deg]
+SPHEROMAK		TypeCme    
+1.0			BStrength      [Gs]
+1.03			Radius         [Rs]
+0.3			Stretch        [Rs]
+1.8			ApexHeight     [Rs]
+600                     uCme           [km/s]
+
 
 
 First five parameters are common for all types of EE generators. If UseCme is 
@@ -5019,6 +5040,9 @@ the sign of toroidal magnetic field is fixed by the choice of active region
 geometry and does not change the sign when BSthrength flips. hence, the 
 toroidal current-to-field ratio also changes sign and so does the helicity, if
 the negative BStrength is chosen.  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SPHEROMAK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+In addition to the above parameters uCme is read, controlling the speed
+of the CME self-similar expansion
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
