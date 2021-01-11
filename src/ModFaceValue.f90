@@ -1017,7 +1017,6 @@ contains
               Ga2Boris - BzFull*uBC2Inv
       else
          Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
-         !$acc loop seq
          do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
             RhoInv = 1/Primitive_VG(iRho,i,j,k)            
