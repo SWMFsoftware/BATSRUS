@@ -439,7 +439,7 @@ contains
        call set_block_values(iBlock, x_, FFV)
 #endif
              
-       !$acc parallel loop collapse(3) private(FFV) independent
+       !$acc parallel loop gang vector collapse(3) private(FFV) independent
        do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
 #ifdef OPENACC
           call init_face_flux_var_type(FFV)
@@ -484,11 +484,8 @@ contains
             FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
-         !$acc loop seq
-         do iVar = 1, nVar
-            FFV%StateLeft_V(iVar)  = LeftState_VX(iVar,iFace,jFace,kFace)
-            FFV%StateRight_V(iVar) = RightState_VX(iVar,iFace,jFace,kFace)
-         end do
+         FFV%StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
+         FFV%StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace), FFV)
 

@@ -414,7 +414,7 @@ contains
        !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
        
-       !$acc parallel loop collapse(3) private(FVV) independent
+       !$acc parallel loop gang vector collapse(3) private(FVV) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           FVV%i = i; FVV%j = j; FVV%k = k
           call calc_primitives(FVV)         ! all cells
@@ -494,7 +494,7 @@ contains
        !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
        
-       !$acc parallel loop collapse(3) private(FVV) independent
+       !$acc parallel loop gang vector collapse(3) private(FVV) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
@@ -1016,18 +1016,12 @@ contains
          Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
               Ga2Boris - BzFull*uBC2Inv
       else
-         !$acc loop seq
-         do iVar = Ux_, Uz_
-            Primitive_VG(iVar,i,j,k)=RhoInv*Primitive_VG(RhoUx_+iVar-Ux_,i,j,k)
-         enddo
+         Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
          !$acc loop seq
          do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-            RhoInv = 1/Primitive_VG(iRho,i,j,k)
-            !$acc loop seq 
-            do iVar = iUx, iUz 
-               Primitive_VG(iVar,i,j,k)=RhoInv*Primitive_VG(iVar,i,j,k)
-            enddo
+            RhoInv = 1/Primitive_VG(iRho,i,j,k)            
+            Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)            
          end do
       end if
 
