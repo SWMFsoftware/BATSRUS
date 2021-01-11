@@ -249,7 +249,7 @@ SPHEROMAK		TypeCme
 1.03			Radius
 0.7			Stretch
 1.13			ApexHeight
-600			uCmeSi
+600			uCme
 
 #STOP
 -1			MaxIteration
