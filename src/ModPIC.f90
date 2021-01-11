@@ -680,9 +680,9 @@ contains
 
     use BATL_lib, ONLY: &
          nDim, x_, y_, z_, find_grid_block, iNode_B,&
-         nI, nJ, nK, Xyz_DGB, nBlock, Unused_B,&
+         nI, nJ, nK, Xyz_DGB, Xyz_DNB, nBlock, Unused_B,&
          block_inside_regions, CoordMin_DB, CoordMax_DB,&
-         nIJK_D
+         nIJK_D, IsCartesianGrid, xyz_to_coord, CellSize_DB
     use BATL_Region, ONLY: points_inside_region, &
          is_point_inside_regions
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
@@ -694,9 +694,12 @@ contains
          iP, jP, kP, iPExt, jPExt, kPExt
 
     real:: r
-    real:: CoordMinPic_D(nDim), CoordMaxPic_D(nDim)
-    real:: XyzPic_D(nDim)=0.0, XyzMhd_D(MaxDim)=0.0, &
-         XyzPatchMhd_D(MaxDim)=0.0, XyzMhdExtend_D(nDim)=0.0
+    real:: XyzMinBlock_D(MaxDim), XyzMaxBlock_D(MaxDim),&
+         XyzMinPic_D(nDim), XyzMaxPic_D(nDim)
+
+    real:: XyzPic_D(nDim)=0.0, XyzMhd_D(MaxDim)=0.0,&
+         XyzPatchMhd_D(MaxDim)=0.0, XyzMhdExtend_D(nDim)=0.0,&
+         Coord_D(MaxDim)
     integer:: iBlock, iBlockFound, iProcFound, iCell_D(MaxDim)
     integer:: IndexPatch_D(3) = 0, IndexCenterPatch_D(3) = 0
     integer:: iPatch_D(3) = 0, iPatchCell_D(3) = 0,&
@@ -726,15 +729,33 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
+          if(IsCartesianGrid) then
+             XyzMinBlock_D = CoordMin_DB(:, iBlock)
+             XyzMaxBlock_D = CoordMax_DB(:, iBlock)
+          else
+             ! In non-cartesian case, the min&max gen. coords
+             ! are not neccessarily real min&max projected in
+             ! cartesian grid, gathering all coordinates of nodes
+             ! and take the min&max in cartesian
+             do iDim=1, nDim
+                XyzMinBlock_D(iDim) = minval(minval(minval(&
+                     Xyz_DNB(iDim, :, :, :, iBlock),&
+                     dim=1), dim=1), dim=1)
+                XyzMaxBlock_D(iDim) = maxval(maxval(maxval(&
+                     Xyz_DNB(iDim, :, :, :, iBlock),&
+                     dim=1), dim=1), dim=1)
+             end do
+          end if
+
           ! Then convert to PIC xyz
-          call mhd_to_pic_vec(iRegion, CoordMin_DB(:, iBlock),&
-               CoordMinPic_D(1:nDim))
-          call mhd_to_pic_vec(iRegion, CoordMax_DB(:, iBlock),&
-               CoordMaxPic_D(1:nDim))
+          call mhd_to_pic_vec(iRegion, XyzMinBlock_D,&
+               XyzMinPic_D(1:nDim))
+          call mhd_to_pic_vec(iRegion, XyzMaxBlock_D,&
+               XyzMaxPic_D(1:nDim))
           ! Then convert to patch indices
-          call coord_to_patch_index(iRegion, CoordMinPic_D(1:nDim),&
+          call coord_to_patch_index(iRegion, XyzMinPic_D(1:nDim),&
                IndPatchMin_D(1:nDim))
-          call coord_to_patch_index(iRegion, CoordMaxPic_D(1:nDim),&
+          call coord_to_patch_index(iRegion, XyzMaxPic_D(1:nDim),&
                IndPatchMax_D(1:nDim))
 
           ! loop through FLEKS patches in this MHD block
@@ -769,13 +790,12 @@ contains
                          if(.not. is_point_inside_regions(iRegionPicLimit_I, XyzMhd_D)) CYCLE
                       end if
 
-                      iCell_D = 1 + nIJK_D * (XyzMhd_D - CoordMin_DB(:, iBlock)) /&
-                           (CoordMax_DB(:, iBlock) - CoordMin_DB(:, iBlock))
+                      ! The non-cartersian case is considered in xyz_to_coord
+                      call xyz_to_coord(XyzMhd_D, Coord_D)
+                      iCell_D = 1 + (Coord_D - CoordMin_DB(:, iBlock)) / CellSize_DB(:, iBlock)
 
                       ! in case point outside block
-                      if(iCell_D(x_)>nIJK_D(x_) .or. iCell_D(y_)>nIJK_D(y_)&
-                           .or. iCell_D(z_)>nIJK_D(z_) .or. iCell_D(x_) < 1&
-                           .or. iCell_D(y_)<1 .or. iCell_D(z_)<1) CYCLE
+                      if( any(iCell_D>nIJK_D) .or. any(iCell_D<1) ) CYCLE
 
                       ! In case just use #PICREGIONMIN to control the PIC shape
                       if(.not. allocated(IsPicCrit_CB)) CYCLE
