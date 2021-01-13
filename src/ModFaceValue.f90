@@ -1541,6 +1541,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
+      !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VY,RightState_VY)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
