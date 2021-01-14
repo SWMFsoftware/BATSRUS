@@ -390,12 +390,12 @@ contains
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
                PoyntingFluxPerB*sqrt(State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
           State_VGB(WaveLast_,i,j,k,iBlock) = &
-               1e-4*State_VGB(WaveFirst_,i,j,k,iBlock)
+               1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
        else
           State_VGB(WaveLast_,i,j,k,iBlock) =  &
                PoyntingFluxPerB*sqrt(State_VGB(iRho_I(IonFirst_),i,j,k,iBlock))
           State_VGB(WaveFirst_,i,j,k,iBlock) = &
-               1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
+               1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
        end if
        if(UseWavePressureLtd) State_VGB(Ew_,i,j,k,iBlock) = &
             sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
