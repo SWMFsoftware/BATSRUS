@@ -194,7 +194,7 @@ sub set_grid_size{
     }
 
     $GhostCell = $NewGhostCell if $NewGhostCell;
-    die "$ERROR -ng=$GhostCell must be 2,3,4 or 5\n" if $GhostCell!~/^[2345]/;
+    die "$ERROR -ng=$GhostCell must be 2,3,4 or 5\n" if $GhostCell!~/^[2345]$/;
 
     # Check the grid size (to be set)
     die "$ERROR nK=$nK must be 1 if nJ is 1\n"         if $nJ==1 and $nK>1;
