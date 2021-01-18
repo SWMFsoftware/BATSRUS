@@ -228,11 +228,14 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
-             Dt_loss = 0.5*minval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                  /WaveDissipation_VC(:,i,j,k))
-             ! The following prevents the wave energies from becoming negative
-             ! due to too large loss terms.
-             time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+             if(all(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)>0.0))then
+                Dt_loss = 0.5*minval( &
+                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                     /WaveDissipation_VC(:,i,j,k))
+                ! The following prevents the wave energies from becoming
+                ! negative due to too large loss terms.
+                time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+             end if
           end do; end do; end do
        end if
 
