@@ -573,7 +573,7 @@ contains
 
     if(UseB0) call set_b0_source(iBlock)
 
-    if(UseB .and. UseDivbSource)then
+    if(UseB .and. UseDivbSource)then       
        if(IsCartesian)then
           call calc_divb_source
        else
@@ -583,8 +583,10 @@ contains
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)&
             call write_source('After B0B1 source')
-
+              
        ! Add contributions to other source terms
+       !$acc data present(true_cell, Source_VC, SourceMhd_VC, DivB1_GB, State_VGB)
+       !$acc parallel loop gang vector collapse(3) private(U_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -625,7 +627,7 @@ contains
           end if
 
        end do; end do; end do
-
+       !$acc end data
        if(DoTest)call write_source('After divb source')
 
        if(UseB0Source .and. UseMhdMomentumFlux)then
@@ -1032,9 +1034,20 @@ contains
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
+      !$acc data present(SourceMhd_VC, Source_VC, &
+      !$acc& DivB1_GB, CellSize_DB, true_cell, &
+      !$acc& LeftState_VX,LeftState_VY,LeftState_VZ, &
+      !$acc& RightState_VX,RightState_VY,RightState_VZ)
+      
+      !$acc parallel loop gang vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
+#ifdef OPENACC
+      DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
+      DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
+      DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
+#endif
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
@@ -1093,7 +1106,6 @@ contains
          if(DoCorrectFace) then
             ! Correct the face value so that the first order derivate is
             ! high-order accurate.
-
             BCorrect0 = correct_face_value( &
                  0.5*(RightState_VX(Bx_,i,j,k) + LeftState_VX(Bx_,i,j,k)), &
                  State_VGB(Bx_,i-2:i+1,j,k,iBlock))
@@ -1139,9 +1151,11 @@ contains
             if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
                  + dB1nFace5 + dB1nFace6
          endif
-
+         
       end do; end do; end do
-
+      
+      !$acc end data
+      
       ! Momentum source term from B0 only needed for true MHD equations
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
@@ -1151,7 +1165,7 @@ contains
               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
-
+      
     end subroutine calc_divb_source
     !==========================================================================
     subroutine calc_divb_source_gencoord

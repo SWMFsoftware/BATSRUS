@@ -201,6 +201,7 @@ module ModAdvance
   real, allocatable :: ExtraSource_ICB(:,:,:,:,:)
 
   real, allocatable :: DivB1_GB(:,:,:,:)
+  !$acc declare create(DivB1_GB)
 
   ! Switch between low and high order schemes
   logical:: UseLowOrder = .false.  ! some faces are low order
