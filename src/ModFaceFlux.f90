@@ -658,10 +658,20 @@ contains
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
+      !$acc data present(uDotArea_ZI, VdtFace_Z, &
+      !$acc& LeftState_VZ,RightState_VZ, &
+      !$acc& Xyz_DGB, &
+      !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
+      !$acc& UseLindeFix, UseRS7, &
+      !$acc& CellFace_DB, &
+      !$acc& CellSize_DB, &
+      !$acc& true_cell, &
+      !$acc& Flux_VZ)
+
 #ifndef OPENACC
       call set_block_values(iBlock, z_, FFV)
 #endif
-
+      !$acc parallel loop gang vector collapse(3) private(FFV) independent
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 #ifdef OPENACC
          call init_face_flux_var_type(FFV)
@@ -750,6 +760,7 @@ contains
             enddo
          end do; end do; enddo
       end if
+      !$acc end data
     end subroutine get_flux_z
     !==========================================================================
 

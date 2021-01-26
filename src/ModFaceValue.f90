@@ -503,9 +503,11 @@ contains
              end do
           end do
        end do
-       !$acc end data
        
        if(nJ > 1)then
+          !TODO: Only parallelized the first 2 loops with openacc as
+          !      the first try. Optimize later.
+          !$acc parallel loop gang vector collapse(2) private(FVV) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 FVV%i = i; FVV%j = j; FVV%k = k
@@ -518,6 +520,9 @@ contains
           end do; end do
        end if
        if(nK > 1)then
+          !TODO: Only parallized the first 2 loops with openacc as
+          !      the first try. Optimize later.
+          !$acc parallel loop gang vector collapse(2) private(FVV) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 FVV%i = i; FVV%j = j; FVV%k = k
@@ -529,6 +534,7 @@ contains
              end do
           end do; end do
        end if
+       !$acc end data
     end if
 
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
@@ -1558,6 +1564,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
+      !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VZ,RightState_VZ)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
