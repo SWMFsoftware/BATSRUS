@@ -315,7 +315,7 @@ test_fast_wave:
 	@echo "test_fast_wave_rundir..." >> test_fast_wave.diff
 	$(MAKE) test_fast_wave_rundir
 	@echo "test_fast_wave_run..." >> test_fast_wave.diff
-	$(MAKE) test_fast_wave_run
+	$(MAKE) test_fast_wave_run NP=1
 	@echo "test_fast_wave_check..." >> test_fast_wave.diff
 	$(MAKE) test_fast_wave_check
 
