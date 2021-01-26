@@ -133,19 +133,16 @@ raw			StringLog
 #SAVERESTART
 F			DoSaveRestart
 
-#PLOTFILENAME
-second			NameMaxTimeUnit
-
-SAVEINITIAL
+#SAVEINITIAL
 T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
 z=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
-5			DtSavePlot
+500			DtSavePlot
 0.0			DxSavePlot
 
 #STOP
 -1			MaxIteration
-5			tSimulationMax
+500			tSimulationMax

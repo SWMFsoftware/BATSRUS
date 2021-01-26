@@ -335,7 +335,7 @@ test_fast_wave_run:
 
 test_fast_wave_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/z=0_mhd_1_t05.00000_n00000010.out \
+		${TESTDIR}/RESULT/GM/z=0_mhd_1_t00000820_n00001000.out \
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
 		> test_fast_wave.diff)
 	ls -l test_fast_wave.diff
