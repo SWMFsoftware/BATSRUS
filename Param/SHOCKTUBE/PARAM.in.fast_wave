@@ -127,7 +127,7 @@ minmod			TypeLimiter
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLog
-1			DnSaveLogfile
+100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVERESTART
