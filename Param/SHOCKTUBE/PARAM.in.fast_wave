@@ -71,7 +71,7 @@ dt			= 0.2*dtmax   = 1.066
 -1.0			LambdaZ
 0.0			Phase
 
-! This perturbation should NOT exist for a fast wave. 
+! This perturbation should NOT exist for a fast wave.
 ! It is introduced for code development/test purpose only.
 #WAVE
 4			Uz_
