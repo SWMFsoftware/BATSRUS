@@ -7,10 +7,6 @@
 $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 	h5pfc ${Cflag2} ModHdf5.f90
 
-# Field line thread module works with 0 optimization only
-#1
-#	${COMPILE.f90} ${Cflag0} ModFieldLineThread.f90
-#
 # Particle field line module works with 0 optimization only
 $Compiler eq "crayftn"
 	${COMPILE.f90} ${Cflag0} ModParticleFieldLine.f90
