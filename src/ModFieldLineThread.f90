@@ -166,7 +166,8 @@ module ModFieldLineThread
   ! Saves restart
   public :: save_thread_restart
   ! Correspondent named indexes
-  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2
+  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
+       Restart_=3
 
   ! The number of grid spaces which are covered by the TR model
   ! the smaller is this number, the better the TR assumption work
@@ -967,7 +968,7 @@ contains
             BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k)
     end do; end do
     call close_file
-    BoundaryThreads_B(iBlock) % iAction = Enthalpy_
+    BoundaryThreads_B(iBlock) % iAction = Restart_
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine read_thread_restart

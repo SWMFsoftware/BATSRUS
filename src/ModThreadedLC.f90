@@ -11,7 +11,7 @@ module ModThreadedLC
        DHeatFluxXOverU_, LambdaSi_, DLogLambdaOverDLogT_,init_tr
   use ModFieldLineThread,  ONLY: BoundaryThreads, BoundaryThreads_B,     &
        UseTriangulation, PSi_, TeSi_, TiSi_, AMajor_, AMinor_,           &
-       DoInit_, Done_, Enthalpy_, Heat_,                                 &
+       DoInit_, Done_, Enthalpy_, Heat_, Restart_,                       &
        jThreadMin=>jMin_, jThreadMax=>jMax_,                             &
        kThreadMin=>kMin_, kThreadMax=>kMax_
   use ModAdvance,          ONLY: UseElectronPressure, UseIdealEos
@@ -103,7 +103,7 @@ module ModThreadedLC
   ! \eta = m \nu_{ei}/(e**2 Ne)
   real :: cExchangeRateSi
   ! See above about usage of the latter constant
-  integer, parameter:: Impl_=3
+  integer, parameter:: Impl_=4
 
   integer        :: nIter = 20
   real           :: cTol=1.0e-6
@@ -336,7 +336,7 @@ contains
        PSi_I(1:nPoint)  = BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)
        AMajor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMajor_,-nPoint:0,j,k)
        AMinor_I(0:nPoint) = BoundaryThreads_B(iBlock)%State_VIII(AMinor_,-nPoint:0,j,k)
-       if(iAction/=Enthalpy_)then
+       if(iAction/=Enthalpy_.and.iAction/=Restart_)then
           TeSi_I(nPoint)   = TeSiIn
           TiSi_I(nPoint)   = TiSiIn
        end if
@@ -381,8 +381,13 @@ contains
        !
        ! Do not store temperature
        !
+    case(Restart_)
+       !
+       ! Do not store temperature
+       !
     case(Impl_)
        call advance_thread(IsTimeAccurate=.true.)
+       AMajorOut = AMajor_I(nPoint)
        ! Output for temperature gradient, all the other outputs
        ! are meaningless
        DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
@@ -404,6 +409,7 @@ contains
        write(*,*)'iAction=',iAction
        call stop_mpi('Unknown action in '//NameSub)
     end select
+    AMajorOut = AMajor_I(nPoint)
     ! Outputs
     ! First order solution: ghost cell from the first layer are filled
     ! in with the solution of the threaded field line equation at the
@@ -795,7 +801,6 @@ contains
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinorBC=AMinorIn,              &
-           AMajorBC=AMajorOut,             &
            nIterIn=nIterIn,                &
            DoCheck=DoCheckConvHere)
       ResHeating_I = 0.0
@@ -953,13 +958,11 @@ contains
   end subroutine tridiag_3by3_block
   !============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinorBC,&
-       AMajorBC, nIterIn, DoCheck)
+    nIterIn, DoCheck)
     ! INPUT
     integer,         intent(in):: nI
     real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
     real,            intent(in):: AMinorBC         ! BC for A-
-    ! OUTPUT
-    real,           intent(out):: AMajorBC          ! BC for A+
     integer,optional,intent(in):: nIterIn
     logical, intent(in) :: DoCheck
     real:: DeltaXi
@@ -1038,7 +1041,6 @@ contains
           call stop_mpi('Did not reach convergence in solve_a_plus_minus')
        end if
     end do
-    AMajorBC = AMajor_I(nI)
   contains
     !==========================================================================
     real function derivative_major(AMajor, AMinor, Reflection)
