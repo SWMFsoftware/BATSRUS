@@ -965,7 +965,9 @@ contains
        read(UnitTmp_, iostat = iError) &
             BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k), &
             BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k), &
-            BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k)
+            BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k),  &
+            BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:0,j,k),&
+            BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:0,j,k)
     end do; end do
     call close_file
     BoundaryThreads_B(iBlock) % iAction = Restart_
@@ -1468,9 +1470,11 @@ contains
           nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&
-               BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k),&
-               BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k)
+               BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k), &
+               BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k), &
+               BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k),  &
+               BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:0,j,k)
        end do; end do
        call close_file
     end do
