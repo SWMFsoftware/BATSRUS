@@ -25,6 +25,8 @@ program BATSRUS
   use ModWriteProgress, ONLY: write_progress, write_runtime_values
   use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
+  use ModConst, ONLY: &
+       cSecondPerYear, cSecondPerDay, cSecondPerHour, cSecondPerMinute
 
   use ModReadParam
 
@@ -131,10 +133,26 @@ program BATSRUS
      write(*,*)
      write(*,'(a)')'    Finished Numerical Simulation'
      write(*,'(a)')'    -----------------------------'
-     if (time_accurate)   write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
-          '   Simulated Time T = ',time_simulation, &
-          ' (',time_simulation/60.00, &
-          ' min, ',time_simulation/3600.00,' hrs)'
+     if (time_accurate)then
+        write(*, '(a,es13.5,a)') &
+             '   Simulated time = ', time_simulation, ' s '
+        if(time_simulation > 1e6*cSecondPerYear) then
+           write(*, '(a,es13.5,a)') &
+                time_simulation/cSecondPerYear
+        elseif(time_simulation > cSecondPerYear) then
+           write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                time_simulation/cSecondPerYear, ' years'
+        elseif(time_simulation > cSecondPerDay) then
+           write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                time_simulation/cSecondPerDay, ' days'
+        elseif(time_simulation > cSecondPerHour) then
+           write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                time_simulation/cSecondPerHour, ' hours'
+        elseif(time_simulation > cSecondPerMinute) then
+           write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                time_simulation/cSecondPerMinute, ' mins'
+        end if
+     end if
   end if
   if (dn_timing > -2) call timing_report
 
