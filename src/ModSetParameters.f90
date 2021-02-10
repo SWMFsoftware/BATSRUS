@@ -1306,7 +1306,7 @@ contains
              elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
                 ! This is intended for restart with a different dimensionality
                 plot_var='all'
-                plot_dimensional(iFile) = .false.
+                plot_dimensional(iFile) = index(plot_string,'ALL')>0
                 call join_string(nVar, NameVar_V(1:nVar), plot_vars(iFile))
                 plot_pars(iFile)='g'
              elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
