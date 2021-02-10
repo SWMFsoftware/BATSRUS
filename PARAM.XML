@@ -4337,7 +4337,7 @@ values or as non-dimensional values:
 
  'var' - vars: READ FROM PARAMETER FILE
          pars: READ FROM PARAMETER FILE
- 'all' - vars: all state variables define in the equation module
+ 'all' - vars: all state variables defined in the equation module
          pars: g
  'hd'  - vars: Primitive_Variables
          pars: g rbody
