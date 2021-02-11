@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib,            ONLY: test_start, test_stop, iProc
   use ModTransitionRegion, ONLY:  iTableTR, TeSiMin, SqrtZ, CoulombLog, &
@@ -195,9 +195,9 @@ contains
     ! \eta = m \nu_{ei}/(e**2 Ne)
     !
     cExchangeRateSi = &
-         CoulombLog/sqrt(cElectronMass)*  &!\
+         CoulombLog/sqrt(cElectronMass)*  &
          ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
-         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
+         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &
          *(2*cElectronMass/cProtonMass)  /&! *energy exchange per ei collision
          cBoltzmann
     ! Dimensionless temperature floor
@@ -876,6 +876,7 @@ contains
     subroutine get_cooling(nLast)
       integer,intent(in) ::nLast
       integer ::  iPoint
+
       !------------------------------------------------------------------------
       ResCooling_I = 0.0;
       do iPoint = 1, nLast
@@ -897,6 +898,7 @@ contains
               ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
       end do
     end subroutine get_cooling
+    !==========================================================================
   end subroutine solve_boundary_thread
   !============================================================================
   ! This routine solves three-diagonal system of equations:                    !
@@ -1262,4 +1264,3 @@ contains
   end subroutine set_field_line_thread_bc
   !============================================================================
 end module ModThreadedLC
-!==============================================================================

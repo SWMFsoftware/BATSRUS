@@ -6,7 +6,7 @@ module ModHeatConduction
 
   use BATL_lib,     ONLY: test_start, test_stop
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
@@ -104,6 +104,7 @@ contains
     character(len=*), intent(in) :: NameCommand
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'read_heatconduction_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -168,6 +169,7 @@ contains
     real::  cTeTiExchangeRateSi
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'init_heat_conduction'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -261,9 +263,9 @@ contains
     ! \eta = m \nu_{ei}/(e**2 Ne)
 
     cTeTiExchangeRateSi = &
-         CoulombLog/sqrt(cElectronMass)*  &!\
+         CoulombLog/sqrt(cElectronMass)*  &
          ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
-         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
+         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &
          *(2*cElectronMass/cProtonMass)    ! *energy exchange per ei collision
     ! While used, this should be divided by TeSi**1.5 and multipled by
     ! atomic density, N_i in SI. We will apply dimensionless density
@@ -759,6 +761,7 @@ contains
     integer:: i, j, k, iBlock
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -887,6 +890,7 @@ contains
     logical :: IsNewBlockTe
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1293,6 +1297,7 @@ contains
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1486,6 +1491,7 @@ contains
     real :: DtLocal
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'update_impl_heat_cond'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1569,4 +1575,3 @@ contains
   !============================================================================
 
 end module ModHeatConduction
-!==============================================================================

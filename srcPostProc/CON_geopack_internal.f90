@@ -173,15 +173,15 @@ contains
            /),(/3,3/))
     real,dimension(3,3,3),parameter::&
          E_DDD=reshape((/&
-         !i = 1,   2,   3,     /j  \
+         !i = 1,   2,   3,     /j  
            cZero, cZero, cZero,&!1  | k=1
            cZero, cZero, -cOne,&!2  |
            cZero,  cOne, cZero,&!3 / 
-                     !i = 1,   2,   3,     /j  \
+                     !i = 1,   2,   3,     /j  
                        cZero, cZero,  cOne,&!1  | k=2
                        cZero, cZero, cZero,&!2  |
                        -cOne, cZero, cZero,&!3 /
-                                !i = 1,   2,   3,     /j  \
+                                !i = 1,   2,   3,     /j  
                                   cZero, -cOne, cZero,&!1  | k=3
                                    cOne, cZero, cZero,&!2  |
                                   cZero, cZero, cZero &!3 /
