@@ -115,7 +115,7 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
              UseDtLimit, DtLimit
-    use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
+    use ModAdvance, ONLY : VdtFace_XI, VdtFace_YI, VdtFace_ZI, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
     use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
@@ -152,15 +152,15 @@ contains
     if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
-    !$acc parallel loop collapse(3) present(true_cell, VdtFace_x,&
-    !$acc VdtFace_y, VdtFace_z, time_BLK, CellVolume_GB)
+    !$acc parallel loop collapse(3) present(true_cell, VdtFace_XI,&
+    !$acc VdtFace_YI, VdtFace_ZI, time_BLK, CellVolume_GB)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
        else
-          Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
-          if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
-          if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
+          Vdt = max(VdtFace_xI(i,j,k,1),VdtFace_xI(i+1,j,k,1))
+          if(nJ > 1) Vdt = Vdt + max(VdtFace_yI(i,j,k,1), VdtFace_yI(i,j+1,k,1))
+          if(nK > 1) Vdt = Vdt + max(VdtFace_zI(i,j,k,1), VdtFace_zI(i,j,k+1,1))
           time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
        end if
     end do; end do; end do
@@ -260,12 +260,12 @@ contains
     end if
 
     if(DoTest)then
-       write(*,*)NameSub,' VdtFace_x(iTest:iTest+1)=', &
-            VdtFace_x(iTest:iTest+1,jTest,kTest)
-       if(nJ>1) write(*,*) NameSub,' VdtFace_y(jTest:jTest+1)=', &
-            VdtFace_y(iTest,jTest:jTest+1,kTest)
-       if(nK>1) write(*,*) NameSub,' VdtFace_z(kTest:kTest+1)=', &
-            VdtFace_z(iTest,jTest,kTest:kTest+1)
+       write(*,*)NameSub,' VdtFace_XI(iTest:iTest+1)=', &
+            VdtFace_xI(iTest:iTest+1,jTest,kTest,1)
+       if(nJ>1) write(*,*) NameSub,' VdtFace_YI(jTest:jTest+1)=', &
+            VdtFace_yI(iTest,jTest:jTest+1,kTest,1)
+       if(nK>1) write(*,*) NameSub,' VdtFace_ZI(kTest:kTest+1)=', &
+            VdtFace_zI(iTest,jTest,kTest:kTest+1,1)
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
 

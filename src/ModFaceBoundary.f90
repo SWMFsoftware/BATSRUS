@@ -110,8 +110,8 @@ contains
   subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
-         RightState_VX, RightState_VY, RightState_VZ
+    use ModAdvance, ONLY: LeftState_VXI, LeftState_VYI, LeftState_VZI, &
+         RightState_VXI, RightState_VYI, RightState_VZI
     use ModGeometry, ONLY: true_cell
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
@@ -158,23 +158,23 @@ contains
       !------------------------------------------------------------------------
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
-           LeftState_VX(iVarTest,  iTest, jTest, kTest),  &
-           RightState_VX(iVarTest, iTest, jTest, kTest)
+           LeftState_VXI(iVarTest,  iTest, jTest, kTest,1),  &
+           RightState_VXI(iVarTest, iTest, jTest, kTest,1)
       write(*,*) 'VarL_x, VarR_x(iTest+1)=',&
-           LeftState_VX(iVarTest,  iTest+1, jTest, kTest), &
-           RightState_VX(iVarTest, iTest+1, jTest, kTest)
+           LeftState_VXI(iVarTest,  iTest+1, jTest, kTest,1), &
+           RightState_VXI(iVarTest, iTest+1, jTest, kTest,1)
       write(*,*) 'VarL_y, VarR_y(jTest)  =',&
-           LeftState_VY(iVarTest,  iTest, jTest, kTest),  &
-           RightState_VY(iVarTest, iTest, jTest, kTest)
+           LeftState_VYI(iVarTest,  iTest, jTest, kTest,1),  &
+           RightState_VYI(iVarTest, iTest, jTest, kTest,1)
       write(*,*) 'VarL_y, VarR_y(jTest+1)=',&
-           LeftState_VY(iVarTest,  iTest, jTest+1, kTest), &
-           RightState_VY(iVarTest, iTest, jTest+1, kTest)
+           LeftState_VYI(iVarTest,  iTest, jTest+1, kTest,1), &
+           RightState_VYI(iVarTest, iTest, jTest+1, kTest,1)
       write(*,*) 'VarL_z, VarR_z(kTest)  =',&
-           LeftState_VZ(iVarTest,  iTest, jTest, kTest), &
-           RightState_VZ(iVarTest, iTest, jTest, kTest)
+           LeftState_VZI(iVarTest,  iTest, jTest, kTest,1), &
+           RightState_VZI(iVarTest, iTest, jTest, kTest,1)
       write(*,*) 'VarL_z, VarR_z(kTest+1)=',&
-           LeftState_VZ(iVarTest,  iTest, jTest, kTest+1), &
-           RightState_VZ(iVarTest, iTest, jTest, kTest+1)
+           LeftState_VZI(iVarTest,  iTest, jTest, kTest+1,1), &
+           RightState_VZI(iVarTest, iTest, jTest, kTest+1,1)
 
     end subroutine write_face_state
     !==========================================================================
@@ -186,8 +186,8 @@ contains
 
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
-         LeftState_VX, LeftState_VY, LeftState_VZ,    &
-         RightState_VX, RightState_VY, RightState_VZ, &
+         LeftState_VXI, LeftState_VYI, LeftState_VZI,    &
+         RightState_VXI, RightState_VYI, RightState_VZI, &
          UseAnisoPe, UseMultiSpecies
     use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
@@ -307,11 +307,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V= LeftState_VX(:,i,j,k)
+                FBC%VarsTrueFace_V= LeftState_VXI(:,i,j,k,1)
 
                 call set_face(i-1,j,k,i,j,k)
 
-                RightState_VX(:,i,j,k) = FBC%VarsGhostFace_V
+                RightState_VXI(:,i,j,k,1) = FBC%VarsGhostFace_V
 
              end if
 
@@ -328,11 +328,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VX(:,i,j,k)
+                FBC%VarsTrueFace_V = RightState_VXI(:,i,j,k,1)
 
                 call set_face(i,j,k,i-1,j,k)
 
-                LeftState_VX(:,i,j,k) = FBC%VarsGhostFace_V
+                LeftState_VXI(:,i,j,k,1) = FBC%VarsGhostFace_V
              end if
           end do ! end i loop
        end do ! end j loop
@@ -356,11 +356,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = LeftState_VY(:,i,j,k)
+                FBC%VarsTrueFace_V = LeftState_VYI(:,i,j,k,1)
 
                 call set_face(i,j-1,k,i,j,k)
 
-                RightState_VY(:,i,j,k) = FBC%VarsGhostFace_V
+                RightState_VYI(:,i,j,k,1) = FBC%VarsGhostFace_V
              end if
 
              if (IsTrueCell_G(i,j,k) .and. &
@@ -376,11 +376,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VY(:,i,j,k)
+                FBC%VarsTrueFace_V = RightState_VYI(:,i,j,k,1)
 
                 call set_face(i,j,k,i,j-1,k)
 
-                LeftState_VY(:,i,j,k) = FBC%VarsGhostFace_V
+                LeftState_VYI(:,i,j,k,1) = FBC%VarsGhostFace_V
              end if
           end do ! end j loop
        end do ! end i loop
@@ -404,11 +404,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
+                FBC%VarsTrueFace_V =  LeftState_VZI(:,i,j,k,1)
 
                 call set_face(i,j,k-1,i,j,k)
 
-                RightState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
+                RightState_VZI(:,i,j,k,1) = FBC%VarsGhostFace_V
              end if
 
              if (IsTrueCell_G(i,j,k).and. &
@@ -424,11 +424,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  RightState_VZ(:,i,j,k)
+                FBC%VarsTrueFace_V =  RightState_VZI(:,i,j,k,1)
 
                 call set_face(i,j,k,i,j,k-1)
 
-                LeftState_VZ(:,i,j,k) = FBC%VarsGhostFace_V
+                LeftState_VZI(:,i,j,k,1) = FBC%VarsGhostFace_V
 
              end if
           end do ! end i loop

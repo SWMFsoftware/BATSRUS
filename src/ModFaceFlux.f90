@@ -21,13 +21,13 @@ module ModFaceFlux
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
   use ModAdvance, ONLY: &
        FaceFluxVarType, &
-       LeftState_VX,  LeftState_VY,  LeftState_VZ,  &! input: left  face state
-       RightState_VX, RightState_VY, RightState_VZ, &! input: right face state
-       Flux_VX, Flux_VY, Flux_VZ,        &! output: flux*Area
-       VdtFace_x, VdtFace_y, VdtFace_z,  &! output: cMax*Area for CFL
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI,&!  output: U.Area for P source
-       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! output: B x Area for J
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         &! output: MHD momentum flux
+       LeftState_VXI, LeftState_VYI, LeftState_VZI,  &! input: left  face state
+       RightState_VXI, RightState_VYI, RightState_VZI, &! input: right face state
+       Flux_VXI, Flux_VYI, Flux_VZI,        &! output: flux*Area
+       VdtFace_XI, VdtFace_YI, VdtFace_ZI,  &! output: cMax*Area for CFL
+       uDotArea_XII, uDotArea_YII, uDotArea_ZII,&!  output: U.Area for P source
+       bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI,&! output: B x Area for J
+       MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! output: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
@@ -349,10 +349,10 @@ contains
 
          do iVar=1,nVar
             write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VX(iVar,iTest,jTest,kTest),&
-                 RightState_VX(iVar,iTest,jTest,kTest),&
-                 LeftState_VX(iVar,iTest+1,jTest,kTest),&
-                 RightState_VX(iVar,iTest+1,jTest,kTest)
+                 LeftState_VXI(iVar,iTest,jTest,kTest,1),&
+                 RightState_VXI(iVar,iTest,jTest,kTest,1),&
+                 LeftState_VXI(iVar,iTest+1,jTest,kTest,1),&
+                 RightState_VXI(iVar,iTest+1,jTest,kTest,1)
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -373,10 +373,10 @@ contains
 
          do iVar=1,nVar
             write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VY(iVar,iTest,jTest,kTest),&
-                 RightState_VY(iVar,iTest,  jTest,kTest),&
-                 LeftState_VY(iVar,iTest,jTest+1,kTest),&
-                 RightState_VY(iVar,iTest,jTest+1,kTest)
+                 LeftState_VYI(iVar,iTest,jTest,kTest,1),&
+                 RightState_VYI(iVar,iTest,  jTest,kTest,1),&
+                 LeftState_VYI(iVar,iTest,jTest+1,kTest,1),&
+                 RightState_VYI(iVar,iTest,jTest+1,kTest,1)
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -396,10 +396,10 @@ contains
               'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
          do iVar=1,nVar
             write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VZ(iVar,iTest,jTest,kTest),&
-                 RightState_VZ(iVar,iTest,  jTest,kTest),&
-                 LeftState_VZ(iVar,iTest,jTest,kTest+1),&
-                 RightState_VZ(iVar,iTest,jTest,kTest+1)
+                 LeftState_VZI(iVar,iTest,jTest,kTest,1),&
+                 RightState_VZI(iVar,iTest,  jTest,kTest,1),&
+                 LeftState_VZI(iVar,iTest,jTest,kTest+1,1),&
+                 RightState_VZI(iVar,iTest,jTest,kTest+1,1)
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -419,24 +419,25 @@ contains
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IX
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IXI
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------           
       
-      !$acc data present(uDotArea_XI, VdtFace_X, &
-      !$acc& LeftState_VX,RightState_VX, &
+      !$acc data present(uDotArea_XII, VdtFace_XI, &
+      !$acc& LeftState_VXIRightState_VXI &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &
       !$acc& CellFace_DB, &
       !$acc& CellSize_DB, &
       !$acc& true_cell, &
-      !$acc& Flux_VX)
+      !$acc& Flux_VXI)
           
 #ifndef OPENACC
-       call set_block_values(iBlock, x_, FFV)
+      call init_face_flux_var_type(FFV)
+      call set_block_values(iBlock, x_, FFV)
 #endif
              
        !$acc parallel loop gang vector collapse(3) private(FFV) independent
@@ -456,8 +457,8 @@ contains
 
           if(  .not. true_cell(FFV%iLeft,FFV%jLeft,FFV%kLeft,iBlock) .and. &
                .not. true_cell(FFV%iRight,FFV%jRight,FFV%kRight,iBlock)) then
-             uDotArea_XI(iFace,jFace,kFace,:) = 0.0
-             VdtFace_X(iFace,jFace,kFace) = 0.0
+             uDotArea_XII(iFace,jFace,kFace,:,1) = 0.0
+             VdtFace_XI(iFace,jFace,kFace,1) = 0.0
              CYCLE
           endif
 
@@ -468,47 +469,47 @@ contains
           end if
 
           if(UseRS7.and..not.FFV%IsBoundary)then
-             FFV%DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+             FFV%DeltaBnR = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace))*&
                  FFV%Normal_D)
-            RightState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
-                 RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+            RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1) =&
+                 RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  FFV%DeltaBnR* FFV%Normal_D
-            FFV%DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+            FFV%DeltaBnL = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,FFV%iBlockFace))*&
                  FFV%Normal_D)
-            LeftState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
-                 LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
+            LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1) =&
+                 LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  FFV%DeltaBnL* FFV%Normal_D
          else
             FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
-         FFV%StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
-         FFV%StateRight_V = RightState_VX(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,1)
+         FFV%StateRight_V = RightState_VXI(:,iFace,jFace,kFace,1)
 
-         call get_numerical_flux(Flux_VX(:,iFace,jFace,kFace), FFV)
+         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,1) , FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VX(:,iFace,jFace,kFace) = FFV%MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,1)  = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
 #ifndef OPENACC
-            FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VX(:,iFace,jFace,kFace), FFV)
+            FaceDivU_I = FaceDivU_IXI(:,iFace,jFace,kFace,1)
+            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,1) , FFV)
 #endif
          endif
 
-         VdtFace_x(iFace,jFace,kFace) = FFV%CmaxDt*FFV%Area
+         VdtFace_xI(iFace,jFace,kFace,1) = FFV%CmaxDt*FFV%Area
 
          ! Correct FFV%Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_XI(iFace,jFace,kFace,:)   = FFV%Unormal_I*FFV%Area
+         uDotArea_XII(iFace,jFace,kFace,:,1)   = FFV%Unormal_I*FFV%Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DX(:,iFace,jFace,kFace) = FFV%bCrossArea_D
+              bCrossArea_DXI(:,iFace,jFace,kFace,1) = FFV%bCrossArea_D
       end do; end do; end do
 
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(FFV%iBlockFace)) then
@@ -520,8 +521,8 @@ contains
                     >= cLowOrder) CYCLE
             endif
             do iFlux = 1, nFlux
-               Flux_VX(iFlux,iFace,jFace,kFace) = &
-                    correct_face_value(Flux_VX(iFlux,iFace,jFace,kFace),&
+               Flux_VXI(iFlux,iFace,jFace,kFace,1)  = &
+                    correct_face_value(Flux_VXI(iFlux,iFace,jFace,kFace,1) ,&
                     FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,1))
             enddo
          end do; end do; enddo
@@ -534,22 +535,23 @@ contains
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IY
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IYI
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
-      !$acc data present(uDotArea_YI, VdtFace_Y, &
-      !$acc& LeftState_VY,RightState_VY, &
+      !$acc data present(uDotArea_YII, VdtFace_YI, &
+      !$acc& LeftState_VYIRightState_VYI &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &
       !$acc& CellFace_DB, &
       !$acc& CellSize_DB, &
       !$acc& true_cell, &
-      !$acc& Flux_VY)
+      !$acc& Flux_VYI)
       
 #ifndef OPENACC
+      call init_face_flux_var_type(FFV)
       call set_block_values(iBlock, y_, FFV)
 #endif
       !$acc parallel loop gang vector collapse(3) private(FFV) independent
@@ -574,8 +576,8 @@ contains
 
          if(  .not. true_cell(FFV%iLeft,FFV%jLeft,FFV%kLeft,iBlock) .and. &
               .not. true_cell(FFV%iRight,FFV%jRight,FFV%kRight,iBlock)) then
-            uDotArea_YI(iFace,jFace,kFace,:) = 0.0
-            VdtFace_Y(iFace,jFace,kFace) = 0.0
+            uDotArea_YII(iFace,jFace,kFace,:,1) = 0.0
+            VdtFace_YI(iFace,jFace,kFace,1) = 0.0
             CYCLE
          endif
 
@@ -586,46 +588,46 @@ contains
          end if
 
          if(UseRS7.and..not.FFV%IsBoundary)then
-            FFV%DeltaBnR = sum((RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
+            FFV%DeltaBnR = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace))* &
                  FFV%Normal_D)
-            RightState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
-                 RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
+            RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) = &
+                 RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  FFV%DeltaBnR* FFV%Normal_D
-            FFV%DeltaBnL = sum((LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
+            FFV%DeltaBnL = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,FFV%iBlockFace))* &
                  FFV%Normal_D)
-            LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
-                 LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
+            LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) = &
+                 LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  FFV%DeltaBnL* FFV%Normal_D
          else
             FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
-         FFV%StateLeft_V  = LeftState_VY( :,iFace,jFace,kFace)
-         FFV%StateRight_V = RightState_VY(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,1)
+         FFV%StateRight_V = RightState_VYI(:,iFace,jFace,kFace,1)
 
-         call get_numerical_flux(Flux_VY(:,iFace,jFace,kFace), FFV)
+         call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,1) , FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VY(:,iFace,jFace,kFace) = FFV%MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,1)  = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
 #ifndef OPENACC
-            FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VY(:,iFace,jFace,kFace), FFV)
+            FaceDivU_I = FaceDivU_IYI(:,iFace,jFace,kFace,1)
+            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,1) , FFV)
 #endif
          endif
 
-         VdtFace_y(iFace,jFace,kFace) = FFV%CmaxDt*FFV%Area
+         VdtFace_yI(iFace,jFace,kFace,1) = FFV%CmaxDt*FFV%Area
 
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_YI(iFace,jFace,kFace, :)  = FFV%Unormal_I*FFV%Area
+         uDotArea_YII(iFace,jFace,kFace, :,1)  = FFV%Unormal_I*FFV%Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DY(:,iFace,jFace,kFace) = FFV%bCrossArea_D
+              bCrossArea_DYI(:,iFace,jFace,kFace,1) = FFV%bCrossArea_D
 
       end do; end do; end do
 
@@ -638,9 +640,9 @@ contains
                     >= cLowOrder) CYCLE
             endif
             do iFlux = 1, nFlux
-               Flux_VY(iFlux,iFace,jFace,kFace) = &
+               Flux_VYI(iFlux,iFace,jFace,kFace,1)  = &
                     correct_face_value(&
-                    Flux_VY(iFlux,iFace,jFace,kFace),&
+                    Flux_VYI(iFlux,iFace,jFace,kFace,1) ,&
                     FluxCenter_VGD(iFlux,iFace,jFace-2:jFace+1,kFace,2))
             enddo
          end do; end do; enddo
@@ -653,22 +655,23 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IZI
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
-      !$acc data present(uDotArea_ZI, VdtFace_Z, &
-      !$acc& LeftState_VZ,RightState_VZ, &
+      !$acc data present(uDotArea_ZII, VdtFace_ZI, &
+      !$acc& LeftState_VZIRightState_VZI &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &
       !$acc& CellFace_DB, &
       !$acc& CellSize_DB, &
       !$acc& true_cell, &
-      !$acc& Flux_VZ)
+      !$acc& Flux_VZI)
 
 #ifndef OPENACC
+      call init_face_flux_var_type(FFV)
       call set_block_values(iBlock, z_, FFV)
 #endif
       !$acc parallel loop gang vector collapse(3) private(FFV) independent
@@ -692,8 +695,8 @@ contains
 
          if(  .not. true_cell(FFV%iLeft,FFV%jLeft,FFV%kLeft,iBlock) .and. &
               .not. true_cell(FFV%iRight,FFV%jRight,FFV%kRight,iBlock)) then
-            uDotArea_ZI(iFace,jFace,kFace,:) = 0.0
-            VdtFace_Z(iFace,jFace,kFace) = 0.0
+            uDotArea_ZII(iFace,jFace,kFace,:,1) = 0.0
+            VdtFace_ZI(iFace,jFace,kFace,1) = 0.0
             CYCLE
          endif
 
@@ -704,45 +707,45 @@ contains
          end if
          if(UseRS7.and..not.FFV%IsBoundary)then
             FFV%DeltaBnR = sum( FFV%Normal_D &
-                 * (RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
+                 * (RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
                  - State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace)) )
-            RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) = &
-                 RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
+            RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) = &
+                 RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
                  - FFV%DeltaBnR* FFV%Normal_D
             FFV%DeltaBnL = sum( FFV%Normal_D &
-                 * (LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
+                 * (LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
                  -  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,FFV%iBlockFace)) )
-            LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
-                 LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
+            LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) =&
+                 LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  FFV%DeltaBnL* FFV%Normal_D
          else
             FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
          end if
 
-         FFV%StateLeft_V  = LeftState_VZ( :,iFace,jFace,kFace)
-         FFV%StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
+         FFV%StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,1)
+         FFV%StateRight_V = RightState_VZI(:,iFace,jFace,kFace,1)
 
-         call get_numerical_flux(Flux_VZ(:,iFace,jFace,kFace), FFV)
+         call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,1) , FFV)
 
-         if(UseMhdMomentumFlux) MhdFlux_VZ(:,iFace,jFace,kFace) = FFV%MhdFlux_V
+         if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,1)  = FFV%MhdFlux_V
 
          if(UseArtificialVisco) then
 #ifndef OPENACC
-            FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
-            call add_artificial_viscosity(Flux_VZ(:,iFace,jFace,kFace), FFV)
+            FaceDivU_I = FaceDivU_IZI(:,iFace,jFace,kFace,1)
+            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,1) , FFV)
 #endif
          endif
 
-         VdtFace_z(iFace,jFace,kFace)       = FFV%CmaxDt*FFV%Area
+         VdtFace_zI(iFace,jFace,kFace,1)       = FFV%CmaxDt*FFV%Area
 
          if(DoCorrectFace) call correct_u_normal(FFV)
-         uDotArea_ZI(iFace,jFace,kFace, :)  = FFV%Unormal_I*FFV%Area
+         uDotArea_ZII(iFace,jFace,kFace, :,1)  = FFV%Unormal_I*FFV%Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DZ(:,iFace,jFace,kFace)= FFV%bCrossArea_D
+              bCrossArea_DZI(:,iFace,jFace,kFace,1)= FFV%bCrossArea_D
 
       end do; end do; end do
 
@@ -754,8 +757,8 @@ contains
             endif
 
             do iFlux = 1, nFlux
-               Flux_VZ(iFlux,iFace,jFace,kFace) = &
-                    correct_face_value(Flux_VZ(iFlux,iFace,jFace,kFace),&
+               Flux_VZI(iFlux,iFace,jFace,kFace,1)  = &
+                    correct_face_value(Flux_VZI(iFlux,iFace,jFace,kFace,1) ,&
                     FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
             enddo
          end do; end do; enddo
@@ -4005,6 +4008,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_cell_flux'
     !--------------------------------------------------------------------------
+    call init_face_flux_var_type(FFV)
     associate( &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
@@ -4068,15 +4072,15 @@ contains
                 case(1)
                    if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
                         k>0 .and. k<=nK) &
-                        VdtFace_X(i,j,k) = CmaxArea
+                        VdtFace_XI(i,j,k,1) = CmaxArea
                 case(2)
                    if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
                         k>0 .and. k<=nK) &
-                        VdtFace_Y(i,j,k) = CmaxArea
+                        VdtFace_YI(i,j,k,1) = CmaxArea
                 case(3)
                    if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
                         k>0 .and. k<=nK+1) &
-                        VdtFace_Z(i,j,k) = CmaxArea
+                        VdtFace_ZI(i,j,k,1) = CmaxArea
                 end select
 
              end do
@@ -4116,6 +4120,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
+    call init_face_flux_var_type(FFV)
     associate( &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       ViscoCoeff => FFV%ViscoCoeff, &

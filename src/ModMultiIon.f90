@@ -173,7 +173,7 @@ contains
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, Efield_DGB, &
-         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
+         bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI, UseElectronPressure
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product

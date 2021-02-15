@@ -214,8 +214,8 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
-         State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+    use ModAdvance, ONLY: MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI, SourceMHD_VC,&
+         State_VGB, bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
@@ -255,11 +255,11 @@ contains
           InvElectronDens = 1.0/sum(ChargeDens_I)
 
           ! Calculate Lorentz force = J x B
-          Current_D = (bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k))
+          Current_D = (bCrossArea_DXI(:,i+1,j,k,1) - bCrossArea_DXI(:,i,j,k,1))
           if(nJ>1) Current_D = Current_D + &
-               (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
+               (bCrossArea_DYI(:,i,j+1,k,1) - bCrossArea_DYI(:,i,j,k,1))
           if(nK>1) Current_D = Current_D + &
-               (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+               (bCrossArea_DZI(:,i,j,k+1,1) - bCrossArea_DZI(:,i,j,k,1))
           Current_D = Current_D*vInv
 
           if(DoTestCell) then
@@ -277,11 +277,11 @@ contains
           if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
                Force_D
           Force_D = Force_D + vInv*&
-               (MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k))
+               (MhdFlux_VXI(:,i,j,k,1)  - MhdFlux_VXI(:,i+1,j,k,1) )
           if(nDim > 1) Force_D = Force_D + vInv*&
-               (MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k))
+               (MhdFlux_VYI(:,i,j,k,1)  - MhdFlux_VYI(:,i,j+1,k,1) )
           if(nDim > 2) Force_D = Force_D + vInv*&
-               (MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )
+               (MhdFlux_VZI(:,i,j,k,1)  - MhdFlux_VZI(:,i,j,k+1,1)  )
           if(DoTestCell)write(*,'(2a,15es16.8)') &
                NameSub,': after grad Pwave, Force_D =', Force_D
           Efield_DGB(:,i,j,k,iBlock) = InvElectronDens*Force_D
@@ -290,9 +290,9 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock))CYCLE
           Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +  &
-               ( MhdFlux_VX(:,i,j,k) - MhdFlux_VX(:,i+1,j,k)    &
-               + MhdFlux_VY(:,i,j,k) - MhdFlux_VY(:,i,j+1,k)    &
-               + MhdFlux_VZ(:,i,j,k) - MhdFlux_VZ(:,i,j,k+1) )  &
+               ( MhdFlux_VXI(:,i,j,k,1)  - MhdFlux_VXI(:,i+1,j,k,1)     &
+               + MhdFlux_VYI(:,i,j,k,1)  - MhdFlux_VYI(:,i,j+1,k,1)     &
+               + MhdFlux_VZI(:,i,j,k,1)  - MhdFlux_VZI(:,i,j,k+1,1)  )  &
                /CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end if
@@ -671,7 +671,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
     use ModAdvance,    ONLY: &
-         Flux_VX, Flux_VY, Flux_VZ, ExNum_CB, EyNum_CB, EzNum_CB
+         Flux_VXI, Flux_VYI, Flux_VZI, ExNum_CB, EyNum_CB, EzNum_CB
     use BATL_lib,      ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
@@ -682,24 +682,24 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     ! E_x=(fy+fy-fz-fz)/4
     ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
-         ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                            &
-         + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / CellFace_DB(2,iBlock) - &
-         ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                            &
-         + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / CellFace_DB(3,iBlock) )
+         ( Flux_VYI(Bz_,1:nI,1:nJ  ,1:nK  ,1)                             &
+         + Flux_VYI(Bz_,1:nI,2:nJ+1,1:nK  ,1) ) / CellFace_DB(2,iBlock) - &
+         ( Flux_VZI(By_,1:nI,1:nJ  ,1:nK  ,1)                             &
+         + Flux_VZI(By_,1:nI,1:nJ  ,2:nK+1,1) ) / CellFace_DB(3,iBlock) )
 
     ! E_y=(fz+fz-fx-fx)/4
     EyNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
-         ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                            &
-         + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / CellFace_DB(3,iBlock) - &
-         ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                            &
-         + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / CellFace_DB(1,iBlock) )
+         ( Flux_VZI(Bx_,1:nI  ,1:nJ,1:nK  ,1)                             &
+         + Flux_VZI(Bx_,1:nI  ,1:nJ,2:nK+1,1) ) / CellFace_DB(3,iBlock) - &
+         ( Flux_VXI(Bz_,1:nI  ,1:nJ,1:nK  ,1)                             &
+         + Flux_VXI(Bz_,2:nI+1,1:nJ,1:nK  ,1) ) / CellFace_DB(1,iBlock) )
 
     ! E_z=(fx+fx-fy-fy)/4
     EzNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
-         ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                            &
-         + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / CellFace_DB(1,iBlock) - &
-         ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                            &
-         + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / CellFace_DB(2,iBlock))
+         ( Flux_VXI(By_,1:nI  ,1:nJ  ,1:nK,1)                             &
+         + Flux_VXI(By_,2:nI+1,1:nJ  ,1:nK,1) ) / CellFace_DB(1,iBlock) - &
+         ( Flux_VYI(Bx_,1:nI  ,1:nJ  ,1:nK,1)                             &
+         + Flux_VYI(Bx_,1:nI  ,2:nJ+1,1:nK,1) ) / CellFace_DB(2,iBlock))
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_num_electric_field

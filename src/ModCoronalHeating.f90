@@ -925,8 +925,8 @@ contains
     subroutine get_log_alfven_speed
 
       use ModAdvance, ONLY: &
-           LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
-           RightState_VX, RightState_VY, RightState_VZ
+           LeftState_VXI, LeftState_VYI, LeftState_VZI,  &
+           RightState_VXI, RightState_VYI, RightState_VZI
       use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
       use ModMain, ONLY: UseB0
       use ModVarIndexes, ONLY: Bx_, Bz_
@@ -936,22 +936,22 @@ contains
       real :: Rho, FullB_D(3)
       !------------------------------------------------------------------------
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-         FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
-              + RightState_VX(Bx_:Bz_,i,j,k))
+         FullB_D = 0.5*(LeftState_VXI(Bx_:Bz_,i,j,k,1) &
+              + RightState_VXI(Bx_:Bz_,i,j,k,1))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
-         Rho = 0.5*(LeftState_VX(iRho_I(IonFirst_),i,j,k) &
-              +     RightState_VX(iRho_I(IonFirst_),i,j,k))
+         Rho = 0.5*(LeftState_VXI(iRho_I(IonFirst_),i,j,k,1) &
+              +     RightState_VXI(iRho_I(IonFirst_),i,j,k,1))
          LogAlfven_FD(i,j,k,x_) = 0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
          LogRho_FD(i,j,k,x_) = 0.50*log(Rho)
       end do; end do; end do
 
       if(nJ > 1)then
          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
-                 + RightState_VY(Bx_:Bz_,i,j,k))
+            FullB_D = 0.5*(LeftState_VYI(Bx_:Bz_,i,j,k,1) &
+                 + RightState_VYI(Bx_:Bz_,i,j,k,1))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
-            Rho = 0.5*(LeftState_VY(iRho_I(IonFirst_),i,j,k) &
-                 +     RightState_VY(iRho_I(IonFirst_),i,j,k))
+            Rho = 0.5*(LeftState_VYI(iRho_I(IonFirst_),i,j,k,1) &
+                 +     RightState_VYI(iRho_I(IonFirst_),i,j,k,1))
             LogAlfven_FD(i,j,k,Dim2_) = &
                  0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
             LogRho_FD(i,j,k,Dim2_) = 0.50*log(Rho)
@@ -960,11 +960,11 @@ contains
 
       if(nK > 1)then
          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
-                 + RightState_VZ(Bx_:Bz_,i,j,k))
+            FullB_D = 0.5*(LeftState_VZI(Bx_:Bz_,i,j,k,1) &
+                 + RightState_VZI(Bx_:Bz_,i,j,k,1))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
-            Rho = 0.5*(LeftState_VZ(iRho_I(IonFirst_),i,j,k) &
-                 +     RightState_VZ(iRho_I(IonFirst_),i,j,k))
+            Rho = 0.5*(LeftState_VZI(iRho_I(IonFirst_),i,j,k,1) &
+                 +     RightState_VZI(iRho_I(IonFirst_),i,j,k,1))
             LogAlfven_FD(i,j,k,Dim3_) = &
                  0.50*log(max(sum(FullB_D**2), 1e-30)/Rho)
             LogRho_FD(i,j,k,Dim3_) = 0.50*log(Rho)
@@ -982,8 +982,8 @@ contains
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
          CellVolume_GB, x_, y_, z_
     use ModAdvance, ONLY: &
-         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ
+         LeftState_VXI, LeftState_VYI, LeftState_VZI,  &
+         RightState_VXI, RightState_VYI, RightState_VZI
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
     use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, IonFirst_
@@ -1001,54 +1001,54 @@ contains
        DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
        CurlU_D(x_) = &
-            DyInvHalf*(LeftState_VY(iUz_I(IonFirst_),i,j+1,k)  &
-            +          RightState_VY(iUz_I(IonFirst_),i,j+1,k) &
-            -          LeftState_VY(iUz_I(IonFirst_),i,j,k)    &
-            -          RightState_VY(iUz_I(IonFirst_),i,j,k))  &
-            - DzInvHalf*(LeftState_VZ(iUy_I(IonFirst_),i,j,k+1)  &
-            +            RightState_VZ(iUy_I(IonFirst_),i,j,k+1) &
-            -            LeftState_VZ(iUy_I(IonFirst_),i,j,k)    &
-            -            RightState_VZ(iUy_I(IonFirst_),i,j,k))
+            DyInvHalf*(LeftState_VYI(iUz_I(IonFirst_),i,j+1,k,1)  &
+            +          RightState_VYI(iUz_I(IonFirst_),i,j+1,k,1) &
+            -          LeftState_VYI(iUz_I(IonFirst_),i,j,k,1)    &
+            -          RightState_VYI(iUz_I(IonFirst_),i,j,k,1))  &
+            - DzInvHalf*(LeftState_VZI(iUy_I(IonFirst_),i,j,k+1,1)  &
+            +            RightState_VZI(iUy_I(IonFirst_),i,j,k+1,1) &
+            -            LeftState_VZI(iUy_I(IonFirst_),i,j,k,1)    &
+            -            RightState_VZI(iUy_I(IonFirst_),i,j,k,1))
 
        CurlU_D(y_) = &
-            DzInvHalf*(LeftState_VZ(iUx_I(IonFirst_),i,j,k+1)  &
-            +          RightState_VZ(iUx_I(IonFirst_),i,j,k+1) &
-            -          LeftState_VZ(iUx_I(IonFirst_),i,j,k)    &
-            -          RightState_VZ(iUx_I(IonFirst_),i,j,k))  &
-            - DxInvHalf*(LeftState_VX(iUz_I(IonFirst_),i+1,j,k)  &
-            +            RightState_VX(iUz_I(IonFirst_),i+1,j,k) &
-            -            LeftState_VX(iUz_I(IonFirst_),i,j,k)    &
-            -            RightState_VX(iUz_I(IonFirst_),i,j,k))
+            DzInvHalf*(LeftState_VZI(iUx_I(IonFirst_),i,j,k+1,1)  &
+            +          RightState_VZI(iUx_I(IonFirst_),i,j,k+1,1) &
+            -          LeftState_VZI(iUx_I(IonFirst_),i,j,k,1)    &
+            -          RightState_VZI(iUx_I(IonFirst_),i,j,k,1))  &
+            - DxInvHalf*(LeftState_VXI(iUz_I(IonFirst_),i+1,j,k,1)  &
+            +            RightState_VXI(iUz_I(IonFirst_),i+1,j,k,1) &
+            -            LeftState_VXI(iUz_I(IonFirst_),i,j,k,1)    &
+            -            RightState_VXI(iUz_I(IonFirst_),i,j,k,1))
 
        CurlU_D(z_) = &
-            DxInvHalf*(LeftState_VX(iUy_I(IonFirst_),i+1,j,k)  &
-            +          RightState_VX(iUy_I(IonFirst_),i+1,j,k) &
-            -          LeftState_VX(iUy_I(IonFirst_),i,j,k)    &
-            -          RightState_VX(iUy_I(IonFirst_),i,j,k))  &
-            - DyInvHalf*(LeftState_VY(iUx_I(IonFirst_),i,j+1,k)  &
-            +            RightState_VY(iUx_I(IonFirst_),i,j+1,k) &
-            -            LeftState_VY(iUx_I(IonFirst_),i,j,k)    &
-            -            RightState_VY(iUx_I(IonFirst_),i,j,k))
+            DxInvHalf*(LeftState_VXI(iUy_I(IonFirst_),i+1,j,k,1)  &
+            +          RightState_VXI(iUy_I(IonFirst_),i+1,j,k,1) &
+            -          LeftState_VXI(iUy_I(IonFirst_),i,j,k,1)    &
+            -          RightState_VXI(iUy_I(IonFirst_),i,j,k,1))  &
+            - DyInvHalf*(LeftState_VYI(iUx_I(IonFirst_),i,j+1,k,1)  &
+            +            RightState_VYI(iUx_I(IonFirst_),i,j+1,k,1) &
+            -            LeftState_VYI(iUx_I(IonFirst_),i,j,k,1)    &
+            -            RightState_VYI(iUx_I(IonFirst_),i,j,k,1))
     else
        CurlU_D(:) = &
             + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),       &
-            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)     &
-            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k)) &
+            LeftState_VXI(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k,1)     &
+            + RightState_VXI(iUx_I(IonFirst_):iUz_I(IonFirst_),i+1,j,k,1)) &
             - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),       &
-            LeftState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)     &
-            + RightState_VX(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k)) &
+            LeftState_VXI(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k,1)     &
+            + RightState_VXI(iUx_I(IonFirst_):iUz_I(IonFirst_),i  ,j,k,1)) &
             + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),       &
-            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)     &
-            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k)) &
+            LeftState_VYI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k,1)     &
+            + RightState_VYI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j+1,k,1)) &
             - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),       &
-            LeftState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)     &
-            + RightState_VY(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k)) &
+            LeftState_VYI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k,1)     &
+            + RightState_VYI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j  ,k,1)) &
             + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),       &
-            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)     &
-            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1)) &
+            LeftState_VZI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1,1)     &
+            + RightState_VZI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k+1,1)) &
             - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),       &
-            LeftState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k  )     &
-            + RightState_VZ(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k  ))
+            LeftState_VZI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k, 1)     &
+            + RightState_VZI(iUx_I(IonFirst_):iUz_I(IonFirst_),i,j,k, 1))
 
        CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if

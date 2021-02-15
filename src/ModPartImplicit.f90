@@ -9,7 +9,7 @@ module ModPartImplicit
        iProcTest, iVarTest, iProc, nProc, iComm
 
   use ModImplicit
-  use ModAdvance, ONLY: FaceFluxVarType
+  use ModAdvance, ONLY: FaceFluxVarType, init_face_flux_var_type
 
   implicit none
   private ! except
@@ -2274,6 +2274,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_flux'
     !--------------------------------------------------------------------------
+    call init_face_flux_var_type(FFV)
     associate(B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
       Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
@@ -2347,6 +2348,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
+    call init_face_flux_var_type(FFV)
     associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       CmaxDt => FFV%CmaxDt, Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
