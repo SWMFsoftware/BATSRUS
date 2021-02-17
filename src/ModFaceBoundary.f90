@@ -6,7 +6,7 @@ module ModFaceBoundary
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid
@@ -110,8 +110,8 @@ contains
   subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
-         RightState_VX, RightState_VY, RightState_VZ
+    use ModAdvance, ONLY: LeftState_VXI, LeftState_VYI, LeftState_VZI, &
+         RightState_VXI, RightState_VYI, RightState_VZI
     use ModGeometry, ONLY: true_cell
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
@@ -154,8 +154,21 @@ contains
     subroutine write_face_state(String)
 
       character(len=*), intent(in):: String
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
            LeftState_VX(iVarTest,  iTest, jTest, kTest),  &
@@ -186,8 +199,8 @@ contains
 
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
-         LeftState_VX, LeftState_VY, LeftState_VZ,    &
-         RightState_VX, RightState_VY, RightState_VZ, &
+         LeftState_VXI, LeftState_VYI, LeftState_VZI,    &
+         RightState_VXI, RightState_VYI, RightState_VZI, &
          UseAnisoPe, UseMultiSpecies
     use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
@@ -214,9 +227,23 @@ contains
     real :: FracH, FracO
 
     logical:: DoTest
+    real, pointer:: LeftState_VX(:,:,:,:)
+    real, pointer:: LeftState_VY(:,:,:,:)
+    real, pointer:: LeftState_VZ(:,:,:,:)
+    real, pointer:: RightState_VX(:,:,:,:)
+    real, pointer:: RightState_VY(:,:,:,:)
+    real, pointer:: RightState_VZ(:,:,:,:)
+
     character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
-    associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &               
+    RightState_VZ => RightState_VZI(:,:,:,:,1)
+    RightState_VY => RightState_VYI(:,:,:,:,1)
+    RightState_VX => RightState_VXI(:,:,:,:,1)
+    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+
+    associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &
                iBlockBc => FBC%iBlockBc )
 
     call test_start(NameSub, DoTest, iBlockBc)
@@ -488,7 +515,7 @@ contains
 
       !------------------------------------------------------------------------
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
-                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &                                  
+                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
                  TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
                  iSide => FBC%iSide)
 
@@ -1042,4 +1069,3 @@ contains
   !============================================================================
 
 end module ModFaceBoundary
-!==============================================================================

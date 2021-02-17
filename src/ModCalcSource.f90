@@ -7,7 +7,7 @@ module ModCalcSource
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none
@@ -102,20 +102,27 @@ contains
     logical:: DoTestCell
 
     logical:: DoTest
+    real, pointer:: uDotArea_XI(:,:,:,:)
+    real, pointer:: uDotArea_YI(:,:,:,:)
+    real, pointer:: uDotArea_ZI(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
+    uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+    uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+    uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+
     call test_start(NameSub, DoTest, iBlock)
 
     !$acc data present(Source_VC, SourceMhd_VC)
-    !$acc parallel loop collapse(4) 
+    !$acc parallel loop collapse(4)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar+nFluid
        Source_VC(iVar,i,j,k) = 0
-    end do; end do; end do; end do 
+    end do; end do; end do; end do
 
-    !$acc parallel loop collapse(4) 
+    !$acc parallel loop collapse(4)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VC(iVar,i,j,k) = 0
-    end do; end do; end do; end do 
+    end do; end do; end do; end do
     !$acc end data
 
     ! Calculate source terms for ion pressure
@@ -255,7 +262,7 @@ contains
           end do; end do; end do
        end do
     end if ! UseSpeedMin
-    
+
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -573,7 +580,7 @@ contains
 
     if(UseB0) call set_b0_source(iBlock)
 
-    if(UseB .and. UseDivbSource)then       
+    if(UseB .and. UseDivbSource)then
        if(IsCartesian)then
           call calc_divb_source
        else
@@ -583,7 +590,7 @@ contains
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)&
             call write_source('After B0B1 source')
-              
+
        ! Add contributions to other source terms
        !$acc data present(true_cell, Source_VC, SourceMhd_VC, DivB1_GB, State_VGB)
        !$acc parallel loop gang vector collapse(3) private(U_D)
@@ -689,11 +696,11 @@ contains
 
     if(IsMhd) then
        !$acc data present(Source_VC, SourceMhd_VC)
-       !$acc parallel loop collapse(4) 
+       !$acc parallel loop collapse(4)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
           Source_VC(iVar,i,j,k) = &
                Source_VC(iVar,i,j,k) + SourceMhd_VC(iVar,i,j,k)
-       end do; end do; end do; end do 
+       end do; end do; end do; end do
        !$acc end data
     endif
 
@@ -844,7 +851,7 @@ contains
     end if
 
     if(DoTest) call write_source('final')
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -857,8 +864,22 @@ contains
 
       integer :: iDir
 
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
+
       character(len=*), parameter:: NameSub = 'calc_grad_u'
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+
       GradU_DD = 0.0
 
       if (DoTestCell) then
@@ -949,8 +970,21 @@ contains
       real :: uPlusLeft_D(3),  uPlusRight_D(3)
       real :: uPlusLeft1_D(3), uPlusRight1_D(3)
 
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
       character(len=*), parameter:: NameSub = 'calc_grad_uPlus'
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       GradU_DD = 0.0
 
       ! Obtain the uPlus_D on the corresponding faces
@@ -1029,7 +1063,20 @@ contains
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
 
       real:: BCorrect0, BCorrect1
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
@@ -1038,7 +1085,7 @@ contains
       !$acc& DivB1_GB, CellSize_DB, true_cell, &
       !$acc& LeftState_VX,LeftState_VY,LeftState_VZ, &
       !$acc& RightState_VX,RightState_VY,RightState_VZ)
-      
+
       !$acc parallel loop gang vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -1151,11 +1198,11 @@ contains
             if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
                  + dB1nFace5 + dB1nFace6
          endif
-         
+
       end do; end do; end do
-      
+
       !$acc end data
-      
+
       ! Momentum source term from B0 only needed for true MHD equations
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
@@ -1165,7 +1212,7 @@ contains
               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
-      
+
     end subroutine calc_divb_source
     !==========================================================================
     subroutine calc_divb_source_gencoord
@@ -1176,8 +1223,22 @@ contains
       real :: B1nJumpL, B1nJumpR, DivBInternal_C(1:nI,1:nJ,1:nK)
       integer :: i, j, k
 
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
+
       character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -1323,17 +1384,30 @@ contains
     use ModMain,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
     use ModAdvance,    ONLY: DivB1_GB, &
-         LeftState_VX, RightState_VX, &
-         LeftState_VY, RightState_VY, &
-         LeftState_VZ, RightState_VZ
+         LeftState_VXI, RightState_VXI, &
+         LeftState_VYI, RightState_VYI, &
+         LeftState_VZI, RightState_VZI
 
     integer, intent(in) :: iBlock
 
     integer:: i, j, k
     real   :: DivB, InvDx, InvDy, InvDz
     logical:: DoTest
+    real, pointer:: LeftState_VX(:,:,:,:)
+    real, pointer:: LeftState_VY(:,:,:,:)
+    real, pointer:: LeftState_VZ(:,:,:,:)
+    real, pointer:: RightState_VX(:,:,:,:)
+    real, pointer:: RightState_VY(:,:,:,:)
+    real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
+    RightState_VZ => RightState_VZI(:,:,:,:,1)
+    RightState_VY => RightState_VYI(:,:,:,:,1)
+    RightState_VX => RightState_VXI(:,:,:,:,1)
+    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
 
     InvDx            = 1/CellSize_DB(x_,iBlock)
@@ -1368,4 +1442,3 @@ contains
   !============================================================================
 
 end module ModCalcSource
-!==============================================================================

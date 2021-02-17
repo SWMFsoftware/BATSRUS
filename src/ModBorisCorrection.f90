@@ -9,8 +9,8 @@ module ModBorisCorrection
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VC, &
        Energy_GBI, EnergyOld_CBI, &
-       LeftState_VX, RightState_VX, &
-       LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
+       LeftState_VXI, RightState_VXI, &
+       LeftState_VYI, RightState_VYI, LeftState_VZI, RightState_VZI
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
        x_, y_, z_, &
@@ -143,6 +143,7 @@ contains
     real:: InvClight2Cell
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -248,6 +249,7 @@ contains
     real:: Clight2Cell, InvClight2Cell
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -407,9 +409,14 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    real, pointer:: LeftState_VX(:,:,:,:)
+    real, pointer:: RightState_VX(:,:,:,:)
     !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
+
+    RightState_VX => RightState_VXI(:,:,:,:,1)
+    LeftState_VX => LeftState_VXI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -492,7 +499,12 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    real, pointer:: LeftState_VY(:,:,:,:)
+    real, pointer:: RightState_VY(:,:,:,:)
     !--------------------------------------------------------------------------
+    RightState_VY => RightState_VYI(:,:,:,:,1)
+    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
        if(UseBorisRegion)then
@@ -573,9 +585,14 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    real, pointer:: LeftState_VZ(:,:,:,:)
+    real, pointer:: RightState_VZ(:,:,:,:)
     !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
+
+    RightState_VZ => RightState_VZI(:,:,:,:,1)
+    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -696,4 +713,3 @@ contains
   !============================================================================
 
 end module ModBorisCorrection
-!==============================================================================

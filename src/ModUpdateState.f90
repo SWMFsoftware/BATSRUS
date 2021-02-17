@@ -38,8 +38,15 @@ contains
     integer :: iVar, iFluid, i, j, k
 
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'update_state'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -79,7 +86,7 @@ contains
     end if
 
     ! Note must copy state to old state only if iStage is 1.
-    if(iStage==1) then       
+    if(iStage==1) then
        !$acc data present(StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI)
        !$acc parallel loop collapse(4)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
@@ -113,7 +120,7 @@ contains
                'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
     end if
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
@@ -153,8 +160,16 @@ contains
     real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
 
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
+
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
 
     ! Nothing to do if time step is zero
@@ -194,7 +209,6 @@ contains
        DtFactor = Cfl
     end if
 
-    
     ! Modify electron pressure source term to electron entropy if necessary
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
@@ -203,9 +217,9 @@ contains
                * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
-    
+
     !$acc data present(Source_VC,Flux_VX,Flux_VY,Flux_VZ, CellVolume_GB, &
-    !$acc& time_BLK) 
+    !$acc& time_BLK)
 
     !$acc parallel loop collapse(4)
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
@@ -216,9 +230,9 @@ contains
             + Flux_VY(iVar,i,j,k) - Flux_VY(iVar,i,j+1,k) &
             + Flux_VZ(iVar,i,j,k) - Flux_VZ(iVar,i,j,k+1) ) &
             /CellVolume_GB(i,j,k,iBlock) )
-    end do; end do; end do; end do 
+    end do; end do; end do; end do
     !$acc end data
-    
+
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
        ! Integrate fluxes in the transverse direction (eq. 20)
        ! <F> = F + Laplace_transverse(F)/24
@@ -435,16 +449,16 @@ contains
 
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
-         
+
          !$acc data present(Source_VC, State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI)
-         !$acc parallel loop collapse(4) 
+         !$acc parallel loop collapse(4)
          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
             State_VGB(iVar,i,j,k,iBlock) = &
                  StateOld_VGB(iVar,i,j,k,iBlock) + Source_VC(iVar,i,j,k)
          end do; end do; end do; end do
 
          ! Update energy variables
-         !$acc parallel loop collapse(4) 
+         !$acc parallel loop collapse(4)
          do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
@@ -651,7 +665,7 @@ contains
             end do; end do; end do
          end if
       end if
-      
+
       ! Update energy or pressure based on UseConservative and IsConserv_CB
       call calc_energy_or_pressure(iBlock)
 
@@ -766,6 +780,7 @@ contains
     integer :: iError1=-1
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'update_check'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -776,7 +791,7 @@ contains
 
     ! Check for allowable percentage changed from update
     if(time_accurate) then
-       !\\\
+       !\\
        !    TIME ACCURATE  ===================================================
        !///
        report_tf = 1.
@@ -954,7 +969,7 @@ contains
                ' nStep=',n_step,'     dt reduction=',report_tf,' dt=',dt
        end if
     else
-       !\\\
+       !\\
        !    LOCAL TIMESTEPPING
        !///
        report_tf = 1.
@@ -1637,6 +1652,7 @@ contains
     real    :: TauInstability, TauGlobal
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'fix_anisotropy'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1846,6 +1862,7 @@ contains
     real :: RhoInv, Ux, Uy, Uz, Temp, NumDens_I(nIonFluid)
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'fix_multi_ion_update'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1920,4 +1937,3 @@ contains
   !============================================================================
 
 end module ModUpdateState
-!==============================================================================

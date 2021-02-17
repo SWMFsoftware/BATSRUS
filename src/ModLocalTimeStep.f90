@@ -32,6 +32,7 @@ contains
     integer, intent(in):: iSession
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'read_localstep_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -64,7 +65,7 @@ contains
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
-         Flux_VX, Flux_VY, Flux_VZ
+         Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
@@ -104,8 +105,16 @@ contains
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
+
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
@@ -388,4 +397,3 @@ contains
   !============================================================================
 
 end module ModLocalTimeStep
-!==============================================================================

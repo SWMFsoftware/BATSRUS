@@ -214,8 +214,8 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
-         State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+    use ModAdvance, ONLY: MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI, SourceMHD_VC,&
+         State_VGB, bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
@@ -233,8 +233,24 @@ contains
     logical :: DoTestCell
 
     logical:: DoTest
+    real, pointer:: bCrossArea_DX(:,:,:,:)
+    real, pointer:: bCrossArea_DY(:,:,:,:)
+    real, pointer:: bCrossArea_DZ(:,:,:,:)
+    real, pointer:: MhdFlux_VX(:,:,:,:)
+    real, pointer:: MhdFlux_VY(:,:,:,:)
+    real, pointer:: MhdFlux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
+    MhdFlux_VZ => MhdFlux_VZI(:,:,:,:,1)
+    MhdFlux_VY => MhdFlux_VYI(:,:,:,:,1)
+    MhdFlux_VX => MhdFlux_VXI(:,:,:,:,1)
+
+    if(allocated(bCrossArea_DXI)) then
+       bCrossArea_DZ => bCrossArea_DZI(:,:,:,:,1)
+       bCrossArea_DY => bCrossArea_DYI(:,:,:,:,1)
+       bCrossArea_DX => bCrossArea_DXI(:,:,:,:,1)
+    endif
+
     call test_start(NameSub, DoTest, iBlock)
 
     Efield_DGB(:,:,:,:,iBlock) = 0.0
@@ -458,6 +474,7 @@ contains
     integer:: nStepLast = -1
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'calc_potential'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -671,14 +688,22 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
     use ModAdvance,    ONLY: &
-         Flux_VX, Flux_VY, Flux_VZ, ExNum_CB, EyNum_CB, EzNum_CB
+         Flux_VXI, Flux_VYI, Flux_VZI, ExNum_CB, EyNum_CB, EzNum_CB
     use BATL_lib,      ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
 
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
+
     character(len=*), parameter:: NameSub = 'get_num_electric_field'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
+
     call test_start(NameSub, DoTest, iBlock)
     ! E_x=(fy+fy-fz-fz)/4
     ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
@@ -706,5 +731,4 @@ contains
   !============================================================================
 
 end module ModElectricField
-!==============================================================================
 

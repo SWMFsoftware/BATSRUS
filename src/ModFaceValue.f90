@@ -8,7 +8,7 @@ module ModFaceValue
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
@@ -106,15 +106,15 @@ module ModFaceValue
   real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate(B0_DG)
   !$acc declare create(B0_DG)
-  
+
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
 
   ! Low order switch for 1D stencil
-  logical:: UseLowOrder_I(1:MaxIJK+1)  
-  
+  logical:: UseLowOrder_I(1:MaxIJK+1)
+
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
@@ -262,15 +262,15 @@ contains
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
-         Flux_VX, Flux_VY, Flux_VZ, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
+         Flux_VXI, Flux_VYI, Flux_VZI, &
+         uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
-         LeftState_VX,      &  ! Face Left  X
-         RightState_VX,     &  ! Face Right X
-         LeftState_VY,      &  ! Face Left  Y
-         RightState_VY,     &  ! Face Right Y
-         LeftState_VZ,      &  ! Face Left  Z
-         RightState_VZ,     &  ! Face Right Z
+         LeftState_VXI,      &  ! Face Left  X
+         RightState_VXI,     &  ! Face Right X
+         LeftState_VYI,      &  ! Face Left  Y
+         RightState_VYI,     &  ! Face Right Y
+         LeftState_VZI,      &  ! Face Left  Z
+         RightState_VZI,     &  ! Face Right Z
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
          FaceValueVarType
 
@@ -299,11 +299,24 @@ contains
     real:: State_V(nVar), Energy
     integer:: iVarSmoothLast, iVarSmooth
 
-    type(FaceValueVarType) :: FVV 
-    
+    type(FaceValueVarType) :: FVV
+
     logical:: DoTest
+    real, pointer:: LeftState_VX(:,:,:,:)
+    real, pointer:: LeftState_VY(:,:,:,:)
+    real, pointer:: LeftState_VZ(:,:,:,:)
+    real, pointer:: RightState_VX(:,:,:,:)
+    real, pointer:: RightState_VY(:,:,:,:)
+    real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
+    RightState_VZ => RightState_VZI(:,:,:,:,1)
+    RightState_VY => RightState_VYI(:,:,:,:,1)
+    RightState_VX => RightState_VXI(:,:,:,:,1)
+    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    
     if(.not. DoResChangeOnly)then
        call test_start(NameSub, DoTest, iBlock)
     else
@@ -334,8 +347,8 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
-    
-    if(.not.allocated(Primitive_VG)) then 
+
+    if(.not.allocated(Primitive_VG)) then
        allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
     endif
 
@@ -371,7 +384,7 @@ contains
     end if
 
     FVV%UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
-    
+
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
@@ -405,7 +418,7 @@ contains
 
     !$acc data present(Primitive_VG, State_VGB)
     !$acc parallel loop collapse(4) independent
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar      
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VG(iVar,i,j,k) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
     !$acc end data
@@ -413,14 +426,14 @@ contains
     if(UseAccurateResChange .or. nOrder==4)then
        !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-       
+
        !$acc parallel loop gang vector collapse(3) private(FVV) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           FVV%i = i; FVV%j = j; FVV%k = k
           call calc_primitives(FVV)         ! all cells
        end do; end do; end do
        !$acc end data
-       
+
        if(nOrder == 4 .and. UseVolumeIntegral4)then
           ! Calculate 4th order accurate cell averaged primitive variables
 
@@ -493,7 +506,7 @@ contains
     else
        !$acc data present(Primitive_VG, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-       
+
        !$acc parallel loop gang vector collapse(3) private(FVV) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
@@ -503,9 +516,9 @@ contains
              end do
           end do
        end do
-       
+
        if(nJ > 1)then
-          !TODO: Only parallelized the first 2 loops with openacc as
+          ! TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
           !$acc parallel loop gang vector collapse(2) private(FVV) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
@@ -520,7 +533,7 @@ contains
           end do; end do
        end if
        if(nK > 1)then
-          !TODO: Only parallized the first 2 loops with openacc as
+          ! TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
           !$acc parallel loop gang vector collapse(2) private(FVV) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
@@ -813,8 +826,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
       do iVar = 1, nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -830,8 +847,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
       do iVar = 1, nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -847,8 +868,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
       do iVar=1,nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -864,8 +889,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VX(iVarLimitRatio_I,i,j,k) = &
               LeftState_VX(iVarLimitRatio_I,i,j,k)*LeftState_VX(Rho_,i,j,k)
@@ -879,8 +908,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VY(iVarLimitRatio_I,i,j,k) = &
               LeftState_VY(iVarLimitRatio_I,i,j,k)*LeftState_VY(Rho_,i,j,k)
@@ -894,8 +927,12 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
               LeftState_VZ(iVarLimitRatio_I,i,j,k)*LeftState_VZ(Rho_,i,j,k)
@@ -909,8 +946,12 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
@@ -934,8 +975,12 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
@@ -959,8 +1004,12 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
@@ -981,18 +1030,19 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives(FVV)      
-      !$acc routine seq      
+    subroutine calc_primitives(FVV)
+      !$acc routine seq
       use ModPhysics, ONLY: InvClight2
 
       type(FaceValueVarType), intent(in):: FVV
-      
+
       real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
       integer:: i, j, k, iVar, iFluid
       real:: RhoInv
+
       !------------------------------------------------------------------------
       i = FVV%i; j = FVV%j; k = FVV%k
-      
+
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
 
       if(DoLimitMomentum)then
@@ -1025,8 +1075,8 @@ contains
          Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
          do iFluid=2,nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-            RhoInv = 1/Primitive_VG(iRho,i,j,k)            
-            Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)            
+            RhoInv = 1/Primitive_VG(iRho,i,j,k)
+            Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
          end do
       end if
 
@@ -1061,9 +1111,17 @@ contains
       !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
+      real, pointer:: uDotArea_XI(:,:,:,:)
+      real, pointer:: Flux_VX(:,:,:,:)
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      Flux_VX => Flux_VXI(:,:,:,:,1)
+      uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+      
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(:,i,j,k) = &
@@ -1222,8 +1280,17 @@ contains
       !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-      !------------------------------------------------------------------------
+      real, pointer:: uDotArea_YI(:,:,:,:)
+      real, pointer:: Flux_VY(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
+      !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      Flux_VY => Flux_VYI(:,:,:,:,1)
+      uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+      
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VY(:,i,j,k) = &
@@ -1379,8 +1446,17 @@ contains
       !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-      !------------------------------------------------------------------------
+      real, pointer:: uDotArea_ZI(:,:,:,:)
+      real, pointer:: Flux_VZ(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
+      !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      Flux_VZ => Flux_VZI(:,:,:,:,1)
+      uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+      
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VZ(:,i,j,k) = &
@@ -1527,15 +1603,19 @@ contains
     subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
       !------------------------------------------------------------------------
       !$acc data present(Primitive_VG,LeftState_VX,RightState_VX)
       !$acc parallel loop collapse(4) independent
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar 
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar
          LeftState_VX(iVar,i,j,k)=Primitive_VG(iVar,i-1,j,k)
          RightState_VX(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)
       end do; end do; end do; end do
       !$acc end data
-      
+
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
@@ -1546,8 +1626,12 @@ contains
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VY,RightState_VY)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
@@ -1563,8 +1647,12 @@ contains
     subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VZ,RightState_VZ)
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
@@ -1579,8 +1667,21 @@ contains
     !==========================================================================
     subroutine get_face_accurate3d(iSideIn)
       integer, intent(in):: iSideIn
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       select case(iSideIn)
       case(1)
          do k=1,nK,2; do j=1,nJ,2
@@ -1749,8 +1850,13 @@ contains
     !==========================================================================
     subroutine get_face_accurate1d(iSideIn)
       integer, intent(in):: iSideIn
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       select case(iSideIn)
       case(1)
          call accurate_reschange1d(&
@@ -1776,8 +1882,17 @@ contains
     !==========================================================================
     subroutine get_face_accurate2d(iSideIn)
       integer, intent(in):: iSideIn
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       select case(iSideIn)
       case(1)
          do j=1,nJ,2
@@ -1828,8 +1943,21 @@ contains
     !==========================================================================
     subroutine get_face_tvd(iSideIn)
       integer,intent(in)::iSideIn
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       select case(iSideIn)
       case(1)
          do k=1,nK,2; do j=1,nJ,2
@@ -1993,8 +2121,13 @@ contains
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::i1, iMinSharp, iMaxSharp
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       iMinSharp = iMin
       iMaxSharp = iMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2036,8 +2169,13 @@ contains
     subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::j1, jMinSharp, jMaxSharp
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      
       jMinSharp = jMin
       jMaxSharp = jMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2079,8 +2217,13 @@ contains
     subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer::k1, kMinSharp, kMaxSharp
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2133,9 +2276,22 @@ contains
       real, allocatable, save:: FlatCoef_G(:,:,:)
 
       integer:: i, j, k, iFluid
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
       ! call timing_start('flatten')
 
+      RightState_VZ => RightState_VZI(:,:,:,:,1)
+      RightState_VY => RightState_VYI(:,:,:,:,1)
+      RightState_VX => RightState_VXI(:,:,:,:,1)
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      
       if(.not.allocated(FlatCoef_G)) &
            allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
 
@@ -2311,11 +2467,11 @@ contains
        IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
        IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
        IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
-    ! _____________! _____________!_______!_______!_
+    ! _____________! _____________! _______!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_! _
     !             !         CToF! FToC FF!
-    ! _____________! _____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________! _F1_V__!__F2_V_!_
     !             !             !       !       !
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
@@ -2409,11 +2565,11 @@ contains
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________! _____________!________!_______!_
+    ! _____________! _____________! ________!_______!_
     !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! __F1_V__! __F2_V_!_
+    ! C2_V        ! C1_V       _! __F1_V__! __F2_V_! _
     !             !         CToF! FToC FF!
-    ! _____________! _____________!__F1_V__!__F2_V_!_
+    ! _____________! _____________! __F1_V__!__F2_V_!_
     !             !             !        !       !
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
@@ -2486,11 +2642,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    ! _____________! _____________!_______!_______!_
+    ! _____________! _____________! _______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_! _
     !             !         CToF! FToC FF!       !
-    ! _____________! _____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________! _F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2632,11 +2788,11 @@ contains
     !                         looking at another physical cell
 
     !             ! C1_V        !       !       !
-    ! _____________! _____________!_______!_______!_
+    ! _____________! _____________! _______!_______!_
     !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
+    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_! _
     !             !         CToF! FToC FF!       !
-    ! _____________! _____________!_F1_V__!__F2_V_!_
+    ! _____________! _____________! _F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
 
@@ -2773,10 +2929,10 @@ contains
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________! _____________!_______!_______!_
+    ! _____________! _____________! _______!_______!_
     !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
-    ! _____________! _____________!_______!_______!_
+    ! _____________! _____________! _______!_______!_
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
@@ -2955,6 +3111,7 @@ contains
       real:: State_VI(nVar,-3:2)
 
       logical:: DoTest
+
       character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
@@ -3081,6 +3238,7 @@ contains
     integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'calc_cell_norm_velocity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -3152,7 +3310,7 @@ contains
     ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
     ! for more details.
 
-    use ModAdvance, ONLY: FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
+    use ModAdvance, ONLY: FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI, &
          Vel_IDGB
     use BATL_size,   ONLY: nDim, jDim_, kDim_
     use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
@@ -3165,8 +3323,16 @@ contains
 
     real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
+    real, pointer:: FaceDivU_IX(:,:,:,:)
+    real, pointer:: FaceDivU_IY(:,:,:,:)
+    real, pointer:: FaceDivU_IZ(:,:,:,:)
+
     character(len=*), parameter:: NameSub = 'calc_face_div_u'
     !--------------------------------------------------------------------------
+    FaceDivU_IZ => FaceDivU_IZI(:,:,:,:,1)
+    FaceDivU_IY => FaceDivU_IYI(:,:,:,:,1)
+    FaceDivU_IX => FaceDivU_IXI(:,:,:,:,1)
+    
     call timing_start(NameSub)
 
     iMin = 1 - nG;       iMax = nI + nG
@@ -4161,5 +4327,4 @@ contains
   !============================================================================
 
 end module ModFaceValue
-!==============================================================================
 

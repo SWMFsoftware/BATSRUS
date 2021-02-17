@@ -50,7 +50,7 @@ contains
   !============================================================================
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: VdtFace_x, VdtFace_y, VdtFace_z, time_BLK
+    use ModAdvance,  ONLY: VdtFace_XI, VdtFace_YI, VdtFace_ZI, time_BLK
     use ModGeometry, ONLY: true_cell
     use BATL_lib, ONLY: CellVolume_GB
     integer, intent(in):: iBlock, iHemisphere
@@ -59,8 +59,15 @@ contains
     integer :: i, j, k, jMerge, jStart, jLast, kLayer, kStride
     real:: VDt
     logical:: DoTest
+    real, pointer:: VdtFace_X(:,:,:)
+    real, pointer:: VdtFace_Y(:,:,:)
+    real, pointer:: VdtFace_Z(:,:,:)
+
     character(len=*), parameter:: NameSub = 'calc_coarse_axis_timestep'
     !--------------------------------------------------------------------------
+    VdtFace_Z => VdtFace_ZI(:,:,:,1) 
+    VdtFace_Y => VdtFace_YI(:,:,:,1) 
+    VdtFace_X => VdtFace_XI(:,:,:,1) 
     call test_start(NameSub, DoTest, iBlock)
 
     select case(iHemisphere)
@@ -81,11 +88,11 @@ contains
              if(any(.not. true_cell(i,jStart:jLast,k,iBlock))) then
                 time_BLK(i,jStart:jLast,k,iBlock) = 0
              else
-                Vdt =  sum(max(VdtFace_x(i,jStart:jLast,k), &
-                     VdtFace_x(i+1,jStart:jLast,k)))&
-                     + max(VdtFace_y(i,jStart,k), VdtFace_y(i,jLast+1,k)) &
-                     + sum(max(VdtFace_z(i,jStart:jLast,k), &
-                     VdtFace_z(i,jStart:jLast,k+1) ))
+                Vdt =  sum(max(VdtFace_X(i,jStart:jLast,k), &
+                     VdtFace_X(i+1,jStart:jLast,k)))&
+                     + max(VdtFace_Y(i,jStart,k), VdtFace_Y(i,jLast+1,k)) &
+                     + sum(max(VdtFace_Z(i,jStart:jLast,k), &
+                     VdtFace_Z(i,jStart:jLast,k+1) ))
 
                 time_BLK(i,jStart:jLast,k,iBlock) = &
                      jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt

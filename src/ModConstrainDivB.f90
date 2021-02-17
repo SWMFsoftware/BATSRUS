@@ -61,6 +61,7 @@ contains
   subroutine init_mod_ct
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'init_mod_ct'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -86,6 +87,7 @@ contains
   subroutine clean_mod_ct
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'clean_mod_ct'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -116,14 +118,20 @@ contains
 
     use ModMain, ONLY : nI,nJ,nK
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
+    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
 
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_VxB'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
     else
@@ -172,7 +180,7 @@ contains
     use ModSize
     use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
+    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use ModParallel, ONLY : NOBLK,&
          neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
     use ModGeometry, ONLY : true_cell, body_BLK
@@ -185,8 +193,14 @@ contains
 
     ! Apply continuous or fixed boundary conditions at outer boundaries
     logical:: DoTest
+    real, pointer:: Flux_VX(:,:,:,:)
+    real, pointer:: Flux_VY(:,:,:,:)
+    real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'bound_VxB'
     !--------------------------------------------------------------------------
+    Flux_VZ => Flux_VZI(:,:,:,:,1)
+    Flux_VY => Flux_VYI(:,:,:,:,1)
+    Flux_VX => Flux_VXI(:,:,:,:,1)
     call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ
@@ -392,6 +406,7 @@ contains
     integer:: i,j,k
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'Bcenter2Bface'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -487,9 +502,9 @@ contains
   !   ! Assign default solution state to fine block to get corners
   !   fine_sol=0.0
   !
-  !   !\
+  !
   !   ! Prolong coarse grid solution to finer block.
-  !   !/
+  !
   !
   !   select case(iVar)
   !   case(Bx_)
@@ -1438,16 +1453,16 @@ contains
   !        end do ! iBlock
   !     end do ! iface
   !
-  !     !\
+  !
   !     ! Wait for all receive commands to be posted for all processors
-  !     !/
+  !
   !     call barrier_mpi
   !
   !     if(DoTest)write(*,*)'receives posted: me=',iProc
   !
-  !     !\
+  !
   !     ! Send blocking messages with Rsend (ready to receive)
-  !     !/
+  !
   !     do iface=ifacemin,ifacemax
   !
   !        ! Set index ranges for the face
@@ -1563,9 +1578,9 @@ contains
   !
   !     end do ! iface
   !
-  !     !\
+  !
   !     ! WAIT FOR ALL MESSAGES TO BE RECEIVED
-  !     !/
+  !
   !     if (number_receive_requests > 0) &
   !          call MPI_waitall(number_receive_requests,receive_requests,status,iError)
   !
@@ -1913,10 +1928,10 @@ contains
   !   number_receive_requests = 0
   !   receive_requests = MPI_REQUEST_NULL
   !
-  !   !\
+  !
   !   ! Non-blocking recieve messages from fine blocks
   !   ! or copy for local blocks
-  !   !/
+  !
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
   ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
@@ -1935,14 +1950,14 @@ contains
   !      end do
   !   end do
   !
-  !   !\
+  !
   !   ! Wait for all receive commands to be posted for all processors
-  !   !/
+  !
   !   call barrier_mpi
   !
-  !   !\
+  !
   !   ! Send blocking messages with Rsend (ready to receive)
-  !   !/
+  !
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
   !
@@ -1957,9 +1972,9 @@ contains
   !
   !   end do
   !
-  !   !\
+  !
   !   ! WAIT FOR ALL MESSAGES TO BE RECEIVED
-  !   !/
+  !
   !   if (number_receive_requests > 0) &
   !        call MPI_waitall(number_receive_requests,receive_requests,status,iError)
   !
@@ -2074,4 +2089,3 @@ contains
   ! end subroutine b_face_fine_pass
 
 end module ModConstrainDivB
-!==============================================================================

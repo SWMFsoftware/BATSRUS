@@ -12,12 +12,12 @@ module ModConserveFlux
 
   use ModMain, ONLY:     UseB
   use ModAdvance, ONLY: &
-       Flux_VX, Flux_VY, Flux_VZ, &
-       VdtFace_X, VdtFace_Y, VdtFace_Z, &
-       LeftState_VX, LeftState_VY, LeftState_VZ, &
-       RightState_VX, RightState_VY, RightState_VZ, &
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI, UseMhdMomentumFlux, &
-       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
+       Flux_VXI, Flux_VYI, Flux_VZI, &
+       VdtFace_XI, VdtFace_YI, VdtFace_ZI, &
+       LeftState_VXI, LeftState_VYI, LeftState_VZI, &
+       RightState_VXI, RightState_VYI, RightState_VZI, &
+       uDotArea_XII, uDotArea_YII, uDotArea_ZII, UseMhdMomentumFlux, &
+       MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI
 
   use ModGeometry,  ONLY: true_cell
   use ModParallel, ONLY : &
@@ -141,8 +141,21 @@ contains
     !==========================================================================
 
     subroutine save_corrected_flux_x
+      real, pointer:: uDotArea_XI(:,:,:,:)
+      real, pointer:: Flux_VX(:,:,:,:)
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: VdtFace_X(:,:,:)
+      real, pointer:: MhdFlux_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
+      MhdFlux_VX => MhdFlux_VXI(:,:,:,:,1) 
+      VdtFace_X => VdtFace_XI(:,:,:,1) 
+      RightState_VX => RightState_VXI(:,:,:,:,1) 
+      LeftState_VX => LeftState_VXI(:,:,:,:,1) 
+      Flux_VX => Flux_VXI(:,:,:,:,1) 
+      uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+      
       do k=1,nK; do j=1,nJ
          CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceTo,iBlock)  &
               = Flux_VX(1:nVar+nFluid, lFaceFrom,j,k)
@@ -151,7 +164,7 @@ contains
               = uDotArea_XI(lFaceFrom,j,k,:)
 
          CorrectedFlux_VXB(Vdt_,j,k,lFaceTo,iBlock)          &
-              = VdtFace_x(lFaceFrom,j,k)
+              = VdtFace_X(lFaceFrom,j,k)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -207,8 +220,21 @@ contains
     !==========================================================================
 
     subroutine save_corrected_flux_y
+      real, pointer:: uDotArea_YI(:,:,:,:)
+      real, pointer:: Flux_VY(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: VdtFace_Y(:,:,:)
+      real, pointer:: MhdFlux_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
+      MhdFlux_VY => MhdFlux_VYI(:,:,:,:,1) 
+      VdtFace_Y => VdtFace_YI(:,:,:,1) 
+      RightState_VY => RightState_VYI(:,:,:,:,1) 
+      LeftState_VY => LeftState_VYI(:,:,:,:,1) 
+      Flux_VY => Flux_VYI(:,:,:,:,1) 
+      uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+      
       do k=1,nK;do i=1,nI
          CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceTo,iBlock)    &
               = Flux_VY(1:FluxLast_,i,lFaceFrom,k)
@@ -217,7 +243,7 @@ contains
               = uDotArea_YI(i,lFaceFrom,k,:)
 
          CorrectedFlux_VYB(Vdt_,i,k,lFaceTo,iBlock)         &
-              = VdtFace_y(i,lFaceFrom,k)
+              = VdtFace_Y(i,lFaceFrom,k)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -249,8 +275,21 @@ contains
     !==========================================================================
 
     subroutine save_corrected_flux_z
+      real, pointer:: uDotArea_ZI(:,:,:,:)
+      real, pointer:: Flux_VZ(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
+      real, pointer:: VdtFace_Z(:,:,:)
+      real, pointer:: MhdFlux_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
+      MhdFlux_VZ => MhdFlux_VZI(:,:,:,:,1) 
+      VdtFace_Z => VdtFace_ZI(:,:,:,1) 
+      RightState_VZ => RightState_VZI(:,:,:,:,1) 
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1) 
+      Flux_VZ => Flux_VZI(:,:,:,:,1) 
+      uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+      
       do j=1,nJ;do i=1,nI
          CorrectedFlux_VZB(1:FluxLast_,  i,j,lFaceTo,iBlock)    &
               = Flux_VZ(1:FluxLast_,i,j,lFaceFrom)
@@ -259,7 +298,7 @@ contains
               = uDotArea_ZI(i,j,lFaceFrom,:)
 
          CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,iBlock)           &
-              = VdtFace_z(i,j,lFaceFrom)
+              = VdtFace_Z(i,j,lFaceFrom)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -376,8 +415,19 @@ contains
     !==========================================================================
 
     subroutine apply_corrected_flux_x
+      real, pointer:: uDotArea_XI(:,:,:,:)
+      real, pointer:: Flux_VX(:,:,:,:)
+      real, pointer:: LeftState_VX(:,:,:,:)
+      real, pointer:: RightState_VX(:,:,:,:)
+      real, pointer:: VdtFace_X(:,:,:)
 
       !------------------------------------------------------------------------
+      VdtFace_X => VdtFace_XI(:,:,:,1) 
+      RightState_VX => RightState_VXI(:,:,:,:,1) 
+      LeftState_VX => LeftState_VXI(:,:,:,:,1) 
+      Flux_VX => Flux_VXI(:,:,:,:,1) 
+      uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+      
       do k = 1, nK; do j = 1, nJ
          if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
          if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
@@ -386,7 +436,7 @@ contains
               CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
          uDotArea_XI(lFaceTo,j,k,:) = &
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
-         VdtFace_x(lFaceTo,j,k) = &
+         VdtFace_X(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
          ! if(UseMhdMomentumFlux) &
          !     MhdFlux_VX(:,lFaceTo,j,k) = CorrectedFlux_VXB(&
@@ -415,7 +465,18 @@ contains
     !==========================================================================
 
     subroutine apply_corrected_flux_y
+      real, pointer:: uDotArea_YI(:,:,:,:)
+      real, pointer:: Flux_VY(:,:,:,:)
+      real, pointer:: LeftState_VY(:,:,:,:)
+      real, pointer:: RightState_VY(:,:,:,:)
+      real, pointer:: VdtFace_Y(:,:,:)
       !------------------------------------------------------------------------
+      VdtFace_Y => VdtFace_YI(:,:,:,1) 
+      RightState_VY => RightState_VYI(:,:,:,:,1) 
+      LeftState_VY => LeftState_VYI(:,:,:,:,1) 
+      Flux_VY => Flux_VYI(:,:,:,:,1) 
+      uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+      
       do k = 1, nK; do i = 1, nI
          if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
          if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
@@ -424,7 +485,7 @@ contains
               CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
          uDotArea_YI(i,lFaceTo,k,:) = &
               CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
-         VdtFace_y(i,lFaceTo,k)= &
+         VdtFace_Y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
          ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VY(:,i,lFaceTo,k) = CorrectedFlux_VYB(&
@@ -443,8 +504,19 @@ contains
     !==========================================================================
 
     subroutine apply_corrected_flux_z
+      real, pointer:: uDotArea_ZI(:,:,:,:)
+      real, pointer:: Flux_VZ(:,:,:,:)
+      real, pointer:: LeftState_VZ(:,:,:,:)
+      real, pointer:: RightState_VZ(:,:,:,:)
+      real, pointer:: VdtFace_Z(:,:,:)
 
       !------------------------------------------------------------------------
+      VdtFace_Z => VdtFace_ZI(:,:,:,1) 
+      RightState_VZ => RightState_VZI(:,:,:,:,1) 
+      LeftState_VZ => LeftState_VZI(:,:,:,:,1) 
+      Flux_VZ => Flux_VZI(:,:,:,:,1) 
+      uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+      
       do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
          if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
@@ -453,7 +525,7 @@ contains
               CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
          uDotArea_ZI(i,j,lFaceTo,:) = &
               CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
-         VdtFace_z(i,j,lFaceTo) = &
+         VdtFace_Z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
          ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VZ(:,i,j,lFaceTo) = CorrectedFlux_VZB(&
@@ -483,9 +555,14 @@ contains
     integer:: j, k
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
-    logical:: DoTest
+    logical:: DoTest    
+    real, pointer:: LeftState_VX(:,:,:,:)
+    real, pointer:: RightState_VX(:,:,:,:)
     character(len=*), parameter:: NameSub = 'apply_bn_face_i'
     !--------------------------------------------------------------------------
+    RightState_VX => RightState_VXI(:,:,:,:,1) 
+    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
     do k=1,nK; do j=1,nJ
        if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
@@ -522,8 +599,13 @@ contains
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
+    real, pointer:: LeftState_VY(:,:,:,:)
+    real, pointer:: RightState_VY(:,:,:,:)
     character(len=*), parameter:: NameSub = 'apply_bn_face_j'
     !--------------------------------------------------------------------------
+    RightState_VY => RightState_VYI(:,:,:,:,1) 
+    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do i=1,nI
@@ -562,8 +644,13 @@ contains
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
+    real, pointer:: LeftState_VZ(:,:,:,:)
+    real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'apply_bn_face_k'
     !--------------------------------------------------------------------------
+    RightState_VZ => RightState_VZI(:,:,:,:,1) 
+    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+    
     call test_start(NameSub, DoTest, iBlock)
     do j=1,nJ; do i=1,nI
        if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
