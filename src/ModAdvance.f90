@@ -255,11 +255,6 @@ module ModAdvance
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
   !$omp threadprivate( FluxCenter_VGD )
 
-  ! CWENO weight used to limit flux.
-  real, allocatable:: Weight_IVX(:,:,:,:,:), Weight_IVY(:,:,:,:,:), &
-       Weight_IVZ(:,:,:,:,:)
-  !$omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
-
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, target, allocatable:: &
        uDotArea_XII(:,:,:,:,:), uDotArea_YII(:,:,:,:,:), uDotArea_ZII(:,:,:,:,:)
@@ -281,8 +276,8 @@ module ModAdvance
   ! if UseEfield, in which case the electric field is part of the state vector.
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
 
-  real, target, allocatable:: MhdSource_VC(:,:,:,:),  &
-       MhdFlux_VXI(:,:,:,:,:), MhdFlux_VYI(:,:,:,:,:), MhdFlux_VZI(:,:,:,:,:)
+  real, target, allocatable:: MhdFlux_VXI(:,:,:,:,:), MhdFlux_VYI(:,:,:,:,:), &
+       MhdFlux_VZI(:,:,:,:,:)
   !$omp threadprivate( MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI )
   !$acc declare create(MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI)  
 
@@ -450,9 +445,6 @@ contains
     if(allocated(bCrossArea_DXI))   deallocate(bCrossArea_DXI)
     if(allocated(bCrossArea_DYI))   deallocate(bCrossArea_DYI)
     if(allocated(bCrossArea_DZI))   deallocate(bCrossArea_DZI)
-    if(allocated(Weight_IVX))      deallocate(Weight_IVX)
-    if(allocated(Weight_IVY))      deallocate(Weight_IVY)
-    if(allocated(Weight_IVZ))      deallocate(Weight_IVZ)
     if(allocated(FaceDivU_IXI))     deallocate(FaceDivU_IXI)
     if(allocated(FaceDivU_IYI))     deallocate(FaceDivU_IYI)
     if(allocated(FaceDivU_IZI))     deallocate(FaceDivU_IZI)
