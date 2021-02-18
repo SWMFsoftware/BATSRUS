@@ -1366,9 +1366,11 @@ contains
 
   subroutine user_update_states(iBlock)
 
-    use ModMain, ONLY: UseUserUpdateStates
+    use ModMain, ONLY: UseUserUpdateStates, nI, nJ, nK, &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
+    use ModAdvance,    ONLY: nVar, nFluid, Flux_VXI, Flux_VYI, Flux_VZI, &
+         Source_VC
     use ModVarIndexes
 
     integer,intent(in)::iBlock
@@ -1381,9 +1383,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    Flux_VZ => Flux_VZI(:,:,:,:,1)
-    Flux_VY => Flux_VYI(:,:,:,:,1)
-    Flux_VX => Flux_VXI(:,:,:,:,1)
+    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         Flux_VZI(:,:,:,:,1)
+    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         Flux_VYI(:,:,:,:,1)
+    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         Flux_VXI(:,:,:,:,1)
     
     if(.not.allocated(iVarsUpdate_I))then
        UseUserUpdateStates = .false.

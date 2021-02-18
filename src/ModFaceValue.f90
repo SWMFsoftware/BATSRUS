@@ -310,12 +310,18 @@ contains
     real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
-    RightState_VZ => RightState_VZI(:,:,:,:,1)
-    RightState_VY => RightState_VYI(:,:,:,:,1)
-    RightState_VX => RightState_VXI(:,:,:,:,1)
-    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-    LeftState_VY => LeftState_VYI(:,:,:,:,1)
-    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         RightState_VZI(:,:,:,:,1)
+    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         RightState_VYI(:,:,:,:,1)
+    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         RightState_VXI(:,:,:,:,1)
+    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         LeftState_VZI(:,:,:,:,1)
+    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         LeftState_VYI(:,:,:,:,1)
+    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         LeftState_VXI(:,:,:,:,1)
     
     if(.not. DoResChangeOnly)then
        call test_start(NameSub, DoTest, iBlock)
@@ -830,8 +836,10 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       do iVar = 1, nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -851,8 +859,10 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
       do iVar = 1, nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -872,8 +882,10 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
       do iVar=1,nVar
          if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
 
@@ -893,8 +905,10 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VX(iVarLimitRatio_I,i,j,k) = &
               LeftState_VX(iVarLimitRatio_I,i,j,k)*LeftState_VX(Rho_,i,j,k)
@@ -912,8 +926,10 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VY(iVarLimitRatio_I,i,j,k) = &
               LeftState_VY(iVarLimitRatio_I,i,j,k)*LeftState_VY(Rho_,i,j,k)
@@ -931,8 +947,10 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
               LeftState_VZ(iVarLimitRatio_I,i,j,k)*LeftState_VZ(Rho_,i,j,k)
@@ -950,8 +968,10 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
@@ -979,8 +999,10 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+ RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+ LeftState_VYI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
@@ -1008,8 +1030,10 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
@@ -1117,10 +1141,14 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
-      Flux_VX => Flux_VXI(:,:,:,:,1)
-      uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
+      Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           Flux_VXI(:,:,:,:,1)
+      uDotArea_XI(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,1:nFluid+1) => &
+           uDotArea_XII(:,:,:,:,1)
       
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1286,10 +1314,14 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      Flux_VY => Flux_VYI(:,:,:,:,1)
-      uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+           Flux_VYI(:,:,:,:,1)
+      uDotArea_YI(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace,1:nFluid+1) => &
+           uDotArea_YII(:,:,:,:,1)
       
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1452,10 +1484,14 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      Flux_VZ => Flux_VZI(:,:,:,:,1)
-      uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+           Flux_VZI(:,:,:,:,1)
+      uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1,1:nFluid+1) => &
+           uDotArea_ZII(:,:,:,:,1)
       
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1608,8 +1644,10 @@ contains
       !------------------------------------------------------------------------
       !$acc data present(Primitive_VG,LeftState_VX,RightState_VX)
       !$acc parallel loop collapse(4) independent
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar
          LeftState_VX(iVar,i,j,k)=Primitive_VG(iVar,i-1,j,k)
          RightState_VX(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)
@@ -1630,8 +1668,10 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VY,RightState_VY)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
@@ -1651,8 +1691,10 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VZ,RightState_VZ)
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
@@ -1675,12 +1717,18 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       select case(iSideIn)
       case(1)
@@ -1854,8 +1902,10 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       select case(iSideIn)
       case(1)
@@ -1888,10 +1938,14 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       select case(iSideIn)
       case(1)
@@ -1951,12 +2005,18 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       select case(iSideIn)
       case(1)
@@ -2125,8 +2185,10 @@ contains
       real, pointer:: RightState_VX(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       iMinSharp = iMin
       iMaxSharp = iMax
@@ -2173,8 +2235,10 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
       
       jMinSharp = jMin
       jMaxSharp = jMax
@@ -2221,8 +2285,10 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
       
       kMinSharp = kMin
       kMaxSharp = kMax
@@ -2285,12 +2351,18 @@ contains
       !------------------------------------------------------------------------
       ! call timing_start('flatten')
 
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       if(.not.allocated(FlatCoef_G)) &
            allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
@@ -3329,9 +3401,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'calc_face_div_u'
     !--------------------------------------------------------------------------
-    FaceDivU_IZ => FaceDivU_IZI(:,:,:,:,1)
-    FaceDivU_IY => FaceDivU_IYI(:,:,:,:,1)
-    FaceDivU_IX => FaceDivU_IXI(:,:,:,:,1)
+    FaceDivU_IZ(1:nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace) => &
+         FaceDivU_IZI(:,:,:,:,1)
+    FaceDivU_IY(1:nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace) => &
+         FaceDivU_IYI(:,:,:,:,1)
+    FaceDivU_IX(1:nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         FaceDivU_IXI(:,:,:,:,1)
     
     call timing_start(NameSub)
 

@@ -16,7 +16,9 @@ module ModConstrainDivB
   ! Since we switched to BATL, it only works on uniform grid.
 
   use ModSize
-  use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModIO,    ONLY: iUnitOut, write_prefix
+  use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+  use ModVarIndexes, ONLY: nFluid, nVar
 
   implicit none
   SAVE
@@ -129,9 +131,12 @@ contains
     real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_VxB'
     !--------------------------------------------------------------------------
-    Flux_VZ => Flux_VZI(:,:,:,:,1)
-    Flux_VY => Flux_VYI(:,:,:,:,1)
-    Flux_VX => Flux_VXI(:,:,:,:,1)
+    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         Flux_VZI(:,:,:,:,1)
+    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         Flux_VYI(:,:,:,:,1)
+    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         Flux_VXI(:,:,:,:,1)
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
     else
@@ -198,9 +203,12 @@ contains
     real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'bound_VxB'
     !--------------------------------------------------------------------------
-    Flux_VZ => Flux_VZI(:,:,:,:,1)
-    Flux_VY => Flux_VYI(:,:,:,:,1)
-    Flux_VX => Flux_VXI(:,:,:,:,1)
+    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         Flux_VZI(:,:,:,:,1)
+    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         Flux_VYI(:,:,:,:,1)
+    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         Flux_VXI(:,:,:,:,1)
     call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ

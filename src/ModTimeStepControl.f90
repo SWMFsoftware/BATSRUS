@@ -113,8 +113,8 @@ contains
 
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-             UseDtLimit, DtLimit
+    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, UseDtLimit, DtLimit, &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
     use ModAdvance, ONLY : VdtFace_XI, VdtFace_YI, VdtFace_ZI, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -147,9 +147,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
-    VdtFace_Z => VdtFace_ZI(:,:,:,1)
-    VdtFace_Y => VdtFace_YI(:,:,:,1)
-    VdtFace_X => VdtFace_XI(:,:,:,1)
+    VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         VdtFace_ZI(:,:,:,1)
+    VdtFace_Y(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         VdtFace_YI(:,:,:,1)
+    VdtFace_X(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         VdtFace_XI(:,:,:,1)
     
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then

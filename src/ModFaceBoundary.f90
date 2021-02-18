@@ -162,12 +162,18 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
 
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
 
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
@@ -236,12 +242,18 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
-    RightState_VZ => RightState_VZI(:,:,:,:,1)
-    RightState_VY => RightState_VYI(:,:,:,:,1)
-    RightState_VX => RightState_VXI(:,:,:,:,1)
-    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-    LeftState_VY => LeftState_VYI(:,:,:,:,1)
-    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         RightState_VZI(:,:,:,:,1)
+    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         RightState_VYI(:,:,:,:,1)
+    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         RightState_VXI(:,:,:,:,1)
+    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         LeftState_VZI(:,:,:,:,1)
+    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         LeftState_VYI(:,:,:,:,1)
+    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         LeftState_VXI(:,:,:,:,1)
 
     associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &
                iBlockBc => FBC%iBlockBc )

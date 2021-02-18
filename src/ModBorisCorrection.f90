@@ -5,7 +5,9 @@ module ModBorisCorrection
   use ModConst, ONLY: cLightSpeed
   use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
   use ModCoordTransform, ONLY: cross_product
-  use ModMain,    ONLY: UseB0, UseHalfStep, nStage
+  use ModMain,    ONLY: UseB0, UseHalfStep, nStage, &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VC, &
        Energy_GBI, EnergyOld_CBI, &
@@ -415,8 +417,10 @@ contains
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
 
-    RightState_VX => RightState_VXI(:,:,:,:,1)
-    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         RightState_VXI(:,:,:,:,1)
+    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         LeftState_VXI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -502,8 +506,10 @@ contains
     real, pointer:: LeftState_VY(:,:,:,:)
     real, pointer:: RightState_VY(:,:,:,:)
     !--------------------------------------------------------------------------
-    RightState_VY => RightState_VYI(:,:,:,:,1)
-    LeftState_VY => LeftState_VYI(:,:,:,:,1)
+    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         RightState_VYI(:,:,:,:,1)
+    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         LeftState_VYI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -591,8 +597,10 @@ contains
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
 
-    RightState_VZ => RightState_VZI(:,:,:,:,1)
-    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
+    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         RightState_VZI(:,:,:,:,1)
+    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         LeftState_VZI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 

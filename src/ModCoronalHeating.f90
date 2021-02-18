@@ -10,7 +10,10 @@ module ModCoronalHeating
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModMain,       ONLY: nI, nJ, nK
+  use ModMain,       ONLY: nI, nJ, nK, &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+  use ModVarIndexes, ONLY: nVar
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
@@ -944,12 +947,18 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
       real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
@@ -1017,12 +1026,18 @@ contains
     real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
-    RightState_VZ => RightState_VZI(:,:,:,:,1)
-    RightState_VY => RightState_VYI(:,:,:,:,1)
-    RightState_VX => RightState_VXI(:,:,:,:,1)
-    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-    LeftState_VY => LeftState_VYI(:,:,:,:,1)
-    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         RightState_VZI(:,:,:,:,1)
+    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         RightState_VYI(:,:,:,:,1)
+    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         RightState_VXI(:,:,:,:,1)
+    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         LeftState_VZI(:,:,:,:,1)
+    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         LeftState_VYI(:,:,:,:,1)
+    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         LeftState_VXI(:,:,:,:,1)
 
     if(IsCartesianGrid)then
        DxInvHalf = 0.5/CellSize_DB(x_,iBlock)

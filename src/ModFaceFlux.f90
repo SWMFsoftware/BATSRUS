@@ -10,8 +10,10 @@ module ModFaceFlux
 #endif
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModMain,       ONLY: UseB, UseB0, cLimit
-  use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction
+  use ModMain,       ONLY: UseB, UseB0, cLimit, MaxDim, &
+       UseRadDiffusion, UseHeatConduction, &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
   use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
        EDotFA_X, EDotFA_Y, EDotFA_Z                     ! output: E.Area
   use ModGeometry,   ONLY: true_cell
@@ -342,12 +344,18 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
       real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
 
       write(*,*) '==========================================================='
       write(*,*) NameSub, ' started'
@@ -456,14 +464,24 @@ contains
       !$acc& true_cell, &
       !$acc& Flux_VX)
 
-      MhdFlux_VX => MhdFlux_VXI(:,:,:,:,1)
-      FaceDivU_IX => FaceDivU_IXI(:,:,:,:,1)
-      if(allocated(bCrossArea_DXI)) bCrossArea_DX => bCrossArea_DXI(:,:,:,:,1)
-      VdtFace_X => VdtFace_XI(:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
-      Flux_VX => Flux_VXI(:,:,:,:,1)
-      uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+      MhdFlux_VX(RhoUx_:RhoUz_,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           MhdFlux_VXI(:,:,:,:,1)
+      FaceDivU_IX(1:nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           FaceDivU_IXI(:,:,:,:,1)
+      VdtFace_X(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           VdtFace_XI(:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
+      Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           Flux_VXI(:,:,:,:,1)
+      uDotArea_XI(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,1:nFluid+1) => &
+           uDotArea_XII(:,:,:,:,1)
+      if(allocated(bCrossArea_DXI)) &
+           bCrossArea_DX(1:MaxDim,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+           bCrossArea_DXI(:,:,:,:,1)
+
 
 #ifndef OPENACC
        call set_block_values(iBlock, x_, FFV)
@@ -587,14 +605,24 @@ contains
       !$acc& true_cell, &
       !$acc& Flux_VY)
 
-      MhdFlux_VY => MhdFlux_VYI(:,:,:,:,1)
-      FaceDivU_IY => FaceDivU_IYI(:,:,:,:,1)
-      if(allocated(bCrossArea_DYI))bCrossArea_DY => bCrossArea_DYI(:,:,:,:,1)
-      VdtFace_Y => VdtFace_YI(:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      Flux_VY => Flux_VYI(:,:,:,:,1)
-      uDotArea_YI => uDotArea_YII(:,:,:,:,1)
+      MhdFlux_VY(RhoUx_:RhoUz_,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+           MhdFlux_VYI(:,:,:,:,1)
+      FaceDivU_IY(1:nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace) => &
+           FaceDivU_IYI(:,:,:,:,1)
+      VdtFace_Y(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+           VdtFace_YI(:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+           Flux_VYI(:,:,:,:,1)
+      uDotArea_YI(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace,1:nFluid+1) => &
+           uDotArea_YII(:,:,:,:,1)
+      if(allocated(bCrossArea_DYI)) &
+           bCrossArea_DY(1:MaxDim,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+           bCrossArea_DYI(:,:,:,:,1)
+
 
 #ifndef OPENACC
       call set_block_values(iBlock, y_, FFV)
@@ -723,14 +751,23 @@ contains
       !$acc& true_cell, &
       !$acc& Flux_VZ)
 
-      MhdFlux_VZ => MhdFlux_VZI(:,:,:,:,1)
-      FaceDivU_IZ => FaceDivU_IZI(:,:,:,:,1)
-      if(allocated(bCrossArea_DZI)) bCrossArea_DZ => bCrossArea_DZI(:,:,:,:,1)
-      VdtFace_Z => VdtFace_ZI(:,:,:,1)
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      Flux_VZ => Flux_VZI(:,:,:,:,1)
-      uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
+      MhdFlux_VZ(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+           MhdFlux_VZI(:,:,:,:,1)
+      FaceDivU_IZ(1:nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace) => &
+           FaceDivU_IZI(:,:,:,:,1)
+      VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+           VdtFace_ZI(:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+           Flux_VZI(:,:,:,:,1)
+      uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1,1:nFluid+1) => &
+           uDotArea_ZII(:,:,:,:,1)
+      if(allocated(bCrossArea_DZI)) &
+           bCrossArea_DZ(1:MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+           bCrossArea_DZI(:,:,:,:,1)
 
 #ifndef OPENACC
       call set_block_values(iBlock, z_, FFV)
@@ -4081,9 +4118,12 @@ contains
     real, pointer:: VdtFace_Z(:,:,:)
     character(len=*), parameter:: NameSub = 'calc_cell_flux'
     !--------------------------------------------------------------------------
-    VdtFace_Z => VdtFace_ZI(:,:,:,1)
-    VdtFace_Y => VdtFace_YI(:,:,:,1)
-    VdtFace_X => VdtFace_XI(:,:,:,1)
+    VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         VdtFace_ZI(:,:,:,1)
+    VdtFace_Y(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         VdtFace_YI(:,:,:,1)
+    VdtFace_X(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         VdtFace_XI(:,:,:,1)
 
     associate( &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &

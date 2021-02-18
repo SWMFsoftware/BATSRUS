@@ -6,6 +6,10 @@ module ModCalcSource
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
+  use ModMain,  ONLY: &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+  use ModVarIndexes, ONLY: nVar
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -107,9 +111,12 @@ contains
     real, pointer:: uDotArea_ZI(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
-    uDotArea_ZI => uDotArea_ZII(:,:,:,:,1)
-    uDotArea_YI => uDotArea_YII(:,:,:,:,1)
-    uDotArea_XI => uDotArea_XII(:,:,:,:,1)
+    uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1,1:nFluid+1) => &
+         uDotArea_ZII(:,:,:,:,1)
+    uDotArea_YI(iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace,1:nFluid+1) => &
+         uDotArea_YII(:,:,:,:,1)
+    uDotArea_XI(1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,1:nFluid+1) => &
+         uDotArea_XII(:,:,:,:,1)
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -873,12 +880,18 @@ contains
 
       character(len=*), parameter:: NameSub = 'calc_grad_u'
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
 
       GradU_DD = 0.0
 
@@ -978,12 +991,18 @@ contains
       real, pointer:: RightState_VZ(:,:,:,:)
       character(len=*), parameter:: NameSub = 'calc_grad_uPlus'
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       GradU_DD = 0.0
 
@@ -1070,12 +1089,18 @@ contains
       real, pointer:: RightState_VY(:,:,:,:)
       real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
@@ -1232,12 +1257,18 @@ contains
 
       character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
       !------------------------------------------------------------------------
-      RightState_VZ => RightState_VZI(:,:,:,:,1)
-      RightState_VY => RightState_VYI(:,:,:,:,1)
-      RightState_VX => RightState_VXI(:,:,:,:,1)
-      LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-      LeftState_VY => LeftState_VYI(:,:,:,:,1)
-      LeftState_VX => LeftState_VXI(:,:,:,:,1)
+      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           RightState_VZI(:,:,:,:,1)
+      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           RightState_VYI(:,:,:,:,1)
+      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           RightState_VXI(:,:,:,:,1)
+      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+           LeftState_VZI(:,:,:,:,1)
+      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+           LeftState_VYI(:,:,:,:,1)
+      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+           LeftState_VXI(:,:,:,:,1)
       
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -1401,12 +1432,18 @@ contains
     real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
-    RightState_VZ => RightState_VZI(:,:,:,:,1)
-    RightState_VY => RightState_VYI(:,:,:,:,1)
-    RightState_VX => RightState_VXI(:,:,:,:,1)
-    LeftState_VZ => LeftState_VZI(:,:,:,:,1)
-    LeftState_VY => LeftState_VYI(:,:,:,:,1)
-    LeftState_VX => LeftState_VXI(:,:,:,:,1)
+    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         RightState_VZI(:,:,:,:,1)
+    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         RightState_VYI(:,:,:,:,1)
+    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         RightState_VXI(:,:,:,:,1)
+    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
+         LeftState_VZI(:,:,:,:,1)
+    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
+         LeftState_VYI(:,:,:,:,1)
+    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
+         LeftState_VXI(:,:,:,:,1)
     
     call test_start(NameSub, DoTest, iBlock)
 

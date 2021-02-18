@@ -61,7 +61,8 @@ contains
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
-         nOrder, nOrderProlong
+         nOrder, nOrderProlong, iMinFace, iMaxFace, jMinFace, jMaxFace, &
+         kMinFace, kMaxFace
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
@@ -111,9 +112,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !--------------------------------------------------------------------------
-    Flux_VZ => Flux_VZI(:,:,:,:,1)
-    Flux_VY => Flux_VYI(:,:,:,:,1)
-    Flux_VX => Flux_VXI(:,:,:,:,1)
+    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         Flux_VZI(:,:,:,:,1)
+    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         Flux_VYI(:,:,:,:,1)
+    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         Flux_VXI(:,:,:,:,1)
     
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*)NameSub, &

@@ -27,7 +27,10 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB
+  use ModMain,         ONLY: n_step, UseB, &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+  use ModVarIndexes, ONLY: nFluid, nVar
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
@@ -241,14 +244,20 @@ contains
     real, pointer:: MhdFlux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
-    MhdFlux_VZ => MhdFlux_VZI(:,:,:,:,1)
-    MhdFlux_VY => MhdFlux_VYI(:,:,:,:,1)
-    MhdFlux_VX => MhdFlux_VXI(:,:,:,:,1)
+    MhdFlux_VZ(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         MhdFlux_VZI(:,:,:,:,1)
+    MhdFlux_VY(RhoUx_:RhoUz_,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         MhdFlux_VYI(:,:,:,:,1)
+    MhdFlux_VX(RhoUx_:RhoUz_,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         MhdFlux_VXI(:,:,:,:,1)
 
     if(allocated(bCrossArea_DXI)) then
-       bCrossArea_DZ => bCrossArea_DZI(:,:,:,:,1)
-       bCrossArea_DY => bCrossArea_DYI(:,:,:,:,1)
-       bCrossArea_DX => bCrossArea_DXI(:,:,:,:,1)
+       bCrossArea_DZ(1:MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+            bCrossArea_DZI(:,:,:,:,1)
+       bCrossArea_DY(1:MaxDim,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+            bCrossArea_DYI(:,:,:,:,1)
+       bCrossArea_DX(1:MaxDim,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+            bCrossArea_DXI(:,:,:,:,1)
     endif
 
     call test_start(NameSub, DoTest, iBlock)
@@ -700,9 +709,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_num_electric_field'
     !--------------------------------------------------------------------------
-    Flux_VZ => Flux_VZI(:,:,:,:,1)
-    Flux_VY => Flux_VYI(:,:,:,:,1)
-    Flux_VX => Flux_VXI(:,:,:,:,1)
+    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
+         Flux_VZI(:,:,:,:,1)
+    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
+         Flux_VYI(:,:,:,:,1)
+    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
+         Flux_VXI(:,:,:,:,1)
 
     call test_start(NameSub, DoTest, iBlock)
     ! E_x=(fy+fy-fz-fz)/4
