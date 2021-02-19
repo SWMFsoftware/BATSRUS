@@ -8,12 +8,9 @@ module ModCoronalHeating
   use BATL_lib, ONLY: &
        test_start, test_stop
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2
+  use ModUtilities, ONLY: norm2 
 #endif
-  use ModMain,       ONLY: nI, nJ, nK, &
-       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
-  use ModVarIndexes, ONLY: nVar
+  use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
@@ -147,12 +144,12 @@ contains
     logical :: DoFirst = .true.
     !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
 
+
     integer, parameter:: nTheta = 72, nPhi=90
     real, parameter:: dSinTheta = 2.0/nTheta, dPhi = cTwoPi/nPhi
     real, parameter:: HeatExponent = 1.1488, HeatCoef = 89.4
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_coronal_heat_factor'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -342,7 +339,6 @@ contains
     integer :: iLeft
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_photosphere_field'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -380,7 +376,6 @@ contains
     integer :: iLeft, j, k, iL
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_photosphere_unsignedflux'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -599,7 +594,6 @@ contains
     real :: FractionB, Bcell
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_block_heating'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -931,8 +925,8 @@ contains
     subroutine get_log_alfven_speed
 
       use ModAdvance, ONLY: &
-           LeftState_VXI,  LeftState_VYI,  LeftState_VZI,  &
-           RightState_VXI, RightState_VYI, RightState_VZI
+           LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+           RightState_VX, RightState_VY, RightState_VZ
       use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
       use ModMain, ONLY: UseB0
       use ModVarIndexes, ONLY: Bx_, Bz_
@@ -940,26 +934,7 @@ contains
 
       integer :: i, j, k
       real :: Rho, FullB_D(3)
-      real, pointer:: LeftState_VX(:,:,:,:)
-      real, pointer:: LeftState_VY(:,:,:,:)
-      real, pointer:: LeftState_VZ(:,:,:,:)
-      real, pointer:: RightState_VX(:,:,:,:)
-      real, pointer:: RightState_VY(:,:,:,:)
-      real, pointer:: RightState_VZ(:,:,:,:)
       !------------------------------------------------------------------------
-      RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-           RightState_VZI(:,:,:,:,1)
-      RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-           RightState_VYI(:,:,:,:,1)
-      RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-           RightState_VXI(:,:,:,:,1)
-      LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-           LeftState_VZI(:,:,:,:,1)
-      LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-           LeftState_VYI(:,:,:,:,1)
-      LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-           LeftState_VXI(:,:,:,:,1)
-
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
               + RightState_VX(Bx_:Bz_,i,j,k))
@@ -1007,8 +982,8 @@ contains
     use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
          CellVolume_GB, x_, y_, z_
     use ModAdvance, ONLY: &
-         LeftState_VXI,  LeftState_VYI,  LeftState_VZI,  &
-         RightState_VXI, RightState_VYI, RightState_VZI
+         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
     use ModCoordTransform, ONLY: cross_product
     use ModSize, ONLY: MaxDim
     use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, IonFirst_
@@ -1018,27 +993,8 @@ contains
 
     real :: DxInvHalf, DyInvHalf, DzInvHalf
 
-    real, pointer:: LeftState_VX(:,:,:,:)
-    real, pointer:: LeftState_VY(:,:,:,:)
-    real, pointer:: LeftState_VZ(:,:,:,:)
-    real, pointer:: RightState_VX(:,:,:,:)
-    real, pointer:: RightState_VY(:,:,:,:)
-    real, pointer:: RightState_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
-    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-         RightState_VZI(:,:,:,:,1)
-    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-         RightState_VYI(:,:,:,:,1)
-    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-         RightState_VXI(:,:,:,:,1)
-    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-         LeftState_VZI(:,:,:,:,1)
-    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-         LeftState_VYI(:,:,:,:,1)
-    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-         LeftState_VXI(:,:,:,:,1)
-
     if(IsCartesianGrid)then
        DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
        DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
@@ -1383,3 +1339,4 @@ contains
   !============================================================================
 
 end module ModCoronalHeating
+!==============================================================================

@@ -5,14 +5,12 @@ module ModBorisCorrection
   use ModConst, ONLY: cLightSpeed
   use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
   use ModCoordTransform, ONLY: cross_product
-  use ModMain,    ONLY: UseB0, UseHalfStep, nStage, &
-       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+  use ModMain,    ONLY: UseB0, UseHalfStep, nStage
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VC, &
        Energy_GBI, EnergyOld_CBI, &
-       LeftState_VXI, RightState_VXI, &
-       LeftState_VYI, RightState_VYI, LeftState_VZI, RightState_VZI
+       LeftState_VX, RightState_VX, &
+       LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
        x_, y_, z_, &
@@ -145,7 +143,6 @@ contains
     real:: InvClight2Cell
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'mhd_to_boris'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -251,7 +248,6 @@ contains
     real:: Clight2Cell, InvClight2Cell
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'boris_to_mhd'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -411,16 +407,9 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    real, pointer:: LeftState_VX(:,:,:,:)
-    real, pointer:: RightState_VX(:,:,:,:)
     !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
-
-    RightState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-         RightState_VXI(:,:,:,:,1)
-    LeftState_VX(1:nVar,1:nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2) => &
-         LeftState_VXI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -503,14 +492,7 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    real, pointer:: LeftState_VY(:,:,:,:)
-    real, pointer:: RightState_VY(:,:,:,:)
     !--------------------------------------------------------------------------
-    RightState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-         RightState_VYI(:,:,:,:,1)
-    LeftState_VY(1:nVar,iMinFace2:iMaxFace2,1:nJ+1,kMinFace2:kMaxFace2) => &
-         LeftState_VYI(:,:,:,:,1)
-
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
        if(UseBorisRegion)then
@@ -591,16 +573,9 @@ contains
     integer:: i, j, k
     real:: InvClight2Face
     real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
-    real, pointer:: LeftState_VZ(:,:,:,:)
-    real, pointer:: RightState_VZ(:,:,:,:)
     !--------------------------------------------------------------------------
     ! U_Boris=rhoU_Boris/rho
     ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
-
-    RightState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-         RightState_VZI(:,:,:,:,1)
-    LeftState_VZ(1:nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,1:nK+1) => &
-         LeftState_VZI(:,:,:,:,1)
 
     do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
@@ -721,3 +696,4 @@ contains
   !============================================================================
 
 end module ModBorisCorrection
+!==============================================================================

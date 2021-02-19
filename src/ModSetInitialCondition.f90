@@ -42,17 +42,8 @@ contains
     integer:: i, j, k, iVar, iBoundary, iFluid
 
     logical:: DoTest
-    real, pointer:: Flux_VX(:,:,:,:)
-    real, pointer:: Flux_VY(:,:,:,:)
-    real, pointer:: Flux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'set_initial_condition'
     !--------------------------------------------------------------------------
-    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-         Flux_VZI(:,:,:,:,1)
-    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-         Flux_VYI(:,:,:,:,1)
-    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-         Flux_VXI(:,:,:,:,1)
     call test_start(NameSub, DoTest, iBlock)
 
     time_BLK(:,:,:,iBlock) = 0.0
@@ -175,7 +166,7 @@ contains
          NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
     !$acc update device(State_VGB)
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_initial_condition
   !============================================================================
@@ -234,3 +225,4 @@ contains
   !============================================================================
 
 end module ModSetInitialCondition
+!==============================================================================

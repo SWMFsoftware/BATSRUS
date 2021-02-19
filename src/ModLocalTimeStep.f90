@@ -32,7 +32,6 @@ contains
     integer, intent(in):: iSession
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'read_localstep_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -61,12 +60,11 @@ contains
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
-         nOrder, nOrderProlong, iMinFace, iMaxFace, jMinFace, jMaxFace, &
-         kMinFace, kMaxFace
+         nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
-         Flux_VXI, Flux_VYI, Flux_VZI
+         Flux_VX, Flux_VY, Flux_VZ
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
@@ -106,19 +104,8 @@ contains
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
     logical:: DoTest
-    real, pointer:: Flux_VX(:,:,:,:)
-    real, pointer:: Flux_VY(:,:,:,:)
-    real, pointer:: Flux_VZ(:,:,:,:)
-
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !--------------------------------------------------------------------------
-    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-         Flux_VZI(:,:,:,:,1)
-    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-         Flux_VYI(:,:,:,:,1)
-    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-         Flux_VXI(:,:,:,:,1)
-    
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
@@ -401,3 +388,4 @@ contains
   !============================================================================
 
 end module ModLocalTimeStep
+!==============================================================================

@@ -27,10 +27,7 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB, &
-       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
-  use ModVarIndexes, ONLY: nFluid, nVar
+  use ModMain,         ONLY: n_step, UseB
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
@@ -217,8 +214,8 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI, SourceMHD_VC,&
-         State_VGB, bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI
+    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMHD_VC,&
+         State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
@@ -236,30 +233,8 @@ contains
     logical :: DoTestCell
 
     logical:: DoTest
-    real, pointer:: bCrossArea_DX(:,:,:,:)
-    real, pointer:: bCrossArea_DY(:,:,:,:)
-    real, pointer:: bCrossArea_DZ(:,:,:,:)
-    real, pointer:: MhdFlux_VX(:,:,:,:)
-    real, pointer:: MhdFlux_VY(:,:,:,:)
-    real, pointer:: MhdFlux_VZ(:,:,:,:)
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
-    MhdFlux_VZ(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-         MhdFlux_VZI(:,:,:,:,1)
-    MhdFlux_VY(RhoUx_:RhoUz_,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-         MhdFlux_VYI(:,:,:,:,1)
-    MhdFlux_VX(RhoUx_:RhoUz_,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-         MhdFlux_VXI(:,:,:,:,1)
-
-    if(allocated(bCrossArea_DXI)) then
-       bCrossArea_DZ(1:MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-            bCrossArea_DZI(:,:,:,:,1)
-       bCrossArea_DY(1:MaxDim,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-            bCrossArea_DYI(:,:,:,:,1)
-       bCrossArea_DX(1:MaxDim,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-            bCrossArea_DXI(:,:,:,:,1)
-    endif
-
     call test_start(NameSub, DoTest, iBlock)
 
     Efield_DGB(:,:,:,:,iBlock) = 0.0
@@ -483,7 +458,6 @@ contains
     integer:: nStepLast = -1
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'calc_potential'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -697,25 +671,14 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
     use ModAdvance,    ONLY: &
-         Flux_VXI, Flux_VYI, Flux_VZI, ExNum_CB, EyNum_CB, EzNum_CB
+         Flux_VX, Flux_VY, Flux_VZ, ExNum_CB, EyNum_CB, EzNum_CB
     use BATL_lib,      ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
 
     logical:: DoTest
-    real, pointer:: Flux_VX(:,:,:,:)
-    real, pointer:: Flux_VY(:,:,:,:)
-    real, pointer:: Flux_VZ(:,:,:,:)
-
     character(len=*), parameter:: NameSub = 'get_num_electric_field'
     !--------------------------------------------------------------------------
-    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-         Flux_VZI(:,:,:,:,1)
-    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-         Flux_VYI(:,:,:,:,1)
-    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-         Flux_VXI(:,:,:,:,1)
-
     call test_start(NameSub, DoTest, iBlock)
     ! E_x=(fy+fy-fz-fz)/4
     ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
@@ -743,4 +706,5 @@ contains
   !============================================================================
 
 end module ModElectricField
+!==============================================================================
 

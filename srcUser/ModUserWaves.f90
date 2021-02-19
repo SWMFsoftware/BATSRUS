@@ -46,7 +46,9 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
+  !\
   ! user routine Version number and descriptive string
+  !/
   real,              parameter :: VersionUserModule = 1.4
   character (len=*), parameter :: NameUserFile = "ModUserWaves.f90"
   character (len=*), parameter :: NameUserModule = &
@@ -109,7 +111,7 @@ module ModUser
 
   ! Variables for shockramp problem
   logical :: DoShockramp=.false.
-
+  
 contains
   !============================================================================
 
@@ -127,13 +129,12 @@ contains
     character(len=20)  :: NameVar
     integer :: iVar
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
+    
     UseUserIcs = .true.
-
+    
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -284,7 +285,7 @@ contains
        case('#UPDATEVAR')
           ! Only the states of the specified variables are updated
           UseUserUpdateStates = .true.
-
+          
           call read_var('VarsUpdate', VarsUpdate)
 
           call split_string(VarsUpdate, nVarsUpdateMax, VarsUpdate_I, &
@@ -350,7 +351,6 @@ contains
     real, allocatable:: State_G(:,:,:)
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -358,7 +358,7 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           x = Xyz_DGB(x_,i,j,k,iBlock)
           y = Xyz_DGB(y_,i,j,k,iBlock)
-          call get_initial_state( [x, y], State_VGB(:,i,j,k,iBlock) )
+          call get_initial_state( (/x, y/), State_VGB(:,i,j,k,iBlock) )
        end do; end do; end do
     end if
 
@@ -849,7 +849,6 @@ contains
     real    :: RhoU_D(3), B_D(3)
     integer :: i, j, k
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1053,7 +1052,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    associate( TimeBc => FBC%TimeBc, &
+    associate( TimeBc => FBC%TimeBc, &               
                iBlockBc => FBC%iBlockBc )
 
     call test_start(NameSub, DoTest, iBlockBc)
@@ -1070,7 +1069,7 @@ contains
     end do
 
     call test_stop(NameSub, DoTest, iBlockBc)
-
+    
     end associate
   end subroutine user_set_face_boundary
   !============================================================================
@@ -1288,7 +1287,9 @@ contains
        RhoBackgrndNo = NumDensBackgrndIo*Io2Si_V(UnitN_)* &
             cProtonMass*Si2No_V(UnitRho_)
 
+       !\
        ! Start filling in cells (including ghost cells)
+       !/
        State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
 
        ! Transform to HGC frame
@@ -1366,30 +1367,17 @@ contains
 
   subroutine user_update_states(iBlock)
 
-    use ModMain, ONLY: UseUserUpdateStates, nI, nJ, nK, &
-         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+    use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, nFluid, Flux_VXI, Flux_VYI, Flux_VZI, &
-         Source_VC
+    use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
     use ModVarIndexes
 
     integer,intent(in)::iBlock
     integer :: iVar
 
     logical:: DoTest
-    real, pointer:: Flux_VX(:,:,:,:)
-    real, pointer:: Flux_VY(:,:,:,:)
-    real, pointer:: Flux_VZ(:,:,:,:)
-
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    Flux_VZ(1:nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nK+1) => &
-         Flux_VZI(:,:,:,:,1)
-    Flux_VY(1:nVar+nFluid,iMinFace:iMaxFace,1:nJ+1,kMinFace:kMaxFace) => &
-         Flux_VYI(:,:,:,:,1)
-    Flux_VX(1:nVar+nFluid,1:nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace) => &
-         Flux_VXI(:,:,:,:,1)
-    
     if(.not.allocated(iVarsUpdate_I))then
        UseUserUpdateStates = .false.
        RETURN
@@ -1433,10 +1421,11 @@ contains
     Field = AmplitudeGaussian/(sqrt(cPi*Spread)) &
          *exp(-Xyz_DGB(y_,i,j,k,iBlock)**2/Spread)
 
-    B_D = [ Field, 0.0, 0.0 ]
+    B_D = (/ Field, 0.0, 0.0 /)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_gaussian_field
   !============================================================================
 
 end module ModUser
+!==============================================================================
