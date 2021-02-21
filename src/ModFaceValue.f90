@@ -102,10 +102,6 @@ module ModFaceValue
   real, allocatable, save:: Primitive_VG(:,:,:,:)
   !$omp threadprivate( Primitive_VG )
   !$acc declare create(Primitive_VG)
-
-  real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-  !$omp threadprivate(B0_DG)
-  !$acc declare create(B0_DG)
   
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
@@ -392,11 +388,6 @@ contains
     end if
 
     if(DoLimitMomentum)then
-       if(UseB0)then
-          B0_DG=B0_DGB(:,:,:,:,iBlock)
-       else
-          B0_DG=0.00
-       end if
        if(UseBorisRegion)then
           call set_clight_cell(iBlock)
           call set_clight_face(iBlock)
@@ -1002,9 +993,16 @@ contains
          ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
          !            = rhoU + (U B^2 - B U.B)/c^2
          !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
-         BxFull = B0_DG(x_,i,j,k) + Primitive_VG(Bx_,i,j,k)
-         ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
-         BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
+         BxFull = Primitive_VG(Bx_,i,j,k)
+         ByFull = Primitive_VG(By_,i,j,k)
+         BzFull = Primitive_VG(Bz_,i,j,k)
+
+         if(UseB0) then 
+            BxFull = B0_DGB(x_,i,j,k,iBlock) + BxFull
+            ByFull = B0_DGB(y_,i,j,k,iBlock) + ByFull
+            BzFull = B0_DGB(z_,i,j,k,iBlock) + BzFull
+         endif
+         
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          if(UseBorisRegion)then
             RhoC2Inv = RhoInv/Clight_G(i,j,k)**2
