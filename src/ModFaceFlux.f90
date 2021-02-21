@@ -302,27 +302,27 @@ contains
     if(DoCorrectFace) call calc_simple_cell_flux(iBlock)
     if(DoResChangeOnly)then
        if(neiLeast(iBlock) == 1) &
-            call get_flux_x(1,1,1,nJ,1,nK)
+            call get_flux_x(1,1,1,nJ,1,nK,iBlock)
        if(neiLwest(iBlock) == 1) &
-            call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
+            call get_flux_x(nIFace,nIFace,1,nJ,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
        if(nJ > 1 .and. neiLsouth(iBlock) == 1) &
-            call get_flux_y(1,nI,1,1,1,nK)
+            call get_flux_y(1,nI,1,1,1,nK,iBlock)
        if(nJ > 1 .and. neiLnorth(iBlock) == 1) &
-            call get_flux_y(1,nI,nJFace,nJFace,1,nK)
+            call get_flux_y(1,nI,nJFace,nJFace,1,nK,iBlock)
        if (DoTest) &
             write(*,*) '------------------------------------------------------'
        if(nK > 1 .and. neiLbot(iBlock)   == 1) &
-            call get_flux_z(1,nI,1,nJ,1,1)
+            call get_flux_z(1,nI,1,nJ,1,1,iBlock)
        if(nK > 1 .and. neiLtop(iBlock)   == 1) &
-            call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
+            call get_flux_z(1,nI,1,nJ,nKFace,nKFace,iBlock)
     else
-       call get_flux_x(1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace)
+       call get_flux_x(1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace,iBlock)
        if(nJ > 1) &
-            call get_flux_y(iMinFace, iMaxFace, 1, nJFace, kMinFace ,kMaxFace)
+            call get_flux_y(iMinFace, iMaxFace, 1, nJFace, kMinFace ,kMaxFace,iBlock)
        if(nK > 1) &
-            call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
+            call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace,iBlock)
     end if
 
     if (DoTest) then
@@ -417,10 +417,10 @@ contains
     end subroutine print_values
     !==========================================================================
 
-    subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IXI
-      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax, iBlock
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------           
@@ -533,10 +533,10 @@ contains
     end subroutine get_flux_x
     !==========================================================================
 
-    subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IYI
-      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
@@ -653,10 +653,10 @@ contains
     end subroutine get_flux_y
     !==========================================================================
 
-    subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax,iBlock)
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IZI
-      integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
+      integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax,iBlock
       integer:: iFlux, iFace, jFace, kFace
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------

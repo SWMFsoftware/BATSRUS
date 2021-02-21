@@ -417,7 +417,7 @@ contains
        !$acc parallel loop gang vector collapse(3) private(FVV) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           FVV%i = i; FVV%j = j; FVV%k = k
-          call calc_primitives(FVV)         ! all cells
+          call calc_primitives(FVV,iBlock)         ! all cells
        end do; end do; end do
        !$acc end data
        
@@ -474,7 +474,7 @@ contains
 
              ! Convert to pointwise primitive variables
              FVV%i = i; FVV%j = j; FVV%k = k
-             call calc_primitives(FVV)
+             call calc_primitives(FVV,iBlock)
 
              ! Convert to cell averaged primitive variables (eq. 16)
              Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
@@ -499,7 +499,7 @@ contains
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
                 FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV)   ! for x-faces
+                call calc_primitives(FVV,iBlock)   ! for x-faces
              end do
           end do
        end do
@@ -511,11 +511,11 @@ contains
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV)   ! for lower y-faces
+                call calc_primitives(FVV,iBlock)   ! for lower y-faces
              end do
              do j=jMaxFace+1,nJ+nStencil
                 FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV)   ! for upper  y-faces
+                call calc_primitives(FVV,iBlock)   ! for upper  y-faces
              end do
           end do; end do
        end if
@@ -526,11 +526,11 @@ contains
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV)   ! for lower z-faces
+                call calc_primitives(FVV,iBlock)   ! for lower z-faces
              end do
              do k=kMaxFace+1,nK+nStencil
                 FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV)   ! for upper z-faces
+                call calc_primitives(FVV,iBlock)   ! for upper z-faces
              end do
           end do; end do
        end if
@@ -545,24 +545,24 @@ contains
        ! First order reconstruction
        if (.not.DoResChangeOnly) then
           call get_faceX_first(&
-               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace,iBlock)
           if(nJ > 1) call get_faceY_first(&
-               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace,iBlock)
           if(nK > 1) call get_faceZ_first(&
-               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace,iBlock)
        else
           if(neiLeast(iBlock)==+1)&
-               call get_faceX_first(1,1,1,nJ,1,nK)
+               call get_faceX_first(1,1,1,nJ,1,nK,iBlock)
           if(neiLwest(iBlock)==+1)&
-               call get_faceX_first(nIFace,nIFace,1,nJ,1,nK)
+               call get_faceX_first(nIFace,nIFace,1,nJ,1,nK,iBlock)
           if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-               call get_faceY_first(1,nI,1,1,1,nK)
+               call get_faceY_first(1,nI,1,1,1,nK,iBlock)
           if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-               call get_faceY_first(1,nI,nJFace,nJFace,1,nK)
+               call get_faceY_first(1,nI,nJFace,nJFace,1,nK,iBlock)
           if(nK > 1 .and. neiLbot(iBlock)==+1) &
-               call get_faceZ_first(1,nI,1,nJ,1,1)
+               call get_faceZ_first(1,nI,1,nJ,1,1,iBlock)
           if(nK > 1 .and. neiLtop(iBlock)==+1) &
-               call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
+               call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
        end if
     case default
 
@@ -571,19 +571,19 @@ contains
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order scheme
              call get_faceX_second(&
-                  1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+                  1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace,iBlock)
              if(nJ > 1) call get_faceY_second(&
-                  iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+                  iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace,iBlock)
              if(nK > 1) call get_faceZ_second(&
-                  iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+                  iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace,iBlock)
           else
              ! High order scheme
              call get_facex_high(&
-                  1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
+                  1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2,iBlock)
              if(nJ > 1) call get_facey_high(&
-                  iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
+                  iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2,iBlock)
              if(nK > 1) call get_facez_high(&
-                  iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
+                  iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace,iBlock)
           end if
        end if
 
@@ -615,48 +615,48 @@ contains
           else
              ! First order facevalues at resolution change
              if(neiLeast(iBlock)==+1)&
-                  call get_faceX_first(1,1,1,nJ,1,nK)
+                  call get_faceX_first(1,1,1,nJ,1,nK,iBlock)
              if(neiLwest(iBlock)==+1)&
-                  call get_faceX_first(nIFace,nIFace,1,nJ,1,nK)
+                  call get_faceX_first(nIFace,nIFace,1,nJ,1,nK,iBlock)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-                  call get_faceY_first(1,nI,1,1,1,nK)
+                  call get_faceY_first(1,nI,1,1,1,nK,iBlock)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call get_faceY_first(1,nI,nJFace,nJFace,1,nK)
+                  call get_faceY_first(1,nI,nJFace,nJFace,1,nK,iBlock)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
-                  call get_faceZ_first(1,nI,1,nJ,1,1)
+                  call get_faceZ_first(1,nI,1,nJ,1,1,iBlock)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
+                  call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
 
        else if(DoResChangeOnly) then
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
-                  call get_faceX_second(1,1,1,nJ,1,nK)
+                  call get_faceX_second(1,1,1,nJ,1,nK,iBlock)
              if(neiLwest(iBlock)==+1)&
-                  call get_faceX_second(nIFace,nIFace,1,nJ,1,nK)
+                  call get_faceX_second(nIFace,nIFace,1,nJ,1,nK,iBlock)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-                  call get_faceY_second(1,nI,1,1,1,nK)
+                  call get_faceY_second(1,nI,1,1,1,nK,iBlock)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call get_faceY_second(1,nI,nJFace,nJFace,1,nK)
+                  call get_faceY_second(1,nI,nJFace,nJFace,1,nK,iBlock)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
-                  call get_faceZ_second(1,nI,1,nJ,1,1)
+                  call get_faceZ_second(1,nI,1,nJ,1,1,iBlock)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
+                  call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace,iBlock)
           else
              ! High order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
-                  call get_faceX_high(1,1,1,nJ,1,nK)
+                  call get_faceX_high(1,1,1,nJ,1,nK,iBlock)
              if(neiLwest(iBlock)==+1)&
-                  call get_faceX_high(nIFace,nIFace,1,nJ,1,nK)
+                  call get_faceX_high(nIFace,nIFace,1,nJ,1,nK,iBlock)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-                  call get_faceY_high(1,nI,1,1,1,nK)
+                  call get_faceY_high(1,nI,1,1,1,nK,iBlock)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call get_faceY_high(1,nI,nJFace,nJFace,1,nK)
+                  call get_faceY_high(1,nI,nJFace,nJFace,1,nK,iBlock)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
-                  call get_faceZ_high(1,nI,1,nJ,1,1)
+                  call get_faceZ_high(1,nI,1,nJ,1,1,iBlock)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace)
+                  call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
        endif
 
@@ -981,11 +981,12 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives(FVV)      
+    subroutine calc_primitives(FVV,iBlock)      
       !$acc routine seq      
       use ModPhysics, ONLY: InvClight2
 
       type(FaceValueVarType), intent(in):: FVV
+      integer, intent(in)::iBlock
       
       real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
       integer:: i, j, k, iVar, iFluid
@@ -1054,9 +1055,9 @@ contains
 
     end subroutine calc_primitives
     !==========================================================================
-    subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       real, allocatable, save:: State_VX(:,:,:,:)
       !$omp threadprivate( State_VX )
       integer:: iVar, iSort
@@ -1215,8 +1216,8 @@ contains
 
     end subroutine get_facex_high
     !==========================================================================
-    subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
 
       real, allocatable, save:: State_VY(:,:,:,:)
       !$omp threadprivate( State_VY )
@@ -1371,9 +1372,9 @@ contains
 
     end subroutine get_facey_high
     !==========================================================================
-    subroutine get_facez_high(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facez_high(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       !$omp threadprivate( State_VZ )
@@ -1524,9 +1525,9 @@ contains
     end subroutine get_facez_high
     !==========================================================================
 
-    subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
       !$acc data present(Primitive_VG,LeftState_VXIRightState_VXI
       !$acc parallel loop collapse(4) independent
@@ -1543,9 +1544,9 @@ contains
 
     end subroutine get_facex_first
     !==========================================================================
-    subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VYIRightState_VYI
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1560,9 +1561,9 @@ contains
 
     end subroutine get_facey_first
     !==========================================================================
-    subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
 
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
       !$acc parallel loop collapse(3) present(Primitive_VG,LeftState_VZIRightState_VZI
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1990,8 +1991,8 @@ contains
       end select
     end subroutine get_face_tvd
     !==========================================================================
-    subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::i1, iMinSharp, iMaxSharp
 
       !------------------------------------------------------------------------
@@ -2033,8 +2034,8 @@ contains
 
     end subroutine get_facex_second
     !==========================================================================
-    subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::j1, jMinSharp, jMaxSharp
 
       !------------------------------------------------------------------------
@@ -2076,8 +2077,8 @@ contains
 
     end subroutine get_facey_second
     !==========================================================================
-    subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::k1, kMinSharp, kMaxSharp
 
       !------------------------------------------------------------------------
