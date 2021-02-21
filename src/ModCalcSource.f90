@@ -1036,8 +1036,8 @@ contains
 
       !$acc data present(SourceMhd_VC, Source_VC, &
       !$acc& DivB1_GB, CellSize_DB, true_cell, &
-      !$acc& LeftState_VXI, LeftState_VYI, LeftState_VZI &
-      !$acc& RightState_VXI, RightState_VYI, RightState_VZI
+      !$acc& LeftState_VXI, LeftState_VYI, LeftState_VZI, &
+      !$acc& RightState_VXI, RightState_VYI, RightState_VZI)
       
       !$acc parallel loop gang vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI

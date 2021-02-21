@@ -426,7 +426,7 @@ contains
       !------------------------------------------------------------------------           
       
       !$acc data present(uDotArea_XII, VdtFace_XI, &
-      !$acc& LeftState_VXIRightState_VXI &
+      !$acc& LeftState_VXI, RightState_VXI, &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &
@@ -541,7 +541,7 @@ contains
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       !$acc data present(uDotArea_YII, VdtFace_YI, &
-      !$acc& LeftState_VYIRightState_VYI &
+      !$acc& LeftState_VYI, RightState_VYI, &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &
@@ -661,7 +661,7 @@ contains
       type(FaceFluxVarType) :: FFV
       !------------------------------------------------------------------------
       !$acc data present(uDotArea_ZII, VdtFace_ZI, &
-      !$acc& LeftState_VZIRightState_VZI &
+      !$acc& LeftState_VZI, RightState_VZI, &
       !$acc& Xyz_DGB, &
       !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
       !$acc& UseLindeFix, UseRS7, &

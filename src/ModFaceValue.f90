@@ -1517,7 +1517,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
-      !$acc data present(Primitive_VGI,LeftState_VXIRightState_VXI
+      !$acc data present(Primitive_VGI,LeftState_VXI, RightState_VXI)
       !$acc parallel loop collapse(4) independent
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar 
          LeftState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i-1,j,k,1)
@@ -1536,7 +1536,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
-      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VYIRightState_VYI
+      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VYI, RightState_VYI)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VYI(:,i,j,k,1)=Primitive_VGI(:,i,j-1,k,1)
          RightState_VYI(:,i,j,k,1)=Primitive_VGI(:,i,j,k,1)
@@ -1553,7 +1553,7 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
-      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VZIRightState_VZI
+      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VZI, RightState_VZI)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZI(:,i,j,k,1)=Primitive_VGI(:,i,j,k-1,1)
          RightState_VZI(:,i,j,k,1)=Primitive_VGI(:,i,j,k,1)

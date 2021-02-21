@@ -228,7 +228,7 @@ module ModAdvance
   !$acc declare create(LeftState_VZI, RightState_VZI)
 
     ! primitive variables
-  real, allocatable, save:: Primitive_VGI(:,:,:,:,:)
+  real, allocatable:: Primitive_VGI(:,:,:,:,:)
   !$omp threadprivate( Primitive_VGI )
   !$acc declare create(Primitive_VGI )
 
