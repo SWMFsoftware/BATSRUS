@@ -227,6 +227,10 @@ module ModAdvance
   !$acc declare create(LeftState_VYI, RightState_VYI)
   !$acc declare create(LeftState_VZI, RightState_VZI)
 
+    ! primitive variables
+  real, allocatable, save:: Primitive_VGI(:,:,:,:,:)
+  !$omp threadprivate( Primitive_VGI )
+  !$acc declare create(Primitive_VGI )
 
   ! Face centered div(U)*dl
   real, allocatable:: FaceDivU_IXI(:,:,:,:,:)
@@ -390,6 +394,8 @@ contains
     allocate(FaceDivU_IXI(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     allocate(FaceDivU_IYI(nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace,nGang))
     allocate(FaceDivU_IZI(nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace,nGang))
+
+    allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
     !$omp end parallel
 
     if(iProc==0)then
