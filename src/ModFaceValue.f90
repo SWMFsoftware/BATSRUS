@@ -11,7 +11,7 @@ module ModFaceValue
   use ModUtilities, ONLY: norm2 
 #endif
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_, nDim, jDim_, kDim_
+       x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, Primitive_VGI
@@ -70,6 +70,14 @@ module ModFaceValue
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
 
+  ! Logicals for limiting the logarithm of variables
+  logical :: UseLogLimiter, UseLogLimiter_V(nVar)
+  !$acc declare create(UseLogLimiter, UseLogLimiter_V)
+  
+  ! Logicals for limiting the total pressure
+  logical :: UsePtotalLimiter
+  !$acc declare create(UsePtotalLimiter)
+  
   ! Parameters for limiting the total pressure (p + p_e + p_wave)
   logical :: UsePtotalLtd     = .false.
 
@@ -261,8 +269,7 @@ contains
          RightState_VYI,     &  ! Face Right Y
          LeftState_VZI,      &  ! Face Left  Z
          RightState_VZI,     &  ! Face Right Z
-         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
-         FaceValueVarType
+         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -289,7 +296,7 @@ contains
     real:: State_V(nVar), Energy
     integer:: iVarSmoothLast, iVarSmooth
 
-    type(FaceValueVarType) :: FVV 
+    integer:: IArguments_I(MaxDim)
     
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_value'
@@ -334,29 +341,29 @@ contains
 
     UseTrueCell = body_BLK(iBlock)
 
-    FVV%UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
-    FVV%UseLogLimiter_V = .false.
-    if(FVV%UseLogLimiter)then
+    UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    UseLogLimiter_V = .false.
+    if(UseLogLimiter)then
        if(UseLogRhoLimiter)then
           do iFluid = 1, nFluid
-             FVV%UseLogLimiter_V(iRho_I(iFluid)) = .true.
+             UseLogLimiter_V(iRho_I(iFluid)) = .true.
           end do
        end if
        if(UseLogPLimiter)then
           do iFluid = 1, nFluid
-             FVV%UseLogLimiter_V(iP_I(iFluid))   = .true.
+             UseLogLimiter_V(iP_I(iFluid))   = .true.
           end do
           if(UseAnisoPressure)then
              do iFluid = IonFirst_, IonLast_
-                FVV%UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
+                UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
              end do
           end if
-          if(UseElectronPressure) FVV%UseLogLimiter_V(Pe_) = .true.
-          if(UseAnisoPe)          FVV%UseLogLimiter_V(Pepar_) = .true.
+          if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
+          if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
        end if
     end if
 
-    FVV%UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
+    UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
     
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
@@ -395,10 +402,12 @@ contains
        !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
        
-       !$acc parallel loop gang vector collapse(3) private(FVV) independent
+       !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          FVV%i = i; FVV%j = j; FVV%k = k
-          call calc_primitives(FVV,iBlock)         ! all cells
+          IArguments_I(x_) = i
+          IArguments_I(y_) = j
+          IArguments_I(z_) = k
+          call calc_primitives(IArguments_I,iBlock)         ! all cells
        end do; end do; end do
        !$acc end data
        
@@ -454,8 +463,10 @@ contains
              end do
 
              ! Convert to pointwise primitive variables
-             FVV%i = i; FVV%j = j; FVV%k = k
-             call calc_primitives(FVV,iBlock)
+             IArguments_I(x_) = i
+             IArguments_I(y_) = j
+             IArguments_I(z_) = k
+             call calc_primitives(IArguments_I,iBlock)
 
              ! Convert to cell averaged primitive variables (eq. 16)
              Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
@@ -475,12 +486,14 @@ contains
        !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
        
-       !$acc parallel loop gang vector collapse(3) private(FVV) independent
+       !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
-                FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV,iBlock)   ! for x-faces
+                IArguments_I(x_) = i
+                IArguments_I(y_) = j
+                IArguments_I(z_) = k
+                call calc_primitives(IArguments_I,iBlock)   ! for x-faces
              end do
           end do
        end do
@@ -488,30 +501,38 @@ contains
        if(nJ > 1)then
           !TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop gang vector collapse(2) private(FVV) independent
+          !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
-                FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV,iBlock)   ! for lower y-faces
+                IArguments_I(x_) = i
+                IArguments_I(y_) = j
+                IArguments_I(z_) = k
+                call calc_primitives(IArguments_I,iBlock)   ! for lower y-faces
              end do
              do j=jMaxFace+1,nJ+nStencil
-                FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV,iBlock)   ! for upper  y-faces
+                IArguments_I(x_) = i
+                IArguments_I(y_) = j
+                IArguments_I(z_) = k
+                call calc_primitives(IArguments_I,iBlock)   ! for upper  y-faces
              end do
           end do; end do
        end if
        if(nK > 1)then
           !TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop gang vector collapse(2) private(FVV) independent
+          !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
-                FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV,iBlock)   ! for lower z-faces
+                IArguments_I(x_) = i
+                IArguments_I(y_) = j
+                IArguments_I(z_) = k
+                call calc_primitives(IArguments_I,iBlock)   ! for lower z-faces
              end do
              do k=kMaxFace+1,nK+nStencil
-                FVV%i = i; FVV%j = j; FVV%k = k
-                call calc_primitives(FVV,iBlock)   ! for upper z-faces
+                IArguments_I(x_) = i
+                IArguments_I(y_) = j
+                IArguments_I(z_) = k
+                call calc_primitives(IArguments_I,iBlock)   ! for upper z-faces
              end do
           end do; end do
        end if
@@ -641,7 +662,7 @@ contains
           end if
        endif
 
-       if(FVV%UseLogLimiter .and. .not.DoLimitMomentum)then
+       if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call logfaceX_to_faceX(1,1,1,nJ,1,nK)
@@ -689,7 +710,7 @@ contains
           end if
        end if
 
-       if(FVV%UsePtotalLimiter)then
+       if(UsePtotalLimiter)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call ptotal_to_p_faceX(1,1,1,nJ,1,nK)
@@ -797,7 +818,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar = 1, nVar
-         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
+         if(.not.UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1) = &
               exp(LeftState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1))
@@ -814,7 +835,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar = 1, nVar
-         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
+         if(.not.UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1) = &
               exp(LeftState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1))
@@ -831,7 +852,7 @@ contains
 
       !------------------------------------------------------------------------
       do iVar=1,nVar
-         if(.not.FVV%UseLogLimiter_V(iVar))CYCLE
+         if(.not.UseLogLimiter_V(iVar))CYCLE
 
          LeftState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1) = &
               exp(LeftState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,1))
@@ -962,18 +983,18 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives(FVV,iBlock)      
+    subroutine calc_primitives(IArguments_I,iBlock)      
       !$acc routine seq      
       use ModPhysics, ONLY: InvClight2
 
-      type(FaceValueVarType), intent(in):: FVV
+      integer, intent(in):: IArguments_I(MaxDim)
       integer, intent(in)::iBlock
       
       real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
       integer:: i, j, k, iVar, iFluid
       real:: RhoInv
       !------------------------------------------------------------------------
-      i = FVV%i; j = FVV%j; k = FVV%k
+      i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
       
       RhoInv = 1/Primitive_VGI(Rho_,i,j,k,1)
 
@@ -1020,7 +1041,7 @@ contains
       end if
 
       ! Transform p to Ptotal
-      if(FVV%UsePtotalLimiter)then
+      if(UsePtotalLimiter)then
          if(UseElectronPressure)then
             Primitive_VGI(p_,i,j,k,1) = Primitive_VGI(p_,i,j,k,1) &
                  + Primitive_VGI(Pe_,i,j,k,1)
@@ -1034,9 +1055,9 @@ contains
       if(UseScalarToRhoRatioLtd) Primitive_VGI(iVarLimitRatio_I,i,j,k,1) = &
            RhoInv*Primitive_VGI(iVarLimitRatio_I,i,j,k,1)
 
-      if(FVV%UseLogLimiter)then
+      if(UseLogLimiter)then
          do iVar = 1, nVar
-            if(FVV%UseLogLimiter_V(iVar)) &
+            if(UseLogLimiter_V(iVar)) &
                  Primitive_VGI(iVar,i,j,k,1) = log(Primitive_VGI(iVar,i,j,k,1))
          end do
       end if

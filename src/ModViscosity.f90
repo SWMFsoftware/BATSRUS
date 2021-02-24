@@ -219,7 +219,7 @@ contains
   end subroutine set_visco_factor_face
   !============================================================================
 
-  subroutine get_viscosity_tensor(FFV)
+  subroutine get_viscosity_tensor(FFV, RealArg_I)
 
     use ModAdvance, ONLY: State_VGB, FaceFluxVarType
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
@@ -228,6 +228,7 @@ contains
     use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
 
     type(FaceFluxVarType), intent(inout) :: FFV
+    real, dimension(:), target, intent(inout):: RealArg_I
 
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0

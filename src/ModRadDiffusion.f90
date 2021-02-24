@@ -29,6 +29,7 @@ module ModRadDiffusion
   use ModImplicit,    ONLY: UseAccurateRadiation
   use ModVarIndexes,  ONLY: p_, nWave
   use BATL_size,      ONLY: nDim, MaxDim
+  use ModAdvance,     ONLY: StateLeft_, StateRight_, Normal_
 
   implicit none
   save
@@ -290,18 +291,25 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux(FFV)
+  subroutine get_radiation_energy_flux(FFV, RealArg_I)
 
     use ModAdvance,      ONLY: State_VGB, Erad_, FaceFluxVarType
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
 
     type(FaceFluxVarType), intent(inout) :: FFV
+    real, dimension(:), target, intent(inout):: RealArg_I
+    real, dimension(:), pointer:: StateLeft_V
+    real, dimension(:), pointer:: StateRight_V
+    real, dimension(:), pointer:: Normal_D
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
+    Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
+    StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
+    StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
@@ -316,8 +324,8 @@ contains
          Erad_WG, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
-       call get_diffusion_coef(FFV%StateLeft_V, DiffCoefL)
-       call get_diffusion_coef(FFV%StateRight_V, DiffCoefR)
+       call get_diffusion_coef(StateLeft_V, DiffCoefL)
+       call get_diffusion_coef(StateRight_V, DiffCoefR)
 
        RadDiffCoef = 0.5*(DiffCoefL + DiffCoefR)
        DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = RadDiffCoef
@@ -325,7 +333,7 @@ contains
        RadDiffCoef = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux = -RadDiffCoef*sum(FFV%Normal_D*FaceGrad_D)
+    EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
     end associate
   contains

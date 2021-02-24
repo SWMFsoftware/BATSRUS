@@ -43,28 +43,13 @@ module ModAdvance
      real :: Area2, AreaX, AreaY, AreaZ, Area
      real :: DeltaBnL, DeltaBnR
      real :: DiffBb ! (1/4)(BnL-BnR)^2
-     real :: StateLeft_V(nVar)
-     real :: StateRight_V(nVar)
-     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
      ! Variables for rotated coordinate system (n is normal to face)
-     real :: Normal_D(3), NormalX, NormalY, NormalZ
-     real :: Tangent1_D(3), Tangent2_D(3)
+     real :: NormalX, NormalY, NormalZ
      real :: B0n, B0t1, B0t2
      real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
      real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
-     ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
-     ! in terms of divergence of the MHD part of momentum flux.
-     ! For this reason we calculate the MHD flux for the first ion fluid even
-     ! in the case when only its hydrodynamic part matters.
-     real :: MhdFlux_V(     RhoUx_:RhoUz_)
-     real :: MhdFluxLeft_V( RhoUx_:RhoUz_)
-     real :: MhdFluxRight_V(RhoUx_:RhoUz_)
      ! normal electric field -> divE
      real :: Enormal
-     ! Normal velocities for all fluids plus electrons
-     real :: Unormal_I(nFluid+1)
-     real :: UnLeft_I(nFluid+1)
-     real :: UnRight_I(nFluid+1)
      ! Variables for normal resistivity
      real :: EtaJx, EtaJy, EtaJz, Eta
      ! Variables needed for Hall resistivity
@@ -77,7 +62,6 @@ module ModAdvance
      real :: DiffCoef, EradFlux, RadDiffCoef
      real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal
      ! B x Area for current -> BxJ
-     real :: bCrossArea_D(3)
      real :: B0x, B0y, B0z
      ! Variables needed by viscosity
      real :: ViscoCoeff
@@ -95,14 +79,23 @@ module ModAdvance
      logical :: IsNewBlockAlfven
   end type FaceFluxVarType
 
-  type, public :: FaceValueVarType
-     integer :: i, j, k
-     ! Logicals for limiting the logarithm of variables
-     logical :: UseLogLimiter, UseLogLimiter_V(nVar)
-     ! Logicals for limiting the total pressure
-     logical :: UsePtotalLimiter
 
-  end type FaceValueVarType
+  integer, parameter :: nFFRealArg = 2*nVar + 2*(nVar+nFluid) + 7*MaxDim + 3*(nFluid+1)
+  integer, parameter :: &
+       StateLeft_       = 1, &
+       StateRight_      = StateLeft_ + nVar, &
+       FluxLeft_        = StateRight_ + nVar, &
+       FLuxRight_       = FluxLeft_ + nVar + nFluid, &
+       Normal_          = FLuxRight_ + nVar + nFluid, &
+       Tangent1_        = Normal_ + MaxDim, &
+       Tangent2_        = Tangent1_ + MaxDim, &
+       MhdFlux_         = Tangent2_ + MaxDim, &
+       MhdFluxLeft_     = MhdFlux_ + MaxDim, &
+       MhdFluxRight_    = MhdFluxLeft_ + MaxDim, &
+       Unormal_         = MhdFluxRight_ + MaxDim, &
+       UnLeft_          = Unormal_ + nFluid + 1, &
+       UnRight_         = UnLeft_ + nFluid + 1, &
+       bCrossArea_      = UnRight_ + nFluid + 1       
   
   ! Numerical flux type
   character (len=10) :: FluxType
@@ -467,15 +460,21 @@ contains
   end subroutine clean_mod_advance
   !============================================================================
 
-  subroutine init_face_flux_var_type(FFV)
+  subroutine init_face_flux_var_type(FFV, RealArg_I)
     !$acc routine seq
     type(FaceFluxVarType), intent(inout) :: FFV
+    real, dimension(:), target, intent(inout):: RealArg_I
+    real, dimension(:), pointer:: Unormal_I
+    real, dimension(:), pointer:: bCrossArea_D
     !--------------------------------------------------------------------------
 
     ! When openacc creates a derived type on GPU, the variables are
     ! not correctly initialized. So, they are explicitly initialized
     ! here. 
 
+    bCrossArea_D => RealArg_I(bCrossArea_:bCrossArea_+MaxDim-1)
+    Unormal_I => RealArg_I(Unormal_:Unormal_+nFluid+1-1)
+    
     FFV%iFluidMin = 1
     FFV%iFluidMax = nFluid
     FFV%iVarMin = 1
@@ -483,9 +482,9 @@ contains
     FFV%iEnergyMin = nVar + 1
     FFV%iEnergyMax = nVar + nFluid
 
-    FFV%Unormal_I = 0.0
+    Unormal_I = 0.0
     FFV%EradFlux = 0.0
-    FFV%bCrossArea_D = 0.0
+    bCrossArea_D = 0.0
     FFV%B0x = 0.0
     FFV%B0y = 0.0
     FFV%B0z = 0.0 

@@ -9,7 +9,8 @@ module ModPartImplicit
        iProcTest, iVarTest, iProc, nProc, iComm
 
   use ModImplicit
-  use ModAdvance, ONLY: FaceFluxVarType, init_face_flux_var_type
+  use ModAdvance, ONLY: FaceFluxVarType, init_face_flux_var_type, &
+       nFFRealArg, UnLeft_, UnRight_
 
   implicit none
   private ! except
@@ -2267,6 +2268,7 @@ contains
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
     type(FaceFluxVarType) :: FFV
+    real, target:: RealArg_I(nFFRealArg)
 
     real :: Un_I(nFluid+1), En, Pe, Pwave
     integer :: i, j, k
@@ -2274,7 +2276,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_var_type(FFV)
+    call init_face_flux_var_type(FFV, RealArg_I)
     associate(B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
       Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
@@ -2283,7 +2285,7 @@ contains
 
     call test_start(NameSub, DoTest, iBlock)
 
-    call set_block_values(iBlock, iDim, FFV)
+    call set_block_values(iBlock, iDim, FFV, RealArg_I)
     ! Set iFace=i, jFace=j, kFace=k so that
     ! call set_cell_values and call get_physical_flux work
     ! This is not quite right but good enough for the preconditioner
@@ -2301,7 +2303,7 @@ contains
           HallJz = HallJ_CD(i, j, k, z_)
        end if
 
-       call set_cell_values(FFV)
+       call set_cell_values(FFV, RealArg_I)
 
        ! Ignore gradient of electron pressure in the preconditioner
        UseHallGradPe = .false.
@@ -2310,7 +2312,7 @@ contains
        B0y = B0_DC(y_, i, j, k)
        B0z = B0_DC(z_, i, j, k)
 
-       call get_physical_flux(Primitive_V, FFV, &
+       call get_physical_flux(Primitive_V, FFV, RealArg_I, &
             Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
        Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
@@ -2344,11 +2346,16 @@ contains
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
     type(FaceFluxVarType) :: FFV
+    real, target:: RealArg_I(nFFRealArg)
+    real, dimension(:), pointer:: UnLeft_I
+    real, dimension(:), pointer:: UnRight_I
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
-    call init_face_flux_var_type(FFV)
+    UnRight_I => RealArg_I(UnRight_:UnRight_+nFluid+1-1)
+    UnLeft_I => RealArg_I(UnLeft_:UnLeft_+nFluid+1-1)
+    call init_face_flux_var_type(FFV, RealArg_I)
     associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
       CmaxDt => FFV%CmaxDt, Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
@@ -2356,10 +2363,10 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     ! The electron speed is set to zero (I can't remember why)
-    FFV%UnLeft_I(eFluid_)  = 0.0
-    FFV%UnRight_I(eFluid_) = 0.0
+    UnLeft_I(eFluid_)  = 0.0
+    UnRight_I(eFluid_) = 0.0
 
-    call set_block_values(iBlock, iDim, FFV)
+    call set_block_values(iBlock, iDim, FFV, RealArg_I)
 
     do kFace=1,nFaceK; do jFace=1,nFaceJ; do iFace=1,nFaceI
 
@@ -2370,7 +2377,7 @@ contains
 
        call conservative_to_primitive(Primitive_V)
 
-       call set_cell_values(FFV)
+       call set_cell_values(FFV, RealArg_I)
 
        ! This is inconsistent for hd with Sokolov scheme,
        ! because originally the maximum speed from Rusanov scheme is applied!
@@ -2379,7 +2386,7 @@ contains
        B0z = B0_DF( z_,iFace, jFace, kFace)
 
        CmaxDt = 0.0 ! initialize to avoid floating point exception
-       call get_speed_max(Primitive_V, FFV, cmax_I = Cmax_I)
+       call get_speed_max(Primitive_V, FFV, RealArg_I, cmax_I = Cmax_I)
 
        Cmax_F(iFace, jFace, kFace) = maxval(Cmax_I)*Area
 
