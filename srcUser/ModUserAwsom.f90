@@ -4,7 +4,7 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iProc
+       test_start, test_stop, iProc, lVerbose
 
   use ModMain, ONLY: nI, nJ,nK
   use ModChromosphere, ONLY: tChromoSi=>TeChromosphereSi
@@ -26,13 +26,13 @@ module ModUser
   include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: NameUserFile = "ModUserAwsomR.f90"
-  character (len=*), parameter :: NameUserModule = 'AWSoM-R model'
+  character (len=*), parameter :: NameUserFile = "ModUserAwsom.f90"
+  character (len=*), parameter :: NameUserModule = 'AWSoM(R) model'
 
   logical :: UseAwsom = .false.
 
   ! Input parameters for chromospheric inner BC's
-  real    :: nChromoSi = 2e17   !tChromoSi = 5e4
+  real    :: nChromoSi = 2e17   ! tChromoSi = 5e4
   real    :: nChromo, RhoChromo, tChromo
   logical :: UseUparBc = .false.
 
@@ -64,22 +64,19 @@ module ModUser
   logical:: FrampStart = .false.
   logical:: UrZero = .false.
   logical:: UpdateWithParker = .true.
-  !\
+
   ! Different mechanisms for radioemission
   ! 'simplistic' - interpolation between Bremsstrahlung and contributions
-  ! from non-thermal emission at critical and quarter-of-critical, 
+  ! from non-thermal emission at critical and quarter-of-critical,
   ! densities, the different contributions being weighted quite arbitrarily.
   ! 'bremsstrahlung' - emission due to the electron-ion collisions
-  !/
   character(len=20):: TypeRadioEmission = 'simplistic'
 contains
   !============================================================================
 
-
   subroutine user_read_inputs
 
     use ModChromosphere, ONLY: NumberDensChromosphereCgs
-    use ModMain,      ONLY: lVerbose
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
@@ -276,11 +273,9 @@ contains
     Usound  = sqrt(tCorona*(1.0 + AverageIonCharge)/MassIon_I(1))
     Uescape = sqrt(-GBody*2.0)/Usound
 
-    !\
     ! Initialize MHD wind with Parker's solution
     ! construct solution which obeys
     !   rho x u_r x r^2 = constant
-    !/
     rTransonic = 0.25*Uescape**2
     if(.not.(rTransonic>exp(1.0)))then
        write(*,*) NameSub, 'Gbody=', Gbody
@@ -299,12 +294,11 @@ contains
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
-       r_D = (/x,y,z/)
+       r_D = [x,y,z]
 
        if(r > rTransonic)then
-          !\
+
           ! Inside supersonic region
-          !/
           Ur0 = 1.0
           IterCount = 0
           do
@@ -322,9 +316,8 @@ contains
              end if
           end do
        else
-          !\
+
           ! Inside subsonic region
-          !/
           Ur0 = 1.0
           IterCount = 0
           do
@@ -421,13 +414,13 @@ contains
     real :: unit_energy
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
-    !\
+
     ! Define log variable to be saved::
-    !/
     select case(TypeVar)
     case('eint')
        do iBlock = 1, nBlock
@@ -511,6 +504,7 @@ contains
     logical :: IsNewBlockAlfven
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -554,7 +548,7 @@ contains
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
-       IsNewBlockAlfven = .true. 
+       IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
@@ -671,9 +665,8 @@ contains
     real    :: uCorona
 
     real    :: DiffDelta, Ur2
-    !\
+
     ! Variables used in the 'heliofloat' boundary condition
-    !/
     real,parameter     :: UEscapeSi = 4.0e5 ! 400 km/c
     real,dimension(3)  :: DirR_D, DirTheta_D, DirPhi_D, Coord_D,&
          UTrue_D, UGhost_D, BTrue_D, BGhost_D
@@ -796,7 +789,7 @@ contains
           iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
           do k = MinK, MaxK; do j = MinJ, MaxJ
-             ! Note that the Bdir_D calculation does not include the 
+             ! Note that the Bdir_D calculation does not include the
              ! CME part below
              FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
                   + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
@@ -846,8 +839,8 @@ contains
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
 
-                ! If DoBqField = T, we need to modify the velocity components 
-                ! here 
+                ! If DoBqField = T, we need to modify the velocity components
+                ! here
                 ! Currently, with the #CME command, we have always DoBqField=F
              end do
           end do; end do
@@ -946,9 +939,9 @@ contains
                 XyzSph_DD = rot_xyz_sph(Xyz1_D)
 
                 if(UrZero)then
-                   u_D = matmul(XyzSph_DD, (/max(Ur,0.0), -Ulat, Uphi/) )
+                   u_D = matmul(XyzSph_DD, [max(Ur,0.0), -Ulat, Uphi] )
                 else
-                   u_D = matmul(XyzSph_DD, (/Ur, -Ulat, Uphi/) )
+                   u_D = matmul(XyzSph_DD, [Ur, -Ulat, Uphi] )
                 endif
 
                 ! Set velocity in first physical cell (i=1)
@@ -1052,14 +1045,12 @@ contains
           RETURN
        endif
 
-       !\
        ! The routine is only used by the solver for semi-implicit heat
        ! conduction along the magnetic field. To calculate the heat
        ! conduction coefficicients, which are averaged over the true cell
        ! and ghost cell, we need to know the magnetic field and temperature
        ! in the ghost cell. To calculate the fux, we also need to set the
        ! ghost cell temperature within the implicit solver.
-       !/
        if(CBC%TypeBc == 'usersemi')then
           StateSemi_VGB(iTeImpl,0,:,:,iBlock) = tChromo
           RETURN
@@ -1162,14 +1153,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    associate( TimeBc => FBC%TimeBc )    
-
+    associate( TimeBc => FBC%TimeBc )
 
     rUnit_D = FBC%FaceCoords_D/sqrt(sum(FBC%FaceCoords_D**2))
-    !\
+
     ! Magnetic field: radial magnetic field is set to zero, the other are floating
     ! Density is fixed,
-    !/
     B1_D  = FBC%VarsTrueFace_V(Bx_:Bz_)
     B1r_D = sum(rUnit_D*B1_D)*rUnit_D
     B1t_D = B1_D - B1r_D
@@ -1178,10 +1167,8 @@ contains
     ! Fix density
     FBC%VarsGhostFace_V(Rho_) = RhoChromo
 
-    !\
     ! The perpendicular to the mf components of velocity are reflected.
     ! The parallel to the field velocity is either floating or reflected
-    !/
     if (UseUparBc) then
        ! Use line-tied boundary conditions
        U_D = FBC%VarsTrueFace_V(Ux_:Uz_)
@@ -1210,15 +1197,12 @@ contains
        FBC%VarsGhostFace_V(Ux_) = FBC%VarsGhostFace_V(Ux_)-2*OmegaBody*FBC%FaceCoords_D(y_)
        FBC%VarsGhostFace_V(Uy_) = FBC%VarsGhostFace_V(Uy_)+2*OmegaBody*FBC%FaceCoords_D(x_)
     end if
-    !\
+
     ! Temperature is fixed
-    !/
 
     Temperature = tChromo
 
-    !\
     ! If the CME is applied, we modify: density, temperature, magnetic field
-    !/
     if(UseCme)then
        call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, TimeBc, &
             n_step, iteration_number)
@@ -1345,7 +1329,6 @@ contains
 
     if(UseAwsom)then
 
-
        do iBlock = 1, MaxBlock
           if(unused_B(iBlock))CYCLE
 
@@ -1359,8 +1342,8 @@ contains
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
 
-             ! Add the eruptive event state to the solar wind            
-             ! Convert momentum density to velocity                 
+             ! Add the eruptive event state to the solar wind
+             ! Convert momentum density to velocity
              State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock)
@@ -1369,7 +1352,7 @@ contains
                   max(0.25*State_VGB(Rho_,i,j,k,iBlock), &
                   State_VGB(Rho_,i,j,k,iBlock) + Rho)
 
-             ! Fix momentum density to correspond to the modified mass density 
+             ! Fix momentum density to correspond to the modified mass density
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
 
@@ -1400,7 +1383,7 @@ contains
     else
        Mass = 0.0
        ! Bstrap_D should be B0_D+B1_D instead of B0_D
-       !if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
+       ! if(DoAddTD14) call get_b0(XyzApex_D, Bstrap_D)
        !
        ! Since the ghost cells may not be filled in, call message_pass first
        if(UseFieldLineThreads)&
@@ -1446,32 +1429,26 @@ contains
              B_D = B_D*Si2No_V(UnitB_)
              p = p*Si2No_V(UnitP_)
 
-             !\
              ! Add the eruptive event state to the solar wind
-             !/
-             !\
+
              ! Convert momentum density to velocity
-             !/
              State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock)
              if(State_VGB(Rho_,i,j,k,iBlock) + Rho < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
                 State_VGB(Rho_,i,j,k,iBlock) = 0.25*State_VGB(Rho_,i,j,k,iBlock)
-                !\
+
                 ! Calculate the mass added to the eruptive event
-                !/
                 Mass = Mass - 3*CellVolume_GB(i,j,k,iBlock)*&
                      State_VGB(Rho_,i,j,k,iBlock)
              else
-                !\
+
                 ! Calculate the mass added to the eruptive event
-                !/
                 Mass = Mass + Rho*CellVolume_GB(i,j,k,iBlock)
                 State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
              endif
-             !\
+
              ! Fix momentum density to correspond to the modified mass density
-             !/
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
                   State_VGB(Rho_,i,j,k,iBlock)
@@ -1526,6 +1503,7 @@ contains
 
     integer,intent(in):: iBlock
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1568,19 +1546,19 @@ contains
        UseUserB0 = .false.
        RETURN
     end if
-    
+
     r = sqrt(sum(Xyz_D**2))
     B0_Dm = MonopoleStrength*Xyz_D/r**3
     ! shifted Xyz_D upwards to center of the user-dipole
 
-    Xyz_D = (/x, y-1.0+UserDipoleDepth, z/)
+    Xyz_D = [x, y-1.0+UserDipoleDepth, z]
     ! Determine radial distance and powers of it
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
 
     ! Compute dipole moment of the intrinsic magnetic field B0.
-    Dipole_D = (/0.0, UserDipoleStrength, 0.0 /)
+    Dipole_D = [0.0, UserDipoleStrength, 0.0 ]
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
     B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
@@ -1644,9 +1622,9 @@ contains
     real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
     real :: ElectronDensitySiCr, Dens2DensCr
     real, parameter :: GauntFactor = 10.0
-    !------------------
+    !--------------------------------------------------------------------------
     ! Assign frequency of radioemission
-    FrequencySi = FrequencySi_W(WaveFirst_) 
+    FrequencySi = FrequencySi_W(WaveFirst_)
     !
     OpacityEmissionOut_W = 0.0
     PlanckOut_W = 0.0
@@ -1655,26 +1633,23 @@ contains
          No2Si_V(UnitTemperature_)
     select case( trim(TypeRadioEmission) )
     case('simplistic')
-       !\
+
        ! Calculate the critical density from the frequency
-       !/
        ElectronDensitySiCr = cPi*cElectronMass&
             *FrequencySi**2/cElectronChargeSquaredJm
        Dens2DensCr = ElectronDensitySi/ElectronDensitySiCr
-       PlanckOut_W = 1.0  !Just a proxy
+       PlanckOut_W = 1.0  ! Just a proxy
        OpacityEmissionOut_W(1) = (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
     case('bremsstrahlung')
-       !\
-       ! Bremsstrahlung spectrum for Radio satisfies well the condition: 
+
+       ! Bremsstrahlung spectrum for Radio satisfies well the condition:
        ! hv<<k_BT. So the B(v,T), which is indicated here are PlanckOut_W,
        ! can be written after Taylor expansion as follows.
-       !/
-       PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*& 
+       PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*&
                ElectronTemperatureSi/cLightSpeed**2 ! [W m^-2 sr^-1 Hz^-1]
-       !\
-       ! We choose absorption coefficient which is [1/m]  to be dimensionless 
+
+       ! We choose absorption coefficient which is [1/m]  to be dimensionless
        ! and thus multiply it by length of segment.
-       !/ 
        OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*&
             (  cElectronChargeSquaredJm/&
             sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
@@ -1686,5 +1661,5 @@ contains
             //TypeRadioEmission)
     end select
   end subroutine user_material_properties
+  !============================================================================
 end module ModUser
-!==============================================================================
