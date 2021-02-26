@@ -2255,7 +2255,8 @@ contains
 
     use ModVarIndexes, ONLY: nVar, Energy_
     use ModMain,     ONLY: MaxDim, x_, y_, z_
-    use ModFaceFlux, ONLY: nFlux, &
+    use ModAdvance,  ONLY: nFlux
+    use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_physical_flux
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
     use ModMultiFluid, ONLY: nFluid, iP_I

@@ -108,7 +108,7 @@ contains
 
     !$acc data present(Source_VC, SourceMhd_VC)
     !$acc parallel loop collapse(4) 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar+nFluid
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VC(iVar,i,j,k) = 0
     end do; end do; end do; end do 
 
@@ -702,7 +702,7 @@ contains
          call get_efield_in_comoving_frame(iBlock)
 
     ! These source terms apply to all the fluids
-    do iFluid=1,nFluid
+    do iFluid = 1, nFluid
        if(nFluid > 1) call select_fluid(iFluid)
        if(UseGravity)then
           ! Add gravitational force

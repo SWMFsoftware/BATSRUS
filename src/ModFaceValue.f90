@@ -8,12 +8,12 @@ module ModFaceValue
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
+  use ModAdvance, ONLY: nFlux, UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, Primitive_VGI
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
@@ -73,11 +73,11 @@ module ModFaceValue
   ! Logicals for limiting the logarithm of variables
   logical :: UseLogLimiter, UseLogLimiter_V(nVar)
   !$acc declare create(UseLogLimiter, UseLogLimiter_V)
-  
+
   ! Logicals for limiting the total pressure
   logical :: UsePtotalLimiter
   !$acc declare create(UsePtotalLimiter)
-  
+
   ! Parameters for limiting the total pressure (p + p_e + p_wave)
   logical :: UsePtotalLtd     = .false.
 
@@ -105,15 +105,15 @@ module ModFaceValue
   ! local constants
   real, parameter:: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
-  
+
   ! Variables for "body" blocks with masked cells
   logical:: UseTrueCell
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
 
   ! Low order switch for 1D stencil
-  logical:: UseLowOrder_I(1:MaxIJK+1)  
-  
+  logical:: UseLowOrder_I(1:MaxIJK+1)
+
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
@@ -297,8 +297,9 @@ contains
     integer:: iVarSmoothLast, iVarSmooth
 
     integer:: IArguments_I(MaxDim)
-    
+
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
     if(.not. DoResChangeOnly)then
@@ -331,7 +332,7 @@ contains
                true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
-    
+
     if(.not.allocated(FaceL_I)) then
        allocate(FaceL_I(1:MaxIJK+2))
        allocate(FaceR_I(0:MaxIJK+1))
@@ -364,7 +365,7 @@ contains
     end if
 
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
-    
+
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
@@ -393,7 +394,7 @@ contains
 
     !$acc data present(Primitive_VGI, State_VGB)
     !$acc parallel loop collapse(4) independent
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar      
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VGI(iVar,i,j,k,1) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
     !$acc end data
@@ -401,7 +402,7 @@ contains
     if(UseAccurateResChange .or. nOrder==4)then
        !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-       
+
        !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
@@ -410,7 +411,7 @@ contains
           call calc_primitives(IArguments_I,iBlock)         ! all cells
        end do; end do; end do
        !$acc end data
-       
+
        if(nOrder == 4 .and. UseVolumeIntegral4)then
           ! Calculate 4th order accurate cell averaged primitive variables
 
@@ -485,7 +486,7 @@ contains
     else
        !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
        !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-       
+
        !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
@@ -497,9 +498,9 @@ contains
              end do
           end do
        end do
-       
+
        if(nJ > 1)then
-          !TODO: Only parallelized the first 2 loops with openacc as
+          ! TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
           !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
@@ -518,7 +519,7 @@ contains
           end do; end do
        end if
        if(nK > 1)then
-          !TODO: Only parallized the first 2 loops with openacc as
+          ! TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
           !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
@@ -665,48 +666,48 @@ contains
        if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
-                  call logfaceX_to_faceX(1,1,1,nJ,1,nK)
+                  call logfaceX_to_faceX(1,1, 1,nJ, 1,nK)
              if(neiLwest(iBlock)==+1) &
-                  call logfaceX_to_faceX(nIFace,nIFace,1,nJ,1,nK)
+                  call logfaceX_to_faceX(nIFace,nIFace, 1,nJ, 1,nK)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
                   call logfaceY_to_faceY(1,nI,1,1,1,nK)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call logfaceY_to_faceY(1,nI,nJFace,nJFace,1,nK)
+                  call logfaceY_to_faceY(1,nI, nJFace,nJFace, 1,nK)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI,1,nJ,1,1)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call logfaceZ_to_faceZ(1,nI,1,nJ,nKFace,nKFace)
+                  call logfaceZ_to_faceZ(1,nI, 1,nJ, nKFace,nKFace)
           else
-             call logfaceX_to_faceX(1,nIFace,jMinFace,jMaxFace, &
-                  kMinFace,kMaxFace)
-             if(nJ > 1) call logfaceY_to_faceY(iMinFace,iMaxFace,1,nJFace, &
-                  kMinFace,kMaxFace)
-             if(nK > 1) call logfaceZ_to_faceZ(iMinFace,iMaxFace, &
-                  jMinFace,jMaxFace,1,nKFace)
+             call logfaceX_to_faceX( &
+                  1,nIFace, jMinFace,jMaxFace, kMinFace,kMaxFace)
+             if(nJ > 1) call logfaceY_to_faceY( &
+                  iMinFace,iMaxFace, 1,nJFace, kMinFace,kMaxFace)
+             if(nK > 1) call logfaceZ_to_faceZ( &
+                  iMinFace,iMaxFace, jMinFace,jMaxFace, 1,nKFace)
           end if
        end if
 
        if(UseScalarToRhoRatioLtd)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
-                  call ratio_to_scalar_faceX(1,1,1,nJ,1,nK)
+                  call ratio_to_scalar_faceX(1, 1, 1, nJ, 1, nK)
              if(neiLwest(iBlock)==+1) &
-                  call ratio_to_scalar_faceX(nIFace,nIFace,1,nJ,1,nK)
+                  call ratio_to_scalar_faceX(nIFace, nIFace, 1, nJ, 1, nK)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-                  call ratio_to_scalar_faceY(1,nI,1,1,1,nK)
+                  call ratio_to_scalar_faceY(1, nI, 1, 1, 1, nK)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call ratio_to_scalar_faceY(1,nI,nJFace,nJFace,1,nK)
+                  call ratio_to_scalar_faceY(1, nI, nJFace, nJFace, 1, nK)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
-                  call ratio_to_scalar_faceZ(1,nI,1,nJ,1,1)
+                  call ratio_to_scalar_faceZ(1, nI, 1, nJ, 1, 1)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call ratio_to_scalar_faceZ(1,nI,1,nJ,nKFace,nKFace)
+                  call ratio_to_scalar_faceZ(1, nI, 1, nJ, nKFace, nKFace)
           else
-             call ratio_to_scalar_faceX(1,nIFace,jMinFace,jMaxFace, &
-                  kMinFace,kMaxFace)
-             if(nJ > 1) call ratio_to_scalar_faceY(iMinFace,iMaxFace,1,nJFace,&
-                  kMinFace,kMaxFace)
-             if(nK > 1) call ratio_to_scalar_faceZ(iMinFace,iMaxFace, &
-                  jMinFace,jMaxFace,1,nKFace)
+             call ratio_to_scalar_faceX( &
+                  1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace)
+             if(nJ > 1) call ratio_to_scalar_faceY( &
+                  iMinFace, iMaxFace, 1, nJFace, kMinFace, kMaxFace)
+             if(nK > 1) call ratio_to_scalar_faceZ( &
+                  iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
           end if
        end if
 
@@ -870,9 +871,11 @@ contains
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VXI(iVarLimitRatio_I,i,j,k,1) = &
-              LeftState_VXI(iVarLimitRatio_I,i,j,k,1)*LeftState_VXI(Rho_,i,j,k,1)
+              LeftState_VXI(iVarLimitRatio_I,i,j,k,1) &
+              *LeftState_VXI(Rho_,i,j,k,1)
          RightState_VXI(iVarLimitRatio_I,i,j,k,1) = &
-              RightState_VXI(iVarLimitRatio_I,i,j,k,1)*RightState_VXI(Rho_,i,j,k,1)
+              RightState_VXI(iVarLimitRatio_I,i,j,k,1) &
+              *RightState_VXI(Rho_,i,j,k,1)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facex
@@ -885,9 +888,11 @@ contains
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VYI(iVarLimitRatio_I,i,j,k,1) = &
-              LeftState_VYI(iVarLimitRatio_I,i,j,k,1)*LeftState_VYI(Rho_,i,j,k,1)
+              LeftState_VYI(iVarLimitRatio_I,i,j,k,1) &
+              *LeftState_VYI(Rho_,i,j,k,1)
          RightState_VYI(iVarLimitRatio_I,i,j,k,1) = &
-              RightState_VYI(iVarLimitRatio_I,i,j,k,1)*RightState_VYI(Rho_,i,j,k,1)
+              RightState_VYI(iVarLimitRatio_I,i,j,k,1) &
+              *RightState_VYI(Rho_,i,j,k,1)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facey
@@ -900,9 +905,11 @@ contains
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VZI(iVarLimitRatio_I,i,j,k,1) = &
-              LeftState_VZI(iVarLimitRatio_I,i,j,k,1)*LeftState_VZI(Rho_,i,j,k,1)
+              LeftState_VZI(iVarLimitRatio_I,i,j,k,1) &
+              *LeftState_VZI(Rho_,i,j,k,1)
          RightState_VZI(iVarLimitRatio_I,i,j,k,1) = &
-              RightState_VZI(iVarLimitRatio_I,i,j,k,1)*RightState_VZI(Rho_,i,j,k,1)
+              RightState_VZI(iVarLimitRatio_I,i,j,k,1) &
+              *RightState_VZI(Rho_,i,j,k,1)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facez
@@ -949,9 +956,11 @@ contains
       if(UseWavePressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VYI(p_,i,j,k,1) = LeftState_VYI(p_,i,j,k,1) &
-                 - (GammaWave-1)*sum(LeftState_VYI(WaveFirst_:WaveLast_,i,j,k,1))
+                 - (GammaWave-1) &
+                 *sum(LeftState_VYI(WaveFirst_:WaveLast_,i,j,k,1))
             RightState_VYI(p_,i,j,k,1) = RightState_VYI(p_,i,j,k,1) &
-                 - (GammaWave-1)*sum(RightState_VYI(WaveFirst_:WaveLast_,i,j,k,1))
+                 - (GammaWave-1) &
+                 *sum(RightState_VYI(WaveFirst_:WaveLast_,i,j,k,1))
          end do; end do; end do
       end if
 
@@ -983,19 +992,19 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives(IArguments_I,iBlock)      
-      !$acc routine seq      
+    subroutine calc_primitives(IArguments_I,iBlock)
+      !$acc routine seq
       use ModPhysics, ONLY: InvClight2
 
       integer, intent(in):: IArguments_I(MaxDim)
       integer, intent(in)::iBlock
-      
+
       real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
       integer:: i, j, k, iVar, iFluid
       real:: RhoInv
       !------------------------------------------------------------------------
       i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
-      
+
       RhoInv = 1/Primitive_VGI(Rho_,i,j,k,1)
 
       if(DoLimitMomentum)then
@@ -1008,12 +1017,12 @@ contains
          ByFull = Primitive_VGI(By_,i,j,k,1)
          BzFull = Primitive_VGI(Bz_,i,j,k,1)
 
-         if(UseB0) then 
+         if(UseB0) then
             BxFull = B0_DGB(x_,i,j,k,iBlock) + BxFull
             ByFull = B0_DGB(y_,i,j,k,iBlock) + ByFull
             BzFull = B0_DGB(z_,i,j,k,iBlock) + BzFull
          endif
-         
+
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          if(UseBorisRegion)then
             RhoC2Inv = RhoInv/Clight_G(i,j,k)**2
@@ -1032,11 +1041,13 @@ contains
          Primitive_VGI(Uz_,i,j,k,1)= Primitive_VGI(rhoUz_,i,j,k,1)*&
               Ga2Boris - BzFull*uBC2Inv
       else
-         Primitive_VGI(Ux_:Uz_,i,j,k,1)=RhoInv*Primitive_VGI(RhoUx_:RhoUz_,i,j,k,1)
-         do iFluid=2,nFluid
+         Primitive_VGI(Ux_:Uz_,i,j,k,1) = &
+              RhoInv*Primitive_VGI(RhoUx_:RhoUz_,i,j,k,1)
+         do iFluid = 2, nFluid
             iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-            RhoInv = 1/Primitive_VGI(iRho,i,j,k,1)            
-            Primitive_VGI(iUx:iUz,i,j,k,1)=RhoInv*Primitive_VGI(iUx:iUz,i,j,k,1)            
+            RhoInv = 1/Primitive_VGI(iRho,i,j,k,1)
+            Primitive_VGI(iUx:iUz,i,j,k,1) = &
+                 RhoInv*Primitive_VGI(iUx:iUz,i,j,k,1)
          end do
       end if
 
@@ -1048,7 +1059,8 @@ contains
          end if
          if(UseWavePressure)then
             Primitive_VGI(p_,i,j,k,1) = Primitive_VGI(p_,i,j,k,1) &
-                 + (GammaWave-1)*sum(Primitive_VGI(WaveFirst_:WaveLast_,i,j,k,1))
+                 + (GammaWave-1) &
+                 *sum(Primitive_VGI(WaveFirst_:WaveLast_,i,j,k,1))
          end if
       end if
 
@@ -1162,7 +1174,7 @@ contains
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
 
                ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nVar + nFluid
+               do iFlux = 1, nFlux
                   ! Copy left fluxes along i direction into 1D array
                   Cell_I(iMin-nG:iMax-1+nG) = &
                        FluxLeft_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
@@ -1320,7 +1332,7 @@ contains
                     *0.5*(FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax))
 
                ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nVar + nFluid
+               do iFlux = 1, nFlux
                   ! Copy left fluxes along i direction into 1D array
                   Cell_I(jMin-nG:jMax-1+nG) = &
                        FluxLeft_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
@@ -1476,7 +1488,7 @@ contains
                     *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
 
                ! Interpolate cell centered split fluxes to the face
-               do iFlux = 1, nVar + nFluid
+               do iFlux = 1, nFlux
                   ! Copy left fluxes along i direction into 1D array
                   Cell_I(kMin-nG:kMax-1+nG) = &
                        FluxLeft_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
@@ -1540,12 +1552,12 @@ contains
       !------------------------------------------------------------------------
       !$acc data present(Primitive_VGI,LeftState_VXI, RightState_VXI)
       !$acc parallel loop collapse(4) independent
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar 
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar
          LeftState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i-1,j,k,1)
          RightState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i,j,k,1)
       end do; end do; end do; end do
       !$acc end data
-      
+
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
@@ -2321,12 +2333,14 @@ contains
        IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
        IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
        IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
-    ! _____________! _____________!_______!_______!_
-    !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
-    !             !         CToF! FToC FF!
-    ! _____________! _____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
+
+    ! _____________|_____________|_______|_______|_
+    !              |         CToF|FToC FF|       |
+    !  C2_V        | C1_V       _|_F1_V__|__F2_V_|_
+    !              |         CToF|FToC FF|       |
+    ! _____________|_____________|_F1_V__|__F2_V_|_
+    !              |             |       |       |
+
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
     real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
@@ -2419,12 +2433,12 @@ contains
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________! _____________!________!_______!_
-    !             !         CToF! FToC FF!
-    ! C2_V        ! C1_V       _! __F1_V__! __F2_V_!_
-    !             !         CToF! FToC FF!
-    ! _____________! _____________!__F1_V__!__F2_V_!_
-    !             !             !        !       !
+    ! _____________|____________|________!_______|_
+    !              |        CToF|FToC FF !       |
+    !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
+    !              |        CToF|FToC FF |       |
+    ! _____________|____________|__F1_V__!__F2_V_|_
+    !              |            |        |       |
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
     real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
@@ -2495,14 +2509,14 @@ contains
        FineF_VII)           ! Values in the phys. cell,
     !                         looking at another physical cell
 
-    !             ! C1_V        !       !       !
-    ! _____________! _____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
-    !             !         CToF! FToC FF!       !
-    ! _____________! _____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
-    !             ! C1_V        !       !       !
+    !              |C1_V        |        |       |
+    ! _____________|____________|________|_______|_
+    !              |        CToF|FToC FF |       |
+    !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
+    !              |        CToF|FToC FF |       |
+    ! _____________|____________|__F1_V__!__F2_V_|_
+    !              |            |        |       |
+    !              | C1_V       |        |       |
 
     real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
     real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
@@ -2641,14 +2655,14 @@ contains
        FineF_VI)            ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    !             ! C1_V        !       !       !
-    ! _____________! _____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V       _! _F1_V__! __F2_V_!_
-    !             !         CToF! FToC FF!       !
-    ! _____________! _____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
-    !             ! C1_V        !       !       !
+    !              |C1_V        |        |       |
+    ! _____________|____________|________|_______|_
+    !              |        CToF|FToC FF |       |
+    !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
+    !              |        CToF|FToC FF |       |
+    ! _____________|____________|__F1_V__!__F2_V_|_
+    !              |            |        |       |
+    !              | C1_V       |        |       |
 
     real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
     real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
@@ -2783,10 +2797,10 @@ contains
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________! _____________!_______!_______!_
-    !             !         CToF! FToC FF!       !
-    ! C2_V        ! C1_V        ! F1_V  !  F2_V !
-    ! _____________! _____________!_______!_______!_
+    ! _____________|_____________|_______|_______|_
+    !              |        CToF |FToC FF|       |
+    !  C2_V        |C1_V         |F1_V   | F2_V  |
+    ! _____________|_____________|_______|_______|_
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
@@ -2965,6 +2979,7 @@ contains
       real:: State_VI(nVar,-3:2)
 
       logical:: DoTest
+
       character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
@@ -3035,7 +3050,7 @@ contains
 
       pTotal_I = 0
       VelRatio = 0
-      do iFluid=1,nFluid
+      do iFluid = 1, nFluid
          if(nFluid > 1) call select_fluid(iFluid)
 
          pTotal_I = pTotal_I + State_VI(iP,:)
@@ -3091,6 +3106,7 @@ contains
     integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'calc_cell_norm_velocity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -3193,60 +3209,72 @@ contains
 
        ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IXI/Y/Z = div(U)*dl
        ! See eq(35) of P. McCorquodale and P. Colella (2010)
-       do kFace=kMinFace,kMaxFace; do jFace=jMinFace,jMaxFace; do iFace=1,nIFace
-          FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
-               (Vel_DG(x_,iFace,jFace,kFace) - &
-               Vel_DG(x_,iFace-1,jFace,kFace))
+       do kFace=kMinFace,kMaxFace
+          do jFace=jMinFace,jMaxFace
+             do iFace=1,nIFace
+                FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
+                     (Vel_DG(x_,iFace,jFace,kFace) - &
+                     Vel_DG(x_,iFace-1,jFace,kFace))
 
-          if(nDim>1) FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
-               FaceDivU_IXI(iFluid,iFace,jFace,kFace,1)+ &
-               (Vel_DG(y_,iFace,jFace+1,kFace) - &
-               Vel_DG(y_,iFace,jFace-1,kFace) + &
-               Vel_DG(y_,iFace-1,jFace+1,kFace) - &
-               Vel_DG(y_,iFace-1,jFace-1,kFace))/4
+                if(nDim>1) FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
+                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,1)+ &
+                     (Vel_DG(y_,iFace,jFace+1,kFace) - &
+                     Vel_DG(y_,iFace,jFace-1,kFace) + &
+                     Vel_DG(y_,iFace-1,jFace+1,kFace) - &
+                     Vel_DG(y_,iFace-1,jFace-1,kFace))/4
 
-          if(nDim>2) FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
-               FaceDivU_IXI(iFluid,iFace,jFace,kFace,1)+ &
-               (Vel_DG(z_,iFace,jFace,kFace+1) - &
-               Vel_DG(z_,iFace,jFace,kFace-1) + &
-               Vel_DG(z_,iFace-1,jFace,kFace+1) - &
-               Vel_DG(z_,iFace-1,jFace,kFace-1))/4
+                if(nDim>2) FaceDivU_IXI(iFluid,iFace,jFace,kFace,1) = &
+                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,1)+ &
+                     (Vel_DG(z_,iFace,jFace,kFace+1) - &
+                     Vel_DG(z_,iFace,jFace,kFace-1) + &
+                     Vel_DG(z_,iFace-1,jFace,kFace+1) - &
+                     Vel_DG(z_,iFace-1,jFace,kFace-1))/4
 
-       enddo; enddo; enddo
+             enddo
+          enddo
+       enddo
 
        If(nDim>1) then
-          do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
-             FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) = &
-                  (Vel_DG(y_,iFace,jFace,kFace) - &
-                  Vel_DG(y_,iFace,jFace-1,kFace)) + &
-                  (Vel_DG(x_,iFace+1,jFace,kFace) - &
-                  Vel_DG(x_,iFace-1,jFace,kFace) + &
-                  Vel_DG(x_,iFace+1,jFace-1,kFace) - &
-                  Vel_DG(x_,iFace-1,jFace-1,kFace))/4
+          do kFace=kMinFace,kMaxFace
+             do jFace=1,nJFace
+                do iFace=iMinFace,iMaxFace
+                   FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) = &
+                        (Vel_DG(y_,iFace,jFace,kFace) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace)) + &
+                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace) + &
+                        Vel_DG(x_,iFace+1,jFace-1,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace-1,kFace))/4
 
-             if(nDim>2) FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) = &
-                  FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) + &
-                  (Vel_DG(z_,iFace,jFace,kFace+1) - &
-                  Vel_DG(z_,iFace,jFace,kFace-1) + &
-                  Vel_DG(z_,iFace,jFace-1,kFace+1) - &
-                  Vel_DG(z_,iFace,jFace-1,kFace-1))/4
-          enddo; enddo; enddo
+                   if(nDim>2) FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) = &
+                        FaceDivU_IYI(iFluid,iFace,jFace,kFace,1) + &
+                        (Vel_DG(z_,iFace,jFace,kFace+1) - &
+                        Vel_DG(z_,iFace,jFace,kFace-1) + &
+                        Vel_DG(z_,iFace,jFace-1,kFace+1) - &
+                        Vel_DG(z_,iFace,jFace-1,kFace-1))/4
+                enddo
+             enddo
+          enddo
        endif
 
        if(nDim>2) then
-          do kFace=1,nKFace; do jFace=jMinFace,jMaxFace; do iFace=iMinFace,iMaxFace
-             FaceDivU_IZI(iFluid,iFace,jFace,kFace,1) = &
-                  (Vel_DG(z_,iFace,jFace,kFace) - &
-                  Vel_DG(z_,iFace,jFace,kFace-1)) + &
-                  (Vel_DG(x_,iFace+1,jFace,kFace) - &
-                  Vel_DG(x_,iFace-1,jFace,kFace) + &
-                  Vel_DG(x_,iFace+1,jFace,kFace-1) - &
-                  Vel_DG(x_,iFace-1,jFace,kFace-1))/4 + &
-                  (Vel_DG(y_,iFace,jFace+1,kFace) - &
-                  Vel_DG(y_,iFace,jFace-1,kFace) + &
-                  Vel_DG(y_,iFace,jFace+1,kFace-1) - &
-                  Vel_DG(y_,iFace,jFace-1,kFace-1))/4
-          enddo; enddo; enddo
+          do kFace=1,nKFace
+             do jFace=jMinFace,jMaxFace
+                do iFace=iMinFace,iMaxFace
+                   FaceDivU_IZI(iFluid,iFace,jFace,kFace,1) = &
+                        (Vel_DG(z_,iFace,jFace,kFace) - &
+                        Vel_DG(z_,iFace,jFace,kFace-1)) + &
+                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace) + &
+                        Vel_DG(x_,iFace+1,jFace,kFace-1) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace-1))/4 + &
+                        (Vel_DG(y_,iFace,jFace+1,kFace) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace) + &
+                        Vel_DG(y_,iFace,jFace+1,kFace-1) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace-1))/4
+                enddo
+             enddo
+          enddo
        endif
 
     enddo ! iFluid
@@ -4171,5 +4199,4 @@ contains
   !============================================================================
 
 end module ModFaceValue
-!==============================================================================
 

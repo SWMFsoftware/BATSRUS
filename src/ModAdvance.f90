@@ -23,9 +23,12 @@ module ModAdvance
 
   public :: init_mod_advance
   public :: clean_mod_advance
-    
+
   ! Numerical flux type
   character (len=10) :: FluxType
+
+  ! Total number of fluxes and sources: nVar state variables + nFluid energies
+  integer, parameter:: nFlux = nVar + nFluid, nSource = nVar + nFluid
 
   ! Logical and number of species for multi-species equations
   logical, parameter:: UseMultiSpecies = SpeciesFirst_ > 1
@@ -109,8 +112,8 @@ module ModAdvance
   real, public, allocatable:: Efield_DGB(:,:,:,:,:)
 
   ! Local cell-centered source terms and divB.
-  real :: Source_VC(nVar+nFluid, nI, nJ, nK)
-  real :: SourceMhd_VC(RhoUx_:RhoUz_, nI, nJ, nK)
+  real :: Source_VC(nSource,nI,nJ,nK)
+  real :: SourceMhd_VC(RhoUx_:RhoUz_,nI,nJ,nK)
   !$omp threadprivate( Source_VC, SourceMhd_VC )
   !$acc declare create( Source_VC, SourceMhd_VC )
 
@@ -128,7 +131,9 @@ module ModAdvance
   logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
   logical:: UseLowOrderRegion = .false.
   logical:: UseAdaptiveLowOrder = .false.
-  real, allocatable:: LowOrderCrit_XB(:,:,:,:),LowOrderCrit_YB(:,:,:,:), &
+  real, allocatable:: &
+       LowOrderCrit_XB(:,:,:,:), &
+       LowOrderCrit_YB(:,:,:,:), &
        LowOrderCrit_ZB(:,:,:,:) ! The ratio of the low order face values
 
   ! Cell centered velocities in ijk direction.
@@ -147,27 +152,28 @@ module ModAdvance
   !$acc declare create(LeftState_VYI, RightState_VYI)
   !$acc declare create(LeftState_VZI, RightState_VZI)
 
-    ! primitive variables
+  ! primitive variables
   real, allocatable:: Primitive_VGI(:,:,:,:,:)
   !$omp threadprivate( Primitive_VGI )
   !$acc declare create(Primitive_VGI )
 
   ! Face centered div(U)*dl
-  real, allocatable:: FaceDivU_IXI(:,:,:,:,:)
-  real, allocatable:: FaceDivU_IYI(:,:,:,:,:)
-  real, allocatable:: FaceDivU_IZI(:,:,:,:,:)
+  real, allocatable, dimension(:,:,:,:,:):: &
+       FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI
   !$omp threadprivate( FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI )
 
   ! V/dt for CFL time step limit
-  real, allocatable:: VdtFace_XI(:,:,:,:), VdtFace_YI(:,:,:,:), VdtFace_ZI(:,:,:,:)
+  real, allocatable:: &
+       VdtFace_XI(:,:,:,:), VdtFace_YI(:,:,:,:), VdtFace_ZI(:,:,:,:)
   !$omp threadprivate( VdtFace_XI, VdtFace_YI, VdtFace_ZI )
   !$acc declare create(VdtFace_XI, VdtFace_YI, VdtFace_ZI)
-  
+
   ! Fluxes are for conservative variables (momentum)
-  real, allocatable:: Flux_VXI(:,:,:,:,:) , Flux_VYI(:,:,:,:,:) , Flux_VZI(:,:,:,:,:) 
+  real, allocatable:: &
+       Flux_VXI(:,:,:,:,:), Flux_VYI(:,:,:,:,:), Flux_VZI(:,:,:,:,:)
   !$omp threadprivate( Flux_VXI, Flux_VYI, Flux_VZI )
   !$acc declare create( Flux_VXI, Flux_VYI, Flux_VZI )
-  
+
   ! Cell centered fluxes
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
@@ -179,14 +185,14 @@ module ModAdvance
   !$omp threadprivate( FluxCenter_VGD )
 
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
-  real, allocatable:: &
-       uDotArea_XII(:,:,:,:,:), uDotArea_YII(:,:,:,:,:), uDotArea_ZII(:,:,:,:,:)
+  real, allocatable, dimension(:,:,:,:,:):: &
+       uDotArea_XII, uDotArea_YII, uDotArea_ZII
   !$omp threadprivate( uDotArea_XII, uDotArea_YII, uDotArea_ZII )
-  !$acc declare create( uDotArea_XII, uDotArea_YII, uDotArea_ZII )  
+  !$acc declare create( uDotArea_XII, uDotArea_YII, uDotArea_ZII )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
-  real, allocatable:: &
-       bCrossArea_DXI(:,:,:,:,:), bCrossArea_DYI(:,:,:,:,:), bCrossArea_DZI(:,:,:,:,:)
+  real, allocatable, dimension(:,:,:,:,:):: &
+       bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI(:,:,:,:,:)
   !$omp threadprivate( bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI )
 
   ! Mhd part of the momentum flux. May be subtracted for calculating
@@ -200,9 +206,9 @@ module ModAdvance
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
 
   real, allocatable:: MhdSource_VC(:,:,:,:),  &
-       MhdFlux_VXI(:,:,:,:,:) , MhdFlux_VYI(:,:,:,:,:) , MhdFlux_VZI(:,:,:,:,:) 
+       MhdFlux_VXI(:,:,:,:,:) , MhdFlux_VYI(:,:,:,:,:) , MhdFlux_VZI(:,:,:,:,:)
   !$omp threadprivate( MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI )
-  !$acc declare create(MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI)  
+  !$acc declare create(MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI)
 
   ! Merge cells around the polar axis in spherical geometry
   logical :: DoFixAxis = .false.
@@ -228,6 +234,7 @@ contains
     ! These arrays may need allocation depending on the parameters
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'init_mod_advance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -253,9 +260,12 @@ contains
     !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DXI))then
-       allocate(bCrossArea_DXI(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-       allocate(bCrossArea_DYI(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-       allocate(bCrossArea_DZI(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
+       allocate(bCrossArea_DXI( &
+            MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
+       allocate(bCrossArea_DYI( &
+            MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
+       allocate(bCrossArea_DZI( &
+            MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
        bCrossArea_DXI = 0.0; bCrossArea_DYI = 0.0; bCrossArea_DZI = 0.0
     end if
     !$omp end parallel
@@ -287,33 +297,48 @@ contains
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then
     ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
-    allocate(LeftState_VXI(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
-    allocate(RightState_VXI(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
+    allocate(LeftState_VXI( &
+         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
+    allocate(RightState_VXI( &
+         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
     allocate(VdtFace_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(Flux_VXI(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang) )
-    allocate(MhdFlux_VXI(RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang) )
-    allocate(uDotArea_XII(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1,nGang))
+    allocate(Flux_VXI(nFlux,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
+    allocate(MhdFlux_VXI( &
+         RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
+    allocate(uDotArea_XII( &
+         nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1,nGang))
     MhdFlux_VXI = 0.0
 
-    allocate(LeftState_VYI(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
-    allocate(RightState_VYI(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
+    allocate(LeftState_VYI( &
+         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
+    allocate(RightState_VYI( &
+         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
     allocate(VdtFace_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    allocate(Flux_VYI(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang) )
-    allocate(MhdFlux_VYI(RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang) )
-    allocate(uDotArea_YII(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1,nGang))
+    allocate(Flux_VYI(nFlux,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
+    allocate(MhdFlux_VYI( &
+         RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
+    allocate(uDotArea_YII( &
+         iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1,nGang))
     MhdFlux_VYI = 0.0
 
-    allocate(LeftState_VZI(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
-    allocate(RightState_VZI(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
+    allocate(LeftState_VZI( &
+         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
+    allocate(RightState_VZI( &
+         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
     allocate(VdtFace_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    allocate(Flux_VZI(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang) )
-    allocate(MhdFlux_VZI(RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang) )
-    allocate(uDotArea_ZII(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1,nGang))
+    allocate(Flux_VZI(nFlux,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
+    allocate(MhdFlux_VZI( &
+         RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
+    allocate(uDotArea_ZII( &
+         iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1,nGang))
     MhdFlux_VZI = 0.0
 
-    allocate(FaceDivU_IXI(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(FaceDivU_IYI(nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace,nGang))
-    allocate(FaceDivU_IZI(nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace,nGang))
+    allocate(FaceDivU_IXI( &
+         nFluid,nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
+    allocate(FaceDivU_IYI( &
+         nFluid,iMinFace:iMaxFace,nJFace,kMinFace:kMaxFace,nGang))
+    allocate(FaceDivU_IZI( &
+         nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace,nGang))
 
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
     !$omp end parallel
@@ -322,7 +347,7 @@ contains
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
     end if
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_advance
   !============================================================================
@@ -330,6 +355,7 @@ contains
   subroutine clean_mod_advance
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'clean_mod_advance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -388,4 +414,3 @@ contains
   !============================================================================
 
 end module ModAdvance
-!==============================================================================
