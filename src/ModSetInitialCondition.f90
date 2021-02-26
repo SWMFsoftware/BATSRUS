@@ -48,9 +48,9 @@ contains
 
     time_BLK(:,:,:,iBlock) = 0.0
 
-    Flux_VX = 0.0
-    Flux_VY = 0.0
-    Flux_VZ = 0.0
+    Flux_VXI = 0.0
+    Flux_VYI = 0.0
+    Flux_VZI = 0.0
 
     if(Unused_B(iBlock))then
        do iVar = 1, nVar

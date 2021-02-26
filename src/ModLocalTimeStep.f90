@@ -64,7 +64,7 @@ contains
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
-         Flux_VX, Flux_VY, Flux_VZ
+         Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
@@ -244,13 +244,13 @@ contains
           if(DoConserveFlux .and. iStage == nStage)then
              ! Store fluxes for flux correction
              Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
-                  Flux_VX(1:nFlux,1:nI+1,1:nJ,1:nK)
+                  Flux_VXI(1:nFlux,1:nI+1,1:nJ,1:nK,1) 
              if(nJ>1) & ! 2D
                   Flux_VFD(1:nFlux,1:nI,1:nJ+1,1:nK,y_) = &
-                  Flux_VY(1:nFlux,1:nI,1:nJ+1,1:nK)
+                  Flux_VYI(1:nFlux,1:nI,1:nJ+1,1:nK,1) 
              if(nK>1) & ! 3D
                   Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
-                  Flux_VZ(1:nFlux,1:nI,1:nJ,1:nK+1)
+                  Flux_VZI(1:nFlux,1:nI,1:nJ,1:nK+1,1) 
 
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &

@@ -116,7 +116,7 @@ contains
 
     use ModMain, ONLY : nI,nJ,nK
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
+    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
@@ -132,24 +132,24 @@ contains
 
     ! VxB_x=(fy+fy-fz-fz)/4
     VxB_x(1:nI,1:nJ+1,1:nK+1,iBlock)= 0.25*(                        &
-         (Flux_VY(Bz_,1:nI,1:nJ+1,0:nK  )                        &
-         +Flux_VY(Bz_,1:nI,1:nJ+1,1:nK+1))/CellFace_DB(2,iBlock) &
-         -(Flux_VZ(By_,1:nI,0:nJ  ,1:nK+1)                        &
-         +Flux_VZ(By_,1:nI,1:nJ+1,1:nK+1))/CellFace_DB(3,iBlock))
+         (Flux_VYI(Bz_,1:nI,1:nJ+1,0:nK  ,1)                         &
+         +Flux_VYI(Bz_,1:nI,1:nJ+1,1:nK+1,1) )/CellFace_DB(2,iBlock) &
+         -(Flux_VZI(By_,1:nI,0:nJ  ,1:nK+1,1)                         &
+         +Flux_VZI(By_,1:nI,1:nJ+1,1:nK+1,1) )/CellFace_DB(3,iBlock))
 
     ! VxB_y=(fz+fz-fx-fx)/4
     VxB_y(1:nI+1,1:nJ,1:nK+1,iBlock)= 0.25*(                        &
-         (Flux_VZ(Bx_,0:nI  ,1:nJ,1:nK+1)                        &
-         +Flux_VZ(Bx_,1:nI+1,1:nJ,1:nK+1))/CellFace_DB(3,iBlock) &
-         -(Flux_VX(Bz_,1:nI+1,1:nJ,0:nK  )                        &
-         +Flux_VX(Bz_,1:nI+1,1:nJ,1:nK+1))/CellFace_DB(1,iBlock))
+         (Flux_VZI(Bx_,0:nI  ,1:nJ,1:nK+1,1)                         &
+         +Flux_VZI(Bx_,1:nI+1,1:nJ,1:nK+1,1) )/CellFace_DB(3,iBlock) &
+         -(Flux_VXI(Bz_,1:nI+1,1:nJ,0:nK  ,1)                         &
+         +Flux_VXI(Bz_,1:nI+1,1:nJ,1:nK+1,1) )/CellFace_DB(1,iBlock))
 
     ! VxB_z=(fx+fx-fy-fy)/4
     VxB_z(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                        &
-         (Flux_VX(By_,1:nI+1,0:nJ  ,1:nK)                        &
-         +Flux_VX(By_,1:nI+1,1:nJ+1,1:nK))/CellFace_DB(1,iBlock) &
-         -(Flux_VY(Bx_,0:nI  ,1:nJ+1,1:nK)                        &
-         +Flux_VY(Bx_,1:nI+1,1:nJ+1,1:nK))/CellFace_DB(2,iBlock))
+         (Flux_VXI(By_,1:nI+1,0:nJ  ,1:nK,1)                         &
+         +Flux_VXI(By_,1:nI+1,1:nJ+1,1:nK,1) )/CellFace_DB(1,iBlock) &
+         -(Flux_VYI(Bx_,0:nI  ,1:nJ+1,1:nK,1)                         &
+         +Flux_VYI(Bx_,1:nI+1,1:nJ+1,1:nK,1) )/CellFace_DB(2,iBlock))
 
     if(DoTest)then
        write(*,*)'get_vxb: final VxB (edge centered)'
@@ -172,7 +172,7 @@ contains
     use ModSize
     use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
+    use ModAdvance, ONLY : Flux_VXI,Flux_VYI,Flux_VZI
     use ModParallel, ONLY : NOBLK,&
          neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
     use ModGeometry, ONLY : true_cell, body_BLK
@@ -190,10 +190,10 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ
-          VxB_y(1,j,k,iBlock) = +Flux_VZ(Bx_,1,j,k)/CellFace_DB(3,iBlock)
+          VxB_y(1,j,k,iBlock) = +Flux_VZI(Bx_,1,j,k,1) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do j=1,nJ+1
-          VxB_z(1,j,k,iBlock) = -Flux_VY(Bx_,1,j,k)/CellFace_DB(2,iBlock)
+          VxB_z(1,j,k,iBlock) = -Flux_VYI(Bx_,1,j,k,1) /CellFace_DB(2,iBlock)
        end do; end do
     end if
     if(neiLwest(iBlock)==NOBLK)then
@@ -206,43 +206,43 @@ contains
        case default
           ! continuous
           do k=1,nK+1; do j=1,nJ
-             VxB_y(nI+1,j,k,iBlock) = +Flux_VZ(Bx_,nI,j,k)/CellFace_DB(3,iBlock)
+             VxB_y(nI+1,j,k,iBlock) = +Flux_VZI(Bx_,nI,j,k,1) /CellFace_DB(3,iBlock)
           end do; end do
           do k=1,nK; do j=1,nJ+1
-             VxB_z(nI+1,j,k,iBlock) = -Flux_VY(Bx_,nI,j,k)/CellFace_DB(2,iBlock)
+             VxB_z(nI+1,j,k,iBlock) = -Flux_VYI(Bx_,nI,j,k,1) /CellFace_DB(2,iBlock)
           end do; end do
        end select
     end if
     if(neiLsouth(iBlock)==NOBLK)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,1,k,iBlock) = -Flux_VZ(By_,i,1,k)/CellFace_DB(3,iBlock)
+          VxB_x(i,1,k,iBlock) = -Flux_VZI(By_,i,1,k,1) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,1,k,iBlock) = +Flux_VX(By_,i,1,k)/CellFace_DB(1,iBlock)
+          VxB_z(i,1,k,iBlock) = +Flux_VXI(By_,i,1,k,1) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLnorth(iBlock)==NOBLK)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,nJ+1,k,iBlock) = -Flux_VZ(By_,i,nJ,k)/CellFace_DB(3,iBlock)
+          VxB_x(i,nJ+1,k,iBlock) = -Flux_VZI(By_,i,nJ,k,1) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,nJ+1,k,iBlock) = +Flux_VX(By_,i,nJ,k)/CellFace_DB(1,iBlock)
+          VxB_z(i,nJ+1,k,iBlock) = +Flux_VXI(By_,i,nJ,k,1) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLbot(iBlock)==NOBLK)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,1,iBlock) = +Flux_VY(Bz_,i,j,1)/CellFace_DB(2,iBlock)
+          VxB_x(i,j,1,iBlock) = +Flux_VYI(Bz_,i,j,1,1) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,1,iBlock) = -Flux_VX(Bz_,i,j,1)/CellFace_DB(1,iBlock)
+          VxB_y(i,j,1,iBlock) = -Flux_VXI(Bz_,i,j,1,1) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLtop(iBlock)==NOBLK)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,nK+1,iBlock) = +Flux_VY(Bz_,i,j,nK)/CellFace_DB(2,iBlock)
+          VxB_x(i,j,nK+1,iBlock) = +Flux_VYI(Bz_,i,j,nK,1) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,nK+1,iBlock) = -Flux_VX(Bz_,i,j,nK)/CellFace_DB(1,iBlock)
+          VxB_y(i,j,nK+1,iBlock) = -Flux_VXI(Bz_,i,j,nK,1) /CellFace_DB(1,iBlock)
        end do; end do
     end if
 

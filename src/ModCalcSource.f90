@@ -215,11 +215,11 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-             DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
+             DivU = uDotArea_XII(i+1,j,k,iFluid,1) - uDotArea_XII(i,j,k,iFluid,1)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
+                  + uDotArea_YII(i,j+1,k,iFluid,1) - uDotArea_YII(i,j,k,iFluid,1)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
+                  + uDotArea_ZII(i,j,k+1,iFluid,1) - uDotArea_ZII(i,j,k,iFluid,1)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
@@ -263,17 +263,17 @@ contains
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
-             DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
+             DivU = uDotArea_XII(i+1,j,k,eFluid_,1) - uDotArea_XII(i,j,k,eFluid_,1)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
+                  + uDotArea_YII(i,j+1,k,eFluid_,1) - uDotArea_YII(i,j,k,eFluid_,1)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_)
+                  + uDotArea_ZII(i,j,k+1,eFluid_,1) - uDotArea_ZII(i,j,k,eFluid_,1)
           else
-             DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+             DivU = uDotArea_XII(i+1,j,k,1,1) - uDotArea_XII(i,j,k,1,1)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+                  + uDotArea_YII(i,j+1,k,1,1) - uDotArea_YII(i,j,k,1,1)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+                  + uDotArea_ZII(i,j,k+1,1,1) - uDotArea_ZII(i,j,k,1,1)
           end if
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
@@ -404,11 +404,11 @@ contains
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
+          DivU = uDotArea_XII(i+1,j,k,eFluid_,1) - uDotArea_XII(i,j,k,eFluid_,1)
           if(nJ > 1) DivU = DivU &
-               + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
+               + uDotArea_YII(i,j+1,k,eFluid_,1) - uDotArea_YII(i,j,k,eFluid_,1)
           if(nK > 1) DivU = DivU &
-               + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_)
+               + uDotArea_ZII(i,j,k+1,eFluid_,1) - uDotArea_ZII(i,j,k,eFluid_,1)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
@@ -822,9 +822,9 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
-          DivU            =        uDotArea_XI(i+1,j,k,1) -uDotArea_XI(i,j,k,1)
-          if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) -uDotArea_YI(i,j,k,1)
-          if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) -uDotArea_ZI(i,j,k,1)
+          DivU            =        uDotArea_XII(i+1,j,k,1,1) -uDotArea_XII(i,j,k,1,1)
+          if(nJ > 1) DivU = DivU + uDotArea_YII(i,j+1,k,1,1) -uDotArea_YII(i,j,k,1,1)
+          if(nK > 1) DivU = DivU + uDotArea_ZII(i,j,k+1,1,1) -uDotArea_ZII(i,j,k,1,1)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
@@ -863,35 +863,35 @@ contains
 
       if (DoTestCell) then
          write(*,*) 'iFluid =', iFluid
-         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i+1,j,  k)
-         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i,  j,  k)
-         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j+1,k)
-         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j,  k)
-         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k+1)
-         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k)
+         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i+1,j,  k,1)
+         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i,  j,  k,1)
+         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j+1,k,1)
+         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j,  k,1)
+         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k+1,1)
+         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k,1)
       end if
 
       ! Calculate gradient tensor of velocity
       if(IsCartesian) then
          GradU_DD(Dim1_,:) = &
-              ( LeftState_VX(iUx:iUz,i+1,j,k)   &
-              + RightState_VX(iUx:iUz,i+1,j,k)  &
-              - LeftState_VX(iUx:iUz,i,j,k)     &
-              - RightState_VX(iUx:iUz,i,j,k) )  &
+              ( LeftState_VXI(iUx:iUz,i+1,j,k,1)   &
+              + RightState_VXI(iUx:iUz,i+1,j,k,1)  &
+              - LeftState_VXI(iUx:iUz,i,j,k,1)     &
+              - RightState_VXI(iUx:iUz,i,j,k,1) )  &
               /(2*CellSize_DB(Dim1_,iBlock))
 
          if(nJ > 1) GradU_DD(Dim2_,:) = &
-              ( LeftState_VY(iUx:iUz,i,j+1,k)   &
-              + RightState_VY(iUx:iUz,i,j+1,k)  &
-              - LeftState_VY(iUx:iUz,i,j,k)     &
-              - RightState_VY(iUx:iUz,i,j,k) )  &
+              ( LeftState_VYI(iUx:iUz,i,j+1,k,1)   &
+              + RightState_VYI(iUx:iUz,i,j+1,k,1)  &
+              - LeftState_VYI(iUx:iUz,i,j,k,1)     &
+              - RightState_VYI(iUx:iUz,i,j,k,1) )  &
               /(2*CellSize_DB(Dim2_,iBlock))
 
          if(nK > 1) GradU_DD(Dim3_,:) = &
-              ( LeftState_VZ(iUx:iUz,i,j,k+1)   &
-              + RightState_VZ(iUx:iUz,i,j,k+1)  &
-              - LeftState_VZ(iUx:iUz,i,j,k)     &
-              - RightState_VZ(iUx:iUz,i,j,k) )  &
+              ( LeftState_VZI(iUx:iUz,i,j,k+1,1)   &
+              + RightState_VZI(iUx:iUz,i,j,k+1,1)  &
+              - LeftState_VZI(iUx:iUz,i,j,k,1)     &
+              - RightState_VZI(iUx:iUz,i,j,k,1) )  &
               /(2*CellSize_DB(Dim3_,iBlock))
 
       else if(IsRzGeometry) then
@@ -901,31 +901,31 @@ contains
             iVar = iUx - 1 + iDir
 
             GradU_DD(:,iDir) = &
-                 0.5*(LeftState_VX(iVar,i+1,j,k) &
-                 + RightState_VX(iVar,i+1,j,k))* &
+                 0.5*(LeftState_VXI(iVar,i+1,j,k,1) &
+                 + RightState_VXI(iVar,i+1,j,k,1))* &
                  FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                 - 0.5*(LeftState_VX(iVar,i,j,k) &
-                 + RightState_VX(iVar,i,j,k))* &
+                 - 0.5*(LeftState_VXI(iVar,i,j,k,1) &
+                 + RightState_VXI(iVar,i,j,k,1))* &
                  FaceNormal_DDFB(:,1,i,j,k,iBlock)
 
             if(nJ == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VY(iVar,i,j+1,k) &
-                 + RightState_VY(iVar,i,j+1,k))* &
+                 0.5*(LeftState_VYI(iVar,i,j+1,k,1) &
+                 + RightState_VYI(iVar,i,j+1,k,1))* &
                  FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                 - 0.5*(LeftState_VY(iVar,i,j,k) &
-                 + RightState_VY(iVar,i,j,k))* &
+                 - 0.5*(LeftState_VYI(iVar,i,j,k,1) &
+                 + RightState_VYI(iVar,i,j,k,1))* &
                  FaceNormal_DDFB(:,2,i,j,k,iBlock)
 
             if(nK == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VZ(iVar,i,j,k+1) &
-                 + RightState_VZ(iVar,i,j,k+1))* &
+                 0.5*(LeftState_VZI(iVar,i,j,k+1,1) &
+                 + RightState_VZI(iVar,i,j,k+1,1))* &
                  FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                 - 0.5*(LeftState_VZ(iVar,i,j,k) &
-                 + RightState_VZ(iVar,i,j,k))* &
+                 - 0.5*(LeftState_VZI(iVar,i,j,k,1) &
+                 + RightState_VZI(iVar,i,j,k,1))* &
                  FaceNormal_DDFB(:,3,i,j,k,iBlock)
          end do
 
@@ -954,10 +954,10 @@ contains
       GradU_DD = 0.0
 
       ! Obtain the uPlus_D on the corresponding faces
-      call get_uPlus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
-      call get_uPlus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
-      call get_uPlus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
-      call get_uPlus(RightState_VX(:,i,  j,k), uPlusRight_D )
+      call get_uPlus(LeftState_VXI( :,i+1,j,k,1), uPlusLeft1_D )
+      call get_uPlus(LeftState_VXI( :,i,  j,k,1), uPlusLeft_D  )
+      call get_uPlus(RightState_VXI(:,i+1,j,k,1), uPlusRight1_D)
+      call get_uPlus(RightState_VXI(:,i,  j,k,1), uPlusRight_D )
 
       ! Calculate gradient tensor of u_plus
       if(IsCartesian) then
@@ -967,10 +967,10 @@ contains
 
          if(nJ > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VY( :,i,j+1,k), uPlusLeft1_D )
-            call get_uPlus(LeftState_VY( :,i,j,  k), uPlusLeft_D  )
-            call get_uPlus(RightState_VY(:,i,j+1,k), uPlusRight1_D)
-            call get_uPlus(RightState_VY(:,i,j,  k), uPlusRight_D )
+            call get_uPlus(LeftState_VYI( :,i,j+1,k,1), uPlusLeft1_D )
+            call get_uPlus(LeftState_VYI( :,i,j,  k,1), uPlusLeft_D  )
+            call get_uPlus(RightState_VYI(:,i,j+1,k,1), uPlusRight1_D)
+            call get_uPlus(RightState_VYI(:,i,j,  k,1), uPlusRight_D )
 
             GradU_DD(Dim2_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -979,10 +979,10 @@ contains
 
          if(nK > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_D )
-            call get_uPlus(LeftState_VZ( :,i,j,k  ), uPlusLeft_D  )
-            call get_uPlus(RightState_VZ(:,i,j,k+1), uPlusRight1_D)
-            call get_uPlus(RightState_VZ(:,i,j,k  ), uPlusRight_D )
+            call get_uPlus(LeftState_VZI( :,i,j,k+1,1), uPlusLeft1_D )
+            call get_uPlus(LeftState_VZI( :,i,j,k,  1), uPlusLeft_D  )
+            call get_uPlus(RightState_VZI(:,i,j,k+1,1), uPlusRight1_D)
+            call get_uPlus(RightState_VZI(:,i,j,k,  1), uPlusRight_D )
 
             GradU_DD(Dim3_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -1036,8 +1036,8 @@ contains
 
       !$acc data present(SourceMhd_VC, Source_VC, &
       !$acc& DivB1_GB, CellSize_DB, true_cell, &
-      !$acc& LeftState_VX,LeftState_VY,LeftState_VZ, &
-      !$acc& RightState_VX,RightState_VY,RightState_VZ)
+      !$acc& LeftState_VXI, LeftState_VYI, LeftState_VZI, &
+      !$acc& RightState_VXI, RightState_VYI, RightState_VZI)
       
       !$acc parallel loop gang vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1051,35 +1051,35 @@ contains
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
-                 (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
+                 (RightState_VXI(Bx_,i,j,k,1)-LeftState_VXI(Bx_,i,j,k,1))
 
             dB1nFace2 = DxInvHalf*&
-                 (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
+                 (RightState_VXI(Bx_,i+1,j,k,1)-LeftState_VXI(Bx_,i+1,j,k,1))
 
             if(nJ > 1)then
                dB1nFace3 = DyInvHalf* &
-                    (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
+                    (RightState_VYI(By_,i,j,k,1)-LeftState_VYI(By_,i,j,k,1))
 
                dB1nFace4 = DyInvHalf* &
-                    (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
+                    (RightState_VYI(By_,i,j+1,k,1)-LeftState_VYI(By_,i,j+1,k,1))
             end if
 
             if(nK > 1)then
                dB1nFace5 = DzInvHalf * &
-                    (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
+                    (RightState_VZI(Bz_,i,j,k,1)-LeftState_VZI(Bz_,i,j,k,1))
 
                dB1nFace6 = DzInvHalf * &
-                    (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+                    (RightState_VZI(Bz_,i,j,k+1,1)-LeftState_VZI(Bz_,i,j,k+1,1))
             end if
 
             DivBInternal_C(i,j,k) = &
-                 2*DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))
+                 2*DxInvHalf*(LeftState_VXI(Bx_,i+1,j,k,1) -RightState_VXI(Bx_,i,j,k,1))
 
             if(nJ > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))
+                 2*DyInvHalf*(LeftState_VYI(By_,i,j+1,k,1) -RightState_VYI(By_,i,j,k,1))
 
             if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
+                 2*DzInvHalf*(LeftState_VZI(Bz_,i,j,k+1,1) -RightState_VZI(Bz_,i,j,k,1))
 
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
@@ -1107,22 +1107,22 @@ contains
             ! Correct the face value so that the first order derivate is
             ! high-order accurate.
             BCorrect0 = correct_face_value( &
-                 0.5*(RightState_VX(Bx_,i,j,k) + LeftState_VX(Bx_,i,j,k)), &
+                 0.5*(RightState_VXI(Bx_,i,j,k,1) + LeftState_VXI(Bx_,i,j,k,1)), &
                  State_VGB(Bx_,i-2:i+1,j,k,iBlock))
 
             BCorrect1 = correct_face_value( &
-                 0.5*(LeftState_VX(Bx_,i+1,j,k) + RightState_VX(Bx_,i+1,j,k)), &
+                 0.5*(LeftState_VXI(Bx_,i+1,j,k,1) + RightState_VXI(Bx_,i+1,j,k,1)), &
                  State_VGB(Bx_,i-1:i+2,j,k,iBlock))
 
             DivB1_GB(i,j,k,iBlock) = 2*DxInvHalf*(BCorrect1 - BCorrect0)
 
             if(nJ>1) then
                BCorrect0 = correct_face_value( &
-                    0.5*(RightState_VY(By_,i,j,k) + LeftState_VY(By_,i,j,k)), &
+                    0.5*(RightState_VYI(By_,i,j,k,1) + LeftState_VYI(By_,i,j,k,1)), &
                     State_VGB(By_,i,j-2:j+1,k,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VY(By_,i,j+1,k)+RightState_VY(By_,i,j+1,k)),&
+                    0.5*(LeftState_VYI(By_,i,j+1,k,1)+RightState_VYI(By_,i,j+1,k,1)),&
                     State_VGB(By_,i,j-1:j+2,k,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
@@ -1131,11 +1131,11 @@ contains
 
             if(nK>1) then
                BCorrect0 = correct_face_value( &
-                    0.5*(RightState_VZ(Bz_,i,j,k) + LeftState_VZ(Bz_,i,j,k)), &
+                    0.5*(RightState_VZI(Bz_,i,j,k,1) + LeftState_VZI(Bz_,i,j,k,1)), &
                     State_VGB(Bz_,i,j,k-2:k+1,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VZ(Bz_,i,j,k+1)+RightState_VZ(Bz_,i,j,k+1)),&
+                    0.5*(LeftState_VZI(Bz_,i,j,k+1,1)+RightState_VZI(Bz_,i,j,k+1,1)),&
                     State_VGB(Bz_,i,j,k-1:k+2,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
@@ -1184,18 +1184,18 @@ contains
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
          B1nJumpL =VInvHalf*&
-              sum(FaceArea_D*(RightState_VX(Bx_:B_+nDim,i,j,k) &
-              -               LeftState_VX(Bx_:B_+nDim,i,j,k)))
+              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i,j,k,1) &
+              -               LeftState_VXI(Bx_:B_+nDim,i,j,k,1)))
          DivBInternal_C(i,j,k) = &
-              -sum(FaceArea_D*RightState_VX(Bx_:B_+nDim,i,j,k))
+              -sum(FaceArea_D*RightState_VXI(Bx_:B_+nDim,i,j,k,1))
 
          FaceArea_D = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)
          B1nJumpR =  VInvHalf*&
-              sum(FaceArea_D*(RightState_VX(Bx_:B_+nDim,i+1,j,k) &
-              -               LeftState_VX(Bx_:B_+nDim,i+1,j,k)))
+              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i+1,j,k,1) &
+              -               LeftState_VXI(Bx_:B_+nDim,i+1,j,k,1)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VX(Bx_:B_+nDim,i+1,j,k))
+              + sum(FaceArea_D*LeftState_VXI(Bx_:B_+nDim,i+1,j,k,1))
 
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
@@ -1217,18 +1217,18 @@ contains
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
          B1nJumpL = VInvHalf*&
-              sum(FaceArea_D*(RightState_VY(Bx_:B_+nDim,i,j,k) &
-              -               LeftState_VY(Bx_:B_+nDim,i,j,k)))
+              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j,k,1) &
+              -               LeftState_VYI(Bx_:B_+nDim,i,j,k,1)))
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              - sum(FaceArea_D*RightState_VY(Bx_:B_+nDim,i,j,k))
+              - sum(FaceArea_D*RightState_VYI(Bx_:B_+nDim,i,j,k,1))
 
          FaceArea_D =  FaceNormal_DDFB(:,2,i,j+1,k,iBlock)
          B1nJumpR = VInvHalf*&
-              sum(FaceArea_D*(RightState_VY(Bx_:B_+nDim,i,j+1,k) &
-              -               LeftState_VY(Bx_:B_+nDim,i,j+1,k)))
+              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j+1,k,1) &
+              -               LeftState_VYI(Bx_:B_+nDim,i,j+1,k,1)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VY(Bx_:B_+nDim,i,j+1,k))
+              + sum(FaceArea_D*LeftState_VYI(Bx_:B_+nDim,i,j+1,k,1))
 
          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
               + B1nJumpL + B1nJumpR
@@ -1252,19 +1252,19 @@ contains
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
             B1nJumpL = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZ(Bx_:B_+nDim,i,j,k) &
-                 -                LeftState_VZ(Bx_:B_+nDim,i,j,k)))
+                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k,1) &
+                 -                LeftState_VZI(Bx_:B_+nDim,i,j,k,1)))
 
             DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-                 - sum(FaceArea_D*RightState_VZ(Bx_:B_+nDim,i,j,k))
+                 - sum(FaceArea_D*RightState_VZI(Bx_:B_+nDim,i,j,k,1))
 
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
             B1nJumpR = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZ(Bx_:B_+nDim,i,j,k+1) &
-                 -               LeftState_VZ(Bx_:B_+nDim,i,j,k+1)))
+                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k+1,1) &
+                 -               LeftState_VZI(Bx_:B_+nDim,i,j,k+1,1)))
 
             DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
-                 sum(FaceArea_D*LeftState_VZ(Bx_:B_+nDim,i,j,k+1))) &
+                 sum(FaceArea_D*LeftState_VZI(Bx_:B_+nDim,i,j,k+1,1))) &
                  /CellVolume_GB(i,j,k,iBlock)
 
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
@@ -1323,9 +1323,9 @@ contains
     use ModMain,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
     use ModAdvance,    ONLY: DivB1_GB, &
-         LeftState_VX, RightState_VX, &
-         LeftState_VY, RightState_VY, &
-         LeftState_VZ, RightState_VZ
+         LeftState_VXI, RightState_VXI, &
+         LeftState_VYI, RightState_VYI, &
+         LeftState_VZI, RightState_VZI
 
     integer, intent(in) :: iBlock
 
@@ -1342,22 +1342,22 @@ contains
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DivB = InvDx* &
-            (  LeftState_VX(Bx_,i+1,j,k)  &
-            + RightState_VX(Bx_,i+1,j,k)  &
-            -  LeftState_VX(Bx_,i,j,k)    &
-            - RightState_VX(Bx_,i,j,k) )
+            (  LeftState_VXI(Bx_,i+1,j,k,1)  &
+            + RightState_VXI(Bx_,i+1,j,k,1)  &
+            -  LeftState_VXI(Bx_,i,j,k,1)    &
+            - RightState_VXI(Bx_,i,j,k,1) )
 
        if(nJ > 1) DivB = DivB + InvDy* &
-            (  LeftState_VY(By_,i,j+1,k)   &
-            + RightState_VY(By_,i,j+1,k)   &
-            -  LeftState_VY(By_,i,j,k)     &
-            - RightState_VY(By_,i,j,k) )
+            (  LeftState_VYI(By_,i,j+1,k,1)   &
+            + RightState_VYI(By_,i,j+1,k,1)   &
+            -  LeftState_VYI(By_,i,j,k,1)     &
+            - RightState_VYI(By_,i,j,k,1) )
 
        if(nK > 1) DivB = DivB + InvDz* &
-            (  LeftState_VZ(Bz_,i,j,k+1)    &
-            + RightState_VZ(Bz_,i,j,k+1)    &
-            -  LeftState_VZ(Bz_,i,j,k)      &
-            - RightState_VZ(Bz_,i,j,k) )
+            (  LeftState_VZI(Bz_,i,j,k+1,1)    &
+            + RightState_VZI(Bz_,i,j,k+1,1)    &
+            -  LeftState_VZI(Bz_,i,j,k,1)      &
+            - RightState_VZI(Bz_,i,j,k,1) )
 
        DivB1_GB(i,j,k,iBlock) = 0.5*DivB
 

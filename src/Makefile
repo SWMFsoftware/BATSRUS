@@ -110,6 +110,7 @@ OBJECTS = \
 	ModWritePlotLos.o \
 	ModWritePlotRadioWave.o \
 	ModWriteProgress.o \
+	ModFaceFluxParameters.o \
 	user_interface.o
 
 # Default user module

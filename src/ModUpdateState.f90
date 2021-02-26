@@ -58,23 +58,23 @@ contains
        end do
        write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
-            'X fluxes L,R =',Flux_VX(iVarTest,iTest,jTest,kTest),&
-            Flux_VX(iVarTest,iTest+1,jTest,kTest)
+            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,1) ,&
+            Flux_VXI(iVarTest,iTest+1,jTest,kTest,1) 
        write(*,'(2x,a,2es23.15)') &
-            'Y fluxes L,R =',Flux_VY(iVarTest,iTest,jTest,kTest),&
-            Flux_VY(iVarTest,iTest,jTest+1,kTest)
+            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,1) ,&
+            Flux_VYI(iVarTest,iTest,jTest+1,kTest,1) 
        write(*,'(2x,a,2es23.15)') &
-            'Z fluxes L,R =',Flux_VZ(iVarTest,iTest,jTest,kTest),&
-            Flux_VZ(iVarTest,iTest,jTest,kTest+1)
+            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,1) ,&
+            Flux_VZI(iVarTest,iTest,jTest,kTest+1,1) 
        write(*,'(2x,a,es23.15)')'source=',&
             Source_VC(iVarTest,iTest,jTest,kTest)
        write(*,'(2x,a,es23.15)')'fluxes=', &
-            +(Flux_VX(iVarTest,iTest,jTest,kTest) &
-            -Flux_VX(iVarTest,iTest+1,jTest,kTest)                        &
-            +Flux_VY(iVarTest,iTest,jTest,kTest)                          &
-            -Flux_VY(iVarTest,iTest,jTest+1,kTest)                        &
-            +Flux_VZ(iVarTest,iTest,jTest,kTest)                          &
-            -Flux_VZ(iVarTest,iTest,jTest,kTest+1) )                      &
+            +(Flux_VXI(iVarTest,iTest,jTest,kTest,1)  &
+            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,1)                         &
+            +Flux_VYI(iVarTest,iTest,jTest,kTest,1)                           &
+            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,1)                         &
+            +Flux_VZI(iVarTest,iTest,jTest,kTest,1)                           &
+            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,1)  )                      &
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
 
@@ -204,7 +204,7 @@ contains
        end do; end do; end do
     end if
     
-    !$acc data present(Source_VC,Flux_VX,Flux_VY,Flux_VZ, CellVolume_GB, &
+    !$acc data present(Source_VC,Flux_VXI,Flux_VYI,Flux_VZI, CellVolume_GB, &
     !$acc& time_BLK) 
 
     !$acc parallel loop collapse(4)
@@ -212,9 +212,9 @@ contains
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
        Source_VC(iVar,i,j,k) = &
             DtLocal* (Source_VC(iVar,i,j,k) + &
-            ( Flux_VX(iVar,i,j,k) - Flux_VX(iVar,i+1,j,k) &
-            + Flux_VY(iVar,i,j,k) - Flux_VY(iVar,i,j+1,k) &
-            + Flux_VZ(iVar,i,j,k) - Flux_VZ(iVar,i,j,k+1) ) &
+            ( Flux_VXI(iVar,i,j,k,1)  - Flux_VXI(iVar,i+1,j,k,1)  &
+            + Flux_VYI(iVar,i,j,k,1)  - Flux_VYI(iVar,i,j+1,k,1)  &
+            + Flux_VZI(iVar,i,j,k,1)  - Flux_VZI(iVar,i,j,k+1,1)  ) &
             /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do; end do 
     !$acc end data
@@ -227,39 +227,39 @@ contains
                /  (24.0*CellVolume_GB(i,j,k,iBlock))
           ! Add f
           Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
-               ( Flux_VX(:,i,j+1,k) &
-               + Flux_VX(:,i,j-1,k) &
-               - 2*(nDim-1)*Flux_VX(:,i,j,k) &
-               - Flux_VX(:,i+1,j+1,k) &
-               - Flux_VX(:,i+1,j-1,k) &
-               + 2*(nDim-1)*Flux_VX(:,i+1,j,k) &
-               + Flux_VY(:,i+1,j,k) &
-               + Flux_VY(:,i-1,j,k) &
-               - 2*(nDim-1)*Flux_VY(:,i,j,k) &
-               - Flux_VY(:,i+1,j+1,k) &
-               - Flux_VY(:,i-1,j+1,k) &
-               + 2*(nDim-1)*Flux_VY(:,i,j+1,k) )
+               ( Flux_VXI(:,i,j+1,k,1)  &
+               + Flux_VXI(:,i,j-1,k,1)  &
+               - 2*(nDim-1)*Flux_VXI(:,i,j,k,1)  &
+               - Flux_VXI(:,i+1,j+1,k,1)  &
+               - Flux_VXI(:,i+1,j-1,k,1)  &
+               + 2*(nDim-1)*Flux_VXI(:,i+1,j,k,1)  &
+               + Flux_VYI(:,i+1,j,k,1)  &
+               + Flux_VYI(:,i-1,j,k,1)  &
+               - 2*(nDim-1)*Flux_VYI(:,i,j,k,1)  &
+               - Flux_VYI(:,i+1,j+1,k,1)  &
+               - Flux_VYI(:,i-1,j+1,k,1)  &
+               + 2*(nDim-1)*Flux_VYI(:,i,j+1,k,1)  )
           if(nK == 1) CYCLE
           ! Remaining terms for 3D
           Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
-               ( Flux_VX(:,i,j,k+1) &
-               + Flux_VX(:,i,j,k-1) &
-               - Flux_VX(:,i+1,j,k+1) &
-               - Flux_VX(:,i+1,j,k-1) &
-               + Flux_VY(:,i,j,k+1) &
-               + Flux_VY(:,i,j,k-1) &
-               - Flux_VY(:,i,j+1,k+1) &
-               - Flux_VY(:,i,j+1,k-1) &
-               + Flux_VZ(:,i+1,j,k) &
-               + Flux_VZ(:,i-1,j,k) &
-               + Flux_VZ(:,i,j+1,k) &
-               + Flux_VZ(:,i,j-1,k) &
-               - 4*Flux_VZ(:,i,j,k) &
-               - Flux_VZ(:,i+1,j,k+1) &
-               - Flux_VZ(:,i-1,j,k+1) &
-               - Flux_VZ(:,i,j+1,k+1) &
-               - Flux_VZ(:,i,j-1,k+1) &
-               + 4*Flux_VZ(:,i,j,k+1) )
+               ( Flux_VXI(:,i,j,k+1,1)  &
+               + Flux_VXI(:,i,j,k-1,1)  &
+               - Flux_VXI(:,i+1,j,k+1,1)  &
+               - Flux_VXI(:,i+1,j,k-1,1)  &
+               + Flux_VYI(:,i,j,k+1,1)  &
+               + Flux_VYI(:,i,j,k-1,1)  &
+               - Flux_VYI(:,i,j+1,k+1,1)  &
+               - Flux_VYI(:,i,j+1,k-1,1)  &
+               + Flux_VZI(:,i+1,j,k,1)  &
+               + Flux_VZI(:,i-1,j,k,1)  &
+               + Flux_VZI(:,i,j+1,k,1)  &
+               + Flux_VZI(:,i,j-1,k,1)  &
+               - 4*Flux_VZI(:,i,j,k,1)  &
+               - Flux_VZI(:,i+1,j,k+1,1)  &
+               - Flux_VZI(:,i-1,j,k+1,1)  &
+               - Flux_VZI(:,i,j+1,k+1,1)  &
+               - Flux_VZI(:,i,j-1,k+1,1)  &
+               + 4*Flux_VZI(:,i,j,k+1,1)  )
 
        end do; end do; end do
     end if

@@ -29,6 +29,7 @@ module ModRadDiffusion
   use ModImplicit,    ONLY: UseAccurateRadiation
   use ModVarIndexes,  ONLY: p_, nWave
   use BATL_size,      ONLY: nDim, MaxDim
+  use ModAdvance,     ONLY: StateLeft_, StateRight_, Normal_
 
   implicit none
   save
@@ -290,24 +291,34 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux(FFV)
+  subroutine get_radiation_energy_flux( FFLog_I, FFInt_I, FFReal_I)
 
-    use ModAdvance,      ONLY: State_VGB, Erad_, FaceFluxVarType
+    use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
+    use ModFaceFluxParameters
 
-    type(FaceFluxVarType), intent(inout) :: FFV
+    
+    logical, dimension(:), target, intent(inout):: FFLog_I
+    integer, dimension(:), target, intent(inout):: FFInt_I
+    real, dimension(:), target, intent(inout):: FFReal_I
+    real, dimension(:), pointer:: StateLeft_V
+    real, dimension(:), pointer:: StateRight_V
+    real, dimension(:), pointer:: Normal_D
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
+    Normal_D => FFReal_I(Normal_:Normal_+MaxDim-1)
+    StateRight_V => FFReal_I(StateRight_:StateRight_+nVar-1)
+    StateLeft_V => FFReal_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-      i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
-      RadDiffCoef => FFV%RadDiffCoef, &
-      EradFlux => FFV%EradFlux, &
-      IsNewBlockRadDiffusion => FFV%IsNewBlockRadDiffusion )
+      iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+      i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_), &
+      RadDiffCoef => FFReal_I(RadDiffCoef_), &
+      EradFlux => FFReal_I(EradFlux_), &
+      IsNewBlockRadDiffusion => FFLog_I(IsNewBlockRadDiffusion_) )
 
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
@@ -316,8 +327,8 @@ contains
          Erad_WG, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
-       call get_diffusion_coef(FFV%StateLeft_V, DiffCoefL)
-       call get_diffusion_coef(FFV%StateRight_V, DiffCoefR)
+       call get_diffusion_coef(StateLeft_V, DiffCoefL)
+       call get_diffusion_coef(StateRight_V, DiffCoefR)
 
        RadDiffCoef = 0.5*(DiffCoefL + DiffCoefR)
        DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = RadDiffCoef
@@ -325,7 +336,7 @@ contains
        RadDiffCoef = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux = -RadDiffCoef*sum(FFV%Normal_D*FaceGrad_D)
+    EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
     end associate
   contains
@@ -343,8 +354,8 @@ contains
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
       associate( &
-         iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-         i => FFV%iFace, j => FFV%jFace, k => FFV%kFace )
+         iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+         i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_) )
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)
