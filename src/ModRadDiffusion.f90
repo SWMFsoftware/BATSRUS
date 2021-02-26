@@ -291,14 +291,16 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux(FFV, RealArg_I)
+  subroutine get_radiation_energy_flux( LogArg_I, IntArg_I, RealArg_I)
 
-    use ModAdvance,      ONLY: State_VGB, Erad_, FaceFluxVarType
+    use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
     use ModFaceFluxParameters
 
-    type(FaceFluxVarType), intent(inout) :: FFV
+    
+    logical, dimension(:), target, intent(inout):: LogArg_I
+    integer, dimension(:), target, intent(inout):: IntArg_I
     real, dimension(:), target, intent(inout):: RealArg_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
@@ -312,11 +314,11 @@ contains
     StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
     StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-      i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
+      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
+      i => IntArg_I(iFace_), j => IntArg_I(jFace_), k => IntArg_I(kFace_), &
       RadDiffCoef => RealArg_I(RadDiffCoef_), &
       EradFlux => RealArg_I(EradFlux_), &
-      IsNewBlockRadDiffusion => FFV%IsNewBlockRadDiffusion )
+      IsNewBlockRadDiffusion => LogArg_I(IsNewBlockRadDiffusion_) )
 
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
@@ -352,8 +354,8 @@ contains
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
       associate( &
-         iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-         i => FFV%iFace, j => FFV%jFace, k => FFV%kFace )
+         iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
+         i => IntArg_I(iFace_), j => IntArg_I(jFace_), k => IntArg_I(kFace_) )
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)

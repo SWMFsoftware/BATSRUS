@@ -24,35 +24,7 @@ module ModAdvance
   public :: init_mod_advance
   public :: clean_mod_advance
   public :: init_face_flux_var_type
-  
-  type, public :: FaceFluxVarType
-     ! index of cell in the negative and positive directions from face
-     integer :: iLeft,  jLeft, kLeft
-     integer :: iRight, jRight, kRight
-     ! Index of the block for this face, iBlockFace = iBlock
-     integer :: iBlockFace
-     ! Direction of the face iDimFace = iDim
-     integer :: iDimFace
-     ! Range of fluid and variable indexes for the current solver
-     integer:: iFluidMin, iFluidMax
-     integer:: iVarMin, iVarMax
-     integer:: iEnergyMin, iEnergyMax
-     ! index of the face
-     integer :: iFace, jFace, kFace
-     ! Maximum speed for the Courant condition
-     logical :: UseHallGradPe
-     logical :: IsBoundary
-     logical :: DoTestCell
-     ! Logicals for computation once per block
-     logical :: IsNewBlockVisco
-     logical :: IsNewBlockGradPe
-     logical :: IsNewBlockCurrent
-     logical :: IsNewBlockHeatCond
-     logical :: IsNewBlockIonHeatCond
-     logical :: IsNewBlockRadDiffusion
-     logical :: IsNewBlockAlfven
-  end type FaceFluxVarType
-  
+    
   ! Numerical flux type
   character (len=10) :: FluxType
 
@@ -416,9 +388,11 @@ contains
   end subroutine clean_mod_advance
   !============================================================================
 
-  subroutine init_face_flux_var_type(FFV, RealArg_I)
+  subroutine init_face_flux_var_type( LogArg_I, IntArg_I, RealArg_I)
     !$acc routine seq
-    type(FaceFluxVarType), intent(inout) :: FFV
+    
+    logical, dimension(:), target, intent(inout):: LogArg_I
+    integer, dimension(:), target, intent(inout):: IntArg_I
     real, dimension(:), target, intent(inout):: RealArg_I
     real, dimension(:), pointer:: Unormal_I
     real, dimension(:), pointer:: bCrossArea_D
@@ -431,12 +405,12 @@ contains
     bCrossArea_D => RealArg_I(bCrossArea_:bCrossArea_+MaxDim-1)
     Unormal_I => RealArg_I(Unormal_:Unormal_+nFluid+1-1)
     
-    FFV%iFluidMin = 1
-    FFV%iFluidMax = nFluid
-    FFV%iVarMin = 1
-    FFV%iVarMax = nVar
-    FFV%iEnergyMin = nVar + 1
-    FFV%iEnergyMax = nVar + nFluid
+    IntArg_I(iFluidMin_) = 1
+    IntArg_I(iFluidMax_) = nFluid
+    IntArg_I(iVarMin_) = 1
+    IntArg_I(iVarMax_) = nVar
+    IntArg_I(iEnergyMin_) = nVar + 1
+    IntArg_I(iEnergyMax_) = nVar + nFluid
 
     Unormal_I = 0.0
     RealArg_I(EradFlux_) = 0.0
@@ -445,17 +419,17 @@ contains
     RealArg_I(B0y_) = 0.0
     RealArg_I(B0z_) = 0.0 
     
-    FFV%UseHallGradPe = .false.
+    LogArg_I(UseHallGradPe_) = .false.
 
-    FFV%DoTestCell = .false.
+    LogArg_I(DoTestCell_) = .false.
 
-    FFV%IsNewBlockVisco = .true.
-    FFV%IsNewBlockGradPe = .true.
-    FFV%IsNewBlockCurrent = .true.
-    FFV%IsNewBlockHeatCond = .true.
-    FFV%IsNewBlockIonHeatCond = .true.
-    FFV%IsNewBlockRadDiffusion = .true.
-    FFV%IsNewBlockAlfven = .true.
+    LogArg_I(IsNewBlockVisco_) = .true.
+    LogArg_I(IsNewBlockGradPe_) = .true.
+    LogArg_I(IsNewBlockCurrent_) = .true.
+    LogArg_I(IsNewBlockHeatCond_) = .true.
+    LogArg_I(IsNewBlockIonHeatCond_) = .true.
+    LogArg_I(IsNewBlockRadDiffusion_) = .true.
+    LogArg_I(IsNewBlockAlfven_) = .true.
         
   end subroutine init_face_flux_var_type
   !============================================================================

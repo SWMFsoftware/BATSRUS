@@ -1,14 +1,47 @@
 module ModFaceFluxParameters
-  
+
   use ModSize,       ONLY: MaxDim
   use ModVarIndexes, ONLY: nVar, nFluid
-  
+
   implicit none
+
+  integer, parameter :: nFFLogicArg = 10
+  integer, parameter :: &
+     IsNewBlockVisco_          = 1, &
+     IsNewBlockGradPe_         = IsNewBlockVisco_ + 1, &
+     IsNewBlockCurrent_        = IsNewBlockGradPe_ + 1, &
+     IsNewBlockHeatCond_       = IsNewBlockCurrent_ + 1, &
+     IsNewBlockIonHeatCond_    = IsNewBlockHeatCond_ + 1, &
+     IsNewBlockRadDiffusion_   = IsNewBlockIonHeatCond_ + 1, &
+     IsNewBlockAlfven_         = IsNewBlockRadDiffusion_ + 1, &
+     UseHallGradPe_            = IsNewBlockAlfven_ + 1, &
+     IsBoundary_               = UseHallGradPe_ + 1, &
+     DoTestCell_               = IsBoundary_ + 1
+
+  integer, parameter :: nFFIntArg = 17
+  integer, parameter :: &
+       iLeft_           = 1, &
+       jLeft_           = iLeft_ + 1, &
+       kleft_           = jleft_ + 1, &
+       iRight_          = kleft_ + 1, &
+       jRight_          = iRight_ + 1, &
+       kRight_          = jRight_ + 1, &
+       iBlockFace_      = kRight_ + 1, &
+       iDimFace_        = iBlockFace_ + 1, &
+       iFluidMin_       = iDimFace_ + 1, &
+       iFluidMax_       = iFluidMin_ + 1, &
+       iVarMin_         = iFluidMax_ + 1, &
+       iVarMax_         = iVarMin_ + 1, &
+       iEnergyMin_      = iVarMax_ + 1, &
+       iEnergyMax_      = iEnergyMin_ + 1, &
+       iFace_           = iEnergyMax_ + 1, &
+       jFace_           = iFace_ + 1, &
+       kFace_           = jFace_ + 1
 
   integer, parameter :: nFFRealArg = &
        2*nVar + 2*(nVar+nFluid) + 7*MaxDim + 3*(nFluid+1) & ! Arrays
        + 53 ! Scalars
-  
+
   integer, parameter :: &
        StateLeft_       = 1, &
        StateRight_      = StateLeft_ + nVar, &
@@ -77,9 +110,5 @@ module ModFaceFluxParameters
        ViscoCoeff_      = B0z_ + 1, &
        InvClightFace_   = ViscoCoeff_ + 1, &
        InvClight2Face_  = InvClightFace_ + 1
-
-
-
-
 
 end module ModFaceFluxParameters

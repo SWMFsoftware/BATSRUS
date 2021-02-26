@@ -330,12 +330,11 @@ contains
   end subroutine init_heat_conduction
   !============================================================================
 
-  subroutine get_heat_flux(FFV, RealArg_I)
+  subroutine get_heat_flux( LogArg_I, IntArg_I, RealArg_I)
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
-         FaceFluxVarType
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure         
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, InvGammaElectronMinus1
@@ -348,7 +347,9 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
-    type(FaceFluxVarType), intent(inout) :: FFV
+    
+    logical, dimension(:), target, intent(inout):: LogArg_I
+    integer, dimension(:), target, intent(inout):: IntArg_I
     real, dimension(:), target, intent(inout):: RealArg_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
@@ -370,11 +371,11 @@ contains
     StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
     StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
+      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
+      iFace => IntArg_I(iFace_), jFace => IntArg_I(jFace_), kFace => IntArg_I(kFace_), &
       HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
       HeatFlux => RealArg_I(HeatFlux_), &
-      IsNewBlockHeatCond => FFV%IsNewBlockHeatCond )
+      IsNewBlockHeatCond => LogArg_I(IsNewBlockHeatCond_) )
 
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
@@ -597,15 +598,17 @@ contains
   end subroutine get_heat_cond_coef
   !============================================================================
 
-  subroutine get_ion_heat_flux(FFV, RealArg_I)
+  subroutine get_ion_heat_flux( LogArg_I, IntArg_I, RealArg_I)
 
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, FaceFluxVarType
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
-    type(FaceFluxVarType), intent(inout) :: FFV
+    
+    logical, dimension(:), target, intent(inout):: LogArg_I
+    integer, dimension(:), target, intent(inout):: IntArg_I
     real, dimension(:), target, intent(inout):: RealArg_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
@@ -621,11 +624,11 @@ contains
     StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
     StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
-      iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
+      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
+      iFace => IntArg_I(iFace_), jFace => IntArg_I(jFace_), kFace => IntArg_I(kFace_), &
       HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
       HeatFlux => RealArg_I(HeatFlux_), &
-      IsNewBlockIonHeatCond => FFV%IsNewBlockIonHeatCond )
+      IsNewBlockIonHeatCond => LogArg_I(IsNewBlockIonHeatCond_) )
 
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
