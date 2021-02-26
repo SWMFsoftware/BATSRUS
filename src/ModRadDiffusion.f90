@@ -296,6 +296,7 @@ contains
     use ModAdvance,      ONLY: State_VGB, Erad_, FaceFluxVarType
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
+    use ModFaceFluxParameters
 
     type(FaceFluxVarType), intent(inout) :: FFV
     real, dimension(:), target, intent(inout):: RealArg_I
@@ -313,8 +314,8 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       i => FFV%iFace, j => FFV%jFace, k => FFV%kFace, &
-      RadDiffCoef => FFV%RadDiffCoef, &
-      EradFlux => FFV%EradFlux, &
+      RadDiffCoef => RealArg_I(RadDiffCoef_), &
+      EradFlux => RealArg_I(EradFlux_), &
       IsNewBlockRadDiffusion => FFV%IsNewBlockRadDiffusion )
 
     if(IsNewBlockRadDiffusion) &

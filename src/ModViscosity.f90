@@ -226,6 +226,7 @@ contains
     use ModMultiFluid, ONLY: select_fluid, nFluid, iRho, iRhoUx
     use ModFaceGradient, ONLY: get_face_gradient_field
     use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
+    use ModFaceFluxParameters
 
     type(FaceFluxVarType), intent(inout) :: FFV
     real, dimension(:), target, intent(inout):: RealArg_I
@@ -241,7 +242,7 @@ contains
       iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
-      ViscoCoeff => FFV%ViscoCoeff, &
+      ViscoCoeff => RealArg_I(ViscoCoeff_), &
       IsNewBlockVisco => FFV%IsNewBlockVisco )
 
     ! Get velocity vector for the block, only done once per block

@@ -9,8 +9,8 @@ module ModPartImplicit
        iProcTest, iVarTest, iProc, nProc, iComm
 
   use ModImplicit
-  use ModAdvance, ONLY: FaceFluxVarType, init_face_flux_var_type, &
-       nFFRealArg, UnLeft_, UnRight_
+  use ModAdvance, ONLY: FaceFluxVarType, init_face_flux_var_type
+  use ModFaceFluxParameters
 
   implicit none
   private ! except
@@ -2277,9 +2277,9 @@ contains
     character(len=*), parameter:: NameSub = 'get_face_flux'
     !--------------------------------------------------------------------------
     call init_face_flux_var_type(FFV, RealArg_I)
-    associate(B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
-      Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
+    associate(B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      HallJx => RealArg_I(HallJx_), HallJy => RealArg_I(HallJy_), HallJz => RealArg_I(HallJz_), &
+      Area => RealArg_I(Area_), DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       UseHallGradPe => FFV%UseHallGradPe )
 
@@ -2356,8 +2356,8 @@ contains
     UnRight_I => RealArg_I(UnRight_:UnRight_+nFluid+1-1)
     UnLeft_I => RealArg_I(UnLeft_:UnLeft_+nFluid+1-1)
     call init_face_flux_var_type(FFV, RealArg_I)
-    associate( B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      CmaxDt => FFV%CmaxDt, Area => FFV%Area, DoTestCell => FFV%DoTestCell, &
+    associate( B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      CmaxDt => RealArg_I(CmaxDt_), Area => RealArg_I(Area_), DoTestCell => FFV%DoTestCell, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace )
 
     call test_start(NameSub, DoTest, iBlock)

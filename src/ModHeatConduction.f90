@@ -10,7 +10,7 @@ module ModHeatConduction
 #endif
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
-  use ModAdvance,     ONLY: StateLeft_, StateRight_, Normal_
+  use ModFaceFluxParameters
   use BATL_size, ONLY: nDim, MaxDim
   use omp_lib
 
@@ -372,8 +372,8 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
-      HeatFlux => FFV%HeatFlux, &
+      HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
+      HeatFlux => RealArg_I(HeatFlux_), &
       IsNewBlockHeatCond => FFV%IsNewBlockHeatCond )
 
     if(UseFieldLineThreads)then
@@ -623,8 +623,8 @@ contains
     associate( &
       iDir => FFV%iDimFace, iBlock => FFV%iBlockFace, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
-      HeatFlux => FFV%HeatFlux, &
+      HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
+      HeatFlux => RealArg_I(HeatFlux_), &
       IsNewBlockIonHeatCond => FFV%IsNewBlockIonHeatCond )
 
     if(IsNewBlockIonHeatCond)then

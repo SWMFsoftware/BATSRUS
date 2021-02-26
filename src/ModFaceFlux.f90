@@ -32,11 +32,8 @@ module ModFaceFlux
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
-       UseLowOrder, IsLowOrderOnly_B, init_face_flux_var_type, &
-       nFFRealArg, StateLeft_, StateRight_, FluxLeft_, FLuxRight_, &
-       Normal_, Tangent1_, Tangent2_, MhdFlux_, MhdFluxLeft_, &
-       MhdFluxRight_, Unormal_, UnLeft_, UnRight_, bCrossArea_   
-
+       UseLowOrder, IsLowOrderOnly_B, init_face_flux_var_type
+  use ModFaceFluxParameters
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        HallFactor_DF, set_hall_factor_face, &
@@ -234,10 +231,10 @@ contains
     Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
     associate( &
       iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
-      Area2 => FFV%Area2, Area => FFV%Area, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
-      InvDxyz => FFV%InvDxyz, &
-      NormalX => FFV%NormalX, NormalY => FFV%NormalY, NormalZ =>FFV%NormalZ )
+      Area2 => RealArg_I(Area2_), Area => RealArg_I(Area_), &
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_), &
+      InvDxyz => RealArg_I(InvDxyz_), &
+      NormalX => RealArg_I(NormalX_), NormalY => RealArg_I(NormalY_), NormalZ =>RealArg_I(NormalZ_) )
 #ifndef OPENACC
       call test_start(NameSub, DoTest, iBlock)
 #endif
@@ -486,26 +483,26 @@ contains
           endif
 
           if(UseB0)then
-             FFV%B0x = B0_DX(x_,iFace,jFace,kFace)
-             FFV%B0y = B0_DX(y_,iFace,jFace,kFace)
-             FFV%B0z = B0_DX(z_,iFace,jFace,kFace)
+             RealArg_I(B0x_) = B0_DX(x_,iFace,jFace,kFace)
+             RealArg_I(B0y_) = B0_DX(y_,iFace,jFace,kFace)
+             RealArg_I(B0z_) = B0_DX(z_,iFace,jFace,kFace)
           end if
 
           if(UseRS7.and..not.FFV%IsBoundary)then
-             FFV%DeltaBnR = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
+             RealArg_I(DeltaBnR_) = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace))*&
                  Normal_D)
             RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1) =&
                  RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
-                 FFV%DeltaBnR* Normal_D
-            FFV%DeltaBnL = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
+                 RealArg_I(DeltaBnR_)* Normal_D
+            RealArg_I(DeltaBnL_) = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,FFV%iBlockFace))*&
                  Normal_D)
             LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1) =&
                  LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,1)-&
-                 FFV%DeltaBnL* Normal_D
+                 RealArg_I(DeltaBnL_)* Normal_D
          else
-            FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
+            RealArg_I(DeltaBnL_) = 0.0; RealArg_I(DeltaBnR_) = 0.0
          end if
 
          StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,1)
@@ -522,14 +519,14 @@ contains
 #endif
          endif
 
-         VdtFace_xI(iFace,jFace,kFace,1) = FFV%CmaxDt*FFV%Area
+         VdtFace_xI(iFace,jFace,kFace,1) = RealArg_I(CmaxDt_)*RealArg_I(Area_)
 
          ! Correct FFV%Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(FFV, RealArg_I)
-         uDotArea_XII(iFace,jFace,kFace,:,1)   = Unormal_I*FFV%Area
+         uDotArea_XII(iFace,jFace,kFace,:,1)   = Unormal_I*RealArg_I(Area_)
 
          if(UseB .and. UseBorisCorrection) &
-              EDotFA_X(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
+              EDotFA_X(iFace,jFace,kFace) = RealArg_I(Enormal_)*RealArg_I(Area_)
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DXI(:,iFace,jFace,kFace,1) = bCrossArea_D
@@ -621,26 +618,26 @@ contains
          endif
 
          if(UseB0)then
-            FFV%B0x = B0_DY(x_,iFace,jFace,kFace)
-            FFV%B0y = B0_DY(y_,iFace,jFace,kFace)
-            FFV%B0z = B0_DY(z_,iFace,jFace,kFace)
+            RealArg_I(B0x_) = B0_DY(x_,iFace,jFace,kFace)
+            RealArg_I(B0y_) = B0_DY(y_,iFace,jFace,kFace)
+            RealArg_I(B0z_) = B0_DY(z_,iFace,jFace,kFace)
          end if
 
          if(UseRS7.and..not.FFV%IsBoundary)then
-            FFV%DeltaBnR = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
+            RealArg_I(DeltaBnR_) = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace))* &
                  Normal_D)
             RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) = &
                  RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
-                 FFV%DeltaBnR* Normal_D
-            FFV%DeltaBnL = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
+                 RealArg_I(DeltaBnR_)* Normal_D
+            RealArg_I(DeltaBnL_) = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,FFV%iBlockFace))* &
                  Normal_D)
             LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) = &
                  LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,1) - &
-                 FFV%DeltaBnL* Normal_D
+                 RealArg_I(DeltaBnL_)* Normal_D
          else
-            FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
+            RealArg_I(DeltaBnL_) = 0.0; RealArg_I(DeltaBnR_) = 0.0
          end if
 
          StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,1)
@@ -657,13 +654,13 @@ contains
 #endif
          endif
 
-         VdtFace_yI(iFace,jFace,kFace,1) = FFV%CmaxDt*FFV%Area
+         VdtFace_yI(iFace,jFace,kFace,1) = RealArg_I(CmaxDt_)*RealArg_I(Area_)
 
          if(DoCorrectFace) call correct_u_normal(FFV, RealArg_I)
-         uDotArea_YII(iFace,jFace,kFace, :,1)  = Unormal_I*FFV%Area
+         uDotArea_YII(iFace,jFace,kFace, :,1)  = Unormal_I*RealArg_I(Area_)
 
          if(UseB .and. UseBorisCorrection) &
-              EDotFA_Y(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
+              EDotFA_Y(iFace,jFace,kFace) = RealArg_I(Enormal_)*RealArg_I(Area_)
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DYI(:,iFace,jFace,kFace,1) = bCrossArea_D
@@ -757,25 +754,25 @@ contains
          endif
 
          if(UseB0)then
-            FFV%B0x = B0_DZ(x_,iFace,jFace,kFace)
-            FFV%B0y = B0_DZ(y_,iFace,jFace,kFace)
-            FFV%B0z = B0_DZ(z_,iFace,jFace,kFace)
+            RealArg_I(B0x_) = B0_DZ(x_,iFace,jFace,kFace)
+            RealArg_I(B0y_) = B0_DZ(y_,iFace,jFace,kFace)
+            RealArg_I(B0z_) = B0_DZ(z_,iFace,jFace,kFace)
          end if
          if(UseRS7.and..not.FFV%IsBoundary)then
-            FFV%DeltaBnR = sum( Normal_D &
+            RealArg_I(DeltaBnR_) = sum( Normal_D &
                  * (RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
                  - State_VGB(Bx_:Bz_,iFace,jFace,kFace,FFV%iBlockFace)) )
             RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) = &
                  RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
-                 - FFV%DeltaBnR* Normal_D
-            FFV%DeltaBnL = sum( Normal_D &
+                 - RealArg_I(DeltaBnR_)* Normal_D
+            RealArg_I(DeltaBnL_) = sum( Normal_D &
                  * (LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) &
                  -  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,FFV%iBlockFace)) )
             LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1) =&
                  LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,1)-&
-                 FFV%DeltaBnL* Normal_D
+                 RealArg_I(DeltaBnL_)* Normal_D
          else
-            FFV%DeltaBnL = 0.0; FFV%DeltaBnR = 0.0
+            RealArg_I(DeltaBnL_) = 0.0; RealArg_I(DeltaBnR_) = 0.0
          end if
 
          StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,1)
@@ -792,13 +789,13 @@ contains
 #endif
          endif
 
-         VdtFace_zI(iFace,jFace,kFace,1)       = FFV%CmaxDt*FFV%Area
+         VdtFace_zI(iFace,jFace,kFace,1)       = RealArg_I(CmaxDt_)*RealArg_I(Area_)
 
          if(DoCorrectFace) call correct_u_normal(FFV, RealArg_I)
-         uDotArea_ZII(iFace,jFace,kFace, :,1)  = Unormal_I*FFV%Area
+         uDotArea_ZII(iFace,jFace,kFace, :,1)  = Unormal_I*RealArg_I(Area_)
 
          if(UseB .and. UseBorisCorrection) &
-              EDotFA_Z(iFace,jFace,kFace) = FFV%Enormal*FFV%Area
+              EDotFA_Z(iFace,jFace,kFace) = RealArg_I(Enormal_)*RealArg_I(Area_)
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DZI(:,iFace,jFace,kFace,1)= bCrossArea_D
@@ -849,7 +846,7 @@ contains
          iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
          iBlockFace => FFV%iBlockFace, &
-         CmaxDt => FFV%CmaxDt, Area => FFV%Area )
+         CmaxDt => RealArg_I(CmaxDt_), Area => RealArg_I(Area_) )
 
       if(.not.all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace)))&
            RETURN
@@ -933,7 +930,7 @@ contains
       iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iBlockFace => FFV%iBlockFace, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ )
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_) )
 
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
@@ -975,7 +972,7 @@ contains
       iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iBlockFace => FFV%iBlockFace, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ )
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_) )
 
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
@@ -1013,7 +1010,7 @@ contains
       iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iBlockFace => FFV%iBlockFace, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ )
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_) )
 
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
@@ -1049,19 +1046,19 @@ contains
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iBlockFace => FFV%iBlockFace, iDimFace => FFV%iDimFace, &
       IsBoundary => FFV%IsBoundary, &
-      Area2 => FFV%Area2, Area => FFV%Area, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
-      ViscoCoeff => FFV%ViscoCoeff, &
-      Eta => FFV%Eta, &
-      InvDxyz => FFV%InvDxyz, &
-      HallCoeff => FFV%HallCoeff, &
-      BiermannCoeff => FFV%BiermannCoeff, &
+      Area2 => RealArg_I(Area2_), Area => RealArg_I(Area_), &
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_), &
+      ViscoCoeff => RealArg_I(ViscoCoeff_), &
+      Eta => RealArg_I(Eta_), &
+      InvDxyz => RealArg_I(InvDxyz_), &
+      HallCoeff => RealArg_I(HallCoeff_), &
+      BiermannCoeff => RealArg_I(BiermannCoeff_), &
       UseHallGradPe => FFV%UseHallGradPe, &
-      NormalX => FFV%NormalX, &
-      NormalY => FFV%NormalY, &
-      NormalZ => FFV%NormalZ, &
-      InvClightFace => FFV%InvClightFace, &
-      InvClight2Face => FFV%InvClight2Face, &
+      NormalX => RealArg_I(NormalX_), &
+      NormalY => RealArg_I(NormalY_), &
+      NormalZ => RealArg_I(NormalZ_), &
+      InvClightFace => RealArg_I(InvClightFace_), &
+      InvClight2Face => RealArg_I(InvClight2Face_), &
       DoTestCell => FFV%DoTestCell )
 
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
@@ -1222,12 +1219,12 @@ contains
 #ifndef OPENACC
     associate( &
       iDimFace => FFV%iDimFace, &
-      CmaxDt => FFV%CmaxDt, IsBoundary => FFV%IsBoundary, &
-      B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
-      UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
-      B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
-      UnR => FFV%UnR, Ut1R => FFV%Ut1R, Ut2R => FFV%Ut2R, &
-      B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R)
+      CmaxDt => RealArg_I(CmaxDt_), IsBoundary => FFV%IsBoundary, &
+      B0n => RealArg_I(B0n_), B0t1 => RealArg_I(B0t1_), B0t2 => RealArg_I(B0t2_), &
+      UnL => RealArg_I(UnL_), Ut1L => RealArg_I(Ut1L_), Ut2L => RealArg_I(Ut2L_), &
+      B1nL => RealArg_I(B1nL_), B1t1L => RealArg_I(B1t1L_), B1t2L => RealArg_I(B1t2L_), &
+      UnR => RealArg_I(UnR_), Ut1R => RealArg_I(Ut1R_), Ut2R => RealArg_I(Ut2R_), &
+      B1nR => RealArg_I(B1nR_), B1t1R => RealArg_I(B1t1R_), B1t2R => RealArg_I(B1t2R_))
 
     RhoL  =  StateLeft_V(Rho_)
     pL    =  StateLeft_V(p_ )
@@ -1777,19 +1774,19 @@ contains
       iLeft => FFV%iLeft, jLeft => FFV%jLeft, kLeft => FFV%kLeft, &
       iRight => FFV%iRight, jRight => FFV%jRight, kRight => FFV%kRight, &
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
-      iBlockFace => FFV%iBlockFace, ViscoCoeff => FFV%ViscoCoeff, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
-      Eta => FFV%Eta, &
-      GradXPeNe => FFV%GradXPeNe, &
-      GradYPeNe => FFV%GradYPeNe, &
-      GradZPeNe => FFV%GradZPeNe, &    
-      NormalX => FFV%NormalX, &
-      NormalY => FFV%NormalY, &
-      NormalZ => FFV%NormalZ, &
-      EradFlux => FFV%EradFlux, &
-      HeatFlux => FFV%HeatFlux, &
-      IonHeatFlux => FFV%IonHeatFlux, &
+      iBlockFace => FFV%iBlockFace, ViscoCoeff => RealArg_I(ViscoCoeff_), &
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      EtaJx => RealArg_I(EtaJx_), EtaJy => RealArg_I(EtaJy_), EtaJz => RealArg_I(EtaJz_), &
+      Eta => RealArg_I(Eta_), &
+      GradXPeNe => RealArg_I(GradXPeNe_), &
+      GradYPeNe => RealArg_I(GradYPeNe_), &
+      GradZPeNe => RealArg_I(GradZPeNe_), &    
+      NormalX => RealArg_I(NormalX_), &
+      NormalY => RealArg_I(NormalY_), &
+      NormalZ => RealArg_I(NormalZ_), &
+      EradFlux => RealArg_I(EradFlux_), &
+      HeatFlux => RealArg_I(HeatFlux_), &
+      IonHeatFlux => RealArg_I(IonHeatFlux_), &
       UseHallGradPe => FFV%UseHallGradPe )
 
     ! Calculate conservative state
@@ -2029,12 +2026,12 @@ contains
       !------------------------------------------------------------------------
       MhdFlux_V => RealArg_I(MhdFlux_:MhdFlux_+MaxDim-1)
       associate( &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         InvClightFace => FFV%InvClightFace, &
-         InvClight2Face => FFV%InvClight2Face )
+         B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         InvClightFace => RealArg_I(InvClightFace_), &
+         InvClight2Face => RealArg_I(InvClight2Face_) )
 
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
@@ -2173,12 +2170,12 @@ contains
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
       associate( &
-         HallCoeff => FFV%HallCoeff, &
-         HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
+         HallCoeff => RealArg_I(HallCoeff_), &
+         HallJx => RealArg_I(HallJx_), HallJy => RealArg_I(HallJy_), HallJz => RealArg_I(HallJz_), &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
          DoTestCell => FFV%DoTestCell )
 
       if(UseMultiIon)then
@@ -2269,12 +2266,12 @@ contains
       !------------------------------------------------------------------------
       MhdFlux_V => RealArg_I(MhdFlux_:MhdFlux_+MaxDim-1)
       associate( &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         HallCoeff => FFV%HallCoeff, &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         InvClight2Face => FFV%InvClight2Face, &
+         B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+         HallCoeff => RealArg_I(HallCoeff_), &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         InvClight2Face => RealArg_I(InvClight2Face_), &
          DoTestCell => FFV%DoTestCell )
 
       Rho     = State_V(Rho_)
@@ -2473,9 +2470,9 @@ contains
       !------------------------------------------------------------------------
       Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
       associate( &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
          DoTestCell => FFV%DoTestCell )
 
       Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
@@ -2529,10 +2526,10 @@ contains
       ! Extract primitive variables
       !------------------------------------------------------------------------
       associate( &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         Area => FFV%Area, DoTestCell => FFV%DoTestCell )
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         Area => RealArg_I(Area_), DoTestCell => FFV%DoTestCell )
 
       Rho = State_V(iRho)
       Ux  = State_V(iUx)
@@ -2722,26 +2719,26 @@ contains
       iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
-      CmaxDt => FFV%CmaxDt, IsBoundary => FFV%IsBoundary, &
-      AreaX => FFV%AreaX, AreaY => FFV%AreaY, AreaZ => FFV%AreaZ, &
-      Area => FFV%Area, &
-      DeltaBnR => FFV%DeltaBnR, DeltaBnL => FFV%DeltaBnL, &
-      DiffBb => FFV%DiffBb, &
-      ViscoCoeff => FFV%ViscoCoeff, &
-      Enormal => FFV%Enormal, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
-      Eta => FFV%Eta, &
-      InvDxyz => FFV%InvDxyz, &
-      HallCoeff => FFV%HallCoeff, &
-      HallJx => FFV%HallJx, HallJy => FFV%HallJy, HallJz => FFV%HallJz, &
-      BiermannCoeff => FFV%BiermannCoeff, &
+      CmaxDt => RealArg_I(CmaxDt_), IsBoundary => FFV%IsBoundary, &
+      AreaX => RealArg_I(AreaX_), AreaY => RealArg_I(AreaY_), AreaZ => RealArg_I(AreaZ_), &
+      Area => RealArg_I(Area_), &
+      DeltaBnR => RealArg_I(DeltaBnR_), DeltaBnL => RealArg_I(DeltaBnL_), &
+      DiffBb => RealArg_I(DiffBb_), &
+      ViscoCoeff => RealArg_I(ViscoCoeff_), &
+      Enormal => RealArg_I(Enormal_), &
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      EtaJx => RealArg_I(EtaJx_), EtaJy => RealArg_I(EtaJy_), EtaJz => RealArg_I(EtaJz_), &
+      Eta => RealArg_I(Eta_), &
+      InvDxyz => RealArg_I(InvDxyz_), &
+      HallCoeff => RealArg_I(HallCoeff_), &
+      HallJx => RealArg_I(HallJx_), HallJy => RealArg_I(HallJy_), HallJz => RealArg_I(HallJz_), &
+      BiermannCoeff => RealArg_I(BiermannCoeff_), &
       UseHallGradPe => FFV%UseHallGradPe, &
-      GradXPeNe => FFV%GradXPeNe, &
-      GradYPeNe => FFV%GradYPeNe, &
-      GradZPeNe => FFV%GradZPeNe, &
-      DiffCoef => FFV%DiffCoef, RadDiffCoef => FFV%RadDiffCoef, &
-      HeatCondCoefNormal => FFV%HeatCondCoefNormal, &
+      GradXPeNe => RealArg_I(GradXPeNe_), &
+      GradYPeNe => RealArg_I(GradYPeNe_), &
+      GradZPeNe => RealArg_I(GradZPeNe_), &
+      DiffCoef => RealArg_I(DiffCoef_), RadDiffCoef => RealArg_I(RadDiffCoef_), &
+      HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
       DoTestCell => FFV%DoTestCell, &
       IsNewBlockGradPe => FFV%IsNewBlockGradPe, &
       IsNewBlockCurrent => FFV%IsNewBlockCurrent )
@@ -3071,7 +3068,7 @@ contains
       !------------------------------------------------------------------------
 #ifndef OPENACC
       Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
-      associate( DiffBb => FFV%DiffBb)
+      associate( DiffBb => RealArg_I(DiffBb_))
 
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
 !      if(.not.UseJCrossBForce) MhdFlux_V = &
@@ -3091,7 +3088,7 @@ contains
 #ifndef OPENACC
       FluxRight_V => RealArg_I(FluxRight_:FluxRight_+nVar+nFluid-1)
       FluxLeft_V => RealArg_I(FluxLeft_:FluxLeft_+nVar+nFluid-1)
-      associate( CmaxDt => FFV%CmaxDt)
+      associate( CmaxDt => RealArg_I(CmaxDt_))
 
         Flux_V(1:p_) = &
              0.5*(FluxLeft_V(1:p_) + FluxRight_V(1:p_)) &
@@ -3112,7 +3109,7 @@ contains
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
 #ifndef OPENACC
-      associate( CmaxDt => FFV%CmaxDt )
+      associate( CmaxDt => RealArg_I(CmaxDt_) )
 
       ! This is needed for the time step constraint only (CmaxDt)
       if(UseDtFixed)then
@@ -3159,7 +3156,7 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
-         Enormal => FFV%Enormal, &
+         Enormal => RealArg_I(Enormal_), &
          DoTestCell => FFV%DoTestCell )
 
       call get_speed_max(State_V, FFV, RealArg_I, Cmax_I = Cmax_I)
@@ -3237,7 +3234,7 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Enormal => FFV%Enormal)
+         Enormal => RealArg_I(Enormal_))
 
       call get_speed_max(StateLeft_V,  FFV, RealArg_I, &
            Cleft_I =CleftStateLeft_I)
@@ -3342,7 +3339,7 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Enormal => FFV%Enormal)
+         Enormal => RealArg_I(Enormal_))
         
       call get_speed_max(State_V, FFV, RealArg_I, &
            Cmax_I = Cmax_I, &
@@ -3501,7 +3498,7 @@ contains
          iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
          iVarMin => FFV%iVarMin, iVarMax => FFV%iVarMax, &
          iEnergyMin => FFV%iEnergyMin, iEnergyMax => FFV%iEnergyMax, &
-         Enormal => FFV%Enormal)
+         Enormal => RealArg_I(Enormal_))
 
       call get_speed_max(State_V, FFV, RealArg_I,  &
            Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
@@ -3608,18 +3605,18 @@ contains
       
       associate( &
          iDimFace => FFV%iDimFace, &
-         CmaxDt => FFV%CmaxDt, &
-         Enormal => FFV%Enormal, &
-         EtaJx => FFV%EtaJx, EtaJy => FFV%EtaJy, EtaJz => FFV%EtaJz, &
-         Eta => FFV%Eta, &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
-         UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
-         B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
-         UnR => FFV%UnR, Ut1R => FFV%Ut1R, Ut2R => FFV%Ut2R, &
-         B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R, &
+         CmaxDt => RealArg_I(CmaxDt_), &
+         Enormal => RealArg_I(Enormal_), &
+         EtaJx => RealArg_I(EtaJx_), EtaJy => RealArg_I(EtaJy_), EtaJz => RealArg_I(EtaJz_), &
+         Eta => RealArg_I(Eta_), &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         B0n => RealArg_I(B0n_), B0t1 => RealArg_I(B0t1_), B0t2 => RealArg_I(B0t2_), &
+         UnL => RealArg_I(UnL_), Ut1L => RealArg_I(Ut1L_), Ut2L => RealArg_I(Ut2L_), &
+         B1nL => RealArg_I(B1nL_), B1t1L => RealArg_I(B1t1L_), B1t2L => RealArg_I(B1t2L_), &
+         UnR => RealArg_I(UnR_), Ut1R => RealArg_I(Ut1R_), Ut2R => RealArg_I(Ut2R_), &
+         B1nR => RealArg_I(B1nR_), B1t1R => RealArg_I(B1t1R_), B1t2R => RealArg_I(B1t2R_), &
          DoTestCell => FFV%DoTestCell )
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
@@ -3943,9 +3940,9 @@ contains
       StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
       associate( &
            iEnergyMin => FFV%iEnergyMin, &
-           B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-           CmaxDt => FFV%CmaxDt, &
-           EradFlux => FFV%EradFlux )
+           B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+           CmaxDt => RealArg_I(CmaxDt_), &
+           EradFlux => RealArg_I(EradFlux_) )
 
         RhoL = StateLeft_V(iRho)
         pL   = StateLeft_V(iP)
@@ -4120,8 +4117,8 @@ contains
       StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
       associate( &
            iDimFace => FFV%iDimFace, &
-           CmaxDt => FFV%CmaxDt, &
-           UnL => FFV%UnL, UnR => FFV%UnR )
+           CmaxDt => RealArg_I(CmaxDt_), &
+           UnL => RealArg_I(UnL_), UnR => RealArg_I(UnR_) )
 
         call get_speed_max(StateLeft_V,  FFV, RealArg_I, &
              Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
@@ -4198,9 +4195,9 @@ contains
       associate( &
          iDimFace => FFV%iDimFace, &
          iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         Area => FFV%Area, &
-         CmaxDt => FFV%CmaxDt )
+         B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+         Area => RealArg_I(Area_), &
+         CmaxDt => RealArg_I(CmaxDt_) )
 
       write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
@@ -4267,8 +4264,8 @@ contains
     call init_face_flux_var_type(FFV, RealArg_I)
     associate( &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      Area => FFV%Area, &
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      Area => RealArg_I(Area_), &
       UseHallGradPe => FFV%UseHallGradPe, &
       DoTestCell => FFV%DoTestCell )
 
@@ -4380,12 +4377,12 @@ contains
     call init_face_flux_var_type(FFV, RealArg_I)
     associate( &
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
-      ViscoCoeff => FFV%ViscoCoeff, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      Eta => FFV%Eta, &
-      HallCoeff => FFV%HallCoeff, &
-      BiermannCoeff => FFV%BiermannCoeff, &
-      Area => FFV%Area, &
+      ViscoCoeff => RealArg_I(ViscoCoeff_), &
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      Eta => RealArg_I(Eta_), &
+      HallCoeff => RealArg_I(HallCoeff_), &
+      BiermannCoeff => RealArg_I(BiermannCoeff_), &
+      Area => RealArg_I(Area_), &
       UseHallGradPe => FFV%UseHallGradPe, &
       DoTestCell => FFV%DoTestCell )
 
@@ -4517,8 +4514,8 @@ contains
       iFace => FFV%iFace, jFace => FFV%jFace, kFace => FFV%kFace, &
       iFluidMin => FFV%iFluidMin, iFluidMax => FFV%iFluidMax, &
       iDimFace => FFV%iDimFace, iBlockFace => FFV%iBlockFace, &
-      CmaxDt => FFV%CmaxDt, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z)
+      CmaxDt => RealArg_I(CmaxDt_), &
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_))
 
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
@@ -4691,11 +4688,11 @@ contains
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !------------------------------------------------------------------------
       associate( &
-         B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-         NormalX => FFV%NormalX, &
-         NormalY => FFV%NormalY, &
-         NormalZ => FFV%NormalZ, &
-         InvClight2Face => FFV%InvClight2Face )
+         B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+         NormalX => RealArg_I(NormalX_), &
+         NormalY => RealArg_I(NormalY_), &
+         NormalZ => RealArg_I(NormalZ_), &
+         InvClight2Face => RealArg_I(InvClight2Face_) )
 
       ! No explicit formula for multi-ion fluids
       if (nTrueIon > 1) call stop_mpi &
@@ -4921,7 +4918,7 @@ contains
          end if
       end if
 
-      if(UseRS7) Sound2 = Sound2 + GammaMinus1*FFV%DiffBb*InvRho
+      if(UseRS7) Sound2 = Sound2 + GammaMinus1*RealArg_I(DiffBb_)*InvRho
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
@@ -4935,9 +4932,9 @@ contains
          end if
       end if
 
-      FullBx = State_V(Bx_) + FFV%B0x
-      FullBy = State_V(By_) + FFV%B0y
-      FullBz = State_V(Bz_) + FFV%B0z
+      FullBx = State_V(Bx_) + RealArg_I(B0x_)
+      FullBy = State_V(By_) + RealArg_I(B0y_)
+      FullBz = State_V(Bz_) + RealArg_I(B0z_)
       if(UseAwSpeed)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results in
@@ -4954,16 +4951,16 @@ contains
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
       if(UseCurlB0)then
-         B1B0L = StateLeft_V(Bx_)*FFV%B0x &
-              +  StateLeft_V(By_)*FFV%B0y &
-              +  StateLeft_V(Bz_)*FFV%B0z
-         B1B0R = StateRight_V(Bx_)*FFV%B0x &
-              +  StateRight_V(By_)*FFV%B0y &
-              +  StateRight_V(Bz_)*FFV%B0z
+         B1B0L = StateLeft_V(Bx_)*RealArg_I(B0x_) &
+              +  StateLeft_V(By_)*RealArg_I(B0y_) &
+              +  StateLeft_V(Bz_)*RealArg_I(B0z_)
+         B1B0R = StateRight_V(Bx_)*RealArg_I(B0x_) &
+              +  StateRight_V(By_)*RealArg_I(B0y_) &
+              +  StateRight_V(Bz_)*RealArg_I(B0z_)
          Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
       end if
 
-      FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
+      FullBn = RealArg_I(NormalX_)*FullBx + RealArg_I(NormalY_)*FullBy + RealArg_I(NormalZ_)*FullBz
       Alfven2Normal = InvRho*FullBn**2
 
       if(UseMultiIon .or. UseEfield)then
@@ -5070,14 +5067,14 @@ contains
       
       ! Fast speed multiplied by the face area
       if(UseBorisSimple .or. (UseEfield))then
-         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*FFV%InvClight2Face) )
+         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*RealArg_I(InvClight2Face_)) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if
       FastDt = Fast
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(FFV%HallCoeff > 0.0 .and. DoHallInduction) then
+      if(RealArg_I(HallCoeff_) > 0.0 .and. DoHallInduction) then
          ! Tangential component of B
          FullBt = sqrt(max(0.0, &
               (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
@@ -5091,7 +5088,7 @@ contains
          cWhistler = cPi*abs(FullBn)
 
          ! Take the faster speed
-         cHall     = FFV%HallCoeff*FFV%InvDxyz*InvRho*max(cWhistler, cDrift)
+         cHall     = RealArg_I(HallCoeff_)*RealArg_I(InvDxyz_)*InvRho*max(cWhistler, cDrift)
 
          ! cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
          FastDt = Fast + cHall
@@ -5106,21 +5103,21 @@ contains
          ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
          ! speed in the "hat" state
-         FullBx = StateLeft_V(Bx_) + FFV%B0x
-         FullBy = StateLeft_V(By_) + FFV%B0y
-         FullBz = StateLeft_V(Bz_) + FFV%B0z
-         FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
+         FullBx = StateLeft_V(Bx_) + RealArg_I(B0x_)
+         FullBy = StateLeft_V(By_) + RealArg_I(B0y_)
+         FullBz = StateLeft_V(Bz_) + RealArg_I(B0z_)
+         FullBn = RealArg_I(NormalX_)*FullBx + RealArg_I(NormalY_)*FullBy + RealArg_I(NormalZ_)*FullBz
          Fast = max(Fast, sqrt( FullBn**2/StateLeft_V(iRhoIon_I(1)) ))
 
-         FullBx = StateRight_V(Bx_) + FFV%B0x
-         FullBy = StateRight_V(By_) + FFV%B0y
-         FullBz = StateRight_V(Bz_) + FFV%B0z
-         FullBn = FFV%NormalX*FullBx + FFV%NormalY*FullBy + FFV%NormalZ*FullBz
+         FullBx = StateRight_V(Bx_) + RealArg_I(B0x_)
+         FullBy = StateRight_V(By_) + RealArg_I(B0y_)
+         FullBz = StateRight_V(Bz_) + RealArg_I(B0z_)
+         FullBn = RealArg_I(NormalX_)*FullBx + RealArg_I(NormalY_)*FullBy + RealArg_I(NormalZ_)*FullBz
          Fast = max(Fast, sqrt( FullBn**2/StateRight_V(iRhoIon_I(1)) ))
       end if
 
       if(UseAwSpeed)then
-         if(FFV%HallCoeff > 0.0)then
+         if(RealArg_I(HallCoeff_) > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
             Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
             CmaxDt_I(1)  = max(Cright_I(1) + FastDt, - Cleft_I(1) - FastDt)
@@ -5135,7 +5132,7 @@ contains
       end if
       else
          if(present(Cmax_I))then
-            if(FFV%HallCoeff > 0.0)then
+            if(RealArg_I(HallCoeff_) > 0.0)then
                Cmax_I(1)   = max(abs(UnMin), abs(UnMax), &
                     abs(HallUnLeft), abs(HallUnRight))
                CmaxDt_I(1) = Cmax_I(1) + FastDt
@@ -5390,12 +5387,12 @@ contains
     StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
       iDimFace => FFV%iDimFace, &
-      B0x => FFV%B0x, B0y => FFV%B0y, B0z => FFV%B0z, &
-      B0n => FFV%B0n, B0t1 => FFV%B0t1, B0t2 => FFV%B0t2, &
-      UnL => FFV%UnL, Ut1L => FFV%Ut1L, Ut2L => FFV%Ut2L, &
-      B1nL => FFV%B1nL, B1t1L => FFV%B1t1L, B1t2L => FFV%B1t2L, &
-      UnR => FFV%UnR, Ut1R => FFV%Ut1R, Ut2R => FFV%Ut2R, &
-      B1nR => FFV%B1nR, B1t1R => FFV%B1t1R, B1t2R => FFV%B1t2R )
+      B0x => RealArg_I(B0x_), B0y => RealArg_I(B0y_), B0z => RealArg_I(B0z_), &
+      B0n => RealArg_I(B0n_), B0t1 => RealArg_I(B0t1_), B0t2 => RealArg_I(B0t2_), &
+      UnL => RealArg_I(UnL_), Ut1L => RealArg_I(Ut1L_), Ut2L => RealArg_I(Ut2L_), &
+      B1nL => RealArg_I(B1nL_), B1t1L => RealArg_I(B1t1L_), B1t2L => RealArg_I(B1t2L_), &
+      UnR => RealArg_I(UnR_), Ut1R => RealArg_I(Ut1R_), Ut2R => RealArg_I(Ut2R_), &
+      B1nR => RealArg_I(B1nR_), B1t1R => RealArg_I(B1t1R_), B1t2R => RealArg_I(B1t2R_) )
 
     if(IsCartesianGrid)then
        select case (iDimFace)
