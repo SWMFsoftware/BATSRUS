@@ -61,7 +61,7 @@ ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 
 ${BINDIR}/INTERPOLATE.exe: ${LIBSHARE} interpolate_output.o
 	${LINK.f90} -o ${BINDIR}/INTERPOLATE.exe interpolate_output.o \
-		-L${LIBDIR} -lSHARE ${Lflag}
+		-L${LIBDIR} -lSHARE ${LflagMpi}
 
 INTERPOLATE:
 	make ${BINDIR}/INTERPOLATE.exe
