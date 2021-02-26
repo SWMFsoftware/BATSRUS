@@ -4,12 +4,6 @@
 
 module ModMain
 
-  use BATL_lib, ONLY: &
-       lVerbose
-
-  use BATL_lib, ONLY: &
-       lVerbose
-
   use ModKind
   use ModSize
   use ModVarIndexes
