@@ -5,20 +5,22 @@ module ModFaceFluxParameters
 
   implicit none
 
-  integer, parameter :: nFFLogicArg = 10
-  integer, parameter :: &
-     IsNewBlockVisco_          = 1, &
-     IsNewBlockGradPe_         = IsNewBlockVisco_ + 1, &
-     IsNewBlockCurrent_        = IsNewBlockGradPe_ + 1, &
-     IsNewBlockHeatCond_       = IsNewBlockCurrent_ + 1, &
-     IsNewBlockIonHeatCond_    = IsNewBlockHeatCond_ + 1, &
-     IsNewBlockRadDiffusion_   = IsNewBlockIonHeatCond_ + 1, &
-     IsNewBlockAlfven_         = IsNewBlockRadDiffusion_ + 1, &
-     UseHallGradPe_            = IsNewBlockAlfven_ + 1, &
-     IsBoundary_               = UseHallGradPe_ + 1, &
-     DoTestCell_               = IsBoundary_ + 1
+  public :: init_face_flux_arrays
 
-  integer, parameter :: nFFIntArg = 17
+  integer, parameter :: nFFLogic = 10
+  integer, parameter :: &
+       IsNewBlockVisco_          = 1, &
+       IsNewBlockGradPe_         = IsNewBlockVisco_ + 1, &
+       IsNewBlockCurrent_        = IsNewBlockGradPe_ + 1, &
+       IsNewBlockHeatCond_       = IsNewBlockCurrent_ + 1, &
+       IsNewBlockIonHeatCond_    = IsNewBlockHeatCond_ + 1, &
+       IsNewBlockRadDiffusion_   = IsNewBlockIonHeatCond_ + 1, &
+       IsNewBlockAlfven_         = IsNewBlockRadDiffusion_ + 1, &
+       UseHallGradPe_            = IsNewBlockAlfven_ + 1, &
+       IsBoundary_               = UseHallGradPe_ + 1, &
+       DoTestCell_               = IsBoundary_ + 1
+
+  integer, parameter :: nFFInt = 17
   integer, parameter :: &
        iLeft_           = 1, &
        jLeft_           = iLeft_ + 1, &
@@ -38,7 +40,7 @@ module ModFaceFluxParameters
        jFace_           = iFace_ + 1, &
        kFace_           = jFace_ + 1
 
-  integer, parameter :: nFFRealArg = &
+  integer, parameter :: nFFReal = &
        2*nVar + 2*(nVar+nFluid) + 7*MaxDim + 3*(nFluid+1) & ! Arrays
        + 53 ! Scalars
 
@@ -110,5 +112,53 @@ module ModFaceFluxParameters
        ViscoCoeff_      = B0z_ + 1, &
        InvClightFace_   = ViscoCoeff_ + 1, &
        InvClight2Face_  = InvClightFace_ + 1
+
+contains
+  !============================================================================
+  subroutine init_face_flux_arrays( FFLog_I, FFInt_I, FFReal_I)
+    !$acc routine seq
+
+    logical, dimension(:), target, intent(inout):: FFLog_I
+    integer, dimension(:), target, intent(inout):: FFInt_I
+    real, dimension(:), target, intent(inout):: FFReal_I
+    real, dimension(:), pointer:: Unormal_I
+    real, dimension(:), pointer:: bCrossArea_D
+
+    ! When openacc creates a derived type on GPU, the variables are
+    ! not correctly initialized. So, they are explicitly initialized
+    ! here.
+
+    !--------------------------------------------------------------------------
+    bCrossArea_D => FFReal_I(bCrossArea_:bCrossArea_+MaxDim-1)
+    Unormal_I => FFReal_I(Unormal_:Unormal_+nFluid+1-1)
+
+    FFInt_I(iFluidMin_) = 1
+    FFInt_I(iFluidMax_) = nFluid
+    FFInt_I(iVarMin_) = 1
+    FFInt_I(iVarMax_) = nVar
+    FFInt_I(iEnergyMin_) = nVar + 1
+    FFInt_I(iEnergyMax_) = nVar + nFluid
+
+    Unormal_I = 0.0
+    FFReal_I(EradFlux_) = 0.0
+    bCrossArea_D = 0.0
+    FFReal_I(B0x_) = 0.0
+    FFReal_I(B0y_) = 0.0
+    FFReal_I(B0z_) = 0.0
+
+    FFLog_I(UseHallGradPe_) = .false.
+
+    FFLog_I(DoTestCell_) = .false.
+
+    FFLog_I(IsNewBlockVisco_) = .true.
+    FFLog_I(IsNewBlockGradPe_) = .true.
+    FFLog_I(IsNewBlockCurrent_) = .true.
+    FFLog_I(IsNewBlockHeatCond_) = .true.
+    FFLog_I(IsNewBlockIonHeatCond_) = .true.
+    FFLog_I(IsNewBlockRadDiffusion_) = .true.
+    FFLog_I(IsNewBlockAlfven_) = .true.
+
+  end subroutine init_face_flux_arrays
+  !============================================================================
 
 end module ModFaceFluxParameters

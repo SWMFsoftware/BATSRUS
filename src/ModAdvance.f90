@@ -23,7 +23,6 @@ module ModAdvance
 
   public :: init_mod_advance
   public :: clean_mod_advance
-  public :: init_face_flux_var_type
     
   ! Numerical flux type
   character (len=10) :: FluxType
@@ -388,50 +387,5 @@ contains
   end subroutine clean_mod_advance
   !============================================================================
 
-  subroutine init_face_flux_var_type( LogArg_I, IntArg_I, RealArg_I)
-    !$acc routine seq
-    
-    logical, dimension(:), target, intent(inout):: LogArg_I
-    integer, dimension(:), target, intent(inout):: IntArg_I
-    real, dimension(:), target, intent(inout):: RealArg_I
-    real, dimension(:), pointer:: Unormal_I
-    real, dimension(:), pointer:: bCrossArea_D
-    !--------------------------------------------------------------------------
-
-    ! When openacc creates a derived type on GPU, the variables are
-    ! not correctly initialized. So, they are explicitly initialized
-    ! here. 
-
-    bCrossArea_D => RealArg_I(bCrossArea_:bCrossArea_+MaxDim-1)
-    Unormal_I => RealArg_I(Unormal_:Unormal_+nFluid+1-1)
-    
-    IntArg_I(iFluidMin_) = 1
-    IntArg_I(iFluidMax_) = nFluid
-    IntArg_I(iVarMin_) = 1
-    IntArg_I(iVarMax_) = nVar
-    IntArg_I(iEnergyMin_) = nVar + 1
-    IntArg_I(iEnergyMax_) = nVar + nFluid
-
-    Unormal_I = 0.0
-    RealArg_I(EradFlux_) = 0.0
-    bCrossArea_D = 0.0
-    RealArg_I(B0x_) = 0.0
-    RealArg_I(B0y_) = 0.0
-    RealArg_I(B0z_) = 0.0 
-    
-    LogArg_I(UseHallGradPe_) = .false.
-
-    LogArg_I(DoTestCell_) = .false.
-
-    LogArg_I(IsNewBlockVisco_) = .true.
-    LogArg_I(IsNewBlockGradPe_) = .true.
-    LogArg_I(IsNewBlockCurrent_) = .true.
-    LogArg_I(IsNewBlockHeatCond_) = .true.
-    LogArg_I(IsNewBlockIonHeatCond_) = .true.
-    LogArg_I(IsNewBlockRadDiffusion_) = .true.
-    LogArg_I(IsNewBlockAlfven_) = .true.
-        
-  end subroutine init_face_flux_var_type
-  !============================================================================
 end module ModAdvance
 !==============================================================================

@@ -330,7 +330,7 @@ contains
   end subroutine init_heat_conduction
   !============================================================================
 
-  subroutine get_heat_flux( LogArg_I, IntArg_I, RealArg_I)
+  subroutine get_heat_flux( FFLog_I, FFInt_I, FFReal_I)
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -348,9 +348,9 @@ contains
          get_gamma_collisionless
 
     
-    logical, dimension(:), target, intent(inout):: LogArg_I
-    integer, dimension(:), target, intent(inout):: IntArg_I
-    real, dimension(:), target, intent(inout):: RealArg_I
+    logical, dimension(:), target, intent(inout):: FFLog_I
+    integer, dimension(:), target, intent(inout):: FFInt_I
+    real, dimension(:), target, intent(inout):: FFReal_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
     real, dimension(:), pointer:: Normal_D
@@ -367,15 +367,15 @@ contains
     !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
-    Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
+    Normal_D => FFReal_I(Normal_:Normal_+MaxDim-1)
+    StateRight_V => FFReal_I(StateRight_:StateRight_+nVar-1)
+    StateLeft_V => FFReal_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
-      iFace => IntArg_I(iFace_), jFace => IntArg_I(jFace_), kFace => IntArg_I(kFace_), &
-      HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
-      HeatFlux => RealArg_I(HeatFlux_), &
-      IsNewBlockHeatCond => LogArg_I(IsNewBlockHeatCond_) )
+      iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+      iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_), &
+      HeatCondCoefNormal => FFReal_I(HeatCondCoefNormal_), &
+      HeatFlux => FFReal_I(HeatFlux_), &
+      IsNewBlockHeatCond => FFLog_I(IsNewBlockHeatCond_) )
 
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
@@ -598,7 +598,7 @@ contains
   end subroutine get_heat_cond_coef
   !============================================================================
 
-  subroutine get_ion_heat_flux( LogArg_I, IntArg_I, RealArg_I)
+  subroutine get_ion_heat_flux( FFLog_I, FFInt_I, FFReal_I)
 
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
@@ -607,9 +607,9 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
     
-    logical, dimension(:), target, intent(inout):: LogArg_I
-    integer, dimension(:), target, intent(inout):: IntArg_I
-    real, dimension(:), target, intent(inout):: RealArg_I
+    logical, dimension(:), target, intent(inout):: FFLog_I
+    integer, dimension(:), target, intent(inout):: FFInt_I
+    real, dimension(:), target, intent(inout):: FFReal_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
     real, dimension(:), pointer:: Normal_D
@@ -620,15 +620,15 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
+    Normal_D => FFReal_I(Normal_:Normal_+MaxDim-1)
+    StateRight_V => FFReal_I(StateRight_:StateRight_+nVar-1)
+    StateLeft_V => FFReal_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
-      iFace => IntArg_I(iFace_), jFace => IntArg_I(jFace_), kFace => IntArg_I(kFace_), &
-      HeatCondCoefNormal => RealArg_I(HeatCondCoefNormal_), &
-      HeatFlux => RealArg_I(HeatFlux_), &
-      IsNewBlockIonHeatCond => LogArg_I(IsNewBlockIonHeatCond_) )
+      iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+      iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_), &
+      HeatCondCoefNormal => FFReal_I(HeatCondCoefNormal_), &
+      HeatFlux => FFReal_I(HeatFlux_), &
+      IsNewBlockIonHeatCond => FFLog_I(IsNewBlockIonHeatCond_) )
 
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then

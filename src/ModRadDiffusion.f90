@@ -291,7 +291,7 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux( LogArg_I, IntArg_I, RealArg_I)
+  subroutine get_radiation_energy_flux( FFLog_I, FFInt_I, FFReal_I)
 
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
@@ -299,9 +299,9 @@ contains
     use ModFaceFluxParameters
 
     
-    logical, dimension(:), target, intent(inout):: LogArg_I
-    integer, dimension(:), target, intent(inout):: IntArg_I
-    real, dimension(:), target, intent(inout):: RealArg_I
+    logical, dimension(:), target, intent(inout):: FFLog_I
+    integer, dimension(:), target, intent(inout):: FFInt_I
+    real, dimension(:), target, intent(inout):: FFReal_I
     real, dimension(:), pointer:: StateLeft_V
     real, dimension(:), pointer:: StateRight_V
     real, dimension(:), pointer:: Normal_D
@@ -310,15 +310,15 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    Normal_D => RealArg_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RealArg_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RealArg_I(StateLeft_:StateLeft_+nVar-1)
+    Normal_D => FFReal_I(Normal_:Normal_+MaxDim-1)
+    StateRight_V => FFReal_I(StateRight_:StateRight_+nVar-1)
+    StateLeft_V => FFReal_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
-      i => IntArg_I(iFace_), j => IntArg_I(jFace_), k => IntArg_I(kFace_), &
-      RadDiffCoef => RealArg_I(RadDiffCoef_), &
-      EradFlux => RealArg_I(EradFlux_), &
-      IsNewBlockRadDiffusion => LogArg_I(IsNewBlockRadDiffusion_) )
+      iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+      i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_), &
+      RadDiffCoef => FFReal_I(RadDiffCoef_), &
+      EradFlux => FFReal_I(EradFlux_), &
+      IsNewBlockRadDiffusion => FFLog_I(IsNewBlockRadDiffusion_) )
 
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
@@ -354,8 +354,8 @@ contains
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
       associate( &
-         iDir => IntArg_I(iDimFace_), iBlock => IntArg_I(iBlockFace_), &
-         i => IntArg_I(iFace_), j => IntArg_I(jFace_), k => IntArg_I(kFace_) )
+         iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
+         i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_) )
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)
