@@ -115,12 +115,12 @@ module ModFaceFluxParameters
 
 contains
   !============================================================================
-  subroutine init_face_flux_arrays( FFLog_I, FFInt_I, FFReal_I)
+  subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: FFLog_I
-    integer, dimension(:), target, intent(inout):: FFInt_I
-    real, dimension(:), target, intent(inout):: FFReal_I
+    logical, dimension(:), target, intent(inout):: IsFF_I
+    integer, dimension(:), target, intent(inout):: IFF_I
+    real, dimension(:), target, intent(inout):: RFF_I
     real, dimension(:), pointer:: Unormal_I
     real, dimension(:), pointer:: bCrossArea_D
 
@@ -129,34 +129,34 @@ contains
     ! here.
 
     !--------------------------------------------------------------------------
-    bCrossArea_D => FFReal_I(bCrossArea_:bCrossArea_+MaxDim-1)
-    Unormal_I => FFReal_I(Unormal_:Unormal_+nFluid+1-1)
+    bCrossArea_D => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
+    Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
 
-    FFInt_I(iFluidMin_) = 1
-    FFInt_I(iFluidMax_) = nFluid
-    FFInt_I(iVarMin_) = 1
-    FFInt_I(iVarMax_) = nVar
-    FFInt_I(iEnergyMin_) = nVar + 1
-    FFInt_I(iEnergyMax_) = nVar + nFluid
+    IFF_I(iFluidMin_) = 1
+    IFF_I(iFluidMax_) = nFluid
+    IFF_I(iVarMin_) = 1
+    IFF_I(iVarMax_) = nVar
+    IFF_I(iEnergyMin_) = nVar + 1
+    IFF_I(iEnergyMax_) = nVar + nFluid
 
     Unormal_I = 0.0
-    FFReal_I(EradFlux_) = 0.0
+    RFF_I(EradFlux_) = 0.0
     bCrossArea_D = 0.0
-    FFReal_I(B0x_) = 0.0
-    FFReal_I(B0y_) = 0.0
-    FFReal_I(B0z_) = 0.0
+    RFF_I(B0x_) = 0.0
+    RFF_I(B0y_) = 0.0
+    RFF_I(B0z_) = 0.0
 
-    FFLog_I(UseHallGradPe_) = .false.
+    IsFF_I(UseHallGradPe_) = .false.
 
-    FFLog_I(DoTestCell_) = .false.
+    IsFF_I(DoTestCell_) = .false.
 
-    FFLog_I(IsNewBlockVisco_) = .true.
-    FFLog_I(IsNewBlockGradPe_) = .true.
-    FFLog_I(IsNewBlockCurrent_) = .true.
-    FFLog_I(IsNewBlockHeatCond_) = .true.
-    FFLog_I(IsNewBlockIonHeatCond_) = .true.
-    FFLog_I(IsNewBlockRadDiffusion_) = .true.
-    FFLog_I(IsNewBlockAlfven_) = .true.
+    IsFF_I(IsNewBlockVisco_) = .true.
+    IsFF_I(IsNewBlockGradPe_) = .true.
+    IsFF_I(IsNewBlockCurrent_) = .true.
+    IsFF_I(IsNewBlockHeatCond_) = .true.
+    IsFF_I(IsNewBlockIonHeatCond_) = .true.
+    IsFF_I(IsNewBlockRadDiffusion_) = .true.
+    IsFF_I(IsNewBlockAlfven_) = .true.
 
   end subroutine init_face_flux_arrays
   !============================================================================
