@@ -392,6 +392,7 @@ contains
     use ModReadParam, ONLY: i_line_command
     use ModUtilities, ONLY: cTab, write_string_tabs_name
     use ModIO,       ONLY: NameMaxTimeUnit
+    use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
 
     integer :: iSpecies, iFluid, iDim
@@ -570,6 +571,13 @@ contains
                   BodyTDim_I(iFluid), cTab//cTab//'BodyTDim'
           end do
        end if
+       write(UnitTmp_,*)
+    end if
+
+    if(UseFieldLineThreads)then
+       write(UnitTmp_,'(a)')'#THREADRESTART'
+       write(UnitTmp_,'(l1,a)')UseFieldLineThreads,&
+            cTab//cTab//cTab//'UseFieldLineThreads'
        write(UnitTmp_,*)
     end if
 
