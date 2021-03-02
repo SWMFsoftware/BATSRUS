@@ -239,7 +239,7 @@ contains
   !============================================================================
 
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
-
+    ! !$acc routine vector
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
     ! The subroutine calculates right and left face values (primitive
@@ -366,12 +366,13 @@ contains
 
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
+#ifndef OPENACC    
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
          .and. DoMonotoneRestrict) &
          call correct_monotone_restrict(iBlock)
-
+#endif
     ! first, calculate the CELL values for the variables to be limited
     ! for non-boris corrections they are: density, velocity, pressure
     ! for boris correction momentum is used instead of the velocity
@@ -385,32 +386,28 @@ contains
        nStencil = nOrder
     end if
 
+#ifndef OPENACC    
     if(DoLimitMomentum)then
        if(UseBorisRegion)then
           call set_clight_cell(iBlock)
           call set_clight_face(iBlock)
        end if
     end if
+#endif    
 
-    !$acc data present(Primitive_VGI, State_VGB)
-    !$acc parallel loop collapse(4) independent
+    !$acc parallel loop vector collapse(4) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VGI(iVar,i,j,k,1) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
-    !$acc end data
 
     if(UseAccurateResChange .or. nOrder==4)then
-       !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
-       !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-
-       !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
+       !$acc parallel loop vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
           IArguments_I(y_) = j
           IArguments_I(z_) = k
           call calc_primitives(IArguments_I,iBlock)         ! all cells
        end do; end do; end do
-       !$acc end data
 
        if(nOrder == 4 .and. UseVolumeIntegral4)then
           ! Calculate 4th order accurate cell averaged primitive variables
@@ -484,10 +481,7 @@ contains
           end do; end do; end do
        end if
     else
-       !$acc data present(Primitive_VGI, DoLimitMomentum, UseBorisRegion, &
-       !$acc& UseWavePressure, GammaWave, UseScalarToRhoRatioLtd)
-
-       !$acc parallel loop gang vector collapse(3) private(IArguments_I) independent
+       !$acc parallel loop vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
@@ -502,7 +496,7 @@ contains
        if(nJ > 1)then
           ! TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
+          !$acc parallel loop vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 IArguments_I(x_) = i
@@ -521,7 +515,7 @@ contains
        if(nK > 1)then
           ! TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop gang vector collapse(2) private(IArguments_I) independent
+          !$acc parallel loop vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 IArguments_I(x_) = i
@@ -537,10 +531,11 @@ contains
              end do
           end do; end do
        end if
-       !$acc end data
     end if
 
+#ifndef OPENACC    
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
+#endif    
 
     ! Now the first or second order face values are calculated
     select case(nOrder)
@@ -568,7 +563,7 @@ contains
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
        end if
     case default
-
+#ifndef OPENACC    
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
@@ -742,7 +737,7 @@ contains
              call flatten(Primitive_VGI(:,:,:,:,1))
           end if
        end if
-
+#endif
     end select  ! nOrder
 
     if(DoTest)then
@@ -1550,13 +1545,11 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       !------------------------------------------------------------------------
-      !$acc data present(Primitive_VGI,LeftState_VXI, RightState_VXI)
       !$acc parallel loop collapse(4) independent
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar
          LeftState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i-1,j,k,1)
          RightState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i,j,k,1)
       end do; end do; end do; end do
-      !$acc end data
 
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
