@@ -435,16 +435,7 @@ contains
       real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
            Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
       !------------------------------------------------------------------------
-      !$acc data present(uDotArea_XII, VdtFace_XI, &
-      !$acc& LeftState_VXI, RightState_VXI, &
-      !$acc& Xyz_DGB, &
-      !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
-      !$acc& UseLindeFix, UseRS7, &
-      !$acc& CellFace_DB, &
-      !$acc& CellSize_DB, &
-      !$acc& true_cell, &
-      !$acc& Flux_VXI)
-
+      
 #ifndef OPENACC
       call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
       call set_block_values(iBlock, x_, IFF_I, RFF_I)
@@ -550,8 +541,6 @@ contains
          end do; end do; enddo
       endif
 
-      !$acc end data
-
     end subroutine get_flux_x
     !==========================================================================
 
@@ -567,16 +556,6 @@ contains
       real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
            Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
       !------------------------------------------------------------------------
-      !$acc data present(uDotArea_YII, VdtFace_YI, &
-      !$acc& LeftState_VYI, RightState_VYI, &
-      !$acc& Xyz_DGB, &
-      !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
-      !$acc& UseLindeFix, UseRS7, &
-      !$acc& CellFace_DB, &
-      !$acc& CellSize_DB, &
-      !$acc& true_cell, &
-      !$acc& Flux_VYI)
-
 #ifndef OPENACC
       call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
       call set_block_values(iBlock, y_, IFF_I, RFF_I)
@@ -686,8 +665,6 @@ contains
          end do; end do; enddo
       end if
 
-      !$acc end data
-
     end subroutine get_flux_y
     !==========================================================================
 
@@ -703,16 +680,6 @@ contains
       real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
            Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
       !------------------------------------------------------------------------
-      !$acc data present(uDotArea_ZII, VdtFace_ZI, &
-      !$acc& LeftState_VZI, RightState_VZI, &
-      !$acc& Xyz_DGB, &
-      !$acc& DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, DoAw, DoRoe, &
-      !$acc& UseLindeFix, UseRS7, &
-      !$acc& CellFace_DB, &
-      !$acc& CellSize_DB, &
-      !$acc& true_cell, &
-      !$acc& Flux_VZI)
-
 #ifndef OPENACC
       call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
       call set_block_values(iBlock, z_, IFF_I, RFF_I)
@@ -818,7 +785,6 @@ contains
             enddo
          end do; end do; enddo
       end if
-      !$acc end data
     end subroutine get_flux_z
     !==========================================================================
 
