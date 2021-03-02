@@ -1073,7 +1073,7 @@ contains
          AreaY => FFReal_I(AreaY_), &
          AreaZ => FFReal_I(AreaZ_), &
          ViscoCoeff => FFReal_I(ViscoCoeff_), &
-         Eta => FFReal_I(Eta_), &
+         Eta => FFReal_I(EtaResist_), &
          InvDxyz => FFReal_I(InvDxyz_), &
          HallCoeff => FFReal_I(HallCoeff_), &
          BiermannCoeff => FFReal_I(BiermannCoeff_), &
@@ -1802,7 +1802,7 @@ contains
          iBlockFace => FFInt_I(iBlockFace_), ViscoCoeff => FFReal_I(ViscoCoeff_), &
          B0x => FFReal_I(B0x_), B0y => FFReal_I(B0y_), B0z => FFReal_I(B0z_), &
          EtaJx => FFReal_I(EtaJx_), EtaJy => FFReal_I(EtaJy_), EtaJz => FFReal_I(EtaJz_), &
-         Eta => FFReal_I(Eta_), &
+         Eta => FFReal_I(EtaResist_), &
          GradXPeNe => FFReal_I(GradXPeNe_), &
          GradYPeNe => FFReal_I(GradYPeNe_), &
          GradZPeNe => FFReal_I(GradZPeNe_), &    
@@ -2770,7 +2770,7 @@ contains
          EtaJx => FFReal_I(EtaJx_), &
          EtaJy => FFReal_I(EtaJy_), &
          EtaJz => FFReal_I(EtaJz_), &
-         Eta => FFReal_I(Eta_), &
+         Eta => FFReal_I(EtaResist_), &
          InvDxyz => FFReal_I(InvDxyz_), &
          HallCoeff => FFReal_I(HallCoeff_), &
          HallJx => FFReal_I(HallJx_), &
@@ -3640,7 +3640,7 @@ contains
            CmaxDt => FFReal_I(CmaxDt_), &
            Enormal => FFReal_I(Enormal_), &
            EtaJx => FFReal_I(EtaJx_), EtaJy => FFReal_I(EtaJy_), EtaJz => FFReal_I(EtaJz_), &
-           Eta => FFReal_I(Eta_), &
+           Eta => FFReal_I(EtaResist_), &
            NormalX => FFReal_I(NormalX_), &
            NormalY => FFReal_I(NormalY_), &
            NormalZ => FFReal_I(NormalZ_), &
@@ -4409,7 +4409,7 @@ contains
          iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_), &
          ViscoCoeff => FFReal_I(ViscoCoeff_), &
          B0x => FFReal_I(B0x_), B0y => FFReal_I(B0y_), B0z => FFReal_I(B0z_), &
-         Eta => FFReal_I(Eta_), &
+         Eta => FFReal_I(EtaResist_), &
          HallCoeff => FFReal_I(HallCoeff_), &
          BiermannCoeff => FFReal_I(BiermannCoeff_), &
          Area => FFReal_I(Area_), &
