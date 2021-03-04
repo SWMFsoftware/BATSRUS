@@ -47,6 +47,7 @@ module ModGeometry
   ! Variables describing cells inside boundaries
   ! true when at least one cell in the block (including ghost cells) is not true
   logical, allocatable :: body_BLK(:)
+  !$acc declare create(body_BLK)
 
   ! true when all cells in block (not including ghost cells) are true_cells
   logical, allocatable :: true_BLK(:)

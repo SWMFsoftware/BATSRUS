@@ -38,7 +38,7 @@ module ModFaceValue
   logical, public :: UseFaceIntegral4     = .false.
   logical, public :: UseLimiter4          = .false.
   integer, public :: nGUsed               = nG
-  !$acc declare create(DoLimitMomentum)
+  !$acc declare create(UseAccurateResChange, DoLimitMomentum, UseVolumeIntegral4)
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -65,10 +65,11 @@ module ModFaceValue
   ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
   real    :: BetaLimiterResChange  = 2.0
   integer :: nFaceLimiterResChange = 2
-
+  
   ! Parameters for limiting the logarithm of variables
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
+  !$acc declare create(UseLogRhoLimiter, UseLogPLimiter)
 
   ! Logicals for limiting the logarithm of variables
   logical :: UseLogLimiter, UseLogLimiter_V(nVar)
@@ -80,6 +81,7 @@ module ModFaceValue
 
   ! Parameters for limiting the total pressure (p + p_e + p_wave)
   logical :: UsePtotalLtd     = .false.
+  !$acc declare create(UsePtotalLtd)
 
   ! Parameters for limiting the variable divided by density
   logical :: UseScalarToRhoRatioLtd = .false.
@@ -111,6 +113,9 @@ module ModFaceValue
   logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
 
+  ! FIXME: The following variables should be private!!!
+  !$acc declare create(UseTrueCell, IsTrueCell_I)
+
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
 
@@ -129,6 +134,9 @@ module ModFaceValue
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
   !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+
+  !$acc declare create(iMin, iMax, jMin, jMax, kMin, kMax)
+  !$acc declare create(Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG)
 
   real:: LowOrderCrit_I(1:MaxIJK+1)
   !$omp threadprivate( LowOrderCrit_I )
@@ -239,7 +247,7 @@ contains
   !============================================================================
 
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
-    ! !$acc routine vector
+    !$acc routine vector
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
     ! The subroutine calculates right and left face values (primitive
@@ -300,6 +308,8 @@ contains
 
     logical:: DoTest
 
+    integer:: iGang = 1
+
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
     if(.not. DoResChangeOnly)then
@@ -308,6 +318,7 @@ contains
        DoTest=.false.
     end if
 
+#ifndef OPENACC     
     if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1)then
@@ -339,7 +350,12 @@ contains
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
        allocate(WeightR_II(-2:2,0:MaxIJK+1))
     endif
+#endif    
 
+#ifdef OPENACC
+    iGang = iBlock
+#endif    
+    
     UseTrueCell = body_BLK(iBlock)
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
@@ -395,13 +411,13 @@ contains
     end if
 #endif    
 
-    !$acc parallel loop vector collapse(4) independent
+    !$acc loop vector collapse(4) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
-       Primitive_VGI(iVar,i,j,k,1) = State_VGB(iVar,i,j,k,iBlock)
+       Primitive_VGI(iVar,i,j,k,iGang) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
     if(UseAccurateResChange .or. nOrder==4)then
-       !$acc parallel loop vector collapse(3) private(IArguments_I) independent
+       !$acc loop vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
           IArguments_I(y_) = j
@@ -453,8 +469,10 @@ contains
                 Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
                 ! check positivity !!!
 
+#ifndef OPENACC                 
                 ! Get 4th order accurate cell center pressure
                 call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
+#endif                
 
                 ! Restore cell averaged energy
                 Energy_GBI(i,j,k,iBlock,iFluid) = Energy
@@ -481,7 +499,7 @@ contains
           end do; end do; end do
        end if
     else
-       !$acc parallel loop vector collapse(3) private(IArguments_I) independent
+       !$acc loop vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
@@ -496,7 +514,7 @@ contains
        if(nJ > 1)then
           ! TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop vector collapse(2) private(IArguments_I) independent
+          !$acc loop vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 IArguments_I(x_) = i
@@ -515,7 +533,7 @@ contains
        if(nK > 1)then
           ! TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc parallel loop vector collapse(2) private(IArguments_I) independent
+          !$acc loop vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 IArguments_I(x_) = i
@@ -740,6 +758,7 @@ contains
 #endif
     end select  ! nOrder
 
+#ifndef OPENACC     
     if(DoTest)then
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1) &
@@ -764,7 +783,8 @@ contains
             RightState_VZI(iVarTest,iTest,jTest,kTest+1,1)
 
     end if
-
+#endif
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -1542,54 +1562,73 @@ contains
     !==========================================================================
 
     subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-
+      !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+      integer:: i, j, k
+      integer:: iGang = 1
       !------------------------------------------------------------------------
-      !$acc parallel loop collapse(4) independent
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax; do iVar = 1, nVar
-         LeftState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i-1,j,k,1)
-         RightState_VXI(iVar,i,j,k,1)=Primitive_VGI(iVar,i,j,k,1)
-      end do; end do; end do; end do
+#ifdef OPENACC
+      iGang = iBlock
+#endif      
+      
+      !$acc loop vector collapse(3)
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         LeftState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i-1,j,k,iGang)
+         RightState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
+      end do; end do; end do
 
+#ifndef OPENACC       
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-
+#endif      
     end subroutine get_facex_first
     !==========================================================================
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-
+      !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+      integer:: i, j, k, iVar
+      integer:: iGang = 1
       !------------------------------------------------------------------------
-      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VYI, RightState_VYI)
+#ifdef OPENACC
+      iGang = iBlock
+#endif      
+      !$acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VYI(:,i,j,k,1)=Primitive_VGI(:,i,j-1,k,1)
-         RightState_VYI(:,i,j,k,1)=Primitive_VGI(:,i,j,k,1)
+         LeftState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j-1,k,iGang)
+         RightState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
+#ifndef OPENACC       
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-
+#endif
     end subroutine get_facey_first
     !==========================================================================
     subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-
+      !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
+      integer:: i, j, k, iVar
+      integer:: iGang = 1
       !------------------------------------------------------------------------
-      !$acc parallel loop collapse(3) present(Primitive_VGI,LeftState_VZI, RightState_VZI)
+#ifdef OPENACC
+      iGang = iBlock
+#endif      
+      !$acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VZI(:,i,j,k,1)=Primitive_VGI(:,i,j,k-1,1)
-         RightState_VZI(:,i,j,k,1)=Primitive_VGI(:,i,j,k,1)
+         LeftState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k-1,iGang)
+         RightState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
+#ifndef OPENACC             
       if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-
+#endif
     end subroutine get_facez_first
     !==========================================================================
     subroutine get_face_accurate3d(iSideIn)

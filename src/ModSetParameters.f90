@@ -3658,6 +3658,12 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+      !$acc update device(nOrder)
+      
+      !$acc update device(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
+      !$acc update device(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
+      !$acc update device(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
+      
     end subroutine correct_parameters
     !==========================================================================
 

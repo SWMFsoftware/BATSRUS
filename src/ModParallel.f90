@@ -23,8 +23,11 @@ module ModParallel
   integer, allocatable :: neiLwest(:)
   integer, allocatable :: neiLnorth(:)
   integer, allocatable :: neiLsouth(:)
-
+  !$acc declare create(neiLtop, neiLbot)
+  !$acc declare create(neiLeast, neiLwest, neiLnorth, neiLsouth)
+  
   integer, allocatable :: neiLEV(:,:)
+  !$acc declare create(neiLEV)
 
   ! Neighbor processor and block numbers (a value of NOBLK
   ! means not used).  As only one level change is permitted

@@ -127,12 +127,16 @@ contains
 
        endif
 
+#define OPENACCDEVELOPMENT
+       
        ! Multi-block solution update.
+       !$acc parallel loop gang
        !$omp parallel do
        do iBlock = 1, nBlock
 
           if(Unused_B(iBlock)) CYCLE
-
+          
+#ifndef OPENACCDEVELOPMENT
           ! Calculate interface values for L/R states of each face
           ! and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
@@ -142,21 +146,37 @@ contains
              call calc_cell_flux(iBlock)
              call timing_stop('calc_fluxes')
           end if
-
+#endif
+          
+#ifndef OPENACCDEVELOPMENT          
           call timing_start('calc_facevalues')
+#endif
+          
           call calc_face_value(iBlock, DoResChangeOnly= .false. , DoMonotoneRestrict = .true.)
+          
+#ifndef OPENACCDEVELOPMENT                    
           call timing_stop('calc_facevalues')
-
+          
           if(body_BLK(iBlock)) &
                call set_face_boundary(iBlock, Time_Simulation,.false.)
-
+#endif          
+          
           if(.not.DoInterpolateFlux)then
              ! Compute interface fluxes for each cell.
+#ifndef OPENACCDEVELOPMENT                                 
              call timing_start('calc_fluxes')
+#endif                       
              call calc_face_flux(.false., iBlock)
+#ifndef OPENACCDEVELOPMENT                                 
              call timing_stop('calc_fluxes')
+#endif                       
           end if
 
+       end do
+       
+       !$omp parallel do
+       do iBlock = 1, nBlock
+          
           ! Enforce flux conservation by applying corrected fluxes
           ! to each coarse grid cell face at block edges with
           ! resolution changes.

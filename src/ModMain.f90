@@ -32,6 +32,7 @@ module ModMain
 
   ! Time stepping parameters and values.
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
+  !$acc declare create(nOrder)
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
 
   ! FLux-In-Cell scheme, if true. (Dt/2, Dt/2, Dt) update with a special
@@ -187,7 +188,10 @@ module ModMain
        iMinFace = 1, iMaxFace = nI, iMinFace2 = 1, iMaxFace2 = nI, &
        jMinFace = 1, jMaxFace = nJ, jMinFace2 = 1, jMaxFace2 = nJ, &
        kMinFace = 1, kMaxFace = nK, kMinFace2 = 1, kMaxFace2 = nK
-
+  !$acc declare create(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
+  !$acc declare create(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
+  !$acc declare create(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
+  
   ! div B control
   logical :: UseDivbSource    = UseB
   logical :: UseDivbDiffusion = .false.
