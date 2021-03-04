@@ -3911,6 +3911,7 @@ No magnetometer grid file is saved by default.
 	<option name="eq.rays" value="eqr" />
 	<option name="min B surface" value="eqb" />
 	<option name="cut" />
+	<option name="bx0" />
 	<option name="slice" value="slc"
 		if="$plotform =~ /\btec\b/"/>
 	<option name="dipole" value="dpl"
@@ -3964,7 +3965,7 @@ No magnetometer grid file is saved by default.
 	       default="-1"/>
     <parameter name="DtSavePlot" type="real"    min="-1"
 	       default="-1.0"/>
-    <if expr="$plotarea =~ /\bdpl|cut|slc\b/">
+    <if expr="$plotarea =~ /\bdpl|cut|bx0|slc\b/">
       <parameter name="xMinCut" type="real" />
       <parameter name="xMaxCut" type="real" min="$xMinCut"/>
       <parameter name="yMinCut" type="real" />
