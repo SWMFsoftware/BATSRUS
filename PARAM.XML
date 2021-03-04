@@ -4097,7 +4097,7 @@ No magnetometer grid file is saved by default.
   </for>
 
 #SAVEPLOT
-18			nPlotFile
+19			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -4259,6 +4259,15 @@ soho:c3 sta:euvi stb:cor2	StringsInstrument
 buf MHD idl	 	StringPlot
 -1  			DnSavePlot
 1 hour			DtSavePlot
+bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
+100			DnSavePlot
+-1.			DtSavePlot
+-10.			Coord1MinCut
+10.			Coord1MaxCut
+-10.			Coord2MinCut
+10.			Coord2MaxCut
+-10.			Coord3MinCut
+10.			Coord3MaxCut
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US.
@@ -4308,6 +4317,7 @@ y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
 cut   - 3D, 2D or 1D cut along (curvilinear) coordinates (IDL and TCP)
         or a 2D rectangular cut (node based Tecplot)
+bx0   - bx=0 (along z direction) isosurface plot
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
@@ -4325,6 +4335,11 @@ buf   - coupling buffer between two components
 The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
 This can be used for reconstructing the full grid and use the data
 with the READAMR library, for example.
+
+For the PlotArea 'bx0' which is the bx=0 on z direction isosurface plot,
+an extra plot variable 'z' will be added as the first plot variable
+in addition to the PlotVar string. This extra plot variable 'z'
+records the position of the isosurface.
 
 For IDL and cell centered Tecplot (tcp) plots the PlotArea = 'cut'
 can be used to create cuts.
@@ -4378,7 +4393,7 @@ values or as non-dimensional values:
 Depending on StringPlot, the following parameters are also read
 from the parameter file in this order:
 \begin{verbatim}
- xMinCut...zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
+ xMinCut...zMaxCut	 if PlotArea is 'cut', 'bx0', 'dpl', or 'slc'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
  TypeCoordPlot           if PlotArea is 'shl' or 'box'
  RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
