@@ -172,7 +172,7 @@ contains
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, Efield_DGB, &
+    use ModAdvance, ONLY: State_VGB, Source_VCI, UseAnisoPe, Efield_DGB, &
          bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI, UseElectronPressure
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
@@ -197,16 +197,18 @@ contains
 
     integer :: i, j, k, iIonFluid
 
+    integer :: iGang
+
     logical :: DoTestCell
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
     if(DoTest)then
-       write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
-            Source_VC(iVarTest,iTest,jTest,kTest)
+       write(*,'(2a,es16.8)') NameSub,': initial Source_VCI=', &
+            Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
     end if
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
@@ -247,13 +249,13 @@ contains
        end if
 
        ! Store ion momentum sources
-       Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) + ForceX_I
-       Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
-       Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
+       Source_VCI(iRhoUxIon_I,i,j,k,iGang) = Source_VCI(iRhoUxIon_I,i,j,k,iGang) + ForceX_I
+       Source_VCI(iRhoUyIon_I,i,j,k,iGang) = Source_VCI(iRhoUyIon_I,i,j,k,iGang) + ForceY_I
+       Source_VCI(iRhoUzIon_I,i,j,k,iGang) = Source_VCI(iRhoUzIon_I,i,j,k,iGang) + ForceZ_I
 
        ! Calculate ion energy sources = u_s.Force_s
-       Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) = &
-            Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) + &
+       Source_VCI(nVar+IonFirst_:nVar+IonLast_,i,j,k,iGang) = &
+            Source_VCI(nVar+IonFirst_:nVar+IonLast_,i,j,k,iGang) + &
             ( State_V(iRhoUxIon_I)*ForceX_I &
             + State_V(iRhoUyIon_I)*ForceY_I &
             + State_V(iRhoUzIon_I)*ForceZ_I &
@@ -261,8 +263,8 @@ contains
 
     end do; end do; end do
 
-    if(DoTest)write(*,'(2a,15es16.8)')NameSub,': final Source_VC =',&
-         Source_VC(iVarTest,iTest,jTest,kTest)
+    if(DoTest)write(*,'(2a,15es16.8)')NameSub,': final Source_VCI =',&
+         Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_source_expl
@@ -289,7 +291,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, UseUserPointImplicit_B, &
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, UseB0, UseFlic
-    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModAdvance, ONLY: State_VGB, Source_VCI
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
@@ -319,6 +321,8 @@ contains
     real :: AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
+    integer :: iGang
+    
     ! Artificial friction
     real :: InvuCutOff2, InvTauCutOff
 
@@ -334,6 +338,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    iGang = 1
     DoTestCell = .false.
 
     ! Add user defined point implicit source terms here
@@ -366,7 +371,7 @@ contains
        DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        if(DoTestCell)write(*,'(2a,15es16.8)') NameSub, ' initial source = ',&
-            Source_VC(iVarTest,i,j,k)
+            Source_VCI(iVarTest,i,j,k,iGang)
 
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,iBlock)
@@ -616,23 +621,23 @@ contains
              end do
 
              iP = iPIon_I(iIon)
-             Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
+             Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) + Heating
 
           end if
 
           iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
-          Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
+          Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) = Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) &
                + Force_D
 
           iEnergy = Energy_-2+iIon+IonFirst_
-          Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+          Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) &
                + sum(Force_D*uIon_D) &
                + InvGammaMinus1_I(IonFirst_+iIon-1)*Heating
 
        end do
 
        if(DoTestCell)write(*,'(2a,15es16.8)')NameSub, ' final source = ',&
-            Source_VC(iVarTest,i,j,k)
+            Source_VCI(iVarTest,i,j,k,iGang)
 
     end do; end do; end do
 

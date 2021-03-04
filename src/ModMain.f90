@@ -32,13 +32,15 @@ module ModMain
 
   ! Time stepping parameters and values.
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
-  !$acc declare create(nOrder)
+  !$acc declare create(nOrder, iStage, nStage)
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
+  !$acc declare create(UseHalfStep)
 
   ! FLux-In-Cell scheme, if true. (Dt/2, Dt/2, Dt) update with a special
   ! procedure to get time-centered electromagnetic fields at half time-step
   ! Maintains the Mhd environment (electromagnetic field) for hybrid.
   logical :: UseFlic     = .false.
+  !$acc declare create(UseFlic)
 
   real :: Dt
   real :: DtFixed
@@ -47,15 +49,17 @@ module ModMain
   real :: Cfl
   real :: CflOrig
   real, allocatable :: Dt_BLK(:)
-  !$acc declare create(Dt_BLK, DtFixed)
+  !$acc declare create(Dt_BLK, Dt, DtFixed, Cfl)
   logical :: time_accurate = .true.,  time_loop = .false.
-
+  !$acc declare create(time_accurate)
+  
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0
   !$acc declare create(Climit)
 
   ! Fixed time step (only for time accurate and for implicit scheme mostly)
   logical :: UseDtFixed
+  !$acc declare create(UseDtFixed)
 
   ! Limited time step
   logical :: UseDtLimit
@@ -200,7 +204,7 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
-  !$acc declare create(SpeedHyp, UseHyperbolicDivb)
+  !$acc declare create(SpeedHyp, UseHyperbolicDivb, UseDivbSource)
 
   ! More numerical scheme parameters
   ! Prolongation order
@@ -284,7 +288,8 @@ module ModMain
   logical:: UseUserInitSession       = .false.
   logical:: UseUserUpdateStates      = .false.
   logical:: UseUserWriteProgress     = .false.
-
+  !$acc declare create(UseUserUpdateStates)
+  
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.
 

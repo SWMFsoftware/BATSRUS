@@ -57,12 +57,13 @@ contains
     ! Misc
     ! Loop variables
     integer :: i, j, k, jMerge, jStart, jLast, kLayer, kStride
+    integer:: iGang
     real:: VDt
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_coarse_axis_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
     select case(iHemisphere)
     case(NorthHemiSph_)
        k = nK - nCoarseLayer; kStride =  1; jMerge = 1
@@ -81,11 +82,11 @@ contains
              if(any(.not. true_cell(i,jStart:jLast,k,iBlock))) then
                 time_BLK(i,jStart:jLast,k,iBlock) = 0
              else
-                Vdt =  sum(max(VdtFace_xI(i,jStart:jLast,k,1), &
-                     VdtFace_xI(i+1,jStart:jLast,k,1)))&
-                     + max(VdtFace_yI(i,jStart,k,1), VdtFace_yI(i,jLast+1,k,1)) &
-                     + sum(max(VdtFace_zI(i,jStart:jLast,k,1), &
-                     VdtFace_zI(i,jStart:jLast,k+1,1) ))
+                Vdt =  sum(max(VdtFace_xI(i,jStart:jLast,k,iGang), &
+                     VdtFace_xI(i+1,jStart:jLast,k,iGang)))&
+                     + max(VdtFace_yI(i,jStart,k,iGang), VdtFace_yI(i,jLast+1,k,iGang)) &
+                     + sum(max(VdtFace_zI(i,jStart:jLast,k,iGang), &
+                     VdtFace_zI(i,jStart:jLast,k+1,iGang) ))
 
                 time_BLK(i,jStart:jLast,k,iBlock) = &
                      jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt

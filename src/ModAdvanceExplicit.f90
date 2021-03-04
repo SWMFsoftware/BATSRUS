@@ -69,7 +69,7 @@ contains
     if(UseBody2Orbit) call update_secondbody
 
     STAGELOOP: do iStage = 1, nStage
-
+       !$acc update device(iStage)
        if(DoTest) write(*,*)NameSub,' starting stage=',iStage
 
        ! If heating model depends on global B topology, update here
@@ -130,9 +130,11 @@ contains
 #define OPENACCDEVELOPMENT
        
        ! Multi-block solution update.
-       !$acc parallel loop gang
+       !$acc parallel
+       
+       !$acc loop gang
        !$omp parallel do
-       do iBlock = 1, nBlock
+       do iBlock = 1,nBlock
 
           if(Unused_B(iBlock)) CYCLE
           
@@ -172,20 +174,24 @@ contains
 #endif                       
           end if
 
-       end do
-       
-       !$omp parallel do
-       do iBlock = 1, nBlock
-          
+#ifndef OPENACCDEVELOPMENT          
           ! Enforce flux conservation by applying corrected fluxes
           ! to each coarse grid cell face at block edges with
           ! resolution changes.
           if(DoConserveFlux) call apply_cons_flux(iBlock)
+#endif
 
+#ifndef OPENACCDEVELOPMENT          
           ! Compute source terms for each cell.
           call timing_start('calc_sources')
+#endif          
           call calc_source(iBlock)
+
+#ifndef OPENACCDEVELOPMENT                    
           call timing_stop('calc_sources')
+#endif          
+
+#ifndef OPENACCDEVELOPMENT          
           ! With known magnetic field and electric field in the
           ! comoving frame update ion velocities at the half time-step
           if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
@@ -207,9 +213,13 @@ contains
 
           ! Update solution state in each cell.
           call timing_start('update_state')
+#endif
+          
           call update_state(iBlock)
-          call timing_stop('update_state')
 
+#ifndef OPENACCDEVELOPMENT                    
+          call timing_stop('update_state')
+          
           if(DoCalcElectricField .and. iStage == nStage) &
                call get_num_electric_field(iBlock)
 
@@ -219,7 +229,8 @@ contains
              call bound_VxB(iBlock)
              call timing_stop('constrain_B')
           end if
-
+#endif
+          
           ! Calculate time step (both local and global
           ! for the block) used in multi-stage update
           ! for time accurate calculations.
@@ -229,13 +240,15 @@ contains
                iStage == nStage .and. DoCalcTimestep) &
                call calc_timestep(iBlock)
 
+#ifndef OPENACCDEVELOPMENT          
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)
-
+#endif
        end do ! Multi-block solution update loop.
        !$omp end parallel do
-
+       !$acc end  parallel
+       
        if(DoTest)write(*,*)NameSub,' done update blocks'
 
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')

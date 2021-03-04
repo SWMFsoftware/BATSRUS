@@ -120,10 +120,14 @@ contains
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
-
+    integer:: iGang
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_VxB'
     !--------------------------------------------------------------------------
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif    
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
     else
@@ -132,24 +136,24 @@ contains
 
     ! VxB_x=(fy+fy-fz-fz)/4
     VxB_x(1:nI,1:nJ+1,1:nK+1,iBlock)= 0.25*(                        &
-         (Flux_VYI(Bz_,1:nI,1:nJ+1,0:nK  ,1)                         &
-         +Flux_VYI(Bz_,1:nI,1:nJ+1,1:nK+1,1) )/CellFace_DB(2,iBlock) &
-         -(Flux_VZI(By_,1:nI,0:nJ  ,1:nK+1,1)                         &
-         +Flux_VZI(By_,1:nI,1:nJ+1,1:nK+1,1) )/CellFace_DB(3,iBlock))
+         (Flux_VYI(Bz_,1:nI,1:nJ+1,0:nK  ,iGang)                         &
+         +Flux_VYI(Bz_,1:nI,1:nJ+1,1:nK+1,iGang) )/CellFace_DB(2,iBlock) &
+         -(Flux_VZI(By_,1:nI,0:nJ  ,1:nK+1,iGang)                         &
+         +Flux_VZI(By_,1:nI,1:nJ+1,1:nK+1,iGang) )/CellFace_DB(3,iBlock))
 
     ! VxB_y=(fz+fz-fx-fx)/4
     VxB_y(1:nI+1,1:nJ,1:nK+1,iBlock)= 0.25*(                        &
-         (Flux_VZI(Bx_,0:nI  ,1:nJ,1:nK+1,1)                         &
-         +Flux_VZI(Bx_,1:nI+1,1:nJ,1:nK+1,1) )/CellFace_DB(3,iBlock) &
-         -(Flux_VXI(Bz_,1:nI+1,1:nJ,0:nK  ,1)                         &
-         +Flux_VXI(Bz_,1:nI+1,1:nJ,1:nK+1,1) )/CellFace_DB(1,iBlock))
+         (Flux_VZI(Bx_,0:nI  ,1:nJ,1:nK+1,iGang)                         &
+         +Flux_VZI(Bx_,1:nI+1,1:nJ,1:nK+1,iGang) )/CellFace_DB(3,iBlock) &
+         -(Flux_VXI(Bz_,1:nI+1,1:nJ,0:nK  ,iGang)                         &
+         +Flux_VXI(Bz_,1:nI+1,1:nJ,1:nK+1,iGang) )/CellFace_DB(1,iBlock))
 
     ! VxB_z=(fx+fx-fy-fy)/4
     VxB_z(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                        &
-         (Flux_VXI(By_,1:nI+1,0:nJ  ,1:nK,1)                         &
-         +Flux_VXI(By_,1:nI+1,1:nJ+1,1:nK,1) )/CellFace_DB(1,iBlock) &
-         -(Flux_VYI(Bx_,0:nI  ,1:nJ+1,1:nK,1)                         &
-         +Flux_VYI(Bx_,1:nI+1,1:nJ+1,1:nK,1) )/CellFace_DB(2,iBlock))
+         (Flux_VXI(By_,1:nI+1,0:nJ  ,1:nK,iGang)                         &
+         +Flux_VXI(By_,1:nI+1,1:nJ+1,1:nK,iGang) )/CellFace_DB(1,iBlock) &
+         -(Flux_VYI(Bx_,0:nI  ,1:nJ+1,1:nK,iGang)                         &
+         +Flux_VYI(Bx_,1:nI+1,1:nJ+1,1:nK,iGang) )/CellFace_DB(2,iBlock))
 
     if(DoTest)then
        write(*,*)'get_vxb: final VxB (edge centered)'
@@ -182,18 +186,23 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i,j,k
-
+    integer:: iGang
+    
     ! Apply continuous or fixed boundary conditions at outer boundaries
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_VxB'
     !--------------------------------------------------------------------------
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif        
     call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ
-          VxB_y(1,j,k,iBlock) = +Flux_VZI(Bx_,1,j,k,1) /CellFace_DB(3,iBlock)
+          VxB_y(1,j,k,iBlock) = +Flux_VZI(Bx_,1,j,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do j=1,nJ+1
-          VxB_z(1,j,k,iBlock) = -Flux_VYI(Bx_,1,j,k,1) /CellFace_DB(2,iBlock)
+          VxB_z(1,j,k,iBlock) = -Flux_VYI(Bx_,1,j,k,iGang) /CellFace_DB(2,iBlock)
        end do; end do
     end if
     if(neiLwest(iBlock)==NOBLK)then
@@ -206,43 +215,43 @@ contains
        case default
           ! continuous
           do k=1,nK+1; do j=1,nJ
-             VxB_y(nI+1,j,k,iBlock) = +Flux_VZI(Bx_,nI,j,k,1) /CellFace_DB(3,iBlock)
+             VxB_y(nI+1,j,k,iBlock) = +Flux_VZI(Bx_,nI,j,k,iGang) /CellFace_DB(3,iBlock)
           end do; end do
           do k=1,nK; do j=1,nJ+1
-             VxB_z(nI+1,j,k,iBlock) = -Flux_VYI(Bx_,nI,j,k,1) /CellFace_DB(2,iBlock)
+             VxB_z(nI+1,j,k,iBlock) = -Flux_VYI(Bx_,nI,j,k,iGang) /CellFace_DB(2,iBlock)
           end do; end do
        end select
     end if
     if(neiLsouth(iBlock)==NOBLK)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,1,k,iBlock) = -Flux_VZI(By_,i,1,k,1) /CellFace_DB(3,iBlock)
+          VxB_x(i,1,k,iBlock) = -Flux_VZI(By_,i,1,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,1,k,iBlock) = +Flux_VXI(By_,i,1,k,1) /CellFace_DB(1,iBlock)
+          VxB_z(i,1,k,iBlock) = +Flux_VXI(By_,i,1,k,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLnorth(iBlock)==NOBLK)then
        do k=1,nK+1; do i=1,nI
-          VxB_x(i,nJ+1,k,iBlock) = -Flux_VZI(By_,i,nJ,k,1) /CellFace_DB(3,iBlock)
+          VxB_x(i,nJ+1,k,iBlock) = -Flux_VZI(By_,i,nJ,k,iGang) /CellFace_DB(3,iBlock)
        end do; end do
        do k=1,nK; do i=1,nI+1
-          VxB_z(i,nJ+1,k,iBlock) = +Flux_VXI(By_,i,nJ,k,1) /CellFace_DB(1,iBlock)
+          VxB_z(i,nJ+1,k,iBlock) = +Flux_VXI(By_,i,nJ,k,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLbot(iBlock)==NOBLK)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,1,iBlock) = +Flux_VYI(Bz_,i,j,1,1) /CellFace_DB(2,iBlock)
+          VxB_x(i,j,1,iBlock) = +Flux_VYI(Bz_,i,j,1,iGang) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,1,iBlock) = -Flux_VXI(Bz_,i,j,1,1) /CellFace_DB(1,iBlock)
+          VxB_y(i,j,1,iBlock) = -Flux_VXI(Bz_,i,j,1,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
     if(neiLtop(iBlock)==NOBLK)then
        do j=1,nJ+1; do i=1,nI
-          VxB_x(i,j,nK+1,iBlock) = +Flux_VYI(Bz_,i,j,nK,1) /CellFace_DB(2,iBlock)
+          VxB_x(i,j,nK+1,iBlock) = +Flux_VYI(Bz_,i,j,nK,iGang) /CellFace_DB(2,iBlock)
        end do; end do
        do j=1,nJ; do i=1,nI+1
-          VxB_y(i,j,nK+1,iBlock) = -Flux_VXI(Bz_,i,j,nK,1) /CellFace_DB(1,iBlock)
+          VxB_y(i,j,nK+1,iBlock) = -Flux_VXI(Bz_,i,j,nK,iGang) /CellFace_DB(1,iBlock)
        end do; end do
     end if
 

@@ -2211,19 +2211,22 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
+    use ModAdvance, ONLY : Source_VCI  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
 
     integer, intent(in) :: iBlock
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
 
+    integer:: iGang   
     logical :: UseDivbSourceOrig
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    iGang = 1
+    
     call timing_start(NameSub)
 
     UseDivbSourceOrig = UseDivbSource
@@ -2233,11 +2236,11 @@ contains
 
     call calc_source(iBlock)
 
-    SourceImpl_VC = Source_VC(1:nVar,:,:,:)
+    SourceImpl_VC = Source_VCI(1:nVar,:,:,:,iGang)
 
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
-       SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
+       SourceImpl_VC(iP_I,:,:,:) = Source_VCI(Energy_:Energy_+nFluid-1,:,:,:,iGang)
     end if
 
     UseDivbSource = UseDivbSourceOrig

@@ -386,7 +386,7 @@ contains
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, By_, Bz_, Energy_
-    use ModAdvance,    ONLY: Source_VC, &
+    use ModAdvance,    ONLY: Source_VCI, &
          UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use omp_lib
 
@@ -397,13 +397,15 @@ contains
 
     integer :: i, j, k
 
+    integer :: iGang
+
     logical :: DoTestCell
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_resistivity_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
     JouleHeating = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -416,17 +418,17 @@ contains
           write(*,*) NameSub, ': initial JouleHeating    =', &
                JouleHeating
           write(*,*) NameSub, ': initial P source        =', &
-               Source_VC(P_,i,j,k)
+               Source_VCI(P_,i,j,k,iGang)
           if (UseElectronPressure) &
                write(*,*) NameSub, ': initial Pe source       =', &
-               Source_VC(Pe_,i,j,k)
+               Source_VCI(Pe_,i,j,k,iGang)
           if (UseAnisoPressure) &
                write(*,*) NameSub, ': initial Ppar Source     =',&
-               Source_VC(Ppar_,i,j,k)
+               Source_VCI(Ppar_,i,j,k,iGang)
           write(*,*) NameSub, ': initial energy source   =', &
-               Source_VC(Energy_,i,j,k)
+               Source_VCI(Energy_,i,j,k,iGang)
           write(*,*) NameSub, ': initial By source       =', &
-               Source_VC(By_,i,j,k)
+               Source_VCI(By_,i,j,k,iGang)
        end if
 
        if(UseAnisoPe) call stop_mpi(NameSub// &
@@ -439,20 +441,20 @@ contains
        end if
 
        if(UseElectronPressure)then
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
+          Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang) + JouleHeating
           ! Remove Joule heating from ion energy equation
           if(UseResistiveFlux) &
-               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                - InvGammaElectronMinus1*JouleHeating
        else
-          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
+          Source_VCI(P_,i,j,k,iGang) = Source_VCI(P_,i,j,k,iGang) + JouleHeating
 
           ! the same amount of Joule heating applies on Ppar
           if(UseAnisoPressure) &
-               Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) + JouleHeating
+               Source_VCI(Ppar_,i,j,k,iGang)  = Source_VCI(Ppar_,i,j,k,iGang) + JouleHeating
 
           if(.not.UseResistiveFlux) &
-               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                + InvGammaElectronMinus1*JouleHeating
        end if
 
@@ -462,7 +464,7 @@ contains
           if(.not.UseJouleHeating) call get_current(i,j,k,iBlock,Current_D)
 
           ! Source[Bphi] = -eta*Jz / radius
-          Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+          Source_VCI(Bz_,i,j,k,iGang) = Source_VCI(Bz_,i,j,k,iGang) &
                - Eta_GB(i,j,k,iBlock)*Current_D(x_)/Xyz_DGB(2,i,j,k,iBlock)
        end if
 
@@ -470,17 +472,17 @@ contains
           write(*,*) NameSub, ': corrected JouleHeating  =', &
                JouleHeating
           write(*,*) NameSub, ': corrected P source      =', &
-               Source_VC(P_,i,j,k)
+               Source_VCI(P_,i,j,k,iGang)
           if(UseElectronPressure) &
                write(*,*) NameSub, ': corrected Pe source     =', &
-               Source_VC(Pe_,i,j,k)
+               Source_VCI(Pe_,i,j,k,iGang)
           if(UseAnisoPressure) &
                write(*,*) NameSub, ': corrected Ppar source     =', &
-               Source_VC(Ppar_,i,j,k)
+               Source_VCI(Ppar_,i,j,k,iGang)
           write(*,*) NameSub, ': corrected energy source =', &
-               Source_VC(Energy_,i,j,k)
+               Source_VCI(Energy_,i,j,k,iGang)
           write(*,*) NameSub, ': initial By source       =', &
-               Source_VC(By_,i,j,k)
+               Source_VCI(By_,i,j,k,iGang)
        end if
     end do; end do; end do
 

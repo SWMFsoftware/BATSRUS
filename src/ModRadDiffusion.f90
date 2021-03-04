@@ -386,7 +386,7 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
+    use ModAdvance,    ONLY: State_VGB, Source_VCI, Erad_, nWave
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
@@ -397,6 +397,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    integer :: iGang
     real :: TeSi, Te
     real :: AbsorptionEmission, OpacityPlanckSi_W(nWave)
     real :: OpacityEmissionSi_W(nWave)
@@ -405,7 +406,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -433,10 +434,10 @@ contains
             - RelaxCoef2_CB(i,j,k,iBlock)*State_VGB(Erad_,i,j,k,iBlock)
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
+       Source_VCI(Erad_,i,j,k,iGang) = Source_VCI(Erad_,i,j,k,iGang) + AbsorptionEmission
 
        ! dE/dt = - AbsorptionEmission
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
+       Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) - AbsorptionEmission
 
     end do; end do; end do
 
