@@ -337,7 +337,8 @@ contains
     use ModPIC, ONLY: UsePic, pic_init_region
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell, iProc
     use ModTimeStepControl, ONLY: TimeSimulationOldCheck
-
+    use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
+    use EEE_ModCommonVariables, ONLY: UseCme
     ! Local variables
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_session'
@@ -361,6 +362,7 @@ contains
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call user_initial_perturbation
+       if(UseCme.and.UseFieldLineThreads)call set_threads
        UseUserPerturbation=.false.
     end if
 
