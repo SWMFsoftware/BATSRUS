@@ -330,7 +330,7 @@ contains
   end subroutine init_heat_conduction
   !============================================================================
 
-  subroutine get_heat_flux( IsFF_I, IFF_I, RFF_I)
+  subroutine get_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -348,12 +348,12 @@ contains
          get_gamma_collisionless
 
     
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
-    real, dimension(:), pointer:: StateLeft_V
-    real, dimension(:), pointer:: StateRight_V
-    real, dimension(:), pointer:: Normal_D
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: Normal_D(MaxDim)
 
     integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
@@ -367,9 +367,6 @@ contains
     !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
       iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
       iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
@@ -598,7 +595,7 @@ contains
   end subroutine get_heat_cond_coef
   !============================================================================
 
-  subroutine get_ion_heat_flux( IsFF_I, IFF_I, RFF_I)
+  subroutine get_ion_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
 
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
@@ -607,12 +604,12 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
     
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
-    real, dimension(:), pointer:: StateLeft_V
-    real, dimension(:), pointer:: StateRight_V
-    real, dimension(:), pointer:: Normal_D
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: Normal_D(MaxDim)
 
     integer :: i, j, k
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
@@ -620,9 +617,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
       iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
       iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &

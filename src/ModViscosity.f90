@@ -229,9 +229,9 @@ contains
     use ModFaceFluxParameters
 
     
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
 
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0

@@ -29,7 +29,6 @@ module ModRadDiffusion
   use ModImplicit,    ONLY: UseAccurateRadiation
   use ModVarIndexes,  ONLY: p_, nWave
   use BATL_size,      ONLY: nDim, MaxDim
-  use ModAdvance,     ONLY: StateLeft_, StateRight_, Normal_
 
   implicit none
   save
@@ -291,7 +290,7 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I)
+  subroutine get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
 
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
@@ -299,20 +298,17 @@ contains
     use ModFaceFluxParameters
 
     
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
-    real, dimension(:), pointer:: StateLeft_V
-    real, dimension(:), pointer:: StateRight_V
-    real, dimension(:), pointer:: Normal_D
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: Normal_D(MaxDim)
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
       iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
       i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_), &

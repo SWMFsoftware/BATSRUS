@@ -40,26 +40,10 @@ module ModFaceFluxParameters
        jFace_           = iFace_ + 1, &
        kFace_           = jFace_ + 1
 
-  integer, parameter :: nFFReal = &
-       2*nVar + 2*(nVar+nFluid) + 7*MaxDim + 3*(nFluid+1) & ! Arrays
-       + 53 ! Scalars
+  integer, parameter :: nFFReal = 53 ! Scalars
 
   integer, parameter :: &
-       StateLeft_       = 1, &
-       StateRight_      = StateLeft_ + nVar, &
-       FluxLeft_        = StateRight_ + nVar, &
-       FLuxRight_       = FluxLeft_ + nVar + nFluid, &
-       Normal_          = FLuxRight_ + nVar + nFluid, &
-       Tangent1_        = Normal_ + MaxDim, &
-       Tangent2_        = Tangent1_ + MaxDim, &
-       MhdFlux_         = Tangent2_ + MaxDim, &
-       MhdFluxLeft_     = MhdFlux_ + MaxDim, &
-       MhdFluxRight_    = MhdFluxLeft_ + MaxDim, &
-       Unormal_         = MhdFluxRight_ + MaxDim, &
-       UnLeft_          = Unormal_ + nFluid + 1, &
-       UnRight_         = UnLeft_ + nFluid + 1, &
-       bCrossArea_      = UnRight_ + nFluid + 1,&
-       CmaxDt_          = bCrossArea_ + MaxDim, &
+       CmaxDt_          = 1, &
        Area2_           = CmaxDt_ + 1, &
        AreaX_           = Area2_ + 1, &
        AreaY_           = AreaX_ + 1, &
@@ -115,22 +99,20 @@ module ModFaceFluxParameters
 
 contains
   !============================================================================
-  subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+  subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
-    real, dimension(:), pointer:: Unormal_I
-    real, dimension(:), pointer:: bCrossArea_D
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Unormal_I(nFluid+1)
+    real, intent(inout):: bCrossArea_D(MaxDim)
 
     ! When openacc creates a derived type on GPU, the variables are
     ! not correctly initialized. So, they are explicitly initialized
     ! here.
 
     !--------------------------------------------------------------------------
-    bCrossArea_D => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
-    Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
 
     IFF_I(iFluidMin_) = 1
     IFF_I(iFluidMax_) = nFluid

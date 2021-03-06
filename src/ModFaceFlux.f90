@@ -214,18 +214,17 @@ contains
   end subroutine init_mod_face_flux
   !============================================================================
 
-  subroutine set_block_values(iBlock, iDim, IFF_I, RFF_I)
+  subroutine set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
 
     integer, intent(in) :: iBlock, iDim       
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
-    real, dimension(:), pointer:: Normal_D
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Normal_D(MaxDim)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_block_values'
     !--------------------------------------------------------------------------
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
     associate( &
          iBlockFace => IFF_I(iBlockFace_), iDimFace => IFF_I(iDimFace_), &
          Area2 => RFF_I(Area2_), Area => RFF_I(Area_), &
@@ -439,8 +438,18 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
-      real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
-           Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
+      real :: StateLeft_V(nVar)                                     
+      real :: StateRight_V(nVar)                                    
+      real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+      real :: Normal_D(MaxDim)                                      
+      real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+      real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+      real :: MhdFluxLeft_V( RhoUx_:RhoUz_)                         
+      real :: MhdFluxRight_V(RhoUx_:RhoUz_)                         
+      real :: Unormal_I(nFluid+1)
+      real :: UnLeft_I(nFluid+1)                                    
+      real :: UnRight_I(nFluid+1)                                   
+      real :: bCrossArea_D(3)
       !------------------------------------------------------------------------
       iGang = 1           
 #ifdef OPENACC
@@ -448,24 +457,19 @@ contains
 #endif      
       
 #ifndef OPENACC
-      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
-      call set_block_values(iBlock, x_, IFF_I, RFF_I)
+      call init_face_flux_arrays(IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      call set_block_values(iBlock, x_, IFF_I, RFF_I, Normal_D)
 #endif
 
       !$acc loop vector collapse(3) &
-      !$acc private(RFF_I, IFF_I, IsFF_I, &
-      !$acc StateLeft_V, StateRight_V, &
-      !$acc Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D) 
+      !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
+      !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
+      !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
+      !$acc UnLeft_I, UnRight_I, bCrossArea_D) 
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
 #ifdef OPENACC
-         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
 #endif
-         bCrossArea_D => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
-         Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-         MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-         Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-         StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-         StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
          IFF_I(iFace_) = iFace
          IFF_I(jFace_) = jFace
@@ -474,9 +478,9 @@ contains
          IFF_I(iDimFace_) = x_
 #ifdef OPENACC
          call set_block_values(IFF_I(iBlockFace_), &
-              IFF_I(iDimFace_), IFF_I, RFF_I)
+              IFF_I(iDimFace_), IFF_I, RFF_I, Normal_D)
 #endif         
-         call set_cell_values_x( IsFF_I, IFF_I, RFF_I)
+         call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
@@ -511,7 +515,11 @@ contains
          StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
          StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
 
-         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  IsFF_I, IFF_I, RFF_I)
+         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
 
          if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -527,7 +535,7 @@ contains
          
 #ifndef OPENACC
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I)
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 #endif
          
          uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*RFF_I(Area_)
@@ -573,8 +581,18 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
-      real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
-           Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
+      real :: StateLeft_V(nVar)                                     
+      real :: StateRight_V(nVar)                                    
+      real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+      real :: Normal_D(MaxDim)                                      
+      real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+      real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+      real :: MhdFluxLeft_V( RhoUx_:RhoUz_)                         
+      real :: MhdFluxRight_V(RhoUx_:RhoUz_)                         
+      real :: Unormal_I(nFluid+1)
+      real :: UnLeft_I(nFluid+1)                                    
+      real :: UnRight_I(nFluid+1)                                   
+      real :: bCrossArea_D(3)
       !------------------------------------------------------------------------
       iGang = 1           
 #ifdef OPENACC
@@ -582,23 +600,18 @@ contains
 #endif      
       
 #ifndef OPENACC
-      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
-      call set_block_values(iBlock, y_, IFF_I, RFF_I)
+      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      call set_block_values(iBlock, y_, IFF_I, RFF_I, Normal_D)
 #endif
       !$acc loop vector collapse(3) &
-      !$acc private(RFF_I, IFF_I, IsFF_I, &
-      !$acc StateLeft_V, StateRight_V, &
-      !$acc Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D) 
+      !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
+      !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
+      !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
+      !$acc UnLeft_I, UnRight_I, bCrossArea_D) 
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
 #ifdef OPENACC
-         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
 #endif
-         bCrossArea_D => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
-         Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-         MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-         Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-         StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-         StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
          IFF_I(iFace_) = iFace
          IFF_I(jFace_) = jFace
@@ -607,7 +620,8 @@ contains
          IFF_I(iDimFace_) = y_
 
 #ifdef OPENACC
-         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), IFF_I, RFF_I)
+         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), &
+              IFF_I, RFF_I, Normal_D)
 #endif         
 
 #ifndef OPENACC         
@@ -615,7 +629,7 @@ contains
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 #endif         
 
-         call set_cell_values_y( IsFF_I, IFF_I, RFF_I)
+         call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
@@ -650,7 +664,11 @@ contains
          StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
          StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
 
-         call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang), IsFF_I, IFF_I, RFF_I)
+         call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang), &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
 
          if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -665,7 +683,7 @@ contains
          VdtFace_yI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
 
 #ifndef OPENACC                  
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I)
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 #endif
          
          uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
@@ -710,8 +728,18 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
-      real, dimension(:), pointer:: StateLeft_V,  StateRight_V, &
-           Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D
+      real :: StateLeft_V(nVar)                                     
+      real :: StateRight_V(nVar)                                    
+      real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+      real :: Normal_D(MaxDim)                                      
+      real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+      real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+      real :: MhdFluxLeft_V( RhoUx_:RhoUz_)                         
+      real :: MhdFluxRight_V(RhoUx_:RhoUz_)                         
+      real :: Unormal_I(nFluid+1)
+      real :: UnLeft_I(nFluid+1)                                    
+      real :: UnRight_I(nFluid+1)                                   
+      real :: bCrossArea_D(3)
       !------------------------------------------------------------------------
       iGang = 1
 #ifdef OPENACC
@@ -719,24 +747,19 @@ contains
 #endif      
       
 #ifndef OPENACC
-      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
-      call set_block_values(iBlock, z_, IFF_I, RFF_I)
+      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      call set_block_values(iBlock, z_, IFF_I, RFF_I, Normal_D)
 #endif
 
       !$acc loop vector collapse(3) &
-      !$acc private(RFF_I, IFF_I, IsFF_I, &
-      !$acc StateLeft_V, StateRight_V, &
-      !$acc Normal_D, MhdFlux_V, Unormal_I, bCrossArea_D)       
+      !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
+      !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
+      !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
+      !$acc UnLeft_I, UnRight_I, bCrossArea_D) 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 #ifdef OPENACC
-         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
 #endif
-         bCrossArea_D => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
-         Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-         MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-         Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-         StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-         StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
          IFF_I(iFace_) = iFace
          IFF_I(jFace_) = jFace
@@ -744,7 +767,8 @@ contains
          IFF_I(iBlockFace_) = iBlock
          IFF_I(iDimFace_) = z_
 #ifdef OPENACC
-         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), IFF_I, RFF_I)
+         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), &
+              IFF_I, RFF_I, Normal_D)
 #endif         
 
 #ifndef OPENACC         
@@ -752,7 +776,7 @@ contains
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 #endif         
 
-         call set_cell_values_z( IsFF_I, IFF_I, RFF_I)
+         call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
@@ -786,7 +810,11 @@ contains
          StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
          StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
 
-         call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang), IsFF_I, IFF_I, RFF_I)
+         call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang), &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
 
          if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -801,7 +829,7 @@ contains
          VdtFace_zI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
 
 #ifndef OPENACC                           
-         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I)
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 #endif         
          uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
 
@@ -920,30 +948,32 @@ contains
   end subroutine calc_face_flux
   !============================================================================
 
-  subroutine set_cell_values( IsFF_I, IFF_I, RFF_I)
+  subroutine set_cell_values( IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Normal_D(MaxDim)
     !--------------------------------------------------------------------------
     select case(IFF_I(iDimFace_))
     case(x_)
-       call set_cell_values_x( IsFF_I, IFF_I, RFF_I)
+       call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
     case(y_)
-       call set_cell_values_y( IsFF_I, IFF_I, RFF_I)
+       call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
     case(z_)
-       call set_cell_values_z( IsFF_I, IFF_I, RFF_I)
+       call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
     end select
 
   end subroutine set_cell_values
   !============================================================================
-  subroutine set_cell_values_x( IsFF_I, IFF_I, RFF_I)
+  subroutine set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Normal_D(MaxDim)
 
     character(len=*), parameter:: NameSub = 'set_cell_values_x'
     !--------------------------------------------------------------------------
@@ -979,18 +1009,19 @@ contains
          end if
       end if
 
-      call set_cell_values_common( IsFF_I, IFF_I, RFF_I)
+      call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
     end associate
   end subroutine set_cell_values_x
   !============================================================================
 
-  subroutine set_cell_values_y( IsFF_I, IFF_I, RFF_I)
+  subroutine set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Normal_D(MaxDim)
 
     character(len=*), parameter:: NameSub = 'set_cell_values_y'
     !--------------------------------------------------------------------------
@@ -1019,18 +1050,19 @@ contains
          end if
       end if
 
-      call set_cell_values_common( IsFF_I, IFF_I, RFF_I)
+      call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
     end associate
   end subroutine set_cell_values_y
   !============================================================================
 
-  subroutine set_cell_values_z( IsFF_I, IFF_I, RFF_I)
+  subroutine set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
-    real, dimension(:), target, intent(inout):: RFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: Normal_D(MaxDim)
 
     character(len=*), parameter:: NameSub = 'set_cell_values_z'
     !--------------------------------------------------------------------------
@@ -1048,13 +1080,13 @@ contains
          AreaZ = FaceNormal_DDFB(z_, 3, iFace,jFace,kFace, iBlockFace)
       end if
 
-      call set_cell_values_common( IsFF_I, IFF_I, RFF_I)
+      call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
     end associate
   end subroutine set_cell_values_z
   !============================================================================
 
-  subroutine set_cell_values_common( IsFF_I, IFF_I, RFF_I)
+  subroutine set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
@@ -1064,12 +1096,11 @@ contains
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
 
-    real, pointer:: Normal_D(:)
+    real, intent(inout):: Normal_D(MaxDim)
     real :: r
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
     associate( &
          iLeft => IFF_I(iLeft_), &
          jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -1084,7 +1115,7 @@ contains
          AreaY => RFF_I(AreaY_), &
          AreaZ => RFF_I(AreaZ_), &
          ViscoCoeff => RFF_I(ViscoCoeff_), &
-         Eta => RFF_I(EtaResist__), &
+         Eta => RFF_I(EtaResist_), &
          InvDxyz => RFF_I(InvDxyz_), &
          HallCoeff => RFF_I(HallCoeff_), &
          BiermannCoeff => RFF_I(BiermannCoeff_), &
@@ -1186,7 +1217,9 @@ contains
     end associate
   end subroutine set_cell_values_common
   !============================================================================
-  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V,  IsFF_I, IFF_I, RFF_I)
+  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V,  &
+       IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+       FluxLeft_V, FluxRight_V, Unormal_I, Normal_D, Tangent1_D, Tangent2_D)
     !$acc routine seq
 
     use ModPhysics, ONLY: Gamma,GammaMinus1,InvGammaMinus1
@@ -1197,8 +1230,13 @@ contains
     logical, target, intent(inout):: IsFF_I(:)
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
-    real, dimension(:), pointer:: &
-         StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V, Unormal_I
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: FluxLeft_V(nVar+nFluid)
+    real, intent(inout):: FluxRight_V(nVar+nFluid)
+    real, intent(inout):: Unormal_I(nFluid+1)
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
 
     ! Number of MHD waves including the divB wave
     integer, parameter :: nWaveMhd=8
@@ -1245,11 +1283,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'roe_solver'
     !--------------------------------------------------------------------------
-    Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-    FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-    FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-    StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 #ifndef OPENACC
     associate( &
          iDimFace => IFF_I(iDimFace_), &
@@ -1266,7 +1299,8 @@ contains
       pR    =  StateRight_V(p_  )
 
       ! Rotate vector variables into a coordinate system orthogonal to the face
-      call rotate_state_vectors(IFF_I, RFF_I)
+      call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+           Normal_D, Tangent1_D, Tangent2_D)
 
       ! Jump in scalar conservative variables
       dCons_V(RhoMhd_) = RhoR      - RhoL
@@ -1745,7 +1779,8 @@ contains
       Flux_V(Energy_) = Diffusion_V(eMhd_)
 
       ! Rotate fluxes of vector variables back
-      call rotate_flux_vector(Diffusion_V, Flux_V, IFF_I, RFF_I)
+      call rotate_flux_vector(Diffusion_V, Flux_V, IFF_I, RFF_I, Normal_D, &
+           Tangent1_D, Tangent2_D)
 
       ! The diffusive flux for the advected scalar variables is simply
       ! 0.5*|Velocity|*(U_R - U_L)
@@ -1764,8 +1799,8 @@ contains
 #endif
   end subroutine roe_solver
   !============================================================================
-  subroutine get_physical_flux(State_V,  IsFF_I, IFF_I, RFF_I, &
-       StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
+  subroutine get_physical_flux(State_V,  IsFF_I, IFF_I, RFF_I, Normal_D, &
+       MhdFlux_V, StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
     !$acc routine seq
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
@@ -1794,7 +1829,8 @@ contains
     real, intent(out):: Pe                 ! electron pressure for multiion
     real, intent(out):: Pwave
 
-    real, dimension(:), pointer:: Normal_D, MhdFlux_V
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: MhdFlux_V(RhoUx_:RhoUz_)
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz, AlfvenSpeed
@@ -1804,8 +1840,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
-    MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
     associate( &
          iLeft => IFF_I(iLeft_), jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
          iRight => IFF_I(iRight_), jRight => IFF_I(jRight_), kRight => IFF_I(kRight_), &
@@ -1880,7 +1914,7 @@ contains
             else
                call get_mhd_flux(State_V, Un, Flux_V, StateCons_V, Bx, By, Bz,&
                     Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn, &
-                    IsFF_I,  RFF_I)
+                    IsFF_I,  RFF_I, MhdFlux_V)
             end if
          elseif(DoBurgers) then
             call get_burgers_flux
@@ -1899,7 +1933,7 @@ contains
                   call get_mhd_flux(State_V, Un, Flux_V, &
                        StateCons_V, Bx, By, Bz, &
                        Bn, B0n, FullBx, FullBy, FullBz, FullBn, HallUn, &
-                       IsFF_I, RFF_I)
+                       IsFF_I, RFF_I, MhdFlux_V)
                end if
             else
                ! Calculate HD flux for individual ion and neutral fluids
@@ -1936,9 +1970,9 @@ contains
 
          if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
       elseif(UseMhdMomentumFlux)then
-         MhdFlux_V(x_) = MhdFlux_V(x_) + Pe*NormalX
-         MhdFlux_V(y_) = MhdFlux_V(y_) + Pe*NormalY
-         MhdFlux_V(z_) = MhdFlux_V(z_) + Pe*NormalZ
+         MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + Pe*NormalX
+         MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + Pe*NormalY
+         MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + Pe*NormalZ
       end if
 
       if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
@@ -2052,7 +2086,6 @@ contains
       use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
-      real, pointer:: MhdFlux_V(:)
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, PeAdd
@@ -2062,7 +2095,6 @@ contains
       ! Extract primitive variables
 
       !------------------------------------------------------------------------
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
       associate( &
            B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
            NormalX => RFF_I(NormalX_), &
@@ -2142,11 +2174,11 @@ contains
         Flux_V(RhoUy_) = Un*Rho*Uy + p*NormalY
         Flux_V(RhoUz_) = Un*Rho*Uz + p*NormalZ
 
-        MhdFlux_V(x_) = &
+        MhdFlux_V(RhoUx_) = &
              - Bn*FullBx - B0n*Bx - En*Ex + pTotal2*Normalx
-        MhdFlux_V(y_) = &
+        MhdFlux_V(RhoUy_) = &
              - Bn*FullBy - B0n*By - En*Ey + pTotal2*Normaly
-        MhdFlux_V(z_) = &
+        MhdFlux_V(RhoUz_) = &
              - Bn*FullBz - B0n*Bz - En*Ez + pTotal2*Normalz
         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
 
@@ -2274,7 +2306,7 @@ contains
 
     subroutine get_mhd_flux(State_V, Un, Flux_V, &
          StateCons_V, Bx, By, Bz, Bn, B0n, &
-         FullBx, FullBy, FullBz, FullBn, HallUn, IsFF_I, RFF_I)
+         FullBx, FullBy, FullBz, FullBn, HallUn, IsFF_I, RFF_I, MhdFlux_V)
       !$acc routine seq
 
       use ModElectricField, ONLY: UseJCrossBForce
@@ -2290,7 +2322,7 @@ contains
       logical, target, intent(inout):: IsFF_I(:)
       real,    target, intent(inout):: RFF_I(:)
 
-      real, pointer:: MhdFlux_V(:)
+      real, intent(inout):: MhdFlux_V(RhoUx_:RhoUz_)
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -2304,7 +2336,6 @@ contains
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
       associate( &
            B0x => RFF_I(B0x_), &
            B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
@@ -2434,18 +2465,18 @@ contains
         MagneticForce_D(RhoUy_) =  - Bn*FullBy - B0n*By + pTotal*NormalY
         MagneticForce_D(RhoUz_) =  - Bn*FullBz - B0n*Bz + pTotal*NormalZ
         ! Add a gradient of extra pressure to momentum flux
-        MhdFlux_V(x_) =  pExtra*NormalX
-        MhdFlux_V(y_) =  pExtra*NormalY
-        MhdFlux_V(z_) =  pExtra*NormalZ
+        MhdFlux_V(RhoUx_) =  pExtra*NormalX
+        MhdFlux_V(RhoUy_) =  pExtra*NormalY
+        MhdFlux_V(RhoUz_) =  pExtra*NormalZ
         if(.not.UseJCrossBForce)&
              MhdFlux_V = MhdFlux_V + MagneticForce_D
         ! Correction for anisotropic electron pressure
         if(UseAnisoPe)then
            if (DoTestCell) then
               write(*,*) NameSub, ' before anisoPe flux:'
-              write(*,*) ' Flux_V(RhoUx_) =', MhdFlux_V(x_)
-              write(*,*) ' Flux_V(RhoUy_) =', MhdFlux_V(y_)
-              write(*,*) ' Flux_V(RhoUz_) =', MhdFlux_V(z_)
+              write(*,*) ' Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+              write(*,*) ' Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+              write(*,*) ' Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
            end if
 
            ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
@@ -2454,9 +2485,9 @@ contains
            DpPerB = 1.5*(State_V(Pepar_) - State_V(Pe_))*FullBn&
                 /max(1e-30, FullB2)
 
-           MhdFlux_V(x_) = MhdFlux_V(x_) + FullBx*DpPerB
-           MhdFlux_V(y_) = MhdFlux_V(y_) + FullBy*DpPerB
-           MhdFlux_V(z_) = MhdFlux_V(z_) + FullBz*DpPerB
+           MhdFlux_V(RhoUx_) = MhdFlux_V(RhoUx_) + FullBx*DpPerB
+           MhdFlux_V(RhoUy_) = MhdFlux_V(RhoUy_) + FullBy*DpPerB
+           MhdFlux_V(RhoUz_) = MhdFlux_V(RhoUz_) + FullBz*DpPerB
            Flux_V(Energy_)= Flux_V(Energy_) &
                 + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
            ! Don't we need Flux_V(PePar_)?
@@ -2466,9 +2497,9 @@ contains
               write(*,*) 'FullBx      =', FullBx
               write(*,*) 'FullBy      =', FullBy
               write(*,*) 'FullBz      =', FullBz
-              write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(x_)
-              write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(y_)
-              write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(z_)
+              write(*,*) 'Flux_V(RhoUx_) =', MhdFlux_V(RhoUx_)
+              write(*,*) 'Flux_V(RhoUy_) =', MhdFlux_V(RhoUy_)
+              write(*,*) 'Flux_V(RhoUz_) =', MhdFlux_V(RhoUz_)
            end if
         end if
 
@@ -2508,11 +2539,9 @@ contains
 #ifndef OPENACC      
       use ModPhysics, ONLY: Clight, C2light
 
-      real, pointer:: Normal_D(:)
       real :: Ex, Ey, Ez
 
       !------------------------------------------------------------------------
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
       associate( &
            NormalX => RFF_I(NormalX_), &
            NormalY => RFF_I(NormalY_), &
@@ -2689,7 +2718,11 @@ contains
   end subroutine get_physical_flux
   !============================================================================
 
-  subroutine get_numerical_flux(Flux_V,  IsFF_I, IFF_I, RFF_I)
+  subroutine get_numerical_flux(Flux_V,  IsFF_I, IFF_I, RFF_I, &
+       StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V, &
+       Normal_D, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
+       Unormal_I, UnLeft_I, UnRight_I, bCrossArea_D, &
+       Tangent1_D, Tangent2_D)
     !$acc routine seq    
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
@@ -2712,10 +2745,19 @@ contains
     logical, target, intent(inout):: IsFF_I(:)
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
-    real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-         FluxLeft_V, FluxRight_V, Normal_D, &
-         MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
-         Unormal_I, UnLeft_I, UnRight_I, bCrossArea_D
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: FluxLeft_V(nVar+nFluid)
+    real, intent(inout):: FluxRight_V(nVar+nFluid)
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: MhdFlux_V(RhoUx_:RhoUz_)
+    real, intent(inout):: MhdFluxLeft_V(RhoUx_:RhoUz_)
+    real, intent(inout):: MhdFluxRight_V(RhoUx_:RhoUz_)
+    real, intent(inout):: Unormal_I(nFluid+1)
+    real, intent(inout):: UnLeft_I(nFluid+1)
+    real, intent(inout):: UnRight_I(nFluid+1)
+    real, intent(inout):: bCrossArea_D(MaxDim)
+    real, intent(inout):: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
 
     real :: State_V(nVar)
     real :: Cmax
@@ -2736,18 +2778,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
-    bCrossArea_D   => RFF_I(bCrossArea_:bCrossArea_+MaxDim-1)
-    UnRight_I      => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-    UnLeft_I       => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-    Unormal_I      => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-    MhdFluxRight_V => RFF_I(MhdFluxRight_:MhdFluxRight_+MaxDim-1)
-    MhdFluxLeft_V  => RFF_I(MhdFluxLeft_:MhdFluxLeft_+MaxDim-1)
-    MhdFlux_V      => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-    Normal_D       => RFF_I(Normal_:Normal_+MaxDim-1)
-    FluxRight_V    => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-    FluxLeft_V     => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-    StateRight_V   => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V    => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
     associate( &
          iLeft => IFF_I(iLeft_), &
@@ -2885,21 +2915,24 @@ contains
 
       if(DoRadDiffusion)then
 #ifndef OPENACC
-         call get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I)
+         call get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I, &
+              StateLeft_V, StateRight_V, Normal_D)
 #endif
          DiffCoef = DiffCoef + RadDiffCoef
       end if
 
       if(DoHeatConduction)then
 #ifndef OPENACC
-         call get_heat_flux( IsFF_I, IFF_I, RFF_I)
+         call get_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V,&
+              Normal_D)
 #endif
          DiffCoef = DiffCoef + HeatCondCoefNormal
       end if
 
       if(DoIonHeatConduction)then
 #ifndef OPENACC
-         call get_ion_heat_flux( IsFF_I, IFF_I, RFF_I)
+         call get_ion_heat_flux( IsFF_I, IFF_I, RFF_I, &
+              StateLeft_V, StateRight_V, Normal_D)
 #endif
          DiffCoef = DiffCoef + HeatCondCoefNormal
       end if
@@ -2966,8 +2999,8 @@ contains
       ! Calculate average state (used by most solvers and also by bCrossArea_D)
       if(DoSimple)then
          State_V = StateLeft_V
-         call get_physical_flux(State_V,  IsFF_I, IFF_I, RFF_I, &
-              StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+         call get_physical_flux(State_V,  IsFF_I, IFF_I, RFF_I, Normal_D,&
+               MhdFlux_V, StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
       else
          State_V = 0.5*(StateLeft_V + StateRight_V)
       end if
@@ -2978,11 +3011,13 @@ contains
            DoHlldwNeutral .or. DoAwNeutral .or. DoHllcNeutral)then
          ! These solvers use left and right fluxes
          call get_physical_flux(StateLeft_V,  IsFF_I, IFF_I, RFF_I, &
+              Normal_D, MhdFlux_V, &
               StateLeftCons_V, FluxLeft_V, UnLeft_I, &
               EnLeft, PeLeft, PwaveLeft)
          if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
 
          call get_physical_flux(StateRight_V,  IsFF_I, IFF_I, RFF_I, &
+              Normal_D, MhdFlux_V, &
               StateRightCons_V, FluxRight_V, UnRight_I, &
               EnRight, PeRight, &
               PwaveRight)
@@ -3022,7 +3057,9 @@ contains
          elseif(DoLf)then
             call lax_friedrichs_flux(State_V, Flux_V, &
                  StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight, &
-                 IsFF_I, IFF_I, RFF_I)
+                 IsFF_I, IFF_I, RFF_I, FluxLeft_V, FluxRight_V, MhdFlux_V, &
+                 MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+                 StateLeft_V, StateRight_V, Normal_D)
          elseif(DoHll)then
             call harten_lax_vanleer_flux
          elseif(DoLfdw .or. DoHlldw)then
@@ -3033,7 +3070,9 @@ contains
             call artificial_wind
          elseif(DoRoeOld)then
             call roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V, &
-                 IsFF_I, IFF_I, RFF_I)
+                 IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+                 FluxLeft_V, FluxRight_V, Unormal_I, Normal_D,&
+                 Tangent1_D, Tangent2_D)
          elseif(DoRoe)then
             call roe_solver_new
          else
@@ -3078,7 +3117,10 @@ contains
          iEnergyMin = iEnergy; iEnergyMax = iEnergy
          if(DoLfNeutral)then
             call lax_friedrichs_flux(State_V, Flux_V, &
-                 StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight,  IsFF_I, IFF_I, RFF_I)
+                 StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight, &
+                 IsFF_I, IFF_I, RFF_I, FluxLeft_V, FluxRight_V, MhdFlux_V, &
+                 MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I,&
+                 StateLeft_V, StateRight_V, Normal_D)
          elseif(DoHllNeutral)then
             call harten_lax_vanleer_flux
          elseif(DoLfdwNeutral .or. DoHlldwNeutral)then
@@ -3122,10 +3164,8 @@ contains
 
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
-      real, pointer:: Normal_D(:)
       !------------------------------------------------------------------------
 #ifndef OPENACC
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
       associate( DiffBb => RFF_I(DiffBb_))
 
         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
@@ -3140,11 +3180,8 @@ contains
     !==========================================================================
     subroutine roe_solver_new
       !$acc routine seq
-      real, pointer:: FluxLeft_V(:), FluxRight_V(:)
       !------------------------------------------------------------------------
 #ifndef OPENACC
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
       associate( CmaxDt => RFF_I(CmaxDt_))
 
         Flux_V(1:p_) = &
@@ -3172,8 +3209,8 @@ contains
         if(UseDtFixed)then
            CmaxDt = 1.0
         else
-           call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, &
-                Cmax_I = Cmax_I)
+           call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, &
+                UnRight_I, Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I)
         end if
 
       end associate
@@ -3181,7 +3218,10 @@ contains
     end subroutine simple_flux
     !==========================================================================
     subroutine lax_friedrichs_flux(State_V, Flux_V, &
-         StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight,  IsFF_I, IFF_I, RFF_I)
+         StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight,  &
+         IsFF_I, IFF_I, RFF_I, FluxLeft_V, FluxRight_V, MhdFlux_V, &
+         MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+         StateLeft_V, StateRight_V, Normal_D)
       !$acc routine seq
 
       real, intent(in)    :: State_V(:)
@@ -3193,20 +3233,21 @@ contains
       integer, target, intent(inout):: IFF_I(:)
       real,    target, intent(inout):: RFF_I(:)
 
-      real, dimension(:), pointer:: FluxLeft_V, FluxRight_V, &
-           MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
-           Unormal_I, UnLeft_I, UnRight_I
+      real, intent(inout):: FluxLeft_V(nVar+nFluid)
+      real, intent(inout):: FluxRight_V(nVar+nFluid)
+      real, intent(inout):: MhdFlux_V(RhoUx_:RhoUz_)
+      real, intent(inout):: MhdFluxLeft_V(RhoUx_:RhoUz_)
+      real, intent(inout):: MhdFluxRight_V(RhoUx_:RhoUz_)
+      real, intent(inout):: Unormal_I(nFluid+1)
+      real, intent(inout):: UnLeft_I(nFluid+1)
+      real, intent(inout):: UnRight_I(nFluid+1)
+      real, intent(inout):: StateLeft_V(nVar)
+      real, intent(inout):: StateRight_V(nVar)
+      real, intent(inout):: Normal_D(MaxDim)
+
 
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      MhdFluxRight_V => RFF_I(MhdFluxRight_:MhdFluxRight_+MaxDim-1)
-      MhdFluxLeft_V => RFF_I(MhdFluxLeft_:MhdFluxLeft_+MaxDim-1)
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
            iFluidMax => IFF_I(iFluidMax_), &
@@ -3216,8 +3257,8 @@ contains
            Enormal => RFF_I(Enormal_), &
            DoTestCell => IsFF_I(DoTestCell_) )
 
-        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, &
-             Cmax_I = Cmax_I)
+        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I)
 
         Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
         Flux_V(iVarMin:iVarMax) = &
@@ -3240,8 +3281,8 @@ contains
         ! These quantities should be calculated with the ion fluxes
         if(iFluidMin == 1)then
            if(UseMhdMomentumFlux)&
-                                ! Calculate the MHD momentum  flux (may be used to calculate
-                                ! electric field)
+                ! Calculate the MHD momentum  flux (may be used to calculate
+                ! electric field)
                 MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
            Enormal   = 0.5*(EnLeft + EnRight)
            if(UseElectronPressure) Unormal_I(eFluid_) = &
@@ -3261,25 +3302,12 @@ contains
     subroutine harten_lax_vanleer_flux
       !$acc routine seq
 
-      real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-           FluxLeft_V, FluxRight_V, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
-           Unormal_I, UnLeft_I, UnRight_I
 
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
       !------------------------------------------------------------------------      
 #ifndef OPENACC
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      MhdFluxRight_V => RFF_I(MhdFluxRight_:MhdFluxRight_+MaxDim-1)
-      MhdFluxLeft_V => RFF_I(MhdFluxLeft_:MhdFluxLeft_+MaxDim-1)
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
@@ -3290,14 +3318,16 @@ contains
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
 
-        call get_speed_max(StateLeft_V,  IsFF_I, IFF_I, RFF_I, &
+        call get_speed_max(StateLeft_V,  IsFF_I, IFF_I, RFF_I, UnLeft_I, &
+             UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cleft_I =CleftStateLeft_I)
 
-        call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, &
+        call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, UnLeft_I,&
+             UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cright_I=CrightStateRight_I)
 
-        call get_speed_max(State_V,      IsFF_I, IFF_I, RFF_I, &
-             Cmax_I = Cmax_I, &
+        call get_speed_max(State_V,      IsFF_I, IFF_I, RFF_I, UnLeft_I, &
+             UnRight_I, Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I, &
              Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
         Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
@@ -3358,9 +3388,6 @@ contains
       real, dimension(nFluid):: CleftStateLeft_I, CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
 
-      real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-           FluxLeft_V, FluxRight_V, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V,&
-           Unormal_I, UnLeft_I, UnRight_I
 
       real:: DeltaCons_V(nVar), DeltaFlux_V(nVar)
       real:: Cleft, Cright
@@ -3371,16 +3398,6 @@ contains
 
       !------------------------------------------------------------------------      
 #ifndef OPENACC
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      MhdFluxRight_V => RFF_I(MhdFluxRight_:MhdFluxRight_+MaxDim-1)
-      MhdFluxLeft_V => RFF_I(MhdFluxLeft_:MhdFluxLeft_+MaxDim-1)
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
@@ -3391,8 +3408,8 @@ contains
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
 
-        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, &
-             Cmax_I = Cmax_I, &
+        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I, &
              Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
         Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
 
@@ -3418,9 +3435,11 @@ contains
 
         if(Nu < 1.0 .or. (Nu > 0.0 .and. .not.DoLf))then
            call get_speed_max(StateLeft_V,  IsFF_I, IFF_I, RFF_I, &
+                UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
                 Cleft_I =CleftStateLeft_I)
 
            call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, &
+                UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
                 Cright_I=CrightStateRight_I)
 
            Cleft  =min(0.0, &
@@ -3519,9 +3538,6 @@ contains
     !==========================================================================
     subroutine artificial_wind
       !$acc routine seq
-      real, dimension(:), pointer:: FluxLeft_V, FluxRight_V, &
-           MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
-           Unormal_I, UnLeft_I, UnRight_I
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
@@ -3530,14 +3546,6 @@ contains
 
       !------------------------------------------------------------------------      
 #ifndef OPENACC
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      MhdFluxRight_V => RFF_I(MhdFluxRight_:MhdFluxRight_+MaxDim-1)
-      MhdFluxLeft_V => RFF_I(MhdFluxLeft_:MhdFluxLeft_+MaxDim-1)
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
 
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
@@ -3548,7 +3556,8 @@ contains
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
 
-        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I,  &
+        call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V,  &
              Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
              UseAwSpeedIn = .true.)
 
@@ -3611,8 +3620,6 @@ contains
       ! Needed as an argument for get_physical_flux
       real :: StateCons_V(nFlux)
 
-      real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-           Normal_D, Tangent1_D, Tangent2_D, MhdFlux_V, Unormal_I
 
       ! Left and right state (scalars and extra variables only)
       real :: DsL, DsRhoL, RhoL, pL, eL, PbL, PtotL, uDotB1L, Bt1L, Bt2L
@@ -3638,13 +3645,6 @@ contains
       real :: sL, CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
       !------------------------------------------------------------------------
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      MhdFlux_V => RFF_I(MhdFlux_:MhdFlux_+MaxDim-1)
-      Tangent2_D => RFF_I(Tangent2_:Tangent2_+MaxDim-1)
-      Tangent1_D => RFF_I(Tangent1_:Tangent1_+MaxDim-1)
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
 
       associate( &
            iDimFace => IFF_I(iDimFace_), &
@@ -3664,9 +3664,11 @@ contains
 
         ! This is the choice made in the hlld_tmp code. May not be the best.
         call get_speed_max(StateLeft_V, IsFF_I, IFF_I, RFF_I, &
+             UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
 
         call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, &
+             UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
         sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
@@ -3682,7 +3684,7 @@ contains
         endif
 
         if(sL >= 0.) then
-           call get_physical_flux(StateLeft_V,  IsFF_I, IFF_I, RFF_I, &
+           call get_physical_flux(StateLeft_V,  IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V, &
                 StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
            if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
            RETURN
@@ -3690,6 +3692,7 @@ contains
 
         if(sR <= 0.) then
            call get_physical_flux(StateRight_V,  IsFF_I, IFF_I, RFF_I, &
+                Normal_D, MhdFlux_V, &
                 StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
            if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
            RETURN
@@ -3702,7 +3705,8 @@ contains
         pR   = StateRight_V(p_)
 
         ! Rotate vector variables into a coordinate system orthogonal to the face
-        call rotate_state_vectors(IFF_I, RFF_I)
+        call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V,&
+             Normal_D, Tangent1_D, Tangent2_D)
 
         ! Use average normal field
         B1n    = 0.5*(B1nL + B1nR)
@@ -3906,7 +3910,8 @@ contains
         Flux_V(Energy_)    = Un*(e + pTot12) - Bn*uDotB1
 
         ! Rotate fluxes of vector variables back
-        call rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I)
+        call rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I, &
+             Normal_D, Tangent1_D, Tangent2_D)
 
         ! Set normal velocity for all fluids (HLLD is for 1 fluid only)
         Unormal_I = Un
@@ -3955,8 +3960,6 @@ contains
       use ModMultiFluid, ONLY: iRhoUx, iRhoUz, iUx, iUz
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
-      real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-           FluxLeft_V, FluxRight_V, Normal_D, Unormal_I, UnLeft_I, UnRight_I
 
       real :: Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real :: RhoSide,UnSide
@@ -3967,14 +3970,6 @@ contains
       real :: Adiabatic, Isothermal, GammaRatio, Factor
       integer :: iVar
       !------------------------------------------------------------------------
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
       associate( &
            iEnergyMin => IFF_I(iEnergyMin_), &
            B0x => RFF_I(B0x_), &
@@ -4028,10 +4023,12 @@ contains
            ! Temporary solution, should be the monotone numerical flux with
            ! modified StateLeft_V and/or StateRight_V
            call get_physical_flux(StateLeft_V,  IsFF_I, IFF_I, RFF_I, &
+                Normal_D, MhdFlux_V, &
                 StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, &
                 PwaveLeft)
 
-           call get_physical_flux(StateRight_V,  IsFF_I, IFF_I, RFF_I, &
+           call get_physical_flux(StateRight_V,  IsFF_I, IFF_I, RFF_I,&
+                Normal_D, MhdFlux_V, &
                 StateRightCons_V, FluxRight_V, UnRight_I, &
                 EnRight, PeRight, PwaveRight)
 
@@ -4131,8 +4128,6 @@ contains
       real :: StateStarCons_V(nFlux)
       real :: UnStar
 
-      real, dimension(:), pointer:: StateLeft_V, StateRight_V, &
-           FluxLeft_V, FluxRight_V, Unormal_I, UnLeft_I, UnRight_I
 
       ! Left and right state (scalars and extra variables only)
       real :: RhoL, TotalPresL, sL
@@ -4141,23 +4136,18 @@ contains
       real :: CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
       !------------------------------------------------------------------------
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
-      FluxRight_V => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
       associate( &
            iDimFace => IFF_I(iDimFace_), &
            CmaxDt => RFF_I(CmaxDt_), &
            UnL => RFF_I(UnL_), &
            UnR => RFF_I(UnR_) )
 
-        call get_speed_max(StateLeft_V, IsFF_I, IFF_I, RFF_I, &
+        call get_speed_max(StateLeft_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, &
+             UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
 
-        call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, &
+        call get_speed_max(StateRight_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, &
+             UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
              Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
         sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
@@ -4174,7 +4164,8 @@ contains
         TotalPresR = StateRight_V(p_) + PeRight + PwaveRight
 
         ! Rotate vector variables into a coordinate system orthogonal to the face
-        call rotate_state_vectors(IFF_I, RFF_I)
+        call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+             Normal_D, Tangent1_D, Tangent2_D)
 
         ! Normal velocity component
         ! UnStarL = UnStarR = UnStar
@@ -4214,16 +4205,10 @@ contains
     subroutine write_test_info
       !$acc routine seq
 
-      real, dimension(:), pointer:: &
-           StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V
 
 #ifndef OPENACC
       integer :: iVar
       !------------------------------------------------------------------------
-      FluxRight_V  => RFF_I(FluxRight_:FluxRight_+nFlux-1)
-      FluxLeft_V   => RFF_I(FluxLeft_:FluxLeft_+nFlux-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V  => RFF_I(StateLeft_:StateLeft_+nVar-1)
       associate( &
            iDimFace => IFF_I(iDimFace_), &
            iFace => IFF_I(iFace_), &
@@ -4293,6 +4278,18 @@ contains
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
+    real :: StateLeft_V(nVar)                                     
+    real :: StateRight_V(nVar)                                    
+    real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+    real :: Normal_D(MaxDim)                                      
+    real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+    real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+    real :: MhdFluxLeft_V( RhoUx_:RhoUz_)                         
+    real :: MhdFluxRight_V(RhoUx_:RhoUz_)                         
+    real :: Unormal_I(nFluid+1)
+    real :: UnLeft_I(nFluid+1)                                    
+    real :: UnRight_I(nFluid+1)                                   
+    real :: bCrossArea_D(3)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -4304,7 +4301,7 @@ contains
      iGang = iBlock
 #endif      
     
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
     associate( &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
@@ -4322,7 +4319,7 @@ contains
       DoTestCell = .false.
 
       do iDim = 1, nDim
-         call set_block_values(iBlock, iDim, IFF_I, RFF_I)
+         call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
 
          if(Dt > 0)then
             CmaxAll = CellSize_DB(iDim,iBlock)/Dt
@@ -4354,7 +4351,8 @@ contains
 
                   ! Get the flux
                   call get_physical_flux(Primitive_V,  IsFF_I, IFF_I, RFF_I, &
-                       Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                       Normal_D, MhdFlux_V, Conservative_V, Flux_V, &
+                       Un_I, En, Pe, Pwave)
 
                   FluxLeft_VGD(:,i,j,k,iDim) = &
                        0.5*Area*(Flux_V + CmaxAll*Conservative_V)
@@ -4363,6 +4361,7 @@ contains
 
                   ! Get the maximum speed
                   call get_speed_max(Primitive_V, IsFF_I, IFF_I, RFF_I,&
+                       UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V,&
                        Cmax_I)
                   CmaxArea = maxval(Cmax_I)*Area
                   select case(iDim)
@@ -4409,6 +4408,18 @@ contains
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
+    real :: StateLeft_V(nVar)                                     
+    real :: StateRight_V(nVar)                                    
+    real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+    real :: Normal_D(MaxDim)                                      
+    real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+    real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+    real :: MhdFluxLeft_V( RhoUx_:RhoUz_)                         
+    real :: MhdFluxRight_V(RhoUx_:RhoUz_)                         
+    real :: Unormal_I(nFluid+1)
+    real :: UnLeft_I(nFluid+1)                                    
+    real :: UnRight_I(nFluid+1)                                   
+    real :: bCrossArea_D(3)
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -4420,7 +4431,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I)
+    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
     associate( &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          ViscoCoeff => RFF_I(ViscoCoeff_), &
@@ -4453,7 +4464,7 @@ contains
       UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
       DoTestCell = .false.
       do iDim = 1, nDim
-         call set_block_values(iBlock, iDim, IFF_I, RFF_I)
+         call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
 
          do k = MinK, MaxK; kFace = k
             do j = MinJ, MaxJ; jFace = j
@@ -4482,7 +4493,8 @@ contains
                   end if
 
                   ! Get the flux
-                  call get_physical_flux(Primitive_V,  IsFF_I, IFF_I, RFF_I, &
+                  call get_physical_flux(Primitive_V,  IsFF_I, IFF_I, RFF_I,&
+                       Normal_D, MhdFlux_V, &
                        Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
                   if(.not. UseHighFDGeometry) then
                      FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
@@ -4518,8 +4530,9 @@ contains
   end subroutine calc_simple_cell_flux
   !============================================================================
 
-  subroutine get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, &
-       cMax_I, cLeft_I, cRight_I, UseAwSpeedIn)
+  subroutine get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I, &
+       Normal_D, StateLeft_V,StateRight_V, cMax_I, cLeft_I, cRight_I, &
+       UseAwSpeedIn)
     !$acc routine seq
 
     use ModMultiFluid, ONLY: select_fluid, iRho, iUx, iUz, iP, &
@@ -4534,17 +4547,19 @@ contains
 
     real,    intent(in) :: State_V(nVar)
 
-    logical, dimension(:), target, intent(inout):: IsFF_I
-    integer, dimension(:), target, intent(inout):: IFF_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(:)
+    real, intent(inout):: UnLeft_I(nFluid+1)
+    real, intent(inout):: UnRight_I(nFluid+1)
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    
     real, optional, intent(out) :: Cmax_I(nFluid)   ! max speed relative to lab
     real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
-
     logical, optional, intent(in):: UseAwSpeedIn    ! use AW speed definitions
-
-    real, target, intent(inout):: RFF_I(:)
-
-    real, pointer:: UnLeft_I(:), UnRight_I(:)
 
     logical:: UseAwSpeed
 
@@ -4556,8 +4571,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_speed_max'
     !--------------------------------------------------------------------------
-    UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-    UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
     associate( &
          iFace => IFF_I(iFace_), &
          jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
@@ -4589,7 +4602,8 @@ contains
                ! displacement current.
                call get_boris_speed
             else
-               call get_mhd_speed(State_V, IFF_I, RFF_I, &
+               call get_mhd_speed(State_V, IFF_I, RFF_I, StateLeft_V, &
+                    StateRight_V, Normal_D, UnLeft_I, UnRight_I, &
                     CmaxDt_I, Cmax_I, Cleft_I, &
                     Cright_I, UnLeft, UnRight, UseAwSpeed)
             endif
@@ -4853,7 +4867,8 @@ contains
     end subroutine get_boris_speed
     !==========================================================================
 
-    subroutine get_mhd_speed(State_V, IFF_I, RFF_I, &
+    subroutine get_mhd_speed(State_V, IFF_I, RFF_I, StateLeft_V, &
+         StateRight_V, Normal_D, UnLeft_I, UnRight_I, &
          CmaxDt_I, Cmax_I, Cleft_I, Cright_I, UnLeft, UnRight, UseAwSpeed)
       !$acc routine seq
 
@@ -4875,8 +4890,11 @@ contains
       real, optional, intent(in) :: UnLeft, UnRight      
       logical, optional, intent(in) :: UseAwSpeed
 
-      real, dimension(:), pointer:: &
-           StateLeft_V, StateRight_V, Normal_D, UnLeft_I, UnRight_I
+      real, intent(inout):: StateLeft_V(nVar)
+      real, intent(inout):: StateRight_V(nVar)
+      real, intent(inout):: Normal_D(MaxDim)
+      real, intent(inout):: UnLeft_I(nFluid+1)
+      real, intent(inout):: UnRight_I(nFluid+1)
 
       real:: UnMin, UnMax
       real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
@@ -4892,11 +4910,6 @@ contains
       integer:: jFluid
       !------------------------------------------------------------------------
 
-      UnRight_I => RFF_I(UnRight_:UnRight_+nFluid+1-1)
-      UnLeft_I => RFF_I(UnLeft_:UnLeft_+nFluid+1-1)
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-      StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-      StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -5203,12 +5216,10 @@ contains
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
       use ModPhysics, ONLY: Gamma_I, GammaElectron
 
-      real, pointer:: Normal_D(:)
       real :: InvRho, Sound2, Sound, Un, GammaP
 
       character(len=*), parameter:: NameSub = 'get_hd_speed'
       !------------------------------------------------------------------------
-      Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
       associate( &
            iLeft => IFF_I(iLeft_), &
            jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -5312,7 +5323,7 @@ contains
   end subroutine get_speed_max
   !============================================================================
 
-  subroutine correct_u_normal(IFF_I, RFF_I)
+  subroutine correct_u_normal(IFF_I, RFF_I, Unormal_I)
     !$acc routine seq 
 
     ! Make Unormal 6th order accuracte
@@ -5324,7 +5335,7 @@ contains
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
 
-    real, pointer:: Unormal_I(:)
+    real, intent(inout):: Unormal_I(nFluid+1)
 
     integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
     real :: Ucell_I(4), Unormal, Ucell_D(3)
@@ -5333,7 +5344,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'correct_u_normal'
     !--------------------------------------------------------------------------
-    Unormal_I => RFF_I(Unormal_:Unormal_+nFluid+1-1)
     associate( &
          iDim => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
          iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
@@ -5414,14 +5424,18 @@ contains
   end subroutine correct_u_normal
   !============================================================================
 
-  subroutine rotate_state_vectors(IFF_I, RFF_I)
+  subroutine rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+       Normal_D, Tangent1_D, Tangent2_D)
 
     use ModCoordTransform, ONLY: cross_product
 
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
-    real, dimension(:), pointer:: &
-         StateLeft_V, StateRight_V, Normal_D, Tangent1_D, Tangent2_D
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: Tangent1_D(MaxDim)
+    real, intent(inout):: Tangent2_D(MaxDim)
 
     ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
     ! StateRight_V(B*_), StateRight_V(U*_) into normal and
@@ -5431,11 +5445,6 @@ contains
     ! Current implementation is for a single ion fluid.
 
     !--------------------------------------------------------------------------
-    Tangent2_D => RFF_I(Tangent2_:Tangent2_+MaxDim-1)
-    Tangent1_D => RFF_I(Tangent1_:Tangent1_+MaxDim-1)
-    Normal_D => RFF_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => RFF_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => RFF_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
          iDimFace => IFF_I(iDimFace_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
@@ -5545,19 +5554,19 @@ contains
     end associate
   end subroutine rotate_state_vectors
   !============================================================================
-  subroutine rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I)
+  subroutine rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I, &
+       Normal_D, Tangent1_D, Tangent2_D)
 
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)    
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
-    real, dimension(:), pointer:: Normal_D, Tangent1_D, Tangent2_D
+    real, intent(inout):: Normal_D(MaxDim)
+    real, intent(inout):: Tangent1_D(MaxDim)
+    real, intent(inout):: Tangent2_D(MaxDim)
 
     ! Rotate n,t1,t2 components back to x,y,z components
     !--------------------------------------------------------------------------
-    Tangent2_D => RFF_I(Tangent2_:Tangent2_+MaxDim-1)
-    Tangent1_D => RFF_I(Tangent1_:Tangent1_+MaxDim-1)
-    Normal_D   => RFF_I(Normal_:Normal_+MaxDim-1)
     associate(iDimFace => IFF_I(iDimFace_))
 
       if(IsCartesianGrid)then
