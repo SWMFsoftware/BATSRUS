@@ -1298,15 +1298,14 @@ contains
          bAmbientCenterSi_D, bAmbientApexSi_D
     use EEE_ModMain,  ONLY: EEE_get_state_init, EEE_do_not_add_cme_again
     use ModB0, ONLY: get_b0
-    use ModMain, ONLY: nI, nJ, nK, MaxBlock, unused_B, n_step, &
-         iteration_number, UseFieldLineThreads
+    use ModMain, ONLY: n_step, iteration_number, UseFieldLineThreads
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
     use ModGeometry,  ONLY: Xyz_DGB
     use ModEnergy,    ONLY: calc_energy_cell
-    use BATL_lib,     ONLY: nDim, MaxDim, iComm, CellVolume_GB, &
-         message_pass_cell, interpolate_state_vector
+    use BATL_lib,     ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, &
+         iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
     integer :: i, j, k, iBlock, iError
     real :: x_D(nDim), Rho, B_D(MaxDim), B0_D(MaxDim), p
@@ -1319,14 +1318,15 @@ contains
 
     if(UseAwsom)then
 
-       do iBlock = 1, MaxBlock
-          if(unused_B(iBlock))CYCLE
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
+             call EEE_get_state_init(x_D, &
+                  Rho, B_D, p, n_step, iteration_number)
 
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
@@ -1406,14 +1406,15 @@ contains
           end if
        end if
 
-       do iBlock = 1, MaxBlock
-          if(unused_B(iBlock))CYCLE
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              x_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             call EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
+             call EEE_get_state_init(x_D, &
+                  Rho, B_D, p, n_step, iteration_number)
 
              Rho = Rho*Si2No_V(UnitRho_)
              B_D = B_D*Si2No_V(UnitB_)
@@ -1425,8 +1426,10 @@ contains
              State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock)
-             if(State_VGB(Rho_,i,j,k,iBlock) + Rho < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
-                State_VGB(Rho_,i,j,k,iBlock) = 0.25*State_VGB(Rho_,i,j,k,iBlock)
+             if(State_VGB(Rho_,i,j,k,iBlock) + Rho &
+                  < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
+                State_VGB(Rho_,i,j,k,iBlock) = &
+                     0.25*State_VGB(Rho_,i,j,k,iBlock)
 
                 ! Calculate the mass added to the eruptive event
                 Mass = Mass - 3*CellVolume_GB(i,j,k,iBlock)*&
@@ -1435,7 +1438,8 @@ contains
 
                 ! Calculate the mass added to the eruptive event
                 Mass = Mass + Rho*CellVolume_GB(i,j,k,iBlock)
-                State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
+                State_VGB(Rho_,i,j,k,iBlock) = &
+                     State_VGB(Rho_,i,j,k,iBlock) + Rho
              endif
 
              ! Fix momentum density to correspond to the modified mass density
@@ -1447,20 +1451,26 @@ contains
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
 
              if(UseElectronPressure)then
-                if(State_VGB(Pe_,i,j,k,iBlock) + 0.5*p < 0.25*State_VGB(Pe_,i,j,k,iBlock))then
-                   State_VGB(Pe_,i,j,k,iBlock) = 0.25*State_VGB(Pe_,i,j,k,iBlock)
+                if(State_VGB(Pe_,i,j,k,iBlock) &
+                     + 0.5*p < 0.25*State_VGB(Pe_,i,j,k,iBlock))then
+                   State_VGB(Pe_,i,j,k,iBlock) = &
+                        0.25*State_VGB(Pe_,i,j,k,iBlock)
                 else
-                   State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
+                   State_VGB(Pe_,i,j,k,iBlock) = &
+                        State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
                 endif
 
-                if(State_VGB(p_,i,j,k,iBlock)  + 0.5*p < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                if(State_VGB(p_,i,j,k,iBlock)  + 0.5*p &
+                     < 0.25*State_VGB(p_,i,j,k,iBlock))then
                    State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
                 else
-                   State_VGB(p_,i,j,k,iBlock)  = State_VGB(p_,i,j,k,iBlock)  + 0.5*p
+                   State_VGB(p_,i,j,k,iBlock) = &
+                        State_VGB(p_,i,j,k,iBlock) + 0.5*p
                 endif
 
              else
-                if(State_VGB(p_,i,j,k,iBlock) + p < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                if(State_VGB(p_,i,j,k,iBlock) + p &
+                     < 0.25*State_VGB(p_,i,j,k,iBlock))then
                    State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
                 else
                    State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p

@@ -362,7 +362,7 @@ contains
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call user_initial_perturbation
-       if(UseCme.and.UseFieldLineThreads)call set_threads
+       if(UseCme .and. UseFieldLineThreads) call set_threads
        UseUserPerturbation=.false.
     end if
 
