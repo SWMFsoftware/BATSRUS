@@ -838,6 +838,14 @@ contains
                 call read_var('yMaxCut',plot_range(4,iFile))
                 call read_var('zMinCut',plot_range(5,iFile))
                 call read_var('zMaxCut',plot_range(6,iFile))
+             elseif(index(plot_string,'bx0')>0)then
+                plot_area='bx0'
+                call read_var('xMinCut',plot_range(1,iFile))
+                call read_var('xMaxCut',plot_range(2,iFile))
+                call read_var('yMinCut',plot_range(3,iFile))
+                call read_var('yMaxCut',plot_range(4,iFile))
+                call read_var('zMinCut',plot_range(5,iFile))
+                call read_var('zMaxCut',plot_range(6,iFile))
              elseif(index(plot_string,'slc')>0)then
                 plot_area='slc'
                 call read_var('xMinCut',plot_range(1,iFile))

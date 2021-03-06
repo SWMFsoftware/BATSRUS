@@ -90,8 +90,8 @@ module ModFaceFluxParameters
        EtaJx_           = Enormal_ + 1, &
        EtaJy_           = EtaJx_ + 1, &
        EtaJz_           = EtaJy_ + 1, &
-       Eta_             = EtaJz_ + 1, &
-       InvDxyz_         = Eta_ + 1, &
+       EtaResist_       = EtaJz_ + 1, &
+       InvDxyz_         = EtaResist_ + 1, &
        HallCoeff_       = InvDxyz_ + 1, &
        HallJx_          = HallCoeff_ + 1, &
        HallJy_          = HallJx_ + 1, &

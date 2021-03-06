@@ -26,6 +26,8 @@ contains
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModKind,     ONLY: nByteReal
     use ModIoUnit,   ONLY: UnitTmp_
+    use ModAdvance,  ONLY: State_VGB, Bx_
+    use ModB0,       ONLY: B0_DGB
     use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
     use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
@@ -188,6 +190,16 @@ contains
 
           ! Check if we are inside the Cartesian box
           if(x<x1 .or. x>x2 .or. y<y1 .or. y>y2 .or. z<z1 .or. z>z2) CYCLE
+
+          ! if plot type is bx0
+          if(index(plot_type1, 'bx0') > 0) then
+             ! check if bx are the same sign in this block
+             if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
+                  all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
+             ! exclude the edge points at the plot range boundary
+             if( abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(5,iFile))/DzBlock <= 3 .or.&
+                  abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(6,iFile))/DzBlock <= 3) CYCLE
+          end if
 
           if(DoSaveGenCoord)then
              Coord_D = CoordMin_DB(:,iBlock) &

@@ -364,13 +364,8 @@ contains
              State_VGB(WaveFirst_,i,j,k,iBlock) =  &
                   PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
              if(UseTurbulentCascade)then
-                if(UseAwsom)then
-                   State_VGB(WaveLast_,i,j,k,iBlock) = &
-                        1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
-                else
-                   State_VGB(WaveLast_,i,j,k,iBlock) = &
-                        1e-4*State_VGB(WaveFirst_,i,j,k,iBlock)
-                end if
+                State_VGB(WaveLast_,i,j,k,iBlock) = &
+                     1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
              else
                 State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
              end if
@@ -378,13 +373,8 @@ contains
              State_VGB(WaveLast_,i,j,k,iBlock) =  &
                   PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
              if(UseTurbulentCascade)then
-                if(UseAwsom)then
-                   State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                        1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
-                else
-                   State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                        1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
-                end if
+                State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                     1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
              else
                 State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
              end if

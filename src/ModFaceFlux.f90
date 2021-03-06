@@ -1084,7 +1084,7 @@ contains
          AreaY => RFF_I(AreaY_), &
          AreaZ => RFF_I(AreaZ_), &
          ViscoCoeff => RFF_I(ViscoCoeff_), &
-         Eta => RFF_I(Eta_), &
+         Eta => RFF_I(EtaResist__), &
          InvDxyz => RFF_I(InvDxyz_), &
          HallCoeff => RFF_I(HallCoeff_), &
          BiermannCoeff => RFF_I(BiermannCoeff_), &
@@ -1095,7 +1095,7 @@ contains
          InvClightFace => RFF_I(InvClightFace_), &
          InvClight2Face => RFF_I(InvClight2Face_), &
          DoTestCell => IsFF_I(DoTestCell_) )
-
+      
       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
       if(Area2 < 1e-30)then
          ! The face is at the pole
@@ -1813,7 +1813,7 @@ contains
          iBlockFace => IFF_I(iBlockFace_), ViscoCoeff => RFF_I(ViscoCoeff_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
          EtaJx => RFF_I(EtaJx_), EtaJy => RFF_I(EtaJy_), EtaJz => RFF_I(EtaJz_), &
-         Eta => RFF_I(Eta_), &
+         Eta => RFF_I(EtaResist_), &
          GradXPeNe => RFF_I(GradXPeNe_), &
          GradYPeNe => RFF_I(GradYPeNe_), &
          GradZPeNe => RFF_I(GradZPeNe_), &    
@@ -2781,7 +2781,7 @@ contains
          EtaJx => RFF_I(EtaJx_), &
          EtaJy => RFF_I(EtaJy_), &
          EtaJz => RFF_I(EtaJz_), &
-         Eta => RFF_I(Eta_), &
+         Eta => RFF_I(EtaResist_), &
          InvDxyz => RFF_I(InvDxyz_), &
          HallCoeff => RFF_I(HallCoeff_), &
          HallJx => RFF_I(HallJx_), &
@@ -3651,7 +3651,7 @@ contains
            CmaxDt => RFF_I(CmaxDt_), &
            Enormal => RFF_I(Enormal_), &
            EtaJx => RFF_I(EtaJx_), EtaJy => RFF_I(EtaJy_), EtaJz => RFF_I(EtaJz_), &
-           Eta => RFF_I(Eta_), &
+           Eta => RFF_I(EtaResist_), &
            NormalX => RFF_I(NormalX_), &
            NormalY => RFF_I(NormalY_), &
            NormalZ => RFF_I(NormalZ_), &
@@ -4425,7 +4425,7 @@ contains
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          ViscoCoeff => RFF_I(ViscoCoeff_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
-         Eta => RFF_I(Eta_), &
+         Eta => RFF_I(EtaResist_), &
          HallCoeff => RFF_I(HallCoeff_), &
          BiermannCoeff => RFF_I(BiermannCoeff_), &
          Area => RFF_I(Area_), &
