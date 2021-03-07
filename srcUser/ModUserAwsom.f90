@@ -487,7 +487,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k
+    integer :: i, j, k, iGang
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
@@ -499,6 +499,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
+    iGang = 1
 
     select case(NameVar)
     case('te')
