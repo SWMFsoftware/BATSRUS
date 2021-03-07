@@ -324,7 +324,7 @@ test_fast_wave:
 	$(MAKE) test_fast_wave_check
 
 test_fast_wave_compile:
-	./Config.pl -noopenmp ${OPENACC} -u=Waves -e=Mhd -g=16,16,16
+	./Config.pl -noopenmp ${OPENACC} -u=Waves -e=Mhd -g=8,8,8
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -338,7 +338,7 @@ test_fast_wave_run:
 
 test_fast_wave_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/z=0_mhd_1_t00000820_n00001000.out \
+		${TESTDIR}/RESULT/GM/z*_n00000010.out \
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
 		> test_fast_wave.diff)
 	ls -l test_fast_wave.diff

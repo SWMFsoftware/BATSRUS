@@ -29,7 +29,6 @@ module ModRadDiffusion
   use ModImplicit,    ONLY: UseAccurateRadiation
   use ModVarIndexes,  ONLY: p_, nWave
   use BATL_size,      ONLY: nDim, MaxDim
-  use ModAdvance,     ONLY: StateLeft_, StateRight_, Normal_
 
   implicit none
   save
@@ -291,7 +290,7 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux( FFLog_I, FFInt_I, FFReal_I)
+  subroutine get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
 
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
@@ -299,26 +298,23 @@ contains
     use ModFaceFluxParameters
 
     
-    logical, dimension(:), target, intent(inout):: FFLog_I
-    integer, dimension(:), target, intent(inout):: FFInt_I
-    real, dimension(:), target, intent(inout):: FFReal_I
-    real, dimension(:), pointer:: StateLeft_V
-    real, dimension(:), pointer:: StateRight_V
-    real, dimension(:), pointer:: Normal_D
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
+    real, intent(inout):: StateLeft_V(nVar)
+    real, intent(inout):: StateRight_V(nVar)
+    real, intent(inout):: Normal_D(MaxDim)
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    Normal_D => FFReal_I(Normal_:Normal_+MaxDim-1)
-    StateRight_V => FFReal_I(StateRight_:StateRight_+nVar-1)
-    StateLeft_V => FFReal_I(StateLeft_:StateLeft_+nVar-1)
     associate( &
-      iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
-      i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_), &
-      RadDiffCoef => FFReal_I(RadDiffCoef_), &
-      EradFlux => FFReal_I(EradFlux_), &
-      IsNewBlockRadDiffusion => FFLog_I(IsNewBlockRadDiffusion_) )
+      iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
+      i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_), &
+      RadDiffCoef => RFF_I(RadDiffCoef_), &
+      EradFlux => RFF_I(EradFlux_), &
+      IsNewBlockRadDiffusion => IsFF_I(IsNewBlockRadDiffusion_) )
 
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
@@ -354,8 +350,8 @@ contains
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
       associate( &
-         iDir => FFInt_I(iDimFace_), iBlock => FFInt_I(iBlockFace_), &
-         i => FFInt_I(iFace_), j => FFInt_I(jFace_), k => FFInt_I(kFace_) )
+         iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
+         i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_) )
 
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)
@@ -386,7 +382,7 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
+    use ModAdvance,    ONLY: State_VGB, Source_VCI, Erad_, nWave
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
@@ -397,6 +393,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    integer :: iGang
     real :: TeSi, Te
     real :: AbsorptionEmission, OpacityPlanckSi_W(nWave)
     real :: OpacityEmissionSi_W(nWave)
@@ -405,7 +402,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -433,10 +430,10 @@ contains
             - RelaxCoef2_CB(i,j,k,iBlock)*State_VGB(Erad_,i,j,k,iBlock)
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
+       Source_VCI(Erad_,i,j,k,iGang) = Source_VCI(Erad_,i,j,k,iGang) + AbsorptionEmission
 
        ! dE/dt = - AbsorptionEmission
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
+       Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) - AbsorptionEmission
 
     end do; end do; end do
 

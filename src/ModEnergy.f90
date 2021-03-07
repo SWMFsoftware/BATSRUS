@@ -42,7 +42,7 @@ contains
   !============================================================================
 
   subroutine calc_energy_or_pressure(iBlock)
-
+    !$acc routine vector
     ! Calculate pressure from energy or energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -68,7 +68,7 @@ contains
        end if
        RETURN
     end if
-
+#ifndef OPENACC
     if(UseNonConservative .and. nConservCrit <= 0)then
        ! All cells are non-conservative
        call calc_energy_cell(iBlock)
@@ -135,7 +135,7 @@ contains
     ! Make sure pressure used for energy is larger than floor value
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, &
          DoUpdateEnergy = .true.)
-
+#endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_or_pressure
   !============================================================================
@@ -238,7 +238,8 @@ contains
 
   subroutine calc_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
-
+    !$acc routine vector
+    
     ! Calculate pressure from energy
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
@@ -252,7 +253,7 @@ contains
     !--------------------------------------------------------------------------
     do iFluid = iFluidMin, iFluidMax
        if(nFluid > 1) call select_fluid(iFluid)
-       !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
+       !$acc loop vector collapse(3)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = &
                GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
@@ -265,7 +266,7 @@ contains
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Subtract magnetic energy
-       !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
+       !$acc loop vector collapse(3)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                - GammaMinus1_I(iFluid)*0.5* &
@@ -296,7 +297,8 @@ contains
 
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
-
+    !$acc routine vector
+    
     ! Calculate total energy (excluding B0):
     !
     !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
@@ -308,14 +310,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
+#ifndef OPENACC    
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid(iFluid)
        ! Calculate thermal plus kinetic energy
-       ! FIXME: the sum() below doest not work for openacc. 
-       !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
              Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
@@ -330,8 +331,6 @@ contains
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
-       ! FIXME: the sum() below doest not work for openacc. 
-       !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           Energy_GBI(i,j,k,iBlock,iFluid) = &
                Energy_GBI(i,j,k,iBlock,iFluid) + &
@@ -347,11 +346,12 @@ contains
        end if
 
     end do
-
+#endif
   end subroutine calc_energy
   !============================================================================
 
   subroutine calc_pressure_cell(iBlock)
+    !$acc routine vector
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
     call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
@@ -415,7 +415,7 @@ contains
           ! MHD energy
 
           if(UseOpenACC) then 
-             !$acc parallel loop collapse(3) present(State_VGB, Energy_GBI)
+             !$acc parallel loop gang  vector collapse(3)
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
                    Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
@@ -488,7 +488,7 @@ contains
 
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax, DoUpdateEnergy)
-    
+    !$acc routine vector
     ! Keep pressure(s) in State_VGB above pMin_I limit
     ! If DoUpdateEnergy is present, also modify energy to remain consistent
 

@@ -219,7 +219,7 @@ contains
   end subroutine set_visco_factor_face
   !============================================================================
 
-  subroutine get_viscosity_tensor( FFLog_I, FFInt_I, FFReal_I)
+  subroutine get_viscosity_tensor( IsFF_I, IFF_I, RFF_I)
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
@@ -229,9 +229,9 @@ contains
     use ModFaceFluxParameters
 
     
-    logical, dimension(:), target, intent(inout):: FFLog_I
-    integer, dimension(:), target, intent(inout):: FFInt_I
-    real, dimension(:), target, intent(inout):: FFReal_I
+    logical, target, intent(inout):: IsFF_I(nFFLogic)
+    integer, target, intent(inout):: IFF_I(nFFInt)
+    real, target, intent(inout):: RFF_I(nFFReal)
 
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
@@ -241,11 +241,11 @@ contains
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
     associate( &
-      iDimFace => FFInt_I(iDimFace_), iBlockFace => FFInt_I(iBlockFace_), &
-      iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_), &
-      iFluidMin => FFInt_I(iFluidMin_), iFluidMax => FFInt_I(iFluidMax_), &
-      ViscoCoeff => FFReal_I(ViscoCoeff_), &
-      IsNewBlockVisco => FFLog_I(IsNewBlockVisco_) )
+      iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
+      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+      iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
+      ViscoCoeff => RFF_I(ViscoCoeff_), &
+      IsNewBlockVisco => IsFF_I(IsNewBlockVisco_) )
 
     ! Get velocity vector for the block, only done once per block
     if(IsNewBlockVisco) then

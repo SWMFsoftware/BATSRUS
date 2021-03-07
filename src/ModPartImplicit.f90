@@ -2211,19 +2211,22 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
+    use ModAdvance, ONLY : Source_VCI  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
 
     integer, intent(in) :: iBlock
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
 
+    integer:: iGang   
     logical :: UseDivbSourceOrig
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    iGang = 1
+    
     call timing_start(NameSub)
 
     UseDivbSourceOrig = UseDivbSource
@@ -2233,11 +2236,11 @@ contains
 
     call calc_source(iBlock)
 
-    SourceImpl_VC = Source_VC(1:nVar,:,:,:)
+    SourceImpl_VC = Source_VCI(1:nVar,:,:,:,iGang)
 
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
-       SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
+       SourceImpl_VC(iP_I,:,:,:) = Source_VCI(Energy_:Energy_+nFluid-1,:,:,:,iGang)
     end if
 
     UseDivbSource = UseDivbSourceOrig
@@ -2254,7 +2257,7 @@ contains
     ! subroutine get_physical_flux from ModFaceFlux.
 
     use ModVarIndexes, ONLY: nVar, Energy_
-    use ModMain,     ONLY: MaxDim, x_, y_, z_
+    use ModMain,     ONLY: MaxDim, x_, y_, z_, RhoUx_, RhoUz_
     use ModAdvance,  ONLY: nFlux
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_physical_flux
@@ -2268,9 +2271,14 @@ contains
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
     
-    logical, target:: FFLog_I(nFFLogic)
-    integer, target:: FFInt_I(nFFInt)
-    real, target:: FFReal_I(nFFReal)
+    logical, target:: IsFF_I(nFFLogic)
+    integer, target:: IFF_I(nFFInt)
+    real, target:: RFF_I(nFFReal)
+
+    real :: Normal_D(MaxDim)                                      
+    real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+    real :: Unormal_I(nFluid+1)
+    real :: bCrossArea_D(3)
 
     real :: Un_I(nFluid+1), En, Pe, Pwave
     integer :: i, j, k
@@ -2278,16 +2286,16 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_flux'
     !--------------------------------------------------------------------------
-    call init_face_flux_arrays( FFLog_I, FFInt_I, FFReal_I)
-    associate(B0x => FFReal_I(B0x_), B0y => FFReal_I(B0y_), B0z => FFReal_I(B0z_), &
-      HallJx => FFReal_I(HallJx_), HallJy => FFReal_I(HallJy_), HallJz => FFReal_I(HallJz_), &
-      Area => FFReal_I(Area_), DoTestCell => FFLog_I(DoTestCell_), &
-      iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_), &
-      UseHallGradPe => FFLog_I(UseHallGradPe_) )
+    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    associate(B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
+      HallJx => RFF_I(HallJx_), HallJy => RFF_I(HallJy_), HallJz => RFF_I(HallJz_), &
+      Area => RFF_I(Area_), DoTestCell => IsFF_I(DoTestCell_), &
+      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+      UseHallGradPe => IsFF_I(UseHallGradPe_) )
 
     call test_start(NameSub, DoTest, iBlock)
 
-    call set_block_values(iBlock, iDim, FFInt_I, FFReal_I)
+    call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
     ! Set iFace=i, jFace=j, kFace=k so that
     ! call set_cell_values and call get_physical_flux work
     ! This is not quite right but good enough for the preconditioner
@@ -2305,7 +2313,7 @@ contains
           HallJz = HallJ_CD(i, j, k, z_)
        end if
 
-       call set_cell_values( FFLog_I, FFInt_I, FFReal_I)
+       call set_cell_values( IsFF_I, IFF_I, RFF_I, Normal_D)
 
        ! Ignore gradient of electron pressure in the preconditioner
        UseHallGradPe = .false.
@@ -2314,7 +2322,7 @@ contains
        B0y = B0_DC(y_, i, j, k)
        B0z = B0_DC(z_, i, j, k)
 
-       call get_physical_flux(Primitive_V,  FFLog_I, FFInt_I, FFReal_I, &
+       call get_physical_flux(Primitive_V,  IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V, &
             Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
        Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
@@ -2348,21 +2356,26 @@ contains
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
     
-    logical, target:: FFLog_I(nFFLogic)
-    integer, target:: FFInt_I(nFFInt)
-    real, target:: FFReal_I(nFFReal)
-    real, dimension(:), pointer:: UnLeft_I
-    real, dimension(:), pointer:: UnRight_I
+    logical, target:: IsFF_I(nFFLogic)
+    integer, target:: IFF_I(nFFInt)
+    real, target:: RFF_I(nFFReal)
+    real :: StateLeft_V(nVar)                                     
+    real :: StateRight_V(nVar)                                    
+    real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
+    real :: Normal_D(MaxDim)                                      
+    real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+    real :: Unormal_I(nFluid+1)
+    real :: UnLeft_I(nFluid+1)                                    
+    real :: UnRight_I(nFluid+1)                                   
+    real :: bCrossArea_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
-    UnRight_I => FFReal_I(UnRight_:UnRight_+nFluid+1-1)
-    UnLeft_I => FFReal_I(UnLeft_:UnLeft_+nFluid+1-1)
-    call init_face_flux_arrays( FFLog_I, FFInt_I, FFReal_I)
-    associate( B0x => FFReal_I(B0x_), B0y => FFReal_I(B0y_), B0z => FFReal_I(B0z_), &
-      CmaxDt => FFReal_I(CmaxDt_), Area => FFReal_I(Area_), DoTestCell => FFLog_I(DoTestCell_), &
-      iFace => FFInt_I(iFace_), jFace => FFInt_I(jFace_), kFace => FFInt_I(kFace_) )
+    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+    associate( B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
+      CmaxDt => RFF_I(CmaxDt_), Area => RFF_I(Area_), DoTestCell => IsFF_I(DoTestCell_), &
+      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_) )
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -2370,7 +2383,7 @@ contains
     UnLeft_I(eFluid_)  = 0.0
     UnRight_I(eFluid_) = 0.0
 
-    call set_block_values(iBlock, iDim, FFInt_I, FFReal_I)
+    call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
 
     do kFace=1,nFaceK; do jFace=1,nFaceJ; do iFace=1,nFaceI
 
@@ -2381,7 +2394,7 @@ contains
 
        call conservative_to_primitive(Primitive_V)
 
-       call set_cell_values( FFLog_I, FFInt_I, FFReal_I)
+       call set_cell_values( IsFF_I, IFF_I, RFF_I, Normal_D)
 
        ! This is inconsistent for hd with Sokolov scheme,
        ! because originally the maximum speed from Rusanov scheme is applied!
@@ -2390,7 +2403,9 @@ contains
        B0z = B0_DF( z_,iFace, jFace, kFace)
 
        CmaxDt = 0.0 ! initialize to avoid floating point exception
-       call get_speed_max(Primitive_V,  FFLog_I, FFInt_I, FFReal_I, cmax_I = Cmax_I)
+       call get_speed_max(Primitive_V,  IsFF_I, IFF_I, RFF_I, &
+            UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
+            cmax_I = Cmax_I)
 
        Cmax_F(iFace, jFace, kFace) = maxval(Cmax_I)*Area
 

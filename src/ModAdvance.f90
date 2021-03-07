@@ -73,9 +73,11 @@ module ModAdvance
 
   ! Conservative/Non-conservative parameters
   logical :: UseNonConservative
+  !$acc declare create(UseNonConservative)
 
   ! Number and type of criteria
   integer :: nConservCrit
+  !$acc declare create(nConservCrit)
   character (len=10), allocatable :: TypeConservCrit_I(:)
 
   ! Geometrical parameters
@@ -112,10 +114,10 @@ module ModAdvance
   real, public, allocatable:: Efield_DGB(:,:,:,:,:)
 
   ! Local cell-centered source terms and divB.
-  real :: Source_VC(nSource,nI,nJ,nK)
-  real :: SourceMhd_VC(RhoUx_:RhoUz_,nI,nJ,nK)
-  !$omp threadprivate( Source_VC, SourceMhd_VC )
-  !$acc declare create( Source_VC, SourceMhd_VC )
+  real, allocatable :: Source_VCI(:,:,:,:,:)
+  real, allocatable :: SourceMhd_VCI(:,:,:,:,:)
+  !$omp threadprivate( Source_VCI, SourceMhd_VCI )
+  !$acc declare create( Source_VCI, SourceMhd_VCI )
 
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -181,6 +183,7 @@ module ModAdvance
 
   ! Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false., DoCorrectFace = .false.
+  !$acc declare create(DoCorrectFace, UseFDFaceFlux)
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
   !$omp threadprivate( FluxCenter_VGD )
 
@@ -205,7 +208,7 @@ module ModAdvance
   ! if UseEfield, in which case the electric field is part of the state vector.
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
 
-  real, allocatable:: MhdSource_VC(:,:,:,:),  &
+  real, allocatable:: MhdSource_VCI(:,:,:,:),  &
        MhdFlux_VXI(:,:,:,:,:) , MhdFlux_VYI(:,:,:,:,:) , MhdFlux_VZI(:,:,:,:,:)
   !$omp threadprivate( MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI )
   !$acc declare create(MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI)
@@ -257,6 +260,10 @@ contains
        Source_VCB = 0.0
     endif
 
+#ifdef OPENACC
+    nGang = MaxBlock
+#endif    
+    
     !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DXI))then
@@ -341,6 +348,9 @@ contains
          nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace,nGang))
 
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
+    
+    allocate(Source_VCI(nSource,nI,nJ,nK,nGang))
+    allocate(SourceMhd_VCI(RhoUx_:RhoUz_,nI,nJ,nK,nGang))
     !$omp end parallel
 
     if(iProc==0)then
@@ -402,6 +412,9 @@ contains
     if(allocated(MhdFlux_VXI))      deallocate(MhdFlux_VXI)
     if(allocated(MhdFlux_VYI))      deallocate(MhdFlux_VYI)
     if(allocated(MhdFlux_VZI))      deallocate(MhdFlux_VZI)
+    if(allocated(Primitive_VGI))    deallocate(Primitive_VGI)
+    if(allocated(Source_VCI))       deallocate(Source_VCI)
+    if(allocated(SourceMhd_VCI))    deallocate(SourceMhd_VCI)
     !$omp end parallel
 
     if(iProc==0)then

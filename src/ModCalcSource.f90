@@ -22,7 +22,7 @@ contains
   !============================================================================
 
   subroutine calc_source(iBlock)
-
+    !$acc routine vector
     use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
          UseUserSourceExpl, UseUserSourceImpl
@@ -62,6 +62,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar, iFluid
+    integer:: iGang
     real :: Pe, Pwave, DivU
     real :: Coef
 
@@ -106,18 +107,22 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    !$acc data present(Source_VC, SourceMhd_VC)
-    !$acc parallel loop collapse(4) 
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif    
+    
+    !$acc loop vector collapse(4) 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
-       Source_VC(iVar,i,j,k) = 0
+       Source_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do 
 
-    !$acc parallel loop collapse(4) 
+    !$acc loop vector collapse(4) 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
-       SourceMhd_VC(iVar,i,j,k) = 0
+       SourceMhd_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do 
-    !$acc end data
 
+#ifndef OPENACC
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
        do iFluid=1,nFluid
@@ -155,12 +160,12 @@ contains
                    bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
-                   Source_VC(iPpar,i,j,k) = Source_VC(iPpar,i,j,k) &
+                   Source_VCI(iPpar,i,j,k,iGang) = Source_VCI(iPpar,i,j,k,iGang) &
                         - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU))
-                   Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                   Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
                         + (State_VGB(iP,i,j,k,iBlock) -  &
                         State_VGB(iPpar,i,j,k,iBlock))*bDotGradparU
                 end if
@@ -199,7 +204,7 @@ contains
                    end if
 
                    ! Source(p) = (gamma - 1)*tau:grad u
-                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
+                   Source_VCI(p_,i,j,k,iGang) = Source_VCI(p_,i,j,k,iGang) + &
                         GammaMinus1*ViscoCoeff * &
                         State_VGB(Rho_,i,j,k,iBlock)*Visco
                 end if
@@ -215,18 +220,18 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-             DivU = uDotArea_XII(i+1,j,k,iFluid,1) - uDotArea_XII(i,j,k,iFluid,1)
+             DivU = uDotArea_XII(i+1,j,k,iFluid,iGang) - uDotArea_XII(i,j,k,iFluid,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,iFluid,1) - uDotArea_YII(i,j,k,iFluid,1)
+                  + uDotArea_YII(i,j+1,k,iFluid,iGang) - uDotArea_YII(i,j,k,iFluid,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,iFluid,1) - uDotArea_ZII(i,j,k,iFluid,1)
+                  + uDotArea_ZII(i,j,k+1,iFluid,iGang) - uDotArea_ZII(i,j,k,iFluid,iGang)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
-                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
                      - (State_VGB(iP,i,j,k,iBlock) &
                      - State_VGB(iPpar,i,j,k,iBlock)/3.0)*DivU
              else
-                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
              end if
           end do; end do; end do
@@ -247,9 +252,9 @@ contains
              Ur =  sum(u_D *rUnit_D)
              if (Ur < SpeedMin) then
                 Force_D = rUnit_D * Rho*(SpeedMin - Ur)/TauSpeedMin
-                Source_VC(iRhoUx:iRhoUz,i,j,k) = &
-                     Source_VC(iRhoUx:iRhoUz,i,j,k) + Force_D
-                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+                Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) = &
+                     Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) + Force_D
+                Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) &
                      + sum(Force_D * u_D)
              end if
           end do; end do; end do
@@ -263,17 +268,17 @@ contains
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
-             DivU = uDotArea_XII(i+1,j,k,eFluid_,1) - uDotArea_XII(i,j,k,eFluid_,1)
+             DivU = uDotArea_XII(i+1,j,k,eFluid_,iGang) - uDotArea_XII(i,j,k,eFluid_,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,eFluid_,1) - uDotArea_YII(i,j,k,eFluid_,1)
+                  + uDotArea_YII(i,j+1,k,eFluid_,iGang) - uDotArea_YII(i,j,k,eFluid_,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,eFluid_,1) - uDotArea_ZII(i,j,k,eFluid_,1)
+                  + uDotArea_ZII(i,j,k+1,eFluid_,iGang) - uDotArea_ZII(i,j,k,eFluid_,iGang)
           else
-             DivU = uDotArea_XII(i+1,j,k,1,1) - uDotArea_XII(i,j,k,1,1)
+             DivU = uDotArea_XII(i+1,j,k,1,iGang) - uDotArea_XII(i,j,k,1,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,1,1) - uDotArea_YII(i,j,k,1,1)
+                  + uDotArea_YII(i,j+1,k,1,iGang) - uDotArea_YII(i,j,k,1,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,1,1) - uDotArea_ZII(i,j,k,1,1)
+                  + uDotArea_ZII(i,j,k+1,1,iGang) - uDotArea_ZII(i,j,k,1,iGang)
           end if
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
@@ -281,7 +286,7 @@ contains
           DivU_C(i,j,k) = DivU
 
           do iVar = WaveFirst_, WaveLast_
-             Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
+             Source_VCI(iVar,i,j,k,iGang) = Source_VCI(iVar,i,j,k,iGang) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
 
@@ -293,13 +298,13 @@ contains
              ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
              ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
              ! Here we add the Pwave div(u) source term
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
+             Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) + DivU*Pwave
 
              ! Add "geometrical source term" p/r to the radial momentum
              ! equation. The "radial" direction is along the Y axis
              ! NOTE: here we have to use signed radial distance!
-             if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
-                  Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
+             if(IsRzGeometry) Source_VCI(RhoUy_,i,j,k,iGang) = &
+                  Source_VCI(RhoUy_,i,j,k,iGang) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
           end if
        end do; end do; end do
     end if
@@ -340,8 +345,8 @@ contains
           end if
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                  Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+             Source_VCI(WaveFirst_:WaveLast_,i,j,k,iGang) = &
+                  Source_VCI(WaveFirst_:WaveLast_,i,j,k,iGang) &
                   - WaveDissipation_VC(:,i,j,k)
           end do; end do; end do
        end if
@@ -352,27 +357,27 @@ contains
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k), &
                   QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
-             Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+             Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang) &
                   + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
-             Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
+             Source_VCI(iPIon_I,i,j,k,iGang) = Source_VCI(iPIon_I,i,j,k,iGang) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I &
                   *GammaMinus1_I(IonFirst_:IonLast_)
-             Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
-                  Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
+             Source_VCI(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k,iGang) = &
+                  Source_VCI(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k,iGang) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
              if(UseAnisoPressure)then
                 do iFluid = IonFirst_, IonLast_
-                   Source_VC(iPparIon_I(iFluid),i,j,k) = &
-                        Source_VC(iPparIon_I(iFluid),i,j,k) &
+                   Source_VCI(iPparIon_I(iFluid),i,j,k,iGang) = &
+                        Source_VCI(iPparIon_I(iFluid),i,j,k,iGang) &
                         + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2.0
                 end do
              end if
           else
-             Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+             Source_VCI(p_,i,j,k,iGang) = Source_VCI(p_,i,j,k,iGang) &
                   + CoronalHeating_C(i,j,k)*GammaMinus1
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                   + CoronalHeating_C(i,j,k)
           end if
        end do; end do; end do
@@ -385,13 +390,13 @@ contains
                RadCooling_C(i,j,k))
 
           if(UseElectronPressure)then
-             Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+             Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
 
           else
-             Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
+             Source_VCI(p_,i,j,k,iGang)  = Source_VCI(p_,i,j,k,iGang) &
                   + RadCooling_C(i,j,k)*GammaMinus1
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                   + RadCooling_C(i,j,k)
           end if
        end do; end do; end do
@@ -404,11 +409,11 @@ contains
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          DivU = uDotArea_XII(i+1,j,k,eFluid_,1) - uDotArea_XII(i,j,k,eFluid_,1)
+          DivU = uDotArea_XII(i+1,j,k,eFluid_,iGang) - uDotArea_XII(i,j,k,eFluid_,iGang)
           if(nJ > 1) DivU = DivU &
-               + uDotArea_YII(i,j+1,k,eFluid_,1) - uDotArea_YII(i,j,k,eFluid_,1)
+               + uDotArea_YII(i,j+1,k,eFluid_,iGang) - uDotArea_YII(i,j,k,eFluid_,iGang)
           if(nK > 1) DivU = DivU &
-               + uDotArea_ZII(i,j,k+1,eFluid_,1) - uDotArea_ZII(i,j,k,eFluid_,1)
+               + uDotArea_ZII(i,j,k+1,eFluid_,iGang) - uDotArea_ZII(i,j,k,eFluid_,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
@@ -427,12 +432,12 @@ contains
              bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
              ! p parallel: -2*ppar*b.(b.(Grad U))
-             Source_VC(Pepar_,i,j,k) = Source_VC(Pepar_,i,j,k) &
+             Source_VCI(Pepar_,i,j,k,iGang) = Source_VCI(Pepar_,i,j,k,iGang) &
                   - 2*State_VGB(Pepar_,i,j,k,iBlock)*bDotGradparU
 
              ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
              !     = (p - ppar)*b.(b.(GradU))
-             Source_VC(Pe_,i,j,k)    = Source_VC(Pe_,i,j,k)      &
+             Source_VCI(Pe_,i,j,k,iGang)    = Source_VCI(Pe_,i,j,k,iGang)      &
                   + (State_VGB(Pe_,i,j,k,iBlock) -               &
                   State_VGB(Pepar_,i,j,k,iBlock))*bDotGradparU
 
@@ -445,10 +450,10 @@ contains
           ! For electron entropy equation there is no such term
           if(.not.UseElectronEntropy .and. .not. UseAnisoPe) then
              ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-             Source_VC(Pe_,i,j,k) = &
-                  Source_VC(Pe_,i,j,k) - GammaElectronMinus1*Pe*DivU
+             Source_VCI(Pe_,i,j,k,iGang) = &
+                  Source_VCI(Pe_,i,j,k,iGang) - GammaElectronMinus1*Pe*DivU
           else if(.not.UseElectronEntropy .and. UseAnisoPe) then
-             Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+             Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang) &
                   - (State_VGB(Pe_,i,j,k,iBlock)      &
                   - State_VGB(Pepar_,i,j,k,iBlock)/3.0)*DivU
           end if
@@ -458,13 +463,13 @@ contains
              ! -u.grad Pe = -div(u Pe) + Pe div(u)
              ! The -div(u Pe) is implemented as a flux in ModFaceFlux.
              ! Here we add the Pe div(u_e) source term
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+             Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) + Pe*DivU
 
              ! Add "geometrical source term" p/r to the radial momentum
              ! equation. The "radial" direction is along the Y axis
              ! NOTE: here we have to use signed radial distance!
-             if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
-                  Source_VC(RhoUy_,i,j,k) + Pe/Xyz_DGB(y_,i,j,k,iBlock)
+             if(IsRzGeometry) Source_VCI(RhoUy_,i,j,k,iGang) = &
+                  Source_VCI(RhoUy_,i,j,k,iGang) + Pe/Xyz_DGB(y_,i,j,k,iBlock)
           end if
        end do; end do; end do
        if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
@@ -485,31 +490,31 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Source[mr] = (p+mphi**2/rho)/radius
-          Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
+          Source_VCI(iRhoUy_I,i,j,k,iGang) = Source_VCI(iRhoUy_I,i,j,k,iGang) &
                + (State_VGB(iP_I,i,j,k,iBlock) &
                +  State_VGB(iRhoUz_I,i,j,k,iBlock)**2 &
                /  State_VGB(iRho_I,i,j,k,iBlock)) &
                / Xyz_DGB(y_,i,j,k,iBlock)
 
           ! Source[mphi] = (-mphi*mr/rho)/radius
-          Source_VC(iRhoUz_I,i,j,k) = Source_VC(iRhoUz_I,i,j,k) &
+          Source_VCI(iRhoUz_I,i,j,k,iGang) = Source_VCI(iRhoUz_I,i,j,k,iGang) &
                - State_VGB(iRhoUz_I,i,j,k,iBlock) &
                * State_VGB(iRhoUy_I,i,j,k,iBlock) &
                /(State_VGB(iRho_I,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock))
 
           if(UseB)then
              ! Source[mr] = (B^2/2-Bphi**2)/radius
-             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+             Source_VCI(RhoUy_,i,j,k,iGang) = Source_VCI(RhoUy_,i,j,k,iGang) &
                   + (0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) &
                   -  State_VGB(Bz_,i,j,k,iBlock)**2) / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[mphi]=Bphi*Br/radius
-             Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+             Source_VCI(RhoUz_,i,j,k,iGang) = Source_VCI(RhoUz_,i,j,k,iGang) &
                   + State_VGB(Bz_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
                   / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
-             Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+             Source_VCI(Bz_,i,j,k,iGang) = Source_VCI(Bz_,i,j,k,iGang) &
                   + (State_VGB(Bz_,i,j,k,iBlock) &
                   *   State_VGB(RhoUy_,i,j,k,iBlock) &
                   -  State_VGB(By_,i,j,k,iBlock) &
@@ -518,20 +523,20 @@ contains
           end if
           if(UseB .and. UseB0)then
              ! Source[mr] = (B0.B1 - 2 B0phi * Bphi)/radius
-             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+             Source_VCI(RhoUy_,i,j,k,iGang) = Source_VCI(RhoUy_,i,j,k,iGang) &
                   + (sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *      B0_DGB(:,i,j,k,iBlock)) &
                   - 2.0*State_VGB(Bz_,i,j,k,iBlock)*B0_DGB(z_,i,j,k,iBlock)) &
                   / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[mphi] = (B0phi * Br + Bphi * B0r)/radius
-             Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+             Source_VCI(RhoUz_,i,j,k,iGang) = Source_VCI(RhoUz_,i,j,k,iGang) &
                   + (B0_DGB(z_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
                   +  B0_DGB(y_,i,j,k,iBlock)*State_VGB(Bz_,i,j,k,iBlock)) &
                   / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[Bphi]=((B0phi * mr - B0r * mphi)/rho)/radius
-             Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+             Source_VCI(Bz_,i,j,k,iGang) = Source_VCI(Bz_,i,j,k,iGang) &
                   + (B0_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUy_,i,j,k,iBlock) &
                   -  B0_DGB(y_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock))&
                   /State_VGB(Rho_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
@@ -547,7 +552,7 @@ contains
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
              ! Source[Bphi] = [ 1/(q_e*n_e) * (dP_e/dZ) ] / radius
-             Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
+             Source_VCI(Bz_,i,j,k,iGang) = Source_VCI(Bz_,i,j,k,iGang) &
                   + IonMassPerCharge_G(i,j,k)/State_VGB(Rho_,i,j,k,iBlock) &
                   /Xyz_DGB(y_,i,j,k,iBlock) &
                   *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/CellSize_DB(x_,iBlock)
@@ -572,12 +577,15 @@ contains
     !   +curl(B0) x B0    - add this if curl B0 is not 0
 
     if(UseB0) call set_b0_source(iBlock)
-
+#endif
+    
     if(UseB .and. UseDivbSource)then       
        if(IsCartesian)then
-          call calc_divb_source
+          call calc_divb_source(iBlock)
        else
+#ifndef OPENACC          
           call calc_divb_source_gencoord
+#endif          
        end if
 
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
@@ -585,8 +593,7 @@ contains
             call write_source('After B0B1 source')
               
        ! Add contributions to other source terms
-       !$acc data present(true_cell, Source_VC, SourceMhd_VC, DivB1_GB, State_VGB)
-       !$acc parallel loop gang vector collapse(3) private(U_D)
+       !$acc loop vector collapse(3) private(U_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -603,33 +610,33 @@ contains
              uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
                   *State_VGB(iRhoUzIon_I(1:nTrueIon),i,j,k,iBlock))
 
-             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
+             Source_VCI(Bx_:Bz_,i,j,k,iGang) = Source_VCI(Bx_:Bz_,i,j,k,iGang) &
                   -DivB1_GB(i,j,k,iBlock)*uPlus_D
           else
              RhoInv = 1.0/State_VGB(Rho_,i,j,k,iBlock)
              U_D = RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
 
-             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
+             Source_VCI(Bx_:Bz_,i,j,k,iGang) = Source_VCI(Bx_:Bz_,i,j,k,iGang) &
                   -DivB1_GB(i,j,k,iBlock)*U_D
 
              if(.not. UseMhdMomentumFlux) CYCLE
 
              ! -B1 div(B1)       - usual div B source
-             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)  &
+             SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                  SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang)  &
                   -DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
              if(.not. IsMhd) CYCLE
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                   -DivB1_GB(i,j,k,iBlock)*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *U_D)
 
           end if
 
        end do; end do; end do
-       !$acc end data
+       
        if(DoTest)call write_source('After divb source')
-
+#ifndef OPENACC
        if(UseB0Source .and. UseMhdMomentumFlux)then
 
           !   -B1 div(B0)     - div(B0) source
@@ -638,8 +645,8 @@ contains
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
-             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                  SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
+             SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                  SourceMhd_VCI(rhoUx_:rhoUz_,i,j,k,iGang) &
                   - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_C(i,j,k) &
                   - cross_product( &
                   CurlB0_DC(:,i,j,k), State_VGB(Bx_:Bz_,i,j,k,iBlock))
@@ -651,10 +658,14 @@ contains
              call write_source('After B0 source')
           end if
        end if
+#endif       
     else
+#ifndef OPENACC       
        if(UseB)call calc_divb(iBlock)
+#endif       
     end if
 
+#ifndef OPENACC           
     if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -665,11 +676,11 @@ contains
           ! +curl(B0) x B0    - add this since curl B0 is not 0
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
-          SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = &
-               SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
+          SourceMhd_VCI(rhoUx_:rhoUz_,i,j,k,iGang) = &
+               SourceMhd_VCI(rhoUx_:rhoUz_,i,j,k,iGang) &
                + CurlB0CrossB_D
           ! Energy equation source term is u.(curl(B0)xB)
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+          Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
                + sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))&
                /State_VGB(rho_,i,j,k,iBlock)
        end do; end do; end do
@@ -686,17 +697,17 @@ contains
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
             call write_source('After E div E')
     end if
-
+#endif
+    
     if(IsMhd) then
-       !$acc data present(Source_VC, SourceMhd_VC)
-       !$acc parallel loop collapse(4) 
+       !$acc loop vector collapse(4) 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
-          Source_VC(iVar,i,j,k) = &
-               Source_VC(iVar,i,j,k) + SourceMhd_VC(iVar,i,j,k)
+          Source_VCI(iVar,i,j,k,iGang) = &
+               Source_VCI(iVar,i,j,k,iGang) + SourceMhd_VCI(iVar,i,j,k,iGang)
        end do; end do; end do; end do 
-       !$acc end data
     endif
 
+#ifndef OPENACC           
     ! The electric field in the comoving frame is needed
     if(UseMhdMomentumFlux)&
          call get_efield_in_comoving_frame(iBlock)
@@ -712,9 +723,9 @@ contains
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
                 ForcePerRho_D = &
                      Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)**3
-                Source_VC(iRhoUx:iRhoUz,i,j,k) =Source_VC(iRhoUx:iRhoUz,i,j,k)&
+                Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) =Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang)&
                      + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
-                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
+                Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) + &
                      sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*ForcePerRho_D)
              end do; end do; end do
 
@@ -724,10 +735,10 @@ contains
                    ForcePerRho_D = Gbody2 &
                         * (Xyz_DGB(:,i,j,k,iBlock)-[xBody2,yBody2,zBody2]) &
                         / r2_BLK(i,j,k,iBlock)**3
-                   Source_VC(iRhoUx:iRhoUz,i,j,k) = &
-                        Source_VC(iRhoUx:iRhoUz,i,j,k) &
+                   Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) = &
+                        Source_VCI(iRhoUx:iRhoUz,i,j,k,iGang) &
                         + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
-                   Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
+                   Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) + &
                         sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                         *   ForcePerRho_D)
                 end do; end do; end do
@@ -736,9 +747,9 @@ contains
              iRhoUGrav = iRhoUx - 1 + GravityDir
              do k=1,nK; do j=1,nJ; do i=1,nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
-                Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &
+                Source_VCI(iRhoUGrav,i,j,k,iGang) = Source_VCI(iRhoUGrav,i,j,k,iGang) &
                      + Gbody*State_VGB(iRho,i,j,k,iBlock)
-                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+                Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) &
                      + Gbody*State_VGB(iRhoUGrav,i,j,k,iBlock)
              end do; end do; end do
           end if
@@ -757,17 +768,17 @@ contains
              Omega2 = OmegaBody**2
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
-                Source_VC(iRhoUx,i,j,k) = Source_VC(iRhoUx,i,j,k) &
+                Source_VCI(iRhoUx,i,j,k,iGang) = Source_VCI(iRhoUx,i,j,k,iGang) &
                      + 2*OmegaBody*State_VGB(iRhoUy,i,j,k,iBlock) &
                      + State_VGB(iRho,i,j,k,iBlock) &
                      *Omega2 * Xyz_DGB(x_,i,j,k,iBlock)
 
-                Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) &
+                Source_VCI(iRhoUy,i,j,k,iGang) = Source_VCI(iRhoUy,i,j,k,iGang) &
                      - 2*OmegaBody*State_VGB(iRhoUx,i,j,k,iBlock) &
                      + State_VGB(iRho,i,j,k,iBlock) &
                      *Omega2 * Xyz_DGB(y_,i,j,k,iBlock)
 
-                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+                Source_VCI(iEnergy,i,j,k,iGang) = Source_VCI(iEnergy,i,j,k,iGang) &
                      + Omega2 * sum(State_VGB(iRhoUx:iRhoUy,i,j,k,iBlock) &
                      *                         Xyz_DGB(x_:y_,i,j,k,iBlock))
              end do; end do; end do
@@ -796,7 +807,7 @@ contains
        ! Add total charge density source term for HypE scalar: c/eps0 = c^3
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          Source_VC(HypE_,i,j,k) = Clight*C2light * &
+          Source_VCI(HypE_,i,j,k,iGang) = Clight*C2light * &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
        end do; end do; end do
     end if
@@ -822,12 +833,12 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
-          DivU            =        uDotArea_XII(i+1,j,k,1,1) -uDotArea_XII(i,j,k,1,1)
-          if(nJ > 1) DivU = DivU + uDotArea_YII(i,j+1,k,1,1) -uDotArea_YII(i,j,k,1,1)
-          if(nK > 1) DivU = DivU + uDotArea_ZII(i,j,k+1,1,1) -uDotArea_ZII(i,j,k,1,1)
+          DivU            =        uDotArea_XII(i+1,j,k,1,iGang) -uDotArea_XII(i,j,k,1,iGang)
+          if(nJ > 1) DivU = DivU + uDotArea_YII(i,j+1,k,1,iGang) -uDotArea_YII(i,j,k,1,iGang)
+          if(nK > 1) DivU = DivU + uDotArea_ZII(i,j,k+1,1,iGang) -uDotArea_ZII(i,j,k,1,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
-          Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
+          Source_VCI(SignB_,i,j,k,iGang) = Source_VCI(SignB_,i,j,k,iGang) &
                + State_VGB(SignB_,i,j,k,iBlock)*DivU
        end do; end do; end do
     end if
@@ -844,6 +855,7 @@ contains
     end if
 
     if(DoTest) call write_source('final')
+#endif
     
     call test_stop(NameSub, DoTest, iBlock)
   contains
@@ -863,35 +875,35 @@ contains
 
       if (DoTestCell) then
          write(*,*) 'iFluid =', iFluid
-         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i+1,j,  k,1)
-         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i,  j,  k,1)
-         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j+1,k,1)
-         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j,  k,1)
-         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k+1,1)
-         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k,1)
+         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i+1,j,  k,iGang)
+         write(*,*) 'ux_D =', LeftState_VXI(iUx:iUz,i,  j,  k,iGang)
+         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j+1,k,iGang)
+         write(*,*) 'uy_D =', LeftState_VYI(iUx:iUz,i,  j,  k,iGang)
+         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k+1,iGang)
+         write(*,*) 'uz_D =', LeftState_VZI(iUx:iUz,i,  j,  k,iGang)
       end if
 
       ! Calculate gradient tensor of velocity
       if(IsCartesian) then
          GradU_DD(Dim1_,:) = &
-              ( LeftState_VXI(iUx:iUz,i+1,j,k,1)   &
-              + RightState_VXI(iUx:iUz,i+1,j,k,1)  &
-              - LeftState_VXI(iUx:iUz,i,j,k,1)     &
-              - RightState_VXI(iUx:iUz,i,j,k,1) )  &
+              ( LeftState_VXI(iUx:iUz,i+1,j,k,iGang)   &
+              + RightState_VXI(iUx:iUz,i+1,j,k,iGang)  &
+              - LeftState_VXI(iUx:iUz,i,j,k,iGang)     &
+              - RightState_VXI(iUx:iUz,i,j,k,iGang) )  &
               /(2*CellSize_DB(Dim1_,iBlock))
 
          if(nJ > 1) GradU_DD(Dim2_,:) = &
-              ( LeftState_VYI(iUx:iUz,i,j+1,k,1)   &
-              + RightState_VYI(iUx:iUz,i,j+1,k,1)  &
-              - LeftState_VYI(iUx:iUz,i,j,k,1)     &
-              - RightState_VYI(iUx:iUz,i,j,k,1) )  &
+              ( LeftState_VYI(iUx:iUz,i,j+1,k,iGang)   &
+              + RightState_VYI(iUx:iUz,i,j+1,k,iGang)  &
+              - LeftState_VYI(iUx:iUz,i,j,k,iGang)     &
+              - RightState_VYI(iUx:iUz,i,j,k,iGang) )  &
               /(2*CellSize_DB(Dim2_,iBlock))
 
          if(nK > 1) GradU_DD(Dim3_,:) = &
-              ( LeftState_VZI(iUx:iUz,i,j,k+1,1)   &
-              + RightState_VZI(iUx:iUz,i,j,k+1,1)  &
-              - LeftState_VZI(iUx:iUz,i,j,k,1)     &
-              - RightState_VZI(iUx:iUz,i,j,k,1) )  &
+              ( LeftState_VZI(iUx:iUz,i,j,k+1,iGang)   &
+              + RightState_VZI(iUx:iUz,i,j,k+1,iGang)  &
+              - LeftState_VZI(iUx:iUz,i,j,k,iGang)     &
+              - RightState_VZI(iUx:iUz,i,j,k,iGang) )  &
               /(2*CellSize_DB(Dim3_,iBlock))
 
       else if(IsRzGeometry) then
@@ -901,31 +913,31 @@ contains
             iVar = iUx - 1 + iDir
 
             GradU_DD(:,iDir) = &
-                 0.5*(LeftState_VXI(iVar,i+1,j,k,1) &
-                 + RightState_VXI(iVar,i+1,j,k,1))* &
+                 0.5*(LeftState_VXI(iVar,i+1,j,k,iGang) &
+                 + RightState_VXI(iVar,i+1,j,k,iGang))* &
                  FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                 - 0.5*(LeftState_VXI(iVar,i,j,k,1) &
-                 + RightState_VXI(iVar,i,j,k,1))* &
+                 - 0.5*(LeftState_VXI(iVar,i,j,k,iGang) &
+                 + RightState_VXI(iVar,i,j,k,iGang))* &
                  FaceNormal_DDFB(:,1,i,j,k,iBlock)
 
             if(nJ == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VYI(iVar,i,j+1,k,1) &
-                 + RightState_VYI(iVar,i,j+1,k,1))* &
+                 0.5*(LeftState_VYI(iVar,i,j+1,k,iGang) &
+                 + RightState_VYI(iVar,i,j+1,k,iGang))* &
                  FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                 - 0.5*(LeftState_VYI(iVar,i,j,k,1) &
-                 + RightState_VYI(iVar,i,j,k,1))* &
+                 - 0.5*(LeftState_VYI(iVar,i,j,k,iGang) &
+                 + RightState_VYI(iVar,i,j,k,iGang))* &
                  FaceNormal_DDFB(:,2,i,j,k,iBlock)
 
             if(nK == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 0.5*(LeftState_VZI(iVar,i,j,k+1,1) &
-                 + RightState_VZI(iVar,i,j,k+1,1))* &
+                 0.5*(LeftState_VZI(iVar,i,j,k+1,iGang) &
+                 + RightState_VZI(iVar,i,j,k+1,iGang))* &
                  FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                 - 0.5*(LeftState_VZI(iVar,i,j,k,1) &
-                 + RightState_VZI(iVar,i,j,k,1))* &
+                 - 0.5*(LeftState_VZI(iVar,i,j,k,iGang) &
+                 + RightState_VZI(iVar,i,j,k,iGang))* &
                  FaceNormal_DDFB(:,3,i,j,k,iBlock)
          end do
 
@@ -954,10 +966,10 @@ contains
       GradU_DD = 0.0
 
       ! Obtain the uPlus_D on the corresponding faces
-      call get_uPlus(LeftState_VXI( :,i+1,j,k,1), uPlusLeft1_D )
-      call get_uPlus(LeftState_VXI( :,i,  j,k,1), uPlusLeft_D  )
-      call get_uPlus(RightState_VXI(:,i+1,j,k,1), uPlusRight1_D)
-      call get_uPlus(RightState_VXI(:,i,  j,k,1), uPlusRight_D )
+      call get_uPlus(LeftState_VXI( :,i+1,j,k,iGang), uPlusLeft1_D )
+      call get_uPlus(LeftState_VXI( :,i,  j,k,iGang), uPlusLeft_D  )
+      call get_uPlus(RightState_VXI(:,i+1,j,k,iGang), uPlusRight1_D)
+      call get_uPlus(RightState_VXI(:,i,  j,k,iGang), uPlusRight_D )
 
       ! Calculate gradient tensor of u_plus
       if(IsCartesian) then
@@ -967,10 +979,10 @@ contains
 
          if(nJ > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VYI( :,i,j+1,k,1), uPlusLeft1_D )
-            call get_uPlus(LeftState_VYI( :,i,j,  k,1), uPlusLeft_D  )
-            call get_uPlus(RightState_VYI(:,i,j+1,k,1), uPlusRight1_D)
-            call get_uPlus(RightState_VYI(:,i,j,  k,1), uPlusRight_D )
+            call get_uPlus(LeftState_VYI( :,i,j+1,k,iGang), uPlusLeft1_D )
+            call get_uPlus(LeftState_VYI( :,i,j,  k,iGang), uPlusLeft_D  )
+            call get_uPlus(RightState_VYI(:,i,j+1,k,iGang), uPlusRight1_D)
+            call get_uPlus(RightState_VYI(:,i,j,  k,iGang), uPlusRight_D )
 
             GradU_DD(Dim2_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -979,9 +991,9 @@ contains
 
          if(nK > 1) then
             ! Obtain the uPlus_D on the corresponding faces
-            call get_uPlus(LeftState_VZI( :,i,j,k+1,1), uPlusLeft1_D )
+            call get_uPlus(LeftState_VZI( :,i,j,k+1,iGang), uPlusLeft1_D )
             call get_uPlus(LeftState_VZI( :,i,j,k,  1), uPlusLeft_D  )
-            call get_uPlus(RightState_VZI(:,i,j,k+1,1), uPlusRight1_D)
+            call get_uPlus(RightState_VZI(:,i,j,k+1,iGang), uPlusRight1_D)
             call get_uPlus(RightState_VZI(:,i,j,k,  1), uPlusRight_D )
 
             GradU_DD(Dim3_,:) = &
@@ -1022,82 +1034,84 @@ contains
 
     end subroutine get_uPlus
     !==========================================================================
-    subroutine calc_divb_source
+    subroutine calc_divb_source(iBlock)
+      !$acc  routine vector
+      integer, intent(in):: iBlock
 
+      integer::  i, j, k
+      integer:: iGang
+      
       ! Variables needed for div B source terms
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
 
       real:: BCorrect0, BCorrect1
       !------------------------------------------------------------------------
+      iGang = 1
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
-
-      !$acc data present(SourceMhd_VC, Source_VC, &
-      !$acc& DivB1_GB, CellSize_DB, true_cell, &
-      !$acc& LeftState_VXI, LeftState_VYI, LeftState_VZI, &
-      !$acc& RightState_VXI, RightState_VYI, RightState_VZI)
       
-      !$acc parallel loop gang vector collapse(3)
+      !$acc loop vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
 #ifdef OPENACC
-      DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
-      DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
-      DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
+         iGang = iBlock
+         DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
+         DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
+         DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 #endif
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
-                 (RightState_VXI(Bx_,i,j,k,1)-LeftState_VXI(Bx_,i,j,k,1))
+                 (RightState_VXI(Bx_,i,j,k,iGang)-LeftState_VXI(Bx_,i,j,k,iGang))
 
             dB1nFace2 = DxInvHalf*&
-                 (RightState_VXI(Bx_,i+1,j,k,1)-LeftState_VXI(Bx_,i+1,j,k,1))
+                 (RightState_VXI(Bx_,i+1,j,k,iGang)-LeftState_VXI(Bx_,i+1,j,k,iGang))
 
             if(nJ > 1)then
                dB1nFace3 = DyInvHalf* &
-                    (RightState_VYI(By_,i,j,k,1)-LeftState_VYI(By_,i,j,k,1))
+                    (RightState_VYI(By_,i,j,k,iGang)-LeftState_VYI(By_,i,j,k,iGang))
 
                dB1nFace4 = DyInvHalf* &
-                    (RightState_VYI(By_,i,j+1,k,1)-LeftState_VYI(By_,i,j+1,k,1))
+                    (RightState_VYI(By_,i,j+1,k,iGang)-LeftState_VYI(By_,i,j+1,k,iGang))
             end if
 
             if(nK > 1)then
                dB1nFace5 = DzInvHalf * &
-                    (RightState_VZI(Bz_,i,j,k,1)-LeftState_VZI(Bz_,i,j,k,1))
+                    (RightState_VZI(Bz_,i,j,k,iGang)-LeftState_VZI(Bz_,i,j,k,iGang))
 
                dB1nFace6 = DzInvHalf * &
-                    (RightState_VZI(Bz_,i,j,k+1,1)-LeftState_VZI(Bz_,i,j,k+1,1))
+                    (RightState_VZI(Bz_,i,j,k+1,iGang)-LeftState_VZI(Bz_,i,j,k+1,iGang))
             end if
 
             DivBInternal_C(i,j,k) = &
-                 2*DxInvHalf*(LeftState_VXI(Bx_,i+1,j,k,1) -RightState_VXI(Bx_,i,j,k,1))
+                 2*DxInvHalf*(LeftState_VXI(Bx_,i+1,j,k,iGang) -RightState_VXI(Bx_,i,j,k,iGang))
 
             if(nJ > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DyInvHalf*(LeftState_VYI(By_,i,j+1,k,1) -RightState_VYI(By_,i,j,k,1))
+                 2*DyInvHalf*(LeftState_VYI(By_,i,j+1,k,iGang) -RightState_VYI(By_,i,j,k,iGang))
 
             if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DzInvHalf*(LeftState_VZI(Bz_,i,j,k+1,1) -RightState_VZI(Bz_,i,j,k,1))
+                 2*DzInvHalf*(LeftState_VZI(Bz_,i,j,k+1,iGang) -RightState_VZI(Bz_,i,j,k,iGang))
 
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
             if(UseMhdMomentumFlux.and.UseB0) then
-               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+               SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                     -B0_DX(:,i,j,k)*dB1nFace1    &
                     -B0_DX(:,i+1,j,k)*dB1nFace2
 
                if(nJ > 1) &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                     -B0_DY(:,i,j,k)*dB1nFace3   &
                     -B0_DY(:,i,j+1,k)*dB1nFace4
 
                if(nK > 1) &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                     -B0_DZ(:,i,j,k)*dB1nFace5     &
                     -B0_DZ(:,i,j,k+1)*dB1nFace6
             endif
@@ -1107,22 +1121,22 @@ contains
             ! Correct the face value so that the first order derivate is
             ! high-order accurate.
             BCorrect0 = correct_face_value( &
-                 0.5*(RightState_VXI(Bx_,i,j,k,1) + LeftState_VXI(Bx_,i,j,k,1)), &
+                 0.5*(RightState_VXI(Bx_,i,j,k,iGang) + LeftState_VXI(Bx_,i,j,k,iGang)), &
                  State_VGB(Bx_,i-2:i+1,j,k,iBlock))
 
             BCorrect1 = correct_face_value( &
-                 0.5*(LeftState_VXI(Bx_,i+1,j,k,1) + RightState_VXI(Bx_,i+1,j,k,1)), &
+                 0.5*(LeftState_VXI(Bx_,i+1,j,k,iGang) + RightState_VXI(Bx_,i+1,j,k,iGang)), &
                  State_VGB(Bx_,i-1:i+2,j,k,iBlock))
 
             DivB1_GB(i,j,k,iBlock) = 2*DxInvHalf*(BCorrect1 - BCorrect0)
 
             if(nJ>1) then
                BCorrect0 = correct_face_value( &
-                    0.5*(RightState_VYI(By_,i,j,k,1) + LeftState_VYI(By_,i,j,k,1)), &
+                    0.5*(RightState_VYI(By_,i,j,k,iGang) + LeftState_VYI(By_,i,j,k,iGang)), &
                     State_VGB(By_,i,j-2:j+1,k,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VYI(By_,i,j+1,k,1)+RightState_VYI(By_,i,j+1,k,1)),&
+                    0.5*(LeftState_VYI(By_,i,j+1,k,iGang)+RightState_VYI(By_,i,j+1,k,iGang)),&
                     State_VGB(By_,i,j-1:j+2,k,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
@@ -1131,11 +1145,11 @@ contains
 
             if(nK>1) then
                BCorrect0 = correct_face_value( &
-                    0.5*(RightState_VZI(Bz_,i,j,k,1) + LeftState_VZI(Bz_,i,j,k,1)), &
+                    0.5*(RightState_VZI(Bz_,i,j,k,iGang) + LeftState_VZI(Bz_,i,j,k,iGang)), &
                     State_VGB(Bz_,i,j,k-2:k+1,iBlock))
 
                BCorrect1 = correct_face_value( &
-                    0.5*(LeftState_VZI(Bz_,i,j,k+1,1)+RightState_VZI(Bz_,i,j,k+1,1)),&
+                    0.5*(LeftState_VZI(Bz_,i,j,k+1,iGang)+RightState_VZI(Bz_,i,j,k+1,iGang)),&
                     State_VGB(Bz_,i,j,k-1:k+2,iBlock))
 
                DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
@@ -1152,17 +1166,15 @@ contains
                  + dB1nFace5 + dB1nFace6
          endif
          
-      end do; end do; end do
-      
-      !$acc end data
+      end do; end do; end do      
       
       ! Momentum source term from B0 only needed for true MHD equations
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-              SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+         SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+              SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
       
@@ -1184,24 +1196,24 @@ contains
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
          B1nJumpL =VInvHalf*&
-              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i,j,k,1) &
-              -               LeftState_VXI(Bx_:B_+nDim,i,j,k,1)))
+              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i,j,k,iGang) &
+              -               LeftState_VXI(Bx_:B_+nDim,i,j,k,iGang)))
          DivBInternal_C(i,j,k) = &
-              -sum(FaceArea_D*RightState_VXI(Bx_:B_+nDim,i,j,k,1))
+              -sum(FaceArea_D*RightState_VXI(Bx_:B_+nDim,i,j,k,iGang))
 
          FaceArea_D = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)
          B1nJumpR =  VInvHalf*&
-              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i+1,j,k,1) &
-              -               LeftState_VXI(Bx_:B_+nDim,i+1,j,k,1)))
+              sum(FaceArea_D*(RightState_VXI(Bx_:B_+nDim,i+1,j,k,iGang) &
+              -               LeftState_VXI(Bx_:B_+nDim,i+1,j,k,iGang)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VXI(Bx_:B_+nDim,i+1,j,k,1))
+              + sum(FaceArea_D*LeftState_VXI(Bx_:B_+nDim,i+1,j,k,iGang))
 
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+         SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang)&
               - B0_DX(:,i,j,k)*B1nJumpL   &
               - B0_DX(:,i+1,j,k)*B1nJumpR
 
@@ -1217,25 +1229,25 @@ contains
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
          B1nJumpL = VInvHalf*&
-              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j,k,1) &
-              -               LeftState_VYI(Bx_:B_+nDim,i,j,k,1)))
+              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j,k,iGang) &
+              -               LeftState_VYI(Bx_:B_+nDim,i,j,k,iGang)))
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              - sum(FaceArea_D*RightState_VYI(Bx_:B_+nDim,i,j,k,1))
+              - sum(FaceArea_D*RightState_VYI(Bx_:B_+nDim,i,j,k,iGang))
 
          FaceArea_D =  FaceNormal_DDFB(:,2,i,j+1,k,iBlock)
          B1nJumpR = VInvHalf*&
-              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j+1,k,1) &
-              -               LeftState_VYI(Bx_:B_+nDim,i,j+1,k,1)))
+              sum(FaceArea_D*(RightState_VYI(Bx_:B_+nDim,i,j+1,k,iGang) &
+              -               LeftState_VYI(Bx_:B_+nDim,i,j+1,k,iGang)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VYI(Bx_:B_+nDim,i,j+1,k,1))
+              + sum(FaceArea_D*LeftState_VYI(Bx_:B_+nDim,i,j+1,k,iGang))
 
          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
               + B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+         SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang)&
               -B0_DY(:,i,j,k)*B1nJumpL &
               -B0_DY(:,i,j+1,k)*B1nJumpR
 
@@ -1252,19 +1264,19 @@ contains
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
             B1nJumpL = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k,1) &
-                 -                LeftState_VZI(Bx_:B_+nDim,i,j,k,1)))
+                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k,iGang) &
+                 -                LeftState_VZI(Bx_:B_+nDim,i,j,k,iGang)))
 
             DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-                 - sum(FaceArea_D*RightState_VZI(Bx_:B_+nDim,i,j,k,1))
+                 - sum(FaceArea_D*RightState_VZI(Bx_:B_+nDim,i,j,k,iGang))
 
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
             B1nJumpR = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k+1,1) &
-                 -               LeftState_VZI(Bx_:B_+nDim,i,j,k+1,1)))
+                 sum(FaceArea_D*(RightState_VZI(Bx_:B_+nDim,i,j,k+1,iGang) &
+                 -               LeftState_VZI(Bx_:B_+nDim,i,j,k+1,iGang)))
 
             DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
-                 sum(FaceArea_D*LeftState_VZI(Bx_:B_+nDim,i,j,k+1,1))) &
+                 sum(FaceArea_D*LeftState_VZI(Bx_:B_+nDim,i,j,k+1,iGang))) &
                  /CellVolume_GB(i,j,k,iBlock)
 
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
@@ -1272,8 +1284,8 @@ contains
 
             if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
 
-            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+            SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                 SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang)&
                  -B0_DZ(:,i,j,k)*B1nJumpL &
                  -B0_DZ(:,i,j,k+1)*B1nJumpR
          end do; end do; end do
@@ -1295,7 +1307,7 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+         SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang)&
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
@@ -1303,10 +1315,13 @@ contains
     !==========================================================================
 
     subroutine write_source(String)
-      character(len=*), intent(in) :: String
+      !$acc routine seq
+      character(len=*), intent(in) :: String      
       !------------------------------------------------------------------------
+#ifndef OPENACC      
       write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
-           Source_VC(iVarTest,iTest,jTest,kTest)
+           Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
+#endif      
     end subroutine write_source
     !==========================================================================
 
@@ -1330,34 +1345,40 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i, j, k
+    integer:: iGang
     real   :: DivB, InvDx, InvDy, InvDz
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif   
+ 
     InvDx            = 1/CellSize_DB(x_,iBlock)
     if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)
     if(nK > 1) InvDz = 1/CellSize_DB(z_,iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DivB = InvDx* &
-            (  LeftState_VXI(Bx_,i+1,j,k,1)  &
-            + RightState_VXI(Bx_,i+1,j,k,1)  &
-            -  LeftState_VXI(Bx_,i,j,k,1)    &
-            - RightState_VXI(Bx_,i,j,k,1) )
+            (  LeftState_VXI(Bx_,i+1,j,k,iGang)  &
+            + RightState_VXI(Bx_,i+1,j,k,iGang)  &
+            -  LeftState_VXI(Bx_,i,j,k,iGang)    &
+            - RightState_VXI(Bx_,i,j,k,iGang) )
 
        if(nJ > 1) DivB = DivB + InvDy* &
-            (  LeftState_VYI(By_,i,j+1,k,1)   &
-            + RightState_VYI(By_,i,j+1,k,1)   &
-            -  LeftState_VYI(By_,i,j,k,1)     &
-            - RightState_VYI(By_,i,j,k,1) )
+            (  LeftState_VYI(By_,i,j+1,k,iGang)   &
+            + RightState_VYI(By_,i,j+1,k,iGang)   &
+            -  LeftState_VYI(By_,i,j,k,iGang)     &
+            - RightState_VYI(By_,i,j,k,iGang) )
 
        if(nK > 1) DivB = DivB + InvDz* &
-            (  LeftState_VZI(Bz_,i,j,k+1,1)    &
-            + RightState_VZI(Bz_,i,j,k+1,1)    &
-            -  LeftState_VZI(Bz_,i,j,k,1)      &
-            - RightState_VZI(Bz_,i,j,k,1) )
+            (  LeftState_VZI(Bz_,i,j,k+1,iGang)    &
+            + RightState_VZI(Bz_,i,j,k+1,iGang)    &
+            -  LeftState_VZI(Bz_,i,j,k,iGang)      &
+            - RightState_VZI(Bz_,i,j,k,iGang) )
 
        DivB1_GB(i,j,k,iBlock) = 0.5*DivB
 

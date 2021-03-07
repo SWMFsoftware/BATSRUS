@@ -3666,6 +3666,19 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+      !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
+      !$acc update device(DoCorrectFace, UseFDFaceFlux)
+
+      !$acc update device(UseDivbSource)
+
+      !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
+      
+      !$acc update device(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
+      !$acc update device(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
+      !$acc update device(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
+
+      !$acc update device(UseUserUpdateStates)
+      
     end subroutine correct_parameters
     !==========================================================================
 
@@ -4096,6 +4109,8 @@ contains
               plot_pars1(l+9:len_trim(plot_pars1))
       end do
 
+      !$acc update device(Dt, DtFixed, Cfl)
+      
     end subroutine set_extra_parameters
     !==========================================================================
     subroutine sort_smooth_indicator

@@ -110,7 +110,7 @@ contains
   !============================================================================
 
   subroutine calc_timestep(iBlock)
-
+    !$acc routine vector
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
@@ -135,6 +135,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, Di, Dk
+    integer:: iGang
     real:: Vdt
 
     ! Variables for time step control due to loss terms
@@ -144,27 +145,31 @@ contains
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+    iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif          
     if(iBlock==iBlockTest)then
     else
-       DoTest=.false.; DoTest=.false.
+       DoTest=.false.
     endif
 
     if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
-    !$acc parallel loop collapse(3) present(true_cell, VdtFace_XI,&
-    !$acc VdtFace_YI, VdtFace_ZI, time_BLK, CellVolume_GB)
+    !$acc loop vector collapse(3) 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
        else
-          Vdt = max(VdtFace_xI(i,j,k,1),VdtFace_xI(i+1,j,k,1))
-          if(nJ > 1) Vdt = Vdt + max(VdtFace_yI(i,j,k,1), VdtFace_yI(i,j+1,k,1))
-          if(nK > 1) Vdt = Vdt + max(VdtFace_zI(i,j,k,1), VdtFace_zI(i,j,k+1,1))
+          Vdt = max(VdtFace_xI(i,j,k,iGang),VdtFace_xI(i+1,j,k,iGang))
+          if(nJ > 1) Vdt = Vdt + max(VdtFace_yI(i,j,k,iGang), VdtFace_yI(i,j+1,k,iGang))
+          if(nK > 1) Vdt = Vdt + max(VdtFace_zI(i,j,k,iGang), VdtFace_zI(i,j,k+1,iGang))
           time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
        end if
     end do; end do; end do
 
+#ifndef OPENACC    
     if(DoFixAxis)then
        ! Use the time step in the super cell of the cell just outside.
        ! In time accurate this removes the time step constraints from supercell
@@ -196,7 +201,7 @@ contains
           call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
        end if
     end if
-
+    
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .or.UseRadCooling)then
@@ -261,14 +266,14 @@ contains
 
     if(DoTest)then
        write(*,*)NameSub,' VdtFace_XI(iTest:iTest+1)=', &
-            VdtFace_xI(iTest:iTest+1,jTest,kTest,1)
+            VdtFace_xI(iTest:iTest+1,jTest,kTest,iGang)
        if(nJ>1) write(*,*) NameSub,' VdtFace_YI(jTest:jTest+1)=', &
-            VdtFace_yI(iTest,jTest:jTest+1,kTest,1)
+            VdtFace_yI(iTest,jTest:jTest+1,kTest,iGang)
        if(nK>1) write(*,*) NameSub,' VdtFace_ZI(kTest:kTest+1)=', &
-            VdtFace_zI(iTest,jTest,kTest:kTest+1,1)
+            VdtFace_zI(iTest,jTest,kTest:kTest+1,iGang)
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
-
+    
     ! Compute maximum stable time step for this solution block
     if(true_BLK(iBlock)) then
        Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
@@ -286,18 +291,17 @@ contains
     if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
-
+#endif
+    
     ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
     if(UseDtFixed) then
-       !TODO: optimize 'copyin'       
-       !$acc data present(time_BLK) copyin(DtFixed)
-       !$acc parallel loop collapse(3)
+       !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           time_BLK(i,j,k,iBlock) = DtFixed
        end do; end do; end do
-       !$acc end data
     endif
 
+#ifndef OPENACC    
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
@@ -315,6 +319,7 @@ contains
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
             time_BLK(:,:,:,iBlock) = 0.0
     end if
+#endif    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
   !============================================================================
@@ -481,12 +486,10 @@ contains
           end if
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
-          !$acc data present(time_BLK)
-          !$acc parallel loop collapse(3) copyin(Dt)
+          !$acc parallel loop collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              time_BLK(i,j,k,iBlock) = Dt
           end do; end do; end do
-          !$acc end data       
        end if
 
        ! Reset time step to zero inside body.

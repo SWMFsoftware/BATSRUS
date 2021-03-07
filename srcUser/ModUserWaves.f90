@@ -1368,12 +1368,13 @@ contains
 
     use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
+    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VCI
     use ModVarIndexes
 
     integer,intent(in)::iBlock
     integer :: iVar
-
+    integer:: iGang
+    
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_update_states'
@@ -1384,13 +1385,17 @@ contains
     end if
 
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif      
+    
     do iVar=1,nVar
        if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then
-          Flux_VXI(iVar,:,:,:,1)  = 0.0
-          Flux_VYI(iVar,:,:,:,1)  = 0.0
-          Flux_VZI(iVar,:,:,:,1)  = 0.0
-          Source_VC(iVar,:,:,:) = 0.0
+          Flux_VXI(iVar,:,:,:,iGang)  = 0.0
+          Flux_VYI(iVar,:,:,:,iGang)  = 0.0
+          Flux_VZI(iVar,:,:,:,iGang)  = 0.0
+          Source_VCI(iVar,:,:,:,iGang) = 0.0
        end if
     end do
 

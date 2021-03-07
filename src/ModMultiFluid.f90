@@ -54,6 +54,7 @@ module ModMultiFluid
 
   ! Allow using fully non-conservative scheme for the neutral fluids
   logical :: DoConserveNeutrals    = .true.
+  !$acc declare create(DoConserveNeutrals)
 
   ! Variables that are set for the selected fluid
   integer ::                           &

@@ -80,6 +80,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
+    
     call test_start(NameSub, DoTest)
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
@@ -148,7 +149,7 @@ contains
           end do; end do; enddo
        end do
     end if
-
+    
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
@@ -162,7 +163,8 @@ contains
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn, &
             UseHighResChangeIn=UseHighResChangeNow,&
-            DefaultState_V=DefaultState_V)
+            DefaultState_V=DefaultState_V, &
+            UseOpenACCIn=.true.)
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
@@ -179,6 +181,7 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
     end if
+    
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,
     ! for example in load_balance

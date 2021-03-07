@@ -152,29 +152,30 @@ contains
   contains
     !==========================================================================
     subroutine write_face_state(String)
-
+      integer:: iGang
       character(len=*), intent(in):: String
-
+      
       !------------------------------------------------------------------------
+      iGang = 1
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
-           LeftState_VXI(iVarTest,  iTest, jTest, kTest,1),  &
-           RightState_VXI(iVarTest, iTest, jTest, kTest,1)
+           LeftState_VXI(iVarTest,  iTest, jTest, kTest,iGang),  &
+           RightState_VXI(iVarTest, iTest, jTest, kTest,iGang)
       write(*,*) 'VarL_x, VarR_x(iTest+1)=',&
-           LeftState_VXI(iVarTest,  iTest+1, jTest, kTest,1), &
-           RightState_VXI(iVarTest, iTest+1, jTest, kTest,1)
+           LeftState_VXI(iVarTest,  iTest+1, jTest, kTest,iGang), &
+           RightState_VXI(iVarTest, iTest+1, jTest, kTest,iGang)
       write(*,*) 'VarL_y, VarR_y(jTest)  =',&
-           LeftState_VYI(iVarTest,  iTest, jTest, kTest,1),  &
-           RightState_VYI(iVarTest, iTest, jTest, kTest,1)
+           LeftState_VYI(iVarTest,  iTest, jTest, kTest,iGang),  &
+           RightState_VYI(iVarTest, iTest, jTest, kTest,iGang)
       write(*,*) 'VarL_y, VarR_y(jTest+1)=',&
-           LeftState_VYI(iVarTest,  iTest, jTest+1, kTest,1), &
-           RightState_VYI(iVarTest, iTest, jTest+1, kTest,1)
+           LeftState_VYI(iVarTest,  iTest, jTest+1, kTest,iGang), &
+           RightState_VYI(iVarTest, iTest, jTest+1, kTest,iGang)
       write(*,*) 'VarL_z, VarR_z(kTest)  =',&
-           LeftState_VZI(iVarTest,  iTest, jTest, kTest,1), &
-           RightState_VZI(iVarTest, iTest, jTest, kTest,1)
+           LeftState_VZI(iVarTest,  iTest, jTest, kTest,iGang), &
+           RightState_VZI(iVarTest, iTest, jTest, kTest,iGang)
       write(*,*) 'VarL_z, VarR_z(kTest+1)=',&
-           LeftState_VZI(iVarTest,  iTest, jTest, kTest+1,1), &
-           RightState_VZI(iVarTest, iTest, jTest, kTest+1,1)
+           LeftState_VZI(iVarTest,  iTest, jTest, kTest+1,iGang), &
+           RightState_VZI(iVarTest, iTest, jTest, kTest+1,iGang)
 
     end subroutine write_face_state
     !==========================================================================
@@ -206,6 +207,7 @@ contains
          IsBodyCell_G, IsTrueCell_G
 
     integer :: i,j,k
+    integer:: iGang
 
     ! Variables used for polar wind boundary condition
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
@@ -219,6 +221,11 @@ contains
     associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &               
                iBlockBc => FBC%iBlockBc )
 
+      iGang = 1               
+#ifdef OPENACC
+      iGang = iBlockBc
+#endif
+      
     call test_start(NameSub, DoTest, iBlockBc)
 
     if(TypeFaceBc_I(body1_) == 'polarwind') then
@@ -307,11 +314,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V= LeftState_VXI(:,i,j,k,1)
+                FBC%VarsTrueFace_V= LeftState_VXI(:,i,j,k,iGang)
 
                 call set_face(i-1,j,k,i,j,k)
 
-                RightState_VXI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                RightState_VXI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
 
              end if
 
@@ -328,11 +335,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DX(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VXI(:,i,j,k,1)
+                FBC%VarsTrueFace_V = RightState_VXI(:,i,j,k,iGang)
 
                 call set_face(i,j,k,i-1,j,k)
 
-                LeftState_VXI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                LeftState_VXI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
              end if
           end do ! end i loop
        end do ! end j loop
@@ -356,11 +363,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = LeftState_VYI(:,i,j,k,1)
+                FBC%VarsTrueFace_V = LeftState_VYI(:,i,j,k,iGang)
 
                 call set_face(i,j-1,k,i,j,k)
 
-                RightState_VYI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                RightState_VYI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
              end if
 
              if (IsTrueCell_G(i,j,k) .and. &
@@ -376,11 +383,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DY(:,i,j,k)
 
-                FBC%VarsTrueFace_V = RightState_VYI(:,i,j,k,1)
+                FBC%VarsTrueFace_V = RightState_VYI(:,i,j,k,iGang)
 
                 call set_face(i,j,k,i,j-1,k)
 
-                LeftState_VYI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                LeftState_VYI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
              end if
           end do ! end j loop
        end do ! end i loop
@@ -404,11 +411,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  LeftState_VZI(:,i,j,k,1)
+                FBC%VarsTrueFace_V =  LeftState_VZI(:,i,j,k,iGang)
 
                 call set_face(i,j,k-1,i,j,k)
 
-                RightState_VZI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                RightState_VZI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
              end if
 
              if (IsTrueCell_G(i,j,k).and. &
@@ -424,11 +431,11 @@ contains
 
                 if(UseB0)FBC%B0Face_D = B0_DZ(:,i,j,k)
 
-                FBC%VarsTrueFace_V =  RightState_VZI(:,i,j,k,1)
+                FBC%VarsTrueFace_V =  RightState_VZI(:,i,j,k,iGang)
 
                 call set_face(i,j,k,i,j,k-1)
 
-                LeftState_VZI(:,i,j,k,1) = FBC%VarsGhostFace_V
+                LeftState_VZI(:,i,j,k,iGang) = FBC%VarsGhostFace_V
 
              end if
           end do ! end i loop

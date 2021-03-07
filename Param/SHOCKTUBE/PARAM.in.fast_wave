@@ -8,9 +8,9 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
+2			nRootBlock1
+2			nRootBlock2
+2			nRootBlock3
 -45.255			xMin
  45.255  		xMax
 -45.255			yMin
@@ -148,4 +148,4 @@ z=0 mhd idl_ascii		StringPlot
 
 #STOP
 -1			MaxIteration
-500			tSimulationMax
+5			tSimulationMax

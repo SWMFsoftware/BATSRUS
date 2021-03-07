@@ -24,7 +24,7 @@ contains
   !============================================================================
 
   subroutine update_state(iBlock)
-
+    !$acc routine vector
     use ModMain
     use ModAdvance
     use ModMultiFluid, ONLY:  nFluid
@@ -36,12 +36,18 @@ contains
 
     integer, intent(in) :: iBlock
     integer :: iVar, iFluid, i, j, k
+    integer:: iGang
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif      
 
+#ifndef OPENACC    
     if(DoTest)then
        write(*,*)NameSub,' n_step=', n_step,' iStage=', iStage,     &
             ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
@@ -58,45 +64,47 @@ contains
        end do
        write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
-            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,1) ,&
-            Flux_VXI(iVarTest,iTest+1,jTest,kTest,1) 
+            'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
+            Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang) 
        write(*,'(2x,a,2es23.15)') &
-            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,1) ,&
-            Flux_VYI(iVarTest,iTest,jTest+1,kTest,1) 
+            'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang) ,&
+            Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang) 
        write(*,'(2x,a,2es23.15)') &
-            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,1) ,&
-            Flux_VZI(iVarTest,iTest,jTest,kTest+1,1) 
+            'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
+            Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) 
        write(*,'(2x,a,es23.15)')'source=',&
-            Source_VC(iVarTest,iTest,jTest,kTest)
+            Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
        write(*,'(2x,a,es23.15)')'fluxes=', &
-            +(Flux_VXI(iVarTest,iTest,jTest,kTest,1)  &
-            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,1)                         &
-            +Flux_VYI(iVarTest,iTest,jTest,kTest,1)                           &
-            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,1)                         &
-            +Flux_VZI(iVarTest,iTest,jTest,kTest,1)                           &
-            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,1)  )                      &
+            +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)  &
+            -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)                         &
+            +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)                           &
+            -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)                         &
+            +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)                           &
+            -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)  )                      &
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
+#endif    
 
     ! Note must copy state to old state only if iStage is 1.
     if(iStage==1) then       
-       !$acc data present(StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI)
-       !$acc parallel loop collapse(4)
+       !$acc loop vector collapse(4)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
          StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
        enddo; enddo; enddo; enddo
 
-       !$acc parallel loop collapse(4)
+       !$acc loop vector collapse(4)
        do iFluid = 1, nFluid; do k = 1,nK; do j = 1,nJ; do i = 1,nI
           EnergyOld_CBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid)
        enddo; enddo; enddo; enddo
-       !$acc end data
     end if
 
+#ifndef OPENACC    
     ! The first call may set UseUserUpdateStates to false
     if(UseUserUpdateStates)       call user_update_states(iBlock)
+#endif    
     if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
 
+#ifndef OPENACC    
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
@@ -113,13 +121,13 @@ contains
                'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
     end if
-    
+#endif    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
 
   subroutine update_state_normal(iBlock)
-
+    !$acc routine vector
     use ModMain
     use ModAdvance
     use ModPhysics
@@ -148,6 +156,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iVar
+    integer:: iGang
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
@@ -156,14 +165,18 @@ contains
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif          
     ! Nothing to do if time step is zero
     if(time_accurate .and. Dt == 0.0) RETURN
-
+    
     ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
     ! and heat exchange between electrons and ions (mult-ion is not coded).
 
+#ifndef OPENACC
     if(.not.UseMultiIon .and. UseResistivity .and. &
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
@@ -174,7 +187,8 @@ contains
             State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
-
+#endif
+    
     ! Calculate partial step size compared to largest stable time step
     if(nStage==4.or.UseFlic)then
        ! Classical 4th order Runge-Kutta scheme
@@ -199,26 +213,23 @@ contains
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
+          Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang)*InvGammaElectron &
                * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
     
-    !$acc data present(Source_VC,Flux_VXI,Flux_VYI,Flux_VZI, CellVolume_GB, &
-    !$acc& time_BLK) 
-
-    !$acc parallel loop collapse(4)
+    !$acc loop vector collapse(4)
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
-       Source_VC(iVar,i,j,k) = &
-            DtLocal* (Source_VC(iVar,i,j,k) + &
-            ( Flux_VXI(iVar,i,j,k,1)  - Flux_VXI(iVar,i+1,j,k,1)  &
-            + Flux_VYI(iVar,i,j,k,1)  - Flux_VYI(iVar,i,j+1,k,1)  &
-            + Flux_VZI(iVar,i,j,k,1)  - Flux_VZI(iVar,i,j,k+1,1)  ) &
+       Source_VCI(iVar,i,j,k,iGang) = &
+            DtLocal* (Source_VCI(iVar,i,j,k,iGang) + &
+            ( Flux_VXI(iVar,i,j,k,iGang)  - Flux_VXI(iVar,i+1,j,k,iGang)  &
+            + Flux_VYI(iVar,i,j,k,iGang)  - Flux_VYI(iVar,i,j+1,k,iGang)  &
+            + Flux_VZI(iVar,i,j,k,iGang)  - Flux_VZI(iVar,i,j,k+1,iGang)  ) &
             /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do; end do 
-    !$acc end data
-    
+
+#ifndef OPENACC     
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
        ! Integrate fluxes in the transverse direction (eq. 20)
        ! <F> = F + Laplace_transverse(F)/24
@@ -226,40 +237,40 @@ contains
           Coeff = DtFactor*time_BLK(i,j,k,iBlock) &
                /  (24.0*CellVolume_GB(i,j,k,iBlock))
           ! Add f
-          Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
-               ( Flux_VXI(:,i,j+1,k,1)  &
-               + Flux_VXI(:,i,j-1,k,1)  &
-               - 2*(nDim-1)*Flux_VXI(:,i,j,k,1)  &
-               - Flux_VXI(:,i+1,j+1,k,1)  &
-               - Flux_VXI(:,i+1,j-1,k,1)  &
-               + 2*(nDim-1)*Flux_VXI(:,i+1,j,k,1)  &
-               + Flux_VYI(:,i+1,j,k,1)  &
-               + Flux_VYI(:,i-1,j,k,1)  &
-               - 2*(nDim-1)*Flux_VYI(:,i,j,k,1)  &
-               - Flux_VYI(:,i+1,j+1,k,1)  &
-               - Flux_VYI(:,i-1,j+1,k,1)  &
-               + 2*(nDim-1)*Flux_VYI(:,i,j+1,k,1)  )
+          Source_VCI(:,i,j,k,iGang) = Source_VCI(:,i,j,k,iGang) + Coeff* &
+               ( Flux_VXI(:,i,j+1,k,iGang)  &
+               + Flux_VXI(:,i,j-1,k,iGang)  &
+               - 2*(nDim-1)*Flux_VXI(:,i,j,k,iGang)  &
+               - Flux_VXI(:,i+1,j+1,k,iGang)  &
+               - Flux_VXI(:,i+1,j-1,k,iGang)  &
+               + 2*(nDim-1)*Flux_VXI(:,i+1,j,k,iGang)  &
+               + Flux_VYI(:,i+1,j,k,iGang)  &
+               + Flux_VYI(:,i-1,j,k,iGang)  &
+               - 2*(nDim-1)*Flux_VYI(:,i,j,k,iGang)  &
+               - Flux_VYI(:,i+1,j+1,k,iGang)  &
+               - Flux_VYI(:,i-1,j+1,k,iGang)  &
+               + 2*(nDim-1)*Flux_VYI(:,i,j+1,k,iGang)  )
           if(nK == 1) CYCLE
           ! Remaining terms for 3D
-          Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
-               ( Flux_VXI(:,i,j,k+1,1)  &
-               + Flux_VXI(:,i,j,k-1,1)  &
-               - Flux_VXI(:,i+1,j,k+1,1)  &
-               - Flux_VXI(:,i+1,j,k-1,1)  &
-               + Flux_VYI(:,i,j,k+1,1)  &
-               + Flux_VYI(:,i,j,k-1,1)  &
-               - Flux_VYI(:,i,j+1,k+1,1)  &
-               - Flux_VYI(:,i,j+1,k-1,1)  &
-               + Flux_VZI(:,i+1,j,k,1)  &
-               + Flux_VZI(:,i-1,j,k,1)  &
-               + Flux_VZI(:,i,j+1,k,1)  &
-               + Flux_VZI(:,i,j-1,k,1)  &
-               - 4*Flux_VZI(:,i,j,k,1)  &
-               - Flux_VZI(:,i+1,j,k+1,1)  &
-               - Flux_VZI(:,i-1,j,k+1,1)  &
-               - Flux_VZI(:,i,j+1,k+1,1)  &
-               - Flux_VZI(:,i,j-1,k+1,1)  &
-               + 4*Flux_VZI(:,i,j,k+1,1)  )
+          Source_VCI(:,i,j,k,iGang) = Source_VCI(:,i,j,k,iGang) + Coeff* &
+               ( Flux_VXI(:,i,j,k+1,iGang)  &
+               + Flux_VXI(:,i,j,k-1,iGang)  &
+               - Flux_VXI(:,i+1,j,k+1,iGang)  &
+               - Flux_VXI(:,i+1,j,k-1,iGang)  &
+               + Flux_VYI(:,i,j,k+1,iGang)  &
+               + Flux_VYI(:,i,j,k-1,iGang)  &
+               - Flux_VYI(:,i,j+1,k+1,iGang)  &
+               - Flux_VYI(:,i,j+1,k-1,iGang)  &
+               + Flux_VZI(:,i+1,j,k,iGang)  &
+               + Flux_VZI(:,i-1,j,k,iGang)  &
+               + Flux_VZI(:,i,j+1,k,iGang)  &
+               + Flux_VZI(:,i,j-1,k,iGang)  &
+               - 4*Flux_VZI(:,i,j,k,iGang)  &
+               - Flux_VZI(:,i+1,j,k+1,iGang)  &
+               - Flux_VZI(:,i-1,j,k+1,iGang)  &
+               - Flux_VZI(:,i,j+1,k+1,iGang)  &
+               - Flux_VZI(:,i,j-1,k+1,iGang)  &
+               + 4*Flux_VZI(:,i,j,k+1,iGang)  )
 
        end do; end do; end do
     end if
@@ -270,9 +281,11 @@ contains
          NameSub, ' original testvar and energy         =', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
+#endif
+    
+    call update_explicit(iBlock, DoTest)
 
-    call update_explicit
-
+#ifndef OPENACC     
     if(UseMultiIon .and. &
          (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
@@ -391,22 +404,34 @@ contains
          NameSub, ' final state                         =', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
-
+#endif
+    
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-    subroutine update_explicit
-
+    subroutine update_explicit(iBlock, DoTest)
+      !$acc routine vector
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
 
+      integer, intent(in):: iBlock
+      logical, intent(in):: DoTest
+      
       ! Allocatable storage for classical 4th order Runge-Kutta scheme
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
 
       real, parameter:: cThird = 1./3.
       real:: Coeff1, Coeff2
       integer:: iFluid, iRho
+      integer:: i, j, k, iVar
+      integer:: iGang
       !------------------------------------------------------------------------
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+      
+#ifndef OPENACC
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call mhd_to_boris(iBlock)
 
@@ -415,7 +440,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
-
+#endif
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
@@ -436,35 +461,34 @@ contains
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
          
-         !$acc data present(Source_VC, State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI)
-         !$acc parallel loop collapse(4) 
+         !$acc loop vector collapse(4) 
          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
             State_VGB(iVar,i,j,k,iBlock) = &
-                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VC(iVar,i,j,k)
+                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VCI(iVar,i,j,k,iGang)
          end do; end do; end do; end do
 
          ! Update energy variables
-         !$acc parallel loop collapse(4) 
+         !$acc loop vector collapse(4) 
          do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
                  EnergyOld_CBI(i,j,k,iBlock,iFluid) &
-                 + Source_VC(nVar+iFluid,i,j,k)
+                 + Source_VCI(nVar+iFluid,i,j,k,iGang)
          end do; end do; end do; end do
-         !$acc end data
       else
          ! Update state variables starting from previous stage
          do k=1,nK; do j=1,nJ; do i=1,nI
             State_VGB(:,i,j,k,iBlock) = &
-                 State_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
+                 State_VGB(:,i,j,k,iBlock) + Source_VCI(1:nVar,i,j,k,iGang)
          end do; end do; end do
 
          ! Update energy variables
          do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,iFluid) = &
-                 Energy_GBI(i,j,k,iBlock,iFluid) + Source_VC(nVar+iFluid,i,j,k)
+                 Energy_GBI(i,j,k,iBlock,iFluid) + Source_VCI(nVar+iFluid,i,j,k,iGang)
          end do; end do; end do; end do
       end if
 
+#ifndef OPENACC         
       if(nStage == 4)then
          ! Classical 4th order Runge-Kutta scheme. Requires extra storage.
          if(.not.allocated(Rk4_VCB)) allocate( &
@@ -518,7 +542,6 @@ contains
                     + cThird*Rk4_CBI(i,j,k,iBlock,iFluid)
             end do; end do; end do; end do
          end select
-
       elseif(.not.UseHalfStep .and. iStage > 1)then
          ! Interpolation step for 2nd and 3rd order Runge-Kutta schemes
 
@@ -549,12 +572,14 @@ contains
          end do; end do; end do; end do
 
       endif
+#endif      
 
+#ifndef OPENACC      
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after flux/source                   =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
-
+      
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          call boris_to_mhd(iBlock)
 
@@ -563,6 +588,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
+#endif      
 
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
@@ -591,12 +617,14 @@ contains
             end do; end do; end do
          end if
 
+#ifndef OPENACC         
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after multispecies correct          =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-
+#endif         
       end if
 
+#ifndef OPENACC      
       if(any(RhoMin_I > 0.0))then
          do iFluid = 1, nFluid
             if(RhoMin_I(iFluid) < 0) CYCLE
@@ -611,6 +639,7 @@ contains
               NameSub, ' after min density correct densities =', &
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
+#endif      
 
       if( IsMhd .and. &
            ((nStage==1.and..not.time_accurate) &
@@ -622,18 +651,20 @@ contains
 
          do k=1,nK; do j=1,nJ; do i=1,nI
             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + 0.5*( &
-                 Source_VC(Bx_,i,j,k)**2 + &
-                 Source_VC(By_,i,j,k)**2 + &
-                 Source_VC(Bz_,i,j,k)**2)
+                 Source_VCI(Bx_,i,j,k,iGang)**2 + &
+                 Source_VCI(By_,i,j,k,iGang)**2 + &
+                 Source_VCI(Bz_,i,j,k,iGang)**2)
          end do; end do; end do
 
+#ifndef OPENACC         
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after energy dB correct             =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
-
+#endif
       end if
 
+#ifndef OPENACC      
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
               call update_wave_group_advection(iBlock)
@@ -651,15 +682,16 @@ contains
             end do; end do; end do
          end if
       end if
-      
+#endif      
       ! Update energy or pressure based on UseConservative and IsConserv_CB
       call calc_energy_or_pressure(iBlock)
 
+#ifndef OPENACC
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
-
+#endif
     end subroutine update_explicit
     !==========================================================================
 

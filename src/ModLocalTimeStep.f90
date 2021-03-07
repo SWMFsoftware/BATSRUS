@@ -103,10 +103,13 @@ contains
     real   :: TimeStage, TimeEnd, DtSiTiny
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
+    integer:: iGang
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    iGang = 1
     if(DoTest)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
@@ -244,13 +247,13 @@ contains
           if(DoConserveFlux .and. iStage == nStage)then
              ! Store fluxes for flux correction
              Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
-                  Flux_VXI(1:nFlux,1:nI+1,1:nJ,1:nK,1) 
+                  Flux_VXI(1:nFlux,1:nI+1,1:nJ,1:nK,iGang) 
              if(nJ>1) & ! 2D
                   Flux_VFD(1:nFlux,1:nI,1:nJ+1,1:nK,y_) = &
-                  Flux_VYI(1:nFlux,1:nI,1:nJ+1,1:nK,1) 
+                  Flux_VYI(1:nFlux,1:nI,1:nJ+1,1:nK,iGang) 
              if(nK>1) & ! 3D
                   Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
-                  Flux_VZI(1:nFlux,1:nI,1:nJ,1:nK+1,1) 
+                  Flux_VZI(1:nFlux,1:nI,1:nJ,1:nK+1,iGang) 
 
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
