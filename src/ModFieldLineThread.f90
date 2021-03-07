@@ -958,7 +958,7 @@ contains
        end if
        nPoint = nint(RealNPoint)
        if(BoundaryThreads_B(iBlock) % nPoint_II(j,k)/=nPoint)then
-          write(*,*)'Incorrest nPoint in Block=', iBlock
+          write(*,*)'Incorrect nPoint in Block=', iBlock
           call close_file
           RETURN
        end if
@@ -1470,9 +1470,9 @@ contains
           nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k)
           write(UnitTmp_)real(nPoint)
           write(UnitTmp_)&
-               BoundaryThreads_B(iBlock) % State_VIII(TeSi_,1-nPoint:0,j,k), &
-               BoundaryThreads_B(iBlock) % State_VIII(TiSi_,1-nPoint:0,j,k), &
-               BoundaryThreads_B(iBlock) % State_VIII(PSi_,1-nPoint:0,j,k),  &
+               BoundaryThreads_B(iBlock) % State_VIII(TeSi_, 1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock) % State_VIII(TiSi_, 1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock) % State_VIII(PSi_,  1-nPoint:0,j,k),&
                BoundaryThreads_B(iBlock) % State_VIII(AMajor_,-nPoint:0,j,k),&
                BoundaryThreads_B(iBlock) % State_VIII(AMinor_,-nPoint:0,j,k)
        end do; end do

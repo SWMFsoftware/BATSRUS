@@ -577,7 +577,7 @@ contains
     if(UseFieldLineThreads)then
        write(UnitTmp_,'(a)')'#THREADRESTART'
        write(UnitTmp_,'(l1,a)')UseFieldLineThreads,&
-            cTab//cTab//cTab//'UseFieldLineThreads'
+            cTab//cTab//cTab//'DoThreadRestart'
        write(UnitTmp_,*)
     end if
 
