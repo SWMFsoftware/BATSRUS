@@ -9,7 +9,7 @@ module ModWriteLogSatFile
        iProc, nProc, iComm
   use,intrinsic :: ieee_arithmetic
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none
@@ -328,7 +328,7 @@ contains
                   'Code stopped with NaN in variable - '//NameLogVar_I(iVar))
           end if
        end do
-       
+
        ! Finally write out the data variables
        write(iUnit,'(100es14.5e3)') LogVar_I(1:nLogTot)
 

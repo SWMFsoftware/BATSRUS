@@ -297,7 +297,6 @@ contains
     use ModVarIndexes,   ONLY: nVar
     use ModFaceFluxParameters
 
-    
     logical, target, intent(inout):: IsFF_I(nFFLogic)
     integer, target, intent(inout):: IFF_I(nFFInt)
     real, target, intent(inout):: RFF_I(nFFReal)

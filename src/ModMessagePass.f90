@@ -80,7 +80,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
-    
+
     call test_start(NameSub, DoTest)
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
@@ -117,7 +117,7 @@ contains
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
-    
+
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
@@ -149,7 +149,7 @@ contains
           end do; end do; enddo
        end do
     end if
-    
+
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
@@ -181,7 +181,7 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
     end if
-    
+
     ! If the grid changed, fix iBoundary_GB
     ! This could/should be done where the grid is actually being changed,
     ! for example in load_balance

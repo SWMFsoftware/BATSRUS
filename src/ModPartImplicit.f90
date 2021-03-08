@@ -8,7 +8,7 @@ module ModPartImplicit
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
        iProcTest, iVarTest, iProc, nProc, iComm
 
-  use ModImplicit  
+  use ModImplicit
   use ModFaceFluxParameters
 
   implicit none
@@ -2218,7 +2218,7 @@ contains
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
 
-    integer:: iGang   
+    integer:: iGang
     logical :: UseDivbSourceOrig
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_source'
@@ -2226,7 +2226,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     iGang = 1
-    
+
     call timing_start(NameSub)
 
     UseDivbSourceOrig = UseDivbSource
@@ -2270,13 +2270,13 @@ contains
     real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
-    
+
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
 
-    real :: Normal_D(MaxDim)                                      
-    real :: MhdFlux_V(     RhoUx_:RhoUz_)                         
+    real :: Normal_D(MaxDim)
+    real :: MhdFlux_V(     RhoUx_:RhoUz_)
     real :: Unormal_I(nFluid+1)
     real :: bCrossArea_D(3)
 
@@ -2355,18 +2355,18 @@ contains
     real, intent(out):: Cmax_F(:,:,:)   ! dimension(nFaceI,nFaceJ,nFaceK)
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
-    
+
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
-    real :: StateLeft_V(nVar)                                     
-    real :: StateRight_V(nVar)                                    
-    real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)     
-    real :: Normal_D(MaxDim)                                      
-    real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)                
+    real :: StateLeft_V(nVar)
+    real :: StateRight_V(nVar)
+    real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
+    real :: Normal_D(MaxDim)
+    real :: Tangent1_D(MaxDim), Tangent2_D(MaxDim)
     real :: Unormal_I(nFluid+1)
-    real :: UnLeft_I(nFluid+1)                                    
-    real :: UnRight_I(nFluid+1)                                   
+    real :: UnLeft_I(nFluid+1)
+    real :: UnRight_I(nFluid+1)
     real :: bCrossArea_D(3)
 
     logical:: DoTest

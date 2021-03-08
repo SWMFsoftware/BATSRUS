@@ -6,7 +6,7 @@ module ModWriteProgress
 
   use BATL_lib,     ONLY: test_start, test_stop, lVerbose
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none

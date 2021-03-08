@@ -38,7 +38,7 @@ module ModPIC
 
   ! If UseAdaptivePic is True, the coupler will calculate the status
   ! of the pic patch array and send to PIC. Adaptive pic only
-  ! works for FLEKS so far. 
+  ! works for FLEKS so far.
   logical, public:: UseAdaptivePic = .false.
 
   logical, public:: DoRestartPicStatus = .false.
@@ -148,7 +148,7 @@ contains
     case ('#PICPATCH')
        call read_var('PatchSize', nCellPerPatch)
 
-    case ('#PICCRITERIA')       
+    case ('#PICCRITERIA')
        if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
        allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
        IsPicCrit_CB = iPicOff_
@@ -406,7 +406,7 @@ contains
     if(IsPicRegionInitialized) RETURN
     IsPicRegionInitialized = .true.
 
-    ! FLEKS requires UseAdaptivePic to be .true. 
+    ! FLEKS requires UseAdaptivePic to be .true.
     UseAdaptivePic = NameVersionPic == "FLEKS"
 
     if(UseSamePicUnit) then
@@ -763,7 +763,7 @@ contains
              do jP = max(IndPatchMin_D(y_), 0), min(IndPatchMax_D(y_), nY - 1)
                 do kP = max(IndPatchMin_D(z_), 0), min(IndPatchMax_D(z_), nZ - 1)
 
-                   ! current patch 
+                   ! current patch
                    iPatch_D = [iP, jP, kP]
                    call patch_index_to_coord(iRegion, iPatch_D, "Mhd", XyzPatchMhd_D)
 
@@ -774,7 +774,7 @@ contains
                       iPatchCell_D = [i, j, k]
                       ! get cell coordinate in the patch
                       XyzMhd_D(1:nDim) = XyzPatchMhd_D(1:nDim)+&
-                           (iPatchCell_D(1:nDim)+0.5)*DxyzPic_DI(1:nDim, iRegion) 
+                           (iPatchCell_D(1:nDim)+0.5)*DxyzPic_DI(1:nDim, iRegion)
 
                       ! first check if #PICREGIONMIN is defined and turn on cell inside it
                       if(allocated(iRegionPic_I)) then
@@ -805,13 +805,13 @@ contains
                               CYCLE
                       end if
 
-                      ! Also switching on the surrounding patches. 
+                      ! Also switching on the surrounding patches.
                       do iPExt = max(iP - nPatchExtend_D(x_), 0), &
                            min(iP + nPatchExtend_D(x_), nX-1)
                          do jPExt = max(jP - nPatchExtend_D(y_), 0), &
                               min(jP + nPatchExtend_D(y_), nY-1)
                             do kPExt = max(kP - nPatchExtend_D(z_), 0), &
-                                 min(kP + nPatchExtend_D(z_), nZ-1)                            
+                                 min(kP + nPatchExtend_D(z_), nZ-1)
 
                                call set_point_status(Status_I(&
                                     StatusMin_I(iRegion):StatusMax_I(iRegion)),&
@@ -1206,7 +1206,7 @@ contains
     if(DoTest)write(*,*) NameSub,' is called'
 
     if(.not. allocated(IsPicCrit_CB)) RETURN
-    
+
     if(nCriteriaPic==0) then
        IsPicCrit_CB = iPicOn_
        RETURN

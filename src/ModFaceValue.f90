@@ -65,7 +65,7 @@ module ModFaceValue
   ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
   real    :: BetaLimiterResChange  = 2.0
   integer :: nFaceLimiterResChange = 2
-  
+
   ! Parameters for limiting the logarithm of variables
   logical :: UseLogRhoLimiter = .false.
   logical :: UseLogPLimiter   = .false.
@@ -306,10 +306,9 @@ contains
 
     integer:: IArguments_I(MaxDim)
 
-    logical:: DoTest
-
     integer:: iGang
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_value'
     !--------------------------------------------------------------------------
     if(.not. DoResChangeOnly)then
@@ -320,9 +319,9 @@ contains
     iGang = 1
 #ifdef OPENACC
       iGang = iBlock
-#endif      
-    
-#ifndef OPENACC     
+#endif
+
+#ifndef OPENACC
     if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1)then
@@ -354,12 +353,12 @@ contains
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
        allocate(WeightR_II(-2:2,0:MaxIJK+1))
     endif
-#endif    
+#endif
 
 #ifdef OPENACC
     iGang = iBlock
-#endif    
-    
+#endif
+
     UseTrueCell = body_BLK(iBlock)
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
@@ -386,7 +385,7 @@ contains
 
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
@@ -406,14 +405,14 @@ contains
        nStencil = nOrder
     end if
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoLimitMomentum)then
        if(UseBorisRegion)then
           call set_clight_cell(iBlock)
           call set_clight_face(iBlock)
        end if
     end if
-#endif    
+#endif
 
     !$acc loop vector collapse(4) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
@@ -473,10 +472,10 @@ contains
                 Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
                 ! check positivity !!!
 
-#ifndef OPENACC                 
+#ifndef OPENACC
                 ! Get 4th order accurate cell center pressure
                 call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
-#endif                
+#endif
 
                 ! Restore cell averaged energy
                 Energy_GBI(i,j,k,iBlock,iFluid) = Energy
@@ -555,9 +554,9 @@ contains
        end if
     end if
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
-#endif    
+#endif
 
     ! Now the first or second order face values are calculated
     select case(nOrder)
@@ -585,7 +584,7 @@ contains
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
        end if
     case default
-#ifndef OPENACC    
+#ifndef OPENACC
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
@@ -762,7 +761,7 @@ contains
 #endif
     end select  ! nOrder
 
-#ifndef OPENACC     
+#ifndef OPENACC
     if(DoTest)then
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1) &
@@ -788,7 +787,7 @@ contains
 
     end if
 #endif
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -1021,14 +1020,14 @@ contains
       real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
       integer:: i, j, k, iVar, iFluid
       integer:: iGang
-      real:: RhoInv      
+      real:: RhoInv
       !------------------------------------------------------------------------
       i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
       iGang = 1
 #ifdef OPENACC
       iGang = iBlock
 #endif
-             
+
       RhoInv = 1/Primitive_VGI(Rho_,i,j,k,iGang)
 
       if(DoLimitMomentum)then
@@ -1579,20 +1578,20 @@ contains
       iGang = 1
 #ifdef OPENACC
       iGang = iBlock
-#endif      
-      
+#endif
+
       !$acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i-1,j,k,iGang)
          RightState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC       
+#ifndef OPENACC
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-#endif      
+#endif
     end subroutine get_facex_first
     !==========================================================================
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
@@ -1604,14 +1603,14 @@ contains
       iGang = 1
 #ifdef OPENACC
       iGang = iBlock
-#endif      
+#endif
       !$acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j-1,k,iGang)
          RightState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC       
+#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
@@ -1628,14 +1627,14 @@ contains
       iGang = 1
 #ifdef OPENACC
       iGang = iBlock
-#endif      
+#endif
       !$acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k-1,iGang)
          RightState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC             
+#ifndef OPENACC
       if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
@@ -2477,11 +2476,11 @@ contains
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-    ! _____________|____________|________!_______|_
+    ! _____________|____________|________! _______|_
     !              |        CToF|FToC FF !       |
     !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
     !              |        CToF|FToC FF |       |
-    ! _____________|____________|__F1_V__!__F2_V_|_
+    ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
@@ -2558,7 +2557,7 @@ contains
     !              |        CToF|FToC FF |       |
     !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
     !              |        CToF|FToC FF |       |
-    ! _____________|____________|__F1_V__!__F2_V_|_
+    ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
     !              | C1_V       |        |       |
 
@@ -2704,7 +2703,7 @@ contains
     !              |        CToF|FToC FF |       |
     !  C2_V        |C1_V       _|__F1_V__|__F2_V_|_
     !              |        CToF|FToC FF |       |
-    ! _____________|____________|__F1_V__!__F2_V_|_
+    ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
     !              | C1_V       |        |       |
 
@@ -3023,7 +3022,6 @@ contains
       real:: State_VI(nVar,-3:2)
 
       logical:: DoTest
-
       character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
@@ -3150,7 +3148,6 @@ contains
     integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'calc_cell_norm_velocity'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -3241,9 +3238,8 @@ contains
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif      
+#endif
 
-    
     iMin = 1 - nG;       iMax = nI + nG
     jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
     kMin = 1 - nG*kDim_; kMax = nK + nG*kDim_
@@ -4248,4 +4244,5 @@ contains
   !============================================================================
 
 end module ModFaceValue
+!==============================================================================
 

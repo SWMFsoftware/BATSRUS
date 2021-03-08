@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib,      ONLY: &
        test_start, test_stop, jTest, kTest, iBlockTest, &
@@ -709,7 +709,6 @@ contains
        ! BDsFaceInvSi_III
        ! DsCellOverBSi_III
        ! Xi_III
-
 
        ! Calculate more accurately the intersection point
        ! with the photosphere surface

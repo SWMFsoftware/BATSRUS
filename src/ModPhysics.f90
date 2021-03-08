@@ -719,7 +719,7 @@ contains
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
     !$acc update device(SpeedHyp, InvClight, InvClight2)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================
@@ -981,7 +981,7 @@ contains
     Io2No_V = 1/No2Io_V
 
     !$acc update device(Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine set_units
   !============================================================================

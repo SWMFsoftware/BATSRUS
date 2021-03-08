@@ -25,7 +25,7 @@ module ModParallel
   integer, allocatable :: neiLsouth(:)
   !$acc declare create(neiLtop, neiLbot)
   !$acc declare create(neiLeast, neiLwest, neiLnorth, neiLsouth)
-  
+
   integer, allocatable :: neiLEV(:,:)
   !$acc declare create(neiLEV)
 

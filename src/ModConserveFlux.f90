@@ -71,7 +71,7 @@ contains
   !============================================================================
 
   subroutine init_mod_cons_flux
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_cons_flux'
     !--------------------------------------------------------------------------
@@ -146,7 +146,7 @@ contains
       iGang = 1
       do k=1,nK; do j=1,nJ
          CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceTo,iBlock)  &
-              = Flux_VXI(1:nVar+nFluid, lFaceFrom,j,k,iGang) 
+              = Flux_VXI(1:nVar+nFluid, lFaceFrom,j,k,iGang)
 
          CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceTo,iBlock) &
               = uDotArea_XII(lFaceFrom,j,k,:,iGang)
@@ -188,7 +188,7 @@ contains
       if(UseMhdMomentumFlux)then
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceTo,iBlock) = &
-                 MhdFlux_VXI(:,lFaceFrom,j,k,iGang) 
+                 MhdFlux_VXI(:,lFaceFrom,j,k,iGang)
          end do; end do
       end if
 
@@ -213,7 +213,7 @@ contains
       iGang = 1
       do k=1,nK;do i=1,nI
          CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceTo,iBlock)    &
-              = Flux_VYI(1:FluxLast_,i,lFaceFrom,k,iGang) 
+              = Flux_VYI(1:FluxLast_,i,lFaceFrom,k,iGang)
 
          CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceTo,iBlock) &
               = uDotArea_YII(i,lFaceFrom,k,:,iGang)
@@ -244,7 +244,7 @@ contains
       if(UseMhdMomentumFlux)then
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceTo,iBlock) = &
-                 MhdFlux_VYI(:,i,lFaceFrom,k,iGang) 
+                 MhdFlux_VYI(:,i,lFaceFrom,k,iGang)
          end do; end do
       end if
     end subroutine save_corrected_flux_y
@@ -256,7 +256,7 @@ contains
       iGang = 1
       do j=1,nJ;do i=1,nI
          CorrectedFlux_VZB(1:FluxLast_,  i,j,lFaceTo,iBlock)    &
-              = Flux_VZI(1:FluxLast_,i,j,lFaceFrom,iGang) 
+              = Flux_VZI(1:FluxLast_,i,j,lFaceFrom,iGang)
 
          CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceTo,iBlock) &
               = uDotArea_ZII(i,j,lFaceFrom,:,iGang)
@@ -287,7 +287,7 @@ contains
       if(UseMhdMomentumFlux)then
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceTo,iBlock) = &
-                 MhdFlux_VZI(:,i,j,lFaceFrom,iGang) 
+                 MhdFlux_VZI(:,i,j,lFaceFrom,iGang)
          end do; end do
       end if
     end subroutine save_corrected_flux_z
@@ -533,7 +533,7 @@ contains
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_bn_face_j'
-    !--------------------------------------------------------------------------    
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     iGang = 1
     do k=1,nK; do i=1,nI

@@ -1,7 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModSetParameters  
+module ModSetParameters
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
 
@@ -3672,13 +3675,13 @@ contains
       !$acc update device(UseDivbSource)
 
       !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
-      
+
       !$acc update device(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
       !$acc update device(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
       !$acc update device(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
 
       !$acc update device(UseUserUpdateStates)
-      
+
     end subroutine correct_parameters
     !==========================================================================
 
@@ -3781,10 +3784,9 @@ contains
          TypeGeometryBatl = TypeGeometry
       end if
 
-
       ! PGI can not handle "TypeCellBc_I(1:2*nDim-1:2) == 'periodic' " correctly.
       TypeCellBcTmp_D = TypeCellBc_I(1:2*nDim-1:2)
-      
+
       call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
            TypeGeometryBatl, TypeCellBcTmp_D == 'periodic', &
            nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
@@ -4110,7 +4112,7 @@ contains
       end do
 
       !$acc update device(Dt, DtFixed, Cfl)
-      
+
     end subroutine set_extra_parameters
     !==========================================================================
     subroutine sort_smooth_indicator

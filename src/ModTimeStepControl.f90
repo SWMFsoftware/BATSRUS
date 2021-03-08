@@ -148,7 +148,7 @@ contains
     iGang = 1
 #ifdef OPENACC
       iGang = iBlock
-#endif          
+#endif
     if(iBlock==iBlockTest)then
     else
        DoTest=.false.
@@ -157,7 +157,7 @@ contains
     if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
-    !$acc loop vector collapse(3) 
+    !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
@@ -169,7 +169,7 @@ contains
        end if
     end do; end do; end do
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoFixAxis)then
        ! Use the time step in the super cell of the cell just outside.
        ! In time accurate this removes the time step constraints from supercell
@@ -201,7 +201,7 @@ contains
           call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
        end if
     end if
-    
+
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .or.UseRadCooling)then
@@ -273,7 +273,7 @@ contains
             VdtFace_zI(iTest,jTest,kTest:kTest+1,iGang)
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
-    
+
     ! Compute maximum stable time step for this solution block
     if(true_BLK(iBlock)) then
        Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
@@ -292,7 +292,7 @@ contains
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 #endif
-    
+
     ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
     if(UseDtFixed) then
        !$acc loop vector collapse(3)
@@ -301,7 +301,7 @@ contains
        end do; end do; end do
     endif
 
-#ifndef OPENACC    
+#ifndef OPENACC
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
@@ -319,7 +319,7 @@ contains
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
             time_BLK(:,:,:,iBlock) = 0.0
     end if
-#endif    
+#endif
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
   !============================================================================

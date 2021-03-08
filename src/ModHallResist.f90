@@ -113,7 +113,6 @@ contains
     ! Get signed indexes for Hall region(s)
     call get_region_indexes(StringHallRegion, iRegionHall_I)
 
-
     !$acc update device(UseHallResist, UseBiermannBattery)
     call test_stop(NameSub, DoTest)
   end subroutine init_hall_resist

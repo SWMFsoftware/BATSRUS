@@ -8,7 +8,7 @@ module ModCoronalHeating
   use BATL_lib, ONLY: &
        test_start, test_stop
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
@@ -143,7 +143,6 @@ contains
     real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
     !$omp threadprivate(TotalCoronalHeating, TimeUpdateLast, DoFirst)
-
 
     integer, parameter:: nTheta = 72, nPhi=90
     real, parameter:: dSinTheta = 2.0/nTheta, dPhi = cTwoPi/nPhi

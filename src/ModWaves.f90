@@ -15,7 +15,7 @@ module ModWaves
   implicit none
 
   logical:: DoAdvectWaves = .true.
-  
+
   !
   ! Intended to simulate waves and wave turbulences. The wave propagate
   ! with respect to the background with some speed. The only implemented

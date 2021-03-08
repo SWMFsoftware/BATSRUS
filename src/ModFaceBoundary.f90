@@ -6,7 +6,7 @@ module ModFaceBoundary
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid
@@ -154,7 +154,7 @@ contains
     subroutine write_face_state(String)
       integer:: iGang
       character(len=*), intent(in):: String
-      
+
       !------------------------------------------------------------------------
       iGang = 1
       write(*,*) NameSub,' ',String,' face states:'
@@ -218,14 +218,14 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
-    associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &               
+    associate( iSide => FBC%iSide, DoResChangeOnly => FBC%DoResChangeOnly, &
                iBlockBc => FBC%iBlockBc )
 
-      iGang = 1               
+      iGang = 1
 #ifdef OPENACC
       iGang = iBlockBc
 #endif
-      
+
     call test_start(NameSub, DoTest, iBlockBc)
 
     if(TypeFaceBc_I(body1_) == 'polarwind') then
@@ -495,7 +495,7 @@ contains
 
       !------------------------------------------------------------------------
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
-                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &                                  
+                 iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
                  TimeBc => FBC%TimeBc, iBlockBc => FBC%iBlockBc, &
                  iSide => FBC%iSide)
 

@@ -239,7 +239,7 @@ contains
   subroutine calc_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
     !$acc routine vector
-    
+
     ! Calculate pressure from energy
     !
     !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
@@ -274,7 +274,7 @@ contains
                State_VGB(By_,i,j,k,iBlock)**2 + &
                State_VGB(Bz_,i,j,k,iBlock)**2 )
        end do; end do; end do
-       
+
        if(Hyp_ > 1 .and. UseHypEnergy)then
           ! Subtract energy associated with the Hyp scalar
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -283,10 +283,10 @@ contains
           end do; end do; end do
        end if
     end do
-    
+
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
-    
+
     ! if(DoTest)then
     !   write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
     !   write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
@@ -298,7 +298,7 @@ contains
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
     !$acc routine vector
-    
+
     ! Calculate total energy (excluding B0):
     !
     !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
@@ -308,9 +308,9 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
     integer:: i,j,k,iFluid
 
+#ifndef OPENACC
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
-#ifndef OPENACC    
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
@@ -385,13 +385,13 @@ contains
 
     integer, intent(in) :: iBlock
     logical, optional, intent(in) :: DoResChangeOnlyIn
-    
+
     ! TOD0: This command is introduced as a temporary solution. It needs
     ! to be reoved when more code is ported to GPU.
     logical, optional, intent(in) :: UseOpenACCIn
 
     integer :: i, j, k, iFluid
-    logical :: DoResChangeOnly, UseOpenACC 
+    logical :: DoResChangeOnly, UseOpenACC
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_energy_ghost'
@@ -414,7 +414,7 @@ contains
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
 
-          if(UseOpenACC) then 
+          if(UseOpenACC) then
              !$acc parallel loop gang  vector collapse(3)
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
@@ -431,8 +431,6 @@ contains
                         State_VGB(By_,i,j,k,iBlock)**2 + &
                         State_VGB(Bz_,i,j,k,iBlock)**2)
 
-
-
                    if(Hyp_ > 1 .and. UseHypEnergy) &
                         Energy_GBI(i,j,k,iBlock,iFluid) = &
                         Energy_GBI(i,j,k,iBlock,iFluid) &
@@ -440,7 +438,7 @@ contains
 
                 end if
              end do; end do; end do
-          else 
+          else
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
                    Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
@@ -473,8 +471,8 @@ contains
              end if
           end do; end do; end do
        end if
-    end do    
-    
+    end do
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_ghost
   !============================================================================
@@ -504,7 +502,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------
-#ifndef OPENACC   
+#ifndef OPENACC
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)

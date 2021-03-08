@@ -6,7 +6,7 @@ module ModRadiativeCooling
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModChromosphere, redefined=>TeChromosphereSi
   use ModSize

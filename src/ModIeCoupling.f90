@@ -8,7 +8,7 @@ module ModIeCoupling
   use ModAdvance,    ONLY: nSpecies
   use ModMultiFluid, ONLY: nIonFluid
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none

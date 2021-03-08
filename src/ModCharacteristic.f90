@@ -4,7 +4,7 @@
 module ModCharacteristicMhd
 
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModCoordTransform, ONLY: cross_product
   use ModVarIndexes, nVarAll => nVar

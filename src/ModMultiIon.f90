@@ -322,7 +322,7 @@ contains
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
     integer :: iGang
-    
+
     ! Artificial friction
     real :: InvuCutOff2, InvTauCutOff
 

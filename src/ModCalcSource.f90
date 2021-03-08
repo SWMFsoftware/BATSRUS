@@ -7,7 +7,7 @@ module ModCalcSource
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none
@@ -110,17 +110,17 @@ contains
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif    
-    
-    !$acc loop vector collapse(4) 
+#endif
+
+    !$acc loop vector collapse(4)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VCI(iVar,i,j,k,iGang) = 0
-    end do; end do; end do; end do 
+    end do; end do; end do; end do
 
-    !$acc loop vector collapse(4) 
+    !$acc loop vector collapse(4)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VCI(iVar,i,j,k,iGang) = 0
-    end do; end do; end do; end do 
+    end do; end do; end do; end do
 
 #ifndef OPENACC
     ! Calculate source terms for ion pressure
@@ -260,7 +260,7 @@ contains
           end do; end do; end do
        end do
     end if ! UseSpeedMin
-    
+
     if(UseWavePressure)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -578,20 +578,20 @@ contains
 
     if(UseB0) call set_b0_source(iBlock)
 #endif
-    
-    if(UseB .and. UseDivbSource)then       
+
+    if(UseB .and. UseDivbSource)then
        if(IsCartesian)then
           call calc_divb_source(iBlock)
        else
-#ifndef OPENACC          
+#ifndef OPENACC
           call calc_divb_source_gencoord
-#endif          
+#endif
        end if
 
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)&
             call write_source('After B0B1 source')
-              
+
        ! Add contributions to other source terms
        !$acc loop vector collapse(3) private(U_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -634,7 +634,7 @@ contains
           end if
 
        end do; end do; end do
-       
+
        if(DoTest)call write_source('After divb source')
 #ifndef OPENACC
        if(UseB0Source .and. UseMhdMomentumFlux)then
@@ -658,14 +658,14 @@ contains
              call write_source('After B0 source')
           end if
        end if
-#endif       
+#endif
     else
-#ifndef OPENACC       
+#ifndef OPENACC
        if(UseB)call calc_divb(iBlock)
-#endif       
+#endif
     end if
 
-#ifndef OPENACC           
+#ifndef OPENACC
     if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -698,16 +698,16 @@ contains
             call write_source('After E div E')
     end if
 #endif
-    
+
     if(IsMhd) then
-       !$acc loop vector collapse(4) 
+       !$acc loop vector collapse(4)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
           Source_VCI(iVar,i,j,k,iGang) = &
                Source_VCI(iVar,i,j,k,iGang) + SourceMhd_VCI(iVar,i,j,k,iGang)
-       end do; end do; end do; end do 
+       end do; end do; end do; end do
     endif
 
-#ifndef OPENACC           
+#ifndef OPENACC
     ! The electric field in the comoving frame is needed
     if(UseMhdMomentumFlux)&
          call get_efield_in_comoving_frame(iBlock)
@@ -856,7 +856,7 @@ contains
 
     if(DoTest) call write_source('final')
 #endif
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -1040,7 +1040,7 @@ contains
 
       integer::  i, j, k
       integer:: iGang
-      
+
       ! Variables needed for div B source terms
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
@@ -1051,7 +1051,7 @@ contains
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
-      
+
       !$acc loop vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -1165,9 +1165,9 @@ contains
             if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
                  + dB1nFace5 + dB1nFace6
          endif
-         
-      end do; end do; end do      
-      
+
+      end do; end do; end do
+
       ! Momentum source term from B0 only needed for true MHD equations
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
 
@@ -1177,7 +1177,7 @@ contains
               SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
               - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
-      
+
     end subroutine calc_divb_source
     !==========================================================================
     subroutine calc_divb_source_gencoord
@@ -1316,12 +1316,12 @@ contains
 
     subroutine write_source(String)
       !$acc routine seq
-      character(len=*), intent(in) :: String      
+      character(len=*), intent(in) :: String
       !------------------------------------------------------------------------
-#ifndef OPENACC      
+#ifndef OPENACC
       write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
            Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
-#endif      
+#endif
     end subroutine write_source
     !==========================================================================
 
@@ -1351,12 +1351,12 @@ contains
     character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif   
- 
+#endif
+
     InvDx            = 1/CellSize_DB(x_,iBlock)
     if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)
     if(nK > 1) InvDz = 1/CellSize_DB(z_,iBlock)

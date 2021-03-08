@@ -123,9 +123,9 @@ contains
     character(len=*), parameter:: NameSub = 'write_plot'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     !$acc update host(State_VGB, Energy_GBI)
-    
+
     ! Initialize stuff
 
     plotvar_inBody = 0.0

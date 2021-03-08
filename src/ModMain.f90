@@ -52,7 +52,7 @@ module ModMain
   !$acc declare create(Dt_BLK, Dt, DtFixed, Cfl)
   logical :: time_accurate = .true.,  time_loop = .false.
   !$acc declare create(time_accurate)
-  
+
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0
   !$acc declare create(Climit)
@@ -195,7 +195,7 @@ module ModMain
   !$acc declare create(iMinFace, iMaxFace, iMinFace2, iMaxFace2)
   !$acc declare create(jMinFace, jMaxFace, jMinFace2, jMaxFace2)
   !$acc declare create(kMinFace, kMaxFace, kMinFace2, kMaxFace2)
-  
+
   ! div B control
   logical :: UseDivbSource    = UseB
   logical :: UseDivbDiffusion = .false.
@@ -289,7 +289,7 @@ module ModMain
   logical:: UseUserUpdateStates      = .false.
   logical:: UseUserWriteProgress     = .false.
   !$acc declare create(UseUserUpdateStates)
-  
+
   logical:: UseExtraBoundary         = .false.
   logical:: UseSolidState            = .false.
 

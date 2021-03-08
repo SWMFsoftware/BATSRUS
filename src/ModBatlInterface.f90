@@ -5,7 +5,7 @@ module ModBatlInterface
 
   use BATL_lib, ONLY: test_start, test_stop
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
   implicit none
@@ -249,7 +249,7 @@ contains
   !$acc update device(neiLtop, neiLbot)
   !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
   !$acc update device(neiLEV)
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_batsrus_block
   !============================================================================

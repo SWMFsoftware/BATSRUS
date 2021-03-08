@@ -478,7 +478,7 @@ contains
 
       select case(iSide)
       case(1)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)         
+         !$acc parallel loop collapse(3) gang vector present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,1,j,k)
@@ -490,25 +490,25 @@ contains
                  State_VG(iVarMin:iVarMax,nI,j,k)
          end do; end do; end do
       case(3)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)         
+         !$acc parallel loop collapse(3) gang vector present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,1,k)
          end do; end do; end do
       case(4)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)         
+         !$acc parallel loop collapse(3) gang vector present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,nJ,k)
          end do; end do; end do
       case(5)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)         
+         !$acc parallel loop collapse(3) gang vector present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,1)
          end do; end do; end do
       case(6)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)         
+         !$acc parallel loop collapse(3) gang vector present(State_VG)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,nK)

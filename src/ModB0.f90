@@ -6,7 +6,7 @@ module ModB0
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   ! The magnetic field can be split into an analytic and numeric part.
@@ -64,7 +64,7 @@ module ModB0
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
-  !$acc declare create(B0_DX, B0_DY, B0_DZ)  
+  !$acc declare create(B0_DX, B0_DY, B0_DZ)
 
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
@@ -171,7 +171,7 @@ contains
     !$omp end parallel
 
     call init_magnetogram_lookup_table(iComm)
-    
+
     call test_stop(NameSub, DoTest)
 
   end subroutine init_mod_b0
@@ -582,7 +582,7 @@ contains
     real, intent(out):: B0_D(3)
 
     real:: r, CarringtonNumber
-    
+
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
     if(iTableB0 > 0)then
@@ -598,7 +598,7 @@ contains
 
        ! Convert from Tesla to normalized units.
        B0_D = B0_D*Si2No_V(UnitB_)
-       
+
     elseif(MonopoleStrength /= 0.0)then
        r = norm2(Xyz_D(1:nDim))
        B0_D = MonopoleStrength*Xyz_D/r**nDim

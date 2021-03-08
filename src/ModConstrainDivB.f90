@@ -127,7 +127,7 @@ contains
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif    
+#endif
     call test_start(NameSub, DoTest, iBlock)
     if(iBlock==iBlockTest)then
     else
@@ -187,7 +187,7 @@ contains
 
     integer:: i,j,k
     integer:: iGang
-    
+
     ! Apply continuous or fixed boundary conditions at outer boundaries
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_VxB'
@@ -195,7 +195,7 @@ contains
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif        
+#endif
     call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ
@@ -496,9 +496,9 @@ contains
   !   ! Assign default solution state to fine block to get corners
   !   fine_sol=0.0
   !
-  !   !\
+  !
   !   ! Prolong coarse grid solution to finer block.
-  !   !/
+  !
   !
   !   select case(iVar)
   !   case(Bx_)
@@ -1447,16 +1447,16 @@ contains
   !        end do ! iBlock
   !     end do ! iface
   !
-  !     !\
+  !
   !     ! Wait for all receive commands to be posted for all processors
-  !     !/
+  !
   !     call barrier_mpi
   !
   !     if(DoTest)write(*,*)'receives posted: me=',iProc
   !
-  !     !\
+  !
   !     ! Send blocking messages with Rsend (ready to receive)
-  !     !/
+  !
   !     do iface=ifacemin,ifacemax
   !
   !        ! Set index ranges for the face
@@ -1572,9 +1572,9 @@ contains
   !
   !     end do ! iface
   !
-  !     !\
+  !
   !     ! WAIT FOR ALL MESSAGES TO BE RECEIVED
-  !     !/
+  !
   !     if (number_receive_requests > 0) &
   !          call MPI_waitall(number_receive_requests,receive_requests,status,iError)
   !
@@ -1922,10 +1922,10 @@ contains
   !   number_receive_requests = 0
   !   receive_requests = MPI_REQUEST_NULL
   !
-  !   !\
+  !
   !   ! Non-blocking recieve messages from fine blocks
   !   ! or copy for local blocks
-  !   !/
+  !
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
   ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
@@ -1944,14 +1944,14 @@ contains
   !      end do
   !   end do
   !
-  !   !\
+  !
   !   ! Wait for all receive commands to be posted for all processors
-  !   !/
+  !
   !   call barrier_mpi
   !
-  !   !\
+  !
   !   ! Send blocking messages with Rsend (ready to receive)
-  !   !/
+  !
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
   !
@@ -1966,9 +1966,9 @@ contains
   !
   !   end do
   !
-  !   !\
+  !
   !   ! WAIT FOR ALL MESSAGES TO BE RECEIVED
-  !   !/
+  !
   !   if (number_receive_requests > 0) &
   !        call MPI_waitall(number_receive_requests,receive_requests,status,iError)
   !

@@ -7,7 +7,7 @@ module ModBoundaryGeometry
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
 
   implicit none
@@ -236,7 +236,7 @@ contains
     end if
 
     !$acc update device(true_cell, body_BLK)
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_block_geometry
   !============================================================================

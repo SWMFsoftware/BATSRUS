@@ -104,7 +104,7 @@ contains
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
     integer:: iGang
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !--------------------------------------------------------------------------
@@ -247,13 +247,13 @@ contains
           if(DoConserveFlux .and. iStage == nStage)then
              ! Store fluxes for flux correction
              Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
-                  Flux_VXI(1:nFlux,1:nI+1,1:nJ,1:nK,iGang) 
+                  Flux_VXI(1:nFlux,1:nI+1,1:nJ,1:nK,iGang)
              if(nJ>1) & ! 2D
                   Flux_VFD(1:nFlux,1:nI,1:nJ+1,1:nK,y_) = &
-                  Flux_VYI(1:nFlux,1:nI,1:nJ+1,1:nK,iGang) 
+                  Flux_VYI(1:nFlux,1:nI,1:nJ+1,1:nK,iGang)
              if(nK>1) & ! 3D
                   Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
-                  Flux_VZI(1:nFlux,1:nI,1:nJ,1:nK+1,iGang) 
+                  Flux_VZI(1:nFlux,1:nI,1:nJ,1:nK+1,iGang)
 
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &

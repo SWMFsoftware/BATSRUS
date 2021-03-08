@@ -7,7 +7,7 @@ module ModParticleFieldLine
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   ! This module contains subroutine for extracting magnetic field lines
   ! for passing to other codes;

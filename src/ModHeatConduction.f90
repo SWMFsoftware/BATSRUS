@@ -105,7 +105,6 @@ contains
     character(len=*), intent(in) :: NameCommand
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'read_heatconduction_param'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -170,7 +169,6 @@ contains
     real::  cTeTiExchangeRateSi
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'init_heat_conduction'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -334,7 +332,7 @@ contains
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure         
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, InvGammaElectronMinus1
@@ -347,7 +345,6 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
-    
     logical, target, intent(inout):: IsFF_I(nFFLogic)
     integer, target, intent(inout):: IFF_I(nFFInt)
     real, target, intent(inout):: RFF_I(nFFReal)
@@ -363,10 +360,10 @@ contains
     !$omp threadprivate( UseFirstOrderBc )
     !$omp threadprivate( UseLeftStateOnly, UseRightStateOnly )
 
-    character(len=*), parameter:: NameSub = 'get_heat_flux'
-    !--------------------------------------------------------------------------
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
+    character(len=*), parameter:: NameSub = 'get_heat_flux'
+    !--------------------------------------------------------------------------
     associate( &
       iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
       iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
@@ -603,7 +600,6 @@ contains
     use ModPhysics,      ONLY: InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
-    
     logical, target, intent(inout):: IsFF_I(nFFLogic)
     integer, target, intent(inout):: IFF_I(nFFInt)
     real, target, intent(inout):: RFF_I(nFFReal)
@@ -773,7 +769,6 @@ contains
     integer:: i, j, k, iBlock
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -902,7 +897,6 @@ contains
     logical :: IsNewBlockTe
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1309,7 +1303,6 @@ contains
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1503,7 +1496,6 @@ contains
     real :: DtLocal
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'update_impl_heat_cond'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -1587,3 +1579,4 @@ contains
   !============================================================================
 
 end module ModHeatConduction
+!==============================================================================

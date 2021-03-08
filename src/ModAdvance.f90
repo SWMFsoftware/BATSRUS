@@ -237,7 +237,6 @@ contains
     ! These arrays may need allocation depending on the parameters
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'init_mod_advance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -262,8 +261,8 @@ contains
 
 #ifdef OPENACC
     nGang = MaxBlock
-#endif    
-    
+#endif
+
     !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DXI))then
@@ -348,7 +347,7 @@ contains
          nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace,nGang))
 
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
-    
+
     allocate(Source_VCI(nSource,nI,nJ,nK,nGang))
     allocate(SourceMhd_VCI(RhoUx_:RhoUz_,nI,nJ,nK,nGang))
     !$omp end parallel
@@ -365,7 +364,6 @@ contains
   subroutine clean_mod_advance
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'clean_mod_advance'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -427,3 +425,4 @@ contains
   !============================================================================
 
 end module ModAdvance
+!==============================================================================
