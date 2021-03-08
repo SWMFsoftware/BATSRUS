@@ -1374,7 +1374,7 @@ contains
     integer,intent(in)::iBlock
     integer :: iVar
     integer:: iGang
-    
+
     logical:: DoTest
 
     character(len=*), parameter:: NameSub = 'user_update_states'
@@ -1388,8 +1388,8 @@ contains
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
-#endif      
-    
+#endif
+
     do iVar=1,nVar
        if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then
           Flux_VXI(iVar,:,:,:,iGang)  = 0.0
