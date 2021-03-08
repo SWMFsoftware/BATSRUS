@@ -12,7 +12,7 @@ module ModFieldTrace
   use ModMain, ONLY: iNewDecomposition, TypeCoordSystem
   use ModPhysics, ONLY: rBody
 #ifdef OPENACC
-  use ModUtilities, ONLY: norm2 
+  use ModUtilities, ONLY: norm2
 #endif
   use ModNumConst, ONLY: i_DD
   use ModKind, ONLY: Real8_
@@ -715,12 +715,11 @@ contains
 
     integer :: i, j, k, iBlock, iNode
 
-    logical:: DoTest 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
-    
+
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -3435,7 +3434,6 @@ contains
                       if(k == nLine) CYCLE
                       Odd=.true.;  if( (nLine/2)*2 == nLine )Odd=.false.
 
-                      !\\
                       ! finish previous line
                       if(k /= 0)then
                          if(Odd)then
@@ -3466,7 +3464,6 @@ contains
                          end if
                       end if
 
-                      !\\
                       ! start new line counters
                       k = nLine
                       if(Odd)then
@@ -3476,7 +3473,6 @@ contains
                       end if
                    end do
 
-                   !\\
                    ! finish last line
                    if(k/=0)then
                       iEnd = nPoint
@@ -3500,7 +3496,6 @@ contains
                       end if
                    end if
 
-                   !\\
                    ! write only last closed
                    if(iD == nD .and. iLC /= -9)then
                       j = (jEnd-jStart)+2*nTP
@@ -3677,7 +3672,7 @@ contains
              do iPoint = 1, nPoint
                 nLine = PlotVar_VI(0,iPoint)
                 if(k /= nLine)then
-                   !\\
+
                    ! finish previous line
                    if(k/=0)then
                       iEnd = iPoint-1
@@ -3735,7 +3730,6 @@ contains
                       end if
                    end if
 
-                   !\\
                    ! start new line counters
                    k=nLine
                    iStart = iPoint
@@ -3751,7 +3745,6 @@ contains
                 end if
              end do
 
-             !\\
              ! finish last line
              if(k/=0)then
                 iEnd = nPoint
@@ -3836,7 +3829,7 @@ contains
     ! by G. Toth and D. De Zeeuw. An overview of the scheme can be found in
     !
     ! D. L. De Zeeuw, S. Sazykin, R. A. Wolf, T. I. Gombosi,
-    ! A. J. Ridley, G. T\'oth, 2004,\\
+    ! A. J. Ridley, G. T\'oth, 2004,
     ! Journal of Geophysical Research, 109, 12219,
     !
     ! Details of the algorithm are to be published later
@@ -4176,15 +4169,6 @@ contains
        end if
 
     end do ! ray iteration
-
-! !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-! !!$  do iBlock=1,nBlock
-! !!$     if(Unused_B(iBlock))CYCLE
-! !!$     do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
-! !!$        call print_test(999)
-! !!$     end do; end do; end do
-! !!$  end do
-! !!$//////////////////////////////
 
     ! Check for unassigned rayface in every used block
     if(DoTest)then
