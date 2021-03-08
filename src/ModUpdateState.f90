@@ -807,9 +807,6 @@ contains
 
     ! Check for allowable percentage changed from update
     if(time_accurate) then
-       !\\
-       !    TIME ACCURATE  ===================================================
-       !///
        report_tf = 1.
        do num_checks = 1,max_checks
           percent_chg_rho = 0.1
@@ -985,9 +982,7 @@ contains
                ' nStep=',n_step,'     dt reduction=',report_tf,' dt=',dt
        end if
     else
-       !\\
-       !    LOCAL TIMESTEPPING
-       !///
+       ! LOCAL TIMESTEPPING
        report_tf = 1.
        PercentChangePE = 0.
        !$omp parallel do private(i,j,k,num_checks,iVar,update_check_done) &
