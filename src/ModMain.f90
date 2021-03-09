@@ -31,7 +31,7 @@ module ModMain
   logical, parameter:: UseB = B_ /= U_
 
   ! Time stepping parameters and values.
-  integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
+  integer :: n_step=0, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   !$acc declare create(nOrder, iStage, nStage)
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
   !$acc declare create(UseHalfStep)
