@@ -511,6 +511,7 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
+#ifdef OPENACC            
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -523,6 +524,7 @@ contains
       real :: UnLeft_I(nFluid+1)
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
+#endif      
       !------------------------------------------------------------------------
       iGang = 1
 #ifdef OPENACC
@@ -530,7 +532,7 @@ contains
 #endif
 
 #ifndef OPENACC
-      call init_face_flux_arrays(IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      !call init_face_flux_arrays(IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
       call set_block_values(iBlock, x_, IFF_I, RFF_I, Normal_D)
 #endif
 
@@ -610,11 +612,15 @@ contains
            StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
            StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
 
+#ifdef OPENACC
            call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  &
                 IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
                 FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
                 MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
                 bCrossArea_D, Tangent1_D, Tangent2_D)
+#else
+           call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
+#endif           
 
            if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -684,6 +690,7 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
+#ifdef OPENACC                  
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -696,6 +703,7 @@ contains
       real :: UnLeft_I(nFluid+1)
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
+#endif      
       !------------------------------------------------------------------------
       iGang = 1
 #ifdef OPENACC
@@ -703,7 +711,7 @@ contains
 #endif
 
 #ifndef OPENACC
-      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      !call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
       call set_block_values(iBlock, y_, IFF_I, RFF_I, Normal_D)
 #endif
       !$acc loop vector collapse(3) &
@@ -790,11 +798,15 @@ contains
            StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
            StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
 
+#ifdef OPENACC           
            call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang), &
                 IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
                 FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
                 MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
                 bCrossArea_D, Tangent1_D, Tangent2_D)
+#else
+           call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
+#endif           
 
            if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -863,6 +875,7 @@ contains
       logical, target:: IsFF_I(nFFLogic)
       integer, target:: IFF_I(nFFInt)
       real, target:: RFF_I(nFFReal)
+#ifdef OPENACC                  
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -875,6 +888,7 @@ contains
       real :: UnLeft_I(nFluid+1)
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
+#endif      
       !------------------------------------------------------------------------
       iGang = 1
 #ifdef OPENACC
@@ -882,7 +896,7 @@ contains
 #endif
 
 #ifndef OPENACC
-      call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+      !call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
       call set_block_values(iBlock, z_, IFF_I, RFF_I, Normal_D)
 #endif
 
@@ -968,11 +982,15 @@ contains
            StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
            StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
 
+#ifdef OPENACC           
            call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang), &
                 IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
                 FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
                 MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
                 bCrossArea_D, Tangent1_D, Tangent2_D)
+#else
+           call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
+#endif           
 
            if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
@@ -1119,23 +1137,28 @@ contains
   end subroutine calc_face_flux
   !============================================================================
 
-  subroutine set_cell_values( IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values(IsFF_I, IFF_I, RFF_I, Normal_D)
     !$acc routine seq
-
     logical, target, intent(inout):: IsFF_I(nFFLogic)
     integer, target, intent(inout):: IFF_I(nFFInt)
     real, target, intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
     !--------------------------------------------------------------------------
-    select case(IFF_I(iDimFace_))
-    case(x_)
-       call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
-    case(y_)
-       call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
-    case(z_)
-       call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
-    end select
+#ifdef OPENACC     
+    associate(iDimFace => IFF_I(iDimFace_))
+#endif      
 
+      select case(iDimFace)
+      case(x_)
+         call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
+      case(y_)
+         call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
+      case(z_)
+         call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
+      end select
+#ifdef OPENACC     
+    end associate
+#endif    
   end subroutine set_cell_values
   !============================================================================
   subroutine set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
@@ -2929,11 +2952,16 @@ contains
   end subroutine get_physical_flux
   !============================================================================
 
-  subroutine get_numerical_flux(Flux_V,  IsFF_I, IFF_I, RFF_I, &
+  subroutine get_numerical_flux(Flux_V &
+#ifdef  OPENACC       
+       ,  IsFF_I, IFF_I, RFF_I, &
        StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V, &
        Normal_D, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, &
        Unormal_I, UnLeft_I, UnRight_I, bCrossArea_D, &
        Tangent1_D, Tangent2_D)
+#else
+    )
+#endif    
     !$acc routine seq
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
@@ -2953,6 +2981,7 @@ contains
 
     real, intent(out):: Flux_V(nFlux)
 
+#ifdef OPENACC    
     logical, target, intent(inout):: IsFF_I(:)
     integer, target, intent(inout):: IFF_I(:)
     real,    target, intent(inout):: RFF_I(:)
@@ -2969,7 +2998,14 @@ contains
     real, intent(inout):: UnRight_I(nFluid+1)
     real, intent(inout):: bCrossArea_D(MaxDim)
     real, intent(inout):: Tangent1_D(MaxDim), Tangent2_D(MaxDim)
+#endif    
 
+    ! TODO:remove the following lines
+    logical, target:: IsFF_I(nFFLogic)
+    integer, target:: IFF_I(nFFInt)
+    real, target:: RFF_I(nFFReal)
+
+    
     real :: State_V(nVar)
     real :: Cmax
     real :: DiffBn_D(3), DiffE
@@ -4527,6 +4563,7 @@ contains
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
+#ifdef OPENACC        
     real :: StateLeft_V(nVar)
     real :: StateRight_V(nVar)
     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -4539,6 +4576,7 @@ contains
     real :: UnLeft_I(nFluid+1)
     real :: UnRight_I(nFluid+1)
     real :: bCrossArea_D(3)
+#endif    
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
@@ -4661,6 +4699,7 @@ contains
     logical, target:: IsFF_I(nFFLogic)
     integer, target:: IFF_I(nFFInt)
     real, target:: RFF_I(nFFReal)
+#ifdef OPENACC        
     real :: StateLeft_V(nVar)
     real :: StateRight_V(nVar)
     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -4673,6 +4712,7 @@ contains
     real :: UnLeft_I(nFluid+1)
     real :: UnRight_I(nFluid+1)
     real :: bCrossArea_D(3)
+#endif    
 
     ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
