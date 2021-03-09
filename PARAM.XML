@@ -4268,6 +4268,7 @@ bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
 10.			Coord2MaxCut
 -10.			Coord3MinCut
 10.			Coord3MaxCut
+-1                      DxSavePlot
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US.

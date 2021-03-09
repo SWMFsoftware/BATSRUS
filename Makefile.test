@@ -562,6 +562,7 @@ test_magnetometer_rundir: test_rundir
 	
 test_magnetometer_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl
 
 test_magnetometer_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=1e-12 \
@@ -575,6 +576,10 @@ test_magnetometer_check:
 	-@(${DIFFNUM} -t -r=1e-5 -a=3e-9 \
 		${TESTDIR}/IO2/eqb_t00000100_n*.dat \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100.dat \
+		>> test_magnetometer.diff)
+	-@(${DIFFNUM} -t -r=1e-5 -a=3e-9 \
+		${TESTDIR}/IO2/bx0_mhd_6_t00000100*.out \
+		Param/MAGNETOMETER/TestOutput/bx0_t00000100.out \
 		>> test_magnetometer.diff)
 	ls -l test_magnetometer.diff
 
