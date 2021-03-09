@@ -2271,9 +2271,9 @@ contains
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
-    logical, target:: IsFF_I(nFFLogic)
-    integer, target:: IFF_I(nFFInt)
-    real, target:: RFF_I(nFFReal)
+    logical:: IsFF_I(nFFLogic)
+    integer:: IFF_I(nFFInt)
+    real:: RFF_I(nFFReal)
 
     real :: Normal_D(MaxDim)
     real :: MhdFlux_V(     RhoUx_:RhoUz_)
@@ -2322,8 +2322,12 @@ contains
        B0y = B0_DC(y_, i, j, k)
        B0z = B0_DC(z_, i, j, k)
 
-       call get_physical_flux(Primitive_V,  IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V, &
-            Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+       call get_physical_flux(Primitive_V, &
+            Conservative_V, Flux_V, Un_I, En, Pe, Pwave &
+#ifdef OPENACC            
+            , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
+#endif                        
+            )
 
        Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
 
@@ -2356,9 +2360,9 @@ contains
 
     real :: Primitive_V(nVar), Cmax_I(nFluid)
 
-    logical, target:: IsFF_I(nFFLogic)
-    integer, target:: IFF_I(nFFInt)
-    real, target:: RFF_I(nFFReal)
+    logical:: IsFF_I(nFFLogic)
+    integer:: IFF_I(nFFInt)
+    real:: RFF_I(nFFReal)
     real :: StateLeft_V(nVar)
     real :: StateRight_V(nVar)
     real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -2403,9 +2407,12 @@ contains
        B0z = B0_DF( z_,iFace, jFace, kFace)
 
        CmaxDt = 0.0 ! initialize to avoid floating point exception
-       call get_speed_max(Primitive_V,  IsFF_I, IFF_I, RFF_I, &
-            UnLeft_I, UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
-            cmax_I = Cmax_I)
+       call get_speed_max(Primitive_V, &
+#ifdef OPENACC
+            IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I, &
+            Normal_D, StateLeft_V,StateRight_V, &
+#endif            
+       cmax_I = Cmax_I)
 
        Cmax_F(iFace, jFace, kFace) = maxval(Cmax_I)*Area
 

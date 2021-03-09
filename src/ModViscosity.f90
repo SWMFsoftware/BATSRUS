@@ -228,9 +228,9 @@ contains
     use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
     use ModFaceFluxParameters
 
-    logical, target, intent(inout):: IsFF_I(nFFLogic)
-    integer, target, intent(inout):: IFF_I(nFFInt)
-    real, target, intent(inout):: RFF_I(nFFReal)
+    logical,  intent(inout):: IsFF_I(nFFLogic)
+    integer,  intent(inout):: IFF_I(nFFInt)
+    real,  intent(inout):: RFF_I(nFFReal)
 
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
