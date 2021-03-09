@@ -4963,305 +4963,323 @@ contains
 
       integer:: jFluid
       !------------------------------------------------------------------------
+      associate( &
+           B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
+           NormalX => RFF_I(NormalX_), &
+           NormalY => RFF_I(NormalY_), &
+           NormalZ => RFF_I(NormalZ_), &
+           InvClight2Face => RFF_I(InvClight2Face_), &
+           HallCoeff => RFF_I(HallCoeff_), &
+           InvDxyz => RFF_I(InvDxyz_), &
+           DiffBb => RFF_I(DiffBb_), &
+           iLeft => IFF_I(iLeft_), &
+           jLeft => IFF_I(jLeft_), &
+           kLeft => IFF_I(kLeft_), &
+           iRight => IFF_I(iRight_), &
+           jRight => IFF_I(jRight_), &
+           kRight => IFF_I(kRight_), &           
+           iBlockFace => IFF_I(iBlockFace_), &           
+           iDimFace => IFF_I(iDimFace_), &
+           iFace => IFF_I(iFace_), &
+           jFace => IFF_I(jFace_), kFace => IFF_I(kFace_) )           
 
-      Rho = State_V(iRhoIon_I(1))
-      Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
-      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
-      UnMin = Un
-      UnMax = Un
+        Rho = State_V(iRhoIon_I(1))
+        Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
+        Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
+        UnMin = Un
+        UnMax = Un
 
-      do jFluid = 2, nTrueIon
-         Rho1= State_V(iRhoIon_I(jFluid))
-         Rho = Rho + Rho1
-         ! The (approximate) fast speed fromula for multi-ion MHD
-         ! contains the maximum of ion sound speeds squared
-         Sound2 = max(Sound2, State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1)
-         Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
-         ! A reliable upper and lower estimate for wave speeds
-         ! uses the max and min of all ion bulk velocities.
-         UnMin = min(Un, UnMin)
-         UnMax = max(Un, UnMax)
-      end do
+        do jFluid = 2, nTrueIon
+           Rho1= State_V(iRhoIon_I(jFluid))
+           Rho = Rho + Rho1
+           ! The (approximate) fast speed fromula for multi-ion MHD
+           ! contains the maximum of ion sound speeds squared
+           Sound2 = max(Sound2, State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1)
+           Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
+           ! A reliable upper and lower estimate for wave speeds
+           ! uses the max and min of all ion bulk velocities.
+           UnMin = min(Un, UnMin)
+           UnMax = max(Un, UnMax)
+        end do
 
-      ! InvRho = 1/Sum(RhoIon_I)
-      InvRho = 1.0/Rho
+        ! InvRho = 1/Sum(RhoIon_I)
+        InvRho = 1.0/Rho
 
-      if(UseMultiIon)then
-         ! The Alfven velocity and the electron pressure are multiplied
-         ! with a Factor >= 1 in multi-ion MHD.
-         ! UseMultiIon = .false. for the five moment case.
-         ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
-         MultiIonFactor = &
-              Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
+        if(UseMultiIon)then
+           ! The Alfven velocity and the electron pressure are multiplied
+           ! with a Factor >= 1 in multi-ion MHD.
+           ! UseMultiIon = .false. for the five moment case.
+           ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
+           MultiIonFactor = &
+                Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
 
-         ! Add contribution of electron pressure=fraction of ion pressure
-         if(.not.UseElectronPressure) Sound2 = Sound2 + MultiIonFactor &
-              *GammaElectron*sum(State_V(iPIon_I))*ElectronPressureRatio*InvRho
-      end if
+           ! Add contribution of electron pressure=fraction of ion pressure
+           if(.not.UseElectronPressure) Sound2 = Sound2 + MultiIonFactor &
+                *GammaElectron*sum(State_V(iPIon_I))*ElectronPressureRatio*InvRho
+        end if
 
-      if(UseElectronPressure .and. .not. UseAnisoPe)then
-         ! UseElectronPressure = .false. for the five moment case
-         GammaPe = GammaElectron*State_V(Pe_)
-         if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
-         Sound2 = Sound2 + GammaPe*InvRho
-      else
-         ! needed for the six moment and anisotropic electron pressure
-         GammaPe = 0.0
-      endif
+        if(UseElectronPressure .and. .not. UseAnisoPe)then
+           ! UseElectronPressure = .false. for the five moment case
+           GammaPe = GammaElectron*State_V(Pe_)
+           if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
+           Sound2 = Sound2 + GammaPe*InvRho
+        else
+           ! needed for the six moment and anisotropic electron pressure
+           GammaPe = 0.0
+        endif
 
-      if(UseEfield) then
-         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal,
-         ! it must be calculated first, even for single ion fluid.
-         if(nTrueIon > 1)then
-            ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
-            MultiIonFactor = Rho*sum(              &
-                 ChargeDens_I(1:nTrueIon)**2       &
-                 /State_V(iRhoIon_I(1:nTrueIon)) ) &
-                 /sum(ChargeDens_I(1:nTrueIon))**2
-         else
-            MultiIonFactor = 1.0
-         end if
+        if(UseEfield) then
+           ! MultiIonFactor is used to correct Alfven2/Alfven2Normal,
+           ! it must be calculated first, even for single ion fluid.
+           if(nTrueIon > 1)then
+              ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
+              MultiIonFactor = Rho*sum(              &
+                   ChargeDens_I(1:nTrueIon)**2       &
+                   /State_V(iRhoIon_I(1:nTrueIon)) ) &
+                   /sum(ChargeDens_I(1:nTrueIon))**2
+           else
+              MultiIonFactor = 1.0
+           end if
 
-         ! Added electron pressure for the five moment equation.
-         ! Sound2 will be re-calculated anyway for the six moment.
-         ! GammaPe = 0.0 for the six moment equation.
-         if (.not. UseAnisoPressure) then
-            GammaPe = sum(Gamma_I(ElectronFirst_:nIonFluid) &
-                 *State_V(iPIon_I(ElectronFirst_:nIonFluid)) )
-            GammaPe = GammaPe*MultiIonFactor
-            Sound2  = Sound2 + GammaPe*InvRho
-         end if
-      end if
+           ! Added electron pressure for the five moment equation.
+           ! Sound2 will be re-calculated anyway for the six moment.
+           ! GammaPe = 0.0 for the six moment equation.
+           if (.not. UseAnisoPressure) then
+              GammaPe = sum(Gamma_I(ElectronFirst_:nIonFluid) &
+                   *State_V(iPIon_I(ElectronFirst_:nIonFluid)) )
+              GammaPe = GammaPe*MultiIonFactor
+              Sound2  = Sound2 + GammaPe*InvRho
+           end if
+        end if
 
-      if(UseRS7) Sound2 = Sound2 + GammaMinus1*RFF_I(DiffBb_)*InvRho
+        if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
 
-      if(UseWavePressure)then
-         if(UseWavePressureLtd)then
-            Sound2 = Sound2 + &
-                 GammaWave * (GammaWave - 1)*&
-                 max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
-                 StateRight_V(Ew_)/StateRight_V(Rho_))
-         else
-            Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-            Sound2 = Sound2 + GammaWave*Pw*InvRho
-         end if
-      end if
+        if(UseWavePressure)then
+           if(UseWavePressureLtd)then
+              Sound2 = Sound2 + &
+                   GammaWave * (GammaWave - 1)*&
+                   max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
+                   StateRight_V(Ew_)/StateRight_V(Rho_))
+           else
+              Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+              Sound2 = Sound2 + GammaWave*Pw*InvRho
+           end if
+        end if
 
-      FullBx = State_V(Bx_) + RFF_I(B0x_)
-      FullBy = State_V(By_) + RFF_I(B0y_)
-      FullBz = State_V(Bz_) + RFF_I(B0z_)
-      if(UseAwSpeed)then
-         ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
-         ! the average field squared (Bright+Bleft)^2/4 results in
-         ! an upper estimate of the left and right Alfven speeds
-         ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
-         !
-         ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
-         ! this is clearly not true.
-         !
-         dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_) &
-              -             StateLeft_V(Bx_:Bz_))**2)
-         Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
-      else
-         Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
-      end if
-      if(UseCurlB0)then
-         B1B0L = StateLeft_V(Bx_)*RFF_I(B0x_) &
-              +  StateLeft_V(By_)*RFF_I(B0y_) &
-              +  StateLeft_V(Bz_)*RFF_I(B0z_)
-         B1B0R = StateRight_V(Bx_)*RFF_I(B0x_) &
-              +  StateRight_V(By_)*RFF_I(B0y_) &
-              +  StateRight_V(Bz_)*RFF_I(B0z_)
-         Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
-      end if
+        FullBx = State_V(Bx_) + B0x
+        FullBy = State_V(By_) + B0y
+        FullBz = State_V(Bz_) + B0z
+        if(UseAwSpeed)then
+           ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
+           ! the average field squared (Bright+Bleft)^2/4 results in
+           ! an upper estimate of the left and right Alfven speeds
+           ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
+           !
+           ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
+           ! this is clearly not true.
+           !
+           dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_) &
+                -             StateLeft_V(Bx_:Bz_))**2)
+           Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
+        else
+           Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
+        end if
+        if(UseCurlB0)then
+           B1B0L = StateLeft_V(Bx_)*B0x &
+                +  StateLeft_V(By_)*B0y &
+                +  StateLeft_V(Bz_)*B0z
+           B1B0R = StateRight_V(Bx_)*B0x &
+                +  StateRight_V(By_)*B0y &
+                +  StateRight_V(Bz_)*B0z
+           Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
+        end if
 
-      FullBn = RFF_I(NormalX_)*FullBx + RFF_I(NormalY_)*FullBy + RFF_I(NormalZ_)*FullBz
-      Alfven2Normal = InvRho*FullBn**2
+        FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+        Alfven2Normal = InvRho*FullBn**2
 
-      if(UseMultiIon .or. UseEfield)then
-         Alfven2 = Alfven2*MultiIonFactor
-         Alfven2Normal = Alfven2Normal*MultiIonFactor
-      end if
+        if(UseMultiIon .or. UseEfield)then
+           Alfven2 = Alfven2*MultiIonFactor
+           Alfven2Normal = Alfven2Normal*MultiIonFactor
+        end if
 
-      ! Calculate fast speed for anisotropic ion pressure.
-      ! Formulas refer to V. B. Baranov, 1970 and MAPLE calculation
-      if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-      if(UseAnisoPressure .and. FullB2 > 0)then
-         Ppar  = State_V(Ppar_)
-         Pperp = (3*State_V(p_) - Ppar)/2.
-         if(.not. IsMhd .and. .not. UseEfield)then
-            ! Most likely the parallel and perpendicular sound speeds should be
-            ! added up here !!!
-            do jFluid = IonFirst_+1, IonLast_
-               Ppar1 = State_V(iPparIon_I(jFluid))
-               Ppar  = Ppar + Ppar1
-               Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
-            end do
-         end if
+        ! Calculate fast speed for anisotropic ion pressure.
+        ! Formulas refer to V. B. Baranov, 1970 and MAPLE calculation
+        if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
+        if(UseAnisoPressure .and. FullB2 > 0)then
+           Ppar  = State_V(Ppar_)
+           Pperp = (3*State_V(p_) - Ppar)/2.
+           if(.not. IsMhd .and. .not. UseEfield)then
+              ! Most likely the parallel and perpendicular sound speeds should be
+              ! added up here !!!
+              do jFluid = IonFirst_+1, IonLast_
+                 Ppar1 = State_V(iPparIon_I(jFluid))
+                 Ppar  = Ppar + Ppar1
+                 Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
+              end do
+           end if
 
-         ! For the six moment eqn, most likely all the ion pressure should
-         ! be added up to the total pressure, as well as the electron
-         ! pressure multiplies by MultiIonFactor
-         if (UseEfield) then
-            p    = sum(State_V(iPIon_I(IonFirst_:nTrueIon))) + &
-                 sum(State_V(iPIon_I(ElectronFirst_:)))*MultiIonFactor
-            Ppar = sum(State_V(iPparIon_I(IonFirst_:nTrueIon))) + &
-                 sum(State_V(iPparIon_I(ElectronFirst_:)))*MultiIonFactor
-            Pperp = 0.5*(3*p - Ppar)
-         end if
+           ! For the six moment eqn, most likely all the ion pressure should
+           ! be added up to the total pressure, as well as the electron
+           ! pressure multiplies by MultiIonFactor
+           if (UseEfield) then
+              p    = sum(State_V(iPIon_I(IonFirst_:nTrueIon))) + &
+                   sum(State_V(iPIon_I(ElectronFirst_:)))*MultiIonFactor
+              Ppar = sum(State_V(iPparIon_I(IonFirst_:nTrueIon))) + &
+                   sum(State_V(iPparIon_I(ElectronFirst_:)))*MultiIonFactor
+              Pperp = 0.5*(3*p - Ppar)
+           end if
 
-         ! Added aniso Pe contribution to the total Ppar and Pperp.
-         if (UseAnisoPe) then
-            if (.not. UseMultiIon) then
-               p1    = State_V(Pe_)
-               Ppar1 = State_V(Pepar_)
-            else
-               ! most likely need to multiply MultiIonFactor, like the
-               ! multi-ion case.
-               p1    = State_V(Pe_)*MultiIonFactor
-               Ppar1 = State_V(Pepar_)*MultiIonFactor
-            end if
-            Ppar  = Ppar + Ppar1
-            Pperp = Pperp + 0.5*(3*p1 - Ppar1)
-         end if
+           ! Added aniso Pe contribution to the total Ppar and Pperp.
+           if (UseAnisoPe) then
+              if (.not. UseMultiIon) then
+                 p1    = State_V(Pe_)
+                 Ppar1 = State_V(Pepar_)
+              else
+                 ! most likely need to multiply MultiIonFactor, like the
+                 ! multi-ion case.
+                 p1    = State_V(Pe_)*MultiIonFactor
+                 Ppar1 = State_V(Pepar_)*MultiIonFactor
+              end if
+              Ppar  = Ppar + Ppar1
+              Pperp = Pperp + 0.5*(3*p1 - Ppar1)
+           end if
 
-         BnInvB2 = FullBn**2/FullB2
-         Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
-         Fast2   = Sound2 + Alfven2
-         Discr   = sqrt(max(0.0, Fast2**2  &
-              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
-              - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
-              + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
-              - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
-              + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
-              - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
-      else
-         Fast2 = Sound2 + Alfven2
-         Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
-      endif
+           BnInvB2 = FullBn**2/FullB2
+           Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
+           Fast2   = Sound2 + Alfven2
+           Discr   = sqrt(max(0.0, Fast2**2  &
+                + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
+                - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
+                + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
+                - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
+                + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
+                - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
+        else
+           Fast2 = Sound2 + Alfven2
+           Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
+        endif
 
-      if(Fast2 + Discr < 0.0)then
+        if(Fast2 + Discr < 0.0)then
 #ifndef OPENACC
-         write(*,*) &
-              ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
-         write(*,*) &
-              ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_)
-         if(UseAnisoPressure) write(*,*) &
-              ' Ppar, Perp             =', Ppar, Pperp
-         if(UseElectronPressure) write(*,*) &
-              ' State_V(Pe_)           =', State_V(Pe_)
-         if(UseAnisoPe) write(*,*) &
-              ' State_V(Pepar_)        =', State_V(Pepar_)
-         if(UseWavePressure) write(*,*) &
-              ' GammaWave, State(Waves)=', &
-              GammaWave, State_V(WaveFirst_:WaveLast_)
+           write(*,*) &
+                ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
+           write(*,*) &
+                ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_)
+           if(UseAnisoPressure) write(*,*) &
+                ' Ppar, Perp             =', Ppar, Pperp
+           if(UseElectronPressure) write(*,*) &
+                ' State_V(Pe_)           =', State_V(Pe_)
+           if(UseAnisoPe) write(*,*) &
+                ' State_V(Pepar_)        =', State_V(Pepar_)
+           if(UseWavePressure) write(*,*) &
+                ' GammaWave, State(Waves)=', &
+                GammaWave, State_V(WaveFirst_:WaveLast_)
 
-         write(*,*) &
-              ' Sound2, Alfven2       =', Sound2, Alfven2
-         write(*,*) &
-              ' FullBn, Alfven2Normal =', FullBn, Alfven2Normal
-         write(*,*) &
-              ' FullBx, FullBy, FullBz=', FullBx, FullBy, FullBz
-         write(*,*) &
-              ' State_VGB(left)       =', &
-              State_VGB(:,IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),IFF_I(iBlockFace_))
-         write(*,*) &
-              ' State_VGB(right)      =', &
-              State_VGB(:,IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),IFF_I(iBlockFace_))
-         write(*,*) &
-              ' Xyz_DGB(right)        =', &
-              Xyz_DGB(:,IFF_I(iFace_),IFF_I(jFace_),IFF_I(kFace_),IFF_I(iBlockFace_))
+           write(*,*) &
+                ' Sound2, Alfven2       =', Sound2, Alfven2
+           write(*,*) &
+                ' FullBn, Alfven2Normal =', FullBn, Alfven2Normal
+           write(*,*) &
+                ' FullBx, FullBy, FullBz=', FullBx, FullBy, FullBz
+           write(*,*) &
+                ' State_VGB(left)       =', &
+                State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
+           write(*,*) &
+                ' State_VGB(right)      =', &
+                State_VGB(:,iRight,jRight,kRight,iBlockFace)
+           write(*,*) &
+                ' Xyz_DGB(right)        =', &
+                Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
 
-         write(*,*) &
-              ' iDim,i,j,k,BlockFace=', &
-              IFF_I(iDimFace_), IFF_I(iFace_),IFF_I(jFace_),IFF_I(kFace_), IFF_I(iBlockFace_)
+           write(*,*) &
+                ' iDim,i,j,k,BlockFace=', &
+                iDimFace, iFace,jFace,kFace, iBlockFace
 
-         call stop_mpi('negative fast speed squared')
+           call stop_mpi('negative fast speed squared')
 #endif
-      end if
+        end if
 
-      ! Fast speed multiplied by the face area
-      if(UseBorisSimple .or. (UseEfield))then
-         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*RFF_I(InvClight2Face_)) )
-      else
-         Fast = sqrt( 0.5*(Fast2 + Discr) )
-      end if
-      FastDt = Fast
+        ! Fast speed multiplied by the face area
+        if(UseBorisSimple .or. (UseEfield))then
+           Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
+        else
+           Fast = sqrt( 0.5*(Fast2 + Discr) )
+        end if
+        FastDt = Fast
 
-      ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(RFF_I(HallCoeff_) > 0.0 .and. DoHallInduction) then
-         ! Tangential component of B
-         FullBt = sqrt(max(0.0, &
-              (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
+        ! Add whistler wave speed for the shortest wavelength 2 dx
+        if(HallCoeff > 0.0 .and. DoHallInduction) then
+           ! Tangential component of B
+           FullBt = sqrt(max(0.0, &
+                (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
 
-         ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
-         Rho1 = sum(State_VGB(iRhoIon_I,&
-              IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),IFF_I(iBlockFace_)))
+           ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
+           Rho1 = sum(State_VGB(iRhoIon_I,iLeft,jLeft,kLeft,iBlockFace))
 
-         ! Calculate drift speed and whistler speed
-         cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
-         cWhistler = cPi*abs(FullBn)
+           ! Calculate drift speed and whistler speed
+           cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
+           cWhistler = cPi*abs(FullBn)
 
-         ! Take the faster speed
-         cHall = RFF_I(HallCoeff_)*RFF_I(InvDxyz_)*InvRho &
-              *max(cWhistler, cDrift)
+           ! Take the faster speed
+           cHall = HallCoeff*InvDxyz*InvRho &
+                *max(cWhistler, cDrift)
 
-         ! cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
-         FastDt = Fast + cHall
-         Fast   = Fast + HallCmaxFactor*cHall
-      end if
+           ! cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
+           FastDt = Fast + cHall
+           Fast   = Fast + HallCmaxFactor*cHall
+        end if
 
-      HallUnLeft  = UnLeft_I(eFluid_)
-      HallUnRight = UnRight_I(eFluid_)
+        HallUnLeft  = UnLeft_I(eFluid_)
+        HallUnRight = UnRight_I(eFluid_)
 
-      if(UseAlfvenWaves .and. UseAwSpeed) then
-         ! In this case the propagation speed for
-         ! Alfven waves equal to the Alvfen speed
-         ! may happen to be larger that the fast wave
-         ! speed in the "hat" state
-         FullBx = StateLeft_V(Bx_) + RFF_I(B0x_)
-         FullBy = StateLeft_V(By_) + RFF_I(B0y_)
-         FullBz = StateLeft_V(Bz_) + RFF_I(B0z_)
-         FullBn = RFF_I(NormalX_)*FullBx + RFF_I(NormalY_)*FullBy + RFF_I(NormalZ_)*FullBz
-         Fast = max(Fast, sqrt( FullBn**2/StateLeft_V(iRhoIon_I(1)) ))
+        if(UseAlfvenWaves .and. UseAwSpeed) then
+           ! In this case the propagation speed for
+           ! Alfven waves equal to the Alvfen speed
+           ! may happen to be larger that the fast wave
+           ! speed in the "hat" state
+           FullBx = StateLeft_V(Bx_) + B0x
+           FullBy = StateLeft_V(By_) + B0y
+           FullBz = StateLeft_V(Bz_) + B0z
+           FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+           Fast = max(Fast, sqrt( FullBn**2/StateLeft_V(iRhoIon_I(1)) ))
 
-         FullBx = StateRight_V(Bx_) + RFF_I(B0x_)
-         FullBy = StateRight_V(By_) + RFF_I(B0y_)
-         FullBz = StateRight_V(Bz_) + RFF_I(B0z_)
-         FullBn = RFF_I(NormalX_)*FullBx + RFF_I(NormalY_)*FullBy + RFF_I(NormalZ_)*FullBz
-         Fast = max(Fast, sqrt( FullBn**2/StateRight_V(iRhoIon_I(1)) ))
-      end if
+           FullBx = StateRight_V(Bx_) + B0x
+           FullBy = StateRight_V(By_) + B0y
+           FullBz = StateRight_V(Bz_) + B0z
+           FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
+           Fast = max(Fast, sqrt( FullBn**2/StateRight_V(iRhoIon_I(1)) ))
+        end if
 
-      if(UseAwSpeed)then
-         if(RFF_I(HallCoeff_) > 0.0)then
-            Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
-            Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
-            CmaxDt_I(1)  = max(Cright_I(1) + FastDt, - Cleft_I(1) - FastDt)
-            Cleft_I(1)   = Cleft_I(1)  - Fast
-            Cright_I(1)  = Cright_I(1) + Fast
-            Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-         else
-            Cleft_I(1)   = min(UnLeft, UnRight) - Fast
-            Cright_I(1)  = max(UnLeft, UnRight) + Fast
-            Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-            CmaxDt_I(1) = Cmax_I(1)
-         end if
-      else
-         if(present(Cmax_I))then
-            if(RFF_I(HallCoeff_) > 0.0)then
-               Cmax_I(1)   = max(abs(UnMin), abs(UnMax), &
-                    abs(HallUnLeft), abs(HallUnRight))
-               CmaxDt_I(1) = Cmax_I(1) + FastDt
-               Cmax_I(1)   = Cmax_I(1) + Fast
-            else
-               Cmax_I(1)   = max(abs(UnMin), abs(UnMax)) + Fast
-               CmaxDt_I(1) = Cmax_I(1)
-            end if
-         end if
-         if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
-         if(present(Cright_I)) Cright_I(1) = UnMax + Fast
-      end if
-
+        if(UseAwSpeed)then
+           if(HallCoeff > 0.0)then
+              Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
+              Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
+              CmaxDt_I(1)  = max(Cright_I(1) + FastDt, - Cleft_I(1) - FastDt)
+              Cleft_I(1)   = Cleft_I(1)  - Fast
+              Cright_I(1)  = Cright_I(1) + Fast
+              Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+           else
+              Cleft_I(1)   = min(UnLeft, UnRight) - Fast
+              Cright_I(1)  = max(UnLeft, UnRight) + Fast
+              Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+              CmaxDt_I(1) = Cmax_I(1)
+           end if
+        else
+           if(present(Cmax_I))then
+              if(HallCoeff > 0.0)then
+                 Cmax_I(1)   = max(abs(UnMin), abs(UnMax), &
+                      abs(HallUnLeft), abs(HallUnRight))
+                 CmaxDt_I(1) = Cmax_I(1) + FastDt
+                 Cmax_I(1)   = Cmax_I(1) + Fast
+              else
+                 Cmax_I(1)   = max(abs(UnMin), abs(UnMax)) + Fast
+                 CmaxDt_I(1) = Cmax_I(1)
+              end if
+           end if
+           if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
+           if(present(Cright_I)) Cright_I(1) = UnMax + Fast
+        end if
+      end associate
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_hd_speed
