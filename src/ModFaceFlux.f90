@@ -123,6 +123,77 @@ module ModFaceFlux
   logical :: DoClightWarning     = .true.
   real    :: FactorClightWarning = 2.0
 
+#ifndef OPENACC
+  ! index of cell in the negative and positive directions from face
+  integer :: iLeft,  jLeft, kLeft
+  integer :: iRight, jRight, kRight
+  ! Index of the block for this face, iBlockFace = iBlock
+  integer :: iBlockFace
+  ! Direction of the face iDimFace = iDim
+  integer :: iDimFace
+  ! Range of fluid and variable indexes for the current solver
+  integer:: iFluidMin = 1, iFluidMax = nFluid
+  integer:: iVarMin   = 1, iVarMax   = nVar
+  integer:: iEnergyMin = nVar+1, iEnergyMax = nVar + nFluid
+  ! index of the face
+  integer :: iFace, jFace, kFace
+  ! Maximum speed for the Courant condition
+  real :: CmaxDt
+  real :: Area2, AreaX, AreaY, AreaZ, Area = 0.0
+  real :: DeltaBnL, DeltaBnR
+  real :: DiffBb ! (1/4)(BnL-BnR)^2
+  real :: StateLeft_V(nVar)
+  real :: StateRight_V(nVar)
+  real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
+  ! Variables for rotated coordinate system (n is normal to face)
+  real :: Normal_D(3), NormalX, NormalY, NormalZ
+  real :: Tangent1_D(3), Tangent2_D(3)
+  real :: B0n, B0t1, B0t2
+  real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
+  real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
+  ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
+  ! in terms of divergence of the MHD part of momentum flux.
+  ! For this reason we calculate the MHD flux for the first ion fluid even
+  ! in the case when only its hydrodynamic part matters.
+  real :: MhdFlux_V(     RhoUx_:RhoUz_)
+  real :: MhdFluxLeft_V( RhoUx_:RhoUz_)
+  real :: MhdFluxRight_V(RhoUx_:RhoUz_)
+  ! normal electric field -> divE
+  real :: Enormal
+  ! Normal velocities for all fluids plus electrons
+  real :: Unormal_I(nFluid+1) = 0.0
+  real :: UnLeft_I(nFluid+1)
+  real :: UnRight_I(nFluid+1)
+  ! Variables for normal resistivity
+  real :: EtaJx, EtaJy, EtaJz, Eta
+  ! Variables needed for Hall resistivity
+  real :: InvDxyz, HallCoeff
+  real :: HallJx, HallJy, HallJz
+  ! Variables needed for Biermann battery term
+  logical :: UseHallGradPe = .false.
+  real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
+  ! Variables for diffusion solvers (radiation diffusion, heat conduction)
+  real :: DiffCoef, EradFlux=0.0, RadDiffCoef
+  real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal
+  ! B x Area for current -> BxJ
+  real :: bCrossArea_D(3) = 0.0
+  real :: B0x=0.0, B0y=0.0, B0z=0.0
+  ! Variables needed by viscosity
+  real :: ViscoCoeff
+  logical :: IsBoundary
+  ! Variables introduced for regional Boris correction
+  real :: InvClightFace, InvClight2Face
+  logical :: DoTestCell = .false.
+  ! Logicals for computation once per block
+  logical :: IsNewBlockVisco = .true.
+  logical :: IsNewBlockGradPe = .true.
+  logical :: IsNewBlockCurrent = .true.
+  logical :: IsNewBlockHeatCond = .true.
+  logical :: IsNewBlockIonHeatCond = .true.
+  logical :: IsNewBlockRadDiffusion = .true.
+  logical :: IsNewBlockAlfven = .true.
+#endif
+     
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
@@ -223,6 +294,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_block_values'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iBlockFace => IFF_I(iBlockFace_), iDimFace => IFF_I(iDimFace_), &
          Area2 => RFF_I(Area2_), Area => RFF_I(Area_), &
@@ -233,6 +305,7 @@ contains
          NormalX => RFF_I(NormalX_), &
          NormalY => RFF_I(NormalY_), &
          NormalZ =>RFF_I(NormalZ_) )
+#endif
 #ifndef OPENACC
       call test_start(NameSub, DoTest, iBlock)
 #endif
@@ -264,7 +337,9 @@ contains
       call test_stop(NameSub, DoTest, iBlock)
 #endif
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine set_block_values
   !============================================================================
 
@@ -465,6 +540,7 @@ contains
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
       do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
+#ifdef OPENACC
          associate( &
               iLeft => IFF_I(iLeft_), &
               jLeft => IFF_I(jLeft_), &
@@ -484,6 +560,7 @@ contains
               Enormal => RFF_I(Enormal_), &
               B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
               IsBoundary => IsFF_I(IsBoundary_) )
+#endif
 
 #ifdef OPENACC
            call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
@@ -565,11 +642,15 @@ contains
            if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
                 bCrossArea_DXI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
 #endif
+#ifdef OPENACC
          end associate
+#endif
       end do; end do; end do
 
 #ifndef OPENACC
+#ifdef OPENACC
       associate( iBlockFace => IFF_I(iBlockFace_) )
+#endif
         if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
            ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
            ! is 6th order.
@@ -585,7 +666,9 @@ contains
               enddo
            end do; end do; enddo
         endif
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_flux_x
     !==========================================================================
@@ -629,6 +712,7 @@ contains
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
       do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
+#ifdef OPENACC
          associate( &
               iLeft => IFF_I(iLeft_), &
               jLeft => IFF_I(jLeft_), &
@@ -649,6 +733,7 @@ contains
               B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
               IsBoundary => IsFF_I(IsBoundary_), &
               DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
 #ifdef OPENACC
            call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
@@ -736,11 +821,15 @@ contains
            if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
                 bCrossArea_DYI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
 #endif
+#ifdef OPENACC
          end associate
+#endif
       end do; end do; end do
 
 #ifndef OPENACC
+#ifdef OPENACC
       associate( iBlockFace => IFF_I(iBlockFace_) )
+#endif
         ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
         ! is 6th order.
         if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
@@ -757,7 +846,9 @@ contains
               enddo
            end do; end do; enddo
         end if
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_flux_y
     !==========================================================================
@@ -801,6 +892,7 @@ contains
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+#ifdef OPENACC
          associate( &
               iLeft => IFF_I(iLeft_), &
               jLeft => IFF_I(jLeft_), &
@@ -821,6 +913,7 @@ contains
               B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
               IsBoundary => IsFF_I(IsBoundary_), &
               DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
 #ifdef OPENACC
            call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
@@ -905,11 +998,15 @@ contains
            if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
                 bCrossArea_DZI(:,iFace,jFace,kFace,iGang)= bCrossArea_D
 #endif
+#ifdef OPENACC
          end associate
+#endif
       end do; end do; end do
 
 #ifndef OPENACC
+#ifdef OPENACC
       associate( iBlockFace => IFF_I(iBlockFace_) )
+#endif
         if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
            do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
               if(UseLowOrder)then
@@ -924,7 +1021,9 @@ contains
               enddo
            end do; end do; enddo
         end if
+#ifdef OPENACC
       end associate
+#endif
 #endif      
     end subroutine get_flux_z
     !==========================================================================
@@ -952,6 +1051,7 @@ contains
 
       character(len=*), parameter:: NameSub = 'add_artificial_viscosity'
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iLeft => IFF_I(iLeft_), &
            jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -959,6 +1059,7 @@ contains
            jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
            iBlockFace => IFF_I(iBlockFace_), &
            CmaxDt => RFF_I(CmaxDt_), Area => RFF_I(Area_) )
+#endif
 
         if(.not. &
              all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace)))&
@@ -1009,7 +1110,9 @@ contains
            endif
         enddo
 
+#ifdef OPENACC
       end associate
+#endif
     end subroutine add_artificial_viscosity
     !==========================================================================
 
@@ -1045,6 +1148,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_cell_values_x'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), &
          jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -1053,6 +1157,7 @@ contains
          iBlockFace => IFF_I(iBlockFace_), &
          AreaX => RFF_I(AreaX_), &
          AreaY => RFF_I(AreaY_), AreaZ => RFF_I(AreaZ_) )
+#endif
 
       iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
@@ -1079,7 +1184,9 @@ contains
 
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine set_cell_values_x
   !============================================================================
 
@@ -1093,11 +1200,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_cell_values_y'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          iBlockFace => IFF_I(iBlockFace_), &
          AreaX => RFF_I(AreaX_), AreaY => RFF_I(AreaY_), AreaZ => RFF_I(AreaZ_) )
+#endif
 
       iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
@@ -1120,7 +1229,9 @@ contains
 
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine set_cell_values_y
   !============================================================================
 
@@ -1134,11 +1245,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_cell_values_z'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          iBlockFace => IFF_I(iBlockFace_), &
          AreaX => RFF_I(AreaX_), AreaY => RFF_I(AreaY_), AreaZ => RFF_I(AreaZ_) )
+#endif
 
       iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
@@ -1150,7 +1263,9 @@ contains
 
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine set_cell_values_z
   !============================================================================
 
@@ -1168,6 +1283,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), &
          jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -1193,6 +1309,7 @@ contains
          InvClightFace => RFF_I(InvClightFace_), &
          InvClight2Face => RFF_I(InvClight2Face_), &
          DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
       if(Area2 < 1e-30)then
@@ -1281,7 +1398,9 @@ contains
          ! if(DoTestCell)write(*,*) NameSub,': Climit=', Climit
       end if
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine set_cell_values_common
   !============================================================================
   subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V,  &
@@ -1351,6 +1470,7 @@ contains
     character(len=*), parameter:: NameSub = 'roe_solver'
     !--------------------------------------------------------------------------
 #ifndef OPENACC
+#ifdef OPENACC
     associate( &
          iDimFace => IFF_I(iDimFace_), &
          CmaxDt => RFF_I(CmaxDt_), IsBoundary => IsFF_I(IsBoundary_), &
@@ -1359,6 +1479,7 @@ contains
          B1nL => RFF_I(B1nL_), B1t1L => RFF_I(B1t1L_), B1t2L => RFF_I(B1t2L_), &
          UnR => RFF_I(UnR_), Ut1R => RFF_I(Ut1R_), Ut2R => RFF_I(Ut2R_), &
          B1nR => RFF_I(B1nR_), B1t1R => RFF_I(B1t1R_), B1t2R => RFF_I(B1t2R_))
+#endif
 
       RhoL  =  StateLeft_V(Rho_)
       pL    =  StateLeft_V(p_ )
@@ -1862,7 +1983,9 @@ contains
       Unormal_I = UnH
       CmaxDt    = abs(UnH) + CfH
 
+#ifdef OPENACC
     end associate
+#endif
 #endif
   end subroutine roe_solver
   !============================================================================
@@ -1907,6 +2030,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
          iRight => IFF_I(iRight_), jRight => IFF_I(jRight_), kRight => IFF_I(kRight_), &
@@ -1925,6 +2049,7 @@ contains
          HeatFlux => RFF_I(HeatFlux_), &
          IonHeatFlux => RFF_I(IonHeatFlux_), &
          UseHallGradPe => IsFF_I(UseHallGradPe_) )
+#endif
 
       ! Calculate conservative state
       StateCons_V(1:nVar)  = State_V
@@ -2143,7 +2268,9 @@ contains
       ! the electron pressure source term
       Un_I(eFluid_) = HallUn
 
+#ifdef OPENACC
     end associate
+#endif
   contains
     !==========================================================================
 
@@ -2160,6 +2287,7 @@ contains
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
            NormalX => RFF_I(NormalX_), &
@@ -2167,6 +2295,7 @@ contains
            NormalZ => RFF_I(NormalZ_), &
            InvClightFace => RFF_I(InvClightFace_), &
            InvClight2Face => RFF_I(InvClight2Face_) )
+#endif
 
         Rho     = State_V(Rho_)
         Ux      = State_V(Ux_)
@@ -2282,7 +2411,9 @@ contains
 
         HallUn = Un
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_boris_flux
     !==========================================================================
@@ -2305,6 +2436,7 @@ contains
       real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            HallCoeff => RFF_I(HallCoeff_), &
            HallJx => RFF_I(HallJx_), HallJy => RFF_I(HallJy_), HallJz => RFF_I(HallJz_), &
@@ -2313,6 +2445,7 @@ contains
            NormalZ => RFF_I(NormalZ_), &
            B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         if(UseMultiIon)then
            ! calculate number densities
@@ -2365,7 +2498,9 @@ contains
         end if
 #endif
 
+#ifdef OPENACC
       end associate
+#endif
     end subroutine get_magnetic_flux
     !==========================================================================
 
@@ -2401,6 +2536,7 @@ contains
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            B0x => RFF_I(B0x_), &
            B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
@@ -2410,6 +2546,7 @@ contains
            NormalZ => RFF_I(NormalZ_), &
            InvClight2Face => RFF_I(InvClight2Face_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         Rho     = State_V(Rho_)
         Ux      = State_V(Ux_)
@@ -2595,7 +2732,9 @@ contains
            StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
         end if
 
+#ifdef OPENACC
       end associate
+#endif
     end subroutine get_mhd_flux
     !==========================================================================
 
@@ -2606,11 +2745,13 @@ contains
 
       real :: Ex, Ey, Ez
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            NormalX => RFF_I(NormalX_), &
            NormalY => RFF_I(NormalY_), &
            NormalZ => RFF_I(NormalZ_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
 
@@ -2643,7 +2784,9 @@ contains
            write(*,'(a, es13.5)') 'Flux_V(HypE_)   =', Flux_V(HypE_)
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_electro_magnetic_flux
     !==========================================================================
@@ -2662,11 +2805,13 @@ contains
 
       ! Extract primitive variables
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            NormalX => RFF_I(NormalX_), &
            NormalY => RFF_I(NormalY_), &
            NormalZ => RFF_I(NormalZ_), &
            Area => RFF_I(Area_), DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         Rho = State_V(iRho)
         Ux  = State_V(iUx)
@@ -2764,7 +2909,9 @@ contains
         ! Needed for adiabatic source term for electron pressure
         if(iFluid == 1 .and. .not.UseB) HallUn = Un
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_hd_flux
     !==========================================================================
@@ -2842,6 +2989,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iLeft => IFF_I(iLeft_), &
          jLeft => IFF_I(jLeft_), &
@@ -2891,6 +3039,7 @@ contains
          DoTestCell => IsFF_I(DoTestCell_), &
          IsNewBlockGradPe => IsFF_I(IsNewBlockGradPe_), &
          IsNewBlockCurrent => IsFF_I(IsNewBlockCurrent_) )
+#endif
 
       ! Initialize diffusion coefficient for time step restriction
       DiffCoef = 0.0
@@ -3218,7 +3367,9 @@ contains
 
       if(DoTestCell)call write_test_info
 
+#ifdef OPENACC
     end associate
+#endif
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)
@@ -3229,7 +3380,9 @@ contains
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
 #ifndef OPENACC
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( DiffBb => RFF_I(DiffBb_))
+#endif
 
         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
         ! Conservative update for the total flux for multi-ion MHD
@@ -3237,7 +3390,9 @@ contains
         !           MhdFlux_V + 0.5*DiffBb*Normal_D
         Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine modify_flux
     !==========================================================================
@@ -3245,7 +3400,9 @@ contains
       !$acc routine seq
       !------------------------------------------------------------------------
 #ifndef OPENACC
+#ifdef OPENACC
       associate( CmaxDt => RFF_I(CmaxDt_))
+#endif
 
         Flux_V(1:p_) = &
              0.5*(FluxLeft_V(1:p_) + FluxRight_V(1:p_)) &
@@ -3256,7 +3413,9 @@ contains
 
         CmaxDt = Cmax
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine roe_solver_new
     !==========================================================================
@@ -3266,7 +3425,9 @@ contains
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
 #ifndef OPENACC
+#ifdef OPENACC
       associate( CmaxDt => RFF_I(CmaxDt_) )
+#endif
 
         ! This is needed for the time step constraint only (CmaxDt)
         if(UseDtFixed)then
@@ -3276,7 +3437,9 @@ contains
                 UnRight_I, Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I)
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine simple_flux
     !==========================================================================
@@ -3310,6 +3473,7 @@ contains
 
       real    :: Cmax_I(nFluid)
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
            iFluidMax => IFF_I(iFluidMax_), &
@@ -3318,6 +3482,7 @@ contains
            iVarMin => IFF_I(iVarMin_), iVarMax => IFF_I(iVarMax_), &
            Enormal => RFF_I(Enormal_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
              Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I)
@@ -3358,7 +3523,9 @@ contains
            write(*,*) 'iVarMin, iVarMax           =', iVarMin, iVarMax
         end if
 
+#ifdef OPENACC
       end associate
+#endif
     end subroutine lax_friedrichs_flux
     !==========================================================================
     subroutine harten_lax_vanleer_flux
@@ -3370,6 +3537,7 @@ contains
       !------------------------------------------------------------------------
 #ifndef OPENACC
 
+#ifdef OPENACC
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
            iFluidMax => IFF_I(iFluidMax_), &
@@ -3378,6 +3546,7 @@ contains
            iEnergyMin => IFF_I(iEnergyMin_), &
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
+#endif
 
         call get_speed_max(StateLeft_V,  IsFF_I, IFF_I, RFF_I, UnLeft_I, &
              UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
@@ -3435,7 +3604,9 @@ contains
                 Pe = WeightRight*PeRight   + WeightLeft*PeLeft
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
@@ -3458,6 +3629,7 @@ contains
 #ifndef OPENACC
 
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
            iFluidMax => IFF_I(iFluidMax_), &
@@ -3466,6 +3638,7 @@ contains
            iEnergyMin => IFF_I(iEnergyMin_), &
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
+#endif
 
         call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
              Normal_D, StateLeft_V,StateRight_V, Cmax_I = Cmax_I, &
@@ -3591,7 +3764,9 @@ contains
                 Pe = WeightRight*PeRight + WeightLeft*PeLeft
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine dominant_wave_flux
     !==========================================================================
@@ -3605,6 +3780,7 @@ contains
 #ifndef OPENACC
 
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
            iFluidMax => IFF_I(iFluidMax_), &
@@ -3613,6 +3789,7 @@ contains
            iEnergyMin => IFF_I(iEnergyMin_), &
            iEnergyMax => IFF_I(iEnergyMax_), &
            Enormal => RFF_I(Enormal_))
+#endif
 
         call get_speed_max(State_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
              Normal_D, StateLeft_V,StateRight_V,  &
@@ -3659,7 +3836,9 @@ contains
                 Pe = WeightRight*PeRight + WeightLeft*PeLeft
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine artificial_wind
     !==========================================================================
@@ -3703,6 +3882,7 @@ contains
       real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
       !------------------------------------------------------------------------
 
+#ifdef OPENACC
       associate( &
            iDimFace => IFF_I(iDimFace_), &
            CmaxDt => RFF_I(CmaxDt_), &
@@ -3718,6 +3898,7 @@ contains
            UnR => RFF_I(UnR_), Ut1R => RFF_I(Ut1R_), Ut2R => RFF_I(Ut2R_), &
            B1nR => RFF_I(B1nR_), B1t1R => RFF_I(B1t1R_), B1t2R => RFF_I(B1t2R_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         ! This is the choice made in the hlld_tmp code. May not be the best.
         call get_speed_max(StateLeft_V, IsFF_I, IFF_I, RFF_I, &
@@ -3998,7 +4179,9 @@ contains
                 + B1x*FluxBx + B1y*FluxBy + B1z*FluxBz
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine hlld_flux
     !==========================================================================
@@ -4026,6 +4209,7 @@ contains
       real :: Adiabatic, Isothermal, GammaRatio, Factor
       integer :: iVar
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iEnergyMin => IFF_I(iEnergyMin_), &
            B0x => RFF_I(B0x_), &
@@ -4033,6 +4217,7 @@ contains
            B0z => RFF_I(B0z_), &
            CmaxDt => RFF_I(CmaxDt_), &
            EradFlux => RFF_I(EradFlux_) )
+#endif
 
         RhoL = StateLeft_V(iRho)
         pL   = StateLeft_V(iP)
@@ -4169,7 +4354,9 @@ contains
            if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine godunov_flux
     !==========================================================================
@@ -4191,11 +4378,13 @@ contains
       real :: CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iDimFace => IFF_I(iDimFace_), &
            CmaxDt => RFF_I(CmaxDt_), &
            UnL => RFF_I(UnL_), &
            UnR => RFF_I(UnR_) )
+#endif
 
         call get_speed_max(StateLeft_V, IsFF_I, IFF_I, RFF_I, UnLeft_I, &
              UnRight_I, Normal_D, StateLeft_V,StateRight_V, &
@@ -4252,7 +4441,9 @@ contains
            Unormal_I = UnRight_I
         endif
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine hllc_flux
     !==========================================================================
@@ -4263,6 +4454,7 @@ contains
 #ifndef OPENACC
       integer :: iVar
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iDimFace => IFF_I(iDimFace_), &
            iFace => IFF_I(iFace_), &
@@ -4273,6 +4465,7 @@ contains
            B0z => RFF_I(B0z_), &
            Area => RFF_I(Area_), &
            CmaxDt => RFF_I(CmaxDt_) )
+#endif
 
         write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
              ' at I=',iFace,' J=',jFace,' K=',kFace
@@ -4305,7 +4498,9 @@ contains
                 0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
         end do
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine write_test_info
     !==========================================================================
@@ -4356,12 +4551,14 @@ contains
 #endif
 
     call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+#ifdef OPENACC
     associate( &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
          Area => RFF_I(Area_), &
          UseHallGradPe => IsFF_I(UseHallGradPe_), &
          DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
       call test_start(NameSub, DoTest, iBlock)
 
@@ -4440,7 +4637,9 @@ contains
 
       call test_stop(NameSub, DoTest, iBlock)
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine calc_cell_flux
   !============================================================================
   subroutine calc_simple_cell_flux(iBlock)
@@ -4486,6 +4685,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !--------------------------------------------------------------------------
     call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+#ifdef OPENACC
     associate( &
          iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
          ViscoCoeff => RFF_I(ViscoCoeff_), &
@@ -4496,6 +4696,7 @@ contains
          Area => RFF_I(Area_), &
          UseHallGradPe => IsFF_I(UseHallGradPe_), &
          DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
       call test_start(NameSub, DoTest, iBlock)
 
@@ -4580,7 +4781,9 @@ contains
 
       call test_stop(NameSub, DoTest, iBlock)
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine calc_simple_cell_flux
   !============================================================================
 
@@ -4625,6 +4828,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_speed_max'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iFace => IFF_I(iFace_), &
          jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
@@ -4632,6 +4836,7 @@ contains
          iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
          CmaxDt => RFF_I(CmaxDt_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_))
+#endif
 
       UseAwSpeed = .false.
       if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
@@ -4788,7 +4993,9 @@ contains
 
       end if
 
+#ifdef OPENACC
     end associate
+#endif
   contains
     !==========================================================================
 
@@ -4805,12 +5012,14 @@ contains
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
            NormalX => RFF_I(NormalX_), &
            NormalY => RFF_I(NormalY_), &
            NormalZ => RFF_I(NormalZ_), &
            InvClight2Face => RFF_I(InvClight2Face_) )
+#endif
 
         ! No explicit formula for multi-ion fluids
         if (nTrueIon > 1) call stop_mpi &
@@ -4916,7 +5125,9 @@ contains
            if(present(Cright_I)) Cright_I(1) = max(UnBoris + Fast, Un + Slow)
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_boris_speed
     !==========================================================================
@@ -4963,6 +5174,7 @@ contains
 
       integer:: jFluid
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
            NormalX => RFF_I(NormalX_), &
@@ -4982,6 +5194,7 @@ contains
            iDimFace => IFF_I(iDimFace_), &
            iFace => IFF_I(iFace_), &
            jFace => IFF_I(jFace_), kFace => IFF_I(kFace_) )           
+#endif
 
         Rho = State_V(iRhoIon_I(1))
         Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
@@ -5279,7 +5492,9 @@ contains
            if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
            if(present(Cright_I)) Cright_I(1) = UnMax + Fast
         end if
+#ifdef OPENACC
       end associate
+#endif
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_hd_speed
@@ -5292,6 +5507,7 @@ contains
 
       character(len=*), parameter:: NameSub = 'get_hd_speed'
       !------------------------------------------------------------------------
+#ifdef OPENACC
       associate( &
            iLeft => IFF_I(iLeft_), &
            jLeft => IFF_I(jLeft_), kLeft => IFF_I(kLeft_), &
@@ -5302,6 +5518,7 @@ contains
            iFace => IFF_I(iFace_), &
            jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
            DoTestCell => IsFF_I(DoTestCell_) )
+#endif
 
         if(DoTestCell) then
            write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
@@ -5371,7 +5588,9 @@ contains
            if(present(Cmax_I))write(*,*)NameSub,' Cmax   =',Cmax_I(iFluid)
         end if
 
+#ifdef OPENACC
       end associate
+#endif
 #endif
     end subroutine get_hd_speed
     !==========================================================================
@@ -5416,11 +5635,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'correct_u_normal'
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
-         iDim => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
+         iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
          iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
          iFace => IFF_I(iFace_), &
          jFace => IFF_I(jFace_), kFace => IFF_I(kFace_))
+#endif
 
       do iFluid = iFluidMin, iFluidMax
 
@@ -5430,7 +5651,7 @@ contains
          iRhoUz = iRhoUz_I(iFluid)
 
          if(.not. IsCartesian) then
-            if(iDim == x_) then
+            if(iDimFace == x_) then
                iCount = 1
                do iCell = iFace - 2, iFace + 1
                   Area0_D(1:nDim) = CellCoef_DDGB( &
@@ -5444,7 +5665,7 @@ contains
                   iCount = iCount + 1
                enddo
 
-            elseif(iDim == y_) then
+            elseif(iDimFace == y_) then
                iCount = 1
                do iCell = jFace - 2, jFace + 1
                   Area0_D(1:nDim) = CellCoef_DDGB( &
@@ -5457,7 +5678,7 @@ contains
                   Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
                   iCount = iCount + 1
                enddo
-            elseif(iDim == z_) then
+            elseif(iDimFace == z_) then
                iCount = 1
                do iCell = kFace - 2, kFace + 1
                   Area0_D = CellCoef_DDGB( &
@@ -5472,12 +5693,12 @@ contains
                enddo
             endif
          else
-            if(iDim == x_) then
+            if(iDimFace == x_) then
                iRhoUx = iRhoUx_I(iFluid)
                Ucell_I = &
                     State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
                     State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
-            elseif(iDim == y_) then
+            elseif(iDimFace == y_) then
                iRhoUy = iRhoUy_I(iFluid)
                Ucell_I = &
                     State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
@@ -5492,7 +5713,9 @@ contains
          Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
       enddo
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine correct_u_normal
   !============================================================================
 
@@ -5516,6 +5739,7 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate( &
          iDimFace => IFF_I(iDimFace_), &
          B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
@@ -5524,6 +5748,7 @@ contains
          B1nL => RFF_I(B1nL_), B1t1L => RFF_I(B1t1L_), B1t2L => RFF_I(B1t2L_), &
          UnR => RFF_I(UnR_), Ut1R => RFF_I(Ut1R_), Ut2R => RFF_I(Ut2R_), &
          B1nR => RFF_I(B1nR_), B1t1R => RFF_I(B1t1R_), B1t2R => RFF_I(B1t2R_) )
+#endif
 
       if(IsCartesianGrid)then
          select case (iDimFace)
@@ -5622,7 +5847,9 @@ contains
          B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
       end if
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine rotate_state_vectors
   !============================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I, &
@@ -5638,7 +5865,9 @@ contains
 
     ! Rotate n,t1,t2 components back to x,y,z components
     !--------------------------------------------------------------------------
+#ifdef OPENACC
     associate(iDimFace => IFF_I(iDimFace_))
+#endif
 
       if(IsCartesianGrid)then
          select case (iDimFace)
@@ -5686,7 +5915,9 @@ contains
               +           Tangent2_D(z_)*FluxRot_V(B1t2_)
       end if
 
+#ifdef OPENACC
     end associate
+#endif
   end subroutine rotate_flux_vector
   !============================================================================
 end module ModFaceFlux
