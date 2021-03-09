@@ -311,6 +311,7 @@ contains
        if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
             .and. IsFirstSession)then
           body1 = .false.
+          rBody = 0.0
           ! Change the default conservative criteria when there is no planet
           ! and the #CONSERVATIVECRITERIA command did not occur
           if(i_line_command("#CONSERVATIVECRITERIA") < 0)then
@@ -2932,7 +2933,7 @@ contains
       DipoleStrengthSi = 0.0
 
       UseBody2 = .false.
-      RBody2 =-1.0
+      rBody2 =-1.0
       xBody2 = 0.0
       yBody2 = 0.0
       zBody2 = 0.0
