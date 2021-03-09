@@ -2356,13 +2356,13 @@ contains
 
        case("#ROTATEHGR")
           call check_stand_alone
-          if(.not.is_first_session())CYCLE READPARAM
+          if(.not.is_first_session() .or. dLongitudeHgrDeg/=0.0)CYCLE READPARAM
           call read_var('dLongitudeHgr', dLongitudeHgrDeg)
           dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
 
        case("#ROTATEHGI")
           call check_stand_alone
-          if(.not.is_first_session())CYCLE READPARAM
+          if(.not.is_first_session() .or. dLongitudeHgiDeg/=0.0)CYCLE READPARAM
           call read_var('dLongitudeHgi', dLongitudeHgiDeg)
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
