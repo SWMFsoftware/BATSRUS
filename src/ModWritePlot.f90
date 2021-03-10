@@ -1030,7 +1030,8 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
-    use ModPIC, ONLY: pic_find_region, pic_find_region_active, pic_find_region_criteria
+    use ModPIC, ONLY: pic_find_region, pic_find_region_active, &
+         pic_find_region_criteria
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
@@ -1048,7 +1049,7 @@ contains
 
     real:: tmp1Var, tmp2Var
     real, allocatable :: J_DC(:,:,:,:)
-    real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:)
+    real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:), u_DG(:,:,:,:)
 
     integer :: iVar, itmp, jtmp, jVar, iIon, iFluid
     integer :: i,j,k
@@ -1254,13 +1255,23 @@ contains
        case('uxrot')
           PlotVar(:,:,:,iVar) = &
                State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
-
        case('uyrot')
           PlotVar(:,:,:,iVar) = &
                State_VGB(iRhoUy,:,:,:,iBlock) / State_VGB(iRho,:,:,:,iBlock)
        case('uz','uzrot')
           PlotVar(:,:,:,iVar) = &
                State_VGB(iRhoUz,:,:,:,iBlock) / State_VGB(iRho,:,:,:,iBlock)
+       case('divu')
+          allocate(u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          ! Calculate velocity
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             u_DG(:,i,j,k) = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)/ &
+                  State_VGB(iRho,i,j,k,iBlock)
+          end do; end do; end do
+          ! Calculate div(u)
+          call calc_divergence(iBlock, u_DG, &
+               nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
+          deallocate(u_DG)
        case('b1x')
           PlotVar(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBlock)
        case('b1y')
@@ -1807,11 +1818,13 @@ contains
        case('t','temp')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
        case('eta','visco')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
-               (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
+          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+               *(No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
        case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
-
+       case('divu')
+          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+               *No2Io_V(UnitU_)/No2Io_V(UnitX_)
        case('gradpex','gradpey','gradpez','gradper')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
