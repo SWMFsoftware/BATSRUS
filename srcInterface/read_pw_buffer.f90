@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
@@ -37,10 +37,9 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   real    :: TimeSimLast = -1.0 - dTimeMax
   real, save:: PwGm_DD(3,3)
 
-  character (len=*), parameter :: NameSub = 'read_pw_buffer'
-
   logical :: DoTest, DoTestMe
-  !--------------------------------------------------------
+  character(len=*), parameter:: NameSub = 'read_pw_buffer'
+  !----------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -94,8 +93,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
        1.0, Xyz_D, iHemisphere)
 
-
-  !Find triangle containing point Xyz_D
+  ! Find triangle containing point Xyz_D
   Area1=0
   Area2=0
   Area3=0
@@ -109,7 +107,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
           list2_I, lptr2_I, lend2_I, Area1, Area2, Area3, IsTriangleFound, &
           iNode1,iNode2,iNode3)
   else
-     ! Get weights if in northern hemisphere. 
+     ! Get weights if in northern hemisphere.
      ! If point is in southern, but no PwLines in south, then flip sign of z
      XyzTmp_D(1)=Xyz_D(1)
      XyzTmp_D(2)=Xyz_D(2)
@@ -138,7 +136,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   ! Make sure unit vector is pointing outward
   if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
 
-  ! Put into a temporary array StateGm_VI                                                                            
+  ! Put into a temporary array StateGm_VI
   if(Xyz_D(3) < 0 .and. nLinePw2 /=0) then
      allocate(StateGm_VI(1:iUGmLast, nPoint2))
      StateGm_VI = StateGm2_VI(:,nLinePw1+1:nLinePw1+nPoint2)
@@ -207,10 +205,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
           StateGm_VI(iRhoGmFirst, iNode2)*No2Io_V(UnitRho_),&
           StateGm_VI(iRhoGmFirst, iNode3)*No2Io_V(UnitRho_)
 
-
      write(*,*)'iNode1, iNode2, iNode3 = ', iNode1, iNode2, iNode3
   end if
 
   deallocate(StateGm_VI)
 
 end subroutine read_pw_buffer
+!==============================================================================

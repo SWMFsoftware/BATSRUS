@@ -1,4 +1,3 @@
-!==============================================================================
 subroutine read_ih_buffer(yIn,zIn,State_V)
 
   use ModVarIndexes, ONLY: nVar, RhoUy_, RhoUz_, By_, Bz_
@@ -14,7 +13,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
   real :: GmIh_DD(3,3), Yz_D(2), y, z
   real, save :: GmIh_II(2,2), TimeSimLast = -1.0
   integer :: I1, I2, J1, J2
-  !--------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   if(nY == 1 .or. nZ == 1)then
      ! Cannot interpolate
@@ -32,7 +31,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
            TimeSimLast = Time_Simulation
         end if
         ! Convert from GM coordinates to buffer coordinates
-        Yz_D    = matmul( (/yIn, zIn/), GmIh_II )
+        Yz_D    = matmul( [yIn, zIn], GmIh_II )
         y = Yz_D(1)
         z = Yz_D(2)
      end if
@@ -57,7 +56,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
           (z-J1)*((I2-y)*State_VII(:,I1,J2) + (y-I1)*State_VII(:,I2,J2))
 
      ! Debugging
-     !if(abs(yIn-yTest_mod)+abs(zIn-zTest_mod)<0.001)then
+     ! if(abs(yIn-yTest_mod)+abs(zIn-zTest_mod)<0.001)then
      !   write(*,*)'!!! y,zTestMod = ',yTest_mod,zTest_mod
      !   write(*,*)'!!! y,zIn=',yIn,zIn
      !   write(*,*)'!!! y,z  =',y,z
@@ -65,7 +64,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
      !   write(*,*)'!!! I2,J2=',I2,J2
      !   write(*,*)'!!! Array=',State_VII(1,I1:I2,J1:J2)
      !   write(*,*)'!!! State=',State_V(1)
-     !end if
+     ! end if
   end if
 
   ! Convert vector variables from buffer coordinates to GM coordinates
@@ -77,3 +76,4 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
   end if
 
 end subroutine read_ih_buffer
+!==============================================================================

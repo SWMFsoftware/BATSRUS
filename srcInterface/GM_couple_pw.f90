@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module GM_couple_pw
 
@@ -8,7 +8,7 @@ module GM_couple_pw
   use BATL_lib, ONLY: nProc, iComm
   use ModNumConst,   ONLY: cDegToRad
   use ModMultiFluid, ONLY: nIonFluid
-  
+
   implicit none
   save
 
@@ -28,9 +28,9 @@ module GM_couple_pw
   real, allocatable :: CoordXyzPw_DI(:,:), CoordXyPw_DI(:,:), StateGm_VI(:,:),&
        CoordXyzPw1_DI(:,:), CoordXyzPw2_DI(:,:), &
        StateGm1_VI(:,:),StateGm2_VI(:,:)
-  
+
   integer, allocatable :: list1_I(:),lptr1_I(:), lend1_I(:),&
-       list2_I(:), lptr2_I(:), lend2_I(:)  
+       list2_I(:), lptr2_I(:), lend2_I(:)
 
   integer, parameter :: nOuterPoint=12
   real,    parameter :: dThetaOuter=5.0*cDegToRad
@@ -43,8 +43,8 @@ module GM_couple_pw
   integer :: nPoint1=-1, nPoint2=-1,nTriangle1=-1,nTriangle2=-1
   integer :: nLinePw1 = -1, nLinePw2 = -1
 
-contains 
-  !===========================================================================
+contains
+  !============================================================================
   subroutine GM_get_for_pw(nTotalLine, Buffer_I)
 
     use ModVarIndexes, ONLY: p_
@@ -62,7 +62,7 @@ contains
 
     allocate(LocalBuffer_I(nTotalLine))
 
-    !Get the pressure at each field line location.
+    ! Get the pressure at each field line location.
     do iLine=1,nTotalLine
        call get_point_data(&
             0.0, CoordXyzPW_DI(:,iLine), 1, nBlock, p_, p_, WeightAndP_I)
@@ -81,7 +81,6 @@ contains
     deallocate(LocalBuffer_I)
 
   end subroutine GM_get_for_pw
-
   !============================================================================
 
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
@@ -93,7 +92,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
     use ModNumConst, ONLY: cTwoPi,cHalfPi
-    use ModTriangulateSpherical,ONLY:trmesh, trplot
+    use ModTriangulateSpherical, ONLY:trmesh, trplot
     use CON_axes, ONLY: transform_matrix
     use ModCoordTransform, ONLY: dir_to_xyz
     use CON_planet_field,  ONLY: map_planet_field
@@ -112,17 +111,17 @@ contains
          SinThetaOuter1,SinThetaOuter2,CosThetaOuter1,CosThetaOuter2,&
          tmp1_array(nFieldLine)
     integer :: Tmp_array(nFieldLine)
-    integer :: iError=0 !error counter for triangulation subroutine
+    integer :: iError=0 ! error counter for triangulation subroutine
 
     logical :: DoTest, DoTestMe
-    character (len=*),parameter :: NameSub='GM_put_from_pw'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'GM_put_from_pw'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe)write(*,*) NameSub,' starting: nVar, nFieldLine, Name_V=', &
          nVar, nFieldLine, Name_V
 
-    ! If only 2 variables are passed, they are the coordinates colatitude 
+    ! If only 2 variables are passed, they are the coordinates colatitude
     ! and longitude needed for the GM->PW pressure coupling.
     if(nVar == 2)then
        if(.not.allocated(CoordXyzPw_DI)) allocate(CoordXyzPw_DI(3, nFieldLine))
@@ -164,7 +163,7 @@ contains
           Tmp_array = 1
        end where
        nLinePw1 = sum(Tmp_array)
-       nPoint1 = nLinePw1 + nOuterPoint    
+       nPoint1 = nLinePw1 + nOuterPoint
 
        nLinePw2 = nLinePw - nLinePw1
        nPoint2 = nLinePw2 + nOuterPoint
@@ -178,7 +177,7 @@ contains
 
        ! Subtract 2 coords and half of the remaining variables are velocities
        nSpeciesPw = (nVar-2)/2
-       ! First 2 variables are coordinates, 
+       ! First 2 variables are coordinates,
        ! then nSpeciesPw densities then nSpeciesPw velocities
        iRhoPwFirst = 3
        iRhoPwLast  = 2 + nSpeciesPw
@@ -274,14 +273,14 @@ contains
        CoordXyzPw2_DI(y_,1:nFieldline) =  &
             sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
        CoordXyzPw2_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:)) 
+            cos(Buffer_VI(Theta_,:))
     elsewhere
        CoordXyzPw1_DI(x_,1:nFieldline) =  &
             sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
        CoordXyzPw1_DI(y_,1:nFieldline) =  &
             sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
        CoordXyzPw1_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:)) 
+            cos(Buffer_VI(Theta_,:))
     end where
 
     if(UseMultiIon)then
@@ -325,7 +324,7 @@ contains
        end if
 
     else
-       ! Set total 
+       ! Set total
        if(UseMultiSpecies)then
           do i=iRhoGmFirst, iRhoGmLast
              where(Buffer_VI(Theta_,:)< cHalfPi)
@@ -353,7 +352,7 @@ contains
                = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
                *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
                / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
-               * Si2No_V(UnitU_) 
+               * Si2No_V(UnitU_)
        elsewhere
           StateGm2_VI(iUGmFirst,1:nFieldline)&
                = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
@@ -365,8 +364,8 @@ contains
 
     ! Reduce densities according to a 1/r3 law based on magnetic field strength
     ! and assuming that PWOM solves up to R=2.25
-    !Factor = (2.25/rBody)**3
-    !StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw) = &
+    ! Factor = (2.25/rBody)**3
+    ! StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw) = &
     !     StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw)*Factor
 
     ! Set coordinates for the outer points
@@ -398,7 +397,6 @@ contains
           CoordXyzPw2_DI(z_,nLinePw1+nLinePw2+i) = CosThetaOuter2
        end if
     end do
-
 
     !
     !  Create the triangulation.
@@ -467,5 +465,7 @@ contains
     end if
 
   end subroutine GM_put_from_pw
+  !============================================================================
 
  end module GM_couple_pw
+!==============================================================================

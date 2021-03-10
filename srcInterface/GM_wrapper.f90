@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module GM_wrapper
 
@@ -69,13 +69,13 @@ module GM_wrapper
   !^CMP IF PS BEGIN
   public:: GM_put_from_ps
   !^CMP END PS
-  
+
   !^CMP IF PC BEGIN
   public:: GM_get_for_pc_dt
   public:: GM_get_for_pc_init
   public:: GM_get_for_pc
   public:: GM_get_for_pc_grid_info
-  public:: GM_put_from_pc  
+  public:: GM_put_from_pc
   !^CMP END PC
 
   !^CMP IF PT BEGIN
@@ -100,7 +100,7 @@ module GM_wrapper
   !^CMP END UA
 
 contains
-  !==========================================================================
+  !============================================================================
 
   subroutine GM_set_param(CompInfo, TypeAction)
 
@@ -115,14 +115,13 @@ contains
     use CON_physics, ONLY: get_time, get_planet
     use ModTimeConvert, ONLY: time_real_to_int
 
-    character (len=*), parameter :: NameSub='GM_set_param'
-
     ! Arguments
     type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp
     character (len=*), intent(in)     :: TypeAction ! What to do
 
     logical :: DoTest,DoTestMe
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'GM_set_param'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=',&
@@ -172,9 +171,9 @@ contains
     end select
 
   end subroutine GM_set_param
-  !======================================================================
-  !BOP
-  !ROUTINE: GM_set_grid - intialize, set and broadcast adaptive block grid
+  !============================================================================
+  ! BOP
+  ! ROUTINE: GM_set_grid - intialize, set and broadcast adaptive block grid
   !INTERFACE:
   subroutine GM_set_grid
     !USES:
@@ -193,17 +192,17 @@ contains
     integer:: nParticle = 0, iError = 0
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'GM_set_grid'
-    !----------------------------------------------------------
     !REVISION HISTORY:
-    !23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
-    !03Sep03 G.Toth    <gtoth@umich.edu> - removed test_message_pass
+    ! 23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
+    ! 03Sep03 G.Toth    <gtoth@umich.edu> - removed test_message_pass
     !                                      call synchronize_refinement directly
-    !EOP
+    ! EOP
 
+    character(len=*), parameter:: NameSub = 'GM_set_grid'
+    !--------------------------------------------------------------------------
     DoTest=.false.; DoTestMe=.false.
 
-    if(done_dd_init(GM_))return
+    if(done_dd_init(GM_))RETURN
     call init_decomposition(GM_,GM_,3,.true.)
 
     ! Note: for Cartesian grid RadiusMin=xMin and RadiusMax=xMax
@@ -244,32 +243,33 @@ contains
           nParticle = Particle_I(KindReg_)%nParticle
           call get_root_decomposition_dd(&
                MH_LineDecomposition, &
-               (/n_proc(GM_)/),      &
-               (/0.50/),              &
-               (/real(n_proc(GM_)*nParticle) + 0.50/), &
-               (/nParticle/))
+               [n_proc(GM_)],      &
+               [0.50],              &
+               [real(n_proc(GM_)*nParticle) + 0.50], &
+               [nParticle])
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
        if(DoTest.and.is_proc0(GM_))call show_domain_decomp(&
             MH_LineDecomposition)
     end if
   end subroutine GM_set_grid
-  !===================================================================!
-  !BOP
-  !ROUTINE: GM_synchronize_refinement - synchronize global grid for GM_
+  !============================================================================
+  ! BOP
+  ! ROUTINE: GM_synchronize_refinement - synchronize global grid for GM_
   !INTERFACE:
   subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
     !USES:
     use MH_domain_decomposition
-    use CON_comp_param,ONLY:GM_
+    use CON_comp_param, ONLY:GM_
     !INPUT ARGUMENTS:
     integer,intent(in) :: iProc0,iCommUnion
     !REVISION HISTORY:
-    !23AUG03  I.Sokolov <igorsok@umich.edu> - initial prototype/code/prolog
-    !03SEP03  G.Toth    <gtoth@umich.edu> - arguments are not optional now
-    !EOP
+    ! 23AUG03  I.Sokolov <igorsok@umich.edu> - initial prototype/code/prolog
+    ! 03SEP03  G.Toth    <gtoth@umich.edu> - arguments are not optional now
+    ! EOP
 
+    !--------------------------------------------------------------------------
     if(is_proc(GM_)) &
          call MH_update_local_decomposition(MH_Domain)
 
@@ -285,12 +285,11 @@ contains
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
-    integer, intent(out):: iDecompOut ! decomposition index 
-
-    character(len=*), parameter :: NameSub='GM_get_grid_info'
+    integer, intent(out):: iDecompOut ! decomposition index
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
+    character(len=*), parameter:: NameSub = 'GM_get_grid_info'
     !--------------------------------------------------------------------------
 
     nDimOut    = nDim
@@ -298,7 +297,7 @@ contains
     iDecompOut = iNewDecomposition
 
   end subroutine GM_get_grid_info
-  !==============================================================================
+  !============================================================================
   subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
     use BATL_lib,   ONLY: MaxDim, find_grid_block
@@ -323,7 +322,6 @@ contains
     end do
 
   end subroutine GM_find_points
-
   !============================================================================
 
   subroutine GM_init_session(iSession, TimeSimulation)
@@ -338,10 +336,9 @@ contains
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='GM_init_session'
-
     logical :: IsUninitialized = .true.
     logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'GM_init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
@@ -375,7 +372,6 @@ contains
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
   end subroutine GM_init_session
-
   !============================================================================
 
   subroutine GM_finalize(TimeSimulation)
@@ -385,8 +381,7 @@ contains
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='GM_finalize'
-
+    character(len=*), parameter:: NameSub = 'GM_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
     time_loop = .false.
@@ -396,7 +391,6 @@ contains
     call BATS_finalize
 
   end subroutine GM_finalize
-
   !============================================================================
 
   subroutine GM_save_restart(TimeSimulation)
@@ -407,14 +401,13 @@ contains
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='GM_save_restart'
+    character(len=*), parameter:: NameSub = 'GM_save_restart'
     !--------------------------------------------------------------------------
     if( NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
 
     call BATS_save_files('RESTART')
 
   end subroutine GM_save_restart
-
   !============================================================================
 
   subroutine GM_run(TimeSimulation,TimeSimulationLimit)
@@ -427,9 +420,8 @@ contains
     !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-    character(len=*), parameter :: NameSub='GM_run'
-
     logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'GM_run'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
@@ -451,8 +443,8 @@ contains
     if(DoTestMe)write(*,*)NameSub,' finished with tSim=', TimeSimulation
 
   end subroutine GM_run
-
   !============================================================================
+
   subroutine GM_use_pointer(iComp, tSimulation)
 
     use CON_coupler, ONLY: NameComp_I, Grid_C
@@ -463,7 +455,7 @@ contains
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_use_pointer'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     nVarComp2      =  Grid_C(iComp)%nVar
@@ -479,17 +471,19 @@ contains
     call user_action('POINTERCOUPLING_'//NameComp_I(iComp))
 
   end subroutine GM_use_pointer
-  !===============
+  !============================================================================
   function GM_is_right_boundary_d(iBlock) RESULT(IsRightBoundary_D)
     use ModParallel, ONLY: NOBLK, NeiLev
     use BATL_size, ONLY: nDim
     integer, intent(in) :: iBlock
     logical :: IsRightBoundary_D(nDim)
     integer:: iDir
-    character(len=*), parameter :: NameSub='GM_is_right_boundary_d'
-    !--------------------------
+    character(len=*), parameter:: NameSub = 'GM_is_right_boundary_d'
+    !--------------------------------------------------------------------------
     do iDir = 1, nDim
        IsRightBoundary_D(iDir) = neiLEV(2*iDir,iBlock) == NOBLK
     end do
   end function GM_is_right_boundary_d
+  !============================================================================
 end module GM_wrapper
+!==============================================================================
