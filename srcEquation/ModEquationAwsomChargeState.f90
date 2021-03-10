@@ -19,7 +19,7 @@ module ModVarIndexes
        Redefine11 => nChargeStateAll, &
        Redefine12 => ChargeStateFirst_, &
        Redefine13 => ChargeStateLast_
-  
+
   implicit none
 
   save
@@ -38,11 +38,11 @@ module ModVarIndexes
   character(len=2), parameter :: NameElement_I(1:nElement) = ['o ']
   integer, parameter          :: nChargeState_I(1:nElement) = [9]
   integer, parameter          :: nChargeStateAll = 9
-  
+
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
   integer, parameter :: nVar = 11 + nWave + nChargeStateAll
-  
+
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
@@ -79,7 +79,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -105,7 +105,7 @@ module ModVarIndexes
        'By  ', & ! By_
        'Bz  ', & ! Bz_
        'Ehot', & ! Ehot_
-       ('El??', iChargeState=ChargeStateFirst_,ChargeStateLast_), &  
+       ('El??', iChargeState=ChargeStateFirst_,ChargeStateLast_), &
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
        'Pe  ', & ! Pe_
        'Ppar', & ! Ppar_
@@ -119,5 +119,5 @@ module ModVarIndexes
   integer, parameter :: ScalarFirst_ = ChargeStateFirst_, ScalarLast_ = ChargeStateLast_
 
 end module ModVarIndexes
-
+!==============================================================================
 

@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -16,7 +16,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdWavesHyp.f90"
 
-
   ! This equation module contains the standard MHD equations plus
   ! extra wave energies
   character (len=*), parameter :: &
@@ -28,7 +27,7 @@ module ModVarIndexes
   ! Number of frequency bins in spectrum
   integer, parameter :: nWave = 2
   integer, parameter :: nVar = 9 + nWave
-  
+
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
@@ -45,7 +44,7 @@ module ModVarIndexes
        WaveFirst_ = 9,  &
        WaveLast_  = WaveFirst_+nWave-1, &
        p_         = nVar, &
-       Energy_    = nVar+1  
+       Energy_    = nVar+1
 
   ! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -60,7 +59,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -69,10 +68,10 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        0.0, & ! Hyp_
-       (1.0, iWave=WaveFirst_,WaveLast_), & 
+       (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! p_
-       1.0 ] ! Energy_ 
- 
+       1.0 ] ! Energy_
+
   ! The names of the variables used in i/o
   character(len=3) :: NameVar_V(nVar+1) = [ &
        'Rho', & ! Rho_
@@ -85,8 +84,7 @@ module ModVarIndexes
        'Hyp', & ! Hyp_
        ('I??', iWave=1,nWave), & ! Waves to be reset
        'p  ', & ! p_
-       'e  ']  ! Energy_        
-  
+       'e  ']  ! Energy_
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
@@ -94,7 +92,6 @@ module ModVarIndexes
   ! Specify scalar to be advected
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
-
+!==============================================================================
 

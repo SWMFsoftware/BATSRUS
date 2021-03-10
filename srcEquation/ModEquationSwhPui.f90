@@ -12,7 +12,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationSwhPui.f90"
 
-
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='Multi-ion MHD'
 
@@ -70,8 +69,8 @@ module ModVarIndexes
        Ne4RhoUx_  = nVar-2, Ne4Ux_ = Ne4RhoUx_, &
        Ne4RhoUy_  = nVar-1, Ne4Uy_ = Ne4RhoUy_, &
        Ne4RhoUz_  = nVar  , Ne4Uz_ = Ne4RhoUz_, &
-       Ne4P_      = nVar  
-  
+       Ne4P_      = nVar
+
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
@@ -87,7 +86,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! SWHRho_
        0.0, & ! SWHRhoUx_
        0.0, & ! SWHRhoUy_
@@ -125,5 +124,5 @@ module ModVarIndexes
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

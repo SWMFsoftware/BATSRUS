@@ -14,8 +14,7 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdComet3FluidsPe.f90"
 
-
-  ! This equation module contains the standard MHD equations 
+  ! This equation module contains the standard MHD equations
   ! with electron pressure
   character (len=*), parameter :: NameEquation= &
        '3-fluid + Pe MHD for Comets'
@@ -82,7 +81,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -143,10 +142,9 @@ module ModVarIndexes
        'HpE    ', & ! HpEnergy_
        'H2OpE  ' ] ! H2OpEnergy_
 
-
   ! There are no extra scalars (Pe has its own flux)
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================
 

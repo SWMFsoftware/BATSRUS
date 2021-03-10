@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -10,7 +10,6 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdHd.f90"
-
 
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='MHD and HD'
@@ -60,7 +59,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -95,9 +94,8 @@ module ModVarIndexes
        'e     ', & ! Energy_
        'NeuE  ' ] ! NeuEnergy_
 
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -11,7 +11,6 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationHd.f90"
-
 
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='HD'
@@ -35,11 +34,10 @@ module ModVarIndexes
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1
 
-
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -56,7 +54,6 @@ module ModVarIndexes
        'P    ', & ! p_
        'E    ']  ! Energy_
 
-
   ! Bx_, By_, Bz_ have to be defined so that the code compiles
   ! but the Bx_ = Ux_ choice indicates that B is not used (see UseB in ModMain)
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
@@ -71,3 +68,4 @@ module ModVarIndexes
   integer, parameter :: iP_I(nFluid)     = [p_]
 
 end module ModVarIndexes
+!==============================================================================

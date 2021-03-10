@@ -13,7 +13,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationOuterHelioPUI.f90"
 
-
   ! This equation module contains 2 ion fluids + 4 neutrals
   character (len=*), parameter :: NameEquation='SWH + PUI and four neutrals'
 
@@ -26,11 +25,11 @@ module ModVarIndexes
   real               :: MassFluid_I(nFluid) = 1.0
 
   ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
-  ! are pick up ions produced in region 3 (see mod user), 
+  ! are pick up ions produced in region 3 (see mod user),
   ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
-       NameFluid_I(nFluid) = ['SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'] 
+       NameFluid_I(nFluid) = ['SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4']
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -71,7 +70,7 @@ module ModVarIndexes
        Ne4RhoUx_  = 30, Ne4Ux_ = 30, &
        Ne4RhoUy_  = 31, Ne4Uy_ = 31, &
        Ne4RhoUz_  = 32, Ne4Uz_ = 32, &
-       Ne4P_      = 33, &   
+       Ne4P_      = 33, &
        Energy_    = nVar+1, SWHEnergy_ = nVar+1, &
        Pu3Energy_ = nVar+2, &
        NeuEnergy_ = nVar+3, &
@@ -154,3 +153,4 @@ module ModVarIndexes
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
 end module ModVarIndexes
+!==============================================================================

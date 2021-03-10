@@ -14,7 +14,7 @@ module ModVarIndexes
 
   character(*),parameter:: NameEquationFile="ModEquationMhdEuropa2FluidsPe.f90"
 
-  ! This equation module contains the standard MHD equations 
+  ! This equation module contains the standard MHD equations
   ! with electron pressure
   character (len=*), parameter :: NameEquation= &
        'Two-Ion-fluid Pe MHD for Europa'
@@ -25,11 +25,10 @@ module ModVarIndexes
   integer, parameter :: IonFirst_ = 1        ! First individual ion fluid
   integer, parameter :: IonLast_  = 2        ! Last individual ion fluid
   logical, parameter :: IsMhd     = .false.  ! Does not do ideal MHD
-  real               :: MassFluid_I(nFluid) = (/ 16.0, 32.0 /)
+  real               :: MassFluid_I(nFluid) = [ 16.0, 32.0 ]
 
   character (len=3), parameter :: NameFluid_I(nFluid) = &
-       (/ 'Op ', 'O2p' /)
-
+       [ 'Op ', 'O2p' ]
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -52,23 +51,23 @@ module ModVarIndexes
        O2pP_      = 14, &
        Energy_    = nVar+1, OpEnergy_  = nVar+1, &
        O2pEnergy_ = nVar+2
- 
+
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =(/OpRho_,   O2pRho_ /) ,&
-       iRhoUx_I(nFluid)=(/OpRhoUx_, O2pRhoUx_ /),&
-       iRhoUy_I(nFluid)=(/OpRhoUy_, O2pRhoUy_ /),&
-       iRhoUz_I(nFluid)=(/OpRhoUz_, O2pRhoUz_ /),&
-       iP_I(nFluid)    =(/OpP_,     O2pP_ /),&
-       iPparIon_I(IonFirst_:IonLast_) = (/1,2/)
+       iRho_I(nFluid)  =[OpRho_,   O2pRho_ ] ,&
+       iRhoUx_I(nFluid)=[OpRhoUx_, O2pRhoUx_ ],&
+       iRhoUy_I(nFluid)=[OpRhoUy_, O2pRhoUy_ ],&
+       iRhoUz_I(nFluid)=[OpRhoUz_, O2pRhoUz_ ],&
+       iP_I(nFluid)    =[OpP_,     O2pP_ ],&
+       iPparIon_I(IonFirst_:IonLast_) = [1,2]
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = (/ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! OpRho_
        0.0, & ! OpRhoUx_
        0.0, & ! OpRhoUy_
@@ -84,10 +83,10 @@ module ModVarIndexes
        0.0, & ! O2pRhoUz_
        1.0, & ! O2pP_
        1.0, & ! OpEnergy_
-       1.0 /) ! O2pEnergy_
-  
+       1.0 ] ! O2pEnergy_
+
   ! The names of the variables used in i/o
-  character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
+  character(len=7) :: NameVar_V(nVar+nFluid) = [ &
        'OpRho  ', & ! OpRho_
        'OpMx   ', & ! OpRhoUx_
        'OpMy   ', & ! OpRhoUy_
@@ -103,7 +102,7 @@ module ModVarIndexes
        'O2pMz  ', & ! O2pRhoUz_
        'O2pP   ', & ! O2pP_
        'OpE    ', & ! OpEnergy_
-       'O2pE   ' /) ! O2pEnergy_
+       'O2pE   ' ] ! O2pEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
@@ -128,4 +127,5 @@ module ModVarIndexes
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
 end module ModVarIndexes
+!==============================================================================
 

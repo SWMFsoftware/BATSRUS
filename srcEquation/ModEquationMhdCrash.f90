@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
   use ModSingleFluid
@@ -20,7 +20,6 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdCrash.f90"
-
 
   ! This equation module contains the CRASH equations with magnetic field.
   ! An extra scalar variable to carry the div B away (hyperbolic cleaning)
@@ -68,7 +67,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -101,7 +100,6 @@ module ModVarIndexes
        'P   ', & ! p_
        'E   ']  ! Energy_
 
-
   ! Advected are the three level sets and the extra internal energy
   ! Note that the variable Hyp is not advected with velocity
   integer, parameter :: ScalarFirst_ = MaterialFirst_, ScalarLast_ = ExtraEint_
@@ -113,3 +111,4 @@ module ModVarIndexes
   integer, parameter :: iP_I(nFluid)     = [p_]
 
 end module ModVarIndexes
+!==============================================================================

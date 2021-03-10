@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -12,8 +12,7 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdHypPe.f90"
 
-
-  ! This equation module contains the standard MHD equations with 
+  ! This equation module contains the standard MHD equations with
   ! an additional electron pressure variable plus one
   ! extra scalar variable to carry the div B away (hyperbolic cleaning)
   character (len=*), parameter :: NameEquation= &
@@ -38,7 +37,7 @@ module ModVarIndexes
        Pe_    = 9,    &
        p_     = nVar, &
        Energy_= nVar+1
- 
+
   ! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 
@@ -52,7 +51,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -79,13 +78,12 @@ module ModVarIndexes
        'p  ', & ! p_
        'e  ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars (Pe has its own flux)
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================
 

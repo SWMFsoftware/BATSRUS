@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -14,7 +14,6 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdHpOp.f90"
-
 
   ! This equation module contains the standard MHD equations with
   ! two species for Earth.  1 - solar wind protons, 2 - ionospheric plasma
@@ -53,7 +52,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        1.0, & ! RhoHp_
        1.0, & ! RhoOp_
@@ -80,7 +79,6 @@ module ModVarIndexes
        'p  ', & ! p_
        'e  ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
@@ -95,3 +93,4 @@ module ModVarIndexes
   real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = [ 1.0, 16.0 ]
 
 end module ModVarIndexes
+!==============================================================================

@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -15,12 +15,11 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdComet.f90"
 
-
   ! This equation module contains the MHD equations with species for Comets
   character (len=*), parameter :: NameEquation='Cometary MHD'
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 14  !8 + 6 ion species
+  integer, parameter :: nVar = 14  ! 8 + 6 ion species
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -56,7 +55,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -91,7 +90,6 @@ module ModVarIndexes
        'p    ', & ! p_
        'e    ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
@@ -106,3 +104,4 @@ module ModVarIndexes
   real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = &
        [18.0,1.0,19.0,17.0,16.0,28.0]
 end module ModVarIndexes
+!==============================================================================

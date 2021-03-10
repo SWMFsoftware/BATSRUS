@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -18,7 +18,6 @@ module ModVarIndexes
   save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationHdEosRad.f90"
-
 
   ! This equation module contains the standard HD equations with
   ! additional single-/multi-group radiation energy.
@@ -43,7 +42,7 @@ module ModVarIndexes
        RhoUy_     = 3, Uy_ = 3,         &
        RhoUz_     = 4, Uz_ = 4,         &
        WaveFirst_ = 5,                  &
-       WaveLast_  = WaveFirst_+nWave-1, & 
+       WaveLast_  = WaveFirst_+nWave-1, &
        ExtraEint_ = WaveLast_+1,        &
        p_         = nVar,               &
        Energy_    = nVar+1
@@ -64,7 +63,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -85,7 +84,6 @@ module ModVarIndexes
        'P   ', & ! p_
        'E   ']  ! Energy_
 
-
   ! Bx_, By_, Bz_ have to be defined so that the code compiles
   ! but the Bx_ = Ux_ choice indicates that B is not used (see UseB in ModMain)
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
@@ -93,5 +91,5 @@ module ModVarIndexes
   ! The only scalar to be advected is the radiation energy density
   integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = ExtraEint_
 
-
 end module ModVarIndexes
+!==============================================================================
