@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -15,10 +15,9 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdSaturn3sp.f90"
 
-
   ! This equation module contains the standard MHD equations with
-  ! three species for Saturn.  1 - solar wind protons+ionosphere, 
-  ! 2 - water group plasma from the rings and Enceladus, 
+  ! three species for Saturn.  1 - solar wind protons+ionosphere,
+  ! 2 - water group plasma from the rings and Enceladus,
   ! 3 - nitrogen group plasma from Titan
   character (len=*), parameter :: NameEquation= &
        'Saturn MHD 3 Species (Saturn3sp), Hansen, May, 2007'
@@ -57,7 +56,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        1.0, & ! RhoH_
        1.0, & ! RhoH2O_
@@ -86,7 +85,6 @@ module ModVarIndexes
        'p     ', & ! p_
        'e     ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
@@ -101,3 +99,4 @@ module ModVarIndexes
   real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = [ 1.0, 16.6, 14.0 ]
 
 end module ModVarIndexes
+!==============================================================================

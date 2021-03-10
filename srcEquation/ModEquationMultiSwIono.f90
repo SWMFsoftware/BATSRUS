@@ -16,7 +16,7 @@ module ModVarIndexes
   ! for the purposes of tracking plasma entry into the magnetosphere in
   ! multifluid MHD.  It requires changes to the #MAGNETOSPHERE command
   ! in order to set the Iono species as the dominant outflow species at
-  ! the inner boundary.  
+  ! the inner boundary.
   ! Based on ModEquationMhdIons and ModEquationMhdSwIono(Hansen, 2006)
   ! Welling, 2010.
 
@@ -75,7 +75,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -122,9 +122,8 @@ module ModVarIndexes
        'SwE    ', & ! SwEnergy_
        'IonoE  ' ] ! IonoEnergy_
 
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

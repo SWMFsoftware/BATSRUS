@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE RB
 
@@ -47,15 +47,13 @@ module GM_couple_rb
 
   integer :: iError
 
-
-
 contains
-  !===========================================================================
+  !============================================================================
   subroutine allocate_gm_rb(iSizeIn,jSizeIn)
     use CON_comp_param, ONLY: RB_
 
     integer, intent(in) :: iSizeIn, jSizeIn
-    character(len=*), parameter:: NameSub=NameMod//'::allocate_gm_rb'
+    character(len=*), parameter:: NameSub = 'allocate_gm_rb'
     !--------------------------------------------------------------------------
     iSize = iSizeIn
     jSize = jSizeIn
@@ -110,19 +108,19 @@ contains
     end if
 
   end subroutine allocate_gm_rb
-
   !============================================================================
+
   subroutine write_integrated_data_tec
 
     use ModIoUnit, ONLY: UNITTMP_
     character(LEN=80) :: filename
     integer :: j2, nCall=0
     real :: tmpT, tmpV1,tmpV2, lonShift
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     nCall=nCall+1
 
-    !write values to plot file
+    ! write values to plot file
     write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",n_step,"_",nCall,".dat"
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
@@ -156,17 +154,17 @@ contains
     CLOSE(UNITTMP_)
 
   end subroutine write_integrated_data_tec
-
   !============================================================================
+
   subroutine write_integrated_data_idl
     use ModPhysics, ONLY: No2Si_V, UnitB_
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain,   ONLY: time_simulation
     CHARACTER (LEN=100) :: filename
     integer :: nCall = 0
-    !-------------------------------------------------------------------------
 
-    !write values to plot file
+    ! write values to plot file
+    !--------------------------------------------------------------------------
     nCall = nCall+1
     write(filename,'(a,i6.6,a,i4.4,a)')"RB/RbValues_n=",n_step,"_",nCall,".out"
 
@@ -189,15 +187,15 @@ contains
        end do
     end do
     CLOSE(UNITTMP_)
-    
-  end subroutine write_integrated_data_idl
 
-  !==========================================================================
+  end subroutine write_integrated_data_idl
+  !============================================================================
+
   subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, &
        nPointLine)
 
-    ! Do ray tracing for RB. 
-    ! Provide total number of points along rays 
+    ! Do ray tracing for RB.
+    ! Provide total number of points along rays
     ! and the number of variables to pass to RB
     use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
 
@@ -208,9 +206,8 @@ contains
     integer, intent(out)          :: nVarLine, nPointLine
     real :: Radius
 
-    character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
-    !---------------------------------------------------------------------
-
+    character(len=*), parameter:: NameSub = 'GM_get_for_rb_trace'
+    !--------------------------------------------------------------------------
     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
          call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
@@ -228,13 +225,12 @@ contains
     nVarLine = 4 ! We only pass line index, length, B and radial distance to RB
 
   end subroutine GM_get_for_rb_trace
-
-  !==========================================================================
+  !============================================================================
 
   subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    use ModGeometry,ONLY: x2
+    use ModGeometry, ONLY: x2
     use ModMain, ONLY: Time_Simulation,TypeCoordSystem
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
          MassFluid_I, IonFirst_, nVar
@@ -246,8 +242,6 @@ contains
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
-
-    character (len=*), parameter :: NameSub='GM_get_for_rb'
 
     integer, intent(in)                                :: iSizeIn, jSizeIn, nVarIn
     real, intent(out), dimension(iSizeIn,jSizeIn,nVarIn) :: Buffer_IIV
@@ -264,6 +258,7 @@ contains
 
     integer :: iLat,iLon,iLine, iLocBmin
     real    :: SolarWind_V(nVar), SmGm_DD(3,3), XyzBminSm_D(3)
+    character(len=*), parameter:: NameSub = 'GM_get_for_rb'
     !--------------------------------------------------------------------------
     if(iProc /= 0) RETURN
 
@@ -301,11 +296,11 @@ contains
        BufferLine_VI(4,iPoint) = &
             sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
 
-       ! Find the location of minimum B, Bmin, and other variables at Bmin 
+       ! Find the location of minimum B, Bmin, and other variables at Bmin
        ! for each field line
        if(Buffer_VI(0,min(nPoint,iPoint+1)) /= Buffer_VI(0,iPoint) &
             .or. iPoint == nPoint)then
-          ! Exclude open field lines by checking the radial 
+          ! Exclude open field lines by checking the radial
           ! distance of the last point on a field line
           if(BufferLine_VI(3,iPoint) > 1.0001*rBody*RadiusPlanet)then
              ! set line index to -1. for non-closed field line
@@ -316,7 +311,7 @@ contains
              Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
 
           else
-             ! For closed field lines 
+             ! For closed field lines
              ! Location of Bmin for this field line
              iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), dim=1) &
                   + iStartPoint - 1
@@ -343,11 +338,10 @@ contains
     if(DoTest .or. DoTestTec)call write_integrated_data_tec
     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
-
     ! Send solar wind values in the array of the extra integral
     ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
-    call get_solar_wind_point(Time_Simulation, (/x2, 0.0, 0.0/), SolarWind_V)
+    call get_solar_wind_point(Time_Simulation, [x2, 0.0, 0.0], SolarWind_V)
 
     Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_) &
          *No2Si_V(UnitN_)
@@ -359,35 +353,33 @@ contains
     Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
     Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
-
   end subroutine GM_get_for_rb
-
-  !==========================================================================
+  !============================================================================
 
   subroutine GM_satinit_for_rb(nSats)
 
-    !This subroutine collects the number of satellite files for use in 
-    !SWMF GM and RB coupling.
+    ! This subroutine collects the number of satellite files for use in
+    ! SWMF GM and RB coupling.
 
-    !Module variables to use:
+    ! Module variables to use:
     use ModMain,   ONLY: DoRbSatTrace
     use ModSatelliteFile, ONLY: nSatellite
 
-    !Subroutine Arguments:
+    ! Subroutine Arguments:
     integer,           intent(out) :: nSats
     !--------------------------------------------------------------------------
 
-    !If RB sat tracing is on, collect the number of satellites to trace.
-    !If RB sat tracing is off, set nSats to zero.
+    ! If RB sat tracing is on, collect the number of satellites to trace.
+    ! If RB sat tracing is off, set nSats to zero.
     if (DoRbSatTrace) then
        nSats = nSatellite
-    else 
+    else
        nSats = 0
     endif
 
   end subroutine GM_satinit_for_rb
+  !============================================================================
 
-  !==========================================================================
   subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
 
     ! Subroutine to update and collect satellite locations for RB tracing
@@ -407,27 +399,27 @@ contains
     character (len=100), intent(out)  :: Buffer_I(nSats)
 
     ! Local variables
-    character (len=*), parameter :: NameSub='GM_get_sat_for_rb'
 
     real ::SatRay_D(3)
 
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
+    real :: StateSat_V(0:nVar+3), B0Sat_D(3)
     real :: Bx,By,Bz,B2
     integer :: iSat
+    character(len=*), parameter:: NameSub = 'GM_get_sat_for_rb'
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I
     Buffer_I = NameSat_I(1:nSats)
 
     do iSat=1, nSats
        ! Update satellite position.
-       !call set_satellite_flags(iSat)
-       !call get_satellite_ray(iSat, sat_RayVars)
+       ! call set_satellite_flags(iSat)
+       ! call get_satellite_ray(iSat, sat_RayVars)
        !
-       !! Reduce values from all 
-       !call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
+       !! Reduce values from all
+       ! call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
        !     0, iComm, iError)
        !
-       !write(*,*) 'sat_RayVars',sat_RayVars
+       ! write(*,*) 'sat_RayVars',sat_RayVars
        call GM_trace_sat(XyzSat_DI(1:3,iSat),SatRay_D)
        ! Determine magnetic field magnitude at satellite B=B0+B1
        if(UseB0)then
@@ -442,17 +434,19 @@ contains
        By = StateSat_V(By_)+B0Sat_D(2)
        Bz = StateSat_V(Bz_)+B0Sat_D(3)
 
-       B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0 
+       B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0
 
        ! Store results in Buffer_III
-       if (iProc == 0) then 
+       if (iProc == 0) then
           Buffer_III(1:3,1,iSat)  = XyzSat_DI(1:3,iSat)
-          !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
+          ! Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
           Buffer_III(1:3,2,iSat)  = SatRay_D
           Buffer_III(4,2,iSat)    = B2
        end if
     end do
 
   end subroutine GM_get_sat_for_rb
+  !============================================================================
 
 end module GM_couple_rb
+!==============================================================================

@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE PC
 
@@ -17,6 +17,7 @@ module GM_couple_pc
   public:: GM_get_for_pc_grid_info
 
 contains
+  !============================================================================
 
   subroutine GM_get_for_pc_dt(DtSi)
 
@@ -34,8 +35,8 @@ contains
     DtSi = Dt*No2Si_V(UnitT_)
 
   end subroutine GM_get_for_pc_dt
-
   !============================================================================
+
   subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
     use ModPIC, ONLY: nSizeStatus, Status_I, UseAdaptivePic, &
          pic_set_cell_status, nRegionPic, StatusMax_I
@@ -44,7 +45,7 @@ contains
 
     integer, intent(inout) :: nInt, nPicGrid
     integer, optional, intent(out):: Int_I(nInt), AccumulatedSize_I(nPicGrid)
-    !------------------------------------------
+    !--------------------------------------------------------------------------
     if(.not.present(Int_I)) then
        nInt = nSizeStatus
        nPicGrid = nRegionPic
@@ -56,8 +57,8 @@ contains
     endif
 
   end subroutine GM_get_for_pc_grid_info
-
   !============================================================================
+
   subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
     use ModVarIndexes, ONLY: MassSpecies_V, Pe_, Bx_, Ex_, &
@@ -76,7 +77,7 @@ contains
     integer, optional, intent(out):: iParam_I(nParamInt)
     real,    optional, intent(out):: Param_I(nParamReal)
 
-    integer :: iFluid, iSpecies, iRegion 
+    integer :: iFluid, iSpecies, iRegion
     integer :: i, j, n
     !--------------------------------------------------------------------------
 
@@ -88,7 +89,7 @@ contains
        nParamInt = 9 + nIonFluid*4
 
        ! Charge and mass per species/fluid
-       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units  = 21 variables 
+       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD + units  = 21 variables
        ! for each region
        ! PePerPtotal + rPlanet + No2Si_V(UnitX_) = 3 variables
        nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*21 + 3
@@ -97,7 +98,7 @@ contains
     end if
 
     ! Set the integer parameters
-    iParam_I(1:9) = (/nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_, Ex_, nCellPerPatch/)
+    iParam_I(1:9) = [nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_, Ex_, nCellPerPatch]
     n = 10
     iParam_I(n:n+nIonFluid-1) = iRhoIon_I;   n = n + nIonFluid
     iParam_I(n:n+nIonFluid-1) = iRhoUxIon_I; n = n + nIonFluid
@@ -143,7 +144,7 @@ contains
              Param_I(n) = 0
           endif
           n = n+1
-       enddo; enddo              
+       enddo; enddo
 
        ! Units
        Param_I(n) = xUnitPicSi_I(iRegion); n = n+1
@@ -176,7 +177,7 @@ contains
   subroutine GM_get_for_pc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
-    ! Interpolate Data_VI from GM at the list of positions Xyz_DI 
+    ! Interpolate Data_VI from GM at the list of positions Xyz_DI
     ! required by PC
 
     use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
@@ -206,7 +207,7 @@ contains
     integer:: iPoint, iBlock, iProcFound
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='GM_get_for_pc'
+    character(len=*), parameter:: NameSub = 'GM_get_for_pc'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -265,16 +266,16 @@ contains
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
-    use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, & 
+    use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, &
          nRegionPic, mhd_to_pic_vec, UseAdaptivePic, &
          is_inside_active_pic_region
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
     use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_, HypE_
-    use ModMultiFluid,ONLY: nIonFluid
+    use ModMultiFluid, ONLY: nIonFluid
     use ModEnergy,    ONLY: calc_energy
-    use ModVarIndexes,ONLY: DefaultState_V
+    use ModVarIndexes, ONLY: DefaultState_V
 
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -286,7 +287,7 @@ contains
 
     logical :: DoCountOnly
     integer :: i, j, k, iBlock, iPoint, iRegion, iVar
-    real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
+    real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim)
 
     real    :: State_V(nVar)
 
@@ -295,11 +296,8 @@ contains
     logical :: IsInside
 
     ! Number of ghost cells around PIC region. Useful when coupled with
-    ! IPIC3D/AMPS but not FLKS. 
-    integer :: nGhostPic   = 2  
-    
-    character(len=*), parameter :: NameSub='GM_get_regions'
-    !--------------------------------------------------------------------------
+    ! IPIC3D/AMPS but not FLKS.
+    integer :: nGhostPic   = 2
 
     ! This function will be called 3 times :
     !
@@ -311,8 +309,10 @@ contains
     !    The indexing array iPoint_I is needed to maintain the same order as
     !    the original position array Pos_DI was given in 2)
 
-    ! to avoid index issues when nDim < 3 
+    ! to avoid index issues when nDim < 3
 
+    character(len=*), parameter:: NameSub = 'GM_get_regions'
+    !--------------------------------------------------------------------------
     DoCountOnly = nPoint < 1
     if(DoCountOnly) nPoint = 0
 
@@ -320,9 +320,9 @@ contains
     do iRegion = 1, nRegionPic
 
        ! XyzMaxRegion_D and XyzMinRegion_D are in the rotated PIC coordinates.
-       XyzMinRegion_D = (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)         
+       XyzMinRegion_D = (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)
        XyzMaxRegion_D = LenPic_DI(1:nDim,iRegion) - &
-            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
+            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)
 
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -333,15 +333,14 @@ contains
 
              if(UseAdaptivePic) then
                 call is_inside_active_pic_region(Xyz_DGB(1:nDim,i,j,k,iBlock), IsInside)
-                if(.not. IsInside) cycle 
+                if(.not. IsInside) CYCLE
              else
                 ! Check if cell center is inside the PIC region
                 call mhd_to_pic_vec(iRegion, Xyz_DGB(1:nDim,i,j,k,iBlock), &
-                     CoordPic_D)                             
-                if(any(CoordPic_D > XyzMaxRegion_D)) CYCLE             
+                     CoordPic_D)
+                if(any(CoordPic_D > XyzMaxRegion_D)) CYCLE
                 if(any(CoordPic_D < XyzMinRegion_D)) CYCLE
              endif
-
 
              if(DoCountOnly)then
                 nPoint = nPoint + 1
@@ -357,13 +356,13 @@ contains
                    if(UseHyperbolicDivB .and. iVar==Hyp_)  CYCLE
                    if(HypE_ > 1         .and. iVar==Hype_) CYCLE
 
-                   if(iPoint_I(iPoint) .ne. -1) then
+                   if(iPoint_I(iPoint) /= -1) then
                       State_VGB(iVar,i,j,k,iBlock) = &
                            Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
                    end if
                 end do
 
-                if(iPoint_I(iPoint) .ne. -1) then
+                if(iPoint_I(iPoint) /= -1) then
                    if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                         State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
                 endif
@@ -371,7 +370,7 @@ contains
                 do iVar = 1, nVar
                    ! Check for positivity
                    if(DefaultState_V(iVar) > 0 .and. State_VGB(iVar,i,j,k,iBlock) <= 0) then
-                      ! Use original MHD state if PC state is not positive                      
+                      ! Use original MHD state if PC state is not positive
                       State_VGB(:,i,j,k,iBlock) = State_V
                       EXIT
                    endif
@@ -391,7 +390,7 @@ contains
     end do
 
   end subroutine GM_get_regions
-  !===========================================================================
+  !============================================================================
   subroutine GM_put_from_pc( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -405,7 +404,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
-    character(len=*), parameter :: NameSub='GM_put_from_pc'
+    character(len=*), parameter:: NameSub = 'GM_put_from_pc'
     !--------------------------------------------------------------------------
 
     if(.not. present(Data_VI))then
@@ -426,5 +425,7 @@ contains
     call GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine GM_put_from_pc
+  !============================================================================
 
 end module GM_couple_pc
+!==============================================================================

@@ -1,10 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables,           & 
+  use ModExtraVariables,           &
        Redefine1 => Pe_,           &
        Redefine2 => SpeciesFirst_, &
        Redefine3 => SpeciesLast_,  &
@@ -16,12 +16,11 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdTitanPe.f90"
 
-
   ! This equation module contains the MHD equations with species for Mars
   character (len=*), parameter :: NameEquation='Titan MHD+Pe'
-  
+
   ! Number of variables without energy:
-  integer, parameter :: nVar = 16  !8 + 7 ion species+Pe
+  integer, parameter :: nVar = 16  ! 8 + 7 ion species+Pe
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -42,8 +41,8 @@ module ModVarIndexes
        Bx_      =12,    &
        By_      =13,    &
        Bz_      =14,    &
-       Pe_      =15,    &  
-       p_       = nVar, & 
+       Pe_      =15,    &
+       p_       = nVar, &
        Energy_  = nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
@@ -59,7 +58,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        1.0, & ! RhoLp_
        1.0, & ! RhoMp_
@@ -98,7 +97,6 @@ module ModVarIndexes
        'p   ', & ! p_
        'e   ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
@@ -114,3 +112,4 @@ module ModVarIndexes
        [1.0,14.0,29.0,28.0,44.0,70.0,74.0]
 
 end module ModVarIndexes
+!==============================================================================

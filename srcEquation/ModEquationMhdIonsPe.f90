@@ -13,7 +13,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdIonsPe.f90"
 
-
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation = &
        'MHD with 2 ions and electron pressure'
@@ -41,7 +40,7 @@ module ModVarIndexes
        By_        =  6, &
        Bz_        =  7, &
        Pe_        =  8, &
-       p_         =  9, & 
+       p_         =  9, &
        HpRho_     = 10, &
        HpRhoUx_   = 11, &
        HpRhoUy_   = 12, &
@@ -71,7 +70,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -120,9 +119,8 @@ module ModVarIndexes
        'HpE  ', & ! HpEnergy_
        'OpE  ' ] ! OpEnergy_
 
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

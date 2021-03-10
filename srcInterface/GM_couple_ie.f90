@@ -1,9 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
-
-!============================================================================
 
 module GM_couple_ie
 
@@ -24,8 +22,8 @@ module GM_couple_ie
   public:: GM_put_from_ie
 
 contains
-
   !============================================================================
+
   subroutine GM_get_info_for_ie(nVar, NameVar_I)
 
     use ModMain,             ONLY: TypeFaceBc_I, body1_
@@ -37,8 +35,8 @@ contains
     character(len=*), intent(out), optional:: NameVar_I(:)
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='GM_get_info_for_ie'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'GM_get_info_for_ie'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Always pass electric potential
@@ -66,8 +64,8 @@ contains
     end if
 
   end subroutine GM_get_info_for_ie
-
   !============================================================================
+
   subroutine GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar)
 
     ! Send the following information from GM to IE on the IE grid:
@@ -96,7 +94,7 @@ contains
     real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
     logical :: DoTest, DoTestMe
 
-    character (len=*), parameter :: NameSub='GM_get_for_ie'
+    character(len=*), parameter:: NameSub = 'GM_get_for_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
@@ -108,7 +106,7 @@ contains
 
     allocate(FieldAlignedCurrent_II(iSize,jSize))
 
-    ! Put the radial component of the field aligned currents 
+    ! Put the radial component of the field aligned currents
     ! into the first variable of the buffer
     call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
          FieldAlignedCurrent_II, LatBoundary=LatBoundary, &
@@ -121,9 +119,9 @@ contains
        ! initialize all elements to zero on proc 0, others should not use it
        Buffer_IIV = 0.0
 
-       ! Save the latitude boundary information to the equator 
+       ! Save the latitude boundary information to the equator
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
-       Buffer_IIV(nThetaIono/2:nThetaIono/2+1,1,1) = LatBoundary                          
+       Buffer_IIV(nThetaIono/2:nThetaIono/2+1,1,1) = LatBoundary
     end if
 
     deallocate(FieldAlignedCurrent_II)
@@ -195,8 +193,8 @@ contains
     if(DoTest)write(*,*)NameSub,': finished'
 
   end subroutine GM_get_for_ie
-
   !============================================================================
+
   subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_I)
 
     ! Receive nVar variables listed in NameVar_I from IE on the IE grid
@@ -213,7 +211,7 @@ contains
     integer:: iVar
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='GM_put_from_ie'
+    character(len=*), parameter:: NameSub = 'GM_put_from_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVare=', iSize, jSize, nVar
@@ -270,5 +268,7 @@ contains
     if(DoTest)write(*,*)NameSub,': done'
 
   end subroutine GM_put_from_ie
+  !============================================================================
 
 end module GM_couple_ie
+!==============================================================================

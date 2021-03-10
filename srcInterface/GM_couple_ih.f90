@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 
@@ -22,12 +22,12 @@ module GM_couple_ih
 
 contains
   !============================================================================
-  !BOP
-  !ROUTINE: GM_put_from_ih - transform and put the data got from IH_
+  ! BOP
+  ! ROUTINE: GM_put_from_ih - transform and put the data got from IH_
   !INTERFACE:
   subroutine GM_put_from_ih(nPartial,&
        iPutStart,&
-       Put,& 
+       Put,&
        Weight,&
        DoAdd,&
        StateSI_V,&
@@ -46,20 +46,18 @@ contains
     real,dimension(nVar),intent(in)::StateSI_V
 
     !REVISION HISTORY:
-    !18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
-    !23AUG03                                     prolog
-    !03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
-    !19JUL04     I.Sokolov <igorsok@umich.edu> - sophisticated back 
+    ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
+    ! 23AUG03                                     prolog
+    ! 03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
+    ! 19JUL04     I.Sokolov <igorsok@umich.edu> - sophisticated back
     !                  (this is what we refer to as a development)
-    !EOP
-
-    character (len=*), parameter :: NameSub='GM_put_from_ih.f90'
+    ! EOP
 
     real,dimension(nVar)::State_V
     integer:: i, j, k, iBlock
 
-    !The meaning of state intdex in buffer and in model can be 
-    !different. Below are the conventions for buffer:
+    ! The meaning of state intdex in buffer and in model can be
+    ! different. Below are the conventions for buffer:
     integer,parameter::&
          BuffRho_  =1,&
          BuffRhoUx_=2,&
@@ -69,8 +67,8 @@ contains
          BuffBz_   =7,&
          BuffP_    =8
 
-    !-----------------------------------------------------------------------
-
+    character(len=*), parameter:: NameSub = 'GM_put_from_ih'
+    !--------------------------------------------------------------------------
     State_V(BuffRho_)              = StateSI_V(BuffRho_) *Si2No_V(UnitRho_)
     State_V(BuffRhoUx_:BuffRhoUz_) = StateSI_V(BuffRhoUx_:BuffRhoUz_) &
          *Si2No_V(UnitRhoU_)
@@ -102,7 +100,6 @@ contains
        State_VGB(P_,i,j,k,iBlock)  = State_V(BuffP_)
     end if
   end subroutine GM_put_from_ih
-
   !============================================================================
 
   subroutine GM_put_from_ih_buffer( &
@@ -118,7 +115,7 @@ contains
     real,             intent(in) :: Buffer_VII(nVar, nYIn, nZIn)
 
     integer                      :: j, k
-    character(len=*), parameter  :: NameSub = 'GM_put_from_ih_buffer.f90'
+    character(len=*), parameter:: NameSub = 'GM_put_from_ih_buffer'
     !--------------------------------------------------------------------------
     if(.not.allocated(State_VII)) then
        ! Check coordinate system. Only GSM and GSE make sense.
@@ -141,8 +138,8 @@ contains
        TypeCellBc_I(2) = 'ihbuffer'
 
        ! Debugging
-       !write(*,*)'!!! NameCoord, nY, nZ=',NameCoord,nY,nZ
-       !write(*,*)'!!! yMin, yMax, zMin, zMax=',yMin, yMax, zMin, zMax
+       ! write(*,*)'!!! NameCoord, nY, nZ=',NameCoord,nY,nZ
+       ! write(*,*)'!!! yMin, yMax, zMin, zMax=',yMin, yMax, zMin, zMax
     end if
 
     ! Store input data
@@ -158,5 +155,7 @@ contains
     end do; end do
 
   end subroutine GM_put_from_ih_buffer
+  !============================================================================
 
 end module GM_couple_ih
+!==============================================================================

@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -15,12 +15,11 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdTitan.f90"
 
-
   ! This equation module contains the MHD equations with species for Mars
   character (len=*), parameter :: NameEquation='Titan MHD'
 
   ! Number of variables without energy:
-  integer, parameter :: nVar = 15  !8 + 7 ion species
+  integer, parameter :: nVar = 15  ! 8 + 7 ion species
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -57,7 +56,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+1) = [ & 
+  real, parameter :: DefaultState_V(nVar+1) = [ &
        1.0, & ! Rho_
        1.0, & ! RhoLp_
        1.0, & ! RhoMp_
@@ -94,7 +93,6 @@ module ModVarIndexes
        'p   ', & ! p_
        'e   ' ] ! Energy_
 
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
@@ -110,3 +108,4 @@ module ModVarIndexes
        [1.0,14.0,29.0,28.0,44.0,70.0,74.0]
 
 end module ModVarIndexes
+!==============================================================================

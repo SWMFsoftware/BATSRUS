@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE PT
 
@@ -11,6 +11,7 @@ module GM_couple_pt
   public:: GM_get_for_pt
 
 contains
+  !============================================================================
 
   subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
@@ -40,11 +41,10 @@ contains
 
     integer:: iPoint, iBlock, iProcFound
 
-    character(len=*), parameter :: NameSub='GM_get_for_pt'
-    !--------------------------------------------------------------------------
-
     ! We should have second order accurate magnetic field in the ghost cells
 
+    character(len=*), parameter:: NameSub = 'GM_get_for_pt'
+    !--------------------------------------------------------------------------
     do iPoint = 1, nPoint
 
        Xyz_D = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
@@ -72,5 +72,7 @@ contains
     end do
 
   end subroutine GM_get_for_pt
+  !============================================================================
 
 end module GM_couple_pt
+!==============================================================================

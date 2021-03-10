@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!MHD grid in BATSRUS 
+! MHD grid in BATSRUS
 module MH_domain_decomposition
 
   use CON_grid_storage, ProcToolkit_ => Pe_
@@ -20,10 +21,9 @@ module MH_domain_decomposition
   type(DomainType), public:: MH_Domain
   type(DomainType), public:: MH_LineDecomposition
 
-
   ! Local variables and constants
   integer, private:: iLastGrid = -1, iLastDecomposition = -1
-  
+
   integer, parameter, private::    &
        PELast_      = 5, &
        LEV_         = 6, &
@@ -32,7 +32,7 @@ module MH_domain_decomposition
 
   ! Position of children relative to the parent block
   ! in the Morton ordering
-  integer, parameter, private:: iShiftMorton_DI(3,8)= reshape( (/ &
+  integer, parameter, private:: iShiftMorton_DI(3,8)= reshape( [ &
        0,0,0, &
        1,0,0, &
        0,1,0, &
@@ -40,20 +40,20 @@ module MH_domain_decomposition
        0,0,1, &
        1,0,1, &
        0,1,1, &
-       1,1,1 /), (/3,8/))
+       1,1,1 ], [3,8])
 
   private:: get_batl_tree, &
        MH_get_roots_dd, MH_get_roots_id
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine show_domain_decomp(Dd)
     use BATL_lib, ONLY: iProc
 
     type(DomainType),intent(in):: Dd
     integer:: iNode, iChild
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(iProc /= 0) RETURN
 
     write(*,*)'!!! Starting show_domain_decomp'
@@ -94,7 +94,7 @@ contains
     write(*,*)'!!! Done with show_domain_decomp'
 
   end subroutine show_domain_decomp
-  !===========================================================================
+  !============================================================================
   subroutine get_batl_tree(Domain)
 
     ! Avoid name conflict with Parent_ in the SWMF coupling toolkit
@@ -103,7 +103,7 @@ contains
     type(DomainType),intent(inout)::Domain
 
     integer:: iNode, iNodeParent, iChild
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNodes = nNode
@@ -130,11 +130,11 @@ contains
           end do
        end if
 
-       if(iTree_IA(Status_,iNode) == Unused_)then 
+       if(iTree_IA(Status_,iNode) == Unused_)then
           do iChild = 1, nChild
              ! iChildOrder_II may be required here !!!
              Domain%iDecomposition_II(iChild,iNode) = &
-                  iTree_IA(Child0_+iChild,iNode) 
+                  iTree_IA(Child0_+iChild,iNode)
           end do
        else
           Domain%iDecomposition_II(FirstChild_,iNode) = &
@@ -159,18 +159,18 @@ contains
     ! call show_domain_decomp(Domain)
 
   end subroutine get_batl_tree
-  !===========================================================================
-  subroutine MH_get_roots_dd(Domain)                         
+  !============================================================================
+  subroutine MH_get_roots_dd(Domain)
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
-    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_    
-    type(DomainType),intent(inout)::Domain 
+    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_
+    type(DomainType),intent(inout)::Domain
     logical :: DoGlueMargins
     integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
-    !-------------------------------------------------------------------------
-    DoGlueMargins = IsAnyAxis 
+    !--------------------------------------------------------------------------
+    DoGlueMargins = IsAnyAxis
     iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
-    if(IsAnyAxis) iDirCycle = Phi_ 
+    if(IsAnyAxis) iDirCycle = Phi_
     if(IsCylindricalAxis)then
        ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
        ! r_ = 1; Phi_ = 2; z_=3
@@ -183,7 +183,7 @@ contains
        !                   CoordMax_D(Lat_)   >  89.99*Unit
        ! r_ = 1; Phi_ = 2; Theta_ = Lat_ = 3
        iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
-    end if 
+    end if
     call get_root_decomposition_dd(&
          Domain,       & ! Decomposition to be constructed
          nRoot_D,                   & ! As in DomainType
@@ -198,18 +198,18 @@ contains
          iDirCycle   = iDirCycle)
 
   end subroutine MH_get_roots_dd
-  !===========================================================================
-  subroutine MH_get_roots_id(GridID_)                         
+  !============================================================================
+  subroutine MH_get_roots_id(GridID_)
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
     use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_
-    integer, intent(in):: GridID_  
+    integer, intent(in):: GridID_
     logical :: DoGlueMargins
     integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     DoGlueMargins = IsAnyAxis
     iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
-    if(IsAnyAxis) iDirCycle = Phi_ 
+    if(IsAnyAxis) iDirCycle = Phi_
     if(IsCylindricalAxis)then
        ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
        ! r_ = 1; Phi_ = 2; z_=3
@@ -237,14 +237,14 @@ contains
          iDirCycle   = iDirCycle)
 
   end subroutine MH_get_roots_id
+  !============================================================================
 
-  !==========================================================================
   subroutine MH_update_local_decomposition(Domain)
     use ModMain, ONLY: iNewGrid, iNewDecomposition
 
     type(DomainType), intent(inout):: Domain
-    !-----------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     if(iNewGrid==iLastGrid .and. iNewDecomposition == iLastDecomposition &
          .and. Domain%iRealization /= 0) &
          RETURN
@@ -258,5 +258,7 @@ contains
     call complete(Domain)
 
   end subroutine MH_update_local_decomposition
+  !============================================================================
 
 end module MH_domain_decomposition
+!==============================================================================

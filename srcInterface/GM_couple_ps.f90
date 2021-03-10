@@ -1,11 +1,11 @@
 module GM_couple_ps
 
-  !use ModMpi
-  !use ModNumConst, ONLY: cRadToDeg, cDegToRad
+  ! use ModMpi
+  ! use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use CON_coupler, ONLY: Grid_C, ncell_id
 
-  !use ModMain, ONLY: n_step
-  !use ModPhysics, ONLY: No2Si_V, Si2No_V, &
+  ! use ModMain, ONLY: n_step
+  ! use ModPhysics, ONLY: No2Si_V, Si2No_V, &
   !     UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
   !     Bdp, DipoleStrengthSi, rCurrents, rBody
 
@@ -13,16 +13,16 @@ module GM_couple_ps
 
   private ! except
 
-  !public:: GM_get_for_ps
-  public:: GM_put_from_ps   
+  ! public:: GM_get_for_ps
+  public:: GM_put_from_ps
 
   logical :: IsInitialized = .false., DoMultiFluidPSCoupling = .false.
-  
+
   character(len=*), parameter :: NameMod='GM_couple_ps'
 
 contains
-  
-  !==========================================================================
+  !============================================================================
+
   subroutine GM_put_from_ps(Buffer_IIV, iSizeIn, jSizeIn, nVarPsGm, NameVarIn)
 
     use CON_coupler
@@ -43,7 +43,7 @@ contains
          Hdens_=5, Odens_=6
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='GM_put_from_ps'
+    character(len=*), parameter:: NameSub = 'GM_put_from_ps'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -54,7 +54,7 @@ contains
             iSizeIn,jSizeIn,nCells_D(1:2)
        call CON_stop(NameSub//' SWMF_ERROR')
     end if
-    
+
     ! Initialization step:
     if(.not. IsInitialized) then
        if(DoTestMe) write(*,*) NameSub//': Initializing PS-GM Coupling'
@@ -67,7 +67,7 @@ contains
        if(DoTestMe) write(*,*) NameSub// &
             ': Setting DoMultiFluidPsCoupling to ', DoMultiFluidPsCoupling
     end if
-    
+
     ! Check NameVar:
     if(DoMultiFluidPSCoupling)then
        if(NameVarIn /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
@@ -92,17 +92,16 @@ contains
           write(*,*)'     PS_lat max/min = ', maxval(IM_lat), minval(IM_lat)
           write(*,*)'     PS_lon max/min = ', maxval(IM_lon), minval(IM_lon)
        end if
-       
+
        ! Coupling requires accurate raytrace that stops at the equator
        UseAccurateTrace= .true.
        DoMapEquatorRay = .true.
     end if
-    
-    !initialize
+
+    ! initialize
     IsImRho_I(:)  = .false.
     IsImP_I(:)    = .false.
     IsImPpar_I(:) = .false.
-
 
         ! Store IM variable for internal use
     ImP_CV     (:,:,1) = Buffer_IIV(:,:,pres_)
@@ -127,8 +126,8 @@ contains
 !       write(*,'(a,2e12.3)')'   Pressure [Pa]  = ', &
 !            maxval(IM_p), minval(IM_p)
 !    end if
-    
-    ! for multifluid                                               
+
+    ! for multifluid
     if(DoMultiFluidPsCoupling)then
        ImP_CV(:,:,2)= Buffer_IIV(:,:,Hpres_)
 !       IM_Hpp = Buffer_IIV(:,:,Hpres_)
@@ -141,7 +140,7 @@ contains
        IsImRho_I(:)  = .true.
        IsImP_I(:)    = .true.
        IsImPpar_I(:) = .false.
-    
+
        if(DoTestMe) then
           write(*,*)NameSub//': Max/Min values received from PS:'
           write(*,'(a,2e12.3)')'   Hp Density [cm-3] = ', &
@@ -156,9 +155,11 @@ contains
           write(*,'(a,2e12.3)')'   Op Pressure [Pa]  = ', &
                maxval(ImP_CV(:,:,3)), minval(ImP_CV(:,:,3))
        end if
-       
+
     endif
 
   end subroutine GM_put_from_ps
+  !============================================================================
 
 end module GM_couple_ps
+!==============================================================================

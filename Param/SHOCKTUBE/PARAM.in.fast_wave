@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
+
 #PLANET
 NONE			NamePlanet
 
@@ -104,15 +107,13 @@ dt			= 0.2*dtmax   = 1.066
 #USERINPUTEND -------------------------------------
 
 
-! The correct boundary condition should be 'periodic'. Use 'float' temporarily
-! for OPENACC development.
 #OUTERBOUNDARY
-float			TypeBc1
-float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #TIMESTEPPING
 1			nStage

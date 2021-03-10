@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -10,7 +10,6 @@ module ModVarIndexes
    save
 
   character (len=*), parameter :: NameEquationFile = "ModEquationOuterHelio.f90"
-
 
    ! This equation module contains the standard MHD equations + 4 neutrals
    character (len=*), parameter :: NameEquation='MHD and four neutrals'
@@ -65,7 +64,7 @@ module ModVarIndexes
         NeuEnergy_ = nVar+2,          Pu3Energy_ = nVar+2, &
         Ne2Energy_ = nVar+3, &
         Ne3Energy_ = nVar+4, &
-        Ne4Energy_ = nVar+5 
+        Ne4Energy_ = nVar+5
 
    ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
    integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -155,5 +154,5 @@ module ModVarIndexes
    ! There are no extra scalars
    integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

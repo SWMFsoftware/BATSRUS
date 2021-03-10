@@ -19,7 +19,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationAwsomFluidsAnisoPi.f90"
 
-
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: NameEquation = &
        'Multi-fluid MHD + Alfven waves + isotropic Pe + anisotropic Pi'
@@ -86,7 +85,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -127,10 +126,9 @@ module ModVarIndexes
        'He2pMy  ', & ! He2pRhoUy_
        'He2pMz  ', & ! He2pRhoUz_
        'He2pPpar', & ! He2pPpar_
-       'He2pP   ', & ! He2pP_             
+       'He2pP   ', & ! He2pP_
        'E       ', & ! Energy_
        'He2pE   ' ] ! He2pEnergy_
-
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
@@ -138,7 +136,6 @@ module ModVarIndexes
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
-
+!==============================================================================
 

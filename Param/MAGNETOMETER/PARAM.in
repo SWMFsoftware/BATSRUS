@@ -109,7 +109,7 @@ z=0 FUL idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.			DxSavePlot
-eqb eqb idl_ascii	StringPlot
+eqb eqb idl_ascii		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 20			nRadius
@@ -127,7 +127,7 @@ eqb eqb tec		StringPlot
 10.0			RadiusMax
 60.0			LongitudeMin
 300.0			LongitudeMax
-bx0 MHD idl_ascii	StringPlot
+bx0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -20.			xMinCut

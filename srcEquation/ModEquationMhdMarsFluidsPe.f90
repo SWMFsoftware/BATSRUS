@@ -13,7 +13,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationMhdMarsFluidsPe.f90"
 
-
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='Multi-fluid Pe MHD for Mars'
 
@@ -67,7 +66,7 @@ module ModVarIndexes
        O2pEnergy_ = nVar+3,&
        OpEnergy_  = nVar+4,&
        CO2pEnergy_= nVar+5
-  
+
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
@@ -84,7 +83,7 @@ module ModVarIndexes
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
-  real, parameter :: DefaultState_V(nVar+nFluid) = [ & 
+  real, parameter :: DefaultState_V(nVar+nFluid) = [ &
        1.0, & ! Rho_
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
@@ -92,7 +91,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       1.0, & ! Pe_ 
+       1.0, & ! Pe_
        1.0, & ! p_
        1.0, & ! HpRho_
        0.0, & ! HpRhoUx_
@@ -157,9 +156,8 @@ module ModVarIndexes
        'OpE    ', & ! OpEnergy_
        'CO2pE  ' ] ! CO2pEnergy_
 
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-
 end module ModVarIndexes
+!==============================================================================

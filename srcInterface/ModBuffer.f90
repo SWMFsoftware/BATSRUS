@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
   use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
@@ -13,9 +14,8 @@ module ModBuffer
 
   integer, public:: nVarCouple
   integer, public:: iVar_V(nVarIndexCouple)
-  logical, public:: DoCoupleVar_V(nCoupleVarGroup)  
+  logical, public:: DoCoupleVar_V(nCoupleVarGroup)
 end module ModBuffer
-
 !==============================================================================
 
 subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
@@ -59,7 +59,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   real              :: TimeSimulationLast = -1.0
   real              :: XyzSource_D(MaxDim)
 
-  !---------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   if(DoInit)then
      DoInit = .false.
      allocate(Buffer_V(nVarCouple))
@@ -116,7 +116,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   if(DoCoupleVar_V(ChargeState_))State_V(ChargeStateFirst_:ChargeStateLast_) = &
        Buffer_V(iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_))&
        *Si2No_V(UnitRho_)
-  
+
   State_V(p_)  = Buffer_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
   if(DoCoupleVar_V(ElectronPressure_))then
      State_V(Pe_) = Buffer_V(iVar_V(PeCouple_))*Si2No_V(UnitP_)
@@ -145,7 +145,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
 
   if(SignB_>1)then
      if(DoThinCurrentSheet)then
-        ! In both IH and OH we have no B0, so we ignore that !         
+        ! In both IH and OH we have no B0, so we ignore that !
         if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
            State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
            if(WaveFirst_ > 1 .and. UseAlfvenWaves)then
@@ -153,7 +153,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
               State_V(WaveFirst_) = State_V(WaveLast_)
               State_V(WaveLast_) = Ewave
            end if
-           
+
            State_V(SignB_)=-1.0
         else
            State_V(SignB_)= 1.0
@@ -164,27 +164,27 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   end if
 
 end subroutine get_from_spher_buffer_grid
+!==============================================================================
 
-!============================================================================
 subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
 
   ! DESCRIPTION
   ! This subroutine is used to interpolate from  state variables defined on a
   ! spherical buffer grid into the input point SphSource_D.
-  ! The buffer grid overlaps some part of the computational grid of a 
+  ! The buffer grid overlaps some part of the computational grid of a
   ! source component that is coupled to this component.
   ! The buffer grid  has the same coordinate system as the source component
   ! (but may have a different grid resolution).
-  ! It is assumed that the buffer grid was filled with the state vector from 
+  ! It is assumed that the buffer grid was filled with the state vector from
   ! the source component at some earlier stage.
 
   ! INPUT:
   ! SphSource_D is associated with a point in the target component, and it
   ! is assumed that is was already converted to the source coordinate system.
- 
+
   ! nVar is the number of state variables used in coupling the two components.
 
-  ! Implicit inputs to this subroutine are the buffer grid size, points 
+  ! Implicit inputs to this subroutine are the buffer grid size, points
   ! and the state vector at each point (USEd from BATSRUS).
 
   ! OUTPUT:
@@ -203,19 +203,19 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   real    :: NormSph_D(3)
   ! logical :: DoTest, DoTestMe
 
-  character(len=*), parameter :: NameSub = 'interpolate_from_global_buffer'
-  !-------------------------------------------------------------------------
   !  call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-  ! Convert to normalized coordinates. 
+  ! Convert to normalized coordinates.
   ! Radial is node centered, theta and phi are cell centered.
-  NormSph_D = (SphSource_D - BufferMin_D)/dSphBuff_D + (/ 1.0, 0.5, 0.5 /)
+  character(len=*), parameter:: NameSub = 'interpolate_from_global_buffer'
+  !----------------------------------------------------------------------------
+  NormSph_D = (SphSource_D - BufferMin_D)/dSphBuff_D + [ 1.0, 0.5, 0.5 ]
 
   Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,0, nPhiBuff+1, &
        0, nThetaBuff+1, NormSph_D, DoExtrapolate=.true.)
 
 end subroutine interpolate_from_global_buffer
-!=============================================================================
+!==============================================================================
 subroutine plot_buffer(iFile)
   use ModPlotFile, ONLY: save_plot_file
   use ModNumConst,   ONLY: cDegToRad
@@ -240,8 +240,8 @@ subroutine plot_buffer(iFile)
   real   :: R, Theta, Phi, CosTheta, SinTheta
   real, allocatable,dimension(:,:,:):: State_VII, Coord_DII
   character(LEN=30)::NameFile
-  !---------------------------------------------------------------------------
-  if(iProc/=0)RETURN !May be improved.
+  !----------------------------------------------------------------------------
+  if(iProc/=0)RETURN ! May be improved.
 
   allocate(State_VII(3 + nVar, 0:nPhiBuff, 0:nThetaBuff))
   allocate(Coord_DII(2, 0:nPhiBuff, 0:nThetaBuff))
@@ -302,9 +302,10 @@ subroutine plot_buffer(iFile)
           'Long Lat x y z '//NamePrimitiveVarOrig//' R',&
           nDimIn=2,      &
           nStepIn=n_step, TimeIn=Time_Simulation,&
-          ParamIn_I=(/R*No2Si_V(UnitX_)/), &
+          ParamIn_I=[R*No2Si_V(UnitX_)], &
           CoordIn_DII=Coord_DII, &
           VarIn_VII=State_VII)
   end do
 
 end subroutine plot_buffer
+!==============================================================================
