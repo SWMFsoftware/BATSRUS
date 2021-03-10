@@ -170,6 +170,7 @@ contains
     ! E_DDD(1,2,3)=E_DDD(2,3,1)=E(3,1,2)=1
     ! E_DDD(2,1,3)=E_DDD(3,2,1)=E(1,3,2)=-1
     ! Otherwise E_DDD=0
+    !--------------------------------------------------------------------------
     rot_matrix = I_DD
     if(Phi /= 0.0)then
        rot_matrix=cos(Phi)*rot_matrix+sin(Phi)*E_DDD(:,:,iDir)
