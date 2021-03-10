@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program select_snapshot
 
-  ! Read a *.outs IDL file of type ascii/real4/real8, select snapshots, 
-  ! then write it into a new file, of any type of ascii/real4/real8 
+  ! Read a *.outs IDL file of type ascii/real4/real8, select snapshots,
+  ! then write it into a new file, of any type of ascii/real4/real8
 
   use ModIoUnit,    ONLY: io_unit_new
   use ModPlotFile,  ONLY: save_plot_file, read_plot_file
@@ -32,14 +33,14 @@ program select_snapshot
   character(len=100) :: StringPart_I(MaxSnapshot)
   character(len=100) :: StringSubpart_I(3)
 
-  integer :: n_D(0:3), n1, n2, n3 
+  integer :: n_D(0:3), n1, n2, n3
   integer :: i, iPart, nPart, nSubpart
   integer :: iSnapshot, iSnapshot1, iSnapshot2, DiSnapshot, nSnapshotWritten
 
   integer :: iUnit
-  character(len=*), parameter:: NameSub = 'select_snapshot'
 
-  !-------------------------------------------------------------------------
+  character(len=*), parameter:: NameSub = 'select_snapshot'
+  !----------------------------------------------------------------------------
 
   ! Name and type of the input file
   write(*,'(a)') 'Input filename:'
@@ -47,23 +48,23 @@ program select_snapshot
   write(*,'(a)') 'Type of input file (ascii/real4/real8):'
   read(*,'(a)') TypeFileIn
 
-  ! Input snapshots 
-  write(*,*) '----------------------------------------------------------'  
+  ! Input snapshots
+  write(*,*) '----------------------------------------------------------'
   write(*,*) 'Example for snapshots selecting: 2, 3 , 6:12:2, 20:25'
-  write(*,*) 'Please use "," to indicate snapshots as the example shows.'  
-  write(*,*) 'Blanks are allowed. '   
+  write(*,*) 'Please use "," to indicate snapshots as the example shows.'
+  write(*,*) 'Blanks are allowed. '
   write(*,*) 'The maximum number of snapshots is 1000.'
-  write(*,*) '----------------------------------------------------------'  
+  write(*,*) '----------------------------------------------------------'
   write(*,'(a)') 'Select snapshots:'
   read(*,'(a)') StringSnapshot
 
   ! Input name and type of snapshot file
   write(*,'(a)') 'Output filename:'
-  read(*,'(a)') NameFileOut 
+  read(*,'(a)') NameFileOut
   write(*,'(a)') 'Type of output file (ascii/real4/real8):'
   read(*,'(a)') TypeFileOut
 
-  ! Get index of snapshots from StringSnapshot 
+  ! Get index of snapshots from StringSnapshot
 
   DoSave_I = .false.
   iSnapshot = 0
@@ -77,16 +78,14 @@ program select_snapshot
      read(StringSubpart_I(3), *) DiSnapshot
 
      DoSave_I(iSnapshot1:iSnapshot2:DiSnapshot) = .true.
-    
-  end do
 
+  end do
 
   ! Now we get the index of snapshots need to extract out.
   nSnapshot = count(DoSave_I)
   write(*,*) 'Number of snapshots selected:', nSnapshot
 
-
-  ! Open a I/O unit for writing the new file 
+  ! Open a I/O unit for writing the new file
   iUnit = io_unit_new()
   iSnapshot = 0  ! number of snapshots read from the *.outs file
   nSnapshotWritten = 0 ! number of snapshots have been written
@@ -121,12 +120,13 @@ program select_snapshot
 
      deallocate(Coord_DIII, Var_VIII)
 
-     if(nSnapshotWritten == nSnapshot) EXIT 
-     !when all selected snapshots are written  
+     if(nSnapshotWritten == nSnapshot) EXIT
+     ! when all selected snapshots are written
 
   end do
 
   close(iUnit)
 
 end program select_snapshot
+!==============================================================================
 

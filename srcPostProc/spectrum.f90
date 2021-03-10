@@ -20,10 +20,10 @@ program spectrum
 
   ! Logical variables of running modes
   logical                     :: IsVerbose =  .false., IsDebug = .false.
-  logical                     :: IsDataFile = .false. ! Use input file or not
+  logical                     :: IsDataFile = .false. ! use input file or not
   logical                     :: IsLogTeMin = .false.
 
-  integer                     :: iError 
+  integer                     :: iError
 
   real                        :: LogTeMin = 3.
 
@@ -34,7 +34,7 @@ program spectrum
        LOSimage_II(:,:)
   integer                     :: nResponseBin
 
-  !One line option
+  ! One line option
   logical                     :: IsOneLine = .false.
   real                        :: OneLineWavelength
 
@@ -42,7 +42,7 @@ program spectrum
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
 
   ! Variables for input files
-  character(len=200)          :: StringLine 
+  character(len=200)          :: StringLine
   character(len=200)          :: NameDataFile, NameTableFile
   character(len=200)          :: TypeDataFile
 
@@ -66,11 +66,11 @@ program spectrum
   integer                     :: iDimLOS=1, iDimVertical=2, iDimHorizontal=3
 
   ! Variables to read solar wind data file in
-  integer                     :: nVar   ! Number of variables   
-  integer                     :: nDim   ! Number of dimensions  
-  integer                     :: nParam ! Number of parameters  
+  integer                     :: nVar   ! Number of variables
+  integer                     :: nDim   ! Number of dimensions
+  integer                     :: nParam ! Number of parameters
   integer                     :: n1, n2, n3 ! Data box size
-  real                        :: CoordMin_D(3), CoordMax_D(3)        
+  real                        :: CoordMin_D(3), CoordMax_D(3)
   real,allocatable            :: Var_VIII(:,:,:,:)
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
@@ -79,8 +79,8 @@ program spectrum
 
   ! Extend transition region
   logical :: DoExtendTransitionRegion = .false.
-  real :: TeModSi = 3.0E+5    !K
-  real :: DeltaTeModSi = 1E+4 !K
+  real :: TeModSi = 3.0E+5    ! K
+  real :: DeltaTeModSi = 1E+4 ! K
 
   ! Variables for uniform data
   logical                     :: IsUniData = .false. ! Overwrite data w/ const
@@ -90,10 +90,10 @@ program spectrum
 
   ! Indexes for the solar wind variables
   integer, parameter          :: &
-       rho_  =  1, &              
-       ux_   =  2, &                  
-       uy_   =  3, &               
-       uz_   =  4, & 
+       rho_  =  1, &
+       ux_   =  2, &
+       uy_   =  3, &
+       uz_   =  4, &
        bx_   =  5, &
        by_   =  6, &
        bz_   =  7, &
@@ -110,10 +110,10 @@ program spectrum
   logical                     :: IsAllLines = .false. ! Ignore unobserved lines
   integer                     :: iWavelengthInterval, nWavelengthInterval
   integer                     :: nMaxLine, nLineFound
-  real, allocatable           :: WavelengthInterval_II(:,:) 
+  real, allocatable           :: WavelengthInterval_II(:,:)
 
   ! For Doppler-shift wavelength intervals are shifted by 10% of speed of light
-  real, allocatable           :: WavelengthIntervalShifted_II(:,:) 
+  real, allocatable           :: WavelengthIntervalShifted_II(:,:)
 
   ! Temperature and density grid for contrbution function (G)
   real                        :: DLogN, DLogT
@@ -123,34 +123,35 @@ program spectrum
   integer                     :: MaxI, MinI, MaxJ, MinJ
 
   ! Variables for lines
-  integer                     :: nBin ! Wavelength bin number  
-  integer                     :: i, iLine, jPixel, kPixel 
+  integer                     :: nBin ! Wavelength bin number
+  integer                     :: i, iLine, jPixel, kPixel
   integer                     :: nLineAll ! All lines of interest
 
   ! Derived type to read tabulated G values
+  !----------------------------------------------------------------------------
   type LineTableType
      character(len=6)         :: NameIon
      real                     :: Aion
      integer                  :: nLevelFrom, nLevelTo ! Levels of transition
-     ! Indexes on density-temperature grid 
-     ! i = density index, j = temperature index 
-     integer                  :: iMin, jMin, iMax, jMax  
-     real                     :: LineWavelength 
+     ! Indexes on density-temperature grid
+     ! i = density index, j = temperature index
+     integer                  :: iMin, jMin, iMax, jMax
+     real                     :: LineWavelength
      real, allocatable        :: g_II(:,:)
      real                     :: StartLogT
   end type LineTableType
 
   type(LineTableType), allocatable :: LineTable_I(:)
 
-  ! Derived type of output 
+  ! Derived type of output
   type SpectrumTableType
-     integer                  :: nBin     
+     integer                  :: nBin
      real,allocatable         :: Spectrum_III(:,:,:), SpectrumGrid_I(:)
   end type SpectrumTableType
 
   type(SpectrumTableType), allocatable :: SpectrumTable_I(:)
 
-  ! For MPI_reduce in the main program 
+  ! For MPI_reduce in the main program
 
   integer :: iInterval
 
@@ -191,7 +192,7 @@ program spectrum
 
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
-!!! !nLineAll = 1.
+!!! ! nLineAll = 1.
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
@@ -212,7 +213,7 @@ program spectrum
      end do
   end if
 
-  if(iProc==0)then 
+  if(iProc==0)then
      call save_all
      if(IsVerbose)write(*,*)'done with save_all'
   end if
@@ -224,15 +225,14 @@ program spectrum
   if(iProc==0)write(*,*)'Spectrum.exe ending'
 
 contains
+  !============================================================================
 
-  !==========================================================================
   subroutine read_responsefunction
 
     use ModPlotFile,         ONLY: read_plot_file
 
-    character(len=*), parameter    :: NameSub = 'read_response'
-    !------------------------------------------------------------------------ 
-
+    character(len=*), parameter:: NameSub = 'read_responsefunction'
+    !--------------------------------------------------------------------------
     call read_plot_file(NameFile = NameResponseFunctionFile, &
          n1Out = nResponseBin, &
          iErrorOut = iError)
@@ -245,15 +245,15 @@ contains
     call read_plot_file(NameFile = NameResponseFunctionFile, &
          TypeFileIn = 'ascii',                               &
          VarOut_I   = ResponseFactor_I,                      &
-         CoordOut_I = ResponseLambda_I,                      & 
+         CoordOut_I = ResponseLambda_I,                      &
          iErrorOut  = iError)
 
     if(iError /= 0) call CON_stop( &
          NameSub//' could not data from '//trim(NameResponseFunctionFile))
 
   end subroutine read_responsefunction
+  !============================================================================
 
-  !==========================================================================
   subroutine calc_dem
 
     use ModPlotFile, ONLY          : save_plot_file
@@ -269,8 +269,8 @@ contains
     character(len=200)             :: StringHeaderEM = &
          '[K] [cm^-3]'
 
-    character(len=*), parameter    :: NameSub = 'calc_dem'
-    !------------------------------------------------------------------------ 
+    character(len=*), parameter:: NameSub = 'calc_dem'
+    !--------------------------------------------------------------------------
 
     ! Set up temperature grid and allocate variables
     nLogTeDEM = nint((LogTeMaxDEM-LogTeMinDEM)/DLogTeDEM)
@@ -312,7 +312,7 @@ contains
        end do
     end do
 
-    do iTe=1,nLogTeDEM 
+    do iTe=1,nLogTeDEM
        Te_I(iTe) = LogTeMinDEM+DLogTeDEM * iTe
     end do
 
@@ -335,14 +335,14 @@ contains
     deallocate(Te_I,DEM_I, EM_I)
 
   end subroutine calc_dem
+  !============================================================================
 
-  !==========================================================================
   subroutine set_data_block
     ! When no data file input is used set up uniform data values in defined box
     integer, parameter             :: iUnitOut = 18
     real                           :: MinWavelength, Maxwavelength
-    character(len=*), parameter    :: NameSub = 'set_data_block'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_data_block'
+    !--------------------------------------------------------------------------
 
     n1 = n1Block
     n2 = n2Block
@@ -369,7 +369,7 @@ contains
        Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
 
        !       dVperd2 = 1.0
-    else 
+    else
        call CON_stop( &
             NameSub//' need data input!!! ')
     end if
@@ -389,7 +389,7 @@ contains
        end if
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
             nWavelengthBin+1))
-       
+
        SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
           ! Values of each wavelength bin correspond to the center of the bin
@@ -398,19 +398,18 @@ contains
        end do
     end do
 
-    if(IsResponseFunction)then 
+    if(IsResponseFunction)then
        allocate(LOSImage_II(n2,n3))
        LOSImage_II = 0.0
     endif
 
   end subroutine set_data_block
-  !==========================================================================
+  !============================================================================
   subroutine save_all
 
     use ModPlotFile, ONLY          : save_plot_file
 
     character                      :: Namefile
-    !------------------------------------------------------------------------
 
     ! Variables for output file
     character(len=5)     :: TypeFileSpectrum = 'ascii'
@@ -419,12 +418,12 @@ contains
     real,allocatable            :: &
          Intensity_VIII(:,:,:,:), CoordWave_I(:), CoordPixelJ_I(:),CoordPixelK_I(:)
 
-    integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, & 
+    integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, &
          nWaveBin, nWaveAll, j, k
     real                        :: DWaveBin, WavelengthMin, WavelengthMax
-    character(len=*), parameter :: NameSub = 'save_all'
-    !------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'save_all'
+    !--------------------------------------------------------------------------
     nWaveAll = 0
     nWaveInterval = nWavelengthInterval
     do iWavelengthInterval = 1,nWavelengthInterval
@@ -438,7 +437,7 @@ contains
     if(IsDataBLock)then
        if(n3/=0)then
           do k = 1, n3
-             CoordPixelK_I(k) = float(k)/float(n3) 
+             CoordPixelK_I(k) = float(k)/float(n3)
           end do
        end if
        if(n2/=0)then
@@ -551,8 +550,8 @@ contains
     endif
 
   end subroutine save_all
+  !============================================================================
 
-  !==========================================================================
   subroutine calc_flux
 
     use ModInterpolate, ONLY: bilinear
@@ -571,11 +570,11 @@ contains
     real                           :: Tlos
     real                           :: Aion
     real                           :: TShift
-    character(len=*), parameter    :: NameSub='calc_flux'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'calc_flux'
+    !--------------------------------------------------------------------------
 
     Aion     = LineTable_I(iLine)%Aion
- 
+
     if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
 
     do kPixel=1,n3
@@ -617,7 +616,7 @@ contains
                 if((Lambda > &
                      SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
                      .and.&
-                     (Lambda < & 
+                     (Lambda < &
                      SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
                      then
                    iCenter=iBin
@@ -644,7 +643,7 @@ contains
 
              ! Calculate thermal and non-thermal broadening
              Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
-             Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)  
+             Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
 
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3
@@ -655,7 +654,7 @@ contains
              if(IsLogTeMin .and. (LogTe < LogTeMin))CYCLE
 
              ! Convert to SI
-             LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
+             LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10
 
              ! Add thermal and non-thermal broadening
              DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
@@ -665,9 +664,9 @@ contains
              ! FWHM = 2sqrt(2ln2)*sigma
              ! sigma = FWHM/(2sqrt(2ln2))
              ! sigma^2 = (7e-12)^2 /(4*2*ln2)
-             if(IsEIS)DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
+             if(IsEIS)DLambdaInstr2 = (7e-12)**2/(8*log(2.))
 
-             ! Add instrumental broadening (if any)            
+             ! Add instrumental broadening (if any)
              if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
 
              ! Convert [m] --> [A]
@@ -679,13 +678,13 @@ contains
              jTMin  = LineTable_I(iLine)%jMin
              iNMax  = LineTable_I(iLine)%iMax
              jTMax  = LineTable_I(iLine)%jMax
-             
+
              Gint = bilinear(LineTable_I(iLine)%g_II(:,:), &
                   iNMin, iNMax, jTMin, jTMax, &
                   [ LogNe/DLogN , LogTe/DLogT ],DoExtrapolate=.true.)
 
              ! When Gint becomes negative due to extrapolation -> move to next
-             if(Gint<=0)CYCLE 
+             if(Gint<=0)CYCLE
 
              ! Calculate flux and spread it on the Spectrum_II grids
 
@@ -731,27 +730,27 @@ contains
     end do
 
   end subroutine calc_flux
+  !============================================================================
 
-  !==========================================================================
   real function extension_factor(TeSi)
 
     real, intent(in) :: TeSi
 
     real :: FractionSpitzer
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
 
     extension_factor = FractionSpitzer + &
          (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
   end function extension_factor
+  !============================================================================
 
-  !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,DLambda,FluxMono)
 
     real, intent(in)            :: Lambda, DLambda, FluxMono
     integer, intent(in)         :: iInterval, iCenter
 
-    integer                     :: iStep, iWave, nWaveBin    
+    integer                     :: iStep, iWave, nWaveBin
     integer                     :: iBin, iBegin, iEnd
     real                        :: Flux, Phi, InvNorm, InvSigma2
     real                        :: LambdaBin, LambdaBegin, LambdaEnd
@@ -759,8 +758,8 @@ contains
 
     integer                     :: jBin
 
-    character(len=*), parameter :: NameSub='disperse_line'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'disperse_line'
+    !--------------------------------------------------------------------------
 
     nWaveBin = SpectrumTable_I(iInterval)%nBin
 
@@ -781,9 +780,9 @@ contains
     end do
 
     InvNorm   = 1/(sqrt(2*cPi) * DLambda)
-    InvSigma2 = 1/(2*DLambda**2) 
+    InvSigma2 = 1/(2*DLambda**2)
 
-    ! Update bins between begin and end indices by adding the Gaussian 
+    ! Update bins between begin and end indices by adding the Gaussian
     ! distribution
 
     do iBin = iBegin , iEnd
@@ -791,12 +790,12 @@ contains
        LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
 
        ! Get distance from peak wavelength in SI
-       LambdaDist = Lambda - LambdaBin 
+       LambdaDist = Lambda - LambdaBin
 
        ! Calculate Gaussian of the line
        Phi = InvNorm * exp(-LambdaDist**2 * InvSigma2)
 
-       ! Calculate total monochromatic flux 
+       ! Calculate total monochromatic flux
        Flux = FluxMono*Phi
 
        if(IsResponseFunction)then
@@ -817,8 +816,8 @@ contains
     end do
 
   end subroutine disperse_line
+  !============================================================================
 
-  !==========================================================================
   subroutine read_param
 
     use ModMPI, ONLY: MPI_COMM_SELF
@@ -827,11 +826,11 @@ contains
     character(len=200)      :: NameCommand
     logical                     :: IsNoInstrument = .false., DoEcho = .false.
     integer                     :: iPixel
-    character(len=*), parameter :: NameSub='read_param'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_param'
+    !--------------------------------------------------------------------------
     call read_file('SPECTRUM.in')
 
-    call read_init('  ') 
+    call read_init('  ')
 
     ! Read SPECTRUM.in
 
@@ -937,10 +936,10 @@ contains
              call read_var('TparUni',TparUni)
              call read_var('TperpUni',TperpUni)
              call read_var('TeUni',TeUni)
-          else 
+          else
              write(*,*) NameSub // ' WARNING: check temperature setting' // &
-                  'Select 1, 2 (proton+electron), or 3 temperature' // & 
-                  '(electron+anisotropic proton) model!' 
+                  'Select 1, 2 (proton+electron), or 3 temperature' // &
+                  '(electron+anisotropic proton) model!'
           endif
           call read_var('I01Uni',I01Uni)
           call read_var('I02Uni',I02Uni)
@@ -1009,8 +1008,8 @@ contains
     endif
 
   end subroutine read_param
+  !============================================================================
 
-  !==========================================================================
   subroutine read_data
 
     use ModPlotFile,         ONLY: read_plot_file
@@ -1033,8 +1032,8 @@ contains
     real,allocatable            :: VarIn_VIII(:,:,:,:)
     real                        :: Coord, Dz1, Dz2
 
-    character(len=*), parameter :: NameSub = 'read_data'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_data'
+    !--------------------------------------------------------------------------
     call read_plot_file(NameFile=NameDataFile, &
          TypeFileIn=TypeDataFile,              &
          StringHeaderOut=StringHeader,         &
@@ -1058,7 +1057,7 @@ contains
          TypeFileIn = TypeDataFile,            &
          VarOut_VIII = VarIn_VIII,             &
          CoordMinOut_D = CoordMin_D,           &
-         CoordMaxOut_D = CoordMax_D,           &   
+         CoordMaxOut_D = CoordMax_D,           &
          iErrorOut = iError)
 
     if(iError /= 0) call CON_stop( &
@@ -1260,8 +1259,8 @@ contains
     dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun *1e2
 
   end subroutine read_data
+  !============================================================================
 
-  !==========================================================================
   subroutine read_table
 
     use ModIoUnit, ONLY: UnitTmp_
@@ -1272,7 +1271,7 @@ contains
     integer                     :: nLevelFrom, nLevelTo
     integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
-    real                        :: LogN, LogT, LogG, Aion 
+    real                        :: LogN, LogT, LogG, Aion
 
     ! End of file indicated by iError /= 0
     integer                     :: iError
@@ -1288,10 +1287,10 @@ contains
 
     ! Switches for header and information for a wavelength of interest
     logical                     :: IsHeader
-    logical                     :: DoStore  
+    logical                     :: DoStore
 
-    character(len=*), parameter :: NameSub='read_table'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_table'
+    !--------------------------------------------------------------------------
     if(IsVerbose) write(*,*)'reading table file=', trim(NameTableFile)
 
     ! Read only wavelength of interest into a nice table
@@ -1318,7 +1317,7 @@ contains
           read(UnitTmp_,*)MinLogN, MaxLogN, DLogN
           read(UnitTmp_,*)MinLogT, MaxLogT, DLogT
           if(IsVerbose)then
-             write(*,*)'MinLogN, MaxLogN, DLogN = ',MinLogN, MaxLogN, DLogN 
+             write(*,*)'MinLogN, MaxLogN, DLogN = ',MinLogN, MaxLogN, DLogN
              write(*,*)'MinLogT, MaxLogT, DLogT = ',MinLogT, MaxLogT, DLogT
           end if
           EXIT READGRID
@@ -1423,14 +1422,14 @@ contains
           if(iLine > nMaxLine)&
                call CON_stop('Too many lines are found, increase MaxWave')
 
-          ! Change reference line 
+          ! Change reference line
           FirstLineWavelength = LineWavelength
           nFirstLevelFrom = nLevelFrom
           nFirstLEvelTo = nLevelTo
           DoStore    = .true.
           nLineFound = nLineFound + 1
 
-          ! Store ion name and wavelength 
+          ! Store ion name and wavelength
           LineTable_I(iLine)%NameIon        = NameIon
           LineTable_I(iLine)%Aion           = Aion
           LineTable_I(iLine)%nLevelFrom     = nLevelFrom
@@ -1469,5 +1468,6 @@ contains
     if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
 
   end subroutine read_table
-  !==========================================================================
+  !============================================================================
 end program spectrum
+!==============================================================================

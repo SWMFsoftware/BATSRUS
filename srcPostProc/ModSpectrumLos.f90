@@ -4,7 +4,7 @@
 
 ! This is a modified version of the line-of-sight (LOS) segment calculation.
 ! See ModWritePlot for the original code, written by Chip Manchester, KC Hansen;
-! and improved by Gabor Toth, Noe Lugaz, Cooper Downs. The code integrates 
+! and improved by Gabor Toth, Noe Lugaz, Cooper Downs. The code integrates
 ! along several lines of sight and create a 2D image of the integrated quantities.
 ! This modified version only outputs the LOS segments (calculated from spherical
 ! grids), so that the Spectrum code can do optimized parallelization to
@@ -22,7 +22,6 @@ module ModSpectrumLos
   public:: init_los_spectrum
   public:: get_los_data_cube
 
-
   ! here simple as: solar radius, outmost radius to calculate
   real :: rInner, rOuter
   ! location of the observer in Batsrus (SC) coordiantes
@@ -32,7 +31,6 @@ module ModSpectrumLos
   ! rotation matrix to transform vectors from Batsrus to image coordinates
   ! after rotation x-axis points towards observer, y -> a, z -> b
   real :: RotBatsLos_DD(3,3)
-
 
   integer :: nPixelA, nPixelB    ! pixels in image a and b directions
   real :: PixelSizeA, PixelSizeB    ! size of pixel in solar radii unit
@@ -47,8 +45,8 @@ module ModSpectrumLos
 
   integer, public :: LosX_ = nVar+1, LosY_ = nVar+2, LosZ_ = nVar+3, Ds_ = nVar+4
 
-
 contains
+  !============================================================================
 
   ! Initialize this module. Setup variables and geometric transformations.
   ! Information of image and observer should be already calculated elsewhere.
@@ -77,6 +75,7 @@ contains
     real :: PixelPos, PixelCenterA, PixelCenterB
 
     ! initialize vectors and geometric stuff within this module
+    !--------------------------------------------------------------------------
     rInner = rInnerIn
     rOuter = rOuterIn
     nPixelA = nPixelIn_I(1)
@@ -101,8 +100,8 @@ contains
       PixelPosB_I(i) = PixelPos + ImageCenterIn_I(2)
     enddo
 
-    ! Unit vectors ImageA_D and ImageB_D orthogonal to the LOS to setup 
-    ! coordinate system in the image plane. In case the observer is closer to 
+    ! Unit vectors ImageA_D and ImageB_D orthogonal to the LOS to setup
+    ! coordinate system in the image plane. In case the observer is closer to
     ! equtorial plane, ImageB_D points roughly along +Z.
     if (abs(LosUnit_D(3)) < maxval(abs(LosUnit_D(1:2)))) then
       ImageA_D = cross_product([0.,0.,1.], LosUnit_D)
@@ -147,8 +146,8 @@ contains
     allocate(StatePixelSegProc_VII(Ds_,MaxLosSeg,nPixelProc))
 
   end subroutine init_los_spectrum
-
   !============================================================================
+
   subroutine get_los_data_cube(iPixelProcInfo_II, StatePixelSegProc_VII, nLosSeg_I)
     use ModNumConst, ONLY : cTiny, cHuge
     use ModCoordTransform, ONLY : cross_product
@@ -158,7 +157,7 @@ contains
     integer, intent(inout) :: nLosSeg_I(:)
 
     integer :: iError
-    integer :: iPix, jPix             ! indexes of the pixel 
+    integer :: iPix, jPix             ! indexes of the pixel
     integer :: iPixelTotal, iProcRecv, iPixelProcLoc
     real :: PixelCenterA, PixelCenterB, PixelPosA, PixelPosB
     real :: PixelPos_D(3), IntersectPos_D(3)
@@ -194,7 +193,7 @@ contains
         ! Pix2LosUnit_D = Pix2LosUnit_D/ObsDistance
 
         ! Calculate whether there are intersections with the rInner sphere
-        ! If LOS line, XyzLine_D = PixelPos_D + d*LosUnit_D, intersects 
+        ! If LOS line, XyzLine_D = PixelPos_D + d*LosUnit_D, intersects
         ! with the sphere of radius rInner+cTiny, then
         ! (rInner+cTiny)^2 = (PixelPos_D + IntersectD*LosUnit_D)^2
         ! d^2 + 2*(PixelPos.Pix2Los) * d + PixelPos^2-(rInner+cTiny)^2 = 0
@@ -202,7 +201,7 @@ contains
         ! If intersect, starting point: PixelPos_D + IntersectD * LosUnit_D
 
         ! The discriminant of the equation
-        PixPosDotPixLos = dot_product(LosUnit_D,PixelPos_D) 
+        PixPosDotPixLos = dot_product(LosUnit_D,PixelPos_D)
         PixPos2 = sum(PixelPos_D**2)
         Discriminant = PixPosDotPixLos**2 - PixPos2  + (rInner + cTiny)**2
 
@@ -214,7 +213,7 @@ contains
         endif
 
         if (Discriminant > 0) then
-          IntersectD = - PixPosDotPixLos + sqrt(Discriminant) 
+          IntersectD = - PixPosDotPixLos + sqrt(Discriminant)
           IntersectPos_D = PixelPos_D + IntersectD*LosUnit_D
           call get_los_segments(IntersectPos_D, LosUnit_D, ObsDistance-IntersectD, &
               iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, nLosSeg_I, &
@@ -235,17 +234,17 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine get_los_data_cube
-
+  !============================================================================
 
   ! Integrate variables from XyzStartIn_D in the direction ObsDirUnit_D
   ! LengthMax: maximum length along LOS for integration. For Spectrum it is
-  !     not very likely LengthMax < rOuter, but include it here just in case 
+  !     not very likely LengthMax < rOuter, but include it here just in case
   !     future mission has spacecraft inside corona (solar orbiter?)
   subroutine get_los_segments(XyzStartIn_D, ObsDirUnit_D, LengthMax, &
       iProcRecv, iPixelProcLoc, StatePixelSegProc_VII, &
       nLosSeg_I, DoTestIn)
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
-    use BATL_size,ONLY: nDim, nIJK_D, MaxDim, MinIJK_D, MaxIJK_D
+    use BATL_size, ONLY: nDim, nIJK_D, MaxDim, MinIJK_D, MaxIJK_D
     use BATL_geometry, ONLY: r_
     use BATL_lib, ONLY: xyz_to_coord, find_grid_block, get_tree_position, &
         CoordMin_D, CoordMax_D
@@ -278,7 +277,7 @@ contains
     integer :: i, iCell_D(3)
 
     character(len=*), parameter:: NameSub = 'get_los_segments'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call timing_start(NameSub)
 
     if (present(DoTestIn)) then
@@ -291,7 +290,6 @@ contains
     nStateVar = nVar
     nSizeVar = Ds_
     allocate(State_V(nSizeVar))
-
 
     iDimMin = r_
 
@@ -334,7 +332,7 @@ contains
       ! Check if we are still in the same block or not
       if( any(CoordLos_D(iDimMin:) < CoordBlockMin_D(iDimMin:)) .or. &
           any(CoordLos_D(iDimMin:) > CoordBlockMax_D(iDimMin:)))then
-        ! Find new block/node, increase the radial coordinate to 
+        ! Find new block/node, increase the radial coordinate to
         ! put the point above the inner boundary
         call find_grid_block(XyzLos_D, iProcSend, iBlock, iNodeOut=iNode)
         ! Set block coordinates and the cell size on all processors
@@ -369,7 +367,6 @@ contains
       Step = maxval(abs(CoordLosNew_D - CoordLos_D)/CellSize_D)
       DoAdjStep = .false.
       if (DoTest) write(*,'(5F10.5)',advance='no') Step, Ds, (CoordLosNew_D-CoordLos_D)/CellSize_D
-
 
       ! If change is too large or too small adjust the step size
       if (Step > StepMax .or. (Step < StepMin .and. .not. IsEdge)) then
@@ -444,11 +441,13 @@ contains
 
     end do LOOPLINE
     if (DoTest) write(*,*)
-    
+
     call timing_stop(NameSub)
 
   contains
+    !==========================================================================
     subroutine adjust_segment_length
+      !------------------------------------------------------------------------
       IsEdge = .false.
       IsCycle = .false.
       do
@@ -474,9 +473,10 @@ contains
         endif
       end do
     end subroutine adjust_segment_length
+    !==========================================================================
 
   end subroutine get_los_segments
-  !==========================================================================
-
+  !============================================================================
 
 end module ModSpectrumLos
+!==============================================================================

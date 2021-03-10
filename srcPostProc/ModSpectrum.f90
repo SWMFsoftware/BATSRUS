@@ -1,24 +1,24 @@
-! The Spectrum code. Integrates the line of sight solar spectrum. Hey it's 
+! The Spectrum code. Integrates the line of sight solar spectrum. Hey it's
 ! spectroscopy, not the regular wide band intensity maps! Isn't that so cool?!
 
 ! Reference: (Szente et al. 2019 ApJS)
 ! Introduction:
-!   High-resolution spectroscopy is the most accurate tool for measuring the 
-!   properties of the solar corona. Synthetic spectra based on the Awsom model 
-!   have been studied, showing good agreement with line widths and fluxes of a 
-!   few spectral lines measured by the SOHO/SUMER. Here we have something even 
-!   better: a full Spectrum suite that allows the user to select any spectral 
-!   range and focus on any spectral line available in the CHIANTI database. 
-!   Currently it is a postprocessing tool that can calculate the emission from 
-!   the optically thin solar corona by combining 3D MHD simulation results with 
-!   the CHIANTI database. Doppler-shifted, nonthermal line broadening due to 
-!   low-frequency Alfvén waves and anisotropic proton and isotropic electron 
-!   temperatures can be individually taken into account during calculations. 
-!   Synthetic spectral calculations can then be used for model validation, for 
+!   High-resolution spectroscopy is the most accurate tool for measuring the
+!   properties of the solar corona. Synthetic spectra based on the Awsom model
+!   have been studied, showing good agreement with line widths and fluxes of a
+!   few spectral lines measured by the SOHO/SUMER. Here we have something even
+!   better: a full Spectrum suite that allows the user to select any spectral
+!   range and focus on any spectral line available in the CHIANTI database.
+!   Currently it is a postprocessing tool that can calculate the emission from
+!   the optically thin solar corona by combining 3D MHD simulation results with
+!   the CHIANTI database. Doppler-shifted, nonthermal line broadening due to
+!   low-frequency Alfvén waves and anisotropic proton and isotropic electron
+!   temperatures can be individually taken into account during calculations.
+!   Synthetic spectral calculations can then be used for model validation, for
 !   interpretation of solar observations, and for forward modeling purposes.
 
 ! Usage:
-!   Call this module from Spectrum2 program. Somehow it should magically work, 
+!   Call this module from Spectrum2 program. Somehow it should magically work,
 !   or not.
 
 ! Comments:
@@ -54,7 +54,7 @@ module ModSpectrum
   logical                     :: IsDataFile = .false. ! Use input file or not
   logical                     :: IsLogTeMin = .false.
 
-  integer                     :: iError 
+  integer                     :: iError
 
   real                        :: LogTeMin = 3.
 
@@ -65,7 +65,7 @@ module ModSpectrum
        LOSimage_II(:,:)
   integer                     :: nResponseBin
 
-  !One line option
+  ! One line option
   logical                     :: IsOneLine = .false.
   real                        :: OneLineWavelength
 
@@ -81,7 +81,7 @@ module ModSpectrum
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
 
   ! Variables for input files
-  character(len=200)          :: StringLine 
+  character(len=200)          :: StringLine
   character(len=200)          :: NameDataFile, NameTableFile
   character(len=200)          :: TypeDataFile
 
@@ -104,11 +104,11 @@ module ModSpectrum
   integer                     :: iDimLOS=1, iDimVertical=2, iDimHorizontal=3
 
   ! Variables to read solar wind data file in
-  integer                     :: nVar   ! Number of variables   
-  integer                     :: nDim   ! Number of dimensions  
-  integer                     :: nParam ! Number of parameters  
+  integer                     :: nVar   ! Number of variables
+  integer                     :: nDim   ! Number of dimensions
+  integer                     :: nParam ! Number of parameters
   integer                     :: n1, nImagePixelJ, nImagePixelK ! Data box size
-  real                        :: CoordMin_D(3), CoordMax_D(3)        
+  real                        :: CoordMin_D(3), CoordMax_D(3)
   real,allocatable            :: Var_VIII(:,:,:,:)
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
@@ -117,8 +117,8 @@ module ModSpectrum
 
   ! Extend transition region
   logical :: DoExtendTransitionRegion = .false.
-  real :: TeModSi = 3.0E+5    !K
-  real :: DeltaTeModSi = 1E+4 !K
+  real :: TeModSi = 3.0E+5    ! K
+  real :: DeltaTeModSi = 1E+4 ! K
 
   ! Variables for uniform data
   logical                     :: IsUniData = .false. ! Overwrite data w/ const
@@ -128,10 +128,10 @@ module ModSpectrum
 
   ! Indexes for the solar wind variables, for local variables
   integer, parameter          :: &
-      Rho_  =  1, &              
-      Ux_   =  2, &                  
-      Uy_   =  3, &               
-      Uz_   =  4, & 
+      Rho_  =  1, &
+      Ux_   =  2, &
+      Uy_   =  3, &
+      Uz_   =  4, &
       Bx_   =  5, &
       By_   =  6, &
       Bz_   =  7, &
@@ -148,15 +148,14 @@ module ModSpectrum
 
   logical :: UseTAnisotropy = .false., UseAlfven = .false.
 
-
   ! Variables for the wavelengths of interest
   logical                     :: IsAllLines = .false. ! Ignore unobserved lines
   integer                     :: iWavelengthInterval, nWavelengthInterval = 0
   integer                     :: nMaxLine, nLineFound
-  real, allocatable           :: WavelengthInterval_II(:,:) 
+  real, allocatable           :: WavelengthInterval_II(:,:)
 
   ! For Doppler-shift wavelength intervals are shifted by 10% of speed of light
-  real, allocatable           :: WavelengthIntervalShifted_II(:,:) 
+  real, allocatable           :: WavelengthIntervalShifted_II(:,:)
 
   ! Temperature and density grid for contrbution function (G)
   real                        :: DLogN, DLogT
@@ -164,7 +163,7 @@ module ModSpectrum
   integer :: iNMin, iNMax, jTMin, jTMax
 
   ! Variables for lines
-  integer                     :: nBin ! Wavelength bin number  
+  integer                     :: nBin ! Wavelength bin number
   integer                     :: i, iLine
   integer                     :: nLineAll ! All lines of interest
 
@@ -173,25 +172,25 @@ module ModSpectrum
      character(len=6)         :: NameIon
      real                     :: Aion
      integer                  :: nLevelFrom, nLevelTo ! Levels of transition
-     ! Indexes on density-temperature grid 
-     ! i = density index, j = temperature index 
-     integer                  :: iMin, jMin, iMax, jMax  
-     real                     :: LineWavelength 
+     ! Indexes on density-temperature grid
+     ! i = density index, j = temperature index
+     integer                  :: iMin, jMin, iMax, jMax
+     real                     :: LineWavelength
      real, allocatable        :: g_II(:,:)
      real                     :: StartLogT
   end type LineTableType
 
   type(LineTableType), allocatable :: LineTable_I(:)
 
-  ! Derived type of output 
+  ! Derived type of output
   type SpectrumTableType
-     integer                  :: nBin     
+     integer                  :: nBin
      real,allocatable         :: Spectrum_II(:,:), SpectrumGrid_I(:)
   end type SpectrumTableType
 
   type(SpectrumTableType), allocatable, public :: SpectrumTable_I(:)
 
-  ! For MPI_reduce in the main program 
+  ! For MPI_reduce in the main program
 
   integer :: iInterval
 
@@ -200,6 +199,7 @@ module ModSpectrum
   !---------------------------------------------------------------------------
 
 contains
+  !============================================================================
 
   subroutine init_spectrum(StatePixelSegProc_VII, nLosSeg_I)
     use ModVarIndexes, ONLY: NameVar_V, MhdRho_=>Rho_, MhdRhoU_=>RhoU_, &
@@ -214,8 +214,8 @@ contains
     real :: TmpWvlnthSwap_I(2)
     real, allocatable :: TmpWvlnthIntvl_I(:,:)
 
-    character(len=*), parameter :: NameSub = 'init_spectrum'
-
+    character(len=*), parameter:: NameSub = 'init_spectrum'
+    !--------------------------------------------------------------------------
     call timing_start(NameSub)
 
     nPixelProc = size(nLosSeg_I)
@@ -238,7 +238,7 @@ contains
     iVarMhd2Spec_I(I01_:I02_) = WaveFirst_ + [0,1]
 
     ! In case of Doppler shift applied some lines might appear that would not
-    ! otherwise. We introduce the extended WaveLengthIntervals for the sake of 
+    ! otherwise. We introduce the extended WaveLengthIntervals for the sake of
     ! searching of lines of interest, estimate with largest los velocity.
     uMin = 0.
     uMax = 0.
@@ -357,6 +357,7 @@ contains
     call timing_stop(NameSub)
 
   end subroutine init_spectrum
+  !============================================================================
 
   subroutine read_param
     use ModReadParam
@@ -365,11 +366,11 @@ contains
     logical                     :: IsNoInstrument = .false., DoEcho = .false.
     logical :: UseAlfven2
     integer                     :: iPixel
-    character(len=*), parameter :: NameSub='read_param'
-    !------------------------------------------------------------------------
-    
+    character(len=*), parameter:: NameSub = 'read_param'
+    !--------------------------------------------------------------------------
+
     call read_file('SPECTRUM.in')
-    call read_init('  ') 
+    call read_init('  ')
 
     ! Read SPECTRUM.in
     READPARAM: do
@@ -437,8 +438,8 @@ contains
               write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
            else
               allocate(WavelengthInterval_II(2,nWavelengthInterval))
-              WavelengthInterval_II(:,1) = (/ 170 ,210 /)
-              WavelengthInterval_II(:,2) = (/ 250 ,290 /)
+              WavelengthInterval_II(:,1) = [ 170 ,210 ]
+              WavelengthInterval_II(:,2) = [ 250 ,290 ]
            endif
         case default
            write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
@@ -471,10 +472,10 @@ contains
       !     call read_var('TparUni',TparUni)
       !     call read_var('TperpUni',TperpUni)
       !     call read_var('TeUni',TeUni)
-      !   else 
+      !   else
       !     write(*,*) NameSub // ' WARNING: check temperature setting' // &
-      !         'Select 1, 2 (proton+electron), or 3 temperature' // & 
-      !         '(electron+anisotropic proton) model!' 
+      !         'Select 1, 2 (proton+electron), or 3 temperature' // &
+      !         '(electron+anisotropic proton) model!'
       !   endif
       !   call read_var('I01Uni',I01Uni)
       !   call read_var('I02Uni',I02Uni)
@@ -548,11 +549,13 @@ contains
     end do READPARAM
 
   contains
+    !==========================================================================
     subroutine read_process_select_lines
       use ModUtilities, ONLY: split_string, lower_case
       integer :: i, j, nStrParts, iC, nStrLen
       logical :: IsUnderScore
       character(len=20) :: NameSelectLine, NameSelectLineTmp_I(2)
+      !------------------------------------------------------------------------
       allocate(NameSelectLines_I(nSelectLines))
       allocate(WvlnthSelectLines_I(nSelectLines))
       do i = 1, nSelectLines
@@ -585,18 +588,17 @@ contains
       enddo
 
     end subroutine read_process_select_lines
+    !==========================================================================
 
   end subroutine read_param
+  !============================================================================
 
-
-  !==========================================================================
   subroutine read_responsefunction
 
     use ModPlotFile,         ONLY: read_plot_file
 
-    character(len=*), parameter    :: NameSub = 'read_response'
-    !------------------------------------------------------------------------ 
-
+    character(len=*), parameter:: NameSub = 'read_responsefunction'
+    !--------------------------------------------------------------------------
     call read_plot_file(NameFile = NameResponseFunctionFile, &
          n1Out = nResponseBin, &
          iErrorOut = iError)
@@ -609,16 +611,15 @@ contains
     call read_plot_file(NameFile = NameResponseFunctionFile, &
          TypeFileIn = 'ascii',                               &
          VarOut_I   = ResponseFactor_I,                      &
-         CoordOut_I = ResponseLambda_I,                      & 
+         CoordOut_I = ResponseLambda_I,                      &
          iErrorOut  = iError)
 
     if(iError /= 0) call CON_stop( &
          NameSub//' could not data from '//trim(NameResponseFunctionFile))
 
   end subroutine read_responsefunction
+  !============================================================================
 
-
-  !==========================================================================
   subroutine read_table
 
     use ModIoUnit, ONLY: UnitTmp_
@@ -629,7 +630,7 @@ contains
     integer                     :: nLevelFrom, nLevelTo
     integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
-    real                        :: LogN, LogT, LogG, Aion 
+    real                        :: LogN, LogT, LogG, Aion
 
     ! End of file indicated by iError /= 0
     integer                     :: iError
@@ -645,10 +646,10 @@ contains
 
     ! Switches for header and information for a wavelength of interest
     logical                     :: IsHeader, IsFound, IsMatch
-    logical                     :: DoStore  
+    logical                     :: DoStore
 
-    character(len=*), parameter :: NameSub='read_table'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_table'
+    !--------------------------------------------------------------------------
     call timing_start(NameSub)
     if(IsVerbose) write(*,*)'reading table file=', trim(NameTableFile)
 
@@ -676,7 +677,7 @@ contains
         read(UnitTmp_,*)MinLogN, MaxLogN, DLogN
         read(UnitTmp_,*)MinLogT, MaxLogT, DLogT
         if(IsVerbose)then
-          write(*,'(A,2F12.2,F12.4)') 'MinLogN, MaxLogN, DLogN = ',MinLogN, MaxLogN, DLogN 
+          write(*,'(A,2F12.2,F12.4)') 'MinLogN, MaxLogN, DLogN = ',MinLogN, MaxLogN, DLogN
           write(*,'(A,2F12.2,F12.4)') 'MinLogT, MaxLogT, DLogT = ',MinLogT, MaxLogT, DLogT
         endif
         EXIT READGRID
@@ -809,14 +810,14 @@ contains
           if(iLine > nMaxLine)&
                call CON_stop('Too many lines are found, increase MaxWave')
 
-          ! Change reference line 
+          ! Change reference line
           FirstLineWavelength = LineWavelength
           nFirstLevelFrom = nLevelFrom
           nFirstLEvelTo = nLevelTo
           DoStore    = .true.
           nLineFound = nLineFound + 1
 
-          ! Store ion name and wavelength 
+          ! Store ion name and wavelength
           LineTable_I(iLine)%NameIon        = NameIon
           LineTable_I(iLine)%Aion           = Aion
           LineTable_I(iLine)%nLevelFrom     = nLevelFrom
@@ -845,11 +846,11 @@ contains
 
     if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
     if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
-    call timing_stop(NameSub) 
+    call timing_stop(NameSub)
 
   end subroutine read_table
+  !============================================================================
 
-  !==========================================================================
   subroutine spectrum_calc_flux(StatePixelSegProc_VII, nLosSeg_I)
     use ModConst, ONLY: cBoltzmann, cProtonMass, cLightSpeed, cTiny
     use ModInterpolate, ONLY: bilinear
@@ -871,14 +872,14 @@ contains
     real                           :: Tlos
     real                           :: Aion
     real                           :: TShift
-    character(len=*), parameter    :: NameSub='spectrum_calc_flux'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'spectrum_calc_flux'
+    !--------------------------------------------------------------------------
     call timing_start(NameSub)
 
     Ds_ = size(StatePixelSegProc_VII,1)
 
     do iLine = 1, nLineAll
-      Aion     = LineTable_I(iLine)%Aion   
+      Aion     = LineTable_I(iLine)%Aion
       Lambda   = LineTable_I(iLine)%LineWavelength
       ! if (IsOneLine .and. Lambda /= OneLineWavelength) CYCLE
 
@@ -950,12 +951,12 @@ contains
         Gint = bilinear(LineTable_I(iLine)%g_II(:,:), iNMin, iNMax, jTMin, jTMax, &
             [LogNe/DLogN,LogTe/DLogT], DoExtrapolate=.false.)
         ! When Gint becomes negative due to extrapolation -> move to next
-        if (Gint<=0) CYCLE 
+        if (Gint<=0) CYCLE
 
         ! Angle of magnetic field relative to X is Alpha. Cos(Alpha)=Bx/B
         Cos2Alpha = Var_I(Bx_)**2/max(sum(Var_I(Bx_:Bz_)**2), 1e-30)
         Sin2Alpha = 1 - Cos2Alpha
-        
+
         if (UseTAnisotropy) then
           ! Calculate angle between LOS and B directions
           ! Calculate temperature relative to the LOS direction
@@ -964,7 +965,7 @@ contains
           Tlos = Var_I(T_)
         endif
         ! Calculate thermal broadening
-        Uth2  = cBoltzmann * Tlos/(cProtonMass * Aion)  
+        Uth2  = cBoltzmann * Tlos/(cProtonMass * Aion)
 
         if (UseAlfven) then
           ! Calculate Elzasser variables
@@ -977,7 +978,7 @@ contains
         endif
 
         ! Convert to SI
-        LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
+        LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10
         ! Add thermal and non-thermal broadening
         DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
 
@@ -986,14 +987,13 @@ contains
         ! FWHM = 2sqrt(2ln2)*sigma
         ! sigma = FWHM/(2sqrt(2ln2))
         ! sigma^2 = (7e-12)^2 /(4*2*ln2)
-        if (IsEIS) DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
-        ! Add instrumental broadening (if any)            
+        if (IsEIS) DLambdaInstr2 = (7e-12)**2/(8*log(2.))
+        ! Add instrumental broadening (if any)
         if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
 
         ! Convert [m] --> [A]
         DLambdaSI = sqrt(DLambdaSI2)
         DLambda   = DLambdaSI * 1e10
-
 
         ! Calculate flux and spread it on the Spectrum_II grids
 
@@ -1028,6 +1028,7 @@ contains
     call timing_stop(NameSub)
 
   contains
+    !==========================================================================
 
     real function extension_factor(TeSi)
       real, intent(in) :: TeSi
@@ -1037,15 +1038,15 @@ contains
       extension_factor = FractionSpitzer + &
            (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
     end function extension_factor
-
     !==========================================================================
+
     subroutine disperse_line
-      integer                     :: iStep, iWave, nWaveBin    
+      integer                     :: iStep, iWave, nWaveBin
       integer                     :: iBin, iBegin, iEnd, jBin
       real                        :: Flux, Phi, InvNorm, InvSigma2
       real                        :: LambdaBin, LambdaBegin, LambdaEnd
       real                        :: LambdaDist
-      character(len=*), parameter :: NameSub='disperse_line'
+      character(len=*), parameter:: NameSub = 'disperse_line'
       !------------------------------------------------------------------------
 
       nWaveBin = SpectrumTable_I(iInterval)%nBin
@@ -1066,17 +1067,17 @@ contains
       end do
 
       InvNorm   = 1/(sqrt(2*cPi) * DLambda)
-      InvSigma2 = 1/(2*DLambda**2) 
+      InvSigma2 = 1/(2*DLambda**2)
 
       ! Update bins between begin and end indices by adding the Gaussian distribution
       do iBin = iBegin , iEnd
         ! Get wavelength from the center of the bin
         LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
         ! Get distance from peak wavelength in SI
-        LambdaDist = Lambda - LambdaBin 
+        LambdaDist = Lambda - LambdaBin
         ! Calculate Gaussian of the line
         Phi = InvNorm * exp(-LambdaDist**2 * InvSigma2)
-        ! Calculate total monochromatic flux 
+        ! Calculate total monochromatic flux
         Flux = FluxMono*Phi
         ! Update bin with flux
         SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iBin) = &
@@ -1087,6 +1088,8 @@ contains
     !==========================================================================
 
   end subroutine spectrum_calc_flux
+  !============================================================================
 
 end module ModSpectrum
+!==============================================================================
 

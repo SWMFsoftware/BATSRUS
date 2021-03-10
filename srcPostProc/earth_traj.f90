@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program earth_traj
 
@@ -12,7 +13,7 @@ program earth_traj
   !
   ! The input parameters are read from EARTH_TRAJ.in, and the result is
   ! written into STDOUT.
-  ! 
+  !
 
   use CON_geopack_internal
   use ModUT
@@ -22,7 +23,7 @@ program earth_traj
 
   implicit none
 
-  real, parameter :: cAU2rSun = cAU/Rsun  
+  real, parameter :: cAU2rSun = cAU/Rsun
 
   real :: Xyz_D(3), Aux
   real :: StartTimeRel=0.0, EndTimeRel=0.0, TimeStep=0.0
@@ -33,7 +34,7 @@ program earth_traj
   integer, dimension(7) :: iStartTime, iCT
   integer :: i, iFile
   integer :: oUnit
-  !-----------------
+  !----------------------------------------------------------------------------
 
   !
   ! Parse the command line arguments
@@ -41,9 +42,9 @@ program earth_traj
   iFile = 10
   NameFile='EARTH_TRAJ.in'
   open(iFile,file=NameFile,status='old')
-  READPARAM: do 
+  READPARAM: do
      read(iFile,'(a)',end=9000,err=9000) NameCommand
-     if(index(NameCommand,'#').ne.1)NameCommand=''
+     if(index(NameCommand,'#') /= 1)NameCommand=''
      select case(NameCommand)
      case("#COOR")
         read(iFile,*,end=9000,err=9000) CoordSys
@@ -55,7 +56,7 @@ program earth_traj
         do i = 1, 6
            read(iFile,*,end=9000,err=9000) iStartTime(i)
         end do
-        read(iFile,*,end=9000,err=9000) Aux  !Auxiliary
+        read(iFile,*,end=9000,err=9000) Aux  ! Auxiliary
         iStartTime(7) = 0
      case("#TIMELOOP")
         read(iFile,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
@@ -64,10 +65,10 @@ program earth_traj
            close(iFile)
            iFile = iFile-1
         else
-           exit READPARAM
+           EXIT READPARAM
         end if
      case default
-        if (len_trim(NameCommand) .ne. 0) then  ! i.e., just skip an empty line
+        if (len_trim(NameCommand) /= 0) then  ! i.e., just skip an empty line
            write(*,*) &
                 '+++ Wrong command "'//trim(NameCommand)//'" encountered +++'
            stop
@@ -79,11 +80,11 @@ program earth_traj
   !
   ! Check correctness of arguments
   !
-  if ((CoordSys .ne. 'HAE') .and. (CoordSys .ne. 'HGI') .and. (CoordSys .ne. 'HGR')) &
+  if ((CoordSys /= 'HAE') .and. (CoordSys /= 'HGI') .and. (CoordSys /= 'HGR')) &
        call CON_stop('+++ Unknown coordinate system "'//trim(CoordSys)//'" specified +++')
   if (StartTimeRel > EndTimeRel) &
        call CON_stop('+++ StartTime MUST be less than EndTime +++')
-  if (TimeStep <= cZero) &
+  if (TimeStep <= 0.0) &
        call CON_stop('+++ TimeStep MUST be positive +++')
   if (EndTimeRel > StartTimeRel + TimeStep*49999) &
        call CON_stop('+++ Output file cannot have more than 50000 lines +++')
@@ -133,3 +134,4 @@ program earth_traj
   call CON_stop('+++ Error in timeloop format +++')
 
 end program earth_traj
+!==============================================================================

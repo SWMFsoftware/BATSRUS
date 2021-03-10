@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program convert_restart_file_format
 
@@ -34,7 +35,6 @@ program convert_restart_file_format
   real (Real4_), allocatable :: B8_X(:,:,:), B8_Y(:,:,:), B8_Z(:,:,:)
 
   !----------------------------------------------------------------------------
-
   write(*,*)'ConvertRestart v1.0 (G. Toth, 2006) starting'
 
   call read_restart_header
@@ -61,6 +61,7 @@ program convert_restart_file_format
   write(*,*)'ConvertRestart finished'
 
 contains
+  !============================================================================
 
   subroutine read_restart_header
 
@@ -79,7 +80,7 @@ contains
           read(iUnitTmp,*) TimeSimulation
        case("#NEWRESTART")
           read(iUnitTmp,*,iostat=iError) IsBfaceSaved
-          ! If constrained transport is configured out 
+          ! If constrained transport is configured out
           ! the logical parameter is not present
           if(iError /= 0) IsBfaceSaved = .false.
        case("#PRECISION")
@@ -132,7 +133,6 @@ contains
     end if
 
   end subroutine read_restart_header
-
   !============================================================================
 
   subroutine read_restart_file(iBlock)
@@ -142,8 +142,8 @@ contains
     integer   :: iError, iVar
     character :: StringDigit
 
-    character (len=*), parameter :: NameSub='read_restart_file'
-    !--------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_restart_file'
+    !--------------------------------------------------------------------------
     write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlock))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
@@ -177,17 +177,16 @@ contains
     close(iUnitBlk)
 
   end subroutine read_restart_file
-
-  !===========================================================================
+  !============================================================================
 
   subroutine write_restart_file(iBlock)
 
     integer, intent(in) :: iBlock
 
-    character (len=*), parameter :: NameSub='write_restart_file'
     integer:: iError, iVar
     character:: StringDigit
-    !--------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'write_restart_file'
+    !--------------------------------------------------------------------------
 
     write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlock))))
 
@@ -221,7 +220,6 @@ contains
     close(iUnitBlk)
 
   end subroutine write_restart_file
-
   !============================================================================
 
   subroutine open_one_restart_file(DoRead)
@@ -229,8 +227,8 @@ contains
     logical, intent(in) :: DoRead
 
     integer :: lRecord, l, iError
-    character(len=*), parameter :: NameSub='open_one_restart_file'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'open_one_restart_file'
+    !--------------------------------------------------------------------------
 
     ! Calculate the record length for the first block
     inquire (IOLENGTH = lRecord ) Dt8, Dxyz8_D, Xyz8_D, State8_VC
@@ -260,22 +258,21 @@ contains
     end if
 
   end subroutine open_one_restart_file
-
   !============================================================================
 
   subroutine read_one_restart_file
 
-    character (len=*), parameter :: NameSub='read_one_restart_file'
     integer :: iBlock
-    !-------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'read_one_restart_file'
+    !--------------------------------------------------------------------------
     call open_one_restart_file(DoRead = .true.)
 
     do iBlock = 1, nBlock
 
        if(nByteReal == 4)then
           if(IsBfaceSaved)then
-             ! Read face centered magnetic field 
+             ! Read face centered magnetic field
              read(iUnitOne, rec=iBlock)  &
                   Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
@@ -291,7 +288,7 @@ contains
 
        else
           if(IsBfaceSaved)then
-             ! Read face centered magnetic field 
+             ! Read face centered magnetic field
              read(iUnitOne, rec=iBlock)  &
                   Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
@@ -315,15 +312,14 @@ contains
     close(iUnitOne)
 
   end subroutine read_one_restart_file
-
   !============================================================================
 
   subroutine write_one_restart_file
 
-    character (len=*), parameter :: NameSub='write_one_restart_file'
     integer :: iBlock
-    !--------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'write_one_restart_file'
+    !--------------------------------------------------------------------------
     call open_one_restart_file(DoRead = .false.)
 
     do iBlock = 1, nBlock
@@ -333,7 +329,7 @@ contains
 
        if(nByteReal == 4)then
           if(IsBfaceSaved)then
-             ! Read face centered magnetic field 
+             ! Read face centered magnetic field
              write(iUnitOne, rec=iBlock)  &
                   Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
@@ -348,7 +344,7 @@ contains
           end if
        else
           if(IsBfaceSaved)then
-             ! Read face centered magnetic field 
+             ! Read face centered magnetic field
              write(iUnitOne, rec=iBlock)  &
                   Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
@@ -368,13 +364,16 @@ contains
     close(iUnitOne)
 
   end subroutine write_one_restart_file
+  !============================================================================
 
-  !===========================================================================
   subroutine my_stop(String)
     character(len=*), intent(in) :: String
+    !--------------------------------------------------------------------------
     write(*,*)'ERROR in convert_restart_file_format:'
     write(*,*) String
     stop
   end subroutine my_stop
+  !============================================================================
 
 end program convert_restart_file_format
+!==============================================================================

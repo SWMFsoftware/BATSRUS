@@ -1,10 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!The use /PATH_TO_BIN/TIME_CONV.exe <data.in>TIME.in
-!Format of the data.in file (the filename is arbitrary:
+! The use /PATH_TO_BIN/TIME_CONV.exe <data.in>TIME.in
+! Format of the data.in file (the filename is arbitrary:
 !
-!2047         Carrigton rotation 
-!360          Carrington coordinate (0 corresponds to the end time, 360 to the start time.
+! 2047         Carrigton rotation
+! 360          Carrington coordinate (0 corresponds to the end time, 360 to the start time.
 program time_convert
   use ModUT
   use ModConst
@@ -22,7 +23,7 @@ program time_convert
   real::TimeStart
   integer, dimension(7) :: iTime_I,iTimeL_I,iTimeR_I,iTimeExact_I
   integer:: iTime
-  !================
+  !----------------------------------------------------------------------------
   read(*,*)iCRIn
   read(*,*)lLongitudeIn
 
@@ -32,13 +33,13 @@ program time_convert
   end if
 
   LongitudeIn = lLongitudeIn * cDegToRad
-  !This is an arbitrarily chosen Carrington rotation with the choice for 
-  !left and right time covering the end time of the rotation
+  ! This is an arbitrarily chosen Carrington rotation with the choice for
+  ! left and right time covering the end time of the rotation
   iCR = 2008
 
-  iTimeL_I=(/2003,10,23,13,0,0,0/)
+  iTimeL_I=[2003,10,23,13,0,0,0]
   call time_int_to_real(iTimeL_I,TimeL)
-  iTimeR_I=(/2003,10,23,14,0,0,0/)
+  iTimeR_I=[2003,10,23,14,0,0,0]
   call time_int_to_real(iTimeR_I,TimeR)
 
   if(lLongitudeIn/=0)then
@@ -46,9 +47,8 @@ program time_convert
      TimeR=TimeR - (lLongitudeIn /360.0) * 27 * 86400
   end if
   call solve_time
-  !\
+
   ! Now we have a time which corrsponds to the given Carrington Longitude in the rotation 2008
-  !/
   do while(iCR/=iCRIn)
      if(iCR>iCRIn)then
         TimeR=TimeR-27*86400
@@ -63,7 +63,7 @@ program time_convert
      end if
   end do
   write(*,'(a)')'#STARTTIME'
-  write(*,'(i4.4)')iTime_I(1)   !Year
+  write(*,'(i4.4)')iTime_I(1)   ! Year
   do iTime=2,5
      write(*,'(i2.2)')iTime_I(iTime)
   end do
@@ -71,9 +71,8 @@ program time_convert
   write(*,'(a)')' 0.0'
   write(*,*)
   write(*,'(a)')'#END'
-  !\
+
   ! Create two files with the time in exact hours.
-  !/
   iTimeExact_I(1:4) = iTime_I(1:4)
   iTimeExact_I(5:7) = 0
   call time_int_to_real(iTimeExact_I,TimeExact)
@@ -84,7 +83,7 @@ program time_convert
   open(12,file='ENDTIME.in',status='replace')
   write(12,'(a)')'#ENDTIME'
   do iUnit=11,12
-     write(iUnit,'(i4.4)')iTimeExact_I(1)     !Year
+     write(iUnit,'(i4.4)')iTimeExact_I(1)     ! Year
      do iTime=2,5
         write(iUnit,'(i2.2)')iTimeExact_I(iTime)
      end do
@@ -96,7 +95,9 @@ program time_convert
   end do
   stop
 contains
-  subroutine solve_time 
+  !============================================================================
+  subroutine solve_time
+    !--------------------------------------------------------------------------
     call time_real_to_int(TimeL,iTimeL_I)
     call CON_recalc(iTimeL_I(1),iTimeL_I(2),iTimeL_I(3),iTimeL_I(4),iTimeL_I(5),iTimeL_I(6))
     LongitudeL=CarringtonLongitude
@@ -104,11 +105,10 @@ contains
     call time_real_to_int(TimeR,iTimeR_I)
     call CON_recalc(iTimeR_I(1),iTimeR_I(2),iTimeR_I(3),iTimeR_I(4),iTimeR_I(5),iTimeR_I(6))
     LongitudeR=CarringtonLongitude
-    !\
+
     ! We need to mantain the inequality
     ! LongitudeL >= LongitudeIn >= LongitudeR
     ! Under the condition, TimeL < TimeR
-    !/
 
     if(LongitudeL<=cPi.and.LongitudeR>=cPi)then
        if(LongitudeIn>cPi)then
@@ -140,4 +140,6 @@ contains
        end if
     end do
   end subroutine solve_time
+  !============================================================================
 end program time_convert
+!==============================================================================

@@ -3,7 +3,7 @@
 ! along the trajectory.
 
 program interpolate_output
-  
+
   ! Read a *.outs IDL file of type ascii/real4/real8 and a satellite file,
   ! then interpolate the *.outs to the trajectory from the satellite file.
 
@@ -14,7 +14,7 @@ program interpolate_output
   use ModCoordTransform, ONLY: atan2_check
   use ModUtilities,      ONLY: open_file, close_file
   use ModIoUnit,         ONLY: UnitTmp_
-  
+
   implicit none
 
   integer:: iError      ! I/O error
@@ -30,9 +30,9 @@ program interpolate_output
   character(len=3), allocatable:: NameMag_I(:) ! name of magnetic stations
   real, allocatable :: CoordPoint_DI(:,:) ! positions
   real, allocatable :: CoordIn_DI(:,:)    ! positions in the input file system
-  real, allocatable :: CoordNorm_DI(:,:)  ! normalized positions 
+  real, allocatable :: CoordNorm_DI(:,:)  ! normalized positions
   integer           :: nPoint         ! number of points for interpolation
-  
+
   ! Input mulit-D file
   character(len=100):: NameFileIn     ! name of input data file
   character(len=10) :: TypeFileIn     ! ascii/real4/real8
@@ -51,7 +51,7 @@ program interpolate_output
   logical:: IsMagStation = .false., IsTrajectory = .true.
 
   character(len=*), parameter:: NameProgram = 'interpolate_output'
-  !-------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   write(*,*) NameProgram,': start read_parameters'
   call read_parameters
@@ -70,11 +70,11 @@ program interpolate_output
   write(*,*) NameProgram,' finished'
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine read_parameters
 
     use ModUtilities, ONLY: fix_dir_name, make_dir
-    
+
     ! Read  file names and types from STDIN (can be piped in from a file):
     !
     ! z=0_mhd_1_e19970517-033600-000.outs
@@ -86,8 +86,8 @@ contains
     ! for accurate conversion between satellite time and simulation time.
 
     integer:: i
-    !-------------------------------------------------------------------------
-    
+
+    !--------------------------------------------------------------------------
     write(*,'(a)', ADVANCE='NO') 'Name of multi-dimensional data file:    '
     read(*,'(a)',iostat=iError) NameFileIn
 
@@ -171,8 +171,8 @@ contains
 
     integer:: iPoint         ! line number in position file
     real:: Lon, Lat
-    !--------------------------------------------------------------------------
     ! Open the position file
+    !--------------------------------------------------------------------------
     call open_file(File=NameFilePoints, Status="old", NameCaller=NameProgram)
 
     ! Find the number of points in the point position file
@@ -205,7 +205,7 @@ contains
     allocate(CoordPoint_DI(2,nPoint), CoordIn_DI(2,nPoint))
 
     ! Rewind to start of file for reading times/positions.
-    rewind(unit=UnitTmp_) 
+    rewind(unit=UnitTmp_)
 
     ! Skip header
     do
@@ -252,7 +252,7 @@ contains
 
     ! Read first snapshot to figure out start time, coordinates,
     ! coordinate system, number of snapshots
-    
+
     use ModCoordTransform, ONLY: xyz_to_lonlat, lonlat_to_xyz
     use CON_planet, ONLY: init_planet_const, set_planet_defaults
     use CON_axes, ONLY: init_axes, transform_matrix
@@ -261,7 +261,7 @@ contains
     integer:: iPoint
     real:: Time, CoordMax_D(2), CoordMin_D(2), dCoord_D(2)
     real:: PointToIn_DD(3,3), XyzPoint_D(3), XyzIn_D(3)
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call read_plot_file(&
          NameFile = NameFileIn,          &
          TypeFileIn = TypeFileIn,        &
@@ -302,7 +302,7 @@ contains
        call init_planet_const
        call set_planet_defaults
        call init_axes(StartTime)
-       
+
        PointToIn_DD = transform_matrix(0.0, NameCoordPoint, NameCoordIn)
        write(*,*) NameProgram, &
             ': convert from ', NameCoordPoint, ' to ', NameCoordIn
@@ -328,13 +328,13 @@ contains
        write(*,*) NameProgram//': could not read first snapshot, iError=', iError
        STOP
     end if
-    
+
     dCoord_D = (CoordMax_D - CoordMin_D)/ [n1-1, n2-1]
 
     write(*,*) NameProgram,': CoordMin_D=', CoordMin_D
     write(*,*) NameProgram,': CoordMax_D=', CoordMax_D
     write(*,*) NameProgram,': dCoord_D  =', dCoord_D
-    
+
     ! Normalize point coordinates
     allocate(CoordNorm_DI(2,nPoint))
     do iPoint = 1, nPoint
@@ -359,7 +359,7 @@ contains
     close(UnitTmp_)
 
     write(*,*) NameProgram,': nSnapshot=', nSnapshot
-    
+
   end subroutine read_through_first
   !============================================================================
   subroutine interpolate_mag_station
@@ -372,8 +372,8 @@ contains
 
     real:: Time ! simulation time
     integer:: iSnapshot, iPoint
-    !-------------------------------------------------------------------------
     ! Extra cell for periodic longitudes
+    !--------------------------------------------------------------------------
     allocate(dB_DG(3,n1+1,n2), dB_DII(3,nSnapshot,nPoint), &
          iTime_II(6,nSnapshot))
 
@@ -403,7 +403,7 @@ contains
        end do
     end do
     close(UnitTmp_)
-    
+
     do iPoint = 1, nPoint
        call open_file(FILE=trim(NameDirOut)//NameMag_I(iPoint)//'.txt')
        write(UnitTmp_, '(a)') &
@@ -418,7 +418,7 @@ contains
             '# Station: '//NameMag_I(iPoint)
        write(UnitTmp_, '(a)') &
             'Year Month Day Hour Min Sec '// &
-            'B_NorthGeomag B_EastGeomag B_DownGeomag'       
+            'B_NorthGeomag B_EastGeomag B_DownGeomag'
        do iSnapshot = 1, nSnapshot
           write(UnitTmp_,'(i4,5i3,3f10.3)') &
                iTime_II(:,iSnapshot), dB_DII(:,iSnapshot,iPoint)
@@ -427,7 +427,7 @@ contains
     end do
 
     deallocate(iTime_II, dB_DG, dB_DII)
-    
+
   end subroutine interpolate_mag_station
   !============================================================================
   subroutine interpolate_trajectory
@@ -444,10 +444,10 @@ contains
     real   :: RadMin, RadMax, PhiMin, PhiMax, dPhi
     integer:: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
-    !-------------------------------------------------------------------------
 
     ! Create arrays to hold interpolated data.
-    allocate(                               & 
+    !--------------------------------------------------------------------------
+    allocate(                               &
          Coord_DII(nDim, n1, 0:n2+1),       &
          Var_VII(nVar, n1, 0:n2+1),         &
          TimeOut_I(nSnapshot),              &
@@ -470,7 +470,7 @@ contains
        if(Time > TrajTime_I(nPoint)) EXIT  ! after end of trajectory file
 
        iSnapshot = iSnapshot + 1
-       
+
        ! Interpolate location of trajectory file in time to snapshot.
        do while(Time > TrajTime_I(iTrajTimestamp))
           iTrajTimestamp = iTrajTimestamp + 1
@@ -527,7 +527,7 @@ contains
     deallocate(Coord_DII, Var_VII)
 
     ! Open file for interpolated output
-    call open_file(file=NameFileOut, NameCaller=NameProgram) 
+    call open_file(file=NameFileOut, NameCaller=NameProgram)
 
     ! Include header
     write(UnitTmp_,'(a,a)')'t ', trim(NameVar)
@@ -537,15 +537,12 @@ contains
        write(UnitTmp_,'(100es13.6)') TimeOut_I(iSnapshot), &
             InterpCoord_DI(:,iSnapshot), InterpData_VI(:,iSnapshot)
     enddo
-    
+
     call close_file(NameCaller=NameProgram)
-    
+
   end subroutine interpolate_trajectory
   !============================================================================
 
 end program
-
-
-
-
+!==============================================================================
 

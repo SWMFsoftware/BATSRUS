@@ -14,7 +14,7 @@ program spectrum
 
   implicit none
 
-  !--------------------------------------------------------
+  !----------------------------------------------------------------------------
   character(len=200) NameFileRoot, NameSpectrumOut
   character(len=200) TypeDataFile, NameUnitInput
 
@@ -112,7 +112,7 @@ program spectrum
   call clean_mpi
 
 contains
-  !==========================================================
+  !============================================================================
 
   subroutine init_defaults
     use ModVarIndexes, ONLY: NameVar_V, nVar, nFluid, nWave, WaveFirst_, WaveLast_, IonFirst_
@@ -125,7 +125,7 @@ contains
     character(len=3) :: NameWave
 
     ! Fix the NameVar_V string for waves
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(WaveLast_ > 1)then
       do iWave = 1, nWave
         write(NameWave,'(a,i2.2)') 'I',iWave
@@ -147,7 +147,7 @@ contains
     BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
   end subroutine init_defaults
-  !==========================================================
+  !============================================================================
 
   subroutine init_program_spectrum
     use BATL_tree, ONLY: read_tree_file, get_tree_position, distribute_tree, &
@@ -164,12 +164,12 @@ contains
     use ModNodes, ONLY: init_mod_nodes
     use ModGeometry, ONLY: init_mod_geometry, XyzMin_D, XyzMax_D, TypeGeometry
 
-
     integer :: iBlock, iNode, iError, i
     real :: rMin, rMax, PositionMin_D(3), PositionMax_D(3), rSize
 
     integer :: UnitTmp_, nDimIn, nInfoIn, nNodeIn, iRatioIn_D(3), nRootIn_D(3)
 
+    !--------------------------------------------------------------------------
     character(len=200) NameInfoFile, NameTreeFile, NameDataFile
     !--------------------------------------------------------
 
@@ -226,7 +226,7 @@ contains
     call read_data_file(NameDataFile)
 
   end subroutine init_program_spectrum
-  !==========================================================
+  !============================================================================
 
   subroutine read_param_file
     use ModReadParam, ONLY: lStringLine, read_file, read_init, read_line, read_command, read_echo_set
@@ -234,7 +234,7 @@ contains
     character(len=*), parameter :: NameParamFile = 'SPECTRUM.in'
     character(len=lStringLine) :: StringLine, NameCommand, NameFileHead, NameVarInput
     logical :: DoEcho = .true.
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     character(len=10) TypeObsCoord
     logical :: DoObsRotate, DoObsRotTangent
     real :: ObsRotAngle
@@ -330,7 +330,6 @@ contains
           call read_echo_set(.false.)
           if (DoEcho) write(*,*)
 
-
       case default
       end select
     end do READPARAM
@@ -343,7 +342,7 @@ contains
     endif
 
   end subroutine read_param_file
-  !==========================================================
+  !============================================================================
 
   ! read in 3d idl file information, refer to ModSetParameters and PostIDL
   subroutine read_info_file(NameInfoFile)
@@ -361,7 +360,7 @@ contains
     logical :: IsLogRadius, IsGenRadius
 
     character(len=*), parameter:: NameSub = 'read_info_file'
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     call read_file(NameInfoFile,IsVerbose=.false.)
     call read_echo_set(.false.)
     call read_init()
@@ -504,7 +503,7 @@ contains
     endif
 
   end subroutine read_info_file
-  !==========================================================
+  !============================================================================
 
   ! read in 3d data file (.out), refer to select_snapshot
   subroutine read_data_file(NameDataFile)
@@ -536,7 +535,7 @@ contains
     ! ---------------------------
 
     character(len=*), parameter:: NameSub = 'read_data_file'
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     iUnit = io_unit_new()
 
     call read_plot_file(NameDataFile, iUnit, TypeDataFile, &
@@ -606,7 +605,7 @@ contains
     enddo
 
   end subroutine read_data_file
-  !==========================================================
+  !============================================================================
 
   ! Collectes los array from all processors, only useful for testing
   subroutine collect_los_segments(NameOutputFile, DoTestIn)
@@ -624,7 +623,7 @@ contains
     real, allocatable :: StatePixSegAll_VII(:,:,:)
     integer, allocatable :: nLosSegAll_I(:), nTmpLosSeg_I(:)
     character(1) :: c
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     character(len=200) NameTmp
     logical :: DoTest
     character(len=*), parameter :: NameSub = 'collect_los_segments'
@@ -738,7 +737,7 @@ contains
 
     call timing_stop(NameSub)
   end subroutine collect_los_segments
-  !==========================================================
+  !============================================================================
 
   subroutine convert_units
     use ModPhysics, ONLY: nIoUnit, No2Si_V, Io2Si_V, UnitX_, UnitRho_, UnitRhoU_, UnitB_, UnitP_, UnitEnergyDens_
@@ -747,7 +746,7 @@ contains
     real :: Input2Si_V(nIoUnit)
     integer :: i, j
 
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
     if (trim(NameUnitInput) == 'normalized variables') then
       Input2Si_V = No2Si_V
     else
@@ -781,7 +780,7 @@ contains
     enddo; enddo
 
   end subroutine convert_units
-  !==========================================================
+  !============================================================================
 
   subroutine collect_save_spectrum(NameOutputFile)
     use ModSpectrum, ONLY: SpectrumTable_I
@@ -796,7 +795,7 @@ contains
     integer :: iPix, jPix, iPixelAll, iPixelProc, iProcSend
     integer :: iStatus_I(mpi_status_size)
     character(len=*), parameter:: NameSub = 'collect_save_spectrum'
-    !--------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     call timing_start(NameSub)
 
@@ -867,7 +866,7 @@ contains
 
     call timing_stop(NameSub)
   end subroutine collect_save_spectrum
-  !==========================================================
+  !============================================================================
 
 end program spectrum
 !==============================================================================
