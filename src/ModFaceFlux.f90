@@ -128,30 +128,58 @@ module ModFaceFlux
   ! index of cell in the negative and positive directions from face
   integer :: iLeft,  jLeft, kLeft
   integer :: iRight, jRight, kRight
+  !$omp threadprivate( iLeft, jLeft, kLeft, iRight, jRight, kRight )
+  
   ! Index of the block for this face, iBlockFace = iBlock
   integer :: iBlockFace
+  !$omp threadprivate( iBlockFace )
+  
   ! Direction of the face iDimFace = iDim
   integer :: iDimFace
+  !$omp threadprivate( iDimFace )
+  
   ! Range of fluid and variable indexes for the current solver
   integer:: iFluidMin = 1, iFluidMax = nFluid
   integer:: iVarMin   = 1, iVarMax   = nVar
   integer:: iEnergyMin = nVar+1, iEnergyMax = nVar + nFluid
+  !$omp threadprivate( iFluidMin, iFLuidMax, iVarMin, iVarMax )
+  !$omp threadprivate( iEnergyMin, iEnergyMax )
+  
   ! index of the face
-  integer :: iFace, jFace, kFace
+  integer, public:: iFace, jFace, kFace
+  !$omp threadprivate( iFace,jFace,kFace )
+  
   ! Maximum speed for the Courant condition
-  real :: CmaxDt
-  real :: Area2, AreaX, AreaY, AreaZ, Area = 0.0
+  real, public :: CmaxDt
+  !$omp threadprivate( CmaxDt )
+  
+  real :: Area2, AreaX, AreaY, AreaZ
+  real, public:: Area = 0.0
+  !$omp threadprivate( Area, Area2, AreaX, AreaY, AreaZ )
+  
   real :: DeltaBnL, DeltaBnR
+  !$omp threadprivate( DeltaBnL, DeltaBnR )
+  
   real :: DiffBb ! (1/4)(BnL-BnR)^2
+  !$omp threadprivate( DiffBb )
+  
   real :: StateLeft_V(nVar)
   real :: StateRight_V(nVar)
   real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
+  !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
+  
   ! Variables for rotated coordinate system (n is normal to face)
   real :: Normal_D(3), NormalX, NormalY, NormalZ
   real :: Tangent1_D(3), Tangent2_D(3)
   real :: B0n, B0t1, B0t2
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
+  !$omp threadprivate( Normal_D, NormalX, NormalY, NormalZ )
+  !$omp threadprivate( Tangent1_D, Tangent2_D )
+  !$omp threadprivate( B0n, B0t1, B0t2 )
+  !$omp threadprivate( UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L )
+  !$omp threadprivate( UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R )
+
   ! Electric field \nabla x B x B - \nabla (P_e +P_w) may be calculated
   ! in terms of divergence of the MHD part of momentum flux.
   ! For this reason we calculate the MHD flux for the first ion fluid even
@@ -159,32 +187,60 @@ module ModFaceFlux
   real :: MhdFlux_V(     RhoUx_:RhoUz_)
   real :: MhdFluxLeft_V( RhoUx_:RhoUz_)
   real :: MhdFluxRight_V(RhoUx_:RhoUz_)
+  !$omp threadprivate( MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V)
+  
   ! normal electric field -> divE
   real :: Enormal
+  !$omp threadprivate(Enormal)
+  
   ! Normal velocities for all fluids plus electrons
   real :: Unormal_I(nFluid+1) = 0.0
-  real :: UnLeft_I(nFluid+1)
-  real :: UnRight_I(nFluid+1)
+  real, public :: UnLeft_I(nFluid+1)
+  real, public :: UnRight_I(nFluid+1)
+  !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
+  
   ! Variables for normal resistivity
-  real :: EtaJx, EtaJy, EtaJz, Eta
+  real :: EtaJx, EtaJy, EtaJz, Eta = 0
+  !$omp threadprivate( EtaJx, EtaJy, EtaJz, Eta )
+  
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff
-  real :: HallJx, HallJy, HallJz
+  real, public :: HallJx, HallJy, HallJz
+  !$omp threadprivate( InvDxyz, HallCoeff, HallJx, HallJy, HallJz )
+  
   ! Variables needed for Biermann battery term
-  logical :: UseHallGradPe = .false.
+  logical, public :: UseHallGradPe = .false.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
+  !$omp threadprivate( UseHallGradPe)
+  !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
+  
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef, EradFlux=0.0, RadDiffCoef
   real :: HeatFlux, IonHeatFlux, HeatCondCoefNormal
+  !$omp threadprivate( DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux )
+  !$omp threadprivate( HeatCondCoefNormal )
+
   ! B x Area for current -> BxJ
   real :: bCrossArea_D(3) = 0.0
-  real :: B0x=0.0, B0y=0.0, B0z=0.0
+  !$omp threadprivate( bCrossArea_D)
+  
+  real, public :: B0x=0.0, B0y=0.0, B0z=0.0
+  !$omp threadprivate( B0x, B0y, B0z )
+  
   ! Variables needed by viscosity
   real :: ViscoCoeff
+  !$omp threadprivate( ViscoCoeff )
+  
   logical :: IsBoundary
+  !$omp threadprivate( IsBoundary )
+  
   ! Variables introduced for regional Boris correction
   real :: InvClightFace, InvClight2Face
-  logical :: DoTestCell = .false.
+  !$omp threadprivate( InvClightFace, InvClight2Face )
+  
+  logical, public :: DoTestCell = .false.
+  !$omp threadprivate( DoTestCell )
+  
   ! Logicals for computation once per block
   logical :: IsNewBlockVisco = .true.
   logical :: IsNewBlockGradPe = .true.
@@ -193,8 +249,11 @@ module ModFaceFlux
   logical :: IsNewBlockIonHeatCond = .true.
   logical :: IsNewBlockRadDiffusion = .true.
   logical :: IsNewBlockAlfven = .true.
+  !$omp threadprivate(IsNewBlockVisco, IsNewBlockGradPe, IsNewBlockCurrent)
+  !$omp threadprivate(IsNewBlockHeatCond, IsNewBlockIonHeatCond)
+  !$omp threadprivate(IsNewBlockRadDiffusion, IsNewBlockAlfven)
 #endif
-     
+
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
@@ -284,13 +343,20 @@ contains
   end subroutine init_mod_face_flux
   !============================================================================
 
-  subroutine set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
+  subroutine set_block_values(iBlock, iDim &
+#ifdef OPENACC       
+       , IFF_I, RFF_I, Normal_D&
+#endif       
+       )
     !$acc routine seq
 
     integer, intent(in) :: iBlock, iDim
+    
+#ifdef OPENACC    
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
+#endif    
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_block_values'
@@ -533,8 +599,7 @@ contains
 #endif
 
 #ifndef OPENACC
-      !call init_face_flux_arrays(IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-      call set_block_values(iBlock, x_, IFF_I, RFF_I, Normal_D)
+      call set_block_values(iBlock, x_)
 #endif
 
       !$acc loop vector collapse(3) &
@@ -577,8 +642,11 @@ contains
 #ifdef OPENACC
            call set_block_values(iBlockFace, &
                 iDimFace, IFF_I, RFF_I, Normal_D)
-#endif
            call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else
+           call set_cell_values_x
+#endif           
+           
 
            if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
                 .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -713,7 +781,7 @@ contains
 
 #ifndef OPENACC
       !call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-      call set_block_values(iBlock, y_, IFF_I, RFF_I, Normal_D)
+      call set_block_values(iBlock, y_)
 #endif
       !$acc loop vector collapse(3) &
       !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
@@ -757,14 +825,15 @@ contains
 #ifdef OPENACC
            call set_block_values(iBlockFace, iDimFace, &
                 IFF_I, RFF_I, Normal_D)
-#endif
+           call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else
+           call set_cell_values_y
+#endif           
 
 #ifndef OPENACC
            DoTestCell = DoTest .and. iFace == iTest .and. &
                 (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 #endif
-
-           call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
 
            if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
                 .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -898,7 +967,7 @@ contains
 
 #ifndef OPENACC
       !call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-      call set_block_values(iBlock, z_, IFF_I, RFF_I, Normal_D)
+      call set_block_values(iBlock, z_)
 #endif
 
       !$acc loop vector collapse(3) &
@@ -942,14 +1011,15 @@ contains
 #ifdef OPENACC
            call set_block_values(iBlockFace, iDimFace, &
                 IFF_I, RFF_I, Normal_D)
-#endif
+           call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else   
+           call set_cell_values_z
+#endif           
 
 #ifndef OPENACC
            DoTestCell = DoTest .and. iFace == iTest .and. &
                 jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 #endif
-
-           call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
 
            if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
                 .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -1138,17 +1208,21 @@ contains
   end subroutine calc_face_flux
   !============================================================================
 
-  subroutine set_cell_values(IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values( &
+#ifdef OPENACC       
+       IsFF_I, IFF_I, RFF_I, Normal_D&
+#endif       
+       )
     !$acc routine seq
+#ifdef OPENACC    
     logical,  intent(inout):: IsFF_I(nFFLogic)
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
+#endif    
     !--------------------------------------------------------------------------
 #ifdef OPENACC     
     associate(iDimFace => IFF_I(iDimFace_))
-#endif      
-
       select case(iDimFace)
       case(x_)
          call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
@@ -1157,19 +1231,33 @@ contains
       case(z_)
          call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
       end select
-#ifdef OPENACC     
     end associate
+#else
+
+    select case(iDimFace)
+      case(x_)
+         call set_cell_values_x
+      case(y_)
+         call set_cell_values_y
+      case(z_)
+         call set_cell_values_z
+      end select
+      
 #endif    
   end subroutine set_cell_values
   !============================================================================
-  subroutine set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values_x(&
+#ifdef OPENACC       
+       IsFF_I, IFF_I, RFF_I, Normal_D&
+#endif       
+       )
     !$acc routine seq
-
+#ifdef OPENACC
     logical,  intent(inout):: IsFF_I(nFFLogic)
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
-
+#endif
     character(len=*), parameter:: NameSub = 'set_cell_values_x'
     !--------------------------------------------------------------------------
 #ifdef OPENACC
@@ -1206,7 +1294,11 @@ contains
          end if
       end if
 
+#ifdef OPENACC      
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else
+      call set_cell_values_common
+#endif      
 
 #ifdef OPENACC
     end associate
@@ -1214,13 +1306,19 @@ contains
   end subroutine set_cell_values_x
   !============================================================================
 
-  subroutine set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values_y(&
+#ifdef OPENACC       
+       IsFF_I, IFF_I, RFF_I, Normal_D&
+#endif       
+       )
     !$acc routine seq
 
+#ifdef OPENACC    
     logical,  intent(inout):: IsFF_I(nFFLogic)
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
+#endif    
 
     character(len=*), parameter:: NameSub = 'set_cell_values_y'
     !--------------------------------------------------------------------------
@@ -1251,7 +1349,11 @@ contains
          end if
       end if
 
+#ifdef OPENACC
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else
+      call set_cell_values_common
+#endif      
 
 #ifdef OPENACC
     end associate
@@ -1259,13 +1361,19 @@ contains
   end subroutine set_cell_values_y
   !============================================================================
 
-  subroutine set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values_z(&
+#ifdef OPENACC       
+       IsFF_I, IFF_I, RFF_I, Normal_D &
+#endif       
+       )
     !$acc routine seq
 
+#ifdef OPENACC    
     logical,  intent(inout):: IsFF_I(nFFLogic)
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Normal_D(MaxDim)
+#endif    
 
     character(len=*), parameter:: NameSub = 'set_cell_values_z'
     !--------------------------------------------------------------------------
@@ -1285,7 +1393,11 @@ contains
          AreaZ = FaceNormal_DDFB(z_, 3, iFace,jFace,kFace, iBlockFace)
       end if
 
+#ifdef OPENACC
       call set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
+#else
+      call set_cell_values_common
+#endif      
 
 #ifdef OPENACC
     end associate
@@ -1293,16 +1405,22 @@ contains
   end subroutine set_cell_values_z
   !============================================================================
 
-  subroutine set_cell_values_common( IsFF_I, IFF_I, RFF_I, Normal_D)
+  subroutine set_cell_values_common( &
+#ifdef OPENACC       
+       IsFF_I, IFF_I, RFF_I, Normal_D &
+#endif       
+       )
     !$acc routine seq
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
 
+#ifdef OPENACC
     logical,  intent(inout):: IsFF_I(:)
     integer,  intent(inout):: IFF_I(:)
     real,     intent(inout):: RFF_I(:)
-
     real, intent(inout):: Normal_D(MaxDim)
+#endif
+    
     real :: r
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
@@ -1427,26 +1545,13 @@ contains
 #endif
   end subroutine set_cell_values_common
   !============================================================================
-  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V,  &
-       IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-       FluxLeft_V, FluxRight_V, Unormal_I, Normal_D, Tangent1_D, Tangent2_D)
+  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
     !$acc routine seq
 
     use ModPhysics, ONLY: Gamma,GammaMinus1,InvGammaMinus1
 
     real, intent(out):: Flux_V(nFlux)
     real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
-
-    logical,  intent(inout):: IsFF_I(:)
-    integer,  intent(inout):: IFF_I(:)
-    real,     intent(inout):: RFF_I(:)
-    real, intent(inout):: StateLeft_V(nVar)
-    real, intent(inout):: StateRight_V(nVar)
-    real, intent(inout):: FluxLeft_V(nVar+nFluid)
-    real, intent(inout):: FluxRight_V(nVar+nFluid)
-    real, intent(inout):: Unormal_I(nFluid+1)
-    real, intent(inout):: Normal_D(MaxDim)
-    real, intent(inout):: Tangent1_D(MaxDim), Tangent2_D(MaxDim)
 
     ! Number of MHD waves including the divB wave
     integer, parameter :: nWaveMhd=8
@@ -1494,522 +1599,506 @@ contains
     character(len=*), parameter:: NameSub = 'roe_solver'
     !--------------------------------------------------------------------------
 #ifndef OPENACC
-#ifdef OPENACC
-    associate( &
-         iDimFace => IFF_I(iDimFace_), &
-         CmaxDt => RFF_I(CmaxDt_), IsBoundary => IsFF_I(IsBoundary_), &
-         B0n => RFF_I(B0n_), B0t1 => RFF_I(B0t1_), B0t2 => RFF_I(B0t2_), &
-         UnL => RFF_I(UnL_), Ut1L => RFF_I(Ut1L_), Ut2L => RFF_I(Ut2L_), &
-         B1nL => RFF_I(B1nL_), B1t1L => RFF_I(B1t1L_), B1t2L => RFF_I(B1t2L_), &
-         UnR => RFF_I(UnR_), Ut1R => RFF_I(Ut1R_), Ut2R => RFF_I(Ut2R_), &
-         B1nR => RFF_I(B1nR_), B1t1R => RFF_I(B1t1R_), B1t2R => RFF_I(B1t2R_))
-#endif
-
-      RhoL  =  StateLeft_V(Rho_)
-      pL    =  StateLeft_V(p_ )
-      RhoR  =  StateRight_V(Rho_)
-      pR    =  StateRight_V(p_  )
-
-      ! Rotate vector variables into a coordinate system orthogonal to the face
-      call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-           Normal_D, Tangent1_D, Tangent2_D)
-
-      ! Jump in scalar conservative variables
-      dCons_V(RhoMhd_) = RhoR      - RhoL
-      dCons_V(RhoUn_ ) = RhoR*UnR  - RhoL*UnL
-      dCons_V(RhoUt1_) = RhoR*Ut1R - RhoL*Ut1L
-      dCons_V(RhoUt2_) = RhoR*Ut2R - RhoL*Ut2L
-      dCons_V(B1n_   ) = B1nR      - B1nL
-      dCons_V(B1t1_  ) = B1t1R     - B1t1L
-      dCons_V(B1t2_  ) = B1t2R     - B1t2L
-      dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
-
-      ! Derived variables
-      RhoInvL = 1./RhoL
-      BnL  = B0n+B1nL
-      Bt1L = B0t1+B1t1L
-      Bt2L = B0t2+B1t2L
-      BbL  = BnL**2 + Bt1L**2 + Bt2L**2
-      aL   = Gamma*pL*RhoInvL
-
-      RhoInvR = 1./RhoR
-      BnR  = B0n+B1nR
-      Bt1R = B0t1+B1t1R
-      Bt2R = B0t2+B1t2R
-      BbR  = BnR**2 + Bt1R**2 + Bt2R**2
-      aR   = Gamma*pR*RhoInvR
-
-      ! Hat face
-      RhoH = 0.5*(RhoL + RhoR)
-      RhoInvH = 1./RhoH
-      UnH  = 0.5*(  UnL +   UnR)
-      Ut1H = 0.5*( Ut1L +  Ut1R)
-      Ut2H = 0.5*( Ut2L +  Ut2R)
-      BnH  = 0.5*(  BnL +   BnR)
-      Bt1H = 0.5*( Bt1L +  Bt1R)
-      Bt2H = 0.5*( Bt2L +  Bt2R)
-      B1nH = 0.5*( B1nL +  B1nR)
-      B1t1H= 0.5*(B1t1L + B1t1R)
-      B1t2H= 0.5*(B1t2L + B1t2R)
-      pH   = 0.5*(   pL +    pR)
-      BbH  = BnH**2  + Bt1H**2  + Bt2H**2
-
-      Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
-      aH   = Gamma*pH*RhoInvH
-
-      ! if(aL<0.0)then
-      !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
-      !        aL,iProc,iDimFace,i,j,k,&
-      !        Xyz_DGB(:,i,j,k,iBlockFace)
-      !   call stop_mpi
-      ! end if
-
-      aL = sqrt(aL)
-      aR = sqrt(aR)
-      aH = sqrt(aH)
-
-      eL = aL*aL + BbL*RhoInvL
-      CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
-      eR = aR**2 + BbR*RhoInvR
-      CfR = max(0., (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
-      eH = aH**2 + BbH*RhoInvH
-      CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
-
-      CfL = sqrt(CfL)
-      CfR = sqrt(CfR)
-      CfH = sqrt(CfH)
-
-      CsL = max(0.,0.5*(eL-CfL))
-      CfL = 0.5*(eL+CfL)
-
-      CsR = max(0.,0.5*(eR-CfR))
-      CfR = 0.5*(eR+CfR)
-
-      CsH = max(0.,0.5*(eH-CfH))
-      CfH = 0.5*(eH+CfH)
-
-      UuH = UnH**2 + Ut1H**2 + Ut2H**2
-      eH  = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
-
-      CsL = sqrt(CsL)
-      CsR = sqrt(CsR)
-      CsH = sqrt(CsH)
-      CfL = sqrt(CfL)
-      CfR = sqrt(CfR)
-      CfH = sqrt(CfH)
-
-      CsL = min(CsL,aL)
-      CfL = max(CfL,aL)
-      CsR = min(CsR,aR)
-      CfR = max(CfR,aR)
-      CsH = min(CsH,aH)
-      CfH = max(CfH,aH)
-
-      ! Non-dimensional scaling factors
-      Tmp1 = Bt1H**2 + Bt2H**2
-
-      if(Tmp1 > 1e-8)then
-         Tmp1 = sqrt(1./Tmp1)
-         BetaY = Bt1H*Tmp1
-         BetaZ = Bt2H*Tmp1
-      else
-         BetaY = cSqrtHalf
-         BetaZ = cSqrtHalf
-      end if
-
-      Tmp1 = CfH**2 - CsH**2
-      if (Tmp1 > 1.0e-08) then
-         AlphaF = max(0.0, (aH**2  - CsH**2)/Tmp1)
-         AlphaS = max(0.0, (CfH**2 - aH**2 )/Tmp1)
-
-         AlphaF = sqrt(AlphaF)
-         AlphaS = sqrt(AlphaS)
-      else if (BnH**2 * RhoInvH <= aH**2 ) then
-         AlphaF = 1.0
-         AlphaS = 0.0
-      else
-         AlphaF = 0.0
-         AlphaS = 1.0
-      endif
-
-      ! Set some values that are reused over and over
-
-      RhoSqrtH = sqrt(RhoH)
-      RhoSqrtL = sqrt(RhoL)
-      RhoSqrtR = sqrt(RhoR)
-      RhoInvSqrtH = 1./RhoSqrtH
-      RhoInvSqrtL = 1./RhoSqrtL
-      RhoInvSqrtR = 1./RhoSqrtR
-
-      SignBnH     = sign(1.,BnH)
-      Gamma1A2Inv = GammaMinus1/aH**2
-
-      ! Eigenvalues
-      Eigenvalue_V(EntropyW_) = UnH
-      Eigenvalue_V(AlfvenRW_) = UnH + BnH*RhoInvSqrtH
-      Eigenvalue_V(AlfvenLW_) = UnH - BnH*RhoInvSqrtH
-      Eigenvalue_V(SlowRW_)   = UnH + CsH
-      Eigenvalue_V(FastRW_)   = UnH + CfH
-      Eigenvalue_V(SlowLW_)   = UnH - CsH
-      Eigenvalue_V(FastLW_)   = UnH - CfH
-      Eigenvalue_V(DivBW_)    = UnH
-
-      ! Entropy fix for Eigenvalues
-      Tmp1 = UnR - UnL
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(1)) < Tmp1*0.5) then
-         Eigenvalue_V(1) = sign(1.,Eigenvalue_V(1))*   &
-              ((Eigenvalue_V(1)*Eigenvalue_V(1)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR + BnR*RhoInvSqrtR) - (UnL + BnL*RhoInvSqrtL)
-      Tmp1 = max(cTiny,4.*Tmp1)
-      if (abs(Eigenvalue_V(2)) < Tmp1*0.5) then
-         Eigenvalue_V(2) = sign(1.,Eigenvalue_V(2))*   &
-              ((Eigenvalue_V(2)*Eigenvalue_V(2)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR - BnR*RhoInvSqrtR) - (UnL - BnL*RhoInvSqrtL)
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(3)) < Tmp1*0.5) then
-         Eigenvalue_V(3) = sign(1.,Eigenvalue_V(3))*   &
-              ((Eigenvalue_V(3)*Eigenvalue_V(3)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR + CsR) - (UnL + CsL)
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(4)) < Tmp1*0.5) then
-         Eigenvalue_V(4) = sign(1.,Eigenvalue_V(4))*   &
-              ((Eigenvalue_V(4)*Eigenvalue_V(4)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR+CfR) - (UnL+CfL)
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(5)) < Tmp1*0.5) then
-         Eigenvalue_V(5) = sign(1.,Eigenvalue_V(5))*   &
-              ((Eigenvalue_V(5)*Eigenvalue_V(5)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR-CsR) - (UnL-CsL)
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(6)) < Tmp1*0.5) then
-         Eigenvalue_V(6) = sign(1.,Eigenvalue_V(6))*   &
-              ((Eigenvalue_V(6)*Eigenvalue_V(6)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = (UnR-CfR) - (UnL-CfL)
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(7)) < Tmp1*0.5) then
-         Eigenvalue_V(7) = sign(1.,Eigenvalue_V(7))*   &
-              ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
-      end if
-
-      Tmp1 = UnR - UnL
-      Tmp1 = max(cTiny, 4.*Tmp1)
-      if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
-         Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
-              ((Eigenvalue_V(8)*Eigenvalue_V(8)/Tmp1) + Tmp1*0.25)
-      end if
-
-      ! Timur's divergence wave fix
-      ! original  version
-      !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
-      !
-      ! Enhanced diffusion, the maximum eigenvalue
-      Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
-
-      ! The original version was proposed by Timur Linde for heliosphere
-      ! simulations. Enhanced version was found to be more robust on 8/20/01
-      ! The original version was commented out in versions 6x resulting in
-      ! worse stability for the Roe solver.
-
-      ! At inner BC replace all eigenvalues with the enhanced eigenvalue
-      ! of divB, which is the maximum eigenvalue
-      if(IsBoundary) Eigenvalue_V(1:nWaveMhd) = Eigenvalue_V(DivBW_)
-
-      ! Eigenvectors
-      Tmp1 = 1./(2.*RhoH*aH**2)
-      Tmp2 = RhoInvH*cSqrtHalf
-      Tmp3 = RhoInvSqrtH*cSqrtHalf
-
-      ! Left eigenvector for Entropy wave
-      EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
-      EigenvectorL_VV(2,1) = Gamma1A2Inv*UnH
-      EigenvectorL_VV(3,1) = Gamma1A2Inv*Ut1H
-      EigenvectorL_VV(4,1) = Gamma1A2Inv*Ut2H
-      EigenvectorL_VV(5,1) = Gamma1A2Inv*B1nH
-      EigenvectorL_VV(6,1) = Gamma1A2Inv*B1t1H
-      EigenvectorL_VV(7,1) = Gamma1A2Inv*B1t2H
-      EigenvectorL_VV(8,1) = -Gamma1A2Inv
-
-      ! Left eigenvector for Alfven wave +
-      EigenvectorL_VV(1,2) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
-      EigenvectorL_VV(2,2) = 0.
-      EigenvectorL_VV(3,2) = -(BetaZ*Tmp2)
-      EigenvectorL_VV(4,2) = (BetaY*Tmp2)
-      EigenvectorL_VV(5,2) = 0.
-      EigenvectorL_VV(6,2) = (BetaZ*Tmp3)
-      EigenvectorL_VV(7,2) = -(BetaY*Tmp3)
-      EigenvectorL_VV(8,2) = 0.
-
-      ! Left eigenvector for Alfven wave -
-      EigenvectorL_VV(1,3) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
-      EigenvectorL_VV(2,3) = 0.
-      EigenvectorL_VV(3,3) = -(BetaZ*Tmp2)
-      EigenvectorL_VV(4,3) = (BetaY*Tmp2)
-      EigenvectorL_VV(5,3) = 0.
-      EigenvectorL_VV(6,3) = -(BetaZ*Tmp3)
-      EigenvectorL_VV(7,3) = (BetaY*Tmp3)
-      EigenvectorL_VV(8,3) = 0.
-
-      ! Left eigenvector for Slow magnetosonic wave +
-      EigenvectorL_VV(1,4) = Tmp1* &
-           (AlphaS*(GammaMinus1*UuH/2. - UnH*CsH) - &
-           AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorL_VV(2,4) = &
-           Tmp1*(AlphaS*(-UnH*GammaMinus1+CsH))
-      EigenvectorL_VV(3,4) = &
-           Tmp1*(-GammaMinus1*AlphaS*Ut1H+AlphaF*CfH*BetaY*SignBnH)
-      EigenvectorL_VV(4,4) = &
-           Tmp1*(-GammaMinus1*AlphaS*Ut2H+AlphaF*CfH*BetaZ*SignBnH)
-      EigenvectorL_VV(5,4) = &
-           Tmp1*(-GammaMinus1*B1nH*AlphaS)
-      EigenvectorL_VV(6,4) = &
-           Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
-      EigenvectorL_VV(7,4) = &
-           Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
-      EigenvectorL_VV(8,4) = &
-           Tmp1*(GammaMinus1*AlphaS)
-
-      ! Left eigenvector for Fast magnetosonic wave +
-      EigenvectorL_VV(1,5) = Tmp1* &
-           (AlphaF*(GammaMinus1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
-           (Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorL_VV(2,5) = &
-           Tmp1*(AlphaF*(-UnH*GammaMinus1+CfH))
-      EigenvectorL_VV(3,5) = &
-           Tmp1*(-GammaMinus1*AlphaF*Ut1H-AlphaS*CsH*BetaY*SignBnH)
-      EigenvectorL_VV(4,5) = &
-           Tmp1*(-GammaMinus1*AlphaF*Ut2H-AlphaS*CsH*BetaZ*SignBnH)
-      EigenvectorL_VV(5,5) = &
-           Tmp1*(-GammaMinus1*B1nH*AlphaF)
-      EigenvectorL_VV(6,5) = &
-           Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
-      EigenvectorL_VV(7,5) = &
-           Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
-      EigenvectorL_VV(8,5) = Tmp1*(GammaMinus1*AlphaF)
-
-      ! Left eigenvector for Slow magnetosonic wave -
-      EigenvectorL_VV(1,6) = Tmp1* &
-           (AlphaS*(GammaMinus1*UuH/2. + UnH*CsH) + &
-           AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorL_VV(2,6) = &
-           Tmp1*(AlphaS*(-UnH*GammaMinus1-CsH))
-      EigenvectorL_VV(3,6) = &
-           Tmp1*(-GammaMinus1*AlphaS*Ut1H-AlphaF*CfH*BetaY*SignBnH)
-      EigenvectorL_VV(4,6) = &
-           Tmp1*(-GammaMinus1*AlphaS*Ut2H-AlphaF*CfH*BetaZ*SignBnH)
-      EigenvectorL_VV(5,6) = &
-           Tmp1*(-GammaMinus1*B1nH*AlphaS)
-      EigenvectorL_VV(6,6) = &
-           Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
-      EigenvectorL_VV(7,6) = &
-           Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
-      EigenvectorL_VV(8,6) = &
-           Tmp1*(GammaMinus1*AlphaS)
-
-      ! Left eigenvector for Fast magnetosonic wave -
-      EigenvectorL_VV(1,7) = Tmp1* &
-           (AlphaF*(GammaMinus1*UuH/2. + UnH*CfH) - &
-           AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorL_VV(2,7) = &
-           Tmp1*(AlphaF*(-UnH*GammaMinus1-CfH))
-      EigenvectorL_VV(3,7) = &
-           Tmp1*(-GammaMinus1*AlphaF*Ut1H+AlphaS*CsH*BetaY*SignBnH)
-      EigenvectorL_VV(4,7) = &
-           Tmp1*(-GammaMinus1*AlphaF*Ut2H+AlphaS*CsH*BetaZ*SignBnH)
-      EigenvectorL_VV(5,7) = &
-           Tmp1*(-GammaMinus1*B1nH*AlphaF)
-      EigenvectorL_VV(6,7) = &
-           Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
-      EigenvectorL_VV(7,7) = &
-           Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
-      EigenvectorL_VV(8,7) = &
-           Tmp1*(GammaMinus1*AlphaF)
-
-      ! Left eigenvector for Divergence wave
-      EigenvectorL_VV(1,8) = 0.
-      EigenvectorL_VV(2,8) = 0.
-      EigenvectorL_VV(3,8) = 0.
-      EigenvectorL_VV(4,8) = 0.
-      EigenvectorL_VV(5,8) = 1.
-      EigenvectorL_VV(6,8) = 0.
-      EigenvectorL_VV(7,8) = 0.
-      EigenvectorL_VV(8,8) = 0.
-
-      ! coefficient for pressure component of the Right vector
-      Tmp1 = Gamma*max(pL,pR)
-
-      ! Pressure component is not linearly independent and obeys the
-      ! equation as follows:
-      ! EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
-      !                     UnH*EigenvectorR_VV(1:8,2)-&
-      !                     Ut1H*EigenvectorR_VV(1:8,3)-&
-      !                     Ut2H*EigenvectorR_VV(1:8,4)-&
-      !                     B1nH*EigenvectorR_VV(1:8,5)-&
-      !                     B1t1H*EigenvectorR_VV(1:8,6)-&
-      !                     B1t2H*EigenvectorR_VV(1:8,7)+
-      !                     EigenvectorR_VV(1:8,8))*inv_gm1
-
-      ! Right eigenvector for Entropy wave
-      EigenvectorR_VV(1,1) = 1.
-      EigenvectorR_VV(1,2) = UnH
-      EigenvectorR_VV(1,3) = Ut1H
-      EigenvectorR_VV(1,4) = Ut2H
-      EigenvectorR_VV(1,5) = 0.
-      EigenvectorR_VV(1,6) = 0.
-      EigenvectorR_VV(1,7) = 0.
-      EigenvectorR_VV(1,eMhd_) = 0.5*UuH
-      EigenvectorR_VV(1,pMhd_) = 0.0
-
-      ! Right eigenvector for Alfven wave +
-      EigenvectorR_VV(2,1) = 0.
-      EigenvectorR_VV(2,2) = 0.
-      EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrtHalf
-      EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrtHalf
-      EigenvectorR_VV(2,5) = 0.
-      EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
-           + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(2,pMhd_) = 0.0
-
-      ! Right eigenvector for Alfven wave -
-      EigenvectorR_VV(3,1) = 0.
-      EigenvectorR_VV(3,2) = 0.
-      EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrtHalf
-      EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrtHalf
-      EigenvectorR_VV(3,5) = 0.
-      EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
-           - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-      EigenvectorR_VV(3,pMhd_) = 0.0
-
-      ! Right eigenvector for Slow magnetosonic wave +
-      EigenvectorR_VV(4,1) = RhoH*AlphaS
-      EigenvectorR_VV(4,2) = RhoH*AlphaS*(UnH+CsH)
-      EigenvectorR_VV(4,3) = RhoH*(AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
-      EigenvectorR_VV(4,4) = RhoH*(AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
-      EigenvectorR_VV(4,5) = 0.
-      EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
-      EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
-      EigenvectorR_VV(4,eMhd_) = &
-           AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
-           - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-           - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorR_VV(4,pMhd_) = Tmp1*AlphaS
-
-      ! Right eigenvector for Fast magnetosonic wave +
-      EigenvectorR_VV(5,1) = RhoH*AlphaF
-      EigenvectorR_VV(5,2) = RhoH*AlphaF* (UnH+CfH)
-      EigenvectorR_VV(5,3) = RhoH* (AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
-      EigenvectorR_VV(5,4) = RhoH* (AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
-      EigenvectorR_VV(5,5) = 0.
-      EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
-      EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
-      EigenvectorR_VV(5,eMhd_) = &
-           AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
-           + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-           - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorR_VV(5,pMhd_) = Tmp1*AlphaF
-
-      ! Right eigenvector for Slow magnetosonic wave -
-      EigenvectorR_VV(6,1) = RhoH*AlphaS
-      EigenvectorR_VV(6,2) = RhoH*AlphaS*(UnH-CsH)
-      EigenvectorR_VV(6,3) = RhoH* (AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
-      EigenvectorR_VV(6,4) = RhoH* (AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
-      EigenvectorR_VV(6,5) = 0.
-      EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
-      EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
-      EigenvectorR_VV(6,eMhd_) = &
-           AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
-           - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-           + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorR_VV(6,pMhd_) = Tmp1*AlphaS
-
-      ! Right eigenvector for Fast magnetosonic wave -
-      EigenvectorR_VV(7,1) = RhoH*AlphaF
-      EigenvectorR_VV(7,2) = RhoH*AlphaF* (UnH-CfH)
-      EigenvectorR_VV(7,3) = RhoH*(AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
-      EigenvectorR_VV(7,4) = RhoH*(AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
-      EigenvectorR_VV(7,5) = 0.
-      EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
-      EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
-      EigenvectorR_VV(7,eMhd_) = &
-           AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
-           + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-           + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-      EigenvectorR_VV(7,pMhd_) = Tmp1*AlphaF
-
-      ! Right eigenvector for Divergence wave
-      EigenvectorR_VV(8,1) = 0.
-      EigenvectorR_VV(8,2) = 0.
-      EigenvectorR_VV(8,3) = 0.
-      EigenvectorR_VV(8,4) = 0.
-      EigenvectorR_VV(8,5) = 1.
-      EigenvectorR_VV(8,6) = 0.
-      EigenvectorR_VV(8,7) = 0.
-      EigenvectorR_VV(8,eMhd_) = B1nH
-      EigenvectorR_VV(8,pMhd_) = 0.0
-
-      ! Alphas (elemental wave strengths)
-      ! matmul is slower than the loop for the NAG F95 compiler
-      ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
-      do iWave = 1, nWaveMhd
-         DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
-      end do
-
-      ! Take absolute value of eigenvalues
-      Eigenvalue_V = abs(Eigenvalue_V)
-
-      ! Limit them if required
-      if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
-
-      ! Calculate the Roe Interface fluxes
-      ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
-      ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
-      !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
-      do iFlux = 1, nFluxMhd
-         Diffusion_V(iFlux) = &
-              sum(Eigenvalue_V*DeltaWave_V*EigenvectorR_VV(:,iFlux))
-      end do
-
-      ! Scalar variables
-      Flux_V(Rho_   ) = Diffusion_V(RhoMhd_)
-      Flux_V(P_     ) = Diffusion_V(pMhd_)
-      Flux_V(Energy_) = Diffusion_V(eMhd_)
-
-      ! Rotate fluxes of vector variables back
-      call rotate_flux_vector(Diffusion_V, Flux_V, IFF_I, RFF_I, Normal_D, &
-           Tangent1_D, Tangent2_D)
-
-      ! The diffusive flux for the advected scalar variables is simply
-      ! 0.5*|Velocity|*(U_R - U_L)
-      do iVar = ScalarFirst_, ScalarLast_
-         Flux_V(iVar) = abs(UnH)*(StateRightCons_V(iVar) - StateLeftCons_V(iVar))
-      end do
-
-      ! Roe flux = average of left and right flux plus the diffusive flux
-      Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Flux_V)
-
-      ! Normal velocity and maximum wave speed
-      Unormal_I = UnH
-      CmaxDt    = abs(UnH) + CfH
-
-#ifdef OPENACC
-    end associate
-#endif
+
+    RhoL  =  StateLeft_V(Rho_)
+    pL    =  StateLeft_V(p_ )
+    RhoR  =  StateRight_V(Rho_)
+    pR    =  StateRight_V(p_  )
+
+    ! Rotate vector variables into a coordinate system orthogonal to the face
+    call rotate_state_vectors
+
+    ! Jump in scalar conservative variables
+    dCons_V(RhoMhd_) = RhoR      - RhoL
+    dCons_V(RhoUn_ ) = RhoR*UnR  - RhoL*UnL
+    dCons_V(RhoUt1_) = RhoR*Ut1R - RhoL*Ut1L
+    dCons_V(RhoUt2_) = RhoR*Ut2R - RhoL*Ut2L
+    dCons_V(B1n_   ) = B1nR      - B1nL
+    dCons_V(B1t1_  ) = B1t1R     - B1t1L
+    dCons_V(B1t2_  ) = B1t2R     - B1t2L
+    dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
+
+    ! Derived variables
+    RhoInvL = 1./RhoL
+    BnL  = B0n+B1nL
+    Bt1L = B0t1+B1t1L
+    Bt2L = B0t2+B1t2L
+    BbL  = BnL**2 + Bt1L**2 + Bt2L**2
+    aL   = Gamma*pL*RhoInvL
+
+    RhoInvR = 1./RhoR
+    BnR  = B0n+B1nR
+    Bt1R = B0t1+B1t1R
+    Bt2R = B0t2+B1t2R
+    BbR  = BnR**2 + Bt1R**2 + Bt2R**2
+    aR   = Gamma*pR*RhoInvR
+
+    ! Hat face
+    RhoH = 0.5*(RhoL + RhoR)
+    RhoInvH = 1./RhoH
+    UnH  = 0.5*(  UnL +   UnR)
+    Ut1H = 0.5*( Ut1L +  Ut1R)
+    Ut2H = 0.5*( Ut2L +  Ut2R)
+    BnH  = 0.5*(  BnL +   BnR)
+    Bt1H = 0.5*( Bt1L +  Bt1R)
+    Bt2H = 0.5*( Bt2L +  Bt2R)
+    B1nH = 0.5*( B1nL +  B1nR)
+    B1t1H= 0.5*(B1t1L + B1t1R)
+    B1t2H= 0.5*(B1t2L + B1t2R)
+    pH   = 0.5*(   pL +    pR)
+    BbH  = BnH**2  + Bt1H**2  + Bt2H**2
+
+    Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
+    aH   = Gamma*pH*RhoInvH
+
+    ! if(aL<0.0)then
+    !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
+    !        aL,iProc,iDimFace,i,j,k,&
+    !        Xyz_DGB(:,i,j,k,iBlockFace)
+    !   call stop_mpi
+    ! end if
+
+    aL = sqrt(aL)
+    aR = sqrt(aR)
+    aH = sqrt(aH)
+
+    eL = aL*aL + BbL*RhoInvL
+    CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
+    eR = aR**2 + BbR*RhoInvR
+    CfR = max(0., (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
+    eH = aH**2 + BbH*RhoInvH
+    CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
+
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
+
+    CsL = max(0.,0.5*(eL-CfL))
+    CfL = 0.5*(eL+CfL)
+
+    CsR = max(0.,0.5*(eR-CfR))
+    CfR = 0.5*(eR+CfR)
+
+    CsH = max(0.,0.5*(eH-CfH))
+    CfH = 0.5*(eH+CfH)
+
+    UuH = UnH**2 + Ut1H**2 + Ut2H**2
+    eH  = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
+
+    CsL = sqrt(CsL)
+    CsR = sqrt(CsR)
+    CsH = sqrt(CsH)
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
+
+    CsL = min(CsL,aL)
+    CfL = max(CfL,aL)
+    CsR = min(CsR,aR)
+    CfR = max(CfR,aR)
+    CsH = min(CsH,aH)
+    CfH = max(CfH,aH)
+
+    ! Non-dimensional scaling factors
+    Tmp1 = Bt1H**2 + Bt2H**2
+
+    if(Tmp1 > 1e-8)then
+       Tmp1 = sqrt(1./Tmp1)
+       BetaY = Bt1H*Tmp1
+       BetaZ = Bt2H*Tmp1
+    else
+       BetaY = cSqrtHalf
+       BetaZ = cSqrtHalf
+    end if
+
+    Tmp1 = CfH**2 - CsH**2
+    if (Tmp1 > 1.0e-08) then
+       AlphaF = max(0.0, (aH**2  - CsH**2)/Tmp1)
+       AlphaS = max(0.0, (CfH**2 - aH**2 )/Tmp1)
+
+       AlphaF = sqrt(AlphaF)
+       AlphaS = sqrt(AlphaS)
+    else if (BnH**2 * RhoInvH <= aH**2 ) then
+       AlphaF = 1.0
+       AlphaS = 0.0
+    else
+       AlphaF = 0.0
+       AlphaS = 1.0
+    endif
+
+    ! Set some values that are reused over and over
+
+    RhoSqrtH = sqrt(RhoH)
+    RhoSqrtL = sqrt(RhoL)
+    RhoSqrtR = sqrt(RhoR)
+    RhoInvSqrtH = 1./RhoSqrtH
+    RhoInvSqrtL = 1./RhoSqrtL
+    RhoInvSqrtR = 1./RhoSqrtR
+
+    SignBnH     = sign(1.,BnH)
+    Gamma1A2Inv = GammaMinus1/aH**2
+
+    ! Eigenvalues
+    Eigenvalue_V(EntropyW_) = UnH
+    Eigenvalue_V(AlfvenRW_) = UnH + BnH*RhoInvSqrtH
+    Eigenvalue_V(AlfvenLW_) = UnH - BnH*RhoInvSqrtH
+    Eigenvalue_V(SlowRW_)   = UnH + CsH
+    Eigenvalue_V(FastRW_)   = UnH + CfH
+    Eigenvalue_V(SlowLW_)   = UnH - CsH
+    Eigenvalue_V(FastLW_)   = UnH - CfH
+    Eigenvalue_V(DivBW_)    = UnH
+
+    ! Entropy fix for Eigenvalues
+    Tmp1 = UnR - UnL
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(1)) < Tmp1*0.5) then
+       Eigenvalue_V(1) = sign(1.,Eigenvalue_V(1))*   &
+            ((Eigenvalue_V(1)*Eigenvalue_V(1)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR + BnR*RhoInvSqrtR) - (UnL + BnL*RhoInvSqrtL)
+    Tmp1 = max(cTiny,4.*Tmp1)
+    if (abs(Eigenvalue_V(2)) < Tmp1*0.5) then
+       Eigenvalue_V(2) = sign(1.,Eigenvalue_V(2))*   &
+            ((Eigenvalue_V(2)*Eigenvalue_V(2)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR - BnR*RhoInvSqrtR) - (UnL - BnL*RhoInvSqrtL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(3)) < Tmp1*0.5) then
+       Eigenvalue_V(3) = sign(1.,Eigenvalue_V(3))*   &
+            ((Eigenvalue_V(3)*Eigenvalue_V(3)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR + CsR) - (UnL + CsL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(4)) < Tmp1*0.5) then
+       Eigenvalue_V(4) = sign(1.,Eigenvalue_V(4))*   &
+            ((Eigenvalue_V(4)*Eigenvalue_V(4)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR+CfR) - (UnL+CfL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(5)) < Tmp1*0.5) then
+       Eigenvalue_V(5) = sign(1.,Eigenvalue_V(5))*   &
+            ((Eigenvalue_V(5)*Eigenvalue_V(5)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR-CsR) - (UnL-CsL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(6)) < Tmp1*0.5) then
+       Eigenvalue_V(6) = sign(1.,Eigenvalue_V(6))*   &
+            ((Eigenvalue_V(6)*Eigenvalue_V(6)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR-CfR) - (UnL-CfL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(7)) < Tmp1*0.5) then
+       Eigenvalue_V(7) = sign(1.,Eigenvalue_V(7))*   &
+            ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = UnR - UnL
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
+       Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
+            ((Eigenvalue_V(8)*Eigenvalue_V(8)/Tmp1) + Tmp1*0.25)
+    end if
+
+    ! Timur's divergence wave fix
+    ! original  version
+    !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
+    !
+    ! Enhanced diffusion, the maximum eigenvalue
+    Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
+
+    ! The original version was proposed by Timur Linde for heliosphere
+    ! simulations. Enhanced version was found to be more robust on 8/20/01
+    ! The original version was commented out in versions 6x resulting in
+    ! worse stability for the Roe solver.
+
+    ! At inner BC replace all eigenvalues with the enhanced eigenvalue
+    ! of divB, which is the maximum eigenvalue
+    if(IsBoundary) Eigenvalue_V(1:nWaveMhd) = Eigenvalue_V(DivBW_)
+
+    ! Eigenvectors
+    Tmp1 = 1./(2.*RhoH*aH**2)
+    Tmp2 = RhoInvH*cSqrtHalf
+    Tmp3 = RhoInvSqrtH*cSqrtHalf
+
+    ! Left eigenvector for Entropy wave
+    EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
+    EigenvectorL_VV(2,1) = Gamma1A2Inv*UnH
+    EigenvectorL_VV(3,1) = Gamma1A2Inv*Ut1H
+    EigenvectorL_VV(4,1) = Gamma1A2Inv*Ut2H
+    EigenvectorL_VV(5,1) = Gamma1A2Inv*B1nH
+    EigenvectorL_VV(6,1) = Gamma1A2Inv*B1t1H
+    EigenvectorL_VV(7,1) = Gamma1A2Inv*B1t2H
+    EigenvectorL_VV(8,1) = -Gamma1A2Inv
+
+    ! Left eigenvector for Alfven wave +
+    EigenvectorL_VV(1,2) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
+    EigenvectorL_VV(2,2) = 0.
+    EigenvectorL_VV(3,2) = -(BetaZ*Tmp2)
+    EigenvectorL_VV(4,2) = (BetaY*Tmp2)
+    EigenvectorL_VV(5,2) = 0.
+    EigenvectorL_VV(6,2) = (BetaZ*Tmp3)
+    EigenvectorL_VV(7,2) = -(BetaY*Tmp3)
+    EigenvectorL_VV(8,2) = 0.
+
+    ! Left eigenvector for Alfven wave -
+    EigenvectorL_VV(1,3) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
+    EigenvectorL_VV(2,3) = 0.
+    EigenvectorL_VV(3,3) = -(BetaZ*Tmp2)
+    EigenvectorL_VV(4,3) = (BetaY*Tmp2)
+    EigenvectorL_VV(5,3) = 0.
+    EigenvectorL_VV(6,3) = -(BetaZ*Tmp3)
+    EigenvectorL_VV(7,3) = (BetaY*Tmp3)
+    EigenvectorL_VV(8,3) = 0.
+
+    ! Left eigenvector for Slow magnetosonic wave +
+    EigenvectorL_VV(1,4) = Tmp1* &
+         (AlphaS*(GammaMinus1*UuH/2. - UnH*CsH) - &
+         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,4) = &
+         Tmp1*(AlphaS*(-UnH*GammaMinus1+CsH))
+    EigenvectorL_VV(3,4) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut1H+AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorL_VV(4,4) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut2H+AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,4) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaS)
+    EigenvectorL_VV(6,4) = &
+         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+    EigenvectorL_VV(7,4) = &
+         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+    EigenvectorL_VV(8,4) = &
+         Tmp1*(GammaMinus1*AlphaS)
+
+    ! Left eigenvector for Fast magnetosonic wave +
+    EigenvectorL_VV(1,5) = Tmp1* &
+         (AlphaF*(GammaMinus1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
+         (Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,5) = &
+         Tmp1*(AlphaF*(-UnH*GammaMinus1+CfH))
+    EigenvectorL_VV(3,5) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut1H-AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorL_VV(4,5) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut2H-AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,5) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaF)
+    EigenvectorL_VV(6,5) = &
+         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+    EigenvectorL_VV(7,5) = &
+         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+    EigenvectorL_VV(8,5) = Tmp1*(GammaMinus1*AlphaF)
+
+    ! Left eigenvector for Slow magnetosonic wave -
+    EigenvectorL_VV(1,6) = Tmp1* &
+         (AlphaS*(GammaMinus1*UuH/2. + UnH*CsH) + &
+         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,6) = &
+         Tmp1*(AlphaS*(-UnH*GammaMinus1-CsH))
+    EigenvectorL_VV(3,6) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut1H-AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorL_VV(4,6) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut2H-AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,6) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaS)
+    EigenvectorL_VV(6,6) = &
+         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+    EigenvectorL_VV(7,6) = &
+         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+    EigenvectorL_VV(8,6) = &
+         Tmp1*(GammaMinus1*AlphaS)
+
+    ! Left eigenvector for Fast magnetosonic wave -
+    EigenvectorL_VV(1,7) = Tmp1* &
+         (AlphaF*(GammaMinus1*UuH/2. + UnH*CfH) - &
+         AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,7) = &
+         Tmp1*(AlphaF*(-UnH*GammaMinus1-CfH))
+    EigenvectorL_VV(3,7) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut1H+AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorL_VV(4,7) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut2H+AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,7) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaF)
+    EigenvectorL_VV(6,7) = &
+         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+    EigenvectorL_VV(7,7) = &
+         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+    EigenvectorL_VV(8,7) = &
+         Tmp1*(GammaMinus1*AlphaF)
+
+    ! Left eigenvector for Divergence wave
+    EigenvectorL_VV(1,8) = 0.
+    EigenvectorL_VV(2,8) = 0.
+    EigenvectorL_VV(3,8) = 0.
+    EigenvectorL_VV(4,8) = 0.
+    EigenvectorL_VV(5,8) = 1.
+    EigenvectorL_VV(6,8) = 0.
+    EigenvectorL_VV(7,8) = 0.
+    EigenvectorL_VV(8,8) = 0.
+
+    ! coefficient for pressure component of the Right vector
+    Tmp1 = Gamma*max(pL,pR)
+
+    ! Pressure component is not linearly independent and obeys the
+    ! equation as follows:
+    ! EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
+    !                     UnH*EigenvectorR_VV(1:8,2)-&
+    !                     Ut1H*EigenvectorR_VV(1:8,3)-&
+    !                     Ut2H*EigenvectorR_VV(1:8,4)-&
+    !                     B1nH*EigenvectorR_VV(1:8,5)-&
+    !                     B1t1H*EigenvectorR_VV(1:8,6)-&
+    !                     B1t2H*EigenvectorR_VV(1:8,7)+
+    !                     EigenvectorR_VV(1:8,8))*inv_gm1
+
+    ! Right eigenvector for Entropy wave
+    EigenvectorR_VV(1,1) = 1.
+    EigenvectorR_VV(1,2) = UnH
+    EigenvectorR_VV(1,3) = Ut1H
+    EigenvectorR_VV(1,4) = Ut2H
+    EigenvectorR_VV(1,5) = 0.
+    EigenvectorR_VV(1,6) = 0.
+    EigenvectorR_VV(1,7) = 0.
+    EigenvectorR_VV(1,eMhd_) = 0.5*UuH
+    EigenvectorR_VV(1,pMhd_) = 0.0
+
+    ! Right eigenvector for Alfven wave +
+    EigenvectorR_VV(2,1) = 0.
+    EigenvectorR_VV(2,2) = 0.
+    EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrtHalf
+    EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrtHalf
+    EigenvectorR_VV(2,5) = 0.
+    EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+         + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,pMhd_) = 0.0
+
+    ! Right eigenvector for Alfven wave -
+    EigenvectorR_VV(3,1) = 0.
+    EigenvectorR_VV(3,2) = 0.
+    EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrtHalf
+    EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrtHalf
+    EigenvectorR_VV(3,5) = 0.
+    EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+         - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,pMhd_) = 0.0
+
+    ! Right eigenvector for Slow magnetosonic wave +
+    EigenvectorR_VV(4,1) = RhoH*AlphaS
+    EigenvectorR_VV(4,2) = RhoH*AlphaS*(UnH+CsH)
+    EigenvectorR_VV(4,3) = RhoH*(AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorR_VV(4,4) = RhoH*(AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorR_VV(4,5) = 0.
+    EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(4,eMhd_) = &
+         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
+         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(4,pMhd_) = Tmp1*AlphaS
+
+    ! Right eigenvector for Fast magnetosonic wave +
+    EigenvectorR_VV(5,1) = RhoH*AlphaF
+    EigenvectorR_VV(5,2) = RhoH*AlphaF* (UnH+CfH)
+    EigenvectorR_VV(5,3) = RhoH* (AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorR_VV(5,4) = RhoH* (AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorR_VV(5,5) = 0.
+    EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(5,eMhd_) = &
+         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
+         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(5,pMhd_) = Tmp1*AlphaF
+
+    ! Right eigenvector for Slow magnetosonic wave -
+    EigenvectorR_VV(6,1) = RhoH*AlphaS
+    EigenvectorR_VV(6,2) = RhoH*AlphaS*(UnH-CsH)
+    EigenvectorR_VV(6,3) = RhoH* (AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorR_VV(6,4) = RhoH* (AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorR_VV(6,5) = 0.
+    EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(6,eMhd_) = &
+         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
+         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(6,pMhd_) = Tmp1*AlphaS
+
+    ! Right eigenvector for Fast magnetosonic wave -
+    EigenvectorR_VV(7,1) = RhoH*AlphaF
+    EigenvectorR_VV(7,2) = RhoH*AlphaF* (UnH-CfH)
+    EigenvectorR_VV(7,3) = RhoH*(AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorR_VV(7,4) = RhoH*(AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorR_VV(7,5) = 0.
+    EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(7,eMhd_) = &
+         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
+         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(7,pMhd_) = Tmp1*AlphaF
+
+    ! Right eigenvector for Divergence wave
+    EigenvectorR_VV(8,1) = 0.
+    EigenvectorR_VV(8,2) = 0.
+    EigenvectorR_VV(8,3) = 0.
+    EigenvectorR_VV(8,4) = 0.
+    EigenvectorR_VV(8,5) = 1.
+    EigenvectorR_VV(8,6) = 0.
+    EigenvectorR_VV(8,7) = 0.
+    EigenvectorR_VV(8,eMhd_) = B1nH
+    EigenvectorR_VV(8,pMhd_) = 0.0
+
+    ! Alphas (elemental wave strengths)
+    ! matmul is slower than the loop for the NAG F95 compiler
+    ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
+    do iWave = 1, nWaveMhd
+       DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
+    end do
+
+    ! Take absolute value of eigenvalues
+    Eigenvalue_V = abs(Eigenvalue_V)
+
+    ! Limit them if required
+    if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
+
+    ! Calculate the Roe Interface fluxes
+    ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
+    ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
+    !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
+    do iFlux = 1, nFluxMhd
+       Diffusion_V(iFlux) = &
+            sum(Eigenvalue_V*DeltaWave_V*EigenvectorR_VV(:,iFlux))
+    end do
+
+    ! Scalar variables
+    Flux_V(Rho_   ) = Diffusion_V(RhoMhd_)
+    Flux_V(P_     ) = Diffusion_V(pMhd_)
+    Flux_V(Energy_) = Diffusion_V(eMhd_)
+
+    ! Rotate fluxes of vector variables back
+    call rotate_flux_vector(Diffusion_V, Flux_V)
+
+    ! The diffusive flux for the advected scalar variables is simply
+    ! 0.5*|Velocity|*(U_R - U_L)
+    do iVar = ScalarFirst_, ScalarLast_
+       Flux_V(iVar) = abs(UnH)*(StateRightCons_V(iVar) - StateLeftCons_V(iVar))
+    end do
+
+    ! Roe flux = average of left and right flux plus the diffusive flux
+    Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Flux_V)
+
+    ! Normal velocity and maximum wave speed
+    Unormal_I = UnH
+    CmaxDt    = abs(UnH) + CfH
 #endif
   end subroutine roe_solver
   !============================================================================
@@ -2019,7 +2108,7 @@ contains
        , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
 #endif
        )
-    
+
     !$acc routine seq
 
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
@@ -2769,7 +2858,7 @@ contains
         call get_magnetic_flux(State_V, Flux_V, &
              FullBx, FullBy, FullBz, FullBn, HallUn)
 #endif
-        
+
         if(.not.IsMhd)RETURN
         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + MhdFlux_V
         if(UseJCrossBForce)Flux_V(RhoUx_:RhoUz_) = &
@@ -3040,14 +3129,6 @@ contains
     real, intent(inout):: Tangent1_D(MaxDim), Tangent2_D(MaxDim)
 #endif    
 
-    ! TODO:remove the following lines
-#ifndef OPENACC    
-    logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
-#endif    
-
-    
     real :: State_V(nVar)
     real :: Cmax
     real :: DiffBn_D(3), DiffE
@@ -3140,7 +3221,8 @@ contains
       ! Calculateing stress tensor for viscosity Visco_DDI
       if(ViscoCoeff > 0.0)then
 #ifndef OPENACC
-         call get_viscosity_tensor( IsFF_I, IFF_I, RFF_I)
+         call get_viscosity_tensor(iDimFace, iFace, jFace, kFace,&
+              iBlockFace,iFluidMin,iFluidMax,ViscoCoeff,IsNewBlockVisco)
 #endif
       end if
 
@@ -3205,24 +3287,27 @@ contains
 
       if(DoRadDiffusion)then
 #ifndef OPENACC
-         call get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I, &
-              StateLeft_V, StateRight_V, Normal_D)
+         call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+              iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
+              RadDiffCoef, EradFlux, IsNewBlockRadDiffusion)
 #endif
          DiffCoef = DiffCoef + RadDiffCoef
       end if
 
       if(DoHeatConduction)then
 #ifndef OPENACC
-         call get_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V,&
-              Normal_D)
+         call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+              StateLeft_V, StateRight_V, Normal_D, &
+              HeatCondCoefNormal, HeatFlux, IsNewBlockHeatCond)
 #endif
          DiffCoef = DiffCoef + HeatCondCoefNormal
       end if
 
       if(DoIonHeatConduction)then
 #ifndef OPENACC
-         call get_ion_heat_flux( IsFF_I, IFF_I, RFF_I, &
-              StateLeft_V, StateRight_V, Normal_D)
+         call get_ion_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+              StateLeft_V, StateRight_V, Normal_D, &
+              HeatCondCoefNormal, IonHeatFlux, IsNewBlockIonHeatCond)
 #endif
          DiffCoef = DiffCoef + HeatCondCoefNormal
       end if
@@ -3295,8 +3380,8 @@ contains
               , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
 #endif
               )
-         
-         
+
+
       else
          State_V = 0.5*(StateLeft_V + StateRight_V)
       end if
@@ -3313,7 +3398,7 @@ contains
               , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
 #endif                   
               )
-         
+
          if(UseMhdMomentumFlux) MhdFluxLeft_V  = MhdFlux_V
 
          call get_physical_flux(StateRight_V, &
@@ -3376,10 +3461,7 @@ contains
          elseif(DoAw)then
             call artificial_wind
          elseif(DoRoeOld)then
-            call roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V, &
-                 IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-                 FluxLeft_V, FluxRight_V, Unormal_I, Normal_D,&
-                 Tangent1_D, Tangent2_D)
+            call roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
          elseif(DoRoe)then
             call roe_solver_new
          else
@@ -3550,7 +3632,7 @@ contains
          StateLeft_V, StateRight_V, Normal_D &
 #endif
          )
-      
+
       !$acc routine seq
 
       real, intent(in)    :: State_V(:)
@@ -3617,8 +3699,8 @@ contains
         ! These quantities should be calculated with the ion fluxes
         if(iFluidMin == 1)then
            if(UseMhdMomentumFlux)&
-                ! Calculate the MHD momentum  flux (may be used to calculate
-                ! electric field)
+                                ! Calculate the MHD momentum  flux (may be used to calculate
+                                ! electric field)
                 MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
            Enormal   = 0.5*(EnLeft + EnRight)
            if(UseElectronPressure) Unormal_I(eFluid_) = &
@@ -4024,7 +4106,7 @@ contains
                 , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
 #endif                
                 )
-           
+
            if(UseRs7)call modify_flux(Flux_V, Unormal_I(1), MhdFlux_V)
            RETURN
         end if
@@ -4047,8 +4129,7 @@ contains
         pR   = StateRight_V(p_)
 
         ! Rotate vector variables into a coordinate system orthogonal to the face
-        call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V,&
-             Normal_D, Tangent1_D, Tangent2_D)
+        call rotate_state_vectors
 
         ! Use average normal field
         B1n    = 0.5*(B1nL + B1nR)
@@ -4252,8 +4333,7 @@ contains
         Flux_V(Energy_)    = Un*(e + pTot12) - Bn*uDotB1
 
         ! Rotate fluxes of vector variables back
-        call rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I, &
-             Normal_D, Tangent1_D, Tangent2_D)
+        call rotate_flux_vector(FluxRot_V, Flux_V)
 
         ! Set normal velocity for all fluids (HLLD is for 1 fluid only)
         Unormal_I = Un
@@ -4514,8 +4594,7 @@ contains
         TotalPresR = StateRight_V(p_) + PeRight + PwaveRight
 
         ! Rotate vector variables into a coordinate system orthogonal to the face
-        call rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-             Normal_D, Tangent1_D, Tangent2_D)
+        call rotate_state_vectors
 
         ! Normal velocity component
         ! UnStarL = UnStarR = UnStar
@@ -4678,7 +4757,11 @@ contains
       DoTestCell = .false.
 
       do iDim = 1, nDim
+#ifdef OPENACC         
          call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
+#else
+         call set_block_values(iBlock, iDim)
+#endif         
 
          if(Dt > 0)then
             CmaxAll = CellSize_DB(iDim,iBlock)/Dt
@@ -4836,7 +4919,11 @@ contains
       UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
       DoTestCell = .false.
       do iDim = 1, nDim
+#ifdef OPENACC         
          call set_block_values(iBlock, iDim, IFF_I, RFF_I, Normal_D)
+#else
+         call set_block_values(iBlock, iDim)
+#endif         
 
          do k = MinK, MaxK; kFace = k
             do j = MinJ, MaxJ; jFace = j
@@ -4871,7 +4958,7 @@ contains
                        , IsFF_I, IFF_I, RFF_I, Normal_D, MhdFlux_V &
 #endif                       
                        )
-                  
+
                   if(.not. UseHighFDGeometry) then
                      FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
                   else
@@ -5296,7 +5383,7 @@ contains
       real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
       real, optional, intent(in) :: UnLeft, UnRight
       logical, optional, intent(in) :: UseAwSpeed
-      
+
       real:: UnMin, UnMax
       real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
@@ -5855,18 +5942,9 @@ contains
   end subroutine correct_u_normal
   !============================================================================
 
-  subroutine rotate_state_vectors(IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-       Normal_D, Tangent1_D, Tangent2_D)
-
+  subroutine rotate_state_vectors
+#ifndef OPENACC
     use ModCoordTransform, ONLY: cross_product
-
-    integer,  intent(inout):: IFF_I(:)
-    real,     intent(inout):: RFF_I(:)
-    real, intent(inout):: StateLeft_V(nVar)
-    real, intent(inout):: StateRight_V(nVar)
-    real, intent(inout):: Normal_D(MaxDim)
-    real, intent(inout):: Tangent1_D(MaxDim)
-    real, intent(inout):: Tangent2_D(MaxDim)
 
     ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
     ! StateRight_V(B*_), StateRight_V(U*_) into normal and
@@ -5875,184 +5953,156 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
     !--------------------------------------------------------------------------
-#ifdef OPENACC
-    associate( &
-         iDimFace => IFF_I(iDimFace_), &
-         B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
-         B0n => RFF_I(B0n_), B0t1 => RFF_I(B0t1_), B0t2 => RFF_I(B0t2_), &
-         UnL => RFF_I(UnL_), Ut1L => RFF_I(Ut1L_), Ut2L => RFF_I(Ut2L_), &
-         B1nL => RFF_I(B1nL_), B1t1L => RFF_I(B1t1L_), B1t2L => RFF_I(B1t2L_), &
-         UnR => RFF_I(UnR_), Ut1R => RFF_I(Ut1R_), Ut2R => RFF_I(Ut2R_), &
-         B1nR => RFF_I(B1nR_), B1t1R => RFF_I(B1t1R_), B1t2R => RFF_I(B1t2R_) )
-#endif
+    if(IsCartesianGrid)then
+       select case (iDimFace)
+       case (x_) ! x face
+          ! B0 on the face
+          B0n  = B0x
+          B0t1 = B0y
+          B0t2 = B0z
+          ! Left face
+          UnL   =  StateLeft_V(Ux_)
+          Ut1L  =  StateLeft_V(Uy_)
+          Ut2L  =  StateLeft_V(Uz_)
+          B1nL  =  StateLeft_V(Bx_)
+          B1t1L =  StateLeft_V(By_)
+          B1t2L =  StateLeft_V(Bz_)
+          ! Right face
+          UnR   =  StateRight_V(Ux_)
+          Ut1R  =  StateRight_V(Uy_)
+          Ut2R  =  StateRight_V(Uz_)
+          B1nR  =  StateRight_V(Bx_)
+          B1t1R =  StateRight_V(By_)
+          B1t2R =  StateRight_V(Bz_)
+       case (y_) ! y face
+          ! B0 on the face
+          B0n  = B0y
+          B0t1 = B0z
+          B0t2 = B0x
+          ! Left face
+          UnL   =  StateLeft_V(Uy_)
+          Ut1L  =  StateLeft_V(Uz_)
+          Ut2L  =  StateLeft_V(Ux_)
+          B1nL  =  StateLeft_V(By_)
+          B1t1L =  StateLeft_V(Bz_)
+          B1t2L =  StateLeft_V(Bx_)
+          ! Right face
+          UnR   =  StateRight_V(Uy_)
+          Ut1R  =  StateRight_V(Uz_)
+          Ut2R  =  StateRight_V(Ux_)
+          B1nR  =  StateRight_V(By_)
+          B1t1R =  StateRight_V(Bz_)
+          B1t2R =  StateRight_V(Bx_)
+       case (z_) ! z face
+          ! B0 on the face
+          B0n  = B0z
+          B0t1 = B0x
+          B0t2 = B0y
+          ! Left face
+          UnL   =  StateLeft_V(Uz_)
+          Ut1L  =  StateLeft_V(Ux_)
+          Ut2L  =  StateLeft_V(Uy_)
+          B1nL  =  StateLeft_V(Bz_)
+          B1t1L =  StateLeft_V(Bx_)
+          B1t2L =  StateLeft_V(By_)
+          ! Right face
+          UnR   =  StateRight_V(Uz_)
+          Ut1R  =  StateRight_V(Ux_)
+          Ut2R  =  StateRight_V(Uy_)
+          B1nR  =  StateRight_V(Bz_)
+          B1t1R =  StateRight_V(Bx_)
+          B1t2R =  StateRight_V(By_)
+       end select
+    else
+       if(Normal_D(z_) < 0.5)then
+          ! Tangent1 = Normal x (0,0,1)
+          Tangent1_D(x_) =  Normal_D(y_)
+          Tangent1_D(y_) = -Normal_D(x_)
+          Tangent1_D(z_) = 0.0
+       else
+          ! Tangent1 = Normal x (1,0,0)
+          Tangent1_D(x_) = 0.0
+          Tangent1_D(y_) =  Normal_D(z_)
+          Tangent1_D(z_) = -Normal_D(y_)
+       end if
+       ! Normalize Tangent1 vector
+       Tangent1_D = Tangent1_D/norm2(Tangent1_D)
+       ! Tangent2 = Normal x Tangent1
+       Tangent2_D = cross_product(Normal_D, Tangent1_D)
 
-      if(IsCartesianGrid)then
-         select case (iDimFace)
-         case (x_) ! x face
-            ! B0 on the face
-            B0n  = B0x
-            B0t1 = B0y
-            B0t2 = B0z
-            ! Left face
-            UnL   =  StateLeft_V(Ux_)
-            Ut1L  =  StateLeft_V(Uy_)
-            Ut2L  =  StateLeft_V(Uz_)
-            B1nL  =  StateLeft_V(Bx_)
-            B1t1L =  StateLeft_V(By_)
-            B1t2L =  StateLeft_V(Bz_)
-            ! Right face
-            UnR   =  StateRight_V(Ux_)
-            Ut1R  =  StateRight_V(Uy_)
-            Ut2R  =  StateRight_V(Uz_)
-            B1nR  =  StateRight_V(Bx_)
-            B1t1R =  StateRight_V(By_)
-            B1t2R =  StateRight_V(Bz_)
-         case (y_) ! y face
-            ! B0 on the face
-            B0n  = B0y
-            B0t1 = B0z
-            B0t2 = B0x
-            ! Left face
-            UnL   =  StateLeft_V(Uy_)
-            Ut1L  =  StateLeft_V(Uz_)
-            Ut2L  =  StateLeft_V(Ux_)
-            B1nL  =  StateLeft_V(By_)
-            B1t1L =  StateLeft_V(Bz_)
-            B1t2L =  StateLeft_V(Bx_)
-            ! Right face
-            UnR   =  StateRight_V(Uy_)
-            Ut1R  =  StateRight_V(Uz_)
-            Ut2R  =  StateRight_V(Ux_)
-            B1nR  =  StateRight_V(By_)
-            B1t1R =  StateRight_V(Bz_)
-            B1t2R =  StateRight_V(Bx_)
-         case (z_) ! z face
-            ! B0 on the face
-            B0n  = B0z
-            B0t1 = B0x
-            B0t2 = B0y
-            ! Left face
-            UnL   =  StateLeft_V(Uz_)
-            Ut1L  =  StateLeft_V(Ux_)
-            Ut2L  =  StateLeft_V(Uy_)
-            B1nL  =  StateLeft_V(Bz_)
-            B1t1L =  StateLeft_V(Bx_)
-            B1t2L =  StateLeft_V(By_)
-            ! Right face
-            UnR   =  StateRight_V(Uz_)
-            Ut1R  =  StateRight_V(Ux_)
-            Ut2R  =  StateRight_V(Uy_)
-            B1nR  =  StateRight_V(Bz_)
-            B1t1R =  StateRight_V(Bx_)
-            B1t2R =  StateRight_V(By_)
-         end select
-      else
-         if(Normal_D(z_) < 0.5)then
-            ! Tangent1 = Normal x (0,0,1)
-            Tangent1_D(x_) =  Normal_D(y_)
-            Tangent1_D(y_) = -Normal_D(x_)
-            Tangent1_D(z_) = 0.0
-         else
-            ! Tangent1 = Normal x (1,0,0)
-            Tangent1_D(x_) = 0.0
-            Tangent1_D(y_) =  Normal_D(z_)
-            Tangent1_D(z_) = -Normal_D(y_)
-         end if
-         ! Normalize Tangent1 vector
-         Tangent1_D = Tangent1_D/norm2(Tangent1_D)
-         ! Tangent2 = Normal x Tangent1
-         Tangent2_D = cross_product(Normal_D, Tangent1_D)
-
-         ! B0 on the face
-         B0n   = sum(Normal_D  *[B0x, B0y, B0z])
-         B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
-         B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
-         ! Left face
-         UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
-         Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
-         Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
-         B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
-         B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
-         B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
-         ! Right face
-         UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
-         Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
-         Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
-         B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
-         B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
-         B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
-      end if
-
-#ifdef OPENACC
-    end associate
+       ! B0 on the face
+       B0n   = sum(Normal_D  *[B0x, B0y, B0z])
+       B0t1  = sum(Tangent1_D*[B0x, B0y, B0z])
+       B0t2  = sum(Tangent2_D*[B0x, B0y, B0z])
+       ! Left face
+       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
+       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
+       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
+       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
+       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
+       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
+       ! Right face
+       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
+       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
+       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
+       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
+       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
+       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
+    end if
 #endif
   end subroutine rotate_state_vectors
   !============================================================================
-  subroutine rotate_flux_vector(FluxRot_V, Flux_V, IFF_I, RFF_I, &
-       Normal_D, Tangent1_D, Tangent2_D)
-
+  subroutine rotate_flux_vector(FluxRot_V, Flux_V)
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
-    integer,  intent(inout):: IFF_I(:)
-    real,     intent(inout):: RFF_I(:)
-    real, intent(inout):: Normal_D(MaxDim)
-    real, intent(inout):: Tangent1_D(MaxDim)
-    real, intent(inout):: Tangent2_D(MaxDim)
-
+#ifndef OPENACC
     ! Rotate n,t1,t2 components back to x,y,z components
     !--------------------------------------------------------------------------
-#ifdef OPENACC
-    associate(iDimFace => IFF_I(iDimFace_))
-#endif
+    if(IsCartesianGrid)then
+       select case (iDimFace)
+       case (x_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(Bx_    ) = FluxRot_V(B1n_)
+          Flux_V(By_    ) = FluxRot_V(B1t1_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t2_)
+       case (y_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t2_)
+          Flux_V(By_    ) = FluxRot_V(B1n_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t1_)
+       case (z_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUn_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t1_)
+          Flux_V(By_    ) = FluxRot_V(B1t2_)
+          Flux_V(Bz_    ) = FluxRot_V(B1n_)
+       end select
+    else
+       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
 
-      if(IsCartesianGrid)then
-         select case (iDimFace)
-         case (x_)
-            Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
-            Flux_V(RhoUy_ ) = FluxRot_V(RhoUt1_)
-            Flux_V(RhoUz_ ) = FluxRot_V(RhoUt2_)
-            Flux_V(Bx_    ) = FluxRot_V(B1n_)
-            Flux_V(By_    ) = FluxRot_V(B1t1_)
-            Flux_V(Bz_    ) = FluxRot_V(B1t2_)
-         case (y_)
-            Flux_V(RhoUx_ ) = FluxRot_V(RhoUt2_)
-            Flux_V(RhoUy_ ) = FluxRot_V(RhoUn_)
-            Flux_V(RhoUz_ ) = FluxRot_V(RhoUt1_)
-            Flux_V(Bx_    ) = FluxRot_V(B1t2_)
-            Flux_V(By_    ) = FluxRot_V(B1n_)
-            Flux_V(Bz_    ) = FluxRot_V(B1t1_)
-         case (z_)
-            Flux_V(RhoUx_ ) = FluxRot_V(RhoUt1_)
-            Flux_V(RhoUy_ ) = FluxRot_V(RhoUt2_)
-            Flux_V(RhoUz_ ) = FluxRot_V(RhoUn_)
-            Flux_V(Bx_    ) = FluxRot_V(B1t1_)
-            Flux_V(By_    ) = FluxRot_V(B1t2_)
-            Flux_V(Bz_    ) = FluxRot_V(B1n_)
-         end select
-      else
-         Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
-              +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
-              +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
-         Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
-              +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
-              +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
-         Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
-              +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
-              +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
-
-         Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
-              +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
-              +           Tangent2_D(x_)*FluxRot_V(B1t2_)
-         Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
-              +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
-              +           Tangent2_D(y_)*FluxRot_V(B1t2_)
-         Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
-              +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
-              +           Tangent2_D(z_)*FluxRot_V(B1t2_)
-      end if
-
-#ifdef OPENACC
-    end associate
+       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
+       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
+       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
+    end if
 #endif
   end subroutine rotate_flux_vector
   !============================================================================

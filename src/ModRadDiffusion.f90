@@ -290,30 +290,32 @@ contains
   end subroutine init_rad_diffusion
   !============================================================================
 
-  subroutine get_radiation_energy_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
+  subroutine get_radiation_energy_flux(iDir, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, &
+       RadDiffCoef, EradFlux, IsNewBlockRadDiffusion)
 
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
     use ModVarIndexes,   ONLY: nVar
     use ModFaceFluxParameters
 
-    logical,  intent(inout):: IsFF_I(nFFLogic)
-    integer,  intent(inout):: IFF_I(nFFInt)
-    real,  intent(inout):: RFF_I(nFFReal)
+    integer,intent(in) :: iDir, i, j, k, iBlock
     real, intent(inout):: StateLeft_V(nVar)
     real, intent(inout):: StateRight_V(nVar)
     real, intent(inout):: Normal_D(MaxDim)
-
+    real,   intent(out):: RadDiffCoef, EradFlux
+    logical,intent(inout):: IsNewBlockRadDiffusion
+    
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    associate( &
-      iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-      i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_), &
-      RadDiffCoef => RFF_I(RadDiffCoef_), &
-      EradFlux => RFF_I(EradFlux_), &
-      IsNewBlockRadDiffusion => IsFF_I(IsNewBlockRadDiffusion_) )
+    ! associate( &
+    !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
+    !   i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_), &
+    !   RadDiffCoef => RFF_I(RadDiffCoef_), &
+    !   EradFlux => RFF_I(EradFlux_), &
+    !   IsNewBlockRadDiffusion => IsFF_I(IsNewBlockRadDiffusion_) )
 
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
@@ -333,7 +335,7 @@ contains
 
     EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
-    end associate
+    ! end associate
   contains
     !==========================================================================
 
@@ -348,10 +350,6 @@ contains
 
       real :: OpacityRosselandSi_W(nWave), OpacityRosseland, Grad2ByErad2
       !------------------------------------------------------------------------
-      associate( &
-         iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-         i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_) )
-
       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
            OpacityRosselandOut_W = OpacityRosselandSi_W)
 
@@ -372,7 +370,6 @@ contains
          DiffCoef = Clight/(3*OpacityRosseland)
       end if
 
-      end associate
     end subroutine get_diffusion_coef
     !==========================================================================
 

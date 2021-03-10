@@ -219,7 +219,8 @@ contains
   end subroutine set_visco_factor_face
   !============================================================================
 
-  subroutine get_viscosity_tensor( IsFF_I, IFF_I, RFF_I)
+  subroutine get_viscosity_tensor(iDimFace, iFace, jFace, &
+       kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff,IsNewBlockVisco)
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
@@ -228,10 +229,11 @@ contains
     use ModMain, ONLY: iMinFace, jMinFace, kMinFace, x_
     use ModFaceFluxParameters
 
-    logical,  intent(inout):: IsFF_I(nFFLogic)
-    integer,  intent(inout):: IFF_I(nFFInt)
-    real,  intent(inout):: RFF_I(nFFReal)
-
+    integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
+    integer, intent(in) :: iFluidMin,iFluidMax
+    real,    intent(in) :: ViscoCoeff
+    logical, intent(inout):: IsNewBlockVisco
+    
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k, iFluid
@@ -239,12 +241,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
-    associate( &
-      iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
-      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
-      iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
-      ViscoCoeff => RFF_I(ViscoCoeff_), &
-      IsNewBlockVisco => IsFF_I(IsNewBlockVisco_) )
+    ! associate( &
+    !   iDimFace => IFF_I(iDimFace_), iBlockFace => IFF_I(iBlockFace_), &
+    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+    !   iFluidMin => IFF_I(iFluidMin_), iFluidMax => IFF_I(iFluidMax_), &
+    !   ViscoCoeff => RFF_I(ViscoCoeff_), &
+    !   IsNewBlockVisco => IsFF_I(IsNewBlockVisco_) )
 
     ! Get velocity vector for the block, only done once per block
     if(IsNewBlockVisco) then
@@ -302,7 +304,7 @@ contains
        Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)
     end do
 
-    end associate
+    ! end associate
   end subroutine get_viscosity_tensor
   !============================================================================
 
