@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation
+Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #PLANET
 NONE			NamePlanet
