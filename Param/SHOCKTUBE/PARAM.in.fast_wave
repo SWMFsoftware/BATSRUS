@@ -11,9 +11,9 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #GRID
-2			nRootBlock1
-2			nRootBlock2
-2			nRootBlock3
+5			nRootBlock1
+5			nRootBlock2
+5			nRootBlock3
 -45.255			xMin
  45.255  		xMax
 -45.255			yMin
@@ -22,11 +22,11 @@ NONE			TypeNormalization
  45.255			zMax
 
 #GRIDBLOCKALL
-10			MaxBlock
+130			MaxBlock
 
 #SHOCKPOSITION
 0.0			ShockPosition
-1			ShockSlope
+1.0			ShockSlope
 
 #UNIFORMSTATE
 1.0			StateVar Rho
@@ -144,9 +144,9 @@ T			DoSaveInitial
 1			nPlotFile
 z=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
-500			DtSavePlot
+50.0			DtSavePlot
 0.0			DxSavePlot
 
 #STOP
 -1			MaxIteration
-5			tSimulationMax
+100.0			tSimulationMax
