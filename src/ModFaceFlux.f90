@@ -435,6 +435,14 @@ contains
 #ifndef OPENACC
     if(DoTest)call print_values
 
+    IsNewBlockCurrent      = .true.
+    IsNewBlockGradPe       = .true.
+    IsNewBlockRadDiffusion = .true.
+    IsNewBlockHeatCond     = .true.
+    IsNewBlockIonHeatCond  = .true.
+    IsNewBlockVisco        = .true.
+    IsNewBlockAlfven       = .true.
+    
     if(UseHallResist)then
        call set_hall_factor_face(iBlock)
     elseif(UseBiermannBattery)then
