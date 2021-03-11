@@ -7,7 +7,11 @@ module ModFaceFluxParameters
 
   public :: init_face_flux_arrays
 
-  integer, parameter :: nFFLogic = 10
+#ifdef OPENACC
+  integer, parameter :: nFFLogic = 10, nFFInt = 17, nFFReal = 53
+#else
+  integer, parameter :: nFFLogic = 1, nFFInt = 1, nFFReal = 1
+#endif  
   integer, parameter :: &
        IsNewBlockVisco_          = 1, &
        IsNewBlockGradPe_         = IsNewBlockVisco_ + 1, &
@@ -20,7 +24,6 @@ module ModFaceFluxParameters
        IsBoundary_               = UseHallGradPe_ + 1, &
        DoTestCell_               = IsBoundary_ + 1
 
-  integer, parameter :: nFFInt = 17
   integer, parameter :: &
        iLeft_           = 1, &
        jLeft_           = iLeft_ + 1, &
@@ -39,8 +42,6 @@ module ModFaceFluxParameters
        iFace_           = iEnergyMax_ + 1, &
        jFace_           = iFace_ + 1, &
        kFace_           = jFace_ + 1
-
-  integer, parameter :: nFFReal = 53 ! Scalars
 
   integer, parameter :: &
        CmaxDt_          = 1, &
@@ -101,10 +102,9 @@ contains
   !============================================================================
   subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
     !$acc routine seq
-
-    logical, target, intent(inout):: IsFF_I(nFFLogic)
-    integer, target, intent(inout):: IFF_I(nFFInt)
-    real, target, intent(inout):: RFF_I(nFFReal)
+    logical,  intent(inout):: IsFF_I(nFFLogic)
+    integer,  intent(inout):: IFF_I(nFFInt)
+    real,  intent(inout):: RFF_I(nFFReal)
     real, intent(inout):: Unormal_I(nFluid+1)
     real, intent(inout):: bCrossArea_D(MaxDim)
 
@@ -113,6 +113,7 @@ contains
     ! here.
 
     !--------------------------------------------------------------------------
+#ifdef OPENACC    
     IFF_I(iFluidMin_) = 1
     IFF_I(iFluidMax_) = nFluid
     IFF_I(iVarMin_) = 1
@@ -138,7 +139,7 @@ contains
     IsFF_I(IsNewBlockIonHeatCond_) = .true.
     IsFF_I(IsNewBlockRadDiffusion_) = .true.
     IsFF_I(IsNewBlockAlfven_) = .true.
-
+#endif
   end subroutine init_face_flux_arrays
   !============================================================================
 

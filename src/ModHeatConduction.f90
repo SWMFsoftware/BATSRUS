@@ -328,7 +328,9 @@ contains
   end subroutine init_heat_conduction
   !============================================================================
 
-  subroutine get_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
+  subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal,&
+       HeatFlux,  IsNewBlockHeatCond)
 
     use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -345,12 +347,10 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
 
-    logical, target, intent(inout):: IsFF_I(nFFLogic)
-    integer, target, intent(inout):: IFF_I(nFFInt)
-    real, target, intent(inout):: RFF_I(nFFReal)
-    real, intent(inout):: StateLeft_V(nVar)
-    real, intent(inout):: StateRight_V(nVar)
-    real, intent(inout):: Normal_D(MaxDim)
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
+    real,    intent(out):: HeatCondCoefNormal, HeatFlux
+    logical, intent(inout):: IsNewBlockHeatCond
 
     integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
@@ -364,12 +364,12 @@ contains
     ! threaded-field-line-model
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
-    associate( &
-      iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
-      HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
-      HeatFlux => RFF_I(HeatFlux_), &
-      IsNewBlockHeatCond => IsFF_I(IsNewBlockHeatCond_) )
+    ! associate( &
+    !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
+    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+    !   HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
+    !   HeatFlux => RFF_I(HeatFlux_), &
+    !   IsNewBlockHeatCond => IsFF_I(IsNewBlockHeatCond_) )
 
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
@@ -476,7 +476,7 @@ contains
        HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
     end if
 
-    end associate
+    ! end associate
   end subroutine get_heat_flux
   !============================================================================
 
@@ -592,7 +592,9 @@ contains
   end subroutine get_heat_cond_coef
   !============================================================================
 
-  subroutine get_ion_heat_flux( IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, Normal_D)
+  subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, &
+       HeatFlux, IsNewBlockIonHeatCond)
 
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
@@ -600,25 +602,22 @@ contains
     use ModPhysics,      ONLY: InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
-    logical, target, intent(inout):: IsFF_I(nFFLogic)
-    integer, target, intent(inout):: IFF_I(nFFInt)
-    real, target, intent(inout):: RFF_I(nFFReal)
-    real, intent(inout):: StateLeft_V(nVar)
-    real, intent(inout):: StateRight_V(nVar)
-    real, intent(inout):: Normal_D(MaxDim)
-
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
+    real,    intent(out):: HeatCondCoefNormal, HeatFlux
+    logical, intent(inout):: IsNewBlockIonHeatCond
     integer :: i, j, k
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), CvL, CvR
 
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    associate( &
-      iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
-      iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
-      HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
-      HeatFlux => RFF_I(HeatFlux_), &
-      IsNewBlockIonHeatCond => IsFF_I(IsNewBlockIonHeatCond_) )
+    ! associate( &
+    !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
+    !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+    !   HeatCondCoefNormal => RFF_I(HeatCondCoefNormal_), &
+    !   HeatFlux => RFF_I(HeatFlux_), &
+    !   IsNewBlockIonHeatCond => IsFF_I(IsNewBlockIonHeatCond_) )
 
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
@@ -660,7 +659,7 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
-    end associate
+    ! end associate
   end subroutine get_ion_heat_flux
   !============================================================================
 
