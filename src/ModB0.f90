@@ -21,8 +21,6 @@ module ModB0
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain, ONLY: UseB, UseB0, UseConstrainB
   use omp_lib
-  use CON_axes, ONLY: dLongitudeHgrDeg
-  use ModCoordTransform, ONLY: rot_matrix_z
 
   implicit none
   SAVE
@@ -167,11 +165,10 @@ contains
     
     call init_magnetogram_lookup_table(iComm)
 
-    if(iProc==0)write(*,*)NameSub,&
-         ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
-         UseCurlB0, rCurrentFreeB0, rMaxB0
     if(iTableB0 > 0) then
-       !if SourceSurface < SC boundary then USECURLB0 is switched ON
+       !if(iProc==0)write(*,*)NameSub,&
+       !     ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
+       !     UseCurlB0, rCurrentFreeB0, rMaxB0
        if(rMaxB0 < RadiusMax) then
           UseCurlB0 = .true.
           rCurrentFreeB0 = rMaxB0
