@@ -305,11 +305,9 @@ contains
     real, intent(inout):: Normal_D(MaxDim)
     real,   intent(out):: RadDiffCoef, EradFlux
     logical,intent(inout):: IsNewBlockRadDiffusion
-    
+
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
-    character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
-    !--------------------------------------------------------------------------
     ! associate( &
     !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
     !   i => IFF_I(iFace_), j => IFF_I(jFace_), k => IFF_I(kFace_), &
@@ -317,6 +315,8 @@ contains
     !   EradFlux => RFF_I(EradFlux_), &
     !   IsNewBlockRadDiffusion => IsFF_I(IsNewBlockRadDiffusion_) )
 
+    character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
+    !--------------------------------------------------------------------------
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 

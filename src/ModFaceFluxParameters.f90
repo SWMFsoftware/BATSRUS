@@ -11,7 +11,7 @@ module ModFaceFluxParameters
   integer, parameter :: nFFLogic = 10, nFFInt = 17, nFFReal = 53
 #else
   integer, parameter :: nFFLogic = 1, nFFInt = 1, nFFReal = 1
-#endif  
+#endif
   integer, parameter :: &
        IsNewBlockVisco_          = 1, &
        IsNewBlockGradPe_         = IsNewBlockVisco_ + 1, &
@@ -112,8 +112,8 @@ contains
     ! not correctly initialized. So, they are explicitly initialized
     ! here.
 
+#ifdef OPENACC
     !--------------------------------------------------------------------------
-#ifdef OPENACC    
     IFF_I(iFluidMin_) = 1
     IFF_I(iFluidMax_) = nFluid
     IFF_I(iVarMin_) = 1

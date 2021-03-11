@@ -362,8 +362,6 @@ contains
 
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
-    character(len=*), parameter:: NameSub = 'get_heat_flux'
-    !--------------------------------------------------------------------------
     ! associate( &
     !   iDir => IFF_I(iDimFace_), iBlock => IFF_I(iBlockFace_), &
     !   iFace => IFF_I(iFace_), jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
@@ -371,6 +369,8 @@ contains
     !   HeatFlux => RFF_I(HeatFlux_), &
     !   IsNewBlockHeatCond => IsFF_I(IsNewBlockHeatCond_) )
 
+    character(len=*), parameter:: NameSub = 'get_heat_flux'
+    !--------------------------------------------------------------------------
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
     else

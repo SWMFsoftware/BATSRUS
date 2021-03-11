@@ -2263,8 +2263,8 @@ contains
          set_block_values, set_cell_values, get_physical_flux
 #ifndef OPENACC
     use ModFaceFlux, ONLY: iFace, jFace, kFace, DoTestCell, &
-         HallJx, HallJy, HallJz, UseHallGradPe, B0x, B0y, B0z, Area    
-#endif    
+         HallJx, HallJy, HallJz, UseHallGradPe, B0x, B0y, B0z, Area
+#endif
     use ModHallResist, ONLY: UseHallResist, HallJ_CD
     use ModMultiFluid, ONLY: nFluid, iP_I
 
@@ -2272,8 +2272,8 @@ contains
     real, intent(in)   :: StateCons_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
     real, intent(in)   :: B0_DC(:,:,:,:)        ! dimension(MaxDim,nI,nJ,nK)
     real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
-#ifndef OPENACC    
-    
+#ifndef OPENACC
+
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
     real :: Un_I(nFluid+1), En, Pe, Pwave
@@ -2284,7 +2284,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    call set_block_values(iBlock, iDim)    
+    call set_block_values(iBlock, iDim)
     ! Set iFace=i, jFace=j, kFace=k so that
     ! call set_cell_values and call get_physical_flux work
     ! This is not quite right but good enough for the preconditioner
@@ -2324,7 +2324,7 @@ contains
     end do; end do; end do
 
     call test_stop(NameSub, DoTest, iBlock)
-#endif    
+#endif
   end subroutine get_face_flux
   !============================================================================
 
@@ -2337,7 +2337,7 @@ contains
 #ifndef OPENACC
     use ModFaceFlux, ONLY: B0x, B0y, B0z, CmaxDt, Area, DoTestCell,&
          iFace, jFace, kFace, UnLeft_I, UnRight_I
-#endif    
+#endif
     use ModAdvance,  ONLY: eFluid_
     use ModMultiFluid, ONLY: nFluid
 
@@ -2350,7 +2350,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
-#ifndef OPENACC    
+#ifndef OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
     ! The electron speed is set to zero (I can't remember why)
@@ -2387,7 +2387,7 @@ contains
          Area, Cmax_F(iTest, jTest, kTest)
 
     call test_stop(NameSub, DoTest, iBlock)
-#endif    
+#endif
   end subroutine get_cmax_face
   !============================================================================
 

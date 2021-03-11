@@ -233,7 +233,7 @@ contains
     integer, intent(in) :: iFluidMin,iFluidMax
     real,    intent(in) :: ViscoCoeff
     logical, intent(inout):: IsNewBlockVisco
-    
+
     real :: Diag
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k, iFluid
