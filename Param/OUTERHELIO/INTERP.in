@@ -1,0 +1,4 @@
+./run_test/RESULTS/OH/z=0_mhd_1_e20170101-000000-000_20170102-000000-000.outs
+ascii
+./run_test/testsat.dat
+./run_test/RESULTS/interpolated_output.dat
