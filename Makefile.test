@@ -933,7 +933,7 @@ test_outerhelio2d_run:
 
 test_outerhelio2d_interpolate:
 	cd ./srcPostProc; make INTERPOLATE
-	./src/INTERPOLATE.exe < Param/OUTERHELIO/INTERP.in
+	${BINDIR}/INTERPOLATE.exe < Param/OUTERHELIO/INTERP.in
 
 test_outerhelio2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
@@ -943,7 +943,7 @@ test_outerhelio2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
 		${TESTDIR}/RESULTS/interpolated_output.dat \
 		Param/OUTERHELIO/TestOutput/interpolation_ref.dat \
-		> test_outerhelio2d.diff)
+		>> test_outerhelio2d.diff)
 	ls -l test_outerhelio2d.diff
 
 
