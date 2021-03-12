@@ -445,8 +445,14 @@ contains
     integer:: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
-    ! Create arrays to hold interpolated data.
     !--------------------------------------------------------------------------
+
+    ! Deallocate Var_VII and reallocate with ghost cells.
+    if(allocated(Var_VII))then
+       deallocate(Var_VII)
+    endif
+
+    ! Create arrays to hold interpolated data.
     allocate(                               &
          Coord_DII(nDim, n1, 0:n2+1),       &
          Var_VII(nVar, n1, 0:n2+1),         &
