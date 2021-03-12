@@ -1,8 +1,8 @@
 ! PARAM.in file for 2D Outer Heliosphere test
 ! Created 2020.05.20, Keebler
 ! Updated 2020.09.01, changed timeframe
-! 			added lookup tables
-!			modified normalization
+! 	  	      added lookup tables
+!		      modified normalization
 
 
 #COMPONENT
@@ -33,6 +33,13 @@ SW2			NameTable
 load			NameCommand
 oh2d_stereoa_test.dat		NameFile
 ascii			TypeFile
+
+#SATELLITE
+1			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+1 hour			DtOutput
+testsat.dat		NameTrajectoryFile
 
 #GRAVITY
 F			UseGravity
@@ -115,7 +122,7 @@ RAW			StringLog
 #SAVEINITIAL
 F			DoSaveInitial
 
-#SAVEPLOT
+SAVEPLOT
 1			nPlotFile
 z=0 MHD idl_ascii		StringPlot
 100			DnSavePlot
@@ -158,11 +165,16 @@ z=0 MHD idl_ascii		StringPlot
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#SAVEPLOTNAME
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
+
 #SAVEPLOT
 1			nPlotFile
 z=0 MHD idl_ascii		StringPlot
 -1  			DnSavePlot
-0.5 day			DtSavePlot
+6 hours			DtSavePlot
 0.0			DxSavePlot
 
 #STOP
