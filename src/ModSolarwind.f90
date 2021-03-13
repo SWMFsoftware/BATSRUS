@@ -704,8 +704,8 @@ contains
 
        ! Get velocity for time shift.
        Solarwind_V = interpolate_vector(Solarwind_VI, nVar=nVar, nDim=1, &
-            Min_D=[1], Max_D=[nData], x_D=[Time], &
-            x1_I=Time_I, DoExtrapolate=.false.)
+            Min_D=[1], Max_D=[nData], x8_D=[Time], x8_I=Time_I, &
+            DoExtrapolate=.false.)
 
        u = dot_product(SolarWind_V(Ux_:Uz_), Normal_D)
        if(DoTestCell) write(*,*)NameSub,' u_D, u =',Solarwind_V(Ux_:Uz_),u
@@ -729,8 +729,8 @@ contains
 
     ! Interpolate in time
     Solarwind_V = interpolate_vector(Solarwind_VI, nVar=nVar, nDim=1, &
-         Min_D=[1], Max_D=[nData], x_D=[Time], &
-         x1_I=Time_I, DoExtrapolate=.false.)
+         Min_D=[1], Max_D=[nData], x8_D=[Time], x8_I=Time_I, &
+         DoExtrapolate=.false.)
 
     if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
 
