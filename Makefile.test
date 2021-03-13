@@ -922,14 +922,14 @@ test_outerhelio2d_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.2D ./PARAM.in
 	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_l1_test.dat .
 	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_stereoa_test.dat .
-	cd ${TESTDIR}; cp Param/OUTERHELIO/INTERP.in .
+	cd ${TESTDIR}; cp Param/OUTERHELIO/INTERPOLATE.in .
 	cd ${TESTDIR}; cp Param/OUTERHELIO/testsat.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_outerhelio2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
-	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERP.in
+	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERPOLATE.in
 
 test_outerhelio2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
