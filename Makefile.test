@@ -916,7 +916,7 @@ test_outerhelio2d:
 test_outerhelio2d_compile:
 	./Config.pl -noopenmp -u=OuterHelio2d -e=Mhd -f -ng=2 -g=10,10,2
 	$(MAKE) BATSRUS
-	make PIDL
+	make PIDL INTERPOLATE
 
 test_outerhelio2d_rundir:
 	rm -rf ${TESTDIR}
@@ -924,6 +924,7 @@ test_outerhelio2d_rundir:
 	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.2D ./PARAM.in
 	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_l1_test.dat .
 	cd ${TESTDIR}; cp Param/OUTERHELIO/oh2d_stereoa_test.dat .
+	cd ${TESTDIR}; cp Param/OUTERHELIO/INTERP.in .
 	cd ${TESTDIR}; cp Param/OUTERHELIO/testsat.dat .
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -932,8 +933,7 @@ test_outerhelio2d_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_outerhelio2d_interpolate:
-	cd ./srcPostProc; make INTERPOLATE
-	${BINDIR}/INTERPOLATE.exe < Param/OUTERHELIO/INTERP.in
+	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERP.in
 
 test_outerhelio2d_check:
 	-@(${DIFFNUM} -t -r=1e-5 \
