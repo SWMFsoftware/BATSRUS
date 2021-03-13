@@ -334,7 +334,7 @@ test_fast_wave_rundir: test_rundir
 
 test_fast_wave_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fast_wave_check:
 	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
