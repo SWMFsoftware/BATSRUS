@@ -10173,7 +10173,7 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
 
 <commandgroup name="PARTICLES">
 
-<command name="PARTICLELINE">
+<command name="PARTICLELINE" if="$_IsFirstSession">
   <parameter name="UseParticles" type="logical" default="F"/>
   <parameter name="nFieldLineMax" type="integer" default="-1"/>
   <parameter name="nParticlePerLine" type="integer" default="-1"/>
