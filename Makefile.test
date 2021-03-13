@@ -908,8 +908,6 @@ test_outerhelio2d:
 	$(MAKE) test_outerhelio2d_rundir
 	@echo "test_outerhelio2d_run..." >> test_outerhelio2d.diff
 	$(MAKE) test_outerhelio2d_run
-	@echo "test_outerhelio2d_interpolate" >> test_outerhelio2d.diff
-	$(MAKE) test_outerhelio2d_interpolate
 	@echo "test_outerhelio2d_check..." >> test_outerhelio2d.diff
 	$(MAKE) test_outerhelio2d_check
 
@@ -931,8 +929,6 @@ test_outerhelio2d_rundir:
 test_outerhelio2d_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
-
-test_outerhelio2d_interpolate:
 	cd ${TESTDIR}; ${BINDIR}/INTERPOLATE.exe < INTERP.in
 
 test_outerhelio2d_check:
