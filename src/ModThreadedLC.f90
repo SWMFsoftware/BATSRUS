@@ -370,7 +370,6 @@ contains
        AMajor_I(0:nPoint) = 1.0
        AMinor_I(0:nPoint) = AMinorIn
        call advance_thread(IsTimeAccurate=.false.)
-       ! call get_res_heating(nIterIn=nIterHere)
        BoundaryThreads_B(iBlock)%State_VIII(TeSi_,1-nPoint:0,j,k) = TeSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(TiSi_,1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%State_VIII(PSi_,1-nPoint:0,j,k)  = PSi_I(1:nPoint)

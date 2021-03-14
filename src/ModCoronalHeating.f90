@@ -441,6 +441,7 @@ contains
        case('F','none')
           UseCoronalHeating = .false.
        case('exponential')
+          DoInit = .true.
           UseExponentialHeating = .true.
           call read_var('DecayLengthExp', DecayLengthExp)
           call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
@@ -451,11 +452,13 @@ contains
           call read_var('HeatNormalization', HeatNormalization)
        case('alfvenwavedissipation')
           UseAlfvenWaveDissipation = .true.
+          DoInit = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
        case('turbulentcascade')
           UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
+          DoInit = .true.
           call read_var('UseWaveReflection', UseWaveReflection)
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           if(UseWaveReflection)then
@@ -471,6 +474,7 @@ contains
        MaxImbalance2 = MaxImbalance**2
 
     case("#POYNTINGFLUX")
+       DoInit = .true.
        call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
 
     case("#ACTIVEREGIONHEATING")
