@@ -162,11 +162,11 @@ contains
     end if
 
     !$omp end parallel
-    
+
     call init_magnetogram_lookup_table(iComm)
 
     if(iTableB0 > 0) then
-       !if(iProc==0)write(*,*)NameSub,&
+       ! if(iProc==0)write(*,*)NameSub,&
        !     ' Input: UseCurlB0, rCurrentFreeB0, rSourceSurface = ',&
        !     UseCurlB0, rCurrentFreeB0, rMaxB0
        if(rMaxB0 < RadiusMax) then
@@ -176,14 +176,14 @@ contains
           if(iProc==0)write(*,*)NameSub,&
                ' UseCurlB0 is switched ON, rCurrentFreeB0 = ',rCurrentFreeB0
        else if(UseCurlB0)then
-          !if SourceSurface > SC boundary then USECURLB0 is NOT required
+          ! if SourceSurface > SC boundary then USECURLB0 is NOT required
           UseCurlB0 = .false.
           rCurrentFreeB0 = -1.0
           if(iProc==0)write(*,*)NameSub,&
                ' NOTE: UseCurlB0 is switched OFF as source surface = ',rMaxB0
        end if
     end if
-    
+
     !$omp parallel
 
     if(UseB0Source .and. .not.allocated(DivB0_C)) &
