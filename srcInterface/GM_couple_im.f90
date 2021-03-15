@@ -40,7 +40,7 @@ module GM_couple_im
   ! IM Grid size
   integer :: nCells_D(2), iSize,jSize
 
-  ! Information about the IM grid ! 2D non-uniform regular grid only !!!
+  ! Information about the IM grid: 2D non-uniform regular grid
   real, allocatable, dimension(:) :: IM_lat, IM_lon
 
   integer :: i,j, i0
@@ -91,7 +91,7 @@ contains
 
     Radius = (RadiusPlanet + IonosphereHeight) / RadiusPlanet
 
-    ! The CRCM ionosphere radius in normalized units
+    ! The CRCM ionosphere radius at 100km altitude in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
 
     DoExtractUnitSi = .true.
@@ -484,7 +484,7 @@ contains
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
-    ! The RCM ionosphere radius in normalized units
+    ! The RCM ionosphere radius at 100km altitude in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     if(.not. DoMultiFluidIMCoupling)then
        call integrate_field_from_sphere(&
@@ -583,7 +583,7 @@ contains
   subroutine GM_satinit_for_im(nSats)
 
     ! This subroutine collects the number of satellite files for use in
-    ! SWMF GM and IM coupling.   !!!DTW 2007
+    ! SWMF GM and IM coupling.
 
     ! Module variables to use:
     use ModMain,   ONLY: DoImSatTrace
@@ -607,7 +607,6 @@ contains
   subroutine GM_get_sat_for_im(Buffer_III, Name_I, nSats)
 
     ! Subroutine to update and collect satellite locations for IM tracing
-    ! !!! DTW 2007
 
     ! Modules
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
@@ -1386,7 +1385,6 @@ contains
           Cs=sqrt(1.-(Rbody/Ri)*s2)
           FCiCs = (Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) &
                - (1./7.)*(Ci**7-Cs**7)
-!!! CHANGE!!!
           if (s8 /= 0.0) then
              Vol = Factor*FCiCs/s8
           else
@@ -1402,7 +1400,6 @@ contains
 
           ! Compute the full analytic volume
           FCiCs = Ci - Ci**3 + (3./5.)*Ci**5 - (1./7.)*Ci**7
-!!! CHANGE!!!
           if (s8 /= 0.0) then
              Vol = factor*FCiCs/s8
           else
