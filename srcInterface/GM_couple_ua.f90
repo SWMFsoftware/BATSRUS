@@ -257,7 +257,7 @@ contains
           if(present(Data_VI))then
              ! Put Data_VI obtained from GM into State_VGB
              ! write(*,*) "nVarBuffer: ", nVar ,Data_VI(1,1),iVarTarget_V(1)
-             ! do iVar = 1, nVar!Buffer
+             ! do iVar = 1, nVarBuffer
 
                 ! iVar = iVarTarget_V(iVarBuffer)
                 ! write(*,*) 'iVar: ',Data_VI(iVar,iPoint)
@@ -267,7 +267,7 @@ contains
                      !*Si2No_V(iUnitCons_V(iVar))
                 ! write(*,*) "Data: ", State_VGB(iVar,i,j,k,iBlock)
              ! end do
-             ! do iVarBuffer = 1, nVar!Buffer
+             ! do iVarBuffer = 1, nVarBuffer
 
               !  iVar = iVarTarget_V(iVarBuffer)
               !  write(*,*) 'iVar: ',iVar
