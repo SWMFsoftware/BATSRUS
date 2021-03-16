@@ -3670,6 +3670,7 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+      !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
