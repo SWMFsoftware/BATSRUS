@@ -8,7 +8,6 @@ module ModPointImplicit
        test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
        iProc
 
-  !DESCRIPTION:
   ! This module implements a point implicit scheme for the implicit
   ! part of the right hand side Rimp = R - Rexp that contributes to the
   ! the implicitly treated variables Uimp, a subset of U=(Uexp, Uimp).
@@ -53,7 +52,6 @@ module ModPointImplicit
   ! dRimp/dU^w = ((Rimp(Uexp^n+1,Uimp^n+eps^w) - Rimp(Uexp^n+1,Uimp^n))/eps^w
   !
   ! where eps^w is a small perturbation in the w-th component of Uimp.
-  ! EOP
   use ModSize, ONLY: MaxBlock
   use ModMultiFluid, ONLY: UseMultiIon
   use ModAdvance, ONLY: UseEfield

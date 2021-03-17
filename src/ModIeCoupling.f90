@@ -314,20 +314,16 @@ contains
 
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
-    !USES:
     use ModMain,           ONLY: TypeCoordSystem, MaxDim
     use ModCoordTransform, ONLY: xyz_to_dir, cross_product
     use CON_planet_field,  ONLY: map_planet_field
 
-    !INPUT ARGUMENTS:
     real, intent(in)    :: tSimulation      ! Simulation time
     real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
     real, intent(in)    :: b_D(MaxDim)      ! Magnetic field
 
-    !OUTPUT ARGUMENTS:
     real, intent(out)   :: u_D(MaxDim)      ! Velocity vector
 
-    !DESCRIPTION:
     ! This subroutine calculates the velocity vector derived from
     ! the electric field of the ionosphere. The location is given by
     ! the Xyz\_D coordinates and the corresponding magnetic field is
@@ -340,7 +336,6 @@ contains
     ! the electric field at the required location. The velocity is
     ! determined from the electric field and the magnetic field using
     ! the fact that the electric field is orthogonal to the magnetic field.
-    ! EOP
 
     real :: XyzIono_D(MaxDim)    ! Mapped point on the ionosphere
     real :: Theta, Phi           ! Mapped point colatitude, longitude
@@ -473,7 +468,6 @@ contains
     use ModMain,           ONLY: Time_Simulation
     use CON_planet_field,  ONLY: map_planet_field
 
-    !INPUT ARGUMENTS:
     real, intent(in)    :: XyzSm_D(3) ! Position vector in SMG
     real, intent(out)   :: JouleHeating    ! Houle heating
 

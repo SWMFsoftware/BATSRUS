@@ -84,7 +84,8 @@ contains
       use ModLoadBalance, ONLY: load_balance
       use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
 
-      !LOCAL VARIABLES:
+      ! local variables
+
       character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
       character(len=100) :: NameFile
 
@@ -175,7 +176,8 @@ contains
 
       ! Set intial conditions for solution in each block.
 
-      !LOCAL VARIABLES:
+      ! local variables
+
       integer :: iLevel, iBlock
 
       character(len=*), parameter :: NameSubSub = &
@@ -466,7 +468,6 @@ contains
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
          pic_set_cell_status
 
-    !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     ! Local variables

@@ -1660,10 +1660,8 @@ contains
     use ModVarIndexes, ONLY: nVar
     use ModMpi
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
 
-    !INPUT/OUTPUT ARGUMENTS:
     ! On input StateCurrent_V contains the weight and the interpolated state
     ! on a given PE.
     ! On output only PE 0 contains new data.
@@ -1676,7 +1674,8 @@ contains
 
     real, intent(inout) :: StateCurrent_V(0:nVar+3)
 
-    !LOCAL VARIABLES:
+    ! local variables
+
     real    :: Weight
     integer :: iError
 

@@ -22,7 +22,6 @@ module CON_geopack_internal
 
   private ! except
 
-  !DESCRIPTION:
   ! The use of CON_geopack is very simple and follows the original
   ! design of the GEOPACK package.
   ! Call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec).
@@ -33,7 +32,6 @@ module CON_geopack_internal
   ! While using the transformation matrix, we denote HgiGse so that
   !${\bf r}_{HGI}=HgiGse_DD\cdot${\bf r}_{GSE}
   ! In F&H they use T(GSE,HGI) for such the matrix
-  ! EOP
 
   ! Slowly varying parameters and matrices, are calculated once
 
@@ -211,7 +209,6 @@ contains
     end if
     if(present(Psi))&
          eulerian_matrix=matmul(rot_matrix(z_,Psi),eulerian_matrix)
-    ! EOC
   end function eulerian_matrix
   !============================================================================
 

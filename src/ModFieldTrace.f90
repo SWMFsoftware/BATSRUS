@@ -633,7 +633,6 @@ contains
 
   subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
-    !DESCRIPTION:
     ! Follow ray in direction iRayIn (1 is parallel with the field,
     !                                 2 is anti-parallel,
     !                                 0 means that no ray is passed
@@ -665,7 +664,6 @@ contains
     ! If DoExtractRay, extract data along the rays, collect and sort it
     !    In this case the rays are indexed with i_D(1).
     !
-    ! EOP
 
     use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
@@ -676,12 +674,12 @@ contains
 
     use ModMpi
 
-    !INPUT ARGUMENTS:
     integer, intent(in) :: iRayIn     ! ray direction, 0 if no ray is passed
     integer, intent(in) :: i_D(4)     ! general index array for start position
     real,    intent(in) :: XyzIn_D(3) ! coordinates of starting position
 
-    !LOCAL VARIABLES:
+    ! local variables
+
     ! Cell, block and PE indexes for initial position and ray direction
     integer :: iStart, jStart, kStart, iBlockStart, iProcStart, iRay
     integer :: iStart_D(4)
@@ -1054,7 +1052,6 @@ contains
 
   subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
-    !DESCRIPTION:
     ! Follow ray identified by index array iStart_D,
     ! starting at initial position XyzInOut_D inside block iBlock,
     ! in direction iRay until we hit the wall of the block or the ionosphere
@@ -1069,7 +1066,6 @@ contains
     ! Return ray_loop_    if the ray did not hit anything
     ! Return ray_body_    if the ray goes into or is inside a body
     ! Return ray_open_    if the ray goes outside the computational box
-    ! EOP
 
     use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: nI, nJ, nK
@@ -1648,7 +1644,8 @@ contains
       real, intent(out):: b_D(3)      ! interpolated magnetic field
       real, intent(out):: bNorm_D(3)  ! unit magnetic field vector
 
-      !LOCAL VARIABLES:
+      ! local variables
+
       real :: Dir0_D(3)
 
       !------------------------------------------------------------------------
@@ -2022,12 +2019,10 @@ contains
     use ModMultiFluid
     use ModMessagePass,    ONLY: exchange_messages
 
-    !INPUT ARGUMENTS:
     integer, intent(in):: nLat, nLon
     real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
     character(len=*), intent(in):: NameVar
 
-    !DESCRIPTION:
     ! Lat_I(nLat) and Lon_I(nLon) are the coordinates of a 2D spherical
     ! grid in the SM(G) coordinate system in degrees. The 2D grid is
     ! at radius Radius given in units of planet radii.
@@ -2229,12 +2224,10 @@ contains
     use ModMultiFluid
     use BATL_lib,          ONLY: find_grid_block
 
-    !INPUT ARGUMENTS:
     integer, intent(in):: nPts
     real,    intent(in):: XyzPt_DI(3,nPts)
     character(len=*), intent(in):: NameVar
 
-    !DESCRIPTION:
     ! A 1D list of points is sent in with x,y,z values in GM coordinates.
     ! NameVar lists the variables that need to be extracted and/or integrated.
     ! The subroutine can calculate the integral of various quantities
@@ -2377,10 +2370,8 @@ contains
     use ModInterpolate,    ONLY: fit_parabola
     use ModUtilities,      ONLY: open_file, close_file
 
-    !INPUT ARGUMENTS:
     integer, intent(in):: iFile
 
-    !DESCRIPTION:
     ! Follow field lines starting from a 2D polar grid on the
     ! magnetic equatorial plane in the SM(G) coordinate system.
     ! The grid parameters are given by plot_rang(1:4, iFile)
@@ -2681,12 +2672,10 @@ contains
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, iComm
     use ModMpi
 
-    !INPUT ARGUMENTS:
     integer, intent(in):: nRadius, nLon
     real,    intent(in):: Radius_I(nRadius), Longitude_I(nLon)
     logical, intent(in):: DoMessagePass
 
-    !DESCRIPTION:
     ! Follow field lines starting from a 2D polar grid on the
     ! magnetic equatorial plane in the SM(G) coordinate system.
     ! The grid parameters are given by the arguments.
@@ -2913,12 +2902,10 @@ contains
     use ModMpi,      ONLY: MPI_WTIME
     use BATL_lib,    ONLY: find_grid_block
 
-    !INPUT ARGUMENTS:
     integer, intent(in) :: nLine
     logical, intent(in) :: IsParallel_I(nLine)
     real,    intent(in) :: Xyz_DI(3, nLine)
 
-    ! EOP
     real    :: Xyz_D(3), Dx2Inv, Dy2Inv, Dz2Inv
     integer :: iProcFound, iBlockFound, iLine, iRay
 

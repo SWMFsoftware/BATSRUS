@@ -445,9 +445,8 @@ contains
     integer:: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
-    !--------------------------------------------------------------------------
-
     ! Deallocate Var_VII and reallocate with ghost cells.
+    !--------------------------------------------------------------------------
     if(allocated(Var_VII))then
        deallocate(Var_VII)
     endif

@@ -22,9 +22,7 @@ module GM_couple_ih
 
 contains
   !============================================================================
-  ! BOP
   ! ROUTINE: GM_put_from_ih - transform and put the data got from IH_
-  !INTERFACE:
   subroutine GM_put_from_ih(nPartial,&
        iPutStart,&
        Put,&
@@ -32,26 +30,23 @@ contains
        DoAdd,&
        StateSI_V,&
        nVar)
-    !USES:
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, UnitP_, UnitB_
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::Weight
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::StateSI_V
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
     ! 23AUG03                                     prolog
     ! 03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
     ! 19JUL04     I.Sokolov <igorsok@umich.edu> - sophisticated back
     !                  (this is what we refer to as a development)
-    ! EOP
 
     real,dimension(nVar)::State_V
     integer:: i, j, k, iBlock

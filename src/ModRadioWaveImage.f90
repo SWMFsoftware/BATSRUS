@@ -568,7 +568,6 @@ contains
     !==========================================================================
     subroutine get_local_density(&
          State_V, GradNElectronSi_D, DeltaSNew, IsBody)
-      !USES:
       use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: nVar
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB

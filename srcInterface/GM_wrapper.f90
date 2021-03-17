@@ -172,11 +172,8 @@ contains
 
   end subroutine GM_set_param
   !============================================================================
-  ! BOP
   ! ROUTINE: GM_set_grid - intialize, set and broadcast adaptive block grid
-  !INTERFACE:
   subroutine GM_set_grid
-    !USES:
     use MH_domain_decomposition
     use CON_coupler
     use ModMain,         ONLY: TypeCoordSystem, NameVarCouple
@@ -192,11 +189,10 @@ contains
     integer:: nParticle = 0, iError = 0
 
     logical:: DoTest, DoTestMe
-    !REVISION HISTORY:
+    ! revision history:
     ! 23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
     ! 03Sep03 G.Toth    <gtoth@umich.edu> - removed test_message_pass
     !                                      call synchronize_refinement directly
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'GM_set_grid'
     !--------------------------------------------------------------------------
@@ -254,20 +250,15 @@ contains
     end if
   end subroutine GM_set_grid
   !============================================================================
-  ! BOP
   ! ROUTINE: GM_synchronize_refinement - synchronize global grid for GM_
-  !INTERFACE:
   subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
-    !USES:
     use MH_domain_decomposition
     use CON_comp_param, ONLY:GM_
-    !INPUT ARGUMENTS:
     integer,intent(in) :: iProc0,iCommUnion
-    !REVISION HISTORY:
+    ! revision history:
     ! 23AUG03  I.Sokolov <igorsok@umich.edu> - initial prototype/code/prolog
     ! 03SEP03  G.Toth    <gtoth@umich.edu> - arguments are not optional now
-    ! EOP
 
     !--------------------------------------------------------------------------
     if(is_proc(GM_)) &
@@ -332,7 +323,6 @@ contains
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_, PS_, PC_
     use CON_world,   ONLY: get_comp_info
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -378,7 +368,6 @@ contains
 
     use ModMain, ONLY: time_loop
 
-    !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'GM_finalize'
@@ -398,7 +387,6 @@ contains
     use CON_coupler, ONLY: NameRestartOutDirComp
     use ModRestartFile, ONLY: NameRestartOutDir
 
-    !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'GM_save_restart'
@@ -414,10 +402,8 @@ contains
 
     use ModMain,   ONLY: Time_Simulation
 
-    !INPUT/OUTPUT ARGUMENTS:
     real, intent(inout) :: TimeSimulation   ! current time of component
 
-    !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     logical :: DoTest, DoTestMe
