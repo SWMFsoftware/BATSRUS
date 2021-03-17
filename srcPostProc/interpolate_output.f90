@@ -52,7 +52,6 @@ program interpolate_output
 
   character(len=*), parameter:: NameProgram = 'interpolate_output'
   !----------------------------------------------------------------------------
-
   write(*,*) NameProgram,': start read_parameters'
   call read_parameters
   write(*,*) NameProgram,': start read_positions'
@@ -86,7 +85,6 @@ contains
     ! for accurate conversion between satellite time and simulation time.
 
     integer:: i
-
     !--------------------------------------------------------------------------
     write(*,'(a)', ADVANCE='NO') 'Name of multi-dimensional data file:    '
     read(*,'(a)',iostat=iError) NameFileIn
@@ -222,7 +220,8 @@ contains
 
           read(StringLine, *, iostat=iError) NameMag_I(iPoint), Lat, Lon
           if(Lon < -360 .or. Lon > 360 .or. Lat < -90 .or. Lat > 90)then
-             write(*,*) NameProgram//': incorrect Lat, Lon values in '//trim(StringLine)
+             write(*,*) NameProgram// &
+                  ': incorrect Lat, Lon values in '//trim(StringLine)
              STOP
           end if
           if(Lon < 0) Lon = Lon + 360
@@ -320,12 +319,14 @@ contains
     allocate(Var_VII(nVar,n1,n2))
 
     ! Get coordinate limits
-    call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
+    call read_plot_file( &
+         NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
          VarOut_VII=Var_VII, &
          CoordMinOut_D=CoordMin_D, CoordMaxOut_D=CoordMax_D, iErrorOut=iError)
 
     if(iError /= 0)then
-       write(*,*) NameProgram//': could not read first snapshot, iError=', iError
+       write(*,*) NameProgram// &
+            ': could not read first snapshot, iError=', iError
        STOP
     end if
 
@@ -345,9 +346,9 @@ contains
     ! Read the whole file through to get the number of snapshots
     nSnapshot = 1
     do
-       call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
-            VarOut_VII=Var_VII, &
-            TimeOut = Time, iErrorOut=iError)
+       call read_plot_file( &
+            NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
+            VarOut_VII=Var_VII, TimeOut = Time, iErrorOut=iError)
 
        if(iError /= 0) EXIT
        if(IsTrajectory)then
@@ -379,11 +380,13 @@ contains
 
     do iSnapshot = 1, nSnapshot
        ! Read variable and time
-       call read_plot_file(NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
+       call read_plot_file( &
+            NameFileIn, TypeFileIn=TypeFileIn, iUnitIn=UnitTmp_, &
             TimeOut = Time, VarOut_VII=Var_VII, iErrorOut=iError)
 
        if(iError /= 0)then
-          write(*,*) NameProgram,' ERROR reading iSnapshot,iError=', iSnapshot,iError
+          write(*,*) NameProgram, &
+               ' ERROR reading iSnapshot,iError=', iSnapshot,iError
           EXIT
        end if
 
@@ -445,13 +448,11 @@ contains
     integer:: Weight
     integer:: iTrajTimestamp, iSnapshot ! loop indices
 
-    ! Deallocate Var_VII and reallocate with ghost cells.
     !--------------------------------------------------------------------------
-    if(allocated(Var_VII))then
-       deallocate(Var_VII)
-    endif
+    if(allocated(Var_VII)) deallocate(Var_VII)
 
     ! Create arrays to hold interpolated data.
+    ! Reallocate Var_VII with ghost cells.
     allocate(                               &
          Coord_DII(nDim, n1, 0:n2+1),       &
          Var_VII(nVar, n1, 0:n2+1),         &
