@@ -714,8 +714,11 @@ contains
     call set_status_all(iPicOff_)
 
     ! although UseAdaptivePic is .true., adaptation is turned off
+    ! if PICREGIONMAX and PICREGIONMIN are not defined
     ! directly turn on all PIC patches
-    if(.not. AdaptPic % DoThis) then
+    if(.not. AdaptPic % DoThis .and.&
+         .not. allocated(iRegionPic_I) .and.&
+         .not. allocated(iRegionPicLimit_I)) then
        call set_status_all(iPicOn_)
        RETURN
     end if
