@@ -581,13 +581,15 @@ contains
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IXI
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax, iBlock
-      integer:: iFlux, i, j, k
+      integer:: iFlux
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
+      
 #ifdef OPENACC
+      integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -602,157 +604,138 @@ contains
       real :: bCrossArea_D(3)
 #endif
       !------------------------------------------------------------------------
-      iGang = 1
+
 #ifdef OPENACC
       iGang = iBlock
-#endif
-
-#ifndef OPENACC
-      call set_block_values(iBlock, x_)
-#endif
 
       !$acc loop vector collapse(3) &
       !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
       !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
-      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-#ifdef OPENACC
-         associate( &
-              iLeft => IFF_I(iLeft_), &
-              jLeft => IFF_I(jLeft_), &
-              kLeft => IFF_I(kLeft_), &
-              iRight => IFF_I(iRight_), &
-              jRight => IFF_I(jRight_), &
-              kRight => IFF_I(kRight_), &
-              iFace => IFF_I(iFace_), &
-              jFace => IFF_I(jFace_), &
-              kFace => IFF_I(kFace_), &
-              iDimFace => IFF_I(iDimFace_), &
-              iBlockFace => IFF_I(iBlockFace_), &
-              CmaxDt => RFF_I(CmaxDt_), &
-              Area => RFF_I(Area_), &
-              DeltaBnR => RFF_I(DeltaBnR_), &
-              DeltaBnL => RFF_I(DeltaBnL_), &
-              Enormal => RFF_I(Enormal_), &
-              B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
-              IsBoundary => IsFF_I(IsBoundary_) )
-#endif
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+         call init_face_flux_arrays(IsFF_I,IFF_I,RFF_I,Unormal_I,bCrossArea_D)
 
-#ifdef OPENACC
-           call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-#endif
+         IFF_I(iFace_) = iFace
+         IFF_I(jFace_) = jFace
+         IFF_I(kFace_) = kFace
+         IFF_I(iBlockFace_) = iBlock
+         IFF_I(iDimFace_) = x_
 
-           iFace = i
-           jFace = j
-           kFace = k
-           iBlockFace = iBlock
-           iDimFace = x_
-#ifdef OPENACC
-           call set_block_values(iBlockFace, &
-                iDimFace, IFF_I, RFF_I, Normal_D)
-           call set_cell_values_x( IsFF_I, IFF_I, RFF_I, Normal_D)
+         call set_block_values(IFF_I(iBlockFace_), &
+              IFF_I(iDimFace_), IFF_I, RFF_I, Normal_D)
+         call set_cell_values_x(IsFF_I, IFF_I, RFF_I, Normal_D)
+
+         if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
+              .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
+            uDotArea_XII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
+
+         if(UseB0)then
+            RFF_I(B0x_) = B0_DX(x_,iFace,jFace,kFace)
+            RFF_I(B0y_) = B0_DX(y_,iFace,jFace,kFace)
+            RFF_I(B0z_) = B0_DX(z_,iFace,jFace,kFace)
+         end if
+
+         RFF_I(DeltaBnL_) = 0.0; RFF_I(DeltaBnR_) = 0.0
+
+         StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
+
+         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
+
+         VdtFace_xI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
+         uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*RFF_I(Area_)
+      end do; end do; end do
 #else
-           call set_cell_values_x
-#endif
+      iGang = 1
+      iBlockFace = iBlock
+      iDimFace = x_
 
-           if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-                .not. true_cell(iRight,jRight,kRight,iBlock)) then
-              uDotArea_XII(iFace,jFace,kFace,:,iGang) = 0.0
-              VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
-              CYCLE
-           endif
+      call set_block_values(iBlock, x_)
 
-           if(UseB0)then
-              B0x = B0_DX(x_,iFace,jFace,kFace)
-              B0y = B0_DX(y_,iFace,jFace,kFace)
-              B0z = B0_DX(z_,iFace,jFace,kFace)
-           end if
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+         call set_cell_values_x
 
-           if(UseRS7.and..not.IsBoundary)then
-              DeltaBnR = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
-                   State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                   Normal_D)
-              RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                   RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
-                   DeltaBnR* Normal_D
-              DeltaBnL = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
-                   State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
-                   Normal_D)
-              LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                   LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
-                   DeltaBnL* Normal_D
-           else
-              DeltaBnL = 0.0; DeltaBnR = 0.0
-           end if
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_XII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
 
-           StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
-           StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
+         if(UseB0)then
+            B0x = B0_DX(x_,iFace,jFace,kFace)
+            B0y = B0_DX(y_,iFace,jFace,kFace)
+            B0z = B0_DX(z_,iFace,jFace,kFace)
+         end if
 
-#ifdef OPENACC
-           call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  &
-                IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-                FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
-                MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
-                bCrossArea_D, Tangent1_D, Tangent2_D)
-#else
-           call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
-#endif
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+                 Normal_D)
+            RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
+                 RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+                 DeltaBnR* Normal_D
+            DeltaBnL = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+                 State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
+                 Normal_D)
+            LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
+                 LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+                 DeltaBnL* Normal_D
+         else
+            DeltaBnL = 0.0; DeltaBnR = 0.0
+         end if
 
-           if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
 
-           if(UseArtificialVisco) then
-#ifndef OPENACC
-              FaceDivU_I = FaceDivU_IXI(:,iFace,jFace,kFace,iGang)
-              call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang), &
-                   IFF_I, RFF_I)
-#endif
-           endif
+         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
 
-           VdtFace_xI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+         if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
-#ifndef OPENACC
-           ! Correct Unormal_I to make div(u) achieve 6th order.
-           if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
-#endif
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IXI(:,iFace,jFace,kFace,iGang)
+            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang), &
+                 IFF_I, RFF_I)
+         endif
 
-           uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*Area
+         VdtFace_xI(iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-#ifndef OPENACC
-           if(UseB .and. UseBorisCorrection) &
-                EDotFA_X(iFace,jFace,kFace) = Enormal*Area
+         ! Correct Unormal_I to make div(u) achieve 6th order.
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-           if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-                bCrossArea_DXI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
-#endif
-#ifdef OPENACC
-         end associate
-#endif
+         uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*Area
+
+         if(UseB .and. UseBorisCorrection) &
+              EDotFA_X(iFace,jFace,kFace) = Enormal*Area
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DXI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
       end do; end do; end do
 
-#ifndef OPENACC
-#ifdef OPENACC
-      associate( iBlockFace => IFF_I(iBlockFace_) )
-#endif
-        if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
-           ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
-           ! is 6th order.
-           do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-              if(UseLowOrder)then
-                 if(LowOrderCrit_XB(i,j,k,iBlockFace) &
-                      >= cLowOrder) CYCLE
-              endif
-              do iFlux = 1, nFlux
-                 Flux_VXI(iFlux,i,j,k,iGang)  = &
-                      correct_face_value(Flux_VXI(iFlux,i,j,k,iGang) ,&
-                      FluxCenter_VGD(iFlux,i-2:i+1,j,k,iGang))
-              enddo
-           end do; end do; enddo
-        endif
-#ifdef OPENACC
-      end associate
-#endif
-#endif
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlock)) then
+         ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
+         ! is 6th order.
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+            if(UseLowOrder)then
+               if(LowOrderCrit_XB(iFace,jFace,kFace,iBlock) &
+                    >= cLowOrder) CYCLE
+            endif
+            do iFlux = 1, nFlux
+               Flux_VXI(iFlux,iFace,jFace,kFace,iGang)  = &
+                    correct_face_value(Flux_VXI(iFlux,iFace,jFace,kFace,iGang) ,&
+                    FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,iGang))
+            enddo
+         end do; end do; enddo
+      endif      
+#endif      
     end subroutine get_flux_x
     !==========================================================================
 
@@ -761,13 +744,15 @@ contains
 
       use ModAdvance, ONLY: State_VGB, FaceDivU_IYI
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
-      integer:: iFlux, i, j, k
+      integer:: iFlux
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
+      
 #ifdef OPENACC
+      integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -782,164 +767,141 @@ contains
       real :: bCrossArea_D(3)
 #endif
       !------------------------------------------------------------------------
-      iGang = 1
+
 #ifdef OPENACC
       iGang = iBlock
-#endif
 
-#ifndef OPENACC
-      ! call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-      call set_block_values(iBlock, y_)
-#endif
       !$acc loop vector collapse(3) &
       !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
       !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
-      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-#ifdef OPENACC
-         associate( &
-              iLeft => IFF_I(iLeft_), &
-              jLeft => IFF_I(jLeft_), &
-              kLeft => IFF_I(kLeft_), &
-              iRight => IFF_I(iRight_), &
-              jRight => IFF_I(jRight_), &
-              kRight => IFF_I(kRight_), &
-              iFace => IFF_I(iFace_), &
-              jFace => IFF_I(jFace_), &
-              kFace => IFF_I(kFace_), &
-              iDimFace => IFF_I(iDimFace_), &
-              iBlockFace => IFF_I(iBlockFace_), &
-              CmaxDt => RFF_I(CmaxDt_), &
-              Area => RFF_I(Area_), &
-              DeltaBnR => RFF_I(DeltaBnR_), &
-              DeltaBnL => RFF_I(DeltaBnL_), &
-              Enormal => RFF_I(Enormal_), &
-              B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
-              IsBoundary => IsFF_I(IsBoundary_), &
-              DoTestCell => IsFF_I(DoTestCell_) )
-#endif
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
 
-#ifdef OPENACC
-           call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-#endif
+         IFF_I(iFace_) = iFace
+         IFF_I(jFace_) = jFace
+         IFF_I(kFace_) = kFace
+         IFF_I(iBlockFace_) = iBlock
+         IFF_I(iDimFace_) = y_
 
-           iFace = i
-           jFace = j
-           kFace = k
-           iBlockFace = iBlock
-           iDimFace = y_
+         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), &
+              IFF_I, RFF_I, Normal_D)
+         call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
 
-#ifdef OPENACC
-           call set_block_values(iBlockFace, iDimFace, &
-                IFF_I, RFF_I, Normal_D)
-           call set_cell_values_y( IsFF_I, IFF_I, RFF_I, Normal_D)
+         if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
+              .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
+            uDotArea_YII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
+
+         if(UseB0)then
+            RFF_I(B0x_) = B0_DY(x_,iFace,jFace,kFace)
+            RFF_I(B0y_) = B0_DY(y_,iFace,jFace,kFace)
+            RFF_I(B0z_) = B0_DY(z_,iFace,jFace,kFace)
+         end if
+
+         RFF_I(DeltaBnL_) = 0.0; RFF_I(DeltaBnR_) = 0.0
+
+         StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
+
+         call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang), &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
+
+         VdtFace_yI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
+         uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
+      end do; end do; end do
 #else
-           call set_cell_values_y
-#endif
+      iGang = 1
+      iBlockFace = iBlock
+      iDimFace = y_
 
-#ifndef OPENACC
-           DoTestCell = DoTest .and. iFace == iTest .and. &
-                (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
-#endif
+      call set_block_values(iBlock, y_)
 
-           if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-                .not. true_cell(iRight,jRight,kRight,iBlock)) then
-              uDotArea_YII(iFace,jFace,kFace,:,iGang) = 0.0
-              VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
-              CYCLE
-           endif
+      do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+         call set_cell_values_y
 
-           if(UseB0)then
-              B0x = B0_DY(x_,iFace,jFace,kFace)
-              B0y = B0_DY(y_,iFace,jFace,kFace)
-              B0z = B0_DY(z_,iFace,jFace,kFace)
-           end if
+         DoTestCell = DoTest .and. iFace == iTest .and. &
+              (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 
-           if(UseRS7.and..not.IsBoundary)then
-              DeltaBnR = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
-                   State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
-                   Normal_D)
-              RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                   RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
-                   DeltaBnR* Normal_D
-              DeltaBnL = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
-                   State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
-                   Normal_D)
-              LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                   LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
-                   DeltaBnL* Normal_D
-           else
-              DeltaBnL = 0.0; DeltaBnR = 0.0
-           end if
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_YII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
 
-           StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
-           StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
+         if(UseB0)then
+            B0x = B0_DY(x_,iFace,jFace,kFace)
+            B0y = B0_DY(y_,iFace,jFace,kFace)
+            B0z = B0_DY(z_,iFace,jFace,kFace)
+         end if
 
-#ifdef OPENACC
-           call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang), &
-                IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-                FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
-                MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
-                bCrossArea_D, Tangent1_D, Tangent2_D)
-#else
-           call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
-#endif
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
+                 Normal_D)
+            RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
+                 RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+                 DeltaBnR* Normal_D
+            DeltaBnL = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+                 State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
+                 Normal_D)
+            LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
+                 LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+                 DeltaBnL* Normal_D
+         else
+            DeltaBnL = 0.0; DeltaBnR = 0.0
+         end if
 
-           if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
 
-           if(UseArtificialVisco) then
-#ifndef OPENACC
-              FaceDivU_I = FaceDivU_IYI(:,iFace,jFace,kFace,iGang)
-              call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang), &
-                   IFF_I, RFF_I)
-#endif
-           endif
+         call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
 
-           VdtFace_yI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+         if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
 
-#ifndef OPENACC
-           if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
-#endif
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IYI(:,iFace,jFace,kFace,iGang)
+            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang), &
+                 IFF_I, RFF_I)
+         endif
 
-           uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
+         VdtFace_yI(iFace,jFace,kFace,iGang) = CmaxDt*Area
 
-#ifndef OPENACC
-           if(UseB .and. UseBorisCorrection) &
-                EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-           if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-                bCrossArea_DYI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
-#endif
-#ifdef OPENACC
-         end associate
-#endif
+         uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
+
+         if(UseB .and. UseBorisCorrection) &
+              EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DYI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
       end do; end do; end do
 
-#ifndef OPENACC
-#ifdef OPENACC
-      associate( iBlockFace => IFF_I(iBlockFace_) )
-#endif
-        ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
-        ! is 6th order.
-        if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
-           do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-              if(UseLowOrder)then
-                 if(LowOrderCrit_YB(i,j,k,iBlockFace) &
-                      >= cLowOrder) CYCLE
-              endif
-              do iFlux = 1, nFlux
-                 Flux_VYI(iFlux,i,j,k,iGang)  = &
-                      correct_face_value(&
-                      Flux_VYI(iFlux,i,j,k,iGang) ,&
-                      FluxCenter_VGD(iFlux,i,j-2:j+1,k,2))
-              enddo
-           end do; end do; enddo
-        end if
-#ifdef OPENACC
-      end associate
-#endif
-#endif
+      ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
+      ! is 6th order.
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlock)) then
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+            if(UseLowOrder)then
+               if(LowOrderCrit_YB(iFace,jFace,kFace,iBlock) &
+                    >= cLowOrder) CYCLE
+            endif
+            do iFlux = 1, nFlux
+               Flux_VYI(iFlux,iFace,jFace,kFace,iGang)  = &
+                    correct_face_value(&
+                    Flux_VYI(iFlux,iFace,jFace,kFace,iGang) ,&
+                    FluxCenter_VGD(iFlux,iFace,jFace-2:jFace+1,kFace,2))
+            enddo
+         end do; end do; enddo
+      end if
+#endif      
     end subroutine get_flux_y
     !==========================================================================
 
@@ -947,13 +909,15 @@ contains
       !$acc routine vector
       use ModAdvance, ONLY: State_VGB, FaceDivU_IZI
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax,iBlock
-      integer:: iFlux, i, j, k
+      integer:: iFlux
       integer:: iGang
 
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
+      
 #ifdef OPENACC
+      integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
       real :: StateRight_V(nVar)
       real :: FluxLeft_V(nVar+nFluid), FluxRight_V(nVar+nFluid)
@@ -968,160 +932,143 @@ contains
       real :: bCrossArea_D(3)
 #endif
       !------------------------------------------------------------------------
-      iGang = 1
+
 #ifdef OPENACC
       iGang = iBlock
-#endif
-
-#ifndef OPENACC
-      ! call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-      call set_block_values(iBlock, z_)
-#endif
 
       !$acc loop vector collapse(3) &
       !$acc private(RFF_I, IFF_I, IsFF_I, StateLeft_V, StateRight_V, &
       !$acc FluxLeft_V, FluxRight_V, Normal_D, Tangent1_D, Tangent2_D, &
       !$acc MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, &
       !$acc UnLeft_I, UnRight_I, bCrossArea_D)
-      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 #ifdef OPENACC
-         associate( &
-              iLeft => IFF_I(iLeft_), &
-              jLeft => IFF_I(jLeft_), &
-              kLeft => IFF_I(kLeft_), &
-              iRight => IFF_I(iRight_), &
-              jRight => IFF_I(jRight_), &
-              kRight => IFF_I(kRight_), &
-              iFace => IFF_I(iFace_), &
-              jFace => IFF_I(jFace_), &
-              kFace => IFF_I(kFace_), &
-              iDimFace => IFF_I(iDimFace_), &
-              iBlockFace => IFF_I(iBlockFace_), &
-              CmaxDt => RFF_I(CmaxDt_), &
-              Area => RFF_I(Area_), &
-              DeltaBnR => RFF_I(DeltaBnR_), &
-              DeltaBnL => RFF_I(DeltaBnL_), &
-              Enormal => RFF_I(Enormal_), &
-              B0x => RFF_I(B0x_), B0y => RFF_I(B0y_), B0z => RFF_I(B0z_), &
-              IsBoundary => IsFF_I(IsBoundary_), &
-              DoTestCell => IsFF_I(DoTestCell_) )
+         call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
 #endif
 
-#ifdef OPENACC
-           call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-#endif
+         IFF_I(iFace_) = iFace
+         IFF_I(jFace_) = jFace
+         IFF_I(kFace_) = kFace
+         IFF_I(iBlockFace_) = iBlock
+         IFF_I(iDimFace_) = z_
 
-           iFace = i
-           jFace = j
-           kFace = k
-           iBlockFace = iBlock
-           iDimFace = z_
-#ifdef OPENACC
-           call set_block_values(iBlockFace, iDimFace, &
-                IFF_I, RFF_I, Normal_D)
-           call set_cell_values_z( IsFF_I, IFF_I, RFF_I, Normal_D)
-#else
-           call set_cell_values_z
-#endif
+         call set_block_values(IFF_I(iBlockFace_), IFF_I(iDimFace_), &
+              IFF_I, RFF_I, Normal_D)
+         call set_cell_values_z(IsFF_I, IFF_I, RFF_I, Normal_D)
 
-#ifndef OPENACC
-           DoTestCell = DoTest .and. iFace == iTest .and. &
-                jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
-#endif
+         if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
+              .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
+            uDotArea_ZII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
 
-           if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-                .not. true_cell(iRight,jRight,kRight,iBlock)) then
-              uDotArea_ZII(iFace,jFace,kFace,:,iGang) = 0.0
-              VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
-              CYCLE
-           endif
+         if(UseB0)then
+            RFF_I(B0x_) = B0_DZ(x_,iFace,jFace,kFace)
+            RFF_I(B0y_) = B0_DZ(y_,iFace,jFace,kFace)
+            RFF_I(B0z_) = B0_DZ(z_,iFace,jFace,kFace)
+         end if
 
-           if(UseB0)then
-              B0x = B0_DZ(x_,iFace,jFace,kFace)
-              B0y = B0_DZ(y_,iFace,jFace,kFace)
-              B0z = B0_DZ(z_,iFace,jFace,kFace)
-           end if
-           if(UseRS7.and..not.IsBoundary)then
-              DeltaBnR = sum( Normal_D &
-                   * (RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
-                   - State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace)) )
-              RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                   RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
-                   - DeltaBnR* Normal_D
-              DeltaBnL = sum( Normal_D &
-                   * (LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
-                   -  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace)) )
-              LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                   LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
-                   DeltaBnL* Normal_D
-           else
-              DeltaBnL = 0.0; DeltaBnR = 0.0
-           end if
+         RFF_I(DeltaBnL_) = 0.0; RFF_I(DeltaBnR_) = 0.0
 
-           StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
-           StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+         StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
 
-#ifdef OPENACC
-           call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang), &
-                IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
-                FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
-                MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
-                bCrossArea_D, Tangent1_D, Tangent2_D)
-#else
-           call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
-#endif
+         call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang), &
+              IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
+              FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
+              MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
+              bCrossArea_D, Tangent1_D, Tangent2_D)
 
-           if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         VdtFace_zI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
+         uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
 
-           if(UseArtificialVisco) then
-#ifndef OPENACC
-              FaceDivU_I = FaceDivU_IZI(:,iFace,jFace,kFace,iGang)
-              call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang), &
-                   IFF_I, RFF_I)
-#endif
-           endif
-
-           VdtFace_zI(iFace,jFace,kFace,iGang) = CmaxDt*Area
-
-#ifndef OPENACC
-           if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
-#endif
-           uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
-
-#ifndef OPENACC
-           if(UseB .and. UseBorisCorrection) &
-                EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
-
-           if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-                bCrossArea_DZI(:,iFace,jFace,kFace,iGang)= bCrossArea_D
-#endif
-#ifdef OPENACC
-         end associate
-#endif
       end do; end do; end do
 
-#ifndef OPENACC
-#ifdef OPENACC
-      associate( iBlockFace => IFF_I(iBlockFace_) )
-#endif
-        if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
-           do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-              if(UseLowOrder)then
-                 if(LowOrderCrit_ZB(i,j,k,iBlockFace) &
-                      >= cLowOrder) CYCLE
-              endif
+#else
+      iGang = 1
+      iBlockFace = iBlock
+      iDimFace = z_
 
-              do iFlux = 1, nFlux
-                 Flux_VZI(iFlux,i,j,k,iGang)  = &
-                      correct_face_value(Flux_VZI(iFlux,i,j,k,iGang) ,&
-                      FluxCenter_VGD(iFlux,i,j,k-2:k+1,3))
-              enddo
-           end do; end do; enddo
-        end if
-#ifdef OPENACC
-      end associate
-#endif
-#endif
+      call set_block_values(iBlock, z_)
+
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+         call set_cell_values_z
+
+         DoTestCell = DoTest .and. iFace == iTest .and. &
+              jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_ZII(iFace,jFace,kFace,:,iGang) = 0.0
+            VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
+            CYCLE
+         endif
+
+         if(UseB0)then
+            B0x = B0_DZ(x_,iFace,jFace,kFace)
+            B0y = B0_DZ(y_,iFace,jFace,kFace)
+            B0z = B0_DZ(z_,iFace,jFace,kFace)
+         end if
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR = sum( Normal_D &
+                 * (RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+                 - State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace)) )
+            RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
+                 RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+                 - DeltaBnR* Normal_D
+            DeltaBnL = sum( Normal_D &
+                 * (LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+                 -  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace)) )
+            LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
+                 LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+                 DeltaBnL* Normal_D
+         else
+            DeltaBnL = 0.0; DeltaBnR = 0.0
+         end if
+
+         StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
+         StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+
+         call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
+
+         if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IZI(:,iFace,jFace,kFace,iGang)
+            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang), &
+                 IFF_I, RFF_I)
+         endif
+
+         VdtFace_zI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+
+         if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
+
+         uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
+
+         if(UseB .and. UseBorisCorrection) &
+              EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DZI(:,iFace,jFace,kFace,iGang)= bCrossArea_D
+      end do; end do; end do
+
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlock)) then
+         do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
+            if(UseLowOrder)then
+               if(LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) &
+                    >= cLowOrder) CYCLE
+            endif
+
+            do iFlux = 1, nFlux
+               Flux_VZI(iFlux,iFace,jFace,kFace,iGang)  = &
+                    correct_face_value(Flux_VZI(iFlux,iFace,jFace,kFace,iGang) ,&
+                    FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
+            enddo
+         end do; end do; enddo
+      end if
+
+#endif      
     end subroutine get_flux_z
     !==========================================================================
 
