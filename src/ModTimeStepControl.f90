@@ -468,6 +468,7 @@ contains
        end if
     end if
 
+    !$acc parallel loop gang
     !$omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
@@ -486,7 +487,7 @@ contains
           end if
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
-          !$acc parallel loop collapse(3)
+          !$acc loop collapse(3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              time_BLK(i,j,k,iBlock) = Dt
           end do; end do; end do
