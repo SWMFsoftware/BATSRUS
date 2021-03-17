@@ -380,7 +380,7 @@ contains
   !============================================================================
 
   subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn, UseOpenACCIn)
-
+    !$acc routine vector
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock
@@ -415,7 +415,7 @@ contains
           ! MHD energy
 
           if(UseOpenACC) then
-             !$acc parallel loop gang  vector collapse(3)
+             !$acc loop vector collapse(3)
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
                    Energy_GBI(i,j,k,iBlock,iFluid) = 0.0

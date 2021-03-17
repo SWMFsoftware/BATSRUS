@@ -203,10 +203,11 @@ contains
     end if
 
     call timing_start('exch_energy')
-    !$omp parallel do
+    !$acc parallel loop gang
+    !$omp parallel do    
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
-
+#ifndef OPENACC
        ! The corner ghost cells outside the domain are updated
        ! from the ghost cells inside the domain, so the outer
        ! boundary condition have to be reapplied.
@@ -221,14 +222,16 @@ contains
           if(time_loop.and.UseBufferGrid)&
                call fill_in_from_buffer(iBlock)
        end if
-
+#endif
+       
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
 
+#ifndef OPENACC       
        if(UseResistivePlanet) then
           CBC%TypeBc = 'ResistivePlanet'
           call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
        end if
-
+#endif
     end do
     !$omp end parallel do
 
