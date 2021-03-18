@@ -204,7 +204,7 @@ contains
 
     call timing_start('exch_energy')
     !$acc parallel loop gang
-    !$omp parallel do    
+    !$omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 #ifndef OPENACC
@@ -223,10 +223,10 @@ contains
                call fill_in_from_buffer(iBlock)
        end if
 #endif
-       
+
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
 
-#ifndef OPENACC       
+#ifndef OPENACC
        if(UseResistivePlanet) then
           CBC%TypeBc = 'ResistivePlanet'
           call user_set_cell_boundary(iBlock,-1,CBC,IsFound)

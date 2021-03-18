@@ -587,7 +587,7 @@ contains
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
-      
+
 #ifdef OPENACC
       integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
@@ -603,9 +603,9 @@ contains
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
 #endif
-      !------------------------------------------------------------------------
 
 #ifdef OPENACC
+      !------------------------------------------------------------------------
       iGang = iBlock
 
       !$acc loop vector collapse(3) &
@@ -734,8 +734,8 @@ contains
                     FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,iGang))
             enddo
          end do; end do; enddo
-      endif      
-#endif      
+      endif
+#endif
     end subroutine get_flux_x
     !==========================================================================
 
@@ -750,7 +750,7 @@ contains
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
-      
+
 #ifdef OPENACC
       integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
@@ -766,9 +766,9 @@ contains
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
 #endif
-      !------------------------------------------------------------------------
 
 #ifdef OPENACC
+      !------------------------------------------------------------------------
       iGang = iBlock
 
       !$acc loop vector collapse(3) &
@@ -901,7 +901,7 @@ contains
             enddo
          end do; end do; enddo
       end if
-#endif      
+#endif
     end subroutine get_flux_y
     !==========================================================================
 
@@ -915,7 +915,7 @@ contains
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
-      
+
 #ifdef OPENACC
       integer:: iFace, jFace, kFace
       real :: StateLeft_V(nVar)
@@ -931,9 +931,9 @@ contains
       real :: UnRight_I(nFluid+1)
       real :: bCrossArea_D(3)
 #endif
-      !------------------------------------------------------------------------
 
 #ifdef OPENACC
+      !------------------------------------------------------------------------
       iGang = iBlock
 
       !$acc loop vector collapse(3) &
@@ -1068,7 +1068,7 @@ contains
          end do; end do; enddo
       end if
 
-#endif      
+#endif
     end subroutine get_flux_z
     !==========================================================================
 
