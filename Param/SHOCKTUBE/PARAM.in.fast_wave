@@ -22,7 +22,7 @@ NONE			TypeNormalization
  181.02			zMax
 
 #GRIDBLOCKALL
-610			MaxBlock
+510			MaxBlock
 
 #SHOCKPOSITION
 0.0			ShockPosition
