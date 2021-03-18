@@ -13,16 +13,16 @@ NONE			TypeNormalization
 #GRID
 5			nRootBlock1
 5			nRootBlock2
-5			nRootBlock3
+20			nRootBlock3
 -45.255			xMin
  45.255  		xMax
 -45.255			yMin
  45.255			yMax
--45.255			zMin
- 45.255			zMax
+-181.02			zMin
+ 181.02			zMax
 
 #GRIDBLOCKALL
-130			MaxBlock
+610			MaxBlock
 
 #SHOCKPOSITION
 0.0			ShockPosition
