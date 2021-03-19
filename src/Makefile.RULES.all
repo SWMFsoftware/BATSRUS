@@ -22,7 +22,3 @@ $Compiler eq "ifort"
 # who knows why
 $Compiler eq "nagfor"
 	${COMPILE.f90} ${Cflag0} ModRadioWaveImage.f90
-
-# pgf90+acc fails at compile time. ACC should be optimized
-$OpenACC eq "yes"
-	 ${COMPILE.f90} ${Cflag0} ModFaceFlux.f90
