@@ -8,8 +8,8 @@ module ModGroundMagPerturb
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product
-  use ModConst,          ONLY: cDegToRad
+  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, xyz_to_lonlat, cross_product
+  use ModConst,          ONLY: cDegToRad, cRadToDeg
 
   implicit none
   save
@@ -187,8 +187,6 @@ contains
   subroutine init_mod_magperturb
     ! Set up the grid of magnetometers and the respective files (if single
     ! file format is selected).
-
-    use ModNumConst, ONLY: cRadToDeg
 
     integer :: iLat, iLon, iMag
     real    :: dLat, dLon
@@ -1098,6 +1096,10 @@ contains
           if(index(StringLine,'#START')>0)then
              READPOINTS: do
                 read(UnitTmp_,*, iostat=iError) NameMag, LatMag, LonMag
+                if(LonMag < 0 .or. LonMag > 0 .or. LatMag < -90 .or. LatMag > 90) &
+                     write(*,*) NameSub, &
+                     ' incorrect coordinates: nMag, NameMag, LonMag, LatMag=', &
+                     nMag, NameMag, LonMag, LatMag
                 if (iError /= 0) EXIT READFILE
 
                 ! Add new points
@@ -1483,15 +1485,15 @@ contains
       use ModPlotFile, ONLY: save_plot_file
       use ModIO, ONLY: NamePlotDir, IsLogName_e
 
-      integer, parameter:: nVar = 15
+      integer, parameter:: nVar = 17
       character(len=*), parameter:: NameVar = &
            "Lon Lat dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac "// &
-           "dBnHal dBeHal dBdHal dBnPed dBePed dBdPed"
+           "dBnHal dBeHal dBdHal dBnPed dBePed dBdPed LonSm LatSm"
 
       integer ::  iTime_I(7), iLon, iLat, iMag
+      real:: LonLat_D(2)
 
       character(len=100):: NameFile
-
       !------------------------------------------------------------------------
       if(allocated(MagOut_VII))then
          if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)
@@ -1508,6 +1510,8 @@ contains
             MagOut_VII( 7: 9,iLon,iLat) = dBFac_DI(:,iMag)
             MagOut_VII(10:12,iLon,iLat) = dBHall_DI(:,iMag)
             MagOut_VII(13:15,iLon,iLat) = dBPedersen_DI(:,iMag)
+            call xyz_to_lonlat(MagSmXyz_DI(:,iMag), LonLat_D)
+            MagOut_VII(16:17,iLon,iLat) = LonLat_D*cRadToDeg
          end do
       end do
 
@@ -1535,7 +1539,7 @@ contains
     subroutine write_mag_single
       ! For TypeMagFileOut == 'single', write a single record to the file.
 
-      integer :: iTime_I(7)
+      integer :: iTime_I(7), iMag
       !------------------------------------------------------------------------
       ! Get current time.
       call get_date_time(iTime_I)
@@ -1569,7 +1573,7 @@ contains
       use ModUtilities, ONLY: open_file, close_file
       use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
-      integer ::  iTime_I(7)
+      integer ::  iTime_I(7), iMag
 
       character(len=13) :: StringPrefix
       character(len=100):: NameFile
