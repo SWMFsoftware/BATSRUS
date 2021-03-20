@@ -5,7 +5,7 @@
 module ModAdvanceExplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iThread
+       test_start, test_stop, iThread, StringTest
 
   implicit none
   private ! except
@@ -19,6 +19,7 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
+    use ModFaceFluxGPU, ONLY: calc_face_flux_gpu
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
          set_low_order_face
@@ -165,7 +166,11 @@ contains
 #ifndef OPENACC
              call timing_start('calc_fluxes')
 #endif
-             call calc_face_flux(.false., iBlock)
+             if(index(StringTest,'GPUFLUX')>0)then
+                call calc_face_flux_gpu(.false., iBlock)
+             else
+                call calc_face_flux(.false., iBlock)
+             end if
 #ifndef OPENACC
              call timing_stop('calc_fluxes')
 #endif

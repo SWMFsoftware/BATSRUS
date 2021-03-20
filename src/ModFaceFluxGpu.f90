@@ -51,7 +51,7 @@ contains
        ! Rusanov flux
        Flux_VXI(:,iFace,jFace,kFace,iGang) = &
             Area*(0.5*(FluxLeft_V + FluxRight_V) &
-            + Cmax*(StateLeftCons_V - StateRightCons_V))
+            + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
 
        ! For time step
        VdtFace_XI(iFace,jFace,kFace,iGang) = Cmax*Area
@@ -59,7 +59,6 @@ contains
        uDotArea_XII(iFace,jFace,kFace,:,iGang) = State_V(Ux_)*Area
 
     end do; end do; end do
-
 
   contains
     !==========================================================================
@@ -82,12 +81,14 @@ contains
       Bz  = State_V(Bz_)
       if(Hyp_ > 1) Hyp = State_V(Hyp_)
       p   = State_V(p_)
-      e   = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2) + 0.5*B2
 
-      ! Convenient variables for different directions (pass Normal_D?)
+      ! Convenient variables
       Un  = Ux
       Bn  = Bx
       B2  = Bx**2 + By**2 + Bz**2
+
+      ! Hydro energy density
+      e   = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
 
       ! Conservative state for the Rusanov solver
       StateCons_V(Rho_)    = Rho
@@ -99,13 +100,14 @@ contains
       StateCons_V(Bz_)     = Bz
       if(Hyp_ > 1) StateCons_V(Hyp_) = Hyp
       StateCons_V(p_)      = p
-      StateCons_V(Energy_) = e
+      ! Add magnetic energy
+      StateCons_V(Energy_) = e + 0.5*B2
 
       ! Physical flux
       Flux_V(Rho_)    =  Rho*Un
-      Flux_V(RhoUx_)  = -Bn*Bx + 0.5*B2
-      Flux_V(RhoUy_)  = -Bn*By
-      Flux_V(RhoUz_)  = -Bn*Bz
+      Flux_V(RhoUx_)  = Un*Rho*Ux + p - Bn*Bx + 0.5*B2
+      Flux_V(RhoUy_)  = Un*Rho*Uy     - Bn*By
+      Flux_V(RhoUz_)  = Un*Rho*Uz     - Bn*Bz
       if(Hyp_ > 1)then
          Flux_V(Bx_)  =  Un*Bx - Ux*Bn + SpeedHyp*Hyp
          Flux_V(By_)  =  Un*By - Uy*Bn
@@ -118,7 +120,7 @@ contains
       end if
       Flux_V(p_)      =  Un*p
       Flux_V(Energy_) =  Un*(e + p) &
-           + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz
+           + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux
 
     end subroutine get_physical_flux
     !==========================================================================
