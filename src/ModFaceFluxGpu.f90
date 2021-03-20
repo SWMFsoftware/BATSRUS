@@ -12,7 +12,7 @@ module ModFaceFluxGpu
   use ModMain, ONLY: SpeedHyp
   use BATL_lib, ONLY: nDim, nI, nJ, nK, x_, y_, z_, CellFace_DB
   implicit none
-  
+
 contains
   !============================================================================
   subroutine calc_face_flux_gpu(DoResChangeOnly, iBlock)
@@ -27,25 +27,25 @@ contains
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
 
     integer:: iFace, jFace, kFace, iGang
-    
+
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_face_flux'
+    character(len=*), parameter:: NameSub = 'calc_face_flux_gpu'
     !--------------------------------------------------------------------------
     if(DoResChangeOnly) RETURN
 
     iGang = min(iBlock, nGang)
-    
+
     !$acc loop vector collapse(3) &
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI+1
-       !if(IsCartesianGrid)then
+       ! if(IsCartesianGrid)then
        Area = CellFace_DB(x_,iBlock)
        NormalX = 1.0
        NormalY = 0.0
        NormalZ = 0.0
-       !end if
+       ! end if
 
        ! Primitive variables
        StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
@@ -73,18 +73,18 @@ contains
     end do; end do; end do
 
     if(nDim == 1) RETURN
-    
+
     !$acc loop vector collapse(3) &
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK; do jFace = 1, nJ+1; do iFace = 1, nI
-       !if(IsCartesianGrid)then
+       ! if(IsCartesianGrid)then
        Area = CellFace_DB(y_,iBlock)
        NormalX = 0.0
        NormalY = 1.0
        NormalZ = 0.0
-       !end if
+       ! end if
 
        ! Primitive variables
        StateLeft_V  = LeftState_VYI(:,iFace,jFace,kFace,iGang)
@@ -118,12 +118,12 @@ contains
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK+1; do jFace = 1, nJ; do iFace = 1, nI
-       !if(IsCartesianGrid)then
+       ! if(IsCartesianGrid)then
        Area = CellFace_DB(z_,iBlock)
        NormalX = 0.0
        NormalY = 0.0
        NormalZ = 1.0
-       !end if
+       ! end if
 
        ! Primitive variables
        StateLeft_V  = LeftState_VZI(:,iFace,jFace,kFace,iGang)
@@ -150,7 +150,7 @@ contains
        uDotArea_ZII(iFace,jFace,kFace,:,iGang) = Un*Area
 
     end do; end do; end do
-    
+
   contains
     !==========================================================================
     subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
@@ -239,11 +239,12 @@ contains
       Fast2 = Sound2 + Alfven2
       Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
       Fast  = sqrt( 0.5*(Fast2 + Discr) )
-      
+
       Un   = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
       Cmax = Un + Fast
-      
+
     end subroutine get_speed_max
+    !==========================================================================
 
   end subroutine calc_face_flux_gpu
   !============================================================================
