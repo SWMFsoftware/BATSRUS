@@ -44,6 +44,7 @@ OBJECTS = \
 	ModExtraVariables.o \
 	ModFaceBoundary.o \
 	ModFaceFlux.o \
+	ModFaceFluxGpu.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
 	ModFieldLineThread.o \
