@@ -1512,6 +1512,10 @@ contains
             MagOut_VII(13:15,iLon,iLat) = dBPedersen_DI(:,iMag)
             call xyz_to_lonlat(MagSmXyz_DI(:,iMag), LonLat_D)
             MagOut_VII(16:17,iLon,iLat) = LonLat_D*cRadToDeg
+            if(iLon == 1) CYCLE
+            ! Eliminate downward jump in the longitude
+            if(MagOut_VII(16,iLon,iLat) < MagOut_VII(16,iLon-1,iLat) - 90) &
+                 MagOut_VII(16,iLon,iLat) = MagOut_VII(16,iLon,iLat) + 360
          end do
       end do
 
