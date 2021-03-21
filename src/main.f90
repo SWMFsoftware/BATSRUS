@@ -135,7 +135,7 @@ program BATSRUS
      write(*,'(a)')'    -----------------------------'
      if (time_accurate)then
         write(*, '(a,es13.5,a)') &
-             '   Simulated time = ', time_simulation, ' s '
+             '    Simulated time = ', time_simulation, ' s '
         if(time_simulation > 1e6*cSecondPerYear) then
            write(*, '(a,es13.5,a)') &
                 time_simulation/cSecondPerYear
