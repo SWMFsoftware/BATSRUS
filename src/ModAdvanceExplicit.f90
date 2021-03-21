@@ -165,13 +165,13 @@ contains
              ! Compute interface fluxes for each cell.
 #ifndef OPENACC
              call timing_start('calc_fluxes')
-#endif
              if(index(StringTest,'GPUFLUX')>0)then
+#endif
                 call calc_face_flux_gpu(.false., iBlock)
+#ifndef OPENACC
              else
                 call calc_face_flux(.false., iBlock)
              end if
-#ifndef OPENACC
              call timing_stop('calc_fluxes')
 #endif
           end if

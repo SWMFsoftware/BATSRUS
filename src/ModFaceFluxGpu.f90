@@ -33,7 +33,11 @@ contains
     !--------------------------------------------------------------------------
     if(DoResChangeOnly) RETURN
 
-    iGang = min(iBlock, nGang)
+#ifdef OPENACC
+    iGang = iBlock
+#else
+    iGang = 1
+#endif
 
     !$acc loop vector collapse(3) &
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
@@ -217,7 +221,8 @@ contains
     end subroutine get_physical_flux
     !==========================================================================
     subroutine get_speed_max(State_V, NormalX, NormalY, NormalZ, Un, Cmax)
-      !$acc seq
+      !$acc routine seq
+
       real, intent(in):: State_V(nVar), NormalX, NormalY, NormalZ
       real, intent(out):: Un, Cmax
 
