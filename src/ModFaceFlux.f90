@@ -5042,7 +5042,7 @@ contains
                call get_boris_speed
             else
 #ifdef OPENACC
-               call get_mhd_speed(State_V, IFF_I, RFF_I, StateLeft_V, &
+               call get_mhd_speed(State_V, IsFF_I, IFF_I, RFF_I, StateLeft_V, &
                     StateRight_V, Normal_D, UnLeft_I, UnRight_I, &
                     CmaxDt_I, Cmax_I, Cleft_I, &
                     Cright_I, UnLeft, UnRight, UseAwSpeed)
@@ -5321,7 +5321,7 @@ contains
     subroutine get_mhd_speed(State_V &
 #ifdef OPENACC
       !------------------------------------------------------------------------
-         , IFF_I, RFF_I, StateLeft_V, &
+         , IsFF_I, IFF_I, RFF_I, StateLeft_V, &
          StateRight_V, Normal_D, UnLeft_I, UnRight_I &
 #endif
          , CmaxDt_I, Cmax_I, Cleft_I, Cright_I, UnLeft, UnRight, UseAwSpeed)
@@ -5337,6 +5337,7 @@ contains
       real, intent(in) :: State_V(:)
 
 #ifdef OPENACC
+      logical,  intent(inout):: IsFF_I(nFFLogic)
       integer,  intent(inout):: IFF_I(:)
       real,     intent(inout):: RFF_I(:)
       real, intent(inout):: StateLeft_V(nVar)
