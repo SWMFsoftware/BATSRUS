@@ -86,7 +86,7 @@ contains
 
 #ifndef OPENACC
        if(DoTestCell) call write_test_info(1, Flux_VXI(:,iFace,jFace,kFace,1))
-#endif    
+#endif
 
     end do; end do; end do
 
@@ -192,9 +192,9 @@ contains
     end do; end do; end do
 
   contains
+    !==========================================================================
 
 #ifndef OPENACC
-    !=========================================================================
     subroutine write_test_info(iDimFace, Flux_V)
       integer, intent(in):: iDimFace
       real,    intent(in):: Flux_V(nFlux)
@@ -230,8 +230,8 @@ contains
       end do
 
     end subroutine write_test_info
-#endif OPENACC
     !==========================================================================
+#endif OPENACC
     subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
          StateCons_V, Flux_V)
       !$acc routine seq
@@ -327,13 +327,13 @@ contains
       if(DoTestCell)then
          write(*,*) &
               ' iFluid, rho, p(face)   =', 1, State_V(Rho_), State_V(p_)
-         !if(UseAnisoPressure) write(*,*) &
+         ! if(UseAnisoPressure) write(*,*) &
          !     ' Ppar, Perp             =', Ppar, Pperp
-         !if(UseElectronPressure) write(*,*) &
+         ! if(UseElectronPressure) write(*,*) &
          !     ' State_V(Pe_)           =', State_V(Pe_)
-         !if(UseAnisoPe) write(*,*) &
+         ! if(UseAnisoPe) write(*,*) &
          !     ' State_V(Pepar_)        =', State_V(Pepar_)
-         !if(UseWavePressure) write(*,*) &
+         ! if(UseWavePressure) write(*,*) &
          !     ' GammaWave, State(Waves)=', &
          !     GammaWave, State_V(WaveFirst_:WaveLast_)
          write(*,*) &
