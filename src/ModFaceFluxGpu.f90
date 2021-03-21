@@ -4,13 +4,15 @@
 module ModFaceFluxGpu
 
   use ModVarIndexes
+  use ModFaceFlux, ONLY: print_face_values
   use ModAdvance, ONLY: nGang, nFlux, &
        LeftState_VXI, RightState_VXI, Flux_VXI, VdtFace_XI, uDotArea_XII, &
        LeftState_VYI, RightState_VYI, Flux_VYI, VdtFace_YI, uDotArea_YII, &
        LeftState_VZI, RightState_VZI, Flux_VZI, VdtFace_ZI, uDotArea_ZII
   use ModPhysics, ONLY: Gamma, InvGammaMinus1
   use ModMain, ONLY: SpeedHyp
-  use BATL_lib, ONLY: nDim, nI, nJ, nK, x_, y_, z_, CellFace_DB
+  use BATL_lib, ONLY: test_start, iTest, jTest, kTest, &
+       nDim, nI, nJ, nK, x_, y_, z_, CellFace_DB
   implicit none
 
 contains
@@ -28,7 +30,7 @@ contains
 
     integer:: iFace, jFace, kFace, iGang
 
-    logical:: DoTest
+    logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'calc_face_flux_gpu'
     !--------------------------------------------------------------------------
     if(DoResChangeOnly) RETURN
@@ -37,6 +39,8 @@ contains
     iGang = iBlock
 #else
     iGang = 1
+    call test_start(NameSub, DoTest, iBlock)
+    if(DoTest)call print_face_values
 #endif
 
     !$acc loop vector collapse(3) &
@@ -44,6 +48,12 @@ contains
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI+1
+
+#ifndef OPENACC
+       DoTestCell = DoTest .and. (iFace == iTest .or. iFace == iTest+1) .and. &
+            jFace == jTest .and. kFace == kTest
+#endif
+
        ! if(IsCartesianGrid)then
        Area = CellFace_DB(x_,iBlock)
        NormalX = 1.0
@@ -74,6 +84,10 @@ contains
        ! For div U source term
        uDotArea_XII(iFace,jFace,kFace,:,iGang) = Un*Area
 
+#ifndef OPENACC
+       if(DoTestCell) call write_test_info(1, Flux_VXI(:,iFace,jFace,kFace,1))
+#endif    
+
     end do; end do; end do
 
     if(nDim == 1) RETURN
@@ -83,6 +97,12 @@ contains
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK; do jFace = 1, nJ+1; do iFace = 1, nI
+
+#ifndef OPENACC
+       DoTestCell = DoTest .and. iFace == iTest .and. &
+            (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
+#endif
+
        ! if(IsCartesianGrid)then
        Area = CellFace_DB(y_,iBlock)
        NormalX = 0.0
@@ -113,6 +133,10 @@ contains
        ! For div U source term
        uDotArea_YII(iFace,jFace,kFace,:,iGang) = Un*Area
 
+#ifndef OPENACC
+       if(DoTestCell) call write_test_info(2, Flux_VYI(:,iFace,jFace,kFace,1))
+#endif
+
     end do; end do; end do
 
     if(nDim == 2) RETURN
@@ -122,6 +146,12 @@ contains
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
     do kFace = 1, nK+1; do jFace = 1, nJ; do iFace = 1, nI
+
+#ifndef OPENACC
+       DoTestCell = DoTest .and. iFace == iTest .and. &
+            jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+#endif
+
        ! if(IsCartesianGrid)then
        Area = CellFace_DB(z_,iBlock)
        NormalX = 0.0
@@ -153,9 +183,54 @@ contains
        ! For div U source term
        uDotArea_ZII(iFace,jFace,kFace,:,iGang) = Un*Area
 
+#ifndef OPENACC
+       if(DoTest .and. iFace == iTest .and. jFace == jTest .and. &
+            (kFace == kTest .or. kFace == kTest+1)) &
+            call write_test_info(3, Flux_VZI(:,iFace,jFace,kFace,1))
+#endif
+
     end do; end do; end do
 
   contains
+
+#ifndef OPENACC
+    !=========================================================================
+    subroutine write_test_info(iDimFace, Flux_V)
+      integer, intent(in):: iDimFace
+      real,    intent(in):: Flux_V(nFlux)
+
+      integer :: iVar
+      !------------------------------------------------------------------------
+
+      write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
+           ' at I=',iFace,' J=',jFace,' K=',kFace
+      write(*,*)'rho=', State_V(Rho_)
+      write(*,*)'Un =', Un
+      write(*,*)'P  =', State_V(p_)
+      if(Bx_ > 1)then
+         write(*,*)'B  =', State_V(Bx_:Bz_) ! + [B0x,B0y,B0z]
+         write(*,*)'BB =', sum(State_V(Bx_:Bz_)**2)
+      end if
+      write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
+           ' at I=',iFace,' J=',jFace,' K=',kFace
+
+      write(*,'(1x,4(a,i4),a,es13.5)') 'Flux*Area for dir =',iDimFace,&
+           ' at I=',iFace,' J=',jFace,' K=',kFace,' Area=',Area
+
+      write(*,*)'Eigenvalue_maxabs=', Cmax
+      write(*,*)'CmaxDt           =', Cmax ! for now the same
+      do iVar = 1, nVar + nFluid
+         write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
+              NameVar_V(iVar),&
+              Flux_V(iVar), &
+              FluxLeft_V(iVar)*Area, &
+              FluxRight_V(iVar)*Area,&
+              StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+              0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
+      end do
+
+    end subroutine write_test_info
+#endif OPENACC
     !==========================================================================
     subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
          StateCons_V, Flux_V)
@@ -235,7 +310,7 @@ contains
       By  = State_V(By_)
       Bz  = State_V(Bz_)
       p   = State_V(p_)
-      Bn  = State_V(Bx_)*NormalX + State_V(By_)*NormalY + State_V(Bz_)*NormalZ
+      Bn  = Bx*NormalX + By*NormalY + Bz*NormalZ
       B2  = Bx**2 + By**2 + Bz**2
 
       Sound2        = InvRho*p*Gamma
@@ -246,7 +321,31 @@ contains
       Fast  = sqrt( 0.5*(Fast2 + Discr) )
 
       Un   = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
-      Cmax = Un + Fast
+      Cmax = abs(Un) + Fast
+
+#ifndef OPENACC
+      if(DoTestCell)then
+         write(*,*) &
+              ' iFluid, rho, p(face)   =', 1, State_V(Rho_), State_V(p_)
+         !if(UseAnisoPressure) write(*,*) &
+         !     ' Ppar, Perp             =', Ppar, Pperp
+         !if(UseElectronPressure) write(*,*) &
+         !     ' State_V(Pe_)           =', State_V(Pe_)
+         !if(UseAnisoPe) write(*,*) &
+         !     ' State_V(Pepar_)        =', State_V(Pepar_)
+         !if(UseWavePressure) write(*,*) &
+         !     ' GammaWave, State(Waves)=', &
+         !     GammaWave, State_V(WaveFirst_:WaveLast_)
+         write(*,*) &
+              ' Fast2, Discr          =', Fast2, Discr
+         write(*,*) &
+              ' Sound2, Alfven2       =', Sound2, Alfven2
+         write(*,*) &
+              ' FullBn, Alfven2Normal =', Bn, Alfven2Normal
+         write(*,*) &
+              ' FullBx, FullBy, FullBz=', Bx, By, Bz
+      end if
+#endif
 
     end subroutine get_speed_max
     !==========================================================================
