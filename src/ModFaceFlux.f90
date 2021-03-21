@@ -54,6 +54,7 @@ module ModFaceFlux
   implicit none
   save
 
+  public :: print_face_values
   public :: calc_face_flux
   public :: calc_cell_flux
   public :: face_flux_set_parameters
@@ -258,6 +259,86 @@ module ModFaceFlux
 
 contains
   !============================================================================
+  subroutine print_face_values
+    integer :: iVar
+    integer:: iGang
+    character(len=*), parameter:: NameSub = 'print_face_values'
+    !--------------------------------------------------------------------------
+    iGang = 1
+
+    if(iDimTest==x_ .or. iDimTest==0)then
+       write(*,*)&
+            'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
+
+       do iVar=1,nVar
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+               LeftState_VXI(iVar,iTest,jTest,kTest,iGang),&
+               RightState_VXI(iVar,iTest,jTest,kTest,iGang),&
+               LeftState_VXI(iVar,iTest+1,jTest,kTest,iGang),&
+               RightState_VXI(iVar,iTest+1,jTest,kTest,iGang)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+               B0_DX(x_,iTest,jTest,kTest),' ',&
+               B0_DX(x_,iTest+1,jTest,kTest)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+               B0_DX(y_,iTest,jTest,kTest),' ',&
+               B0_DX(y_,iTest+1,jTest,kTest)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+               B0_DX(z_,iTest,jTest,kTest),' ',&
+               B0_DX(z_,iTest+1,jTest,kTest)
+       end if
+    end if
+
+    if(iDimTest==y_ .or. iDimTest==0)then
+       write(*,*)&
+            'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
+
+       do iVar=1,nVar
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+               LeftState_VYI(iVar,iTest,jTest,kTest,iGang),&
+               RightState_VYI(iVar,iTest,  jTest,kTest,iGang),&
+               LeftState_VYI(iVar,iTest,jTest+1,kTest,iGang),&
+               RightState_VYI(iVar,iTest,jTest+1,kTest,iGang)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+               B0_DY(x_,iTest,jTest,kTest),' ',&
+               B0_DY(x_,iTest,jTest+1,kTest)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+               B0_DY(y_,iTest,jTest,kTest),' ',&
+               B0_DY(y_,iTest,jTest+1,kTest)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+               B0_DY(z_,iTest,jTest,kTest),' ',&
+               B0_DY(z_,iTest,jTest+1,kTest)
+       end if
+    end if
+
+    if(iDimTest==z_ .or. iDimTest==0)then
+       write(*,*)&
+            'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       do iVar=1,nVar
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+               LeftState_VZI(iVar,iTest,jTest,kTest,iGang),&
+               RightState_VZI(iVar,iTest,  jTest,kTest,iGang),&
+               LeftState_VZI(iVar,iTest,jTest,kTest+1,iGang),&
+               RightState_VZI(iVar,iTest,jTest,kTest+1,iGang)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+               B0_DZ(x_,iTest,jTest,kTest),' ',&
+               B0_DZ(x_,iTest,jTest,kTest+1)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+               B0_DZ(y_,iTest,jTest,kTest),' ',&
+               B0_DZ(y_,iTest,jTest,kTest+1)
+          write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+               B0_DZ(z_,iTest,jTest,kTest),' ',&
+               B0_DZ(z_,iTest,jTest,kTest+1)
+       end if
+    end if
+
+  end subroutine print_face_values
+  !============================================================================
 
   subroutine face_flux_set_parameters(NameCommand)
     use ModReadParam, ONLY: read_var
@@ -434,8 +515,11 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
 #ifndef OPENACC
-    if(DoTest)call print_values
-
+    if(DoTest)then
+       write(*,*) '==========================================================='
+       write(*,*) NameSub, ' started with DoResChangeOnly=', DoResChangeOnly
+       if(.not.DoResChangeOnly) call print_face_values
+    end if
     IsNewBlockCurrent      = .true.
     IsNewBlockGradPe       = .true.
     IsNewBlockRadDiffusion = .true.
@@ -489,91 +573,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
-    !==========================================================================
-    subroutine print_values
-      integer :: iVar
-      integer:: iGang
-      !------------------------------------------------------------------------
-      iGang = 1
-      write(*,*) '==========================================================='
-      write(*,*) NameSub, ' started'
-      if(DoResChangeOnly)then
-         write(*,*)'calc_facefluxes for DoResChangeOnly'
-         RETURN
-      end if
-
-      if(iDimTest==x_ .or. iDimTest==0)then
-         write(*,*)&
-              'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
-
-         do iVar=1,nVar
-            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VXI(iVar,iTest,jTest,kTest,iGang),&
-                 RightState_VXI(iVar,iTest,jTest,kTest,iGang),&
-                 LeftState_VXI(iVar,iTest+1,jTest,kTest,iGang),&
-                 RightState_VXI(iVar,iTest+1,jTest,kTest,iGang)
-         end do
-         if(UseB0)then
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0_DX(x_,iTest,jTest,kTest),' ',&
-                 B0_DX(x_,iTest+1,jTest,kTest)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0_DX(y_,iTest,jTest,kTest),' ',&
-                 B0_DX(y_,iTest+1,jTest,kTest)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0_DX(z_,iTest,jTest,kTest),' ',&
-                 B0_DX(z_,iTest+1,jTest,kTest)
-         end if
-      end if
-
-      if(iDimTest==y_ .or. iDimTest==0)then
-         write(*,*)&
-              'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
-
-         do iVar=1,nVar
-            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VYI(iVar,iTest,jTest,kTest,iGang),&
-                 RightState_VYI(iVar,iTest,  jTest,kTest,iGang),&
-                 LeftState_VYI(iVar,iTest,jTest+1,kTest,iGang),&
-                 RightState_VYI(iVar,iTest,jTest+1,kTest,iGang)
-         end do
-         if(UseB0)then
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0_DY(x_,iTest,jTest,kTest),' ',&
-                 B0_DY(x_,iTest,jTest+1,kTest)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0_DY(y_,iTest,jTest,kTest),' ',&
-                 B0_DY(y_,iTest,jTest+1,kTest)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0_DY(z_,iTest,jTest,kTest),' ',&
-                 B0_DY(z_,iTest,jTest+1,kTest)
-         end if
-      end if
-
-      if(iDimTest==z_ .or. iDimTest==0)then
-         write(*,*)&
-              'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
-         do iVar=1,nVar
-            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-                 LeftState_VZI(iVar,iTest,jTest,kTest,iGang),&
-                 RightState_VZI(iVar,iTest,  jTest,kTest,iGang),&
-                 LeftState_VZI(iVar,iTest,jTest,kTest+1,iGang),&
-                 RightState_VZI(iVar,iTest,jTest,kTest+1,iGang)
-         end do
-         if(UseB0)then
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0_DZ(x_,iTest,jTest,kTest),' ',&
-                 B0_DZ(x_,iTest,jTest,kTest+1)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0_DZ(y_,iTest,jTest,kTest),' ',&
-                 B0_DZ(y_,iTest,jTest,kTest+1)
-            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0_DZ(z_,iTest,jTest,kTest),' ',&
-                 B0_DZ(z_,iTest,jTest,kTest+1)
-         end if
-      end if
-
-    end subroutine print_values
     !==========================================================================
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
@@ -662,6 +661,9 @@ contains
 
       do kFace=kMin,kMax; do jFace=jMin,jMax; do iFace=iMin,iMax
          call set_cell_values_x
+
+         DoTestCell = DoTest .and. (iFace == iTest .or. iFace == iTest+1) &
+              .and. jFace == jTest .and. kFace == kTest
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -1191,13 +1193,13 @@ contains
 #else
 
     select case(iDimFace)
-      case(x_)
-         call set_cell_values_x
-      case(y_)
-         call set_cell_values_y
-      case(z_)
-         call set_cell_values_z
-      end select
+    case(x_)
+       call set_cell_values_x
+    case(y_)
+       call set_cell_values_y
+    case(z_)
+       call set_cell_values_z
+    end select
 
 #endif
   end subroutine set_cell_values
@@ -5382,7 +5384,8 @@ contains
            iBlockFace => IFF_I(iBlockFace_), &
            iDimFace => IFF_I(iDimFace_), &
            iFace => IFF_I(iFace_), &
-           jFace => IFF_I(jFace_), kFace => IFF_I(kFace_) )
+           jFace => IFF_I(jFace_), kFace => IFF_I(kFace_), &
+           DoTestCell => IsFF_I(DoTestCell_) )
 #endif
 
         Rho = State_V(iRhoIon_I(1))
@@ -5561,10 +5564,8 @@ contains
            Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
         endif
 
-        if(Fast2 + Discr < 0.0)then
 #ifndef OPENACC
-           write(*,*) &
-                ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
+        if(DoTestCell .or. Fast2 + Discr < 0.0)then
            write(*,*) &
                 ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_)
            if(UseAnisoPressure) write(*,*) &
@@ -5576,7 +5577,8 @@ contains
            if(UseWavePressure) write(*,*) &
                 ' GammaWave, State(Waves)=', &
                 GammaWave, State_V(WaveFirst_:WaveLast_)
-
+           write(*,*) &
+                ' Fast2, Discr          =', Fast2, Discr
            write(*,*) &
                 ' Sound2, Alfven2       =', Sound2, Alfven2
            write(*,*) &
@@ -5589,17 +5591,18 @@ contains
            write(*,*) &
                 ' State_VGB(right)      =', &
                 State_VGB(:,iRight,jRight,kRight,iBlockFace)
+        end if
+        if(Fast2 + Discr < 0.0)then
            write(*,*) &
                 ' Xyz_DGB(right)        =', &
                 Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
-
            write(*,*) &
                 ' iDim,i,j,k,BlockFace=', &
                 iDimFace, iFace,jFace,kFace, iBlockFace
 
            call stop_mpi('negative fast speed squared')
-#endif
         end if
+#endif
 
         ! Fast speed multiplied by the face area
         if(UseBorisSimple .or. (UseEfield))then
