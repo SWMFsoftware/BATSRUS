@@ -246,14 +246,14 @@ contains
        CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
        CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
        if (.not.time_accurate) then
-          write(*,'(a,f9.1,a,f9.1,a,i8)') 'Speed is',&
+          write(*,'(a,f12.1,a,f9.1,a,i8)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
                CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
-          write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e11.4,a)') 'Speed is',&
+          write(*,'(a,f12.1,a,f9.1,a,i8,a,1p,e11.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
