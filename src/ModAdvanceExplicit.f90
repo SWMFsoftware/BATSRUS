@@ -19,10 +19,10 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
-    use ModFaceFluxGPU, ONLY: calc_face_flux_gpu
+    use ModFaceFluxGpu, ONLY: calc_face_flux_gpu
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
-    use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
-         set_low_order_face
+    use ModFaceValue
+    use ModFaceValueGpu, ONLY: calc_face_value_gpu
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
          DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
@@ -150,13 +150,14 @@ contains
 
 #ifndef OPENACC
           call timing_start('calc_facevalues')
+          if(index(StringTest,'GPUFLUX')>0)then
 #endif
-
-          call calc_face_value(iBlock, DoResChangeOnly= .false. , DoMonotoneRestrict = .true.)
-
+             call calc_face_value_gpu(iBlock)
 #ifndef OPENACC
+          else
+             call calc_face_value(iBlock, DoResChangeOnly=.false., DoMonotoneRestrict=.true.)
+          end if
           call timing_stop('calc_facevalues')
-
           if(body_BLK(iBlock)) &
                call set_face_boundary(iBlock, Time_Simulation,.false.)
 #endif
