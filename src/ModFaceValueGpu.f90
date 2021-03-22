@@ -4,7 +4,7 @@
 
 module ModFaceValueGpu
 
-  use BATL_lib, ONLY: nI, nJ, nK
+  use BATL_lib, ONLY: nDim, nI, nJ, nK
   use ModVarIndexes
   use ModAdvance, ONLY: State_VGB, &
          LeftState_VXI, RightState_VXI, &
@@ -49,6 +49,8 @@ contains
        RightState_VXI(Uz_+1:,i,j,k,iGang)  = State_VGB(RhoUz_+1:,i,j,k,iBlock)
     end do; end do; end do
 
+    if(nDim == 1) RETURN
+
     !$acc loop vector collapse(3) independent
     do k=1, nK; do j=1, nJ+1; do i=1,nI
        LeftState_VYI(Rho_,i,j,k,iGang)    = State_VGB(Rho_,i,j-1,k,iBlock)
@@ -61,6 +63,8 @@ contains
             /State_VGB(Rho_,i,j,k,iBlock)
        RightState_VYI(Uz_+1:,i,j,k,iGang)  = State_VGB(RhoUz_+1:,i,j,k,iBlock)
     end do; end do; end do
+
+    if(nDim == 2) RETURN
 
     !$acc loop vector collapse(3) independent
     do k=1, nK+1; do j=1, nJ; do i=1,nI

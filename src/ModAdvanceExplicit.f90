@@ -43,6 +43,7 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
+    use ModUpdateStateGpu, ONLY: update_state_gpu
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
@@ -216,11 +217,13 @@ contains
 
           ! Update solution state in each cell.
           call timing_start('update_state')
+          if(index(StringTest,'GPUFLUX')>0)then
 #endif
-
-          call update_state(iBlock)
-
+             call update_state_gpu(iBlock)
 #ifndef OPENACC
+          else
+             call update_state(iBlock)
+          end if
           call timing_stop('update_state')
 
           if(DoCalcElectricField .and. iStage == nStage) &
