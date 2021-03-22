@@ -11,16 +11,16 @@ common constants, mp, kb, cgs, kev_J
   a2=double(0.531)
   a3=double(67.3)
 
-  e=double(0.5*mp*g*g/kev_J) ; convert relative vel. to energy
+  e=double(5d-1*mp*g*g/kev_J) ; convert relative vel. to energy
 
-  sig1=(a1-a2*alog(e))
+  sig1=double(a1-a2*alog(e))
   sig1=sig1*sig1
-  sig2=(1-exp(-a3/e))
+  sig2=double(1-exp(-a3/e))
   sig2=sig2*sig2*sig2*sig2*sqrt(sig2)
   sigma=sig1*sig2
   sigma=sigma*1d-20
 
-  w=where(sigma ne sigma, ct)
+  winf=where(sigma ne sigma, ct)
   if ct gt 0 then stop
 
   return, sigma
@@ -36,15 +36,15 @@ function integrandr, g, k, du
 common constants, mp, kb, cgs, kev_J
 
   sr_int=dblarr(n_elements(g))
+ 
+  a=2d*k*du*g
+  q=k*g*g
+  s=k*du*du
 
-  w=where(2*k*du*g lt 1d2,complement=nw)
+  sr_int=double((1/2d)*g^2*cx_int(g) $
+            *(exp(-s-q+a)-exp(-s-q-a)))
 
-  sr_int[w]=double(g[w]^2*cx_int(g[w])*exp(-k*g[w]*g[w]) $
-        *sinh(2.*k*du*g[w]))
-
-  sr_int[nw]=0.
-
-  w1=where(sr_int ne sr_int,ct)
+  winf=where(sr_int ne sr_int or finite(sr_int) eq 0 ,ct)
   if ct gt 0 then stop
 
   return, sr_int
@@ -61,15 +61,14 @@ common constants, mp, kb, cgs, kev_J
 
   sm_int=dblarr(n_elements(g))
 
-  w=where(2*k*du*g lt 1d2,complement=nw)
+  a=2d*k*du*g
+  q=k*g*g
+  s=k*du*du
 
-  sm_int[w]=double(g[w]^2*mp*cx_int(g[w])*exp(-k*g[w]*g[w]) $
-        *(2.*k*du*g[w]*cosh(2.*k*du*g[w]) $
-        -sinh(2.*k*du*g[w])))
+  sm_int=double((1/2d)*g^2*mp*cx_int(g) $
+            *((a-1)*exp(-s-q+a)+(a+1)*exp(-s-q-a)))
 
-  sm_int[nw]=0.
-
-  w1=where(sm_int ne sm_int,ct)
+  winf=where(sm_int ne sm_int,ct)
   if ct gt 0 then stop
 
   return, sm_int
@@ -86,14 +85,14 @@ common constants, mp, kb, cgs, kev_J
 
   se_int=dblarr(n_elements(g))
 
-  w=where(2*k*du*g lt 1d2,complement=nw)
+  a=2d*k*du*g
+  q=k*g*g
+  s=k*du*du
 
-  se_int[w]=double(g^4*mp*cx_int(g[w])*exp(-k*g[w]*g[w]) $
-         *sinh(2*k*du*g[w]))
+  se_int=double((1/2d)*g^4*mp*cx_int(g) $
+         *(exp(-s-q+a)-exp(-s-q-a)))
 
-  se_int[nw]=0.
-
-  w1=where(se_int ne se_int,ct)
+  winf=where(se_int ne se_int,ct)
   if ct gt 0 then stop
 
   return, se_int
@@ -101,11 +100,7 @@ common constants, mp, kb, cgs, kev_J
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-pro SourceIntLookup
-
-; IDL procedure to populate lookup table of density,
-; momentum, and enegry source terms using integrals
-; from McNutt et al. (1998) equations 24, 25, and 27
+pro SourceIntLookupDbl3
 
 ; Defining constants to be used in procedure and functions
 common constants, mp, kb, cgs, kev_J
@@ -116,24 +111,27 @@ common constants, mp, kb, cgs, kev_J
   ; du = relative bulk flow velocity
   ; k = 1/(vth_p^2+vth_h^2)
 
-  n=100 ; number of table elements
+  n=101 ; number of table elements
 
   ; creating source term arrays
   sr=dblarr(n,n)
   sm=dblarr(n,n)
   se=dblarr(n,n)
 
-  dg=1. ; m/s 
-  g=dindgen(1e7)*dg+dg ; relative velocity (vh-vp) for integration
+  dg=1d ; m/s 
+  g=dindgen(1d7)*dg+dg ; relative velocity (vh-vp) for integration
 
-  ; relative bulk velocity of H and H+ squared (m/s)^2
-  du2=(dindgen(n)*1d4+1.)*1d6
-  du=sqrt(du2)
+  ; sqrt of relative bulk velocity of H and H+ (m/s)^1/2
+   sdu=double(dindgen(n)*32d-2+1d-5)*sqrt(1d3)
+   du=sdu*sdu
+   du2=du*du
+    
+  ; sqrt of combination of thermal velocities (m/s)^1/2
+  sw=double(dindgen(n)*32d-2+1d)*sqrt(1d3)
+  w1=sw*sw
+  w2=w1*w1
 
-  ; combination of thermal velocities squared (m/s)^2
-  w2=((dindgen(n)*1d4)+1.)*1d6
-
-  k=double(1./w2)
+  k=double(1d/w2)
 
   i=0
 
@@ -141,23 +139,23 @@ common constants, mp, kb, cgs, kev_J
        j=0
      while j lt n do begin
 
-        b=exp(-k[j]*du2[i])
-
  	; Calculating Density Source Term
-        cr=2./sqrt(!pi)*sqrt(k[j])/du[i]*b
+        cr=2d*mp/sqrt(double(!pi))*sqrt(k[j])/du[i]
 	sr[i,j]=cr*total(integrandr(g,k[j],du[i])*dg)
 
 	; Calculating Momentum Source Term
-        cm=1./sqrt(!pi*k[j])/(du2[i])*b
-	sm[i,j]=cm*total(integrandm(g,k[j],du[i])*dg) ; calculate momentum source
+	if i eq 0 then sm[i,j]=0 else begin
+           cm=1d/sqrt(double(!pi)*k[j])/(du2[i]*du[i])
+	   sm[i,j]=cm*total(integrandm(g,k[j],du[i])*dg) ; calculate momentum source
+	endelse
 
 	; Calculating Energy Source Term
-        ce=2./sqrt(!pi)*sqrt(k[j]^(5.))*b
-        ce1=1./(k[j]*du[i])
-        ce2=1./(4.*k[j]^2*du[i])
+        ce=2d/sqrt(double(!pi))*sqrt(k[j]^(5.))
+        ce1=1d/(2d*k[j]*du[i])
+        ce2=1d/(4d*k[j]^2*du[i])
 	se1=ce1*total(integrande(g,k[j],du[i])*dg) ; calculate energy source
-        if sm[i,j] ne 0. then se2=ce2*sm[i,j]/cm else se2=0.; total(integrande2(g,k[j],du[i])*dg)
-        se[i,j]=ce*(se1+se2)
+        if sm[i,j] ne 0. then se2=ce2*sm[i,j]/cm else se2=0d
+        se[i,j]=ce*(se1-se2)
 
         if sr[i,j] ne sr[i,j] or sm[i,j] ne sm[i,j] or se[i,j] ne se[i,j] then stop      
 	j++
@@ -166,11 +164,14 @@ common constants, mp, kb, cgs, kev_J
      i++
   endwhile
 
+
+
 close, 1
 openw, 1, "ExchangeRate.dat"
 for i=0, n-1 do begin
    for j=0, n-1 do begin
-	printf, 1, w2[j]/(1d6), du2[i]/(1d6), sr[i,j], sm[i,j], se[i,j]
+	if i eq 0 then sdu[i]=0d
+	printf, 1, sw[j]/sqrt(1d3), sdu[i]/sqrt(1d3), sr[i,j], sm[i,j], se[i,j]
    endfor
 endfor 
 close, 1
