@@ -313,7 +313,7 @@ contains
          RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     allocate(uDotArea_XII( &
          nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1,nGang))
-    MhdFlux_VXI = 0.0
+    Flux_VXI = 0.0; MhdFlux_VXI = 0.0
 
     allocate(LeftState_VYI( &
          nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
@@ -325,7 +325,7 @@ contains
          RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     allocate(uDotArea_YII( &
          iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1,nGang))
-    MhdFlux_VYI = 0.0
+    Flux_VYI = 0.0; MhdFlux_VYI = 0.0
 
     allocate(LeftState_VZI( &
          nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
@@ -337,7 +337,7 @@ contains
          RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     allocate(uDotArea_ZII( &
          iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1,nGang))
-    MhdFlux_VZI = 0.0
+    Flux_VZI = 0.0; MhdFlux_VZI = 0.0
 
     allocate(FaceDivU_IXI( &
          nFluid,nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
@@ -349,6 +349,7 @@ contains
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
 
     allocate(Source_VCI(nSource,nI,nJ,nK,nGang))
+    Source_VCI = 0.0
     allocate(SourceMhd_VCI(RhoUx_:RhoUz_,nI,nJ,nK,nGang))
     !$omp end parallel
 
