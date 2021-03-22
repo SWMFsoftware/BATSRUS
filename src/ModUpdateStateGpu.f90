@@ -7,7 +7,11 @@ module ModUpdateStateGpu
   use ModMain, ONLY: iStage, Cfl
   use ModAdvance
   use BATL_lib, ONLY: nI, nJ, nK, CellVolume_GB
-
+  use ModEnergy, ONLY: calc_energy_or_pressure
+  use ModMultiFluid, ONLY: nFluid, IonLast_, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP, select_fluid
+  use ModPhysics,    ONLY: GammaMinus1_I
+  
   implicit none
 
 contains
@@ -28,7 +32,7 @@ contains
     if(iStage==1) then
        !$acc loop vector collapse(4)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
-         StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
+          StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
        enddo; enddo; enddo; enddo
 
        !$acc loop vector collapse(4)
@@ -64,6 +68,32 @@ contains
             + Source_VCI(nVar+iFluid,i,j,k,iGang)
     end do; end do; end do; end do
 
+    ! Calculate pressure from energy
+    do iFluid = 1, IonLast_
+       if(nFluid > 1) call select_fluid(iFluid)
+       !$acc loop vector collapse(3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          State_VGB(iP,i,j,k,iBlock) = &
+               GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
+               0.5*(State_VGB(iRhoUx,i,j,k,iBlock)**2 + &
+               State_VGB(iRhoUy,i,j,k,iBlock)**2 + &
+               State_VGB(iRhoUz,i,j,k,iBlock)**2) &
+               /State_VGB(iRho,i,j,k,iBlock) )
+       end do; end do; end do
+
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
+
+       ! Subtract magnetic energy
+       !$acc loop vector collapse(3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               - GammaMinus1_I(iFluid)*0.5* &
+               (State_VGB(Bx_,i,j,k,iBlock)**2 + &
+               State_VGB(By_,i,j,k,iBlock)**2 + &
+               State_VGB(Bz_,i,j,k,iBlock)**2 )
+       end do; end do; end do
+    end do
+    
   end subroutine update_state_gpu
   !============================================================================
 
