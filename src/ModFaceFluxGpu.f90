@@ -1,14 +1,15 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModFaceFluxGpu
 
   use ModVarIndexes
   use ModFaceFlux, ONLY: print_face_values
-  use ModAdvance, ONLY: nGang, nFlux, &
-       LeftState_VXI, RightState_VXI, Flux_VXI, VdtFace_XI, uDotArea_XII, &
-       LeftState_VYI, RightState_VYI, Flux_VYI, VdtFace_YI, uDotArea_YII, &
-       LeftState_VZI, RightState_VZI, Flux_VZI, VdtFace_ZI, uDotArea_ZII
+  use ModAdvance, ONLY: nGang, nFlux, State_VGB, &
+       Flux_VXI, VdtFace_XI, uDotArea_XII, &
+       Flux_VYI, VdtFace_YI, uDotArea_YII, &
+       Flux_VZI, VdtFace_ZI, uDotArea_ZII   
   use ModPhysics, ONLY: Gamma, InvGammaMinus1
   use ModMain, ONLY: SpeedHyp
   use BATL_lib, ONLY: test_start, iTest, jTest, kTest, &
@@ -28,7 +29,7 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
 
-    integer:: iFace, jFace, kFace, iGang
+    integer:: iFace, jFace, kFace, i, j, k, iGang
 
     logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'calc_face_flux_gpu'
@@ -61,10 +62,16 @@ contains
        NormalZ = 0.0
        ! end if
 
-       ! Primitive variables
-       StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
-       StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
-       State_V      = 0.5*(StateLeft_V + StateRight_V)  ! average state
+       ! First order left state of primitive variables
+       StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
+       StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+       ! First order right state of primitive variables
+       StateRight_V  = State_VGB(:,i,j,k,iBlock)
+       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       
+       ! average state
+       State_V = 0.5*(StateLeft_V + StateRight_V)
 
        call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
             Un, Cmax)
@@ -110,10 +117,16 @@ contains
        NormalZ = 0.0
        ! end if
 
-       ! Primitive variables
-       StateLeft_V  = LeftState_VYI(:,iFace,jFace,kFace,iGang)
-       StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
-       State_V      = 0.5*(StateLeft_V + StateRight_V)  ! average state
+       ! First order left state of primitive variables
+       StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
+       StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+       ! First order right state of primitive variables
+       StateRight_V  = State_VGB(:,i,j,k,iBlock)
+       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+
+       ! Average state
+       State_V = 0.5*(StateLeft_V + StateRight_V)
 
        call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
             Un, Cmax)
@@ -159,11 +172,16 @@ contains
        NormalZ = 1.0
        ! end if
 
-       ! Primitive variables
-       StateLeft_V  = LeftState_VZI(:,iFace,jFace,kFace,iGang)
-       StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+       ! First order left state of primitive variables
+       StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
+       StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+       ! First order right state of primitive variables
+       StateRight_V  = State_VGB(:,i,j,k,iBlock)
+       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       
        ! average state
-       State_V      = 0.5*(StateLeft_V + StateRight_V)
+       State_V = 0.5*(StateLeft_V + StateRight_V)
 
        call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
             Un, Cmax)

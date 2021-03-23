@@ -22,7 +22,7 @@ contains
     use ModFaceFluxGpu, ONLY: calc_face_flux_gpu
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue
-    use ModFaceValueGpu, ONLY: calc_face_value_gpu
+!!!    use ModFaceValueGpu, ONLY: calc_face_value_gpu
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
          DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
@@ -153,7 +153,7 @@ contains
           call timing_start('calc_facevalues')
           if(index(StringTest,'GPUFLUX')>0)then
 #endif
-             call calc_face_value_gpu(iBlock)
+!!!             call calc_face_value_gpu(iBlock)
 #ifndef OPENACC
           else
              call calc_face_value(iBlock, DoResChangeOnly=.false., DoMonotoneRestrict=.true.)

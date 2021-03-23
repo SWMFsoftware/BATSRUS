@@ -47,7 +47,6 @@ OBJECTS = \
 	ModFaceFluxGpu.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
-	ModFaceValueGpu.o \
 	ModFieldLineThread.o \
 	ModFieldTrace.o \
 	ModFixAxisCells.o \
