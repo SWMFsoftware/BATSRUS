@@ -28,6 +28,7 @@ contains
     use ModIoUnit,   ONLY: UnitTmp_
     use ModAdvance,  ONLY: State_VGB, Bx_
     use ModB0,       ONLY: B0_DGB
+    use ModMain,     ONLY: UseB0
     use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
     use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
@@ -194,8 +195,13 @@ contains
           ! if plot type is bx0
           if(index(plot_type1, 'bx0') > 0) then
              ! check if bx are the same sign in this block
-             if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
-                  all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
+             if(UseB0) then
+                if( all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
+                     all(B0_DGB(x_,i,j,k-1:k+1,iBlock)+State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
+             else
+                if( all(State_VGB(Bx_,i,j,k-1:k+1,iBlock)>0) .or.&
+                     all(State_VGB(Bx_,i,j,k-1:k+1,iBlock)<0)) CYCLE
+             end if
              ! exclude the edge points at the plot range boundary
              if( abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(5,iFile))/DzBlock <= 3 .or.&
                   abs(Xyz_DGB(z_,i,j,k,iBlock) - plot_range(6,iFile))/DzBlock <= 3) CYCLE
