@@ -29,7 +29,7 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
 
-    integer:: iFace, jFace, kFace, i, j, k, iGang
+    integer:: i, j, k, iGang
 
     logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'calc_face_flux_gpu'
@@ -48,11 +48,11 @@ contains
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
-    do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI+1
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
 #ifndef OPENACC
-       DoTestCell = DoTest .and. (iFace == iTest .or. iFace == iTest+1) .and. &
-            jFace == jTest .and. kFace == kTest
+       DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+            j == jTest .and. k == kTest
 #endif
 
        ! if(IsCartesianGrid)then
@@ -81,18 +81,18 @@ contains
             StateRightCons_V, FluxRight_V)
 
        ! Rusanov flux
-       Flux_VXI(:,iFace,jFace,kFace,iGang) = &
+       Flux_VXI(:,i,j,k,iGang) = &
             Area*(0.5*(FluxLeft_V + FluxRight_V) &
             + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
 
        ! For time step
-       VdtFace_XI(iFace,jFace,kFace,iGang) = Cmax*Area
+       VdtFace_XI(i,j,k,iGang) = Cmax*Area
 
        ! For div U source term
-       uDotArea_XII(iFace,jFace,kFace,:,iGang) = Un*Area
+       uDotArea_XII(i,j,k,:,iGang) = Un*Area
 
 #ifndef OPENACC
-       if(DoTestCell) call write_test_info(1, Flux_VXI(:,iFace,jFace,kFace,1))
+       if(DoTestCell) call write_test_info(1, Flux_VXI(:,i,j,k,1))
 #endif
 
     end do; end do; end do
@@ -103,11 +103,11 @@ contains
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
-    do kFace = 1, nK; do jFace = 1, nJ+1; do iFace = 1, nI
+    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
 #ifndef OPENACC
-       DoTestCell = DoTest .and. iFace == iTest .and. &
-            (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
+       DoTestCell = DoTest .and. i == iTest .and. &
+            (j == jTest .or. j == jTest+1) .and. k == kTest
 #endif
 
        ! if(IsCartesianGrid)then
@@ -136,18 +136,18 @@ contains
             StateRightCons_V, FluxRight_V)
 
        ! Rusanov flux
-       Flux_VYI(:,iFace,jFace,kFace,iGang) = &
+       Flux_VYI(:,i,j,k,iGang) = &
             Area*(0.5*(FluxLeft_V + FluxRight_V) &
             + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
 
        ! For time step
-       VdtFace_YI(iFace,jFace,kFace,iGang) = Cmax*Area
+       VdtFace_YI(i,j,k,iGang) = Cmax*Area
 
        ! For div U source term
-       uDotArea_YII(iFace,jFace,kFace,:,iGang) = Un*Area
+       uDotArea_YII(i,j,k,:,iGang) = Un*Area
 
 #ifndef OPENACC
-       if(DoTestCell) call write_test_info(2, Flux_VYI(:,iFace,jFace,kFace,1))
+       if(DoTestCell) call write_test_info(2, Flux_VYI(:,i,j,k,1))
 #endif
 
     end do; end do; end do
@@ -158,11 +158,11 @@ contains
     !$acc private(Area, NormalX, NormalY, NormalZ, Un, Cmax, &
     !$acc         StateLeft_V, StateRight_V, State_V, &
     !$acc         StateLeftCons_V, StateRightCons_V, FluxLeft_V, FluxRight_V)
-    do kFace = 1, nK+1; do jFace = 1, nJ; do iFace = 1, nI
+    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
 #ifndef OPENACC
-       DoTestCell = DoTest .and. iFace == iTest .and. &
-            jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+       DoTestCell = DoTest .and. i == iTest .and. &
+            j == jTest .and. (k == kTest .or. k == kTest+1)
 #endif
 
        ! if(IsCartesianGrid)then
@@ -191,20 +191,20 @@ contains
             StateRightCons_V, FluxRight_V)
 
        ! Rusanov flux
-       Flux_VZI(:,iFace,jFace,kFace,iGang) = &
+       Flux_VZI(:,i,j,k,iGang) = &
             Area*(0.5*(FluxLeft_V + FluxRight_V) &
             + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
 
        ! For time step
-       VdtFace_ZI(iFace,jFace,kFace,iGang) = Cmax*Area
+       VdtFace_ZI(i,j,k,iGang) = Cmax*Area
 
        ! For div U source term
-       uDotArea_ZII(iFace,jFace,kFace,:,iGang) = Un*Area
+       uDotArea_ZII(i,j,k,:,iGang) = Un*Area
 
 #ifndef OPENACC
-       if(DoTest .and. iFace == iTest .and. jFace == jTest .and. &
-            (kFace == kTest .or. kFace == kTest+1)) &
-            call write_test_info(3, Flux_VZI(:,iFace,jFace,kFace,1))
+       if(DoTest .and. i == iTest .and. j == jTest .and. &
+            (k == kTest .or. k == kTest+1)) &
+            call write_test_info(3, Flux_VZI(:,i,j,k,1))
 #endif
 
     end do; end do; end do
@@ -221,7 +221,7 @@ contains
       !------------------------------------------------------------------------
 
       write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
-           ' at I=',iFace,' J=',jFace,' K=',kFace
+           ' at I=',i,' J=',j,' K=',k
       write(*,*)'rho=', State_V(Rho_)
       write(*,*)'Un =', Un
       write(*,*)'P  =', State_V(p_)
@@ -230,10 +230,10 @@ contains
          write(*,*)'BB =', sum(State_V(Bx_:Bz_)**2)
       end if
       write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
-           ' at I=',iFace,' J=',jFace,' K=',kFace
+           ' at I=',i,' J=',j,' K=',k
 
       write(*,'(1x,4(a,i4),a,es13.5)') 'Flux*Area for dir =',iDimFace,&
-           ' at I=',iFace,' J=',jFace,' K=',kFace,' Area=',Area
+           ' at I=',i,' J=',j,' K=',k,' Area=',Area
 
       write(*,*)'Eigenvalue_maxabs=', Cmax
       write(*,*)'CmaxDt           =', Cmax ! for now the same
