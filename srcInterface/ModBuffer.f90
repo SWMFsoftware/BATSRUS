@@ -3,10 +3,10 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
   use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
-  use CON_coupler,         ONLY: SC_, IH_, nVarIndexCouple, nCoupleVarGroup
+  use CON_coupler,         ONLY: SC_, nVarIndexCouple, nCoupleVarGroup
   implicit none
   save
-  integer:: SourceID_ = SC_, TargetID_ = IH_
+  integer:: SourceID_ = SC_
 
   integer::nVarBuff=-1
   logical::DoInit =.true.
