@@ -129,7 +129,18 @@ T			UseDtFixed
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
-minmod			TypeLimiter
+
+#STRICT
+F			UseStrict
+
+#DIVB
+F			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#STRICT
+T			UseStrict
 
 #SAVELOGFILE
 T			DoSaveLogfile
