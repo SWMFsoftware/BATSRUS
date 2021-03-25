@@ -137,7 +137,7 @@ contains
 
           if(Unused_B(iBlock)) CYCLE
           
-#ifdef OPENACC
+#ifndef OPENACC
           if(index(StringTest,'GPUFLUX')>0)then
 #endif
              call update_state_gpu(iBlock)
@@ -165,7 +165,7 @@ contains
           if(.not.DoInterpolateFlux)then
              ! Compute interface fluxes for each cell.
              call timing_start('calc_fluxes')
-             call calc_face_flux_gpu(.false., iBlock)
+             call calc_face_flux(.false., iBlock)
              call timing_stop('calc_fluxes')
           end if
 
@@ -212,7 +212,6 @@ contains
              call bound_VxB(iBlock)
              call timing_stop('constrain_B')
           end if
-#endif
 
           ! Calculate time step (both local and global
           ! for the block) used in multi-stage update
