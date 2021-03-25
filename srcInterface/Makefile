@@ -21,7 +21,6 @@ OBJ_UA = GM_couple_ua.o					    #^CMP IF UA
 
 OBJECTS = \
 	ModGridDescriptor.o\
-	ModBuffer.o\
 	GM_wrapper.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC) $(OBJ_PS) $(OBJ_UA)
 

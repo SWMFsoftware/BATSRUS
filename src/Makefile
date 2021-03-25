@@ -27,6 +27,7 @@ OBJECTS = \
 	ModBlockData.o \
 	ModBorisCorrection.o \
 	ModBoundaryGeometry.o \
+	ModBuffer.o\
 	ModCalcSource.o \
 	ModCellBoundary.o \
 	ModCellGradient.o \
