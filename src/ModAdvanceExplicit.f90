@@ -19,7 +19,7 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
-    use ModFaceFluxGpu, ONLY: calc_face_flux_gpu
+!!!    use ModFaceFluxGpu, ONLY: calc_face_flux_gpu
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue
 !!!    use ModFaceValueGpu, ONLY: calc_face_value_gpu
@@ -136,8 +136,15 @@ contains
        do iBlock = 1,nBlock
 
           if(Unused_B(iBlock)) CYCLE
-
+          
+#ifdef OPENACC
+          if(index(StringTest,'GPUFLUX')>0)then
+#endif
+             call update_state_gpu(iBlock)
+             CYCLE
 #ifndef OPENACC
+          end if
+             
           ! Calculate interface values for L/R states of each face
           ! and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
@@ -147,55 +154,31 @@ contains
              call calc_cell_flux(iBlock)
              call timing_stop('calc_fluxes')
           end if
-#endif
 
-#ifndef OPENACC
           call timing_start('calc_facevalues')
-          if(index(StringTest,'GPUFLUX')>0)then
-#endif
-!!!             call calc_face_value_gpu(iBlock)
-#ifndef OPENACC
-          else
-             call calc_face_value(iBlock, DoResChangeOnly=.false., DoMonotoneRestrict=.true.)
-          end if
+          call calc_face_value(iBlock, DoResChangeOnly=.false., &
+               DoMonotoneRestrict=.true.)
           call timing_stop('calc_facevalues')
           if(body_BLK(iBlock)) &
                call set_face_boundary(iBlock, Time_Simulation,.false.)
-#endif
 
           if(.not.DoInterpolateFlux)then
              ! Compute interface fluxes for each cell.
-#ifndef OPENACC
              call timing_start('calc_fluxes')
-             if(index(StringTest,'GPUFLUX')>0)then
-#endif
-                call calc_face_flux_gpu(.false., iBlock)
-#ifndef OPENACC
-             else
-                call calc_face_flux(.false., iBlock)
-             end if
+             call calc_face_flux_gpu(.false., iBlock)
              call timing_stop('calc_fluxes')
-#endif
           end if
 
-#ifndef OPENACC
           ! Enforce flux conservation by applying corrected fluxes
           ! to each coarse grid cell face at block edges with
           ! resolution changes.
           if(DoConserveFlux) call apply_cons_flux(iBlock)
-#endif
 
-#ifndef OPENACC
           ! Compute source terms for each cell.
           call timing_start('calc_sources')
-#endif
           call calc_source(iBlock)
-
-#ifndef OPENACC
           call timing_stop('calc_sources')
-#endif
 
-#ifndef OPENACC
           ! With known magnetic field and electric field in the
           ! comoving frame update ion velocities at the half time-step
           if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
@@ -217,13 +200,7 @@ contains
 
           ! Update solution state in each cell.
           call timing_start('update_state')
-          if(index(StringTest,'GPUFLUX')>0)then
-#endif
-             call update_state_gpu(iBlock)
-#ifndef OPENACC
-          else
-             call update_state(iBlock)
-          end if
+          call update_state(iBlock)
           call timing_stop('update_state')
 
           if(DoCalcElectricField .and. iStage == nStage) &
@@ -246,7 +223,6 @@ contains
                iStage == nStage .and. DoCalcTimestep) &
                call calc_timestep(iBlock)
 
-#ifndef OPENACC
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)
