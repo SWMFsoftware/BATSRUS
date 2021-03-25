@@ -297,28 +297,6 @@ contains
 
 end program BATSRUS
 !==============================================================================
-
-! The following subroutines are here for compilation of the stand alone code.
-! The subroutines and functions below are defined in srcInterface for SWMF,
-! but they still need to get compiled in stand-alone mode.
-subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
-  implicit none
-  real,dimension(3),intent(in)::Xyz_D
-  integer,intent(in)::nVar
-  real,dimension(nVar)::State_V
-  !----------------------------------------------------------------------------
-  call stop_mpi( &
-       'ERROR: get_from_spher_buffer_grid is for SWMF')
-end subroutine get_from_spher_buffer_grid
-!==============================================================================
-subroutine plot_buffer(iFile)
-  implicit none
-  integer, intent(in)::iFile
-  !----------------------------------------------------------------------------
-  call stop_mpi( &
-       'ERROR: plot_buffer is for SWMF')
-end subroutine plot_buffer
-!==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
   real :: y, z, State_V(8)
   !----------------------------------------------------------------------------
