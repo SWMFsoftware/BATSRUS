@@ -48,7 +48,8 @@ test_help:
 	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test)"
-	@echo "    test_fast_wave             (run 3D fast wave test)"	
+	@echo "    test_fast_wave             (run 3D fast wave test)"
+	@echo "    test_bx0		      (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
@@ -95,8 +96,9 @@ test:
 	-@($(MAKE) test_spectrum2)
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
-	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)	
+	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
 	./Config.pl -noacc -double
+	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
 	-@($(MAKE) test_partsteady TESTDIR=run_test_partsteady)
@@ -342,6 +344,38 @@ test_fast_wave_check:
 		Param/SHOCKTUBE/TestOutput/fast_wave_ref.out \
 		> test_fast_wave.diff)
 	ls -l test_fast_wave.diff
+
+### 3D BX0 TEST ###
+
+test_bx0:
+	@echo "test_bx0_compile..." > test_bx0.diff
+	$(MAKE) test_bx0_compile
+	@echo "test_bx0_rundir..." >> test_bx0.diff
+	$(MAKE) test_bx0_rundir
+	@echo "test_bx0_run..." >> test_bx0.diff
+	$(MAKE) test_bx0_run NP=1
+	@echo "test_bx0_check..." >> test_bx0.diff
+	$(MAKE) test_bx0_check
+
+test_bx0_compile:
+	./Config.pl -noopenmp -single -u=Waves -e=Mhd -g=10,10,10
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_bx0_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.bx0 PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_bx0_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+
+test_bx0_check:
+	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
+		${TESTDIR}/RESULT/GM/bx0*_n00000001.out \
+		Param/SHOCKTUBE/TestOutput/bx0_ref.out \
+		> test_bx0.diff)
+	ls -l test_bx0.diff
 
 ### PART STEADY TEST ###
 

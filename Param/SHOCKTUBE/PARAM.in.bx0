@@ -1,0 +1,124 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRID
+5			nRootBlock1
+5			nRootBlock2
+5			nRootBlock3
+-40			xMin
+ 40      		xMax
+-40			yMin
+ 40			yMax
+-40			zMin
+ 40			zMax
+
+#GRIDBLOCKALL
+130			MaxBlock
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.0			StateVar p
+
+#USERINPUTBEGIN -----------------------------------
+
+#WAVE
+1			Rho_
+1000.0			Width
+0.1			Amplitude (rho1/rho0)*b0
+20.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+90.0			Phase
+
+#WAVE
+5			Bx_
+1000.0			Width
+0.2			Amplitude (rho1/rho0)*b0
+40.0			LambdaX
+-1.0			LambdaY
+20.0			LambdaZ
+25.123			Phase
+
+#WAVE
+7			Bz_
+1000.0			Width
+-0.1			Amplitude (rho1/rho0)*b0
+40.0			LambdaX
+-1.0			LambdaY
+20.0			LambdaZ
+25.123			Phase
+
+#USERINPUTEND -------------------------------------
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#TIMESTEPPING
+1			nStage
+0.8			CflExpl
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.5			DtFixedDim [sec] (read if UseDtFixed is true)
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+100			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+x=0 mhd idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+y=0 mhd idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
+10			DnSavePlot
+-1.			DtSavePlot
+-50.			Coord1MinCut
+50.			Coord1MaxCut
+-50.			Coord2MinCut
+50.			Coord2MaxCut
+-20.			Coord3MinCut
+20.			Coord3MaxCut
+-1                      DxSavePlot
+
+#STOP
+1			MaxIteration
+-20.0			tSimulationMax
