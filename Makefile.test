@@ -326,7 +326,7 @@ test_fast_wave:
 	$(MAKE) test_fast_wave_check
 
 test_fast_wave_compile:
-	./Config.pl -noopenmp -single ${OPENACC} -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -noopenmp ${OPENACC} -single -u=Waves -e=Mhd -g=10,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -358,7 +358,7 @@ test_bx0:
 	$(MAKE) test_bx0_check
 
 test_bx0_compile:
-	./Config.pl -noopenmp -single -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -noopenmp -u=Waves -e=Mhd -g=10,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
