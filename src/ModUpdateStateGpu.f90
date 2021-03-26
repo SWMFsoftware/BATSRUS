@@ -28,6 +28,8 @@ contains
     logical:: DoTestCell
     integer:: i, j, k
 
+    real :: Change_V(nFlux), DtPerDv
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
@@ -35,31 +37,45 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 #endif
 
-    !$acc loop vector collapse(3)
+    !$acc loop vector collapse(3) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        StateOld_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
 !!!       EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
     end do; end do; end do
+
     
-    !$acc loop vector collapse(3)
+    !$acc loop vector collapse(3) private(DtPerDv, Change_V) independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
 #ifndef OPENACC
        DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
 #endif
 
-       call do_face(1, i, j, k, iBlock)
-       call do_face(2, i, j, k, iBlock)
+       ! Time step divided by cell volume
+!!!    DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+       DtPerDv = Dt/CellVolume_B(iBlock)
+
+       ! Initialize change in State_VGB
+       Change_V = 0.0
+
+       call do_face(1, i, j, k, iBlock, Change_V)
+       call do_face(2, i, j, k, iBlock, Change_V)
 
        if(nDim > 1)then
-          call do_face(3, i, j, k, iBlock)
-          call do_face(4, i, j, k, iBlock)
+          call do_face(3, i, j, k, iBlock, Change_V)
+          call do_face(4, i, j, k, iBlock, Change_V)
        end if
 
        if(nDim > 2)then
-          call do_face(5, i, j, k, iBlock)
-          call do_face(6, i, j, k, iBlock)
+          call do_face(5, i, j, k, iBlock, Change_V)
+          call do_face(6, i, j, k, iBlock, Change_V)
        end if
+
+       ! Update state
+       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+            + DtPerDv*Change_V(1:nVar)
+       Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+            + DtPerDv*Change_V(nVar+1)
 
        ! Calculate pressure from energy
        State_VGB(p_,i,j,k,iBlock) = &
@@ -81,16 +97,16 @@ contains
 
   end subroutine update_state_gpu
   !============================================================================
-  subroutine do_face(iFace, i, j, k, iBlock)
+  subroutine do_face(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
     integer, intent(in):: iFace, i, j, k, iBlock
+    real, intent(inout):: Change_V(nFlux)
 
     real :: Area, NormalX, NormalY, NormalZ, Un, Cmax
     real :: StateLeft_V(nVar), StateRight_V(nVar), State_V(nVar)
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux), Flux_V(nFlux)
-    real :: DtPerDv
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -165,15 +181,7 @@ contains
     Flux_V = Area*(0.5*(FluxLeft_V + FluxRight_V) &
          + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
 
-    ! Time step divided by cell volume
-!!!    DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-    DtPerDv = Dt/CellVolume_B(iBlock)
-
-    ! Update state
-    State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-         + DtPerDv*Flux_V(1:nVar)
-    Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-         + DtPerDv*Flux_V(nVar+1)
+    Change_V = Change_V + Flux_V
 
   end subroutine do_face
   !==========================================================================
