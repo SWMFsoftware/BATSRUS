@@ -659,6 +659,10 @@ contains
           end if
        end if
 #endif
+    else
+#ifndef OPENACC
+       if(UseB)call calc_divb(iBlock)
+#endif
     end if
 
 #ifndef OPENACC
