@@ -120,4 +120,4 @@ bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
 
 #STOP
 1			MaxIteration
--20.0			tSimulationMax
+-1.0			tSimulationMax
