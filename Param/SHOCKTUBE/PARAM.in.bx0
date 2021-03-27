@@ -1,5 +1,5 @@
 #DESCRIPTION
-Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
+Param/SHOCKTUBE/PARAM.in.bx0: test Bx=0 isosurface plot		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -84,7 +84,6 @@ T			UseDtFixed
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
-minmod			TypeLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
