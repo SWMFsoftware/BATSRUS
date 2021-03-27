@@ -18,7 +18,7 @@ module ModUpdateStateGpu
   implicit none
 
   logical:: DoTestCell= .false.
-  
+
 contains
   !============================================================================
   subroutine update_state_gpu(iBlock)
@@ -43,7 +43,6 @@ contains
 !!!       EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
     end do; end do; end do
 
-    
     !$acc loop vector collapse(3) private(DtPerDv, Change_V) independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -184,7 +183,7 @@ contains
     Change_V = Change_V + Flux_V
 
   end subroutine do_face
-  !==========================================================================
+  !============================================================================
   subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
        StateCons_V, Flux_V)
     !$acc routine seq
@@ -195,7 +194,7 @@ contains
     real, intent(out):: Flux_V(nFlux)      ! conservative flux
 
     real:: Rho, Ux, Uy, Uz, Bx, By, Bz, Hyp, p, e, Un, Bn, pB, pTot
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Rho = State_V(Rho_)
     Ux  = State_V(Ux_)
     Uy  = State_V(Uy_)
@@ -247,7 +246,7 @@ contains
          + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux
 
   end subroutine get_physical_flux
-  !==========================================================================
+  !============================================================================
   subroutine get_speed_max(State_V, NormalX, NormalY, NormalZ, Un, Cmax)
     !$acc routine seq
 
@@ -256,7 +255,7 @@ contains
 
     real:: InvRho, p, Bx, By, Bz, Bn, B2
     real:: Sound2, Alfven2, Alfven2Normal, Fast2, Discr, Fast
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     InvRho = 1.0/State_V(Rho_)
     Bx  = State_V(Bx_)
@@ -301,7 +300,7 @@ contains
 #endif
 
   end subroutine get_speed_max
-  !==========================================================================
+  !============================================================================
 
 end module ModUpdateStateGpu
 !==============================================================================

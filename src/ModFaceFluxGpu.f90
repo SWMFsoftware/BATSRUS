@@ -9,7 +9,7 @@ module ModFaceFluxGpu
   use ModAdvance, ONLY: nGang, nFlux, State_VGB, &
        Flux_VXI, VdtFace_XI, uDotArea_XII, &
        Flux_VYI, VdtFace_YI, uDotArea_YII, &
-       Flux_VZI, VdtFace_ZI, uDotArea_ZII   
+       Flux_VZI, VdtFace_ZI, uDotArea_ZII
   use ModPhysics, ONLY: Gamma, InvGammaMinus1
   use ModMain, ONLY: SpeedHyp
   use BATL_lib, ONLY: test_start, iTest, jTest, kTest, &
@@ -69,7 +69,7 @@ contains
        ! First order right state of primitive variables
        StateRight_V  = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
-       
+
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
@@ -179,7 +179,7 @@ contains
        ! First order right state of primitive variables
        StateRight_V  = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
-       
+
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 

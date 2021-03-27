@@ -10,7 +10,7 @@ module ModBuffer
   real              :: TimeSimulationLast = -1.0
   character (len=3) :: TypeCoordSource='???'
 end module ModBuffer
-!=============================================================================
+!==============================================================================
 subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   use ModBuffer
   use ModMain,       ONLY: TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
@@ -21,21 +21,21 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   use ModVarIndexes, ONLY: Ux_, Uz_, RhoUx_, RhoUz_, SignB_,  Rho_,&
        WaveFirst_, WaveLast_, Bx_, Bz_
   use ModCoordTransform, ONLY: xyz_to_sph
-  
+
   implicit none
-  
+
   integer,intent(in) :: nVar
   real,   intent(in) :: XyzTarget_D(MaxDim)
   real,   intent(out):: State_V(nVar)
-  
+
   real              :: Sph_D(MaxDim)
   real              :: Ewave
   real              :: XyzSource_D(MaxDim)
-  
-  !--------------------------------------------------------------------------
+
+  !----------------------------------------------------------------------------
   if(TypeCoordSource /= TypeCoordSystem) then
      ! Convert target coordinates to the coordiante system of the model
-     
+
      if(Time_Simulation > TimeSimulationLast)then
         SourceTarget_DD = transform_matrix(&
              Time_Simulation, TypeCoordSystem, TypeCoordSource)
@@ -45,11 +45,11 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   else
      XyzSource_D = XyzTarget_D
   end if
-  
+
   ! Convert to left handed spherical coordinates Sph_D=(/r,phi,theta/) !!!
   ! What a concept...
   call xyz_to_sph(XyzSource_D, Sph_D(1), Sph_D(3), Sph_D(2))
-  
+
   ! Get the target state from the spherical buffer grid
   call interpolate_from_global_buffer(Sph_D, nVar, State_V)
   ! Transform vector variables from SC to IH
@@ -71,7 +71,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
               State_V(WaveFirst_) = State_V(WaveLast_)
               State_V(WaveLast_) = Ewave
            end if
-           
+
            State_V(SignB_)=-1.0
         else
            State_V(SignB_)= 1.0
@@ -80,7 +80,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
         State_V(SignB_) = 0.0
      end if
   end if
-  
+
 end subroutine get_from_spher_buffer_grid
 !==============================================================================
 subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
@@ -93,43 +93,43 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   ! (but may have a different grid resolution).
   ! It is assumed that the buffer grid was filled with the state vector from
   ! the source component at some earlier stage.
-  
+
   ! INPUT:
   ! SphSource_D is associated with a point in the target component, and it
   ! is assumed that is was already converted to the source coordinate system.
-  
+
   ! nVar is the number of state variables used in coupling the two components.
-  
+
   ! Implicit inputs to this subroutine are the buffer grid size, points
   ! and the state vector at each point (USEd from BATSRUS).
-  
+
   ! OUTPUT:
   ! Buffer_V is the state vector resulting from the interpolation.
-  
+
   use ModInterpolate, ONLY: trilinear
   use ModMain,        ONLY: BufferState_VG, BufferMin_D,&
        nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D
   implicit none
-  
+
   ! Input and output variables
   real,intent(in)    :: SphSource_D(3)
   integer,intent(in) :: nVar
   real,intent(out)   :: Buffer_V(nVar)
-  
+
   real    :: NormSph_D(3)
   ! logical :: DoTest, DoTestMe
-  
+
   !  call CON_set_do_test(NameSub,DoTest, DoTestMe)
-  
+
   ! Convert to normalized coordinates.
   ! Radial is node centered, theta and phi are cell centered.
   character(len=*), parameter:: NameSub = 'interpolate_from_global_buffer'
   !----------------------------------------------------------------------------
   NormSph_D = (SphSource_D - BufferMin_D)/dSphBuff_D + [ 1.0, 0.5, 0.5 ]
-  
+
   Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,0, nPhiBuff+1, &
        0, nThetaBuff+1, NormSph_D, DoExtrapolate=.true.)
-  
+
 end subroutine interpolate_from_global_buffer
 !==============================================================================
 subroutine plot_buffer(iFile)
@@ -148,9 +148,9 @@ subroutine plot_buffer(iFile)
   use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitP_, UnitX_,&
        UnitEnergyDens_
   use BATL_lib,     ONLY: iProc
-  
+
   implicit none
-  
+
   integer, intent(in)::iFile
   integer:: iTimePlot_I(7), iR, iPhi, iTheta
   real   :: R, Theta, Phi, CosTheta, SinTheta
@@ -158,7 +158,7 @@ subroutine plot_buffer(iFile)
   character(LEN=30)::NameFile
   !----------------------------------------------------------------------------
   if(iProc/=0)RETURN ! May be improved.
-  
+
   allocate(State_VII(3 + nVar, 0:nPhiBuff, 0:nThetaBuff))
   allocate(Coord_DII(2, 0:nPhiBuff, 0:nThetaBuff))
   call time_real_to_int(StartTime + Time_Simulation, iTimePlot_I)
@@ -181,7 +181,7 @@ subroutine plot_buffer(iFile)
            call get_from_spher_buffer_grid(&
                 State_VII(x_:z_,iPhi,iTheta), nVar,&
                 State_VII(z_+1:z_+nVar,iPhi,iTheta))
-           
+
         end do
      end do
      ! Convert from normalized units to SI
@@ -191,26 +191,26 @@ subroutine plot_buffer(iFile)
           No2Si_V(UnitU_)
      State_VII(z_+Bx_:z_+Bz_,:,:)   = State_VII(z_+Bx_:z_+Bz_,:,:)*&
           No2Si_V(UnitB_)
-     
+
      if(WaveFirst_ > 1)State_VII(z_+WaveFirst_:z_+WaveLast_,:,:) = &
           State_VII(z_+WaveFirst_:z_+WaveLast_,:,:)* &
           No2Si_V(UnitEnergyDens_)
-     
+
      if(ChargeStateFirst_ > 1)&
           State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:) = &
           State_VII(z_+ChargeStateFirst_:z_+ChargeStateLast_,:,:)* &
           No2Si_V(UnitRho_)
-     
+
      State_VII(z_+p_,:,:)  = State_VII(z_+p_,:,:)*No2Si_V(UnitP_)
      if(UseElectronPressure)State_VII(z_+Pe_,:,:)  = &
           State_VII(z_+Pe_,:,:)*No2Si_V(UnitP_)
-     
+
      if(UseAnisoPressure)State_VII(z_+Ppar_,:,:)  = &
           State_VII(z_+Ppar_,:,:)*No2Si_V(UnitP_)
-     
+
      if(Ehot_>1)State_VII(z_+Ehot_,:,:) = &
           State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
-     
+
      call save_plot_file(NameFile,&
           StringHeaderIn=&
           'SC-IH interface, longitude and latitude are in deg, other in SI',&
@@ -222,6 +222,6 @@ subroutine plot_buffer(iFile)
           CoordIn_DII=Coord_DII, &
           VarIn_VII=State_VII)
   end do
-  
+
 end subroutine plot_buffer
 !==============================================================================
