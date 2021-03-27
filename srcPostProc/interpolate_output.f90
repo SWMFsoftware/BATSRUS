@@ -345,8 +345,10 @@ contains
 
     ! Read the whole file through to get the number of snapshots
     nSnapshot = 1
-    if(IsTrajectory .and. TrajTime_I(1) /= 0)then
-       nSnapshot = 0  ! matching times require one fewer snapshots
+    if(IsTrajectory)then
+       ! matching times require one fewer snapshots
+       ! This does not look like a general solution (Gabor)
+       if(TrajTime_I(1) /= 0) nSnapshot = 0
     end if
     do
        call read_plot_file( &
