@@ -15,7 +15,7 @@ NONE			TypeNormalization
 5			nRootBlock2
 5			nRootBlock3
 -40			xMin
- 40      		xMax
+ 40			xMax
 -40			yMin
  40			yMax
 -40			zMin
@@ -107,16 +107,16 @@ y=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 0.0			DxSavePlot
-bx0 MHD idl_ascii	StringPlot ! bx=0(on z) isosurface plot with MHD data
+bx0 MHD idl_ascii		StringPlot ! bx=0(on z) isosurface plot with MHD data
 10			DnSavePlot
 -1.			DtSavePlot
--50.			Coord1MinCut
-50.			Coord1MaxCut
--50.			Coord2MinCut
-50.			Coord2MaxCut
--20.			Coord3MinCut
-20.			Coord3MaxCut
--1                      DxSavePlot
+-50.			xMinCut
+50.			xMaxCut
+-50.			yMinCut
+50.			yMaxCut
+-20.			zMinCut
+20.			zMaxCut
+-1			DxSavePlot
 
 #STOP
 1			MaxIteration
