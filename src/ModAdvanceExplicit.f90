@@ -129,106 +129,102 @@ contains
 
        endif
 
-       ! Multi-block solution update.
-       !$acc parallel
-       !$acc loop gang
-       !$omp parallel do
-       do iBlock = 1,nBlock
+       if(index(StringTest,'GPUFLUX')>0)then
+          call update_state_gpu
+       else
+          ! Multi-block solution update.
+          !acc parallel
+          !acc loop gang
+          !$omp parallel do
+          do iBlock = 1,nBlock
 
-          if(Unused_B(iBlock)) CYCLE
+             if(Unused_B(iBlock)) CYCLE
 
-#ifndef OPENACC
-          if(index(StringTest,'GPUFLUX')>0)then
-#endif
-             call update_state_gpu(iBlock)
-             CYCLE
-#ifndef OPENACC
-          end if
+             ! Calculate interface values for L/R states of each face
+             ! and apply BCs for interface states as needed.
+             call set_b0_face(iBlock)
 
-          ! Calculate interface values for L/R states of each face
-          ! and apply BCs for interface states as needed.
-          call set_b0_face(iBlock)
+             if(DoInterpolateFlux)then
+                call timing_start('calc_fluxes')
+                call calc_cell_flux(iBlock)
+                call timing_stop('calc_fluxes')
+             end if
 
-          if(DoInterpolateFlux)then
-             call timing_start('calc_fluxes')
-             call calc_cell_flux(iBlock)
-             call timing_stop('calc_fluxes')
-          end if
+             call timing_start('calc_facevalues')
+             call calc_face_value(iBlock, DoResChangeOnly=.false., &
+                  DoMonotoneRestrict=.true.)
+             call timing_stop('calc_facevalues')
+             if(body_BLK(iBlock)) &
+                  call set_face_boundary(iBlock, Time_Simulation,.false.)
 
-          call timing_start('calc_facevalues')
-          call calc_face_value(iBlock, DoResChangeOnly=.false., &
-               DoMonotoneRestrict=.true.)
-          call timing_stop('calc_facevalues')
-          if(body_BLK(iBlock)) &
-               call set_face_boundary(iBlock, Time_Simulation,.false.)
+             if(.not.DoInterpolateFlux)then
+                ! Compute interface fluxes for each cell.
+                call timing_start('calc_fluxes')
+                call calc_face_flux(.false., iBlock)
+                call timing_stop('calc_fluxes')
+             end if
 
-          if(.not.DoInterpolateFlux)then
-             ! Compute interface fluxes for each cell.
-             call timing_start('calc_fluxes')
-             call calc_face_flux(.false., iBlock)
-             call timing_stop('calc_fluxes')
-          end if
+             ! Enforce flux conservation by applying corrected fluxes
+             ! to each coarse grid cell face at block edges with
+             ! resolution changes.
+             if(DoConserveFlux) call apply_cons_flux(iBlock)
 
-          ! Enforce flux conservation by applying corrected fluxes
-          ! to each coarse grid cell face at block edges with
-          ! resolution changes.
-          if(DoConserveFlux) call apply_cons_flux(iBlock)
+             ! Compute source terms for each cell.
+             call timing_start('calc_sources')
+             call calc_source(iBlock)
+             call timing_stop('calc_sources')
 
-          ! Compute source terms for each cell.
-          call timing_start('calc_sources')
-          call calc_source(iBlock)
-          call timing_stop('calc_sources')
+             ! With known magnetic field and electric field in the
+             ! comoving frame update ion velocities at the half time-step
+             if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
+             ! Electric field in the comoving frame is calculated
+             ! and, probably used, in calc_sorces. Add -UxB, to get field
+             ! in the global coordinate frame
+             if(UseChargedParticles.and.UseMhdMomentumFlux)&
+                  call correct_efield_block(iBlock)
+             ! In the course of second stage in the FLIC scheme nothing
+             ! is updated instead of the (multi)ion currents, which are
+             ! updated by advance_ion_current.
+             if(UseFlic.and.iStage==2)CYCLE
+             ! Calculate time step (both local and global
+             ! for the block) used in multi-stage update
+             ! for steady state calculations.
+             ! Also calculate time step when UseDtLimit is true.
+             if((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
+                  .and. DoCalcTimestep) call calc_timestep(iBlock)
 
-          ! With known magnetic field and electric field in the
-          ! comoving frame update ion velocities at the half time-step
-          if(UseFlic.and.iStage>=2)call advance_ion_current(iBlock)
-          ! Electric field in the comoving frame is calculated
-          ! and, probably used, in calc_sorces. Add -UxB, to get field
-          ! in the global coordinate frame
-          if(UseChargedParticles.and.UseMhdMomentumFlux)&
-               call correct_efield_block(iBlock)
-          ! In the course of second stage in the FLIC scheme nothing
-          ! is updated instead of the (multi)ion currents, which are
-          ! updated by advance_ion_current.
-          if(UseFlic.and.iStage==2)CYCLE
-          ! Calculate time step (both local and global
-          ! for the block) used in multi-stage update
-          ! for steady state calculations.
-          ! Also calculate time step when UseDtLimit is true.
-          if((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
-               .and. DoCalcTimestep) call calc_timestep(iBlock)
+             ! Update solution state in each cell.
+             call timing_start('update_state')
+             call update_state(iBlock)
+             call timing_stop('update_state')
 
-          ! Update solution state in each cell.
-          call timing_start('update_state')
-          call update_state(iBlock)
-          call timing_stop('update_state')
+             if(DoCalcElectricField .and. iStage == nStage) &
+                  call get_num_electric_field(iBlock)
 
-          if(DoCalcElectricField .and. iStage == nStage) &
-               call get_num_electric_field(iBlock)
+             if(UseConstrainB .and. iStage == nStage)then
+                call timing_start('constrain_B')
+                call get_VxB(iBlock)
+                call bound_VxB(iBlock)
+                call timing_stop('constrain_B')
+             end if
 
-          if(UseConstrainB .and. iStage == nStage)then
-             call timing_start('constrain_B')
-             call get_VxB(iBlock)
-             call bound_VxB(iBlock)
-             call timing_stop('constrain_B')
-          end if
+             ! Calculate time step (both local and global
+             ! for the block) used in multi-stage update
+             ! for time accurate calculations.
+             ! For time accurate with UseDtLimit, do not
+             ! calculate time step.
+             if(time_accurate .and. .not.UseDtLimit .and. &
+                  iStage == nStage .and. DoCalcTimestep) &
+                  call calc_timestep(iBlock)
 
-          ! Calculate time step (both local and global
-          ! for the block) used in multi-stage update
-          ! for time accurate calculations.
-          ! For time accurate with UseDtLimit, do not
-          ! calculate time step.
-          if(time_accurate .and. .not.UseDtLimit .and. &
-               iStage == nStage .and. DoCalcTimestep) &
-               call calc_timestep(iBlock)
+             ! At this point the user has surely set all "block data"
+             ! NOTE: The user has the option of calling set_block_data directly.
+             call set_block_data(iBlock)
 
-          ! At this point the user has surely set all "block data"
-          ! NOTE: The user has the option of calling set_block_data directly.
-          call set_block_data(iBlock)
-#endif
-       end do ! Multi-block solution update loop.
-       !$omp end parallel do
-       !$acc end  parallel
+          end do ! Multi-block solution update loop.
+          !$omp end parallel do
+          !acc end parallel
+       end if
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
 
