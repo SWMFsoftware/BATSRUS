@@ -20,14 +20,6 @@ NONE			TypeNormalization
 1			nK
 1			MinBlockAll
 
-#UPDATECHECK
-F			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
-
 #GRID
 1			nRootBlock1
 1			nRootBlock2
@@ -44,15 +36,9 @@ Brio-Wu MHD shock tube problem rotated around Z axis
 2.0			Gamma
 
 #HYPERBOLICDIVB
-T			UseHyperbolicDivb
+F			UseHyperbolicDivb
 4.0			SpeedHypDim
 0.1			HypDecay
-
-#DIVB
-F			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
 
 #SHOCKTUBE
 1.			LeftState  Rho
