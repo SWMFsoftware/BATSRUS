@@ -133,8 +133,8 @@ contains
           call update_state_gpu
        else
           ! Multi-block solution update.
-          !acc parallel
-          !acc loop gang
+          ! acc parallel
+          ! acc loop gang
           !$omp parallel do
           do iBlock = 1,nBlock
 
@@ -223,7 +223,7 @@ contains
 
           end do ! Multi-block solution update loop.
           !$omp end parallel do
-          !acc end parallel
+          ! acc end parallel
        end if
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
