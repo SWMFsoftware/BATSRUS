@@ -143,22 +143,22 @@ F			UseConstrainB
 T			UseStrict
 
 #SAVELOGFILE
-F			DoSaveLogfile
+T			DoSaveLogfile
 raw			StringLog
-100			DnSaveLogfile
--1.			DtSaveLogfile
+-1			DnSaveLogfile
+100.0			DtSaveLogfile
 
 #SAVERESTART
 F			DoSaveRestart
 
-#SAVEINITIAL
+SAVEINITIAL
 T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
 z=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
-50.0			DtSavePlot
+100.0			DtSavePlot
 0.0			DxSavePlot
 
 #STOP
