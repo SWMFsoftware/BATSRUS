@@ -7,10 +7,10 @@ module ModUpdateStateGpu
   use ModVarIndexes
   use ModFaceFlux, ONLY: print_face_values
   use ModMain, ONLY: iStage, Cfl, Dt
-  use ModAdvance, ONLY: nFlux, StateOld_VGB, State_VGB, Energy_GBI
+  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI
 !!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_, CellVolume_B, CellFace_DB, &
+       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
   use ModMain, ONLY: SpeedHyp
@@ -21,14 +21,13 @@ module ModUpdateStateGpu
 
 contains
   !============================================================================
-  subroutine update_state_gpu(iBlock)
-    !$acc routine vector
-    integer, intent(in):: iBlock
+  subroutine update_state_gpu
 
     logical:: DoTestCell
-    integer:: i, j, k
+    integer:: i, j, k, iBlock
 
-    real :: Change_V(nFlux), DtPerDv
+    real:: Change_V(nFlux), Change_VC(nFlux,nI,nJ,nK), DtPerDv
+    !$acc declare create (Change_V, Change_VC, DtPerDv)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
@@ -37,58 +36,67 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 #endif
 
-    !$acc loop vector collapse(3) independent
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       StateOld_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
-!!!       EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
-    end do; end do; end do
+    !$acc parallel
+    !$acc loop gang private(Change_VC) independent
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
 
-    !$acc loop vector collapse(3) private(DtPerDv, Change_V) independent
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       !$acc loop vector collapse(3) private(Change_V) independent
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
 #ifndef OPENACC
-       DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 #endif
 
-       ! Time step divided by cell volume
-!!!    DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-       DtPerDv = Dt/CellVolume_B(iBlock)
+          ! Initialize change in State_VGB
+          Change_V = 0.0
 
-       ! Initialize change in State_VGB
-       Change_V = 0.0
+          call do_face(1, i, j, k, iBlock, Change_V)
+          call do_face(2, i, j, k, iBlock, Change_V)
 
-       call do_face(1, i, j, k, iBlock, Change_V)
-       call do_face(2, i, j, k, iBlock, Change_V)
+          if(nDim > 1)then
+             call do_face(3, i, j, k, iBlock, Change_V)
+             call do_face(4, i, j, k, iBlock, Change_V)
+          end if
 
-       if(nDim > 1)then
-          call do_face(3, i, j, k, iBlock, Change_V)
-          call do_face(4, i, j, k, iBlock, Change_V)
-       end if
+          if(nDim > 2)then
+             call do_face(5, i, j, k, iBlock, Change_V)
+             call do_face(6, i, j, k, iBlock, Change_V)
+          end if
 
-       if(nDim > 2)then
-          call do_face(5, i, j, k, iBlock, Change_V)
-          call do_face(6, i, j, k, iBlock, Change_V)
-       end if
+          Change_VC(:,i,j,k) = Change_V
 
-       ! Update state
-       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-            + DtPerDv*Change_V(1:nVar)
-       Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-            + DtPerDv*Change_V(nVar+1)
+       enddo; enddo; enddo
 
-       ! Calculate pressure from energy
-       State_VGB(p_,i,j,k,iBlock) = &
-            GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
-            0.5*( &
-            ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
-            )/State_VGB(Rho_,i,j,k,iBlock)      &
-            + State_VGB(Bx_,i,j,k,iBlock)**2    &
-            + State_VGB(By_,i,j,k,iBlock)**2    &
-            + State_VGB(Bz_,i,j,k,iBlock)**2    &
-            )          )
-    enddo; enddo; enddo
+       !$acc loop vector collapse(3) private(DtPerDv) independent
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          ! Time step divided by cell volume
+!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+          DtPerDv = Dt/CellVolume_B(iBlock)
+
+          ! Update state
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+               + DtPerDv*Change_VC(1:nVar,i,j,k)
+          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+               + DtPerDv*Change_VC(nVar+1,i,j,k)
+
+          ! Calculate pressure from energy
+          State_VGB(p_,i,j,k,iBlock) = &
+               GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
+               0.5*( &
+               ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
+               + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
+               + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
+               )/State_VGB(Rho_,i,j,k,iBlock)      &
+               + State_VGB(Bx_,i,j,k,iBlock)**2    &
+               + State_VGB(By_,i,j,k,iBlock)**2    &
+               + State_VGB(Bz_,i,j,k,iBlock)**2    &
+               )          )
+       enddo; enddo; enddo
+
+    end do
+    !$acc end parallel
 
 #ifndef OPENACC
     call test_stop(NameSub, DoTest, iBlock)
@@ -113,45 +121,45 @@ contains
        NormalX = 1.0
        NormalY = 0.0
        NormalZ = 0.0
-       StateLeft_V           = StateOld_VGB(:,i-1,j,k,iBlock)
+       StateLeft_V           = State_VGB(:,i-1,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i,j,k,iBlock)
+       StateRight_V          = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(2)
        Area = -CellFace_DB(x_,iBlock)
        NormalX = 1.0
        NormalY = 0.0
        NormalZ = 0.0
-       StateLeft_V           = StateOld_VGB(:,i,j,k,iBlock)
+       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i+1,j,k,iBlock)
+       StateRight_V          = State_VGB(:,i+1,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(3)
        Area = CellFace_DB(y_,iBlock)
        NormalX = 0.0
        NormalY = 1.0
        NormalZ = 0.0
-       StateLeft_V           = StateOld_VGB(:,i,j-1,k,iBlock)
+       StateLeft_V           = State_VGB(:,i,j-1,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i,j,k,iBlock)
+       StateRight_V          = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(4)
        Area = -CellFace_DB(y_,iBlock)
        NormalX = 0.0
        NormalY = 1.0
        NormalZ = 0.0
-       StateLeft_V           = StateOld_VGB(:,i,j,k,iBlock)
+       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i,j+1,k,iBlock)
+       StateRight_V          = State_VGB(:,i,j+1,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(5)
        Area = CellFace_DB(z_,iBlock)
        NormalX = 0.0
        NormalY = 0.0
        NormalZ = 1.0
-       StateLeft_V           = StateOld_VGB(:,i,j,k-1,iBlock)
+       StateLeft_V           = State_VGB(:,i,j,k-1,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i,j,k,iBlock)
+       StateRight_V          = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(6)
        Area = -CellFace_DB(z_,iBlock)
@@ -159,9 +167,9 @@ contains
        NormalY = 0.0
        NormalZ = 1.0
        ! This could be call get_face(iFace,i,j,k)
-       StateLeft_V           = StateOld_VGB(:,i,j,k,iBlock)
+       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = StateOld_VGB(:,i,j,k+1,iBlock)
+       StateRight_V          = State_VGB(:,i,j,k+1,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     end select
 
