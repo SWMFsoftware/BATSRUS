@@ -136,7 +136,7 @@ contains
        do iBlock = 1,nBlock
 
           if(Unused_B(iBlock)) CYCLE
-          
+
 #ifndef OPENACC
           if(index(StringTest,'GPUFLUX')>0)then
 #endif
@@ -144,7 +144,7 @@ contains
              CYCLE
 #ifndef OPENACC
           end if
-             
+
           ! Calculate interface values for L/R states of each face
           ! and apply BCs for interface states as needed.
           call set_b0_face(iBlock)
