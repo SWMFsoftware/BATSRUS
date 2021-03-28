@@ -261,7 +261,7 @@ test_shocktube_1d:
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
-	./Config.pl -noopenmp ${OPENACC} -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
+	./Config.pl -noopenmp ${OPENACC} -double -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
 	$(MAKE) BATSRUS
 	make PIDL
 
