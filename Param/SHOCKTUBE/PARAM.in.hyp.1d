@@ -31,7 +31,6 @@ NONE			TypeNormalization
 -0.125			zMin
  0.125			zMax
 
-Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
 2.0			Gamma
 
@@ -60,14 +59,9 @@ F			UseHyperbolicDivb
 0.0			RightState Hyp
 0.1			RightState p
 
-Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
 float			TypeBc1
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
 
 #TIMESTEPPING
 1			nStage
@@ -80,11 +74,9 @@ T			UseDtFixed
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
-minmod			TypeLimiter
-
 
 #SAVELOGFILE
-F			DoSaveLogfile
+T			DoSaveLogfile
 raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
@@ -94,7 +86,6 @@ F			DoSaveRestart
 
 #PLOTFILENAME
 second			NameMaxTimeUnit
-
 
 #SAVEPLOT
 1			nPlotFile
