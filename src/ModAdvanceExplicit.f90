@@ -43,7 +43,7 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
-    use ModUpdateStateGpu, ONLY: update_state_gpu
+    use ModUpdateStateGpu, ONLY: update_state_gpu, update_state_gpu_v1
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
@@ -129,7 +129,9 @@ contains
 
        endif
 
-       if(index(StringTest,'GPUFLUX')>0)then
+       if(index(StringTest,'GPUFLUXV1')>0)then
+          call update_state_gpu_v1
+       elseif(index(StringTest,'GPUFLUX')>0)then
           call update_state_gpu
        else
           ! Multi-block solution update.
