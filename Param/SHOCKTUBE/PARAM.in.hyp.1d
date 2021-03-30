@@ -1,6 +1,6 @@
 Comment this out to run with regular ModFaceFlux
 #TEST
-GPUFLUX			StringTest
+FASTUPDATE		StringTest
 
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.hyp.1d: 1D shocktube with a single block		StringDescription

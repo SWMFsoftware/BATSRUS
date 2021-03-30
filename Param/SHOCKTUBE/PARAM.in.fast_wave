@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #TEST
-GPUFLUX			StringTest
+FASTUPDATE		StringTest
 
 #PLANET
 NONE			NamePlanet
