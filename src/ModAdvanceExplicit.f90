@@ -19,10 +19,8 @@ contains
 
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
-!!!    use ModFaceFluxGpu, ONLY: calc_face_flux_gpu
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue
-!!!    use ModFaceValueGpu, ONLY: calc_face_value_gpu
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
          DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
@@ -43,8 +41,8 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
-    use ModUpdateStateGpu, ONLY: update_state_gpu, update_state_gpu_v1
     use ModUpdateState, ONLY: update_check, update_state
+    use ModUpdateStateFast
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field, correct_efield_block
@@ -129,10 +127,12 @@ contains
 
        endif
 
-       if(index(StringTest,'GPUFLUXV1')>0)then
-          call update_state_gpu_v1
-       elseif(index(StringTest,'GPUFLUX')>0)then
-          call update_state_gpu
+       if(index(StringTest,'FASTUPDATE')>0)then
+          call update_state_fast ! optimal for both
+#ifndef OPENACC
+       elseif(index(StringTest,'GPUUPDATE')>0)then
+          call update_state_gpu  ! optimal for GPU
+#endif
        else
           ! Multi-block solution update.
           ! acc parallel

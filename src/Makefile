@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL =/bin/sh
@@ -45,7 +46,6 @@ OBJECTS = \
 	ModExtraVariables.o \
 	ModFaceBoundary.o \
 	ModFaceFlux.o \
-	ModFaceFluxGpu.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
 	ModFieldLineThread.o \
@@ -105,7 +105,7 @@ OBJECTS = \
 	ModViscosity.o \
 	ModWaves.o \
 	ModWriteTecplot.o \
-	ModUpdateStateGpu.o \
+	ModUpdateStateFast.o \
 	ModUpdateState.o \
 	ModWriteLogSatFile.o \
 	ModWritePlot.o \
