@@ -9,11 +9,13 @@ module ModUpdateStateGpu
   use ModMain, ONLY: iStage, Cfl, Dt
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI
 !!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
-  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
+  use BATL_lib, ONLY: nDim, nI, nJ, nK, &
+       nBlock, Unused_B, x_, y_, z_, IsCartesianGrid, &
+       CellVolume_B, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
   use ModMain, ONLY: SpeedHyp
+  use ModNumConst, ONLY: cUnit_DD
 
   implicit none
 
@@ -146,20 +148,9 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
     !--------------------------------------
-    ! if(IsCartesianGrid)then
-    Area = CellFace_DB(x_,iBlock)
-    NormalX = 1.0
-    NormalY = 0.0
-    NormalZ = 0.0
-    ! end if
+    call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
-    ! First order left state of primitive variables
-    StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
-    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-
-    ! First order right state of primitive variables
-    StateRight_V  = State_VGB(:,i,j,k,iBlock)
-    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+    call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     ! average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
@@ -188,13 +179,8 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
     !--------------------------------------
-    ! if(IsCartesianGrid)then
-    Area = CellFace_DB(y_,iBlock)
-    NormalX = 0.0
-    NormalY = 1.0
-    NormalZ = 0.0
-    ! end if
-
+    call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    
     ! First order left state of primitive variables
     StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
     StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
@@ -230,12 +216,7 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
     !--------------------------------------
-    ! if(IsCartesianGrid)then
-    Area = CellFace_DB(z_,iBlock)
-    NormalX = 0.0
-    NormalY = 0.0
-    NormalZ = 1.0
-    ! end if
+    call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     ! First order left state of primitive variables
     StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
@@ -369,55 +350,40 @@ contains
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
-       Area = CellFace_DB(x_,iBlock)
-       NormalX = 1.0
-       NormalY = 0.0
-       NormalZ = 0.0
-       StateLeft_V           = State_VGB(:,i-1,j,k,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i,j,k,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
+       call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
-       Area = -CellFace_DB(x_,iBlock)
-       NormalX = 1.0
-       NormalY = 0.0
-       NormalZ = 0.0
-       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i+1,j,k,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_normal(1, i+1, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+
+       call get_face_x(i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
-       Area = CellFace_DB(y_,iBlock)
-       NormalX = 0.0
-       NormalY = 1.0
-       NormalZ = 0.0
+       call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
        StateLeft_V           = State_VGB(:,i,j-1,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
        StateRight_V          = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(4)
-       Area = -CellFace_DB(y_,iBlock)
-       NormalX = 0.0
-       NormalY = 1.0
-       NormalZ = 0.0
+       call get_normal(2, i, j+1, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+
        StateLeft_V           = State_VGB(:,i,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
        StateRight_V          = State_VGB(:,i,j+1,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(5)
-       Area = CellFace_DB(z_,iBlock)
-       NormalX = 0.0
-       NormalY = 0.0
-       NormalZ = 1.0
+       call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
        StateLeft_V           = State_VGB(:,i,j,k-1,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
        StateRight_V          = State_VGB(:,i,j,k,iBlock)
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     case(6)
-       Area = -CellFace_DB(z_,iBlock)
-       NormalX = 0.0
-       NormalY = 0.0
-       NormalZ = 1.0
+       call get_normal(3, i, j, k+1, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+
        ! This could be call get_face(iFace,i,j,k)
        StateLeft_V           = State_VGB(:,i,j,k,iBlock)
        StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
@@ -560,6 +526,77 @@ contains
 #endif
 
   end subroutine get_speed_max
+  !============================================================================
+  subroutine get_normal(iDir, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    !$acc routine seq
+    integer, intent(in) :: i, j, k, iBlock, iDir
+    real,    intent(out):: NormalX, NormalY, NormalZ, Area
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid)then
+       Area = CellFace_DB(iDir,iBlock)
+       NormalX = cUnit_DD(iDir,1)
+       NormalY = cUnit_DD(iDir,2)
+       NormalZ = cUnit_DD(iDir,3)
+    else
+       Area = CellFace_DFB(iDir,i,j,k,iBlock)
+       if(Area == 0.0)then
+          NormalX = 1.0; NormalY = 0.0; NormalZ = 0.0
+          RETURN
+       end if
+       NormalX = FaceNormal_DDFB(1,1,i,j,k,iBlock)/Area
+       NormalY = FaceNormal_DDFB(2,1,i,j,k,iBlock)/Area
+       NormalZ = FaceNormal_DDFB(3,1,i,j,k,iBlock)/Area
+    end if
+    
+  end subroutine get_normal
+  !============================================================================
+  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    !-------------------------------------------------------------------------
+    ! First order left state of primitive variables
+    StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
+    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+    ! First order right state of primitive variables
+    StateRight_V  = State_VGB(:,i,j,k,iBlock)
+    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+    
+  end subroutine get_face_x
+  !============================================================================
+  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    !-------------------------------------------------------------------------
+    ! First order left state of primitive variables
+    StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
+    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+    ! First order right state of primitive variables
+    StateRight_V  = State_VGB(:,i,j,k,iBlock)
+    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+
+  end subroutine get_face_y
+  !============================================================================
+  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    !-------------------------------------------------------------------------
+    ! First order left state of primitive variables
+    StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
+    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
+
+    ! First order right state of primitive variables
+    StateRight_V  = State_VGB(:,i,j,k,iBlock)
+    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+
+  end subroutine get_face_z
   !============================================================================
 
 end module ModUpdateStateGpu
