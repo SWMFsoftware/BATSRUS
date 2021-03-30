@@ -544,7 +544,7 @@ contains
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
     if(time_accurate .and. &
          Time_Simulation < TimeSimulationLimit .and. &
-         TimeSimulationLimit - Time_Simulation <= 1e-6*Dt*No2Si_V(UnitT_))then
+         TimeSimulationLimit - Time_Simulation <= 1e-3*Dt*No2Si_V(UnitT_))then
 
        if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
