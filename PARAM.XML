@@ -1593,13 +1593,13 @@ The default value corresponding to reflection is shown above.
 
 <command name="BUFFERGRID">
 	 <parameter name="nRBuff" type="integer" min="2" default="2" />
-	 <parameter name="nPhiBuff" type="integer" min="2" default="90" />
-	 <parameter name="nThetaBuff" type="integer" min="2" default="45" />
+	 <parameter name="nLonBuff" type="integer" min="2" default="90" />
+	 <parameter name="nLatBuff" type="integer" min="2" default="45" />
 	 <parameter name="rBuffMin" type="real" min="1" default="19" />
 	 <parameter name="rBuffMax" type="real" min="$rBuffMin" default="21" />
-	 <parameter name="PhiBuffMin" type="real" min="0" max="360"
+	 <parameter name="LonBuffMin" type="real" min="0" max="360"
 	 	    		      		  	   default="0" />
-	 <parameter name="PhiBuffMax" type="real" min="$PhiBuffMin" max="360"
+	 <parameter name="LonBuffMax" type="real" min="$PhiBuffMin" max="360"
 	 	    		      		  	   default="360" />
 	 <parameter name="LatBuffMin" type="real" min="-90" max="90"
 	 	    		      		  	   default="-90" />
@@ -1608,12 +1608,12 @@ The default value corresponding to reflection is shown above.
 
 #BUFFERGRID
 2	nRBuff
-90	nPhiBuff
-45	nThetaBuff
+90	nLonBuff
+45	nLatBuff
 19.0	rBuffMin
 21	rBuffMax
-0.0	PhiBuffMin
-360.0	PhiBuffMax
+0.0	LonBuffMin
+360.0	LonBuffMax
 -90.0	LatBuffMin
 90.0	LatBuffMax
 
@@ -10121,13 +10121,13 @@ Default value is HelioDipoleStrength = 0.0.
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp =~ /IH|OH/">
 	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
 	<parameter name="rBuffMax"   type="real" min="1" default="21"/>
-	<parameter name="nThetaBuff" type="integer" min="18" default="45"/>
-	<parameter name="nPhiBuff"   type="integer" min="36" default="90"/>
+	<parameter name="nLonBuff" type="integer" min="36" default="90"/>
+	<parameter name="nLatBuff"   type="integer" min="18" default="45"/>
 #HELIOBUFFERGRID
 19.0		rBuffMin
 21.0		rBuffMax
-45		nThetaBuff
-90		nPhiBuff
+90		nLonBuff
+45		nLatBuff
 
 Define the radius and the grid resolution for the uniform
 spherical buffer grid which passes information

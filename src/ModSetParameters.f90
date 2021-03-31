@@ -2494,8 +2494,8 @@ contains
                ' #HELIOBUFFERGRID can be used in IH and OH components only')
           call read_var('rBuffMin',   BufferMin_D(BuffR_))
           call read_var('rBuffMax',   BufferMax_D(BuffR_))
-          call read_var('nLatBuff',   nLatBuff)
           call read_var('nLonBuff',   nLonBuff)
+          call read_var('nLatBuff',   nLatBuff)
 
        case("#BUFFERGRID")
           if(.not.is_first_session())CYCLE READPARAM
