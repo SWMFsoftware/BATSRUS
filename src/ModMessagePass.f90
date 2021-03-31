@@ -248,7 +248,7 @@ contains
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
     use ModGeometry, ONLY: R_BLK
-    use ModMain,    ONLY: BufferMin_D, BufferMax_D
+    use ModBuffer,   ONLY: BufferMin_D, BufferMax_D
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
     is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
@@ -283,6 +283,7 @@ contains
   subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+    use ModBuffer,  ONLY: get_from_spher_buffer_grid
     integer,intent(in)::iBlock
 
     integer:: i, j, k

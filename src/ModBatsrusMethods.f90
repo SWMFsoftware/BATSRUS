@@ -905,7 +905,7 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: trace_field_grid, &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-
+      use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
 
       integer :: iSat, iPointSat

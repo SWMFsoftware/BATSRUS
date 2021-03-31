@@ -70,18 +70,9 @@ module ModMain
   logical:: UseLocalTimeStepNew = .false. ! if just switched on
 
   ! Model Coupling variables
-  ! Dimensions of the buffer grid between SC and IH
   logical :: UseBufferGrid    = .false.
-  logical :: UseHelioBuffer3D = .false.
-  integer :: nPhiBuff = 90,   nThetaBuff = 45, nRBuff = 2
-  real    :: dSphBuff_D(3)
-  real    :: BufferMin_D(3) = [ 19.0,    0.0, 0.0]
-  real    :: BufferMax_D(3) = [ 21.0, cTwoPi, cPi]
-
-  real, allocatable:: BufferState_VG(:,:,:,:)
-
-  ! Named indexes for the spherical buffer (left handed coordinates!!! )
-  integer, parameter :: BuffR_=1, BuffPhi_=2, BuffTheta_=3
+  
+  ! Dimensions of the buffer grid between SC and IH
 
   logical :: UseIe = .false.
   logical :: UsePw = .false.

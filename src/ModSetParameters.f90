@@ -20,6 +20,8 @@ contains
     ! Set input parameters for BATS-R-US!
 
     use ModMain
+    use ModBuffer, ONLY: BufferMax_D, BufferMin_D, BuffR_, nRBuff, &
+         BuffLon_, nLonBuff, BuffLat_, nLatBuff
     use ModAdvance
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
@@ -2492,26 +2494,26 @@ contains
                ' #HELIOBUFFERGRID can be used in IH and OH components only')
           call read_var('rBuffMin',   BufferMin_D(BuffR_))
           call read_var('rBuffMax',   BufferMax_D(BuffR_))
-          call read_var('nThetaBuff', nThetaBuff)
-          call read_var('nPhiBuff',   nPhiBuff)
+          call read_var('nLatBuff',   nLatBuff)
+          call read_var('nLonBuff',   nLonBuff)
 
        case("#BUFFERGRID")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nRBuff',      nRBuff)
-          call read_var('nPhiBuff',    nPhiBuff)
-          call read_var('nThetaBuff',  nThetaBuff)
-          call read_var('rBuffMin',    BufferMin_D(BuffR_))
-          call read_var('rBuffMax',    BufferMax_D(BuffR_))
-          call read_var('PhiBuffMin',  BufferMin_D(BuffPhi_))
-          call read_var('PhiBuffMax',  BufferMax_D(BuffPhi_))
-          call read_var('LatBuffMin',  BufferMin_D(BuffTheta_))
-          call read_var('LatBuffMax',  BufferMax_D(BuffTheta_))
+          call read_var('nRBuff'    ,  nRBuff)
+          call read_var('nLonBuff'  ,  nLonBuff)
+          call read_var('nLatBuff'  ,  nLatBuff)
+          call read_var('rBuffMin'  ,  BufferMin_D(BuffR_))
+          call read_var('rBuffMax'  ,  BufferMax_D(BuffR_))
+          call read_var('LonBuffMin',  BufferMin_D(BuffLon_))
+          call read_var('LonBuffMax',  BufferMax_D(BuffLon_))
+          call read_var('LatBuffMin',  BufferMin_D(BuffLat_))
+          call read_var('LatBuffMax',  BufferMax_D(BuffLat_))
 
           ! Convert degrees to radians, latitude to co-latitude
-          BufferMin_D(BuffPhi_)   = BufferMin_D(BuffPhi_) * cDegToRad
-          BufferMax_D(BuffPhi_)   = BufferMax_D(BuffPhi_) * cDegToRad
-          BufferMin_D(BuffTheta_) = cHalfPi - BufferMin_D(BuffTheta_)*cDegToRad
-          BufferMax_D(BuffTheta_) = cHalfPi - BufferMax_D(BuffTheta_)*cDegToRad
+          BufferMin_D(BuffLon_)   = BufferMin_D(BuffLon_)*cDegToRad
+          BufferMax_D(BuffLon_)   = BufferMax_D(BuffLon_)*cDegToRad
+          BufferMin_D(BuffLat_)   = BufferMin_D(BuffLat_)*cDegToRad
+          BufferMax_D(BuffLat_)   = BufferMax_D(BuffLat_)*cDegToRad
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
