@@ -63,9 +63,10 @@ contains
     !               also added EUV (3-filters)
     !               and Soft-Xray synthesis capability
 
-    use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
-         time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
+    use ModMain,    ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
+         time_accurate, nBlock, NameThisComp, TypeCoordSystem,            &
          Body1, StartTime, iStartTime_I
+    use ModBuffer,   ONLY: BufferMax_D
     use ModGeometry, ONLY: &
          XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
