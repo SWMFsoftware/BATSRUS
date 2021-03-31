@@ -102,18 +102,7 @@ contains
           Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
                + DtPerDv*Change_V(nVar+1)
 
-          ! Calculate pressure from energy
-          State_VGB(p_,i,j,k,iBlock) = &
-               GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
-               0.5*( &
-               ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
-               + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
-               + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
-               )/State_VGB(Rho_,i,j,k,iBlock)      &
-               + State_VGB(Bx_,i,j,k,iBlock)**2    &
-               + State_VGB(By_,i,j,k,iBlock)**2    &
-               + State_VGB(Bz_,i,j,k,iBlock)**2    &
-               )          )
+          call set_energy_pressure(i,j,k,iBlock)
 
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
@@ -246,18 +235,7 @@ contains
           Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
                + DtPerDv*Change_VC(nVar+1,i,j,k)
 
-          ! Calculate pressure from energy
-          State_VGB(p_,i,j,k,iBlock) = &
-               GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
-               0.5*( &
-               ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
-               + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
-               + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
-               )/State_VGB(Rho_,i,j,k,iBlock)      &
-               + State_VGB(Bx_,i,j,k,iBlock)**2    &
-               + State_VGB(By_,i,j,k,iBlock)**2    &
-               + State_VGB(Bz_,i,j,k,iBlock)**2    &
-               )          )
+          call set_energy_pressure(i,j,k,iBlock)
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -568,6 +546,27 @@ contains
          +             Cmax*(StateLeftCons_V - StateRightCons_V))
 
   end subroutine get_numerical_flux
+  !============================================================================
+  subroutine set_energy_pressure(i, j, k, iBlock)
+    !$acc routine seq
+
+    ! Calculate energy from pressure or vice-versa
+
+    integer, intent(in):: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+    ! Calculate pressure from energy
+    State_VGB(p_,i,j,k,iBlock) = &
+         GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
+         0.5*( &
+         ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
+         + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
+         + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
+         )/State_VGB(Rho_,i,j,k,iBlock)      &
+         + State_VGB(Bx_,i,j,k,iBlock)**2    &
+         + State_VGB(By_,i,j,k,iBlock)**2    &
+         + State_VGB(Bz_,i,j,k,iBlock)**2    &
+         )          )
+  end subroutine set_energy_pressure
   !============================================================================
 
 end module ModUpdateStateFast
