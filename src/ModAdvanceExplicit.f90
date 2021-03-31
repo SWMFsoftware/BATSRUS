@@ -128,10 +128,12 @@ contains
        endif
 
        if(index(StringTest,'FASTUPDATE')>0)then
-          call update_state_fast ! optimal for both
-#ifndef OPENACC
-       elseif(index(StringTest,'GPUUPDATE')>0)then
+#ifdef OPENACC
           call update_state_gpu  ! optimal for GPU
+#else
+          call update_state_cpu  ! optimal for CPU
+       elseif(index(StringTest,'GPUUPDATE')>0)then
+          call update_state_gpu  ! run on CPU for debugging
 #endif
        else
           ! Multi-block solution update.

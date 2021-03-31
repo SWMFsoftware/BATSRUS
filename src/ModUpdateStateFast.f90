@@ -23,18 +23,18 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: update_state_fast ! optimal for GPU and CPU
 #ifndef OPENACC
-  public:: update_state_gpu  ! optimal for GPU but works on CPU too
+  public:: update_state_cpu ! optimal for CPU, does not work on GPU
 #endif
-  
+  public:: update_state_gpu ! optimal for GPU but works on CPU too
+
   logical:: DoTestCell= .false.
 
 contains
   !============================================================================
-  subroutine update_state_fast
-
 #ifndef OPENACC
+  subroutine update_state_cpu
+
     ! optimal for CPU (face value and face flux calculated only once)
 
     integer:: i, j, k, iBlock
@@ -45,7 +45,7 @@ contains
     real:: Flux_VZ(nFlux,nI,nJ,nK+1)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'update_state_fast'
+    character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -65,37 +65,37 @@ contains
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
              DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. (j == jTest .or. j==jTest+1) .and. k == kTest 
+                  .and. (j == jTest .or. j==jTest+1) .and. k == kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VY(:,i,j,k))
-             
+
           end do; end do; end do
        end if
-       
+
        if(nDim > 2)then
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
              DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. j == jTest .and. (k == kTest .or. k == kTest+1) 
+                  .and. j == jTest .and. (k == kTest .or. k == kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZ(:,i,j,k))
-             
+
           end do; end do; end do
        end if
 
        ! Update
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          
+
           Change_V =  Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k)
           if(nDim > 1) Change_V = Change_V &
                + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k)
           if(nDim > 2) Change_V = Change_V &
-               + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) 
+               + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1)
 
           ! Time step divided by cell volume
 !!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
           DtPerDv = Dt/CellVolume_B(iBlock)
-          
+
           ! Update state
           State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                + DtPerDv*Change_V(1:nVar)
@@ -130,101 +130,62 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
 
-  end subroutine update_state_fast
-  !=======================================
+  end subroutine update_state_cpu
+  !============================================================================
   subroutine get_flux_x(i, j,  k, iBlock, Flux_V)
-    
+
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
 
-    real :: Area, NormalX, NormalY, NormalZ, Un, Cmax
-    real :: StateLeft_V(nVar), StateRight_V(nVar), State_V(nVar)
-    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
-    !--------------------------------------
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
     call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    ! average state
-    State_V = 0.5*(StateLeft_V + StateRight_V)
-
-    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-         Un, Cmax)
-    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
-         StateLeftCons_V, FluxLeft_V)
-    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
-         StateRightCons_V, FluxRight_V)
-
-    ! Rusanov flux
-    Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
-         +             Cmax*(StateLeftCons_V - StateRightCons_V))
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_x
-  !=======================================
+  !============================================================================
   subroutine get_flux_y(i, j, k, iBlock, Flux_V)
-    
+
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
 
-    real :: Area, NormalX, NormalY, NormalZ, Un, Cmax
-    real :: StateLeft_V(nVar), StateRight_V(nVar), State_V(nVar)
-    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
-    !--------------------------------------
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
     call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    ! average state
-    State_V = 0.5*(StateLeft_V + StateRight_V)
-
-    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-         Un, Cmax)
-    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
-         StateLeftCons_V, FluxLeft_V)
-    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
-         StateRightCons_V, FluxRight_V)
-
-    ! Rusanov flux
-    Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
-         +             Cmax*(StateLeftCons_V - StateRightCons_V))
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_y
-  !=======================================
+  !============================================================================
   subroutine get_flux_z(i, j, k, iBlock, Flux_V)
-    
+
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
 
-    real :: Area, NormalX, NormalY, NormalZ, Un, Cmax
-    real :: StateLeft_V(nVar), StateRight_V(nVar), State_V(nVar)
-    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
-    !--------------------------------------
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
     call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    ! average state
-    State_V = 0.5*(StateLeft_V + StateRight_V)
-
-    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-         Un, Cmax)
-    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
-         StateLeftCons_V, FluxLeft_V)
-    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
-         StateRightCons_V, FluxRight_V)
-
-    ! Rusanov flux
-    Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
-         +             Cmax*(StateLeftCons_V - StateRightCons_V))
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_z
   !============================================================================
+#endif
   subroutine update_state_gpu
 
-#endif
     ! optimal for GPU, but also works with CPU
 
     integer:: i, j, k, iBlock
@@ -233,7 +194,7 @@ contains
     !$acc declare create (Change_V, Change_VC, DtPerDv)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'update_state_fast'
+    character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
 #ifndef OPENACC
     call test_start(NameSub, DoTest)
@@ -316,22 +277,18 @@ contains
 
 #ifndef OPENACC
     call test_stop(NameSub, DoTest, iBlock)
-
-  end subroutine update_state_gpu
-#else
-  end subroutine update_state_fast
 #endif
+  end subroutine update_state_gpu
   !============================================================================
+
   subroutine do_face(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real :: Area, NormalX, NormalY, NormalZ, Un, Cmax
-    real :: StateLeft_V(nVar), StateRight_V(nVar), State_V(nVar)
-    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux), Flux_V(nFlux)
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -376,20 +333,8 @@ contains
        StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
     end select
 
-    ! average state
-    State_V = 0.5*(StateLeft_V + StateRight_V)
-
-    ! Calculate the Rusanov flux
-    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-         Un, Cmax)
-    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
-         StateLeftCons_V, FluxLeft_V)
-    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
-         StateRightCons_V, FluxRight_V)
-
-    ! Rusanov flux
-    Flux_V = Area*(0.5*(FluxLeft_V + FluxRight_V) &
-         + 0.5*Cmax*(StateLeftCons_V - StateRightCons_V))
+    call get_numerical_flux(NormalX, NormalY, NormalZ, &
+         Area,  StateLeft_V, StateRight_V, Flux_V)
 
     Change_V = Change_V + Flux_V
 
@@ -516,8 +461,8 @@ contains
     !$acc routine seq
     integer, intent(in) :: i, j, k, iBlock, iDir
     real,    intent(out):: NormalX, NormalY, NormalZ, Area
-    !--------------------------------------------------------------------------
 #ifndef OPENACC
+    !--------------------------------------------------------------------------
     if(IsCartesianGrid)then
 #endif
        Area = CellFace_DB(iDir,iBlock)
@@ -536,7 +481,7 @@ contains
        NormalZ = FaceNormal_DDFB(3,1,i,j,k,iBlock)/Area
     end if
 #endif
-  
+
   end subroutine get_normal
   !============================================================================
   subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -544,15 +489,15 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    !-------------------------------------------------------------------------
     ! First order left state of primitive variables
+    !--------------------------------------------------------------------------
     StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
     StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
 
     ! First order right state of primitive variables
     StateRight_V  = State_VGB(:,i,j,k,iBlock)
     StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
-    
+
   end subroutine get_face_x
   !============================================================================
   subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -560,8 +505,8 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    !-------------------------------------------------------------------------
     ! First order left state of primitive variables
+    !--------------------------------------------------------------------------
     StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
     StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
 
@@ -576,8 +521,8 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    !-------------------------------------------------------------------------
     ! First order left state of primitive variables
+    !--------------------------------------------------------------------------
     StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
     StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
 
@@ -586,6 +531,43 @@ contains
     StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
 
   end subroutine get_face_z
+  !============================================================================
+  subroutine get_numerical_flux(NormalX, NormalY, NormalZ, &
+       Area,  StateLeft_V, StateRight_V, Flux_V)
+    !$acc routine seq
+
+    real, intent(in):: NormalX, NormalY, NormalZ, Area
+    real, intent(in):: StateLeft_V(nVar), StateRight_V(nVar)
+    real, intent(out):: Flux_V(nFlux)
+
+    ! Average state
+    real:: State_V(nVar)
+
+    ! Conservative variables
+    real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
+
+    ! Left and right fluxes
+    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
+
+    ! Maximum speed and normal velocity
+    real :: Cmax, Un
+    ! Rusanov flux
+    ! average state
+    !--------------------------------------------------------------------------
+    State_V = 0.5*(StateLeft_V + StateRight_V)
+
+    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+         Un, Cmax)
+    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
+         StateLeftCons_V, FluxLeft_V)
+    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
+         StateRightCons_V, FluxRight_V)
+
+    ! Rusanov flux
+    Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
+         +             Cmax*(StateLeftCons_V - StateRightCons_V))
+
+  end subroutine get_numerical_flux
   !============================================================================
 
 end module ModUpdateStateFast
