@@ -55,7 +55,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
   ! Transform vector variables from SC to IH
   if(TypeCoordSource /= TypeCoordSystem)then
      State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
-          State_V(Ux_:Uz_)*No2Si_V(UnitX_), XyzSource_D * No2Si_V(UnitX_), &
+          State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D * No2Si_V(UnitX_), &
           TypeCoordSource, TypeCoordSystem)*Si2No_V(UnitU_)
      if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
   end if
