@@ -120,7 +120,7 @@ contains
     real,intent(out)   :: Buffer_V(nVar)
 
     real               :: NormSph_D(3)
-    
+
     ! Convert to normalized coordinates.
     ! Radial is node centered, theta and phi are cell centered.
     character(len=*), parameter:: NameSub = 'interpolate_from_global_buffer'
@@ -145,8 +145,6 @@ contains
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,      &
          UnitP_, UnitEnergyDens_
     use BATL_lib,     ONLY: iProc
-
-    implicit none
 
     integer, intent(in)::iFile
     integer:: iTimePlot_I(7), iR, iLon, iLat
@@ -223,3 +221,4 @@ contains
   end subroutine plot_buffer
   !============================================================================
 end module ModBuffer
+!==============================================================================

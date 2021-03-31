@@ -71,7 +71,7 @@ module ModMain
 
   ! Model Coupling variables
   logical :: UseBufferGrid    = .false.
-  
+
   ! Dimensions of the buffer grid between SC and IH
 
   logical :: UseIe = .false.
