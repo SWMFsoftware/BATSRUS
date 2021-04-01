@@ -20,8 +20,7 @@ contains
     ! Set input parameters for BATS-R-US!
 
     use ModMain
-    use ModBuffer, ONLY: BufferMax_D, BufferMin_D, BuffR_, nRBuff, &
-         BuffLon_, nLonBuff, BuffLat_, nLatBuff
+    use ModBuffer, ONLY: read_buffer_grid_param
     use ModAdvance
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
@@ -2481,39 +2480,14 @@ contains
           if(.not.UseB0)CYCLE READPARAM
           call read_var('HelioDipoleStrengthSi',DipoleStrengthSi)
           call read_var('HelioDipoleTilt'      ,ThetaTilt)
-          ThetaTilt = ThetaTilt * cDegToRad
+          ThetaTilt = ThetaTilt*cDegToRad
 
        case("#HELIOROTATION", "#INERTIAL")
           if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
                ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
 
-       case("#HELIOBUFFERGRID")
-          if(.not.is_first_session())CYCLE READPARAM
-          if(NameThisComp == 'SC') &
-               call stop_mpi(NameSub//' ERROR:'// &
-               ' #HELIOBUFFERGRID can be used in IH and OH components only')
-          call read_var('rBuffMin',   BufferMin_D(BuffR_))
-          call read_var('rBuffMax',   BufferMax_D(BuffR_))
-          call read_var('nLonBuff',   nLonBuff)
-          call read_var('nLatBuff',   nLatBuff)
-
-       case("#BUFFERGRID")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nRBuff'    ,  nRBuff)
-          call read_var('nLonBuff'  ,  nLonBuff)
-          call read_var('nLatBuff'  ,  nLatBuff)
-          call read_var('rBuffMin'  ,  BufferMin_D(BuffR_))
-          call read_var('rBuffMax'  ,  BufferMax_D(BuffR_))
-          call read_var('LonBuffMin',  BufferMin_D(BuffLon_))
-          call read_var('LonBuffMax',  BufferMax_D(BuffLon_))
-          call read_var('LatBuffMin',  BufferMin_D(BuffLat_))
-          call read_var('LatBuffMax',  BufferMax_D(BuffLat_))
-
-          ! Convert degrees to radians, latitude to co-latitude
-          BufferMin_D(BuffLon_)   = BufferMin_D(BuffLon_)*cDegToRad
-          BufferMax_D(BuffLon_)   = BufferMax_D(BuffLon_)*cDegToRad
-          BufferMin_D(BuffLat_)   = BufferMin_D(BuffLat_)*cDegToRad
-          BufferMax_D(BuffLat_)   = BufferMax_D(BuffLat_)*cDegToRad
+       case("#HELIOBUFFERGRID", "#BUFFERGRID", "#RESTARTBUFFERGRID")
+          if(is_first_session())call read_buffer_grid_param(NameCommand)
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)

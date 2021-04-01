@@ -18,8 +18,65 @@ module ModBuffer
 
   real               :: SourceTarget_DD(MaxDim, MaxDim)
   real               :: TimeSimulationLast = -1.0
+
+  logical            :: DoRestartBuffer = .false.
   character (len=3)  :: TypeCoordSource='???'
 contains
+  !============================================================================
+  subroutine read_buffer_grid_param(NameCommand)
+    use ModReadParam
+    use ModNumConst, ONLY: cDegToRad
+    use ModMain,     ONLY: NameThisComp
+    character(LEN=*), intent(in) :: NameCommand
+    character(len=*), parameter:: NameSub = 'read_buffer_grid_param'
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#HELIOBUFFERGRID")
+       if(NameThisComp == 'SC') &
+            call stop_mpi(NameSub//' ERROR:'// &
+            ' #HELIOBUFFERGRID can be used in IH and OH components only')
+       call read_var('rBuffMin',   BufferMin_D(BuffR_))
+       call read_var('rBuffMax',   BufferMax_D(BuffR_))
+       call read_var('nLonBuff',   nLonBuff)
+       call read_var('nLatBuff',   nLatBuff)
+       nRBuff = 2
+       BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
+       BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
+       call set_buffer_grid
+    case("#BUFFERGRID")
+       call read_var('nRBuff'    ,  nRBuff)
+       call read_var('nLonBuff'  ,  nLonBuff)
+       call read_var('nLatBuff'  ,  nLatBuff)
+       call read_var('rBuffMin'  ,  BufferMin_D(BuffR_))
+       call read_var('rBuffMax'  ,  BufferMax_D(BuffR_))
+       call read_var('LonBuffMin',  BufferMin_D(BuffLon_))
+       call read_var('LonBuffMax',  BufferMax_D(BuffLon_))
+       call read_var('LatBuffMin',  BufferMin_D(BuffLat_))
+       call read_var('LatBuffMax',  BufferMax_D(BuffLat_))
+
+       ! Convert degrees to radians, latitude to co-latitude
+       BufferMin_D(BuffLon_:BuffLat_) = BufferMin_D(BuffLon_:BuffLat_)&
+            *cDegToRad
+       BufferMax_D(BuffLon_:BuffLat_) = BufferMax_D(BuffLon_:BuffLat_)&
+            *cDegToRad
+       call set_buffer_grid
+    case("#RESTARTBUFFERGRID")
+       call read_var('DoRestartBuffer', DoRestartBuffer)
+    end select
+  end subroutine read_buffer_grid_param
+  !============================================================================
+  subroutine set_buffer_grid
+    use ModVarIndexes, ONLY: nVar
+    integer  :: nCell_D(3)
+    !--------------------------------------------------------------------------
+    if(allocated(BufferState_VG))deallocate(BufferState_VG)
+    allocate(BufferState_VG(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1))
+    ! Calculate grid spacing and save
+    nCell_D = [nRBuff, nLonBuff, nLatBuff]
+    dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
+    dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
+         /real(nRBuff - 1)
+  end subroutine set_buffer_grid
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     use ModMain,       ONLY: TypeCoordSystem, Time_Simulation, &
@@ -53,8 +110,6 @@ contains
        XyzSource_D = XyzTarget_D
     end if
 
-    ! Convert to left handed spherical coordinates Sph_D=(/r,phi,theta/) !!!
-    ! What a concept...
     call xyz_to_rlonlat(XyzSource_D, Sph_D(1), Sph_D(2), Sph_D(3))
 
     ! Get the target state from the spherical buffer grid
@@ -87,7 +142,6 @@ contains
           State_V(SignB_) = 0.0
        end if
     end if
-
   end subroutine get_from_spher_buffer_grid
   !============================================================================
   subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
@@ -133,54 +187,59 @@ contains
   end subroutine interpolate_from_global_buffer
   !============================================================================
   subroutine plot_buffer(iFile)
-    use ModPlotFile, ONLY: save_plot_file
-    use ModNumConst,   ONLY: cDegToRad
+    use ModPlotFile,   ONLY: save_plot_file
+    use ModNumConst,   ONLY: cRadToDeg
     use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
-    use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_,             &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_,        &
+    use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, &
+         p_, WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_,    &
          ChargeStateLast_
-    use ModIO,            ONLY: NamePrimitiveVarOrig
+    use ModIO,            ONLY: NamePrimitiveVarOrig, NamePlotDir
     use ModTimeConvert,   ONLY: time_real_to_int
-    use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_, n_step
-    use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,      &
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModMain,          ONLY: StartTime, Time_Simulation, x_, z_, n_step
+    use ModPhysics,       ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitX_,   &
          UnitP_, UnitEnergyDens_
     use BATL_lib,     ONLY: iProc
-
-    integer, intent(in)::iFile
-    integer:: iTimePlot_I(7), iR, iLon, iLat
-    real   :: R, Lat, Lon, CosLat, SinLat
-    real, allocatable,dimension(:,:,:):: State_VII, Coord_DII
+    integer, intent(in):: iFile          ! Unused
+    integer            :: iTimePlot_I(7) ! To shape the file name
+    integer            :: iR, iLon, iLat ! Coordinate indexes
+    real               :: R, Lat, Lon    ! Coords
+    ! Xyz and state variables to plot
+    real               :: State_VII(3 + nVar, nLonBuff, nLatBuff)
+    ! Coords: Longitude, Latitude, in degrees
+    real               :: Coord_DII(2, nLonBuff, nLatBuff)
     character(LEN=30)::NameFile
     !--------------------------------------------------------------------------
-    if(iProc/=0)RETURN ! May be improved.
-
-    allocate(State_VII(3 + nVar, 0:nLonBuff, 0:nLatBuff))
-    allocate(Coord_DII(2, 0:nLonBuff, 0:nLatBuff))
+    if(iProc/=0)RETURN ! May be improved
+    ! Convert time to integers:
     call time_real_to_int(StartTime + Time_Simulation, iTimePlot_I)
-    do iR = 1,2
-       R = BufferMin_D(BuffR_)*(2 - iR) + BufferMax_D(BuffR_)*(iR - 1)
+    ! Independing on nRBuff, plot only two 2D files for spherical surfaces
+    ! of radius of BufferMin_D(BuffR_) and BufferMax_D(BuffR_)
+    do iR = 1, nRBuff, nRBuff - 1
+       R = BufferMin_D(BuffR_) + dSphBuff_D(BuffR_)*(iR - 1)
+       ! Shape the file name
        write(NameFile,'(a,i2.2,a,i4.4,a,5(i2.2,a))')'R=',nint(R),'Rs_',&
             iTimePlot_I(1),'_',iTimePlot_I(2),'_',iTimePlot_I(3),'_',&
             iTimePlot_I(4),'_',iTimePlot_I(5),'_',iTimePlot_I(6),'.out'
-       do iLat = 0, nLatBuff
-          Lat = -89.999 + (179.999/nLatBuff)*iLat
-          Coord_DII(2,:,iLat) = Lat
-          CosLat = cos(Lat*cDegToRad)
-          SinLat = sin(Lat*cDegToRad)
-          do iLon = 0, nLonBuff
-             Lon = (360.0/nLonBuff)*iLon
-             Coord_DII( 1,iLon,iLat) = Lon
-             State_VII(x_,iLon,iLat) = R*CosLat*cos(Lon*cDegToRad)
-             State_VII(y_,iLon,iLat) = R*CosLat*sin(Lon*cDegToRad)
-             State_VII(z_,iLon,iLat) = R*SinLat
-             call get_from_spher_buffer_grid(       &
-                  State_VII(x_:z_,iLon,iLat), nVar, &
-                  State_VII(z_+1:z_+nVar,iLon,iLat))
-
+       do iLat = 1, nLatBuff
+          Lat = BufferMin_D(BuffLat_) + dSphBuff_D(BuffLat_)*(iLat - 0.50)
+          Coord_DII(2,:,iLat) = Lat*cRadToDeg
+          do iLon = 1, nLonBuff
+             Lon = BufferMin_D(BuffLon_) + dSphBuff_D(BuffLon_)*(iLon  - 0.50)
+             Coord_DII( 1,iLon,iLat) = Lon*cRadToDeg
+             ! Save Cartesian coordinates
+             call rlonlat_to_xyz(R, Lon, Lat, State_VII(x_:z_,iLon,iLat))
+             ! Save Buffer state vector
+             State_VII(z_+1:z_+nVar, iLon, iLat) = &
+                  BufferState_VG(:, iR, iLon, iLat)
+             ! Transform to primitive variables:
+             State_VII(z_+Ux_:z_+Uz_, iLon, iLat) = &
+                  State_VII(z_+RhoUx_:z_+RhoUz_, iLon, iLat)/&
+                  State_VII(z_+Rho_, iLon, iLat)
           end do
        end do
        ! Convert from normalized units to SI
-       State_VII(  x_:z_,:,:) = State_VII(  x_:z_,:,:)*No2Si_V(UnitX_)
+       State_VII(  x_:z_,:,:) = State_VII(  x_:z_,:,:)*No2Si_V(UnitX_  )
        State_VII(z_+rho_,:,:) = State_VII(z_+rho_,:,:)*No2Si_V(UnitRho_)
        State_VII(z_+Ux_:z_+Uz_,:,:)   = State_VII(z_+Ux_:z_+Uz_,:,:)*&
             No2Si_V(UnitU_)
@@ -206,9 +265,9 @@ contains
        if(Ehot_>1)State_VII(z_+Ehot_,:,:) = &
             State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
 
-       call save_plot_file(NameFile,&
+       call save_plot_file(trim(NamePlotDir)//NameFile,&
             StringHeaderIn=&
-            'SC-IH interface, longitude and latitude are in deg, other in SI',&
+            'SC-IH interface: longitude and latitude are in deg, other in SI',&
             NameVarIn    = &
             'Long Lat x y z '//NamePrimitiveVarOrig//' R',&
             nDimIn=2,      &
@@ -217,8 +276,11 @@ contains
             CoordIn_DII=Coord_DII, &
             VarIn_VII=State_VII)
     end do
-
   end subroutine plot_buffer
+  !============================================================================
+  subroutine  save_buffer_restart
+    !--------------------------------------------------------------------------
+  end subroutine save_buffer_restart
   !============================================================================
 end module ModBuffer
 !==============================================================================

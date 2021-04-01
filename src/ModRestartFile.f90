@@ -192,8 +192,9 @@ contains
 
     use ModB0,       ONLY: UseB0, add_b0, subtract_b0
     use ModGeometry, ONLY: true_cell
-    use ModMain,     ONLY: UseFieldLineThreads
+    use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
+    use ModBuffer,   ONLY: save_buffer_restart
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_restart_files'
@@ -219,6 +220,7 @@ contains
          call string_append_iter(NameFile,iteration_number)
     call write_tree_file(NameFile)
     if(UseFieldLineThreads)call save_thread_restart
+    if(UseBufferGrid)call save_buffer_restart
     if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
@@ -368,7 +370,8 @@ contains
   subroutine write_restart_header
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
-         Body1, UseBody2, Time_Accurate, iStartTime_I, IsStandAlone
+         Body1, UseBody2, Time_Accurate, iStartTime_I, IsStandAlone,       &
+         UseBufferGrid
     use ModPhysics,    ONLY: &
          sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
          sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
@@ -394,6 +397,8 @@ contains
     use ModIO,       ONLY: NameMaxTimeUnit
     use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
+    use ModBuffer,   ONLY: nRBuff, nLonBuff, nLatBuff, BuffR_,             &
+         BufferMin_D, BufferMax_D
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -580,6 +585,31 @@ contains
             cTab//cTab//cTab//'DoThreadRestart'
        write(UnitTmp_,*)
     end if
+    if(UseBufferGrid)then
+       write(UnitTmp_,'(a)')'#RESTARTBUFFERGRID'
+       write(UnitTmp_,'(l1,a)')UseBufferGrid, &
+            cTab//cTab//cTab//'DoRestartBuffer'
+       write(UnitTmp_,*)
+       write(UnitTmp_,'(a)')'#BUFFERGRID'
+       write(UnitTmp_,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'
+       write(UnitTmp_,'(i8,a)')nLonBuff, cTab//cTab//'nLonBuff'
+       write(UnitTmp_,'(i8,a)')nlatBuff, cTab//cTab//'nLatBuff'
+       write(UnitTmp_,'(es22.15,a)') &
+            BufferMin_D(BuffR_), cTab//cTab//'RBuffMin'
+       write(UnitTmp_,'(es22.15,a)') &
+            BufferMax_D(BuffR_), cTab//cTab//'RBuffMax'
+       write(UnitTmp_,'(a)')'0.0'//&
+            cTab//cTab//cTab//'LonBuffMin'
+       write(UnitTmp_,'(a)')'360.0'//&
+            cTab//cTab//cTab//'LonBuffMax'
+       write(UnitTmp_,'(a)')'-90.0'//&
+            cTab//cTab//cTab//'LatBuffMin'
+       write(UnitTmp_,'(a)')'90.0'//&
+            cTab//cTab//cTab//'LatBuffMax'
+       write(UnitTmp_,*)
+    end if
+       
+       
 
     if(UseBody2)then
        write(UnitTmp_,'(a)')'#SECONDBODY'

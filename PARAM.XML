@@ -10137,6 +10137,17 @@ be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.
 This command can only be used in the first session by the IH(OH) component.
 Default values are shown above.
 </command>
+
+<command name="RESTARTBUFFERGRID">
+	 <parameter name="DoRestartBuffer" type="logical" default="F"/>
+
+#RESTARTBUFFERGRID
+F		DoRestartBuffer
+
+If .true. the MHD state on the buffer grid  is restored from the restart file
+Default value is DoRestartBuffer = .false.
+</command>
+
 </commandgroup>
 
 <commandgroup name="WAVE SPECIFIC COMMANDS">
