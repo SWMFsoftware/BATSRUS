@@ -219,8 +219,10 @@ contains
     if (UseRestartOutSeries) &
          call string_append_iter(NameFile,iteration_number)
     call write_tree_file(NameFile)
+    ! Save the solution on threads if present
     if(UseFieldLineThreads)call save_thread_restart
-    if(UseBufferGrid)call save_buffer_restart
+    ! Save the buffer grid state if present (at zeroth proc only!)
+    if(UseBufferGrid.and.iProc==0)call save_buffer_restart
     if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')

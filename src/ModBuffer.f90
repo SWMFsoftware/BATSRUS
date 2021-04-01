@@ -279,8 +279,31 @@ contains
   end subroutine plot_buffer
   !============================================================================
   subroutine  save_buffer_restart
+    use ModMain,       ONLY: NameThisComp
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
+    character(len=*), parameter:: NameSub = 'save_buffer_restart'
+    !--------------------------------------------------------------------------
+    call open_file(file=NameThisComp//'/restartOUT/buffer.dat', &
+         form='UNFORMATTED',    &
+         NameCaller=NameSub)
+    write(UnitTmp_,*)BufferState_VG
+    call close_file
     !--------------------------------------------------------------------------
   end subroutine save_buffer_restart
+  !============================================================================
+  subroutine  read_buffer_restart
+    use ModMain,       ONLY: NameThisComp
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
+    character(len=*), parameter:: NameSub = 'read_buffer_restart'
+    !--------------------------------------------------------------------------
+    call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
+         status='old', form='UNFORMATTED', NameCaller=NameSub)
+    read(UnitTmp_,*)BufferState_VG
+    call close_file
+    !--------------------------------------------------------------------------
+  end subroutine read_buffer_restart
   !============================================================================
 end module ModBuffer
 !==============================================================================
