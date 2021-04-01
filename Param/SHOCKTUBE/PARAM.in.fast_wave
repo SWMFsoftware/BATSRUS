@@ -1,7 +1,7 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
-#TEST
+TEST
 FASTUPDATE		StringTest
 
 #PLANET
@@ -128,7 +128,7 @@ T			UseDtFixed
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux
+Linde			TypeFlux
 
 #STRICT
 F			UseStrict

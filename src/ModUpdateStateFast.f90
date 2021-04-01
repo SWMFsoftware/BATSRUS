@@ -5,7 +5,7 @@
 module ModUpdateStateFast
 
   use ModVarIndexes
-  use ModFaceFlux, ONLY: print_face_values
+  use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
   use ModMain, ONLY: iStage, Cfl, Dt
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI
 !!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
@@ -513,7 +513,7 @@ contains
     real, intent(in):: NormalX, NormalY, NormalZ, Area
     real, intent(in):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out):: Flux_V(nFlux)
-
+    
     ! Average state
     real:: State_V(nVar)
 
@@ -525,21 +525,54 @@ contains
 
     ! Maximum speed and normal velocity
     real :: Cmax, Un
-    ! Rusanov flux
-    ! average state
+    real :: Cleft, Cright
     !--------------------------------------------------------------------------
-    State_V = 0.5*(StateLeft_V + StateRight_V)
+    if(DoLf)then
+       ! average state
+       State_V = 0.5*(StateLeft_V + StateRight_V)
 
-    call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-         Un, Cmax)
-    call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
-         StateLeftCons_V, FluxLeft_V)
-    call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
-         StateRightCons_V, FluxRight_V)
+       call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+            Un, Cmax)
+       call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
+            StateLeftCons_V, FluxLeft_V)
+       call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
+            StateRightCons_V, FluxRight_V)
+       
+       ! Lax-Friedrichs flux
+       Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
+            +             Cmax*(StateLeftCons_V - StateRightCons_V))
+    else
+       ! This implementation is for non-relativistic MHD only
+       ! Left speed of left state
+       call get_speed_max(StateLeft_V, NormalX, NormalY, NormalZ, &
+            Un, Cleft)
+       Cleft = Un - Cleft
 
-    ! Rusanov flux
-    Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
-         +             Cmax*(StateLeftCons_V - StateRightCons_V))
+       ! Right speed of right state
+       call get_speed_max(StateRight_V, NormalX, NormalY, NormalZ, &
+            Un, Cright)
+       Cright = Un + Cright
+
+       ! Speeds of average state
+       State_V = 0.5*(StateLeft_V + StateRight_V)
+       call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+            Un, Cmax)
+
+       ! Limited left and right speeds
+       Cleft  = min(0.0, Cleft,  Un - Cmax)
+       Cright = max(0.0, Cright, Un + Cmax)
+
+       ! Physical flux
+       call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
+            StateLeftCons_V, FluxLeft_V)
+       call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
+            StateRightCons_V, FluxRight_V)
+
+       ! HLLE flux
+       Flux_V = Area / (Cright - Cleft) * &
+            ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
+            + Cright*Cleft*(StateRightCons_V - StateLeftCons_V) )
+    end if
 
   end subroutine get_numerical_flux
   !============================================================================
