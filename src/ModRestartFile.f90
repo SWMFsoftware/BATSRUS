@@ -610,8 +610,6 @@ contains
             cTab//cTab//cTab//'LatBuffMax'
        write(UnitTmp_,*)
     end if
-       
-       
 
     if(UseBody2)then
        write(UnitTmp_,'(a)')'#SECONDBODY'

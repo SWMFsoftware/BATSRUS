@@ -513,7 +513,7 @@ contains
     real, intent(in):: NormalX, NormalY, NormalZ, Area
     real, intent(in):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out):: Flux_V(nFlux)
-    
+
     ! Average state
     real:: State_V(nVar)
 
@@ -537,7 +537,7 @@ contains
             StateLeftCons_V, FluxLeft_V)
        call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
             StateRightCons_V, FluxRight_V)
-       
+
        ! Lax-Friedrichs flux
        Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
             +             Cmax*(StateLeftCons_V - StateRightCons_V))
