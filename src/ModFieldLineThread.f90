@@ -23,11 +23,6 @@ module ModFieldLineThread
   integer, public, parameter:: jMin_ = 1 - jDim_, jMax_ = nJ + jDim_
   integer, public, parameter:: kMin_ = 1 - kDim_, kMax_ = nK + kDim_
 
-  public :: init                      ! Initializes module
-  public :: save_threads_for_plot     ! Get  State_VG array
-  public :: interpolate_thread_state  ! Interpolate state from State_VG
-  public :: set_thread_plotvar        ! Plot variables for "shell" plots
-  public :: get_tr_los_image          ! Correction for TR on LOS images
   ! rBody here is set to one keeping a capability to set
   ! the face-formulated boundary condition by modifying
   ! rBody
@@ -47,7 +42,8 @@ module ModFieldLineThread
      ! sense and used for calculating TMax_II(j,k). The values of
      ! BDsFaceInv_III(negative iPoint,j,k) are equal to
      ! ds[m]/(B[T]*PoyntingFluxPerBSi). Are used to calculate
-     ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsFaceInv
+     ! the dimensionless heat flux as
+     ! (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsFaceInv
      real,pointer :: BDsFaceInvSi_III(:,:,:)
      ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
      ! temperature equals the Poynting flux (which is not realistic and means
@@ -153,21 +149,25 @@ module ModFieldLineThread
   ! equals -0.5 for i=0.
   ! The uniform grid starts at normalized coordinate equal to 0 at i=0.
   real   :: Coord1Norm0 = 0.0
-
-  public:: BoundaryThreads
-  public:: read_thread_param ! Read parameters of threads
-  public:: check_tr_table    ! Calculate a table for transition region
-  public:: set_threads       ! (Re)Sets threads in the inner boundary blocks
-
+  ! Public members
+  public :: BoundaryThreads
+  public :: init                      ! Initializes module
+  public :: read_thread_param         ! Read parameters of threads
+  public :: check_tr_table            ! Calculate a table for transition region
+  public :: set_threads       ! (Re)Sets threads in the inner boundary blocks
   ! Called prior to different invokes of set_cell_boundary, to determine
   ! how the solution on the thread should be (or not be) advanced:
   ! after hydro stage or after the heat conduction stage etc
-  public:: advance_threads
-  ! Saves restart
-  public :: save_thread_restart
+  public :: advance_threads
   ! Correspondent named indexes
   integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2, &
        Restart_=3
+  public :: save_threads_for_plot     ! Get  State_VG array
+  public :: interpolate_thread_state  ! Interpolate state from State_VG
+  public :: set_thread_plotvar        ! Plot variables for "shell" plots
+  public :: get_tr_los_image          ! Correction for TR on LOS images
+  ! Saves restart
+  public :: save_thread_restart
 
   ! The number of grid spaces which are covered by the TR model
   ! the smaller is this number, the better the TR assumption work
@@ -182,7 +182,6 @@ module ModFieldLineThread
   ! The plasma properties dependent coefficient needed to evaluate the
   ! eefect of gravity on the hydrostatic equilibrium
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-
   logical :: IsInitialized = .false.
   character(len=100) :: NameRestartFile
 contains
