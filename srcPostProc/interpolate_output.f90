@@ -372,15 +372,15 @@ contains
 
     ! Interpolate dB to the position of the magnetometer stations
 
-    real,    allocatable:: dB_DG(:,:,:)  ! deltaB on Lon-Lat grid
-    real,    allocatable:: dB_DII(:,:,:) ! deltaB per snapshot and station
+    real,    allocatable:: Interp_VG(:,:,:)  ! interpolated vars on Lon-Lat grid
+    real,    allocatable:: Interp_VII(:,:,:) ! vars per snapshot and station
     integer, allocatable:: iTime_II(:,:) ! Date-time for each snapshot
 
     real:: Time ! simulation time
     integer:: iSnapshot, iPoint
     ! Extra cell for periodic longitudes
     !--------------------------------------------------------------------------
-    allocate(dB_DG(3,n1+1,n2), dB_DII(3,nSnapshot,nPoint), &
+    allocate(Interp_VG(5,n1+1,n2), Interp_VII(5,nSnapshot,nPoint), &
          iTime_II(6,nSnapshot))
 
     do iSnapshot = 1, nSnapshot
@@ -399,15 +399,25 @@ contains
        iTime_II(:,iSnapshot) = iTime_I(1:6)
 
        ! Copy the first three variables (dBn dBe dBd)
-       dB_DG(:,1:n1,:) = Var_VII(1:3,:,:)
+       Interp_VG(1:3,1:n1,:) = Var_VII(1:3,:,:)
+
+       ! Copy the last two variable (LonSm LatSm)
+       Interp_VG(4:5,1:n1,:) = Var_VII(nVar-1:nVar,:,:)
 
        ! Apply periodic longitudes
-       dB_DG(:,n1+1,:) = dB_DG(:,1,:)
+       Interp_VG(:,n1+1,:) = Interp_VG(:,1,:)
+
+       ! Correct the 360 degree jump in LonSm
+       Interp_VG(4,n1+1,:) = Interp_VG(4,1,:) + 360.0
 
        do iPoint = 1, nPoint
-          dB_DII(:,iSnapshot,iPoint) = &
-               bilinear(dB_DG, 3, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint), &
+          Interp_VII(:,iSnapshot,iPoint) = &
+               bilinear(Interp_VG, 5, 1, n1+1, 1, n2, CoordNorm_DI(:,iPoint), &
                DoExtrapolate=.false.)
+
+          ! Correct longitude to be in the 0,360 range
+          Interp_VII(4,iSnapshot,iPoint) = &
+               modulo(Interp_VII(4,iSnapshot,iPoint), 360.0)
        end do
     end do
     close(UnitTmp_)
@@ -426,15 +436,15 @@ contains
             '# Station: '//NameMag_I(iPoint)
        write(UnitTmp_, '(a)') &
             'Year Month Day Hour Min Sec '// &
-            'B_NorthGeomag B_EastGeomag B_DownGeomag'
+            'B_NorthGeomag B_EastGeomag B_DownGeomag SmLon SmLat'
        do iSnapshot = 1, nSnapshot
-          write(UnitTmp_,'(i4,5i3,3f10.3)') &
-               iTime_II(:,iSnapshot), dB_DII(:,iSnapshot,iPoint)
+          write(UnitTmp_,'(i4,5i3,5f10.3)') &
+               iTime_II(:,iSnapshot), Interp_VII(:,iSnapshot,iPoint)
        end do
        call close_file
     end do
 
-    deallocate(iTime_II, dB_DG, dB_DII)
+    deallocate(iTime_II, Interp_VG, Interp_VII)
 
   end subroutine interpolate_mag_station
   !============================================================================
