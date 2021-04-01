@@ -23,16 +23,13 @@ module ModUpdateStateFast
 
   private ! except
 
-#ifndef OPENACC
   public:: update_state_cpu ! optimal for CPU, does not work on GPU
-#endif
   public:: update_state_gpu ! optimal for GPU but works on CPU too
 
   logical:: DoTestCell= .false.
 
 contains
   !============================================================================
-#ifndef OPENACC
   subroutine update_state_cpu
 
     ! optimal for CPU (face value and face flux calculated only once)
@@ -172,7 +169,6 @@ contains
 
   end subroutine get_flux_z
   !============================================================================
-#endif
   subroutine update_state_gpu
 
     ! optimal for GPU, but also works with CPU
