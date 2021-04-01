@@ -1,7 +1,7 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
-TEST
+#TEST
 FASTUPDATE		StringTest
 
 #PLANET
