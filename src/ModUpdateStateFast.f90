@@ -267,44 +267,25 @@ contains
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
-
-       call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
        Area = -Area
-
-       call get_face_x(i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
        call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
-
-       StateLeft_V           = State_VGB(:,i,j-1,k,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i,j,k,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, NormalX, NormalY, NormalZ, Area)
        Area = -Area
-
-       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i,j+1,k,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
     case(5)
        call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
-
-       StateLeft_V           = State_VGB(:,i,j,k-1,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i,j,k,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, NormalX, NormalY, NormalZ, Area)
        Area = -Area
-
-       ! This could be call get_face(iFace,i,j,k)
-       StateLeft_V           = State_VGB(:,i,j,k,iBlock)
-       StateLeft_V(Ux_:Uz_)  = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-       StateRight_V          = State_VGB(:,i,j,k+1,iBlock)
-       StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, &
@@ -472,14 +453,9 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    ! First order left state of primitive variables
     !--------------------------------------------------------------------------
-    StateLeft_V  = State_VGB(:,i-1,j,k,iBlock)
-    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-
-    ! First order right state of primitive variables
-    StateRight_V  = State_VGB(:,i,j,k,iBlock)
-    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+    call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
 
   end subroutine get_face_x
   !============================================================================
@@ -488,15 +464,10 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    ! First order left state of primitive variables
     !--------------------------------------------------------------------------
-    StateLeft_V  = State_VGB(:,i,j-1,k,iBlock)
-    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-
-    ! First order right state of primitive variables
-    StateRight_V  = State_VGB(:,i,j,k,iBlock)
-    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
-
+    call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
+    call get_primitive(State_VGB(:,i,j,k,iBlock), StateLeft_V)
+    
   end subroutine get_face_y
   !============================================================================
   subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -504,14 +475,9 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    ! First order left state of primitive variables
     !--------------------------------------------------------------------------
-    StateLeft_V  = State_VGB(:,i,j,k-1,iBlock)
-    StateLeft_V(Ux_:Uz_) = StateLeft_V(Ux_:Uz_)/StateLeft_V(Rho_)
-
-    ! First order right state of primitive variables
-    StateRight_V  = State_VGB(:,i,j,k,iBlock)
-    StateRight_V(Ux_:Uz_) = StateRight_V(Ux_:Uz_)/StateRight_V(Rho_)
+    call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
+    call get_primitive(State_VGB(:,i,j,k,iBlock), StateLeft_V)
 
   end subroutine get_face_z
   !============================================================================
@@ -651,6 +617,17 @@ contains
          )          )
   end subroutine set_energy_pressure
   !============================================================================
+  subroutine get_primitive(State_V, Primitive_V)
+    !$acc routine seq
 
+    real, intent(in) :: State_V(nVar)
+    real, intent(out):: Primitive_V(nVar)
+    !--------------------------------------------------------------------------
+    Primitive_V(1:Ux_-1)    = State_V(1:RhoUx_-1)
+    Primitive_V(Ux_:Uz_)    = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+    Primitive_V(Uz_+1:nVar) = State_V(RhoUz_+1:nVar)
+
+  end subroutine get_primitive
+  !============================================================================
 end module ModUpdateStateFast
 !==============================================================================
