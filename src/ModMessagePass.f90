@@ -58,7 +58,7 @@ contains
     ! Use 2nd order prolongation to fill
     logical, optional, intent(in) :: UseOrder2In
 
-    ! If .true. apply solution on the buffer grid, 
+    ! If .true. apply solution on the buffer grid,
     ! to fill in the cells within the buffer grid ranges
     logical, optional, intent(in) :: UseBufferIn
 
@@ -111,7 +111,7 @@ contains
 
     UseBuffer = time_loop.and.UseBufferGrid
     if(present(UseBufferIn)) UseBuffer = UseBufferIn
-    
+
     DoRestrictFace = nOrderProlong==1
     if(UseConstrainB) DoRestrictFace = .false.
 

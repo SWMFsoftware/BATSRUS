@@ -296,13 +296,13 @@ contains
       end if
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
-         ! within the region covered by this grid 
+         ! within the region covered by this grid
          call exchange_messages(UseBufferIn = .true.)
          DoRestartBuffer = .false.
       else
          call exchange_messages
       end if
-   
+
     end subroutine set_initial_conditions
     !==========================================================================
 

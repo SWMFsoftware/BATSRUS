@@ -180,9 +180,9 @@ contains
     select case(NameThisComp)
     case('SC')
        rInner = max(rBody, RadiusMin)
-       rOuter = rUpperModel             ! \
+       rOuter = rUpperModel
     case('IH')                  ! To split the intergral span between SC and IH
-       rInner = max(rBody, rLowerModel) ! /
+       rInner = max(rBody, rLowerModel)
        rOuter = 1000.0
     case('GM')
        rInner = 0.0 ! needed for comet applications

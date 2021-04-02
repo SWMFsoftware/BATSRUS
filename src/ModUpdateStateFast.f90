@@ -364,7 +364,7 @@ contains
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds.
-    
+
     real, intent(in) :: State_V(nVar), NormalX, NormalY, NormalZ
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
@@ -373,8 +373,8 @@ contains
 
     real:: InvRho, p, Bx, By, Bz, Bn, B2
     real:: Sound2, Alfven2, Alfven2Normal, Fast2, Discr, Fast
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     InvRho = 1.0/State_V(Rho_)
     Bx  = State_V(Bx_)
     By  = State_V(By_)
@@ -394,7 +394,7 @@ contains
     if(present(Cmax))   Cmax   = abs(Un) + Fast
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
- 
+
 #ifndef OPENACC
     if(DoTestCell)then
        write(*,*) &
@@ -467,7 +467,7 @@ contains
     !--------------------------------------------------------------------------
     call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
     call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
-    
+
   end subroutine get_face_y
   !============================================================================
   subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
