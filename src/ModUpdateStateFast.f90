@@ -16,7 +16,7 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: IsCartesianGrid, CellFace_DFB, FaceNormal_DDFB
 #endif
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
-  use ModMain, ONLY: SpeedHyp
+  use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp
   use ModNumConst, ONLY: cUnit_DD
 
   implicit none
@@ -377,11 +377,18 @@ contains
 
   end subroutine get_physical_flux
   !============================================================================
-  subroutine get_speed_max(State_V, NormalX, NormalY, NormalZ, Un, Cmax)
+  subroutine get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+       Un, Cmax, Cleft, Cright)
     !$acc routine seq
 
-    real, intent(in):: State_V(nVar), NormalX, NormalY, NormalZ
-    real, intent(out):: Un, Cmax
+    ! Using primitive variable State_V and normal direction get
+    ! normal velocity and wave speeds.
+    
+    real, intent(in) :: State_V(nVar), NormalX, NormalY, NormalZ
+    real, intent(out):: Un              ! normal velocity (signed)
+    real, intent(out), optional:: Cmax  ! maximum speed (positive)
+    real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
+    real, intent(out), optional:: Cright! fastest right wave (usually positive)
 
     real:: InvRho, p, Bx, By, Bz, Bn, B2
     real:: Sound2, Alfven2, Alfven2Normal, Fast2, Discr, Fast
@@ -402,9 +409,11 @@ contains
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
     Fast  = sqrt( 0.5*(Fast2 + Discr) )
 
-    Un   = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
-    Cmax = abs(Un) + Fast
-
+    Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
+    if(present(Cmax))   Cmax   = abs(Un) + Fast
+    if(present(Cleft))  Cleft  = Un - Fast
+    if(present(Cright)) Cright = Un + Fast
+ 
 #ifndef OPENACC
     if(DoTestCell)then
        write(*,*) &
@@ -510,9 +519,9 @@ contains
        Area,  StateLeft_V, StateRight_V, Flux_V)
     !$acc routine seq
 
-    real, intent(in):: NormalX, NormalY, NormalZ, Area
-    real, intent(in):: StateLeft_V(nVar), StateRight_V(nVar)
-    real, intent(out):: Flux_V(nFlux)
+    real, intent(in)   :: NormalX, NormalY, NormalZ, Area
+    real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
+    real, intent(out)  :: Flux_V(nFlux)
 
     ! Average state
     real:: State_V(nVar)
@@ -523,11 +532,12 @@ contains
     ! Left and right fluxes
     real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
 
-    ! Maximum speed and normal velocity
-    real :: Cmax, Un
-    real :: Cleft, Cright
+    ! Left, right and maximum speeds, normal velocity, jump in Bn
+    real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
     !--------------------------------------------------------------------------
     if(DoLf)then
+       ! Rusanov scheme
+
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
@@ -542,25 +552,42 @@ contains
        Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
             +             Cmax*(StateLeftCons_V - StateRightCons_V))
     else
+       ! Linde scheme
+       if(UseB)then
+          ! Sokolov's algorithm
+          ! Calculate the jump in the normal magnetic field vector
+          DiffBn = 0.5* &
+               ( NormalX*(StateRight_V(Bx_) - StateLeft_V(Bx_)) &
+               + NormalY*(StateRight_V(By_) - StateLeft_V(By_)) &
+               + NormalZ*(StateRight_V(Bz_) - StateLeft_V(Bz_)) )
+
+          ! Remove the jump in the normal magnetic field
+          StateLeft_V(Bx_)  =  StateLeft_V(Bx_)  + DiffBn*NormalX
+          StateLeft_V(By_)  =  StateLeft_V(By_)  + DiffBn*NormalY
+          StateLeft_V(Bz_)  =  StateLeft_V(Bz_)  + DiffBn*NormalZ
+          StateRight_V(Bx_) =  StateRight_V(Bx_) - DiffBn*NormalX
+          StateRight_V(By_) =  StateRight_V(By_) - DiffBn*NormalY
+          StateRight_V(Bz_) =  StateRight_V(Bz_) - DiffBn*NormalZ
+
+       end if
+
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
        call get_speed_max(StateLeft_V, NormalX, NormalY, NormalZ, &
-            Un, Cleft)
-       Cleft = Un - Cleft
+            Un, Cleft=Cleft)
 
        ! Right speed of right state
        call get_speed_max(StateRight_V, NormalX, NormalY, NormalZ, &
-            Un, Cright)
-       Cright = Un + Cright
+            Un, Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
        call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-            Un, Cmax)
+            Un, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
-       Cleft  = min(0.0, Cleft,  Un - Cmax)
-       Cright = max(0.0, Cright, Un + Cmax)
+       Cleft  = min(0.0, Cleft,  CleftAverage)
+       Cright = max(0.0, Cright, CrightAverage)
 
        ! Physical flux
        call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
@@ -569,9 +596,36 @@ contains
             StateRightCons_V, FluxRight_V)
 
        ! HLLE flux
-       Flux_V = Area / (Cright - Cleft) * &
+       Flux_V = &
             ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
-            + Cright*Cleft*(StateRightCons_V - StateLeftCons_V) )
+            + Cright*Cleft*(StateRightCons_V - StateLeftCons_V) ) &
+            / (Cright - Cleft)
+
+       if(UseB)then
+          if(Hyp_ > 1 .and. UseHyperbolicDivb) then
+             ! Overwrite the flux of the Hyp field with the Lax-Friedrichs flux
+             Cmax = max(Cmax, SpeedHyp)
+             Flux_V(Hyp_) = 0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
+                  - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
+          end if
+
+          ! Linde scheme: use Lax-Friedrichs flux for Bn
+          ! The original jump was removed, now we add it with Cmax
+          Flux_V(Bx_) = Flux_V(Bx_) - Cmax*DiffBn*NormalX
+          Flux_V(By_) = Flux_V(By_) - Cmax*DiffBn*NormalY
+          Flux_V(Bz_) = Flux_V(Bz_) - Cmax*DiffBn*NormalZ
+
+          ! Fix the energy diffusion
+          ! The energy jump is also modified by
+          ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
+          Flux_V(Energy_) = Flux_V(Energy_) - Cmax*0.5*DiffBn* &
+               ( NormalX*(StateRight_V(Bx_) + StateLeft_V(Bx_)) &
+               + NormalY*(StateRight_V(By_) + StateLeft_V(By_)) &
+               + NormalZ*(StateRight_V(Bz_) + StateLeft_V(Bz_)) )
+       end if
+
+       Flux_V = Area*Flux_V
+
     end if
 
   end subroutine get_numerical_flux
