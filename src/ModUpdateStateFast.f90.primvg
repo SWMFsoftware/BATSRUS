@@ -247,7 +247,7 @@ contains
           if(DoTestCell)then
              write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
              write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
-             write(*,*)'Change_V  =', Change_VC(:,i,j,k)
+             write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
 #endif
