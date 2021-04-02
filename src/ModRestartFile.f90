@@ -278,7 +278,7 @@ contains
   subroutine read_restart_files
 
     use ModEnergy, ONLY: calc_energy_cell
-
+    use ModBuffer, ONLY: DoRestartBuffer, read_buffer_restart
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_restart_files'
@@ -315,6 +315,8 @@ contains
     ! Copy restart data into State_VGB as needed.
     call match_copy_restart_variables
 
+    ! Restart buffer grid if present
+    if(DoRestartBuffer)call read_buffer_restart
     ! Deallocate temporary arrays
     deallocate(State8_CV)
     deallocate(State8_VC)
@@ -400,7 +402,7 @@ contains
     use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
     use ModBuffer,   ONLY: nRBuff, nLonBuff, nLatBuff, BuffR_,             &
-         BufferMin_D, BufferMax_D
+         BufferMin_D, BufferMax_D, TypeCoordSource
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -591,6 +593,8 @@ contains
        write(UnitTmp_,'(a)')'#RESTARTBUFFERGRID'
        write(UnitTmp_,'(l1,a)')UseBufferGrid, &
             cTab//cTab//cTab//'DoRestartBuffer'
+       write(UnitTmp_,'(a)')TypeCoordSource//&
+            cTab//cTab//cTab//'TypeCoordSource'
        write(UnitTmp_,*)
        write(UnitTmp_,'(a)')'#BUFFERGRID'
        write(UnitTmp_,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'

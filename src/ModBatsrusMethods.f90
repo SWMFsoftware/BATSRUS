@@ -163,7 +163,8 @@ contains
       use ModIO,                  ONLY: restart, restart_Bface
       use ModRestartFile,         ONLY: read_restart_files
       use ModMessagePass,         ONLY: exchange_messages
-      use ModMain,                ONLY: UseB0
+      use ModMain,                ONLY: UseB0, IsTimeLoop=>time_loop
+      use ModBuffer,              ONLY: DoRestartBuffer
       use ModB0,                  ONLY: set_b0_reschange
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
@@ -179,6 +180,8 @@ contains
       ! local variables
 
       integer :: iLevel, iBlock
+
+      logical :: IsTimeLoopStored
 
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
@@ -293,9 +296,19 @@ contains
             call BATS_init_constrain_b
          end if
       end if
-
-      call exchange_messages
-
+      if(DoRestartBuffer)then
+         ! Store IsTimeLoop
+         IsTimeLoopStored =  IsTimeLoop
+         ! Reset IsTimeLoop to .true. to apply the buffer grid solution
+         ! within the region covered by this grid 
+         IsTimeLoop = .true. 
+         call exchange_messages
+         IsTimeLoop = IsTimeLoopStored
+         DoRestartBuffer = .false.
+      else
+         call exchange_messages
+      end if
+   
     end subroutine set_initial_conditions
     !==========================================================================
 

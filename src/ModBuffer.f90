@@ -20,7 +20,7 @@ module ModBuffer
   real               :: TimeSimulationLast = -1.0
 
   logical            :: DoRestartBuffer = .false.
-  character (len=3)  :: TypeCoordSource='???'
+  character (len=3)  :: TypeCoordSource = '???'
 contains
   !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
@@ -62,6 +62,7 @@ contains
        call set_buffer_grid
     case("#RESTARTBUFFERGRID")
        call read_var('DoRestartBuffer', DoRestartBuffer)
+       if(DoRestartBuffer)call read_var('TypeCoordSource', TypeCoordSource)
     end select
   end subroutine read_buffer_grid_param
   !============================================================================
