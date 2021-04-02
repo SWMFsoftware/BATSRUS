@@ -29,7 +29,7 @@ module ModMessagePass
 
 contains
   !============================================================================
-  subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
+  subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In, UseBufferIn)
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
@@ -58,8 +58,13 @@ contains
     ! Use 2nd order prolongation to fill
     logical, optional, intent(in) :: UseOrder2In
 
+    ! If .true. apply solution on the buffer grid, 
+    ! to fill in the cells within the buffer grid ranges
+    logical, optional, intent(in) :: UseBufferIn
+
     logical :: UseOrder2
     logical :: DoResChangeOnly
+    logical :: UseBuffer
 
     logical :: DoRestrictFace, DoTwoCoarseLayers, DoSendCorner
     integer :: nWidth, nCoarseLayer
@@ -104,6 +109,9 @@ contains
     UseOrder2=.false.
     if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
+    UseBuffer = time_loop.and.UseBufferGrid
+    if(present(UseBufferIn)) UseBuffer = UseBufferIn
+    
     DoRestrictFace = nOrderProlong==1
     if(UseConstrainB) DoRestrictFace = .false.
 
@@ -219,8 +227,7 @@ contains
              ! Fill in boundary cells with hybrid particles
              if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
           end if
-          if(time_loop.and.UseBufferGrid)&
-               call fill_in_from_buffer(iBlock)
+          if(UseBuffer)call fill_in_from_buffer(iBlock)
        end if
 #endif
 
