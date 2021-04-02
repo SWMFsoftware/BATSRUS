@@ -1595,8 +1595,8 @@ The default value corresponding to reflection is shown above.
 	 <parameter name="nRBuff" type="integer" min="2" default="2" />
 	 <parameter name="nLonBuff" type="integer" min="2" default="90" />
 	 <parameter name="nLatBuff" type="integer" min="2" default="45" />
-	 <parameter name="rBuffMin" type="real" min="1" default="19" />
-	 <parameter name="rBuffMax" type="real" min="$rBuffMin" default="21" />
+	 <parameter name="RBuffMin" type="real" min="1" default="19" />
+	 <parameter name="RBuffMax" type="real" min="$rBuffMin" default="21" />
 	 <parameter name="LonBuffMin" type="real" min="0" max="360"
 	 	    		      		  	   default="0" />
 	 <parameter name="LonBuffMax" type="real" min="$PhiBuffMin" max="360"
@@ -10119,20 +10119,25 @@ Default value is HelioDipoleStrength = 0.0.
 </command>
 
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp =~ /IH|OH/">
-	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
-	<parameter name="rBuffMax"   type="real" min="1" default="21"/>
-	<parameter name="nLonBuff" type="integer" min="36" default="90"/>
+        <parameter name="nRBuff"     type="integer" min="2" default="2"/>
+  	<parameter name="nLonBuff"   type="integer" min="36" default="90"/>
 	<parameter name="nLatBuff"   type="integer" min="18" default="45"/>
+	<parameter name="RBuffMin"   type="real" min="0" default="19"/>
+	<parameter name="RBuffMax"   type="real" min="0" default="21"/>
+
 #HELIOBUFFERGRID
-19.0		rBuffMin
-21.0		rBuffMax
+2		nRBuff	
 90		nLonBuff
-45		nLatBuff
+45		nLatBuff	
+19.0		RBuffMin
+21.0		RBuffMax
+
 
 Define the radius and the grid resolution for the uniform
 spherical buffer grid which passes information
 from the SC(IH) component to the IH(OH) component. The resolution should
-be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.  The buffer grid will only be used if 'buffergrid' is chosed for TypeBcBody in the
+be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.
+The buffer grid will only be used if 'buffergrid' is chosed for TypeBcBody in the
 #INNERBOUNDARY command of the target (IH or OH) component.
 This command can only be used in the first session by the IH(OH) component.
 Default values are shown above.
