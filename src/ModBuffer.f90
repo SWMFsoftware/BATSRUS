@@ -35,11 +35,11 @@ contains
        if(NameThisComp == 'SC') &
             call stop_mpi(NameSub//' ERROR:'// &
             ' #HELIOBUFFERGRID can be used in IH and OH components only')
-       call read_var('rBuffMin',   BufferMin_D(BuffR_))
-       call read_var('rBuffMax',   BufferMax_D(BuffR_))
-       call read_var('nLonBuff',   nLonBuff)
-       call read_var('nLatBuff',   nLatBuff)
-       nRBuff = 2
+       call read_var('nRBuff'    ,  nRBuff)
+       call read_var('nLonBuff'  ,  nLonBuff)
+       call read_var('nLatBuff'  ,  nLatBuff)
+       call read_var('RBuffMin'  ,  BufferMin_D(BuffR_))
+       call read_var('RBuffMax'  ,  BufferMax_D(BuffR_))
        BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
        BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
        call set_buffer_grid
@@ -47,8 +47,8 @@ contains
        call read_var('nRBuff'    ,  nRBuff)
        call read_var('nLonBuff'  ,  nLonBuff)
        call read_var('nLatBuff'  ,  nLatBuff)
-       call read_var('rBuffMin'  ,  BufferMin_D(BuffR_))
-       call read_var('rBuffMax'  ,  BufferMax_D(BuffR_))
+       call read_var('RBuffMin'  ,  BufferMin_D(BuffR_))
+       call read_var('RBuffMax'  ,  BufferMax_D(BuffR_))
        call read_var('LonBuffMin',  BufferMin_D(BuffLon_))
        call read_var('LonBuffMax',  BufferMax_D(BuffLon_))
        call read_var('LatBuffMin',  BufferMin_D(BuffLat_))
@@ -67,6 +67,7 @@ contains
   !============================================================================
   subroutine set_buffer_grid
     use ModVarIndexes, ONLY: nVar
+    use ModMain,       ONLY: rLowerModel
     integer  :: nCell_D(3)
     !--------------------------------------------------------------------------
     if(allocated(BufferState_VG))deallocate(BufferState_VG)
@@ -76,6 +77,8 @@ contains
     dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
     dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
          /real(nRBuff - 1)
+    ! Assign the lower limit for LOS intergation, for the given model:
+    rLowerModel = BufferMax_D(BuffR_)
   end subroutine set_buffer_grid
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
@@ -285,11 +288,9 @@ contains
     character(len=*), parameter:: NameSub = 'save_buffer_restart'
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartOUT/buffer.dat', &
-         form='UNFORMATTED',    &
-         NameCaller=NameSub)
-    write(UnitTmp_,*)BufferState_VG
+         form='UNFORMATTED', NameCaller=NameSub)
+    write(UnitTmp_)BufferState_VG
     call close_file
-    !--------------------------------------------------------------------------
   end subroutine save_buffer_restart
   !============================================================================
   subroutine  read_buffer_restart
@@ -300,9 +301,8 @@ contains
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
          status='old', form='UNFORMATTED', NameCaller=NameSub)
-    read(UnitTmp_,*)BufferState_VG
+    read(UnitTmp_)BufferState_VG
     call close_file
-    !--------------------------------------------------------------------------
   end subroutine read_buffer_restart
   !============================================================================
 end module ModBuffer

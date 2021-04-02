@@ -71,6 +71,8 @@ module ModMain
 
   ! Model Coupling variables
   logical :: UseBufferGrid    = .false.
+  ! To split the LOS intergration span between the models
+  real    :: rLowerModel = 0.0, rUpperModel = 1000.0
 
   ! Dimensions of the buffer grid between SC and IH
 

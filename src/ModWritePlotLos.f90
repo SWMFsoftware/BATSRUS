@@ -65,8 +65,7 @@ contains
 
     use ModMain,    ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
          time_accurate, nBlock, NameThisComp, TypeCoordSystem,            &
-         Body1, StartTime, iStartTime_I
-    use ModBuffer,   ONLY: BufferMax_D
+         Body1, StartTime, iStartTime_I, rLowerModel, rUpperModel
     use ModGeometry, ONLY: &
          XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -181,9 +180,9 @@ contains
     select case(NameThisComp)
     case('SC')
        rInner = max(rBody, RadiusMin)
-       rOuter = BufferMax_D(1)
-    case('IH')
-       rInner = BufferMax_D(1)
+       rOuter = rUpperModel             ! \
+    case('IH')                  ! To split the intergral span between SC and IH
+       rInner = max(rBody, rLowerModel) ! /
        rOuter = 1000.0
     case('GM')
        rInner = 0.0 ! needed for comet applications
