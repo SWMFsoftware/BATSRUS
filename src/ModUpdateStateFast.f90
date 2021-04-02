@@ -466,7 +466,7 @@ contains
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
-    call get_primitive(State_VGB(:,i,j,k,iBlock), StateLeft_V)
+    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     
   end subroutine get_face_y
   !============================================================================
@@ -477,7 +477,7 @@ contains
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
-    call get_primitive(State_VGB(:,i,j,k,iBlock), StateLeft_V)
+    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
 
   end subroutine get_face_z
   !============================================================================
