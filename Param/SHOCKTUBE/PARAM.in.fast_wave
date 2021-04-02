@@ -1,6 +1,12 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
+#TIMING
+T			UseTiming
+-1			DnTiming
+-1			nDepthTiming
+tree			TypeTimingReport
+
 #TEST
 FASTUPDATE		StringTest
 
@@ -128,7 +134,7 @@ T			UseDtFixed
 
 #SCHEME
 1			nOrder
-Linde			TypeFlux
+Rusanov			TypeFlux
 
 #STRICT
 F			UseStrict
@@ -164,3 +170,13 @@ z=0 mhd idl_ascii		StringPlot
 #STOP
 -1			MaxIteration
 100.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+#STOP
+-1			MaxIteration
+200.0			tSimulationMax
