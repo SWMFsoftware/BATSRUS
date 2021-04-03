@@ -85,7 +85,7 @@ contains
                      Io2No_V(UnitU_)
              end do
 
-          end if
+          end if  ! UseShockTube
 
           ! Loop through all the cells
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -144,7 +144,7 @@ contains
                 ! Remove B0 from B (if any)
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-             end if
+             end if ! UseShockTube
 
           end do; end do; end do
 
