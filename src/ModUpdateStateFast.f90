@@ -584,6 +584,8 @@ contains
 
     ! Left, right and maximum speeds, normal velocity, jump in Bn
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
+    
+    real :: CInvDiff, CMulti
     !--------------------------------------------------------------------------
     if(DoLf)then
        ! Rusanov scheme
@@ -645,11 +647,13 @@ contains
        call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
             StateRightCons_V, FluxRight_V)
 
+       CMulti = Cright*Cleft
+       CInvDiff = 1./(Cright - Cleft)       
        ! HLLE flux
        Flux_V = &
             ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
-            + Cright*Cleft*(StateRightCons_V - StateLeftCons_V) ) &
-            / (Cright - Cleft)
+            + CMulti*(StateRightCons_V - StateLeftCons_V) ) &
+            *CInvDiff
 
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
