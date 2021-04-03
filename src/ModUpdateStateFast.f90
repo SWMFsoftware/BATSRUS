@@ -485,7 +485,7 @@ contains
           end if
        end do
     end if
-       
+
   end subroutine get_face_x
   !============================================================================
   subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -584,7 +584,7 @@ contains
 
     ! Left, right and maximum speeds, normal velocity, jump in Bn
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
-    
+
     real :: CInvDiff, CMulti
     !--------------------------------------------------------------------------
     if(DoLf)then
@@ -648,7 +648,7 @@ contains
             StateRightCons_V, FluxRight_V)
 
        CMulti = Cright*Cleft
-       CInvDiff = 1./(Cright - Cleft)       
+       CInvDiff = 1./(Cright - Cleft)
        ! HLLE flux
        Flux_V = &
             ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
@@ -730,14 +730,14 @@ contains
     ! Second order limiter on a 4 point stencil
     real, intent(in) :: Var1, Var2, Var3, Var4  ! cell center values at i=1..4
     real, intent(out):: VarLeft, VarRight       ! face values at i=2.5
-    !--------------------------------------------------------------------------
 !    if(BetaLimiter == 1.0)then
        ! minmod limiter
+    !--------------------------------------------------------------------------
        VarLeft  = Var2 + minmodhalf(Var2-Var1, Var3-Var2)
        VarRight = Var3 - minmodhalf(Var3-Var2, Var4-Var3)
 !    else
 !       ! mc3 limiter
-!       
+!
 !    end if
   end subroutine limiter2
   !============================================================================
