@@ -2383,7 +2383,7 @@ contains
              case('HGI')
                 ! If rotating frame was on in the previous session then
                 ! we need to transform from HGR/HGC to HGI system.
-                ! Note: This only works if the twoo coordinate systems
+                ! Note: This only works if the two coordinate systems
                 ! are aligned at the initial time (i.e. HGR = HGC).
                 if(UseRotatingFrame) iSignRotationIC = +1
                 UseRotatingFrame = .false.
