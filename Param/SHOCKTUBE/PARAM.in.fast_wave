@@ -115,7 +115,6 @@ dt			= 0.2*dtmax   = 1.066
 
 #USERINPUTEND -------------------------------------
 
-
 #OUTERBOUNDARY
 periodic		TypeBc1
 periodic		TypeBc2
@@ -124,6 +123,11 @@ periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
 #TIMESTEPPING
 1			nStage
 0.8			CflExpl
@@ -131,10 +135,6 @@ periodic		TypeBc6
 #FIXEDTIMESTEP
 T			UseDtFixed
 0.5			DtFixedDim [sec] (read if UseDtFixed is true)
-
-#SCHEME
-1			nOrder
-Rusanov			TypeFlux
 
 #STRICT
 F			UseStrict
@@ -174,8 +174,13 @@ z=0 mhd idl_ascii		StringPlot
 #RUN ##########################################################################
 
 #SCHEME
-1			nOrder
+2			nOrder
 Linde			TypeFlux
+minmod			TypeLimiter
+
+#TIMESTEPPING
+1			nStage
+0.8			CflExpl
 
 #STOP
 -1			MaxIteration
