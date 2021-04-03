@@ -5,8 +5,9 @@
 module ModUpdateStateFast
 
   use ModVarIndexes
-  use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
-  use ModMain, ONLY: iStage, Cfl, Dt
+  use ModFaceFlux,  ONLY: DoLf
+  use ModFaceValue, ONLY: BetaLimiter
+  use ModMain, ONLY: iStage, Cfl, Dt, nOrder
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI
 !!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
@@ -453,10 +454,38 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    !--------------------------------------------------------------------------
-    call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
-    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
 
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    if(nOrder == 1)then
+       call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          if(iVar < Ux_ .or. iVar > Uz_)then
+             call limiter2( &
+                  State_VGB(iVar,i-2,j,k,iBlock), &
+                  State_VGB(iVar,i-1,j,k,iBlock), &
+                  State_VGB(iVar,  i,j,k,iBlock), &
+                  State_VGB(iVar,i+1,j,k,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          else
+             call limiter2( &
+                  State_VGB(iVar,i-2,j,k,iBlock)/ &
+                  State_VGB(Rho_,i-2,j,k,iBlock), &
+                  State_VGB(iVar,i-1,j,k,iBlock)/ &
+                  State_VGB(Rho_,i-1,j,k,iBlock), &
+                  State_VGB(iVar,  i,j,k,iBlock)/ &
+                  State_VGB(Rho_,  i,j,k,iBlock), &
+                  State_VGB(iVar,i+1,j,k,iBlock)/ &
+                  State_VGB(Rho_,i+1,j,k,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          end if
+       end do
+    end if
+       
   end subroutine get_face_x
   !============================================================================
   subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -464,10 +493,37 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    !--------------------------------------------------------------------------
-    call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
-    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
 
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    if(nOrder == 1)then
+       call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
+       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          if(iVar < Ux_ .or. iVar > Uz_)then
+             call limiter2( &
+                  State_VGB(iVar,i,j-2,k,iBlock), &
+                  State_VGB(iVar,i,j-1,k,iBlock), &
+                  State_VGB(iVar,i,j  ,k,iBlock), &
+                  State_VGB(iVar,i,j+1,k,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          else
+             call limiter2( &
+                  State_VGB(iVar,i,j-2,k,iBlock)/ &
+                  State_VGB(Rho_,i,j-2,k,iBlock), &
+                  State_VGB(iVar,i,j-1,k,iBlock)/ &
+                  State_VGB(Rho_,i,j-1,k,iBlock), &
+                  State_VGB(iVar,i,j  ,k,iBlock)/ &
+                  State_VGB(Rho_,i,j  ,k,iBlock), &
+                  State_VGB(iVar,i,j+1,k,iBlock)/ &
+                  State_VGB(Rho_,i,j+1,k,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          end if
+       end do
+    end if
   end subroutine get_face_y
   !============================================================================
   subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
@@ -475,9 +531,37 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+
+    integer:: iVar
     !--------------------------------------------------------------------------
-    call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
-    call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+    if(nOrder == 1)then
+       call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
+       call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          if(iVar < Ux_ .or. iVar > Uz_)then
+             call limiter2( &
+                  State_VGB(iVar,i,j,k-2,iBlock), &
+                  State_VGB(iVar,i,j,k-1,iBlock), &
+                  State_VGB(iVar,i,j,k  ,iBlock), &
+                  State_VGB(iVar,i,j,k+1,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          else
+             call limiter2( &
+                  State_VGB(iVar,i,j,k-2,iBlock)/ &
+                  State_VGB(Rho_,i,j,k-2,iBlock), &
+                  State_VGB(iVar,i,j,k-1,iBlock)/ &
+                  State_VGB(Rho_,i,j,k-1,iBlock), &
+                  State_VGB(iVar,i,j,k  ,iBlock)/ &
+                  State_VGB(Rho_,i,j,k  ,iBlock), &
+                  State_VGB(iVar,i,j,k+1,iBlock)/ &
+                  State_VGB(Rho_,i,j,k+1,iBlock), &
+                  StateLeft_V(iVar), StateRight_V(iVar))
+          end if
+       end do
+    end if
 
   end subroutine get_face_z
   !============================================================================
@@ -629,5 +713,30 @@ contains
 
   end subroutine get_primitive
   !============================================================================
+  real function minmodhalf(a, b)
+    !$acc routine seq
+    real, intent(in):: a, b
+    !--------------------------------------------------------------------------
+    minmodhalf = (sign(0.25, a) + sign(0.25, b))*min(abs(a), abs(b))
+  end function minmodhalf
+  !============================================================================
+  subroutine limiter2(Var1, Var2, Var3, Var4, VarLeft, VarRight)
+    !$acc routine seq
+
+    ! Second order limiter on a 4 point stencil
+    real, intent(in) :: Var1, Var2, Var3, Var4  ! cell center values at i=1..4
+    real, intent(out):: VarLeft, VarRight       ! face values at i=2.5
+    !--------------------------------------------------------------------------
+!    if(BetaLimiter == 1.0)then
+       ! minmod limiter
+       VarLeft  = Var2 + minmodhalf(Var2-Var1, Var3-Var2)
+       VarRight = Var3 - minmodhalf(Var3-Var2, Var4-Var3)
+!    else
+!       ! mc3 limiter
+!       
+!    end if
+  end subroutine limiter2
+  !============================================================================
+
 end module ModUpdateStateFast
 !==============================================================================
