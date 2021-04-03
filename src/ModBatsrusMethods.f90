@@ -159,11 +159,12 @@ contains
 
     subroutine set_initial_conditions
 
-      use ModSetInitialCondition, ONLY: set_initial_condition
+      use ModSetInitialCondition, ONLY: set_initial_condition, &
+           add_rotational_velocity
       use ModIO,                  ONLY: restart, restart_Bface
       use ModRestartFile,         ONLY: read_restart_files
       use ModMessagePass,         ONLY: exchange_messages
-      use ModMain,                ONLY: UseB0
+      use ModMain,                ONLY: UseB0, iSignRotationIC
       use ModBuffer,              ONLY: DoRestartBuffer
       use ModB0,                  ONLY: set_b0_reschange
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
@@ -232,6 +233,10 @@ contains
       if(restart)then
          call user_action('reading restart files')
          call read_restart_files
+         ! Transform velocities from a rotating system to the HGI system
+         ! if required: add/subtract rho*(omega x r) to/from the momentum 
+         ! of all fluids for all blocks
+         if(iSignRotationIC /= 0)call add_rotational_velocity(iSignRotationIC)
       end if
 
       ! Potentially useful for applying "First Touch" strategy
@@ -244,7 +249,13 @@ contains
               call get_vdf_from_state(iBlock,DoOnScratch = .True.)
       end do
 !!$ omp end parallel do
-
+      
+      ! If iSignRotationIC was non-zero, the rotational velocity has been
+      ! added either in applying restart, or in set_initial conditions.
+      ! Therefore iSignRotation is set to true for the rotational velocity
+      ! not to be double-counted in init_session 
+      iSignRotationIC = 0
+      
       if(UseHybrid)then
          ! Check particles and collect their moments
          call trace_particles(Dt=0.0,DoBorisStepIn=.false.)
@@ -252,16 +263,16 @@ contains
          ! while randomized the particles has been modified somewhat
          call get_state_from_vdf
       end if
-
+      
       call user_action('initial condition done')
-
+      
       ! Allow the user to add a perturbation to the initial condition.
       if(UseUserPerturbation)then
          ! Fill in ghost cells in case needed by the user perturbation
          ! However, cannot be used with the boundary conditions (such as
          ! threaded field lines) wich cannot be stated that early.
          if(.not.UseFieldLineThreads)call exchange_messages
-
+         
          call user_initial_perturbation
          UseUserPerturbation=.false.
 
@@ -367,7 +378,14 @@ contains
 
     ! Find the test cell defined by #TESTIJK or #TESTXYZ commands
     call find_test_cell
-
+    
+    ! Transform velocities from a rotating system to the HGI system if required
+    if(iSignRotationIC /= 0)then
+       ! add/subtract rho*(omega x r) to/from the momentum of all fluids
+       ! for all blocks
+       call add_rotational_velocity(iSignRotationIC)
+       iSignRotationIC = 0
+    end if
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call user_initial_perturbation
@@ -378,14 +396,6 @@ contains
     ! Set number of explicit and implicit blocks
     ! Partially implicit/local selection will be done in each time step
     call select_stepping(DoPartSelect=.false.)
-
-    ! Transform velocities from a rotating system to the HGI system if required
-    if(iSignRotationIC /= 0)then
-       ! add/subtract rho*(omega x r) to/from the momentum of all fluids
-       ! for all blocks
-       call add_rotational_velocity(iSignRotationIC)
-       iSignRotationIC = 0
-    end if
 
     ! Ensure zero divergence for the CT scheme
     if(UseConstrainB .and. DoInitConstrainB)&
