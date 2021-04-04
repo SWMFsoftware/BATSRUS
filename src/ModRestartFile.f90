@@ -401,8 +401,7 @@ contains
     use ModIO,       ONLY: NameMaxTimeUnit
     use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
-    use ModBuffer,   ONLY: nRBuff, nLonBuff, nLatBuff, BuffR_,             &
-         BufferMin_D, BufferMax_D, TypeCoordSource
+    use ModBuffer,   ONLY: write_buffer_restart_header
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -589,31 +588,7 @@ contains
             cTab//cTab//cTab//'DoThreadRestart'
        write(UnitTmp_,*)
     end if
-    if(UseBufferGrid)then
-       write(UnitTmp_,'(a)')'#RESTARTBUFFERGRID'
-       write(UnitTmp_,'(l1,a)')UseBufferGrid, &
-            cTab//cTab//cTab//'DoRestartBuffer'
-       write(UnitTmp_,'(a)')TypeCoordSource//&
-            cTab//cTab//cTab//'TypeCoordSource'
-       write(UnitTmp_,*)
-       write(UnitTmp_,'(a)')'#BUFFERGRID'
-       write(UnitTmp_,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'
-       write(UnitTmp_,'(i8,a)')nLonBuff, cTab//cTab//'nLonBuff'
-       write(UnitTmp_,'(i8,a)')nlatBuff, cTab//cTab//'nLatBuff'
-       write(UnitTmp_,'(es22.15,a)') &
-            BufferMin_D(BuffR_), cTab//cTab//'RBuffMin'
-       write(UnitTmp_,'(es22.15,a)') &
-            BufferMax_D(BuffR_), cTab//cTab//'RBuffMax'
-       write(UnitTmp_,'(a)')'0.0'//&
-            cTab//cTab//cTab//'LonBuffMin'
-       write(UnitTmp_,'(a)')'360.0'//&
-            cTab//cTab//cTab//'LonBuffMax'
-       write(UnitTmp_,'(a)')'-90.0'//&
-            cTab//cTab//cTab//'LatBuffMin'
-       write(UnitTmp_,'(a)')'90.0'//&
-            cTab//cTab//cTab//'LatBuffMax'
-       write(UnitTmp_,*)
-    end if
+    if(UseBufferGrid)call write_buffer_restart_header(UnitTmp_)
 
     if(UseBody2)then
        write(UnitTmp_,'(a)')'#SECONDBODY'

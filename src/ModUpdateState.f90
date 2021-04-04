@@ -27,12 +27,12 @@ contains
     !$acc routine vector
     use ModMain
     use ModAdvance
-    use ModMultiFluid, ONLY:  nFluid
-    use BATL_lib, ONLY: CellVolume_GB
+    use ModMultiFluid, ONLY: nFluid
+    use BATL_lib,      ONLY: CellVolume_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
     use ModUserInterface ! user_update_states
-    use ModMessagePass, ONLY: fix_buffer_grid
+    use ModBuffer,     ONLY: fix_buffer_grid
 
     integer, intent(in) :: iBlock
     integer :: iVar, iFluid, i, j, k
@@ -147,7 +147,7 @@ contains
     use ModFaceValue, ONLY: UseFaceIntegral4
     use BATL_lib, ONLY: CellVolume_GB
     use ModUserInterface
-    use ModMessagePass, ONLY: fix_buffer_grid
+    use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
          ion_electron_init_point_impl, HypEDecay
     use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
