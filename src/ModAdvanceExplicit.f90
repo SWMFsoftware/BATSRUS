@@ -41,6 +41,7 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
+    use ModUpdateStatePrim, ONLY: update_state_gpu_prim, update_state_cpu_prim
     use ModUpdateStateFast, ONLY: update_state_gpu, update_state_cpu
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
@@ -132,9 +133,15 @@ contains
           call update_state_gpu  ! optimal for GPU
 #else
           call update_state_cpu  ! optimal for CPU
-       elseif(index(StringTest,'GPUUPDATE')>0)then
-          call update_state_gpu  ! run on CPU for debugging
 #endif
+       elseif(index(StringTest,'GPUUPDATE')>0)then
+          call update_state_gpu
+       elseif(index(StringTest,'CPUUPDATE')>0)then
+          call update_state_cpu
+       elseif(index(StringTest,'GPUPRIM')>0)then
+          call update_state_gpu_prim
+       elseif(index(StringTest,'CPUPRIM')>0)then
+          call update_state_cpu_prim
        else
           ! Multi-block solution update.
           !$acc parallel
