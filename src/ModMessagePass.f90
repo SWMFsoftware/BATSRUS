@@ -17,7 +17,7 @@ module ModMessagePass
   private ! except
 
   public:: exchange_messages   ! fill ghost cells and (re)calculate energies
-  
+
   ! Set to true if there is a need for extra message passing
   logical, public:: DoExtraMessagePass = .false.
 

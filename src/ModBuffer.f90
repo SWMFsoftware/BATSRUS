@@ -2,23 +2,26 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModNumConst,  ONLY: cHalfPi, cTwoPi
   use BATL_lib,     ONLY: MaxDim
   implicit none
   save
   ! Named indexes for the spherical buffer
   integer, parameter :: BuffR_  =1, BuffLon_ =  2, BuffLat_ =  3
-  
+
   ! Number of buffer grid points, along radial, longitudinal and latitudinal
   ! dirctions
   integer            :: nRBuff = 2, nLonBuff = 90, nLatBuff = 45
-  
+
   ! Buffer grid with dimension(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1).
   ! There are layers of grid points to implement periodic BCs in longitude
-  ! and across-the-pole interpolation in latitude. 
+  ! and across-the-pole interpolation in latitude.
   real,  allocatable :: BufferState_VG(:,:,:,:)
-  
-  ! Mesh sizes 
+
+  ! Mesh sizes
   real               :: dSphBuff_D(MaxDim)
   ! Minimum and maximum coordinate values. For radius the use of UnitX_
   ! is assumed, while the longitude and latitude are expressed in radians
@@ -58,7 +61,7 @@ contains
   end subroutine init_buffer_grid
   !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
-    ! Read all parameters from the parameter file and/or restart header file 
+    ! Read all parameters from the parameter file and/or restart header file
     use ModReadParam, ONLY: read_var
     ! The longitude and latitude range are read in degrees and then converted
     ! to radians
@@ -439,33 +442,33 @@ contains
     ! Fill all spatial domain with values depend on the BC
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       
+
        ! Fill in the physical cells, which are outside the buffer grid
        ! When testing, do not fill cells outside the buffer
        do k = 1, nK; do j = 1 , nJ; do i = 1, nI
           if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
-          
+
           ! For each grid point, get the values at the base (buffer)
           x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
-          
+
           ! The grid point values are extracted from the base values
           call get_from_spher_buffer_grid(&
                x_D, nVar, State_VGB(:,i,j,k,iBlock))
-          
+
           ! Transform primitive variables to conservative ones:
           State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
                State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
                State_VGB(rho_,i,j,k,iBlock)
-          
+
           ! Scale as (r/R)^2:
           State_VGB(:,i,j,k,iBlock)=&
                State_VGB(:,i,j,k,iBlock)*&
                (rBuffMax/R_BLK(i,j,k,iBlock))**2
-          
+
        end do; end do; end do
     end do
   end subroutine match_ibc
   !============================================================================
-  
+
 end module ModBuffer
 !==============================================================================

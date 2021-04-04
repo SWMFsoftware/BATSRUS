@@ -32,7 +32,7 @@ module ModUpdateStateFast
   ! Used by ModUpdateStatePrim
   public:: set_energy_pressure, get_normal, get_primitive, get_numerical_flux,&
        limiter2
-  
+
   logical:: DoTestCell= .false.
 
 contains
@@ -62,7 +62,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
-          !DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+          ! DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(i, j, k, iBlock, Flux_VX(:,i,j,k))
@@ -72,7 +72,7 @@ contains
        if(nDim > 1)then
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
              !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VY(:,i,j,k))
@@ -83,7 +83,7 @@ contains
        if(nDim > 2)then
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
              !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZ(:,i,j,k))
@@ -130,7 +130,7 @@ contains
     !$acc end parallel
 
     call test_stop(NameSub, DoTest, iBlock)
-    
+
   end subroutine update_state_cpu
   !============================================================================
   subroutine get_flux_x(i, j,  k, iBlock, Flux_V)
@@ -759,7 +759,7 @@ end module ModUpdateStateFast
 module ModUpdateStatePrim
 
   ! Save Primitive_VG array
-  
+
   use ModVarIndexes
   use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
   use ModMain, ONLY: iStage, Cfl, Dt, nOrder
@@ -778,7 +778,7 @@ module ModUpdateStatePrim
   use ModUpdateStateFast, ONLY: &
        set_energy_pressure, get_normal, get_primitive, get_numerical_flux, &
        limiter2
-  
+
   implicit none
 
   private ! except
@@ -803,7 +803,7 @@ contains
     real:: Flux_VZ(nFlux,nI,nJ,nK+1)
     !$acc declare create (Primitive_VG, Flux_VX, Flux_VY, Flux_VZ)
     !$acc declare create (Change_V, DtPerDv)
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu_prim'
     !--------------------------------------------------------------------------
@@ -823,7 +823,7 @@ contains
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
-          !DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+          ! DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(Primitive_VG, i, j, k, iBlock, Flux_VX(:,i,j,k))
@@ -834,7 +834,7 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
              !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
 
              call get_flux_y(Primitive_VG, i, j, k, iBlock, Flux_VY(:,i,j,k))
@@ -846,7 +846,7 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
              !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
 
              call get_flux_z(Primitive_VG, i, j, k, iBlock, Flux_VZ(:,i,j,k))
@@ -962,10 +962,10 @@ contains
     real:: Change_V(nFlux), DtPerDv
     !$acc declare create (Primitive_VG, Change_V, DtPerDv)
 
+#ifndef OPENACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu_prim'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     call test_start(NameSub, DoTest)
 #endif
 
@@ -978,7 +978,7 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VG(:,i,j,k))
        end do; end do; end do
-       
+
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
