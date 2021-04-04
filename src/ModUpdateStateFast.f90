@@ -4,6 +4,8 @@
 
 module ModUpdateStateFast
 
+  ! Calculate each face twice
+
   use ModVarIndexes
   use ModFaceFlux,  ONLY: DoLf
   use ModFaceValue, ONLY: BetaLimiter
@@ -27,6 +29,10 @@ module ModUpdateStateFast
   public:: update_state_cpu ! optimal for CPU, does not work on GPU
   public:: update_state_gpu ! optimal for GPU but works on CPU too
 
+  ! Used by ModUpdateStatePrim
+  public:: set_energy_pressure, get_normal, get_primitive, get_numerical_flux,&
+       limiter2
+  
   logical:: DoTestCell= .false.
 
 contains
@@ -740,4 +746,398 @@ contains
   !============================================================================
 
 end module ModUpdateStateFast
+!==============================================================================
+
+module ModUpdateStatePrim
+
+  ! Save Primitive_VG array
+  
+  use ModVarIndexes
+  use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
+  use ModMain, ONLY: iStage, Cfl, Dt, nOrder
+  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI
+!!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
+  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+#ifndef OPENACC
+  use BATL_lib, ONLY: IsCartesianGrid, CellFace_DFB, FaceNormal_DDFB
+#endif
+  use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
+  use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp
+  use ModNumConst, ONLY: cUnit_DD
+
+  use ModUpdateStateFast, ONLY: &
+       set_energy_pressure, get_normal, get_primitive, get_numerical_flux, &
+       limiter2
+  
+  implicit none
+
+  private ! except
+
+  public:: update_state_cpu_prim ! optimal for CPU
+  public:: update_state_gpu_prim ! optimal for GPU
+
+  logical:: DoTestCell= .false.
+
+contains
+  !============================================================================
+  subroutine update_state_cpu_prim
+
+    ! optimal for CPU (face value and face flux calculated only once)
+
+    integer:: i, j, k, iBlock
+
+    real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real:: DtPerDv, Change_V(nFlux)
+    real:: Flux_VX(nFlux,nI+1,nJ,nK)
+    real:: Flux_VY(nFlux,nI,nJ+1,nK)
+    real:: Flux_VZ(nFlux,nI,nJ,nK+1)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_state_cpu_prim'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       ! Calculate the primitive variables
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VG(:,i,j,k))
+       end do; end do; end do
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+
+          DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+               j == jTest .and. k == kTest .and. iBlock == iBlockTest
+
+          call get_flux_x(Primitive_VG, i, j, k, iBlock, Flux_VX(:,i,j,k))
+
+       end do; end do; end do
+
+       if(nDim > 1)then
+          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+
+             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+                  .and. (j == jTest .or. j==jTest+1) .and. k == kTest
+
+             call get_flux_y(Primitive_VG, i, j, k, iBlock, Flux_VY(:,i,j,k))
+
+          end do; end do; end do
+       end if
+
+       if(nDim > 2)then
+          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+
+             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+                  .and. j == jTest .and. (k == kTest .or. k == kTest+1)
+
+             call get_flux_z(Primitive_VG, i, j, k, iBlock, Flux_VZ(:,i,j,k))
+
+          end do; end do; end do
+       end if
+
+       ! Update
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          Change_V =  Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k)
+          if(nDim > 1) Change_V = Change_V &
+               + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k)
+          if(nDim > 2) Change_V = Change_V &
+               + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1)
+
+          ! Time step divided by cell volume
+!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+          DtPerDv = Dt/CellVolume_B(iBlock)
+
+          ! Update state
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+               + DtPerDv*Change_V(1:nVar)
+          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+               + DtPerDv*Change_V(nVar+1)
+
+          call set_energy_pressure(i,j,k,iBlock)
+
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest
+          if(DoTestCell)then
+             write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+             write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
+             write(*,*)'Change_V  =', Change_V
+             write(*,*)'DtPerDv   =', DtPerDv
+          end if
+
+       enddo; enddo; enddo
+
+    end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+
+  end subroutine update_state_cpu_prim
+  !============================================================================
+  subroutine get_flux_x(Primitive_VG, i, j,  k, iBlock, Flux_V)
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: Flux_V(nFlux)
+
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
+    call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
+    call get_face_x(Primitive_VG, i, j, k, iBlock, StateLeft_V, StateRight_V)
+
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
+
+  end subroutine get_flux_x
+  !============================================================================
+  subroutine get_flux_y(Primitive_VG, i, j, k, iBlock, Flux_V)
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: Flux_V(nFlux)
+
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
+    call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
+    call get_face_y(Primitive_VG, i, j, k, iBlock, StateLeft_V, StateRight_V)
+
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
+
+  end subroutine get_flux_y
+  !============================================================================
+  subroutine get_flux_z(Primitive_VG, i, j, k, iBlock, Flux_V)
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: Flux_V(nFlux)
+
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
+    !--------------------------------------------------------------------------
+    call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+
+    call get_face_z(Primitive_VG, i, j, k, iBlock, StateLeft_V, StateRight_V)
+
+    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+         StateLeft_V, StateRight_V, Flux_V)
+
+  end subroutine get_flux_z
+  !============================================================================
+  subroutine update_state_gpu_prim
+
+    ! optimal for GPU, store primitive variables
+
+    integer:: i, j, k, iBlock
+
+    real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real:: Change_V(nFlux), DtPerDv
+    !$acc declare create (Primitive_VG, Change_V, DtPerDv)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_state_gpu_prim'
+    !--------------------------------------------------------------------------
+#ifndef OPENACC
+    call test_start(NameSub, DoTest)
+#endif
+
+    !$acc parallel
+    !$acc loop gang private(Primitive_VG) independent
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       !$acc loop vector collapse(3) independent
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VG(:,i,j,k))
+       end do; end do; end do
+       
+       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+#ifndef OPENACC
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest
+#endif
+
+          ! Initialize change in State_VGB
+          Change_V = 0.0
+
+          call do_face(Primitive_VG, 1, i, j, k, iBlock, Change_V)
+          call do_face(Primitive_VG, 2, i, j, k, iBlock, Change_V)
+
+          if(nDim > 1)then
+             call do_face(Primitive_VG, 3, i, j, k, iBlock, Change_V)
+             call do_face(Primitive_VG, 4, i, j, k, iBlock, Change_V)
+          end if
+
+          if(nDim > 2)then
+             call do_face(Primitive_VG, 5, i, j, k, iBlock, Change_V)
+             call do_face(Primitive_VG, 6, i, j, k, iBlock, Change_V)
+          end if
+
+          ! Time step divided by cell volume
+!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+          DtPerDv = Dt/CellVolume_B(iBlock)
+
+          ! Update state
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+               + DtPerDv*Change_V(1:nVar)
+          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+               + DtPerDv*Change_V(nVar+1)
+
+          call set_energy_pressure(i,j,k,iBlock)
+
+#ifndef OPENACC
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest
+          if(DoTestCell)then
+             write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+             write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
+             write(*,*)'Change_V  =', Change_V
+             write(*,*)'DtPerDv   =', DtPerDv
+          end if
+#endif
+
+       enddo; enddo; enddo
+
+    end do
+    !$acc end parallel
+
+#ifndef OPENACC
+    call test_stop(NameSub, DoTest, iBlock)
+#endif
+  end subroutine update_state_gpu_prim
+  !============================================================================
+  subroutine do_face(Primitive_VG, iFace, i, j, k, iBlock, Change_V)
+    !$acc routine seq
+
+    real,    intent(in):: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in):: iFace, i, j, k, iBlock
+    real, intent(inout):: Change_V(nFlux)
+
+    real :: Area, NormalX, NormalY, NormalZ
+    real :: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
+    !--------------------------------------------------------------------------
+    select case(iFace)
+    case(1)
+       call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_face_x(Primitive_VG, i,j,k,iBlock, StateLeft_V, StateRight_V)
+    case(2)
+       call get_normal(1, i+1, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+       call get_face_x(Primitive_VG, i+1,j,k,iBlock, StateLeft_V, StateRight_V)
+    case(3)
+       call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_face_y(Primitive_VG, i,j,k,iBlock, StateLeft_V, StateRight_V)
+    case(4)
+       call get_normal(2, i, j+1, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+       call get_face_y(Primitive_VG, i,j+1,k,iBlock, StateLeft_V, StateRight_V)
+    case(5)
+       call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_face_z(Primitive_VG, i,j,k,iBlock, StateLeft_V, StateRight_V)
+    case(6)
+       call get_normal(3, i, j, k+1, iBlock, NormalX, NormalY, NormalZ, Area)
+       Area = -Area
+       call get_face_z(Primitive_VG, i,j,k+1,iBlock, StateLeft_V, StateRight_V)
+    end select
+
+    call get_numerical_flux(NormalX, NormalY, NormalZ, &
+         Area, StateLeft_V, StateRight_V, Flux_V)
+
+    Change_V = Change_V + Flux_V
+
+  end subroutine do_face
+  !============================================================================
+  subroutine get_face_x(Primitive_VG, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    if(nOrder == 1)then
+       StateLeft_V   = Primitive_VG(:,i-1,j,k)
+       StateRight_V  = Primitive_VG(:,i,j,k)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          call limiter2( &
+               Primitive_VG(iVar,i-2,j,k), &
+               Primitive_VG(iVar,i-1,j,k), &
+               Primitive_VG(iVar,  i,j,k), &
+               Primitive_VG(iVar,i+1,j,k), &
+               StateLeft_V(iVar), StateRight_V(iVar))
+       end do
+    end if
+
+  end subroutine get_face_x
+  !============================================================================
+  subroutine get_face_y(Primitive_VG, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    if(nOrder == 1)then
+       StateLeft_V   = Primitive_VG(:,i,j-1,k)
+       StateRight_V  = Primitive_VG(:,i,j,k)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          call limiter2( &
+               Primitive_VG(iVar,i,j-2,k), &
+               Primitive_VG(iVar,i,j-1,k), &
+               Primitive_VG(iVar,i,j  ,k), &
+               Primitive_VG(iVar,i,j+1,k), &
+               StateLeft_V(iVar), StateRight_V(iVar))
+       end do
+    end if
+
+  end subroutine get_face_y
+  !============================================================================
+  subroutine get_face_z(Primitive_VG, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V)
+    !$acc routine seq
+
+    real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+
+    integer:: iVar
+    !--------------------------------------------------------------------------
+    if(nOrder == 1)then
+       StateLeft_V   = Primitive_VG(:,i,j,k-1)
+       StateRight_V  = Primitive_VG(:,i,j,k)
+    else
+       ! Do it per variable to reduce memory use
+       do iVar = 1, nVar
+          ! Single fluid conversion to primitive variables
+          call limiter2( &
+               Primitive_VG(iVar,i,j,k-2), &
+               Primitive_VG(iVar,i,j,k-1), &
+               Primitive_VG(iVar,i,j,k  ), &
+               Primitive_VG(iVar,i,j,k+1), &
+               StateLeft_V(iVar), StateRight_V(iVar))
+       end do
+    end if
+
+  end subroutine get_face_z
+  !============================================================================
+end module ModUpdateStatePrim
 !==============================================================================
