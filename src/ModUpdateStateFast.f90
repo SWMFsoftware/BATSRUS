@@ -47,19 +47,23 @@ contains
     real:: Flux_VX(nFlux,nI+1,nJ,nK)
     real:: Flux_VY(nFlux,nI,nJ+1,nK)
     real:: Flux_VZ(nFlux,nI,nJ,nK+1)
+    !$acc declare create (Flux_VX, Flux_VY, Flux_VZ, Change_V, DtPerDv)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$acc parallel
+    !$acc loop gang private(Flux_VX, Flux_VY, Flux_VZ) independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
-          DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
-               j == jTest .and. k == kTest .and. iBlock == iBlockTest
+          !DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+          !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(i, j, k, iBlock, Flux_VX(:,i,j,k))
 
@@ -68,8 +72,8 @@ contains
        if(nDim > 1)then
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. (j == jTest .or. j==jTest+1) .and. k == kTest
+             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VY(:,i,j,k))
 
@@ -79,8 +83,8 @@ contains
        if(nDim > 2)then
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. j == jTest .and. (k == kTest .or. k == kTest+1)
+             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZ(:,i,j,k))
 
@@ -88,6 +92,7 @@ contains
        end if
 
        ! Update
+       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           Change_V =  Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k)
@@ -108,6 +113,7 @@ contains
 
           call set_energy_pressure(i,j,k,iBlock)
 
+#ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
           if(DoTestCell)then
@@ -116,16 +122,19 @@ contains
              write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
+#endif
 
        enddo; enddo; enddo
 
     end do
+    !$acc end parallel
 
     call test_stop(NameSub, DoTest, iBlock)
-
+    
   end subroutine update_state_cpu
   !============================================================================
   subroutine get_flux_x(i, j,  k, iBlock, Flux_V)
+    !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
@@ -143,6 +152,7 @@ contains
   end subroutine get_flux_x
   !============================================================================
   subroutine get_flux_y(i, j, k, iBlock, Flux_V)
+    !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
@@ -160,6 +170,7 @@ contains
   end subroutine get_flux_y
   !============================================================================
   subroutine get_flux_z(i, j, k, iBlock, Flux_V)
+    !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
@@ -188,9 +199,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     call test_start(NameSub, DoTest)
-#endif
 
     !$acc parallel
     !$acc loop gang private(Change_VC) independent
@@ -256,9 +265,8 @@ contains
     end do
     !$acc end parallel
 
-#ifndef OPENACC
     call test_stop(NameSub, DoTest, iBlock)
-#endif
+
   end subroutine update_state_gpu
   !============================================================================
 
@@ -793,34 +801,41 @@ contains
     real:: Flux_VX(nFlux,nI+1,nJ,nK)
     real:: Flux_VY(nFlux,nI,nJ+1,nK)
     real:: Flux_VZ(nFlux,nI,nJ,nK+1)
-
+    !$acc declare create (Primitive_VG, Flux_VX, Flux_VY, Flux_VZ)
+    !$acc declare create (Change_V, DtPerDv)
+    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu_prim'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$acc parallel
+    !$acc loop gang private(Primitive_VG, Flux_VX,Flux_VY,Flux_VZ) independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        ! Calculate the primitive variables
+       !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VG(:,i,j,k))
        end do; end do; end do
 
+       !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
-          DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
-               j == jTest .and. k == kTest .and. iBlock == iBlockTest
+          !DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+          !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(Primitive_VG, i, j, k, iBlock, Flux_VX(:,i,j,k))
 
        end do; end do; end do
 
        if(nDim > 1)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. (j == jTest .or. j==jTest+1) .and. k == kTest
+             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
 
              call get_flux_y(Primitive_VG, i, j, k, iBlock, Flux_VY(:,i,j,k))
 
@@ -828,10 +843,11 @@ contains
        end if
 
        if(nDim > 2)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-                  .and. j == jTest .and. (k == kTest .or. k == kTest+1)
+             !DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
+             !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
 
              call get_flux_z(Primitive_VG, i, j, k, iBlock, Flux_VZ(:,i,j,k))
 
@@ -839,6 +855,7 @@ contains
        end if
 
        ! Update
+       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           Change_V =  Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k)
@@ -859,6 +876,7 @@ contains
 
           call set_energy_pressure(i,j,k,iBlock)
 
+#ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
           if(DoTestCell)then
@@ -867,16 +885,18 @@ contains
              write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
-
+#endif
        enddo; enddo; enddo
 
     end do
+    !$acc end parallel
 
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine update_state_cpu_prim
   !============================================================================
   subroutine get_flux_x(Primitive_VG, i, j,  k, iBlock, Flux_V)
+    !$acc routine seq
 
     real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in) :: i, j, k, iBlock
@@ -895,6 +915,7 @@ contains
   end subroutine get_flux_x
   !============================================================================
   subroutine get_flux_y(Primitive_VG, i, j, k, iBlock, Flux_V)
+    !$acc routine seq
 
     real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in) :: i, j, k, iBlock
@@ -913,6 +934,7 @@ contains
   end subroutine get_flux_y
   !============================================================================
   subroutine get_flux_z(Primitive_VG, i, j, k, iBlock, Flux_V)
+    !$acc routine seq
 
     real,    intent(in) :: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in) :: i, j, k, iBlock
