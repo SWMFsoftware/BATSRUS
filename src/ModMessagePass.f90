@@ -17,9 +17,7 @@ module ModMessagePass
   private ! except
 
   public:: exchange_messages   ! fill ghost cells and (re)calculate energies
-  public:: fix_buffer_grid     ! restore old values in the buffer grid
-  public:: fill_in_from_buffer ! set cells of the block covered by buffer grid
-
+  
   ! Set to true if there is a need for extra message passing
   logical, public:: DoExtraMessagePass = .false.
 
@@ -46,6 +44,7 @@ contains
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
+    use ModBuffer,   ONLY: fill_in_from_buffer
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
@@ -252,76 +251,6 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine exchange_messages
-  !============================================================================
-  logical function is_buffered_point(i,j,k,iBlock)
-    use ModGeometry, ONLY: R_BLK
-    use ModBuffer,   ONLY: BufferMin_D, BufferMax_D
-    integer, intent(in):: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-         .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
-  end function is_buffered_point
-  !============================================================================
-  subroutine fix_buffer_grid(iBlock)
-
-    ! Do not update solution in the domain covered by the buffer grid
-
-    use ModAdvance, ONLY: State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI
-    use BATL_lib, ONLY: nI, nJ, nK
-
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'fix_buffer_grid'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
-       State_VGB(:,i,j,k,iBlock) = &
-            StateOld_VGB(:,i,j,k,iBlock)
-       Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine fix_buffer_grid
-  !============================================================================
-  subroutine fill_in_from_buffer(iBlock)
-    use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
-    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
-    use ModBuffer,  ONLY: get_from_spher_buffer_grid
-    integer,intent(in)::iBlock
-
-    integer:: i, j, k
-    logical:: DoWrite=.true.
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(DoWrite)then
-       DoWrite=.false.
-       if(iProc==0)then
-          write(*,*)'Fill in the cells near the inner boundary from the buffer'
-       end if
-    end if
-
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(.not.is_buffered_point(i, j, k, iBlock)) CYCLE
-
-       ! Get interpolated values from buffer grid:
-       call get_from_spher_buffer_grid(&
-            Xyz_DGB(:,i,j,k,iBlock), nVar, State_VGB(:,i,j,k,iBlock))
-
-       ! Transform primitive variables to conservative ones:
-       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-            State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
-
-    end do; end do; end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine fill_in_from_buffer
   !============================================================================
 
 end module ModMessagePass

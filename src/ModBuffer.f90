@@ -8,25 +8,64 @@ module ModBuffer
   save
   ! Named indexes for the spherical buffer
   integer, parameter :: BuffR_  =1, BuffLon_ =  2, BuffLat_ =  3
+  
+  ! Number of buffer grid points, along radial, longitudinal and latitudinal
+  ! dirctions
   integer            :: nRBuff = 2, nLonBuff = 90, nLatBuff = 45
-  ! Buffer grid with dimension(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1)
+  
+  ! Buffer grid with dimension(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1).
+  ! There are layers of grid points to implement periodic BCs in longitude
+  ! and across-the-pole interpolation in latitude. 
   real,  allocatable :: BufferState_VG(:,:,:,:)
+  
+  ! Mesh sizes 
+  real               :: dSphBuff_D(MaxDim)
+  ! Minimum and maximum coordinate values. For radius the use of UnitX_
+  ! is assumed, while the longitude and latitude are expressed in radians
+  real               :: BufferMin_D(MaxDim) = [ 19.0,    0.0, -cHalfPi]
+  real               :: BufferMax_D(MaxDim) = [ 21.0, cTwoPi,  cHalfPi]
 
-  real               :: dSphBuff_D(3)
-  real               :: BufferMin_D(3) = [ 19.0,    0.0, -cHalfPi]
-  real               :: BufferMax_D(3) = [ 21.0, cTwoPi,  cHalfPi]
-
-  real               :: SourceTarget_DD(MaxDim, MaxDim)
-  real               :: TimeSimulationLast = -1.0
-
-  logical            :: DoRestartBuffer = .false.
+  ! The magnetic field and velocity vectors on grid are in the coordinate
+  ! system as used in the "source" model (in SC, if the grid is applied in
+  ! the IH). Therefore, we need both the coordinate system identifier from
+  ! the source model...
   character (len=3)  :: TypeCoordSource = '???'
+  ! ...and the matrix to convert the coordinate, velocity and the
+  ! magnetic field vectors between the buffer grid and the model one:
+  real               :: SourceTarget_DD(MaxDim, MaxDim)
+  ! To figure out, if the time-dependent conversion matrix needs to be
+  ! recalculated for a new time step
+  real               :: TimeSimulationLast = -1.0
+  ! If the logical below is true the buffer may be restarted, even is the
+  ! source model is not used/configured in the restarted run.
+  logical            :: DoRestartBuffer = .false.
 contains
   !============================================================================
+  subroutine init_buffer_grid
+    use ModVarIndexes, ONLY: nVar
+    use ModMain,       ONLY: rLowerModel
+    integer  :: nCell_D(3)
+    !--------------------------------------------------------------------------
+    if(allocated(BufferState_VG))deallocate(BufferState_VG)
+    allocate(BufferState_VG(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1))
+    ! Calculate grid spacing and save
+    nCell_D = [nRBuff, nLonBuff, nLatBuff]
+    dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
+    dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
+         /real(nRBuff - 1)
+    ! Assign the lower limit for LOS intergation, for the given model:
+    rLowerModel = BufferMax_D(BuffR_)
+  end subroutine init_buffer_grid
+  !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
-    use ModReadParam
-    use ModNumConst, ONLY: cDegToRad
-    use ModMain,     ONLY: NameThisComp
+    ! Read all parameters from the parameter file and/or restart header file 
+    use ModReadParam, ONLY: read_var
+    ! The longitude and latitude range are read in degrees and then converted
+    ! to radians
+    use ModNumConst,  ONLY: cDegToRad
+    ! At the time the use of buffer grid is expected in IH or OH, but not in
+    ! SC
+    use ModMain,      ONLY: NameThisComp
     character(LEN=*), intent(in) :: NameCommand
     character(len=*), parameter:: NameSub = 'read_buffer_grid_param'
     !--------------------------------------------------------------------------
@@ -42,7 +81,7 @@ contains
        call read_var('RBuffMax'  ,  BufferMax_D(BuffR_))
        BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
        BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
-       call set_buffer_grid
+       call init_buffer_grid
     case("#BUFFERGRID")
        call read_var('nRBuff'    ,  nRBuff)
        call read_var('nLonBuff'  ,  nLonBuff)
@@ -59,28 +98,12 @@ contains
             *cDegToRad
        BufferMax_D(BuffLon_:BuffLat_) = BufferMax_D(BuffLon_:BuffLat_)&
             *cDegToRad
-       call set_buffer_grid
+       call init_buffer_grid
     case("#RESTARTBUFFERGRID")
        call read_var('DoRestartBuffer', DoRestartBuffer)
        if(DoRestartBuffer)call read_var('TypeCoordSource', TypeCoordSource)
     end select
   end subroutine read_buffer_grid_param
-  !============================================================================
-  subroutine set_buffer_grid
-    use ModVarIndexes, ONLY: nVar
-    use ModMain,       ONLY: rLowerModel
-    integer  :: nCell_D(3)
-    !--------------------------------------------------------------------------
-    if(allocated(BufferState_VG))deallocate(BufferState_VG)
-    allocate(BufferState_VG(nVar, nRBuff, 0:nLonBuff+1, 0:nLatBuff+1))
-    ! Calculate grid spacing and save
-    nCell_D = [nRBuff, nLonBuff, nLatBuff]
-    dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
-    dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
-         /real(nRBuff - 1)
-    ! Assign the lower limit for LOS intergation, for the given model:
-    rLowerModel = BufferMax_D(BuffR_)
-  end subroutine set_buffer_grid
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     use ModMain,       ONLY: TypeCoordSystem, Time_Simulation, &
@@ -114,7 +137,7 @@ contains
        XyzSource_D = XyzTarget_D
     end if
 
-    call xyz_to_rlonlat(XyzSource_D, Sph_D(1), Sph_D(2), Sph_D(3))
+    call xyz_to_rlonlat(XyzSource_D, Sph_D)
 
     ! Get the target state from the spherical buffer grid
     call interpolate_from_global_buffer(Sph_D, nVar, State_V)
@@ -137,7 +160,6 @@ contains
                 State_V(WaveFirst_) = State_V(WaveLast_)
                 State_V(WaveLast_) = Ewave
              end if
-
              State_V(SignB_)=-1.0
           else
              State_V(SignB_)= 1.0
@@ -294,6 +316,33 @@ contains
     call close_file
   end subroutine save_buffer_restart
   !============================================================================
+  subroutine write_buffer_restart_header(iFile)
+    use ModUtilities, ONLY: cTab
+    integer, intent(in) :: iFile
+    !--------------------------------------------------------------------------
+    write(iFile,'(a)')'#RESTARTBUFFERGRID'
+    write(iFile,'(a)')'T'//cTab//cTab//cTab//'DoRestartBuffer'
+    write(iFile,'(a)')TypeCoordSource//cTab//cTab//cTab//'TypeCoordSource'
+    write(iFile,*)
+    write(iFile,'(a)')'#BUFFERGRID'
+    write(iFile,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'
+    write(iFile,'(i8,a)')nLonBuff, cTab//cTab//'nLonBuff'
+    write(iFile,'(i8,a)')nlatBuff, cTab//cTab//'nLatBuff'
+    write(iFile,'(es22.15,a)') &
+         BufferMin_D(BuffR_), cTab//cTab//'RBuffMin'
+    write(iFile,'(es22.15,a)') &
+         BufferMax_D(BuffR_), cTab//cTab//'RBuffMax'
+    write(iFile,'(a)')'0.0'//&
+         cTab//cTab//cTab//'LonBuffMin'
+    write(iFile,'(a)')'360.0'//&
+         cTab//cTab//cTab//'LonBuffMax'
+    write(iFile,'(a)')'-90.0'//&
+         cTab//cTab//cTab//'LatBuffMin'
+    write(iFile,'(a)')'90.0'//&
+         cTab//cTab//cTab//'LatBuffMax'
+    write(iFile,*)
+  end subroutine write_buffer_restart_header
+  !============================================================================
   subroutine  read_buffer_restart
     use ModMain,       ONLY: NameThisComp
     use ModIoUnit,     ONLY: UnitTmp_
@@ -306,5 +355,117 @@ contains
     call close_file
   end subroutine read_buffer_restart
   !============================================================================
+  logical function is_buffered_point(i,j,k,iBlock)
+    use ModGeometry, ONLY: R_BLK
+    integer, intent(in):: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
+         .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+  end function is_buffered_point
+  !============================================================================
+  subroutine fill_in_from_buffer(iBlock)
+    use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
+    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc, &
+         test_start, test_stop
+    integer,intent(in)::iBlock
+
+    integer:: i, j, k
+    logical:: DoWrite=.true.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoWrite)then
+       DoWrite=.false.
+       if(iProc==0)then
+          write(*,*)'Fill in the cells near the inner boundary from the buffer'
+       end if
+    end if
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       if(.not.is_buffered_point(i, j, k, iBlock)) CYCLE
+
+       ! Get interpolated values from buffer grid:
+       call get_from_spher_buffer_grid(&
+            Xyz_DGB(:,i,j,k,iBlock), nVar, State_VGB(:,i,j,k,iBlock))
+
+       ! Transform primitive variables to conservative ones:
+       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+            State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine fill_in_from_buffer
+  !============================================================================
+  subroutine fix_buffer_grid(iBlock)
+
+    ! Do not update solution in the domain covered by the buffer grid
+
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI
+    use BATL_lib,   ONLY: nI, nJ, nK, &
+         test_start, test_stop
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_buffer_grid'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
+       State_VGB(:,i,j,k,iBlock) = &
+            StateOld_VGB(:,i,j,k,iBlock)
+       Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
+    end do; end do; end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine fix_buffer_grid
+  !============================================================================
+  subroutine match_ibc
+    ! restore old values in the domain covered by the buffer grid
+    use ModGeometry, ONLY:R_BLK
+    use BATL_lib,  ONLY: Xyz_DGB, iProc
+    use ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
+    use ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
+    integer  :: iBlock
+    integer  :: i,j,k
+    real     :: x_D(MaxDim), rBuffMax
+    !--------------------------------------------------------------------------
+    rBuffMax = BufferMax_D(BuffR_)
+
+    ! Fill all spatial domain with values depend on the BC
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       
+       ! Fill in the physical cells, which are outside the buffer grid
+       ! When testing, do not fill cells outside the buffer
+       do k = 1, nK; do j = 1 , nJ; do i = 1, nI
+          if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
+          
+          ! For each grid point, get the values at the base (buffer)
+          x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
+          
+          ! The grid point values are extracted from the base values
+          call get_from_spher_buffer_grid(&
+               x_D, nVar, State_VGB(:,i,j,k,iBlock))
+          
+          ! Transform primitive variables to conservative ones:
+          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
+               State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+               State_VGB(rho_,i,j,k,iBlock)
+          
+          ! Scale as (r/R)^2:
+          State_VGB(:,i,j,k,iBlock)=&
+               State_VGB(:,i,j,k,iBlock)*&
+               (rBuffMax/R_BLK(i,j,k,iBlock))**2
+          
+       end do; end do; end do
+    end do
+  end subroutine match_ibc
+  !============================================================================
+  
 end module ModBuffer
 !==============================================================================
