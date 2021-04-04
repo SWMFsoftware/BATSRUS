@@ -717,28 +717,25 @@ contains
 
   end subroutine get_primitive
   !============================================================================
-  real function minmodhalf(a, b)
-    !$acc routine seq
-    real, intent(in):: a, b
-    !--------------------------------------------------------------------------
-    minmodhalf = (sign(0.25, a) + sign(0.25, b))*min(abs(a), abs(b))
-  end function minmodhalf
-  !============================================================================
   subroutine limiter2(Var1, Var2, Var3, Var4, VarLeft, VarRight)
     !$acc routine seq
 
     ! Second order limiter on a 4 point stencil
     real, intent(in) :: Var1, Var2, Var3, Var4  ! cell center values at i=1..4
     real, intent(out):: VarLeft, VarRight       ! face values at i=2.5
-!    if(BetaLimiter == 1.0)then
-       ! minmod limiter
+
+    real, parameter:: cThird = 1./3.
+    real:: Slope21, Slope32, Slope43
     !--------------------------------------------------------------------------
-       VarLeft  = Var2 + minmodhalf(Var2-Var1, Var3-Var2)
-       VarRight = Var3 - minmodhalf(Var3-Var2, Var4-Var3)
-!    else
-!       ! mc3 limiter
-!
-!    end if
+    Slope21 = BetaLimiter*(Var2 - Var1)
+    Slope32 = BetaLimiter*(Var3 - Var2)
+    Slope43 = BetaLimiter*(Var4 - Var3)
+
+    VarLeft  = Var2 + (sign(0.25,Slope32) + sign(0.25,Slope21))*&
+         min(abs(Slope32), abs(Slope21), cThird*abs(2*Var3-Var1-Var2))
+    VarRight = Var3 - (sign(0.25,Slope32) + sign(0.25,Slope43))*&
+         min(abs(Slope32), abs(Slope43), cThird*abs(Var3+Var4-2*Var2))
+
   end subroutine limiter2
   !============================================================================
 

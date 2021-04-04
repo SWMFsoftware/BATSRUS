@@ -43,6 +43,7 @@ module ModFaceValue
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
   character(len=6), public :: TypeLimiter5= 'mp'
+  !$acc declare create(BetaLimiter)
 
   logical, public :: UseAccurateExtremum = .true.
   integer:: nLowOrder = 2
