@@ -111,7 +111,7 @@ contains
 
     ! Event date for filename
     character (len=3)  :: NameExt
-    character (len=19) :: eventDateTime
+    character (len=19) :: StringDateTime
 
     ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
     integer :: lRecData
@@ -197,9 +197,9 @@ contains
        if(IsPlotName_e)then
           ! Event date
           call get_date_time(iTime_I)
-          write(eventDateTime, '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)')&
+          write(StringDateTime, '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)')&
                iTime_I
-          NameSnapshot = trim(NameSnapshot) // "_e" // trim(eventDateTime)
+          NameSnapshot = trim(NameSnapshot) // "_e" // trim(StringDateTime)
        end if
        if(IsPlotName_t)then
           ! The file name will contain the StringDateOrTime
@@ -717,9 +717,15 @@ contains
                   unitstr_TEC)
              write(UnitTmp_,'(a)')trim(unitstr_TEC)
           elseif( unitstr_IDL == '') then
-             write(UnitTmp_,'(a)')'normalized units'
+             call get_date_time(iTime_I)
+             write(StringDateTime, '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
+                  iTime_I(1:6)
+             write(UnitTmp_,'(a)')StringDateTime//'; normalized units'
           else
-             write(UnitTmp_,'(a)')trim(unitstr_IDL)
+             call get_date_time(iTime_I)
+             write(StringDateTime, '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
+                  iTime_I(1:6)
+             write(UnitTmp_,'(a)')StringDateTime//'; '//trim(unitstr_IDL)
           endif
           write(UnitTmp_,*)
 
