@@ -3418,7 +3418,16 @@ contains
                  StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight)
 #endif
          elseif(DoHll)then
+#ifdef OPENACC
+            call harten_lax_vanleer_flux(&
+                 State_V, Flux_V, StateLeftCons_V, StateRightCons_V, &
+                 Cmax, EnLeft, EnRight, IsFF_I, IFF_I, RFF_I, FluxLeft_V, &
+                 FluxRight_V, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V,&
+                 Unormal_I, UnLeft_I, UnRight_I, StateLeft_V, StateRight_V,&
+                 Normal_D )
+#else
             call harten_lax_vanleer_flux
+#endif
          elseif(DoLfdw .or. DoHlldw)then
             call dominant_wave_flux(DoLfdw)
          elseif(DoHlld)then
@@ -3481,7 +3490,16 @@ contains
                  StateLeftCons_V, StateRightCons_V, Cmax, EnLeft, EnRight)
 #endif
          elseif(DoHllNeutral)then
+#ifdef OPENACC
+            call harten_lax_vanleer_flux(&
+                 State_V, Flux_V, StateLeftCons_V, StateRightCons_V, &
+                 Cmax, EnLeft, EnRight, IsFF_I, IFF_I, RFF_I, FluxLeft_V, &
+                 FluxRight_V, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V,&
+                 Unormal_I, UnLeft_I, UnRight_I, StateLeft_V, StateRight_V, &
+                 Normal_D)
+#else
             call harten_lax_vanleer_flux
+#endif
          elseif(DoLfdwNeutral .or. DoHlldwNeutral)then
             call dominant_wave_flux(DoLfdwNeutral)
          elseif(DoAwNeutral)then
@@ -3685,15 +3703,45 @@ contains
 #endif
     end subroutine lax_friedrichs_flux
     !==========================================================================
-    subroutine harten_lax_vanleer_flux
+    subroutine harten_lax_vanleer_flux(&
+#ifdef OPENACC
+      !------------------------------------------------------------------------
+         State_V, Flux_V, StateLeftCons_V, StateRightCons_V, &
+         Cmax, EnLeft, EnRight, IsFF_I, IFF_I, RFF_I, &
+         FluxLeft_V, FluxRight_V, MhdFlux_V, MhdFluxLeft_V, MhdFluxRight_V,&
+         Unormal_I, UnLeft_I, UnRight_I, StateLeft_V, StateRight_V, Normal_D &
+#endif
+         )
       !$acc routine seq
+
+#ifdef OPENACC
+      real, intent(in)    :: State_V(:)
+      real, intent(inout) :: Flux_V(:) ! only part of array is set
+      real, intent(in)    :: StateLeftCons_V(:), StateRightCons_V(:)
+      real, intent(out)   :: Cmax
+      real, intent(in)    :: EnLeft, EnRight
+
+      logical,  intent(inout):: IsFF_I(:)
+      integer,  intent(inout):: IFF_I(:)
+      real,     intent(inout):: RFF_I(:)
+
+      real, intent(inout):: FluxLeft_V(nVar+nFluid)
+      real, intent(inout):: FluxRight_V(nVar+nFluid)
+      real, intent(inout):: MhdFlux_V(RhoUx_:RhoUz_)
+      real, intent(inout):: MhdFluxLeft_V(RhoUx_:RhoUz_)
+      real, intent(inout):: MhdFluxRight_V(RhoUx_:RhoUz_)
+      real, intent(inout):: Unormal_I(nFluid+1)
+      real, intent(inout):: UnLeft_I(nFluid+1)
+      real, intent(inout):: UnRight_I(nFluid+1)
+      real, intent(inout):: StateLeft_V(nVar)
+      real, intent(inout):: StateRight_V(nVar)
+      real, intent(inout):: Normal_D(MaxDim)
+#endif
 
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
       !------------------------------------------------------------------------
-#ifndef OPENACC
-
 #ifdef OPENACC
       associate( &
            iFluidMin => IFF_I(iFluidMin_), &
@@ -3705,11 +3753,26 @@ contains
            Enormal => RFF_I(Enormal_))
 #endif
 
-        call get_speed_max(StateLeft_V, Cleft_I =CleftStateLeft_I)
+        call get_speed_max(StateLeft_V &
+#ifdef  OPENACC
+             , IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V &
+#endif
+             , Cleft_I =CleftStateLeft_I)
 
-        call get_speed_max(StateRight_V, Cright_I=CrightStateRight_I)
+        call get_speed_max(StateRight_V &
+#ifdef  OPENACC
+             , IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V &
+#endif
+             , Cright_I=CrightStateRight_I)
 
-        call get_speed_max(State_V, Cmax_I = Cmax_I, &
+        call get_speed_max(State_V&
+#ifdef  OPENACC
+             , IsFF_I, IFF_I, RFF_I, UnLeft_I, UnRight_I,&
+             Normal_D, StateLeft_V,StateRight_V &
+#endif
+             , Cmax_I = Cmax_I, &
              Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
         Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
@@ -3758,7 +3821,6 @@ contains
 
 #ifdef OPENACC
       end associate
-#endif
 #endif
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
