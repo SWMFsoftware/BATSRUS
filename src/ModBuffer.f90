@@ -315,7 +315,7 @@ contains
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartOUT/buffer.dat', &
          form='UNFORMATTED', NameCaller=NameSub)
-    write(UnitTmp_)BufferState_VG
+    write(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
     call close_file
   end subroutine save_buffer_restart
   !============================================================================
@@ -354,8 +354,9 @@ contains
     !--------------------------------------------------------------------------
     call open_file(file=NameThisComp//'/restartIN/buffer.dat', &
          status='old', form='UNFORMATTED', NameCaller=NameSub)
-    read(UnitTmp_)BufferState_VG
+    read(UnitTmp_)BufferState_VG(:,:,1:nLonBuff,1:nLatBuff)
     call close_file
+    call fill_in_buffer_grid_gc
   end subroutine read_buffer_restart
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
