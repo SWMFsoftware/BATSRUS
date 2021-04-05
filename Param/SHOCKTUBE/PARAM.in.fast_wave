@@ -127,7 +127,7 @@ periodic		TypeBc6
 2			nOrder
 Rusanov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #TIMESTEPPING
 1			nStage
@@ -178,7 +178,7 @@ z=0 mhd idl_ascii		StringPlot
 2			nOrder
 Linde			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #TIMESTEPPING
 1			nStage
