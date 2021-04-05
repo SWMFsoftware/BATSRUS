@@ -469,6 +469,24 @@ contains
     end do
   end subroutine match_ibc
   !============================================================================
-
+  subroutine fill_in_buffer_grid_gc
+    ! Fill in the buffer grid ghost cells:
+    ! For longitude: using periodic BCs at 0th and 360 degrees longitude
+    ! For latitude: interpolation across the pole
+    integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
+    !--------------------------------------------------------------------------
+    ! Fill buffer grid ghost cells
+    do iLon = 1, nLonBuff
+       iLonNew = iLon + nLonBuff/2
+       if (iLonNew > nLonBuff) iLonNew = iLonNew - nLonBuff
+       BufferState_VG(:,:,iLon, 0)         = BufferState_VG(:,:,iLonNew, 1)
+       BufferState_VG(:,:,iLon,nLatBuff+1) = &
+            BufferState_VG(:,:,iLonNew, nLatBuff)
+    end do
+    BufferState_VG(:,:,0,:)          = BufferState_VG(:,:,nLonBuff,:)
+    BufferState_VG(:,:,nLonBuff+1,:) = BufferState_VG(:,:,1,:)
+  end subroutine fill_in_buffer_grid_gc
+  !============================================================================
+  
 end module ModBuffer
 !==============================================================================
