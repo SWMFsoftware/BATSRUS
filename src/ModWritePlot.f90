@@ -106,6 +106,7 @@ contains
     integer :: nPEcellsN,nPEcellsS,nBLKcellsN, nBLKcellsS
 
     integer :: iTime_I(7), iDim, iParam
+    integer :: iDefaultStartTime_I(7) = [2000,3,21,10,45,0,0]
 
     character (len=10) :: NamePlotVar
 
@@ -717,10 +718,9 @@ contains
                   unitstr_TEC)
              write(UnitTmp_,'(a)')trim(unitstr_TEC)
           elseif( unitstr_IDL == '') then
-             call get_date_time(iTime_I)
-             write(StringDateTime, '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
-                  iTime_I(1:6)
-             write(UnitTmp_,'(a)')StringDateTime//'; normalized units'
+             write(UnitTmp_,'(a)')'normalized units'
+          elseif(all(iDefaultStartTime_I == iStartTime_I))then
+             write(UnitTmp_,'(a)')trim(unitstr_IDL)
           else
              call get_date_time(iTime_I)
              write(StringDateTime, '(i4.4,"-",i2.2,"-",i2.2,"T",i2.2,":",i2.2,":",i2.2)')&
