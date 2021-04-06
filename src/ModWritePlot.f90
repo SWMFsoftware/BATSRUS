@@ -1037,7 +1037,7 @@ contains
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: pic_find_region, pic_find_region_active, &
-         pic_find_region_criteria
+         pic_find_region_criteria, IsPicCrit_CB, jb_CB, jbperp_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
@@ -1640,7 +1640,7 @@ contains
           PlotVar(:,:,:,iVar) = iTypeAdvance_B(iBlock)
           if(UsePointImplicit)then
              if(UseUserPointImplicit_B(iBlock))&
-                PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
+                  PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5
           end if
        case('balance')
           if(allocated(iTypeBalance_A)) &
@@ -1715,8 +1715,16 @@ contains
           end do; end do; end do
        case('pic_crit')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             PlotVar(i,j,k,iVar) = pic_find_region_criteria(iBlock,i,j,k)
+             PlotVar(i,j,k,iVar) = IsPicCrit_CB(i,j,k,iBlock)
           end do; end do; end do
+       case('jb')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = jb_CB(i,j,k,iBlock)
+          end do; end do; end do
+       case('jbperp')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = jbperp_CB(i,j,k,iBlock)
+          end do; end do; end do    
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &

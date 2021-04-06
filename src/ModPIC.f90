@@ -47,7 +47,8 @@ module ModPIC
   real, allocatable, public :: FullBfield_DGB(:,:,:,:,:), UnitBfield_DGB(:,:,:,:,:), &
        GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
        GradUnitBz_DGB(:,:,:,:,:)
-
+  real, allocatable, public :: jb_CB(:,:,:,:), jbperp_CB(:,:,:,:)
+  
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
@@ -150,9 +151,17 @@ contains
 
     case ('#PICCRITERIA')
        if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
-       allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
-       IsPicCrit_CB = iPicOff_
+       if(allocated(jb_CB)) deallocate(jb_CB)
+       if(allocated(jbperp_CB)) deallocate(jbperp_CB)
 
+       allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
+       allocate(jb_CB(nI,nJ,nK,MaxBlock))
+       allocate(jbperp_CB(nI,nJ,nK,MaxBlock))
+       
+       IsPicCrit_CB = iPicOff_
+       jb_CB = -777.0
+       jbperp_CB = -777.0
+       
        call read_var('nCriteriaPic', nCriteriaPic)
        if(.not. allocated(NameCriteriaPic_I)) &
             allocate(NameCriteriaPic_I(nCriteriaPic))
@@ -1227,6 +1236,9 @@ contains
        case('j/b')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
+       case('j/bperp')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        case('divu')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)&
                *Io2No_V(UnitU_)/Io2No_V(UnitX_)
@@ -1256,10 +1268,10 @@ contains
     do iCriteria=1, nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
        case('j/bperp')
-          allocate(Current_D(3))
+          if(.not. allocated(Current_D)) allocate(Current_D(3))
           allocate(CurrentCrossB_D(3))
        case('j/b')
-          allocate(Current_D(3))
+          if(.not. allocated(Current_D)) allocate(Current_D(3))
        case('divu')
           allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
@@ -1339,10 +1351,12 @@ contains
                 current = norm2(Current_D)
                 CriteriaValue = current**2 / (norm2(CurrentCrossB_D) + current*CriteriaB1)&
                      *CellSize_DB(1, iBlock)
+                jbperp_CB(i,j,k,iBlock) = CriteriaValue
              case('j/b')
                 call get_current(i, j, k, iBlock, Current_D)
                 CriteriaValue = norm2(Current_D) / (norm2(FullBfield_DGB(:,i,j,k,iBlock))&
                      +CriteriaB1)*CellSize_DB(1, iBlock)
+                jb_CB(i,j,k,iBlock) = CriteriaValue
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
