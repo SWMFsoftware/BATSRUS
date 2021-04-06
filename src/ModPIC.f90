@@ -48,7 +48,7 @@ module ModPIC
        GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
        GradUnitBz_DGB(:,:,:,:,:)
   real, allocatable, public :: jb_CB(:,:,:,:), jbperp_CB(:,:,:,:)
-  
+
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
@@ -157,11 +157,11 @@ contains
        allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
        allocate(jb_CB(nI,nJ,nK,MaxBlock))
        allocate(jbperp_CB(nI,nJ,nK,MaxBlock))
-       
+
        IsPicCrit_CB = iPicOff_
        jb_CB = -777.0
        jbperp_CB = -777.0
-       
+
        call read_var('nCriteriaPic', nCriteriaPic)
        if(.not. allocated(NameCriteriaPic_I)) &
             allocate(NameCriteriaPic_I(nCriteriaPic))

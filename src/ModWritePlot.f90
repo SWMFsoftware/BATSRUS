@@ -1724,7 +1724,7 @@ contains
        case('jbperp')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = jbperp_CB(i,j,k,iBlock)
-          end do; end do; end do    
+          end do; end do; end do
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
