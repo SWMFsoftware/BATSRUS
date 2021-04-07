@@ -230,7 +230,7 @@ contains
 #endif
 
           ! Set StateOld and EnergyOld here?
-          
+
           ! Initialize change in State_VGB
           Change_V = 0.0
 
@@ -361,9 +361,9 @@ contains
     integer, intent(in):: iBlock
 
     integer:: i, j, k
-    !--------------------------------------------------------------------------
 
     !$acc loop vector collapse(3) independent
+    !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
        EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
@@ -1095,7 +1095,7 @@ contains
              Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
                   + DtPerDv*Change_V(nVar+1)
           end if
-             
+
           call set_energy_pressure(i,j,k,iBlock)
 
 #ifndef OPENACC
