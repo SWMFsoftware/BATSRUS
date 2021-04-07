@@ -2097,6 +2097,7 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
+      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do j=jMin, jMax
          Primitive_VI(:,iMin-2:iMax+1) = Primitive_VGI(:,iMin-2:iMax+1,j,k,iGang)
          if(UseTrueCell)then
@@ -2159,6 +2160,7 @@ contains
               min(jMax, max(jMin - 1, nJ + 1 - nFaceLimiterResChange))
       endif
 
+      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do i=iMin,iMax
          Primitive_VI(:,jMin-2:jMax+1) = Primitive_VGI(:,i,jMin-2:jMax+1,k,iGang)
          if(UseTrueCell)then
@@ -2220,6 +2222,8 @@ contains
          if(neiLtop(iBlock) /= 0) kMaxSharp = &
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
+
+      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)      
       do j=jMin,jMax; do i=iMin,iMax;
          Primitive_VI(:,kMin-2:kMax+1) = Primitive_VGI(:,i,j,kMin-2:kMax+1,iGang)
          if(UseTrueCell)then
