@@ -8736,19 +8736,20 @@ The default is to apply the resistive MHD scheme everywhere if it is switched on
 
 <command name="HALLRESISTIVITY">
 	<parameter name="UseHallResist" type="logical" default="F"/>
-	<if expr="$UseHallResist">
-		<parameter name="HallFactorMax" type="real" min="0"
-			default="1"/>
-		<parameter name="HallCmaxFactor" type="real" min="0" max="1"
-			default="1"/>
-	</if>
+	<parameter name="HallFactorMax" type="real" min="0"
+		   default="1"/>
+	<parameter name="HallCmaxFactor" type="real" min="0" max="1"
+		   default="1"/>
 
 #HALLRESISTIVITY
-T		UseHallResist (rest of parameters read only if true)
+T		UseHallResist
 1.0		HallFactorMax
 0.1		HallCmaxFactor
 
 If UseHallResist is true the Hall resistivity is used.
+All parameters are read even if it is false to allow setting
+the kinetic scaling equal to HallFactorMax for MHD-EPIC,
+although it is better to use the #PICGRIDUNIT command for this purpose.
 
 The off-diagonal Hall elements of the resistivity tensor
 are multiplied by HallFactorMax. If HallFactorMax is 1 then the
