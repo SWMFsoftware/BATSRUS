@@ -9,10 +9,10 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModFaceFlux,  ONLY: DoLf
   use ModFaceValue, ONLY: BetaLimiter
-  use ModMain, ONLY: iStage, Cfl, Dt, nOrder
+  use ModMain, ONLY: nStage, iStage, Cfl, Dt, nOrder
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, &
-       Flux_VXI, Flux_VYI, Flux_VZI
-!!!  time_BLK, StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
+       Flux_VXI, Flux_VYI, Flux_VZI, StateOld_VGB, EnergyOld_CBI, &
+       time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
@@ -32,7 +32,7 @@ module ModUpdateStateFast
 
   ! Used by ModUpdateStatePrim
   public:: set_energy_pressure, get_normal, get_primitive, get_numerical_flux,&
-       limiter2
+       limiter2, set_old_state
 
   logical:: DoTestCell= .false.
 
@@ -63,6 +63,8 @@ contains
        iGang = 1
 #endif
 
+       if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
+
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
@@ -76,8 +78,8 @@ contains
        if(nDim > 1)then
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-             !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
+             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+             !     .and. (j == jTest .or. j==jTest+1) .and. k==kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang))
 
@@ -87,8 +89,8 @@ contains
        if(nDim > 2)then
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-             !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
+             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+             !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang))
 
@@ -107,14 +109,21 @@ contains
 
           ! Time step divided by cell volume
 !!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-          DtPerDv = Dt/CellVolume_B(iBlock)
+!!!                 *real(iStage)/nStage
+          DtPerDv = (iStage*Dt)/(nStage*CellVolume_B(iBlock))
 
           ! Update state
-          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-               + DtPerDv*Change_V(1:nVar)
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + DtPerDv*Change_V(nVar+1)
-
+          if(iStage == 1)then
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          else
+             State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          end if
           call set_energy_pressure(i,j,k,iBlock)
 
 #ifndef OPENACC
@@ -210,6 +219,8 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
+       if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
+
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -218,6 +229,8 @@ contains
                .and. iBlock == iBlockTest
 #endif
 
+          ! Set StateOld and EnergyOld here?
+          
           ! Initialize change in State_VGB
           Change_V = 0.0
 
@@ -238,34 +251,63 @@ contains
 
        enddo; enddo; enddo
 
-       !$acc loop vector collapse(3) private(DtPerDv) independent
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Update state
+       if(iStage == 1)then
+          !$acc loop vector collapse(3) private(DtPerDv) independent
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-          ! Time step divided by cell volume
-!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-          DtPerDv = Dt/CellVolume_B(iBlock)
+             ! Time step divided by cell volume
+!!!          DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+             DtPerDv = Dt/CellVolume_B(iBlock)/nStage
 
-          ! Update state
-          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-               + DtPerDv*Change_VC(1:nVar,i,j,k)
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + DtPerDv*Change_VC(nVar+1,i,j,k)
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_VC(1:nVar,i,j,k)
+             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_VC(nVar+1,i,j,k)
 
-          call set_energy_pressure(i,j,k,iBlock)
+             call set_energy_pressure(i,j,k,iBlock)
 
 #ifndef OPENACC
-          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
-               .and. iBlock == iBlockTest
-          if(DoTestCell)then
-             write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-             write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
-             write(*,*)'Change_V  =', Change_VC(:,i,j,k)
-             write(*,*)'DtPerDv   =', DtPerDv
-          end if
+             DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+                  .and. iBlock == iBlockTest
+             if(DoTestCell)then
+                write(*,*)'iStage    =', iStage
+                write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+                write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
+                write(*,*)'Change_V  =', Change_VC(:,i,j,k)
+                write(*,*)'DtPerDv   =', DtPerDv
+             end if
 #endif
 
-       enddo; enddo; enddo
+          enddo; enddo; enddo
+       else
+          !$acc loop vector collapse(3) private(DtPerDv) independent
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
+             ! Time step divided by cell volume
+!!!          DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
+             DtPerDv = Dt/CellVolume_B(iBlock)
+
+             State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_VC(1:nVar,i,j,k)
+             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_VC(nVar+1,i,j,k)
+
+             call set_energy_pressure(i,j,k,iBlock)
+
+#ifndef OPENACC
+             DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+                  .and. iBlock == iBlockTest
+             if(DoTestCell)then
+                write(*,*)'iStage    =', iStage
+                write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+                write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
+                write(*,*)'Change_V  =', Change_VC(:,i,j,k)
+                write(*,*)'DtPerDv   =', DtPerDv
+             end if
+#endif
+          enddo; enddo; enddo
+       end if
     end do
     !$acc end parallel
 
@@ -273,7 +315,6 @@ contains
 
   end subroutine update_state_gpu
   !============================================================================
-
   subroutine do_face(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
@@ -313,6 +354,22 @@ contains
     Change_V = Change_V + Flux_V
 
   end subroutine do_face
+  !============================================================================
+  subroutine set_old_state(iBlock)
+    !$acc routine vector
+
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
+
+    !$acc loop vector collapse(3) independent
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
+       EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
+    end do; end do; end do
+
+  end subroutine set_old_state
   !============================================================================
   subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
        StateCons_V, Flux_V)
@@ -767,9 +824,10 @@ module ModUpdateStatePrim
   use ModVarIndexes
   use ModAdvance, ONLY: Flux_VXI, Flux_VYI, Flux_VZI
   use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
-  use ModMain, ONLY: iStage, Cfl, Dt, nOrder
-  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, Primitive_VGI
-!!!  time_BLK, StateOld_VGB, EnergyOld_CBI
+  use ModMain, ONLY: nStage, iStage, Cfl, Dt, nOrder
+  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, Primitive_VGI, &
+       StateOld_VGB, EnergyOld_CBI
+!!!  time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
@@ -782,7 +840,7 @@ module ModUpdateStatePrim
 
   use ModUpdateStateFast, ONLY: &
        set_energy_pressure, get_normal, get_primitive, get_numerical_flux, &
-       limiter2
+       limiter2, set_old_state
 
   implicit none
 
@@ -820,6 +878,8 @@ contains
        iGang = 1
 #endif
 
+       if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
+
        ! Calculate the primitive variables
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -840,8 +900,8 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-             !     .and. (j == jTest .or. j==jTest+1) .and. k == kTest
+             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+             !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang))
 
@@ -852,8 +912,8 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             ! DoTestCell = DoTest .and. iBlock == iBlockTest .and. i == iTest &
-             !     .and. j == jTest .and. (k == kTest .or. k == kTest+1)
+             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+             !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang))
 
@@ -872,13 +932,20 @@ contains
 
           ! Time step divided by cell volume
 !!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-          DtPerDv = Dt/CellVolume_B(iBlock)
+          DtPerDv = (iStage*Dt)/(nStage*CellVolume_B(iBlock))
 
           ! Update state
-          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-               + DtPerDv*Change_V(1:nVar)
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + DtPerDv*Change_V(nVar+1)
+          if(iStage == 1)then
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          else
+             State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          end if
 
           call set_energy_pressure(i,j,k,iBlock)
 
@@ -981,6 +1048,7 @@ contains
 #else
        iGang = 1
 #endif
+       if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -1012,15 +1080,22 @@ contains
           end if
 
           ! Time step divided by cell volume
-!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-          DtPerDv = Dt/CellVolume_B(iBlock)
-
+!!!       DtPerDv = (Cfl*time_BLK(i,j,k,iBlock)*iStage) &
+!!!                 /(nStage*CellVolume_GB(i,j,k,iBlock))
+          DtPerDv = (Dt*iStage)/(CellVolume_B(iBlock)*nStage)
           ! Update state
-          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
-               + DtPerDv*Change_V(1:nVar)
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + DtPerDv*Change_V(nVar+1)
-
+          if(iStage == 1)then
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          else
+             State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
+                  + DtPerDv*Change_V(1:nVar)
+             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
+                  + DtPerDv*Change_V(nVar+1)
+          end if
+             
           call set_energy_pressure(i,j,k,iBlock)
 
 #ifndef OPENACC
@@ -1033,9 +1108,7 @@ contains
              write(*,*)'DtPerDv   =', DtPerDv
           end if
 #endif
-
        enddo; enddo; enddo
-
     end do
     !$acc end parallel
 
