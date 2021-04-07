@@ -197,11 +197,12 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
-  !$acc declare create(SpeedHyp, UseHyperbolicDivb, UseDivbSource)
+  !$acc declare create(SpeedHyp, UseHyperbolicDivb, UseDivbSource, UseConstrainB)
 
   ! More numerical scheme parameters
   ! Prolongation order
   integer           :: nOrderProlong = 1
+  !$acc declare create(nOrderProlong)
 
   ! Message passing mode ('all' or 'allopt' ...)
   character(len=10) :: optimize_message_pass = 'allopt'
@@ -306,6 +307,7 @@ module ModMain
 
   ! Use high-order accurate ghost cells.
   logical :: UseHighResChange = .false.
+  !$acc declare create(UseHighResChange)
 
   ! Use high-order accurate refined/coarsened cells.
   logical :: UseHighOrderAMR = .false.

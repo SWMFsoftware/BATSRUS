@@ -131,6 +131,7 @@ module ModAdvance
   ! Switch between low and high order schemes
   logical:: UseLowOrder = .false.  ! some faces are low order
   logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
+  !$acc declare create(IsLowOrderOnly_B)
   logical:: UseLowOrderRegion = .false.
   logical:: UseAdaptiveLowOrder = .false.
   real, allocatable:: &

@@ -43,7 +43,7 @@ module ModFaceValue
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
   character(len=6), public :: TypeLimiter5= 'mp'
-  !$acc declare create(BetaLimiter)
+  !$acc declare create(BetaLimiter, TypeLimiter)
 
   logical, public :: UseAccurateExtremum = .true.
   integer:: nLowOrder = 2
@@ -66,6 +66,7 @@ module ModFaceValue
   ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
   real    :: BetaLimiterResChange  = 2.0
   integer :: nFaceLimiterResChange = 2
+  !$acc declare create(BetaLimiterResChange, nFaceLimiterResChange)
 
   ! Parameters for limiting the logarithm of variables
   logical :: UseLogRhoLimiter = .false.
@@ -119,12 +120,6 @@ module ModFaceValue
 
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-
-  ! variables used for TVD limiters
-  real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
-  real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
-  real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
-  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
 
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
@@ -183,7 +178,7 @@ contains
 
        ! Make sure only one of UseAccurateResChange and UseTvdResChange is true
        if(UseAccurateResChange) UseTvdResChange=.false.
-
+       !$acc update  device(BetaLimiterResChange, nFaceLimiterResChange)
     case('#RESCHANGE')
        call read_var('UseAccurateResChange',UseAccurateResChange)
        if(UseAccurateResChange) UseTvdResChange=.false.
@@ -585,7 +580,6 @@ contains
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
        end if
     case default
-#ifndef OPENACC
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
@@ -597,6 +591,7 @@ contains
              if(nK > 1) call get_faceZ_second(&
                   iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace,iBlock)
           else
+#ifndef OPENACC
              ! High order scheme
              call get_facex_high(&
                   1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2,iBlock)
@@ -604,13 +599,14 @@ contains
                   iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2,iBlock)
              if(nK > 1) call get_facez_high(&
                   iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace,iBlock)
+#endif
           end if
        end if
 
        ! Now take care of faces at resolution changes
        if(nOrderProlong==1 .and..not.UseConstrainB &
             .and. .not.UseHighResChange)then
-
+#ifndef OPENACC
           ! If nOrderProlong is 1 then use TVD reschange or accurate reschange
           ! scheme and overwrite face values at resolution changes
 
@@ -647,7 +643,7 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
-
+#endif
        else if(DoResChangeOnly) then
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order face values at resolution changes
@@ -664,6 +660,7 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace,iBlock)
           else
+#ifndef OPENACC
              ! High order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_high(1,1,1,nJ,1,nK,iBlock)
@@ -677,9 +674,11 @@ contains
                   call get_faceZ_high(1,nI,1,nJ,1,1,iBlock)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace,iBlock)
+#endif
           end if
        endif
 
+#ifndef OPENACC
        if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
@@ -1107,7 +1106,10 @@ contains
       !$omp threadprivate( State_VX )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
@@ -1127,9 +1129,11 @@ contains
                        true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
                   ! Get 2nd order limited slopes
                   if(UseTrueCell)then
-                     call limiter_body(iMin, iMax, BetaLimiter)
+                     call limiter_body(iMin, iMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(iMin, iMax, BetaLimiter)
+                     call limiter(iMin, iMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -1268,6 +1272,10 @@ contains
       !$omp threadprivate( State_VY )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
@@ -1285,9 +1293,11 @@ contains
                   IsTrueCell_I(jMin-nG:jMax-1+nG) = &
                        true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
                   if(UseTrueCell)then
-                     call limiter_body(jMin, jMax, BetaLimiter)
+                     call limiter_body(jMin, jMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(jMin, jMax, BetaLimiter)
+                     call limiter(jMin, jMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -1425,6 +1435,10 @@ contains
       !$omp threadprivate( State_VZ )
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
       !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
@@ -1445,9 +1459,11 @@ contains
                   IsTrueCell_I(kMin-nG:kMax-1+nG) = &
                        true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
                   if(UseTrueCell)then
-                     call limiter_body(kMin, kMax, BetaLimiter)
+                     call limiter_body(kMin, kMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   else
-                     call limiter(kMin, kMax, BetaLimiter)
+                     call limiter(kMin, kMax, BetaLimiter,&
+                          Primitive_VI,dVarLimL_VI,dVarLimR_VI)
                   end if
                else
                   dVarLimL_VI = 0; dVarLimR_VI = 0
@@ -2057,10 +2073,21 @@ contains
     end subroutine get_face_tvd
     !==========================================================================
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::i1, iMinSharp, iMaxSharp
-
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       iMinSharp = iMin
       iMaxSharp = iMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2075,18 +2102,24 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
-                 call limiter_body(iMinSharp, iMaxSharp, BetaLimiter)
+                 call limiter_body(iMinSharp, iMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMin < iMinSharp) &
-                 call limiter_body(iMin, iMinSharp-1, BetaLimiterResChange)
+                 call limiter_body(iMin, iMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMax > iMaxSharp) &
-                 call limiter_body(iMaxSharp+1, iMax, BetaLimiterResChange)
+                 call limiter_body(iMaxSharp+1, iMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(iMinSharp <= iMaxSharp) &
-                 call limiter(iMinSharp, iMaxSharp, BetaLimiter)
+                 call limiter(iMinSharp, iMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMin < iMinSharp) &
-                 call limiter(iMin, iMinSharp-1, BetaLimiterResChange)
+                 call limiter(iMin, iMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(iMax > iMaxSharp) &
-                 call limiter(iMaxSharp+1, iMax, BetaLimiterResChange)
+                 call limiter(iMaxSharp+1, iMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          end if
          do i=iMin,iMax
             i1 = i - 1
@@ -2095,15 +2128,28 @@ contains
          end do
       end do; end do
 
+#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
+#endif
 
     end subroutine get_facex_second
     !==========================================================================
     subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::j1, jMinSharp, jMaxSharp
-
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       jMinSharp = jMin
       jMaxSharp = jMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2118,18 +2164,24 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
-                 call limiter_body(jMinSharp, jMaxSharp, BetaLimiter)
+                 call limiter_body(jMinSharp, jMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMin < jMinSharp) &
-                 call limiter_body(jMin, jMinSharp-1, BetaLimiterResChange)
+                 call limiter_body(jMin, jMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMax > jMaxSharp) &
-                 call limiter_body(jMaxSharp+1, jMax, BetaLimiterResChange)
+                 call limiter_body(jMaxSharp+1, jMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(jMinSharp <= jMaxSharp) &
-                 call limiter(jMinSharp, jMaxSharp, BetaLimiter)
+                 call limiter(jMinSharp, jMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMin < jMinSharp) &
-                 call limiter(jMin, jMinSharp-1, BetaLimiterResChange)
+                 call limiter(jMin, jMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(jMax > jMaxSharp) &
-                 call limiter(jMaxSharp+1, jMax, BetaLimiterResChange)
+                 call limiter(jMaxSharp+1, jMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          end if
          do j=jMin, jMax
             j1 = j - 1
@@ -2138,15 +2190,28 @@ contains
          end do
       end do; end do
 
+#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
+#endif
 
     end subroutine get_facey_second
     !==========================================================================
     subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
+      !$acc routine vector
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::k1, kMinSharp, kMaxSharp
-
+      real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+      ! variables used for TVD limiters
+      real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+      real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2160,18 +2225,24 @@ contains
          if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
-                 call limiter_body(kMinSharp, kMaxSharp, BetaLimiter)
+                 call limiter_body(kMinSharp, kMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMin < kMinSharp) &
-                 call limiter_body(kMin, kMinSharp-1, BetaLimiterResChange)
+                 call limiter_body(kMin, kMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMax > kMaxSharp) &
-                 call limiter_body(kMaxSharp+1, kMax, BetaLimiterResChange)
+                 call limiter_body(kMaxSharp+1, kMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          else
             if(kMinSharp <= kMaxSharp) &
-                 call limiter(kMinSharp, kMaxSharp, BetaLimiter)
+                 call limiter(kMinSharp, kMaxSharp, BetaLimiter,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMin < kMinSharp) &
-                 call limiter(kMin, kMinSharp-1, BetaLimiterResChange)
+                 call limiter(kMin, kMinSharp-1, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
             if(kMax > kMaxSharp) &
-                 call limiter(kMaxSharp+1, kMax, BetaLimiterResChange)
+                 call limiter(kMaxSharp+1, kMax, BetaLimiterResChange,&
+                 Primitive_VI,dVarLimL_VI,dVarLimR_VI)
          end if
          do k=kMin,kMax
             k1 = k - 1
@@ -2180,7 +2251,9 @@ contains
          end do
       end do; end do
 
+#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
+#endif
 
     end subroutine get_facez_second
     !==========================================================================
@@ -3009,6 +3082,8 @@ contains
           enddo ! iBlock
        endif ! UseLowOrder
     endif ! nOrder
+
+    !$acc update device(IsLowOrderOnly_B)
     call test_stop(NameSub, DoTest)
 
   contains
@@ -3904,10 +3979,13 @@ contains
   !
   !       left_face  = central_value - limited_slope_left
   !       right_face = central_value + limited_slope_right
-  subroutine limiter_body(lMin, lMax, Beta)
-
+  subroutine limiter_body(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+    !$acc routine seq
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
+    real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+    real, intent(inout):: dVarLimR_VI(1:nVar,0:MaxIJK+1)
+    real, intent(inout):: dVarLimL_VI(1:nVar,0:MaxIJK+1)
 
     real,dimension(Hi3_):: dVar1_I, dVar2_I !
     real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
@@ -3991,16 +4069,21 @@ contains
           end if
        end do
     case default
+#ifndef OPENACC
        call stop_mpi('limiter_body: unknown TypeLimiter='//TypeLimiter)
+#endif
     end select
 
   end subroutine limiter_body
   !============================================================================
 
-  subroutine limiter(lMin, lMax, Beta)
-
+  subroutine limiter(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+    !$acc routine seq
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
+    real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+    real, intent(inout):: dVarLimR_VI(1:nVar,0:MaxIJK+1)
+    real, intent(inout):: dVarLimL_VI(1:nVar,0:MaxIJK+1)
 
     real,dimension(Hi3_):: dVar1_I, dVar2_I
     real,dimension(nVar):: dVar1_V, dVar2_V
@@ -4075,7 +4158,9 @@ contains
                cThird*abs(dVar1_V+2*dVar2_V))
        end do
     case default
+#ifndef OPENACC
        call stop_mpi('limiter: unknown TypeLimiter='//TypeLimiter)
+#endif
     end select
 
   end subroutine limiter

@@ -3650,6 +3650,11 @@ contains
       !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
+      !$acc update device(TypeLimiter)
+      !$acc update device(nOrderProlong)
+      !$acc update device(UseConstrainB)
+      !$acc update device(UseHighResChange)
+
       !$acc update device(UseDivbSource)
 
       !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
