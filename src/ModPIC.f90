@@ -30,6 +30,8 @@ module ModPIC
   public:: calc_pic_criteria
   public:: write_pic_status_file
   public:: read_pic_status_file
+  public:: calc_crit_jb
+  public:: calc_crit_jbperp
 
   ! The PIC code that is coupled to MHD
   character(len=50), public:: NameVersionPic = 'none'
@@ -44,17 +46,17 @@ module ModPIC
   logical, public:: DoRestartPicStatus = .false.
 
   real, allocatable, public :: DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
-  real, allocatable, public :: FullBfield_DGB(:,:,:,:,:), UnitBfield_DGB(:,:,:,:,:), &
+  real, allocatable, public :: FullB_DGB(:,:,:,:,:), FullB_DG(:,:,:,:),&
+       UnitBfield_DGB(:,:,:,:,:), &
        GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
        GradUnitBz_DGB(:,:,:,:,:)
-  real, allocatable, public :: jb_CB(:,:,:,:), jbperp_CB(:,:,:,:)
 
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
   real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
        CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
-  real, public :: CriteriaB1
+  real, public :: CriteriaB1=0.0
   integer, public:: nPatchExtend_D(3)=0
 
   ! Description of the region where the pic region is fixed there
@@ -151,16 +153,9 @@ contains
 
     case ('#PICCRITERIA')
        if(allocated(IsPicCrit_CB)) deallocate(IsPicCrit_CB)
-       if(allocated(jb_CB)) deallocate(jb_CB)
-       if(allocated(jbperp_CB)) deallocate(jbperp_CB)
-
        allocate(IsPicCrit_CB(nI,nJ,nK,MaxBlock))
-       allocate(jb_CB(nI,nJ,nK,MaxBlock))
-       allocate(jbperp_CB(nI,nJ,nK,MaxBlock))
 
        IsPicCrit_CB = iPicOff_
-       jb_CB = -777.0
-       jbperp_CB = -777.0
 
        call read_var('nCriteriaPic', nCriteriaPic)
        if(.not. allocated(NameCriteriaPic_I)) &
@@ -1199,13 +1194,13 @@ contains
          x_, y_, z_, Ux_, Uy_, Uz_
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
-    use ModB0,           ONLY: B0_DGB
+    use ModB0,           ONLY: UseB0, B0_DGB
     use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_
     use ModCoordTransform, ONLY: cross_product
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
-    real :: CriteriaValue
+    real :: CritJB, CritJBperp, CriteriaValue
     real, allocatable :: Current_D(:), Ufield_DGB(:,:,:,:,:),&
          DivU_CB(:,:,:,:), CurrentCrossB_D(:)
     real :: current, bNorm
@@ -1254,24 +1249,23 @@ contains
     PicCritInfo_CBI = iPicOff_
 
     ! Full B Field is a useful variable
-    allocate(FullBfield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+    allocate(FullB_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,nBlock))
+    allocate(FullB_DG(3,minI:maxI,minJ:maxJ,minK:maxK))
 
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
-       FullBfield_DGB(:,:,:,:,iBlock) = &
-            State_VGB(Bx_:Bz_,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+       if(UseB0) then
+          FullB_DGB(:,:,:,:,iBlock) = &
+               State_VGB(Bx_:Bz_,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+       else
+          FullB_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+       end if
     end do
 
     ! loop through criterias and allocate variables
     ! also the unit transfer is done here
     do iCriteria=1, nCriteriaPic
        select case(trim(NameCriteriaPic_I(iCriteria)))
-       case('j/bperp')
-          if(.not. allocated(Current_D)) allocate(Current_D(3))
-          allocate(CurrentCrossB_D(3))
-       case('j/b')
-          if(.not. allocated(Current_D)) allocate(Current_D(3))
        case('divu')
           allocate(DivU_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(Ufield_DGB(3,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
@@ -1298,12 +1292,12 @@ contains
        if(allocated(DivCurvature_CB)) then
 
           do k=minK,maxK; do j=minJ,maxJ; do i=minI,maxI
-             bNorm = FullBfield_DGB(x_,i,j,k,iBlock)**2
-             if(nJ>1) bNorm = bNorm + FullBfield_DGB(y_,i,j,k,iBlock)**2
-             if(nK>1) bNorm = bNorm + FullBfield_DGB(z_,i,j,k,iBlock)**2
+             bNorm = FullB_DGB(x_,i,j,k,iBlock)**2
+             if(nJ>1) bNorm = bNorm + FullB_DGB(y_,i,j,k,iBlock)**2
+             if(nK>1) bNorm = bNorm + FullB_DGB(z_,i,j,k,iBlock)**2
              bNorm = sqrt(bNorm)
              UnitBfield_DGB(1:nDim,i,j,k,iBlock) = &
-                  FullBfield_DGB(1:nDim,i,j,k,iBlock) / bNorm
+                  FullB_DGB(1:nDim,i,j,k,iBlock) / bNorm
           end do; end do; end do
 
           ! Notice that Gradient B field only have physical cell values
@@ -1342,21 +1336,19 @@ contains
             call calc_divergence(iBlock, Curvature_DGB(:,:,:,:,iBlock), &
             nG, DivCurvature_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
 
+       FullB_DG = FullB_DGB(:,:,:,:,iBlock)
+
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iCriteria=1, nCriteriaPic
              select case(trim(NameCriteriaPic_I(iCriteria)))
              case('j/bperp')
-                call get_current(i, j, k, iBlock, Current_D)
-                CurrentCrossB_D = cross_product(Current_D, FullBfield_DGB(:,i,j,k,iBlock))
-                current = norm2(Current_D)
-                CriteriaValue = current**2 / (norm2(CurrentCrossB_D) + current*CriteriaB1)&
-                     *CellSize_DB(1, iBlock)
-                jbperp_CB(i,j,k,iBlock) = CriteriaValue
+                call calc_crit_jbperp(i, j, k, iBlock, FullB_DG,&
+                     CriteriaB1, CritJBperp)
+                CriteriaValue = CritJBperp
              case('j/b')
-                call get_current(i, j, k, iBlock, Current_D)
-                CriteriaValue = norm2(Current_D) / (norm2(FullBfield_DGB(:,i,j,k,iBlock))&
-                     +CriteriaB1)*CellSize_DB(1, iBlock)
-                jb_CB(i,j,k,iBlock) = CriteriaValue
+                call calc_crit_jb(i, j, k, iBlock, FullB_DG,&
+                     CriteriaB1, CritJB)
+                CriteriaValue = CritJB
              case('rho')
                 CriteriaValue = State_VGB(Rho_,i,j,k,iBlock)
              case('divu')
@@ -1393,7 +1385,8 @@ contains
     if(allocated(Ufield_DGB))        deallocate(Ufield_DGB)
     if(allocated(Curvature_DGB))     deallocate(Curvature_DGB)
     if(allocated(DivCurvature_CB))   deallocate(DivCurvature_CB)
-    if(allocated(FullBfield_DGB))    deallocate(FullBfield_DGB)
+    if(allocated(FullB_DGB))         deallocate(FullB_DGB)
+    if(allocated(FullB_DG))          deallocate(FullB_DG)
     if(allocated(UnitBfield_DGB))    deallocate(UnitBfield_DGB)
     if(allocated(GradUnitBx_DGB))    deallocate(GradUnitBx_DGB)
     if(allocated(GradUnitBy_DGB))    deallocate(GradUnitBy_DGB)
@@ -1401,6 +1394,62 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_pic_criteria
+  !============================================================================
+
+  subroutine calc_crit_jb(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJB)
+
+    use BATL_lib,         ONLY: CellSize_DB
+    use ModCurrent,       ONLY: get_current
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: CriteriaB1
+    real, intent(in):: FullB_DG(:,:,:,:)
+
+    real :: current, current_D(3)
+
+    real, intent(out) :: CritJB
+
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'calc_crit_jb'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    call get_current(i, j, k, iBlock, Current_D)
+    current = norm2(Current_D)
+    CritJB = current/(norm2(FullB_DG(:,i,j,k))+CriteriaB1)*&
+         CellSize_DB(1, iBlock)
+
+  end subroutine calc_crit_jb
+  !============================================================================
+
+  subroutine calc_crit_jbperp(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJBperp)
+
+    use BATL_lib,          ONLY: CellSize_DB
+    use ModCurrent,        ONLY: get_current
+    use ModCoordTransform, ONLY: cross_product
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: CriteriaB1
+    real, intent(in):: FullB_DG(:,:,:,:)
+
+    real :: current, current_D(3), CurrentCrossB_D(3)
+
+    real, intent(out) :: CritJBperp
+
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'calc_crit_jbperp'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    call get_current(i, j, k, iBlock, Current_D)
+    current = norm2(Current_D)
+    CurrentCrossB_D = cross_product(Current_D, FullB_DG(:,i,j,k))
+    CritJBperp = current**2 / (norm2(CurrentCrossB_D) + current*CriteriaB1)&
+         *CellSize_DB(1, iBlock)
+
+  end subroutine calc_crit_jbperp
   !============================================================================
 
 end module ModPIC
