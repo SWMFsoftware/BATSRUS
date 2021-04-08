@@ -2223,7 +2223,7 @@ contains
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
 
-      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)      
+      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do j=jMin,jMax; do i=iMin,iMax;
          Primitive_VI(:,kMin-2:kMax+1) = Primitive_VGI(:,i,j,kMin-2:kMax+1,iGang)
          if(UseTrueCell)then

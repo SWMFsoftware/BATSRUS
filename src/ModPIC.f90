@@ -1409,7 +1409,7 @@ contains
 
     real, intent(out) :: CritJB
 
-    logical :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_crit_jb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1437,7 +1437,7 @@ contains
 
     real, intent(out) :: CritJBperp
 
-    logical :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_crit_jbperp'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
