@@ -6,9 +6,9 @@ orig			StringTest
 
 #TIMING
 T			UseTiming
--1			DnTiming
+-1			DnTiming  ! every session
 -1			nDepthTiming
-tree			TypeTimingReport
+cumu			TypeTimingReport
 
 #PLANET
 NONE			NamePlanet
