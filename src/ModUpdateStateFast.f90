@@ -531,6 +531,7 @@ contains
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
 
     integer:: iVar
+    real:: Var1, Var2, Var3, Var4, InvRho
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
        call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
@@ -540,24 +541,19 @@ contains
        do iVar = 1, nVar
           ! Single fluid conversion to primitive variables
           if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i-2,j,k,iBlock), &
-                  State_VGB(iVar,i-1,j,k,iBlock), &
-                  State_VGB(iVar,  i,j,k,iBlock), &
-                  State_VGB(iVar,i+1,j,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             Var1 = State_VGB(iVar,i-2,j,k,iBlock)
+             Var2 = State_VGB(iVar,i-1,j,k,iBlock)
+             Var3 = State_VGB(iVar,i  ,j,k,iBlock)
+             Var4 = State_VGB(iVar,i+1,j,k,iBlock)
           else
-             call limiter2( &
-                  State_VGB(iVar,i-2,j,k,iBlock)/ &
-                  State_VGB(Rho_,i-2,j,k,iBlock), &
-                  State_VGB(iVar,i-1,j,k,iBlock)/ &
-                  State_VGB(Rho_,i-1,j,k,iBlock), &
-                  State_VGB(iVar,  i,j,k,iBlock)/ &
-                  State_VGB(Rho_,  i,j,k,iBlock), &
-                  State_VGB(iVar,i+1,j,k,iBlock)/ &
-                  State_VGB(Rho_,i+1,j,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             InvRho = 1/State_VGB(Rho_,i-2,j,k,iBlock)
+             Var1 = InvRho*State_VGB(iVar,i-2,j,k,iBlock)
+             Var2 = InvRho*State_VGB(iVar,i-1,j,k,iBlock)
+             Var3 = InvRho*State_VGB(iVar,i  ,j,k,iBlock)
+             Var4 = InvRho*State_VGB(iVar,i+1,j,k,iBlock)
           end if
+          call limiter2(Var1, Var2, Var3, Var4, &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
     end if
 
@@ -570,6 +566,7 @@ contains
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
 
     integer:: iVar
+    real:: Var1, Var2, Var3, Var4, InvRho
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
        call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
@@ -579,24 +576,19 @@ contains
        do iVar = 1, nVar
           ! Single fluid conversion to primitive variables
           if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i,j-2,k,iBlock), &
-                  State_VGB(iVar,i,j-1,k,iBlock), &
-                  State_VGB(iVar,i,j  ,k,iBlock), &
-                  State_VGB(iVar,i,j+1,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             Var1 = State_VGB(iVar,i,j-2,k,iBlock)
+             Var2 = State_VGB(iVar,i,j-1,k,iBlock)
+             Var3 = State_VGB(iVar,i,j  ,k,iBlock)
+             Var4 = State_VGB(iVar,i,j+1,k,iBlock)
           else
-             call limiter2( &
-                  State_VGB(iVar,i,j-2,k,iBlock)/ &
-                  State_VGB(Rho_,i,j-2,k,iBlock), &
-                  State_VGB(iVar,i,j-1,k,iBlock)/ &
-                  State_VGB(Rho_,i,j-1,k,iBlock), &
-                  State_VGB(iVar,i,j  ,k,iBlock)/ &
-                  State_VGB(Rho_,i,j  ,k,iBlock), &
-                  State_VGB(iVar,i,j+1,k,iBlock)/ &
-                  State_VGB(Rho_,i,j+1,k,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             InvRho = 1/State_VGB(Rho_,i-2,j,k,iBlock)
+             Var1 = InvRho*State_VGB(iVar,i,j-2,k,iBlock)
+             Var2 = InvRho*State_VGB(iVar,i,j-1,k,iBlock)
+             Var3 = InvRho*State_VGB(iVar,i,j  ,k,iBlock)
+             Var4 = InvRho*State_VGB(iVar,i,j+1,k,iBlock)
           end if
+          call limiter2(Var1, Var2, Var3, Var4, &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
     end if
   end subroutine get_face_y
@@ -608,6 +600,7 @@ contains
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
 
     integer:: iVar
+    real:: Var1, Var2, Var3, Var4, InvRho
     !--------------------------------------------------------------------------
     if(nOrder == 1)then
        call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
@@ -617,24 +610,19 @@ contains
        do iVar = 1, nVar
           ! Single fluid conversion to primitive variables
           if(iVar < Ux_ .or. iVar > Uz_)then
-             call limiter2( &
-                  State_VGB(iVar,i,j,k-2,iBlock), &
-                  State_VGB(iVar,i,j,k-1,iBlock), &
-                  State_VGB(iVar,i,j,k  ,iBlock), &
-                  State_VGB(iVar,i,j,k+1,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             Var1 = State_VGB(iVar,i,j,k-2,iBlock)
+             Var2 = State_VGB(iVar,i,j,k-1,iBlock)
+             Var3 = State_VGB(iVar,i,j,k  ,iBlock)
+             Var4 = State_VGB(iVar,i,j,k+1,iBlock)
           else
-             call limiter2( &
-                  State_VGB(iVar,i,j,k-2,iBlock)/ &
-                  State_VGB(Rho_,i,j,k-2,iBlock), &
-                  State_VGB(iVar,i,j,k-1,iBlock)/ &
-                  State_VGB(Rho_,i,j,k-1,iBlock), &
-                  State_VGB(iVar,i,j,k  ,iBlock)/ &
-                  State_VGB(Rho_,i,j,k  ,iBlock), &
-                  State_VGB(iVar,i,j,k+1,iBlock)/ &
-                  State_VGB(Rho_,i,j,k+1,iBlock), &
-                  StateLeft_V(iVar), StateRight_V(iVar))
+             InvRho = 1/State_VGB(Rho_,i-2,j,k,iBlock)
+             Var1 = InvRho*State_VGB(iVar,i,j,k-2,iBlock)
+             Var2 = InvRho*State_VGB(iVar,i,j,k-1,iBlock)
+             Var3 = InvRho*State_VGB(iVar,i,j,k  ,iBlock)
+             Var4 = InvRho*State_VGB(iVar,i,j,k+1,iBlock)
           end if
+          call limiter2(Var1, Var2, Var3, Var4, &
+               StateLeft_V(iVar), StateRight_V(iVar))
        end do
     end if
 
@@ -1177,11 +1165,10 @@ contains
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
           call limiter2( &
                Primitive_VGI(iVar,i-2,j,k,iGang), &
                Primitive_VGI(iVar,i-1,j,k,iGang), &
-               Primitive_VGI(iVar,  i,j,k,iGang), &
+               Primitive_VGI(iVar,i  ,j,k,iGang), &
                Primitive_VGI(iVar,i+1,j,k,iGang), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
@@ -1209,8 +1196,7 @@ contains
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
-          call limiter2( &
+          call limiter2(  &
                Primitive_VGI(iVar,i,j-2,k,iGang), &
                Primitive_VGI(iVar,i,j-1,k,iGang), &
                Primitive_VGI(iVar,i,j  ,k,iGang), &
@@ -1241,7 +1227,6 @@ contains
     else
        ! Do it per variable to reduce memory use
        do iVar = 1, nVar
-          ! Single fluid conversion to primitive variables
           call limiter2( &
                Primitive_VGI(iVar,i,j,k-2,iGang), &
                Primitive_VGI(iVar,i,j,k-1,iGang), &
