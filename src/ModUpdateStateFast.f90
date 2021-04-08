@@ -45,7 +45,7 @@ contains
     integer:: i, j, k, iBlock, iGang
 
     real:: DtPerDv, Change_V(nFlux)
-    !$acc declare create (Change_V, DtPerDv)
+    !$acc declare create (Change_V)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu'
@@ -207,7 +207,7 @@ contains
     integer:: i, j, k, iBlock
 
     real:: Change_V(nFlux), Change_VC(nFlux,nI,nJ,nK), DtPerDv
-    !$acc declare create (Change_V, Change_VC, DtPerDv)
+    !$acc declare create (Change_V, Change_VC)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
@@ -860,7 +860,7 @@ contains
     integer:: i, j, k, iBlock, iGang
 
     real:: DtPerDv, Change_V(nFlux)
-    !$acc declare create (Change_V, DtPerDv)
+    !$acc declare create (Change_V)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu_prim'
@@ -1029,7 +1029,7 @@ contains
     integer:: i, j, k, iBlock, iGang
 
     real:: Change_V(nFlux), DtPerDv
-    !$acc declare create (Change_V, DtPerDv)
+    !$acc declare create (Change_V)
 
 #ifndef OPENACC
     logical:: DoTest
