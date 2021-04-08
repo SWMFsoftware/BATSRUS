@@ -4845,148 +4845,150 @@ The default is to flush the output, i.e. DoFlush=T.
 </commandgroup>
 
 <commandgroup name="ERUPTIVE EVENT GENERATOR">
-<command name="CME">
-  <parameter name="UseCme" type="logical" default="F" />
-  <parameter name="DoAddFluxRope" type="logical" default="F" />
-  <parameter name="LongitudeCme" type="real"
-	     min="0" max="359" default="0" />
-  <parameter name="LatitudeCme" type="real"
-	     min="-89" max="89" default="0" />	
-  <parameter name="OrientationCme" type="real" 
-	     min="0" max="359" default="0" />
-  <parameter name="TypeCme" type="string" case="upper" input="select"
-	     required="T">
-    <option name="GL"             />
-    <option name="GIBSON-LOW"     />
-    <option name="TD "	      />
-    <option name="TITOV-DEMOULIN" />
-    <option name="TD14"	      />
-    <option name="SPHEROMAK"	      />
-  </parameter>
-  <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
-    <parameter name="BStrength" type="real" default="0" />
-    <parameter name="Radius" type="real" min="0" default="0" />
-    <parameter name="Stretch" type="real" min="0" default="0" />
-    <parameter name="ApexHeight" type="real" min="0" default="0" />
-  </if>
-  <if expr="$TypeCme =~ /SPHEROMAK/">
-    <parameter name="BStrength" type="real" default="0" />
-    <parameter name="Radius" type="real" min="0" default="0" />
-    <parameter name="Stretch" type="real" min="0" default="0" />
-    <parameter name="ApexHeight" type="real" min="0" default="0" />
-    <parameter name="uCme" type="real" min="0" default="0" />
-  </if>
-  <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
-    <parameter name="BcTubeDim" type="real" default="0" />
-    <parameter name="RadiusMajor" type="real" min="0" default="0" />
-    <parameter name="RadiusMinor" type="real" min="0" default="0" />
-    <parameter name="Depth" type="real" min="0" default="0" />
-    <parameter name="UsePlasmaBeta" type="logical" default="F"/>
-    <if expr="not $UsePlasmaBeta">
-      <parameter name="Mass" type="real" min="0" default="0" />
-    </if>
-    <if expr="$UsePlasmaBeta">
-      <parameter name="PlasmaBeta" type="real" min="0" default="0" />
-      <parameter name="EjectaTemperature" type="real" min="1e4" 
-		 default="5e4" />
-    </if>
-    <parameter name="TypeBStrap" type="string" case="lower"
-	       input="select" required="F">
-      <option name="none"	  />
-      <option name="readbstrap" />
-      <option name="getbstrap"  />
-    </parameter>
-    <if expr="$TypeBStrap =~ /readbstrap/">
-      <parameter name="bStrappingDim" type="real" min="0" 
-		 default="0" />
-      <parameter name="TypeCharge" type="string" case="lower"
+  <command name="CME">
+    <parameter name="UseCme" type="logical" default="F" />
+    <if expr="$UseCme">
+      <parameter name="DoAddFluxRope" type="logical" default="F" />
+      <parameter name="LongitudeCme" type="real"
+		 min="0" max="359" default="0" />
+      <parameter name="LatitudeCme" type="real"
+		 min="-89" max="89" default="0" />	
+      <parameter name="OrientationCme" type="real" 
+		 min="0" max="359" default="0" />
+      <parameter name="TypeCme" type="string" case="upper" input="select"
+		 required="T">
+	<option name="GL"             />
+	<option name="GIBSON-LOW"     />
+	<option name="TD "	      />
+	<option name="TITOV-DEMOULIN" />
+	<option name="TD14"	      />
+	<option name="SPHEROMAK"	      />
+      </parameter>
+      <if expr="$TypeCme =~ /GL|GIBSON-LOW/">
+	<parameter name="BStrength" type="real" default="0" />
+	<parameter name="Radius" type="real" min="0" default="0" />
+	<parameter name="Stretch" type="real" min="0" default="0" />
+	<parameter name="ApexHeight" type="real" min="0" default="0" />
+      </if>
+      <if expr="$TypeCme =~ /SPHEROMAK/">
+	<parameter name="BStrength" type="real" default="0" />
+	<parameter name="Radius" type="real" min="0" default="0" />
+	<parameter name="Stretch" type="real" min="0" default="0" />
+	<parameter name="ApexHeight" type="real" min="0" default="0" />
+	<parameter name="uCme" type="real" min="0" default="0" />
+      </if>
+      <if expr="$TypeCme =~ /TD |TITOV-DEMOULIN/">
+	<parameter name="BcTubeDim" type="real" default="0" />
+	<parameter name="RadiusMajor" type="real" min="0" default="0" />
+	<parameter name="RadiusMinor" type="real" min="0" default="0" />
+	<parameter name="Depth" type="real" min="0" default="0" />
+	<parameter name="UsePlasmaBeta" type="logical" default="F"/>
+	<if expr="not $UsePlasmaBeta">
+	  <parameter name="Mass" type="real" min="0" default="0" />
+	</if>
+	<if expr="$UsePlasmaBeta">
+	  <parameter name="PlasmaBeta" type="real" min="0" default="0" />
+	  <parameter name="EjectaTemperature" type="real" min="1e4" 
+		     default="5e4" />
+	</if>
+	<parameter name="TypeBStrap" type="string" case="lower"
+		   input="select" required="F">
+	  <option name="none"	  />
+	  <option name="readbstrap" />
+	  <option name="getbstrap"  />
+	</parameter>
+	<if expr="$TypeBStrap =~ /readbstrap/">
+	  <parameter name="bStrappingDim" type="real" min="0" 
+		     default="0" />
+	  <parameter name="TypeCharge" type="string" case="lower"
 	    	 input="select" required="F">
-	<option name="none"	  />
-	<option name="steady" />
-	<option name="moving" />
-	<option name="cancelflux" />
-      </parameter>
-      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	<parameter name="bQStrapFraction" type="real" min="0" 
-		   default="0" />
-	<parameter name="qDistance" type="real" min="0" 
-		   default="0" />
+	    <option name="none"	  />
+	    <option name="steady" />
+	    <option name="moving" />
+	    <option name="cancelflux" />
+	  </parameter>
+	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	    <parameter name="bQStrapFraction" type="real" min="0" 
+		       default="0" />
+	    <parameter name="qDistance" type="real" min="0" 
+		       default="0" />
+	  </if>
+	  <if expr="$TypeCharge =~ /moving|cancelflux/">
+	    <parameter name="UChargeX" type="real" min="0" 
+		       default="0" />
+	  </if>
+	</if>
       </if>
-      <if expr="$TypeCharge =~ /moving|cancelflux/">
-	<parameter name="UChargeX" type="real" min="0" 
-		   default="0" />
-      </if>
-    </if>
-  </if>
-  <if expr="$TypeCme =~ /TD14/">
-    <parameter name="BcTubeDim" type="real" default="0" />
-    <parameter name="RadiusMajor" type="real" min="0" default="0" />
-    <parameter name="RadiusMinor" type="real" min="0" default="0" />
-    <parameter name="Depth" type="real" min="0" default="0" />
-    <parameter name="TypeBStrap" type="string" case="lower"
-	       input="select" required="F">
-      <option name="none"	  />
-      <option name="readbstrap" />
-      <option name="getbstrap"  />
-      <option name="steady" />
-      <option name="moving" />
-      <option name="cancelflux" />
-    </parameter>
-    <if expr="$TypeBStrap =~ /readbstrap/">
-      <parameter name="bStrappingDim" type="real" min="0" 
-	       default="0" />
-      <parameter name="TypeCharge" type="string" case="lower"
-		 input="select" required="F">
+      <if expr="$TypeCme =~ /TD14/">
+	<parameter name="BcTubeDim" type="real" default="0" />
+	<parameter name="RadiusMajor" type="real" min="0" default="0" />
+	<parameter name="RadiusMinor" type="real" min="0" default="0" />
+	<parameter name="Depth" type="real" min="0" default="0" />
+	<parameter name="TypeBStrap" type="string" case="lower"
+		   input="select" required="F">
 	  <option name="none"	  />
+	  <option name="readbstrap" />
+	  <option name="getbstrap"  />
 	  <option name="steady" />
 	  <option name="moving" />
 	  <option name="cancelflux" />
-      </parameter>
-      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	 <parameter name="bQStrapFraction" type="real" min="0" 
-		    default="0" />
-	 <parameter name="qDistance" type="real" min="0" 
-		 default="0" />
-      </if>
-      <if expr="$TypeCharge =~ /moving|cancelflux/">
-	<parameter name="UChargeX" type="real" min="0" 
-		   default="0" />
+	</parameter>
+	<if expr="$TypeBStrap =~ /readbstrap/">
+	  <parameter name="bStrappingDim" type="real" min="0" 
+		     default="0" />
+	  <parameter name="TypeCharge" type="string" case="lower"
+		     input="select" required="F">
+	    <option name="none"	  />
+	    <option name="steady" />
+	    <option name="moving" />
+	    <option name="cancelflux" />
+	  </parameter>
+	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	    <parameter name="bQStrapFraction" type="real" min="0" 
+		       default="0" />
+	    <parameter name="qDistance" type="real" min="0" 
+		       default="0" />
+	  </if>
+	  <if expr="$TypeCharge =~ /moving|cancelflux/">
+	    <parameter name="UChargeX" type="real" min="0" 
+		       default="0" />
+	  </if>
+	</if>
+	<if expr="$TypeBStrap =~ /getbstrap/">
+	  <parameter name="TypeCharge" type="string" case="lower"
+		     input="select" required="F">
+	    <option name="none"	  />
+	    <option name="steady" />
+	    <option name="moving" />
+	    <option name="cancelflux" />
+	  </parameter>
+	  <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
+	    <parameter name="bQStrapFraction" type="real" min="0" 
+		       default="0" />
+	    <parameter name="qDistance" type="real" min="0" 
+		       default="0" />
+	  </if>
+	  <if expr="$TypeCharge =~ /moving|cancelflux/">
+	    <parameter name="UChargeX" type="real" min="0" 
+		       default="0" />
+	  </if>
+	</if>
+	<if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
+	  <parameter name="bQStrappingDim" type="real" min="0" 
+		     default="0" />
+	  <parameter name="qDistance" type="real" min="0" 
+		     default="0" />
+	  <if expr="$TypeBStrap =~ /moving|cancelflux/">
+	    <parameter name="UChargeX" type="real" min="0" 
+		       default="0" />
+	  </if>
+	</if>
       </if>
     </if>
-    <if expr="$TypeBStrap =~ /getbstrap/">
-      <parameter name="TypeCharge" type="string" case="lower"
-		 input="select" required="F">
-	  <option name="none"	  />
-	  <option name="steady" />
-	  <option name="moving" />
-	  <option name="cancelflux" />
-      </parameter>
-      <if expr="$TypeCharge =~ /steady|moving|cancelflux/">
-	 <parameter name="bQStrapFraction" type="real" min="0" 
-		    default="0" />
-	 <parameter name="qDistance" type="real" min="0" 
-		 default="0" />
-      </if>
-      <if expr="$TypeCharge =~ /moving|cancelflux/">
-	<parameter name="UChargeX" type="real" min="0" 
-		   default="0" />
-      </if>
-    </if>
-    <if expr="$TypeBStrap =~ /steady|moving|cancelflux/">
-      <parameter name="bQStrappingDim" type="real" min="0" 
-		 default="0" />
-      <parameter name="qDistance" type="real" min="0" 
-		 default="0" />
-      <if expr="$TypeBStrap =~ /moving|cancelflux/">
-	<parameter name="UChargeX" type="real" min="0" 
-		   default="0" />
-      </if>
-    </if>
-  </if>
-	
+
 #CME
-T			UseCme
-T			DoAddFluxRope
+T			UseCme ! Rest is read if UseCme is true
+T			DoAddFluxRope 
 0			LongitudeCme   [deg]
 0			LatitudeCme    [deg]
 0			OrientationCme [deg]
@@ -5008,8 +5010,6 @@ SPHEROMAK		TypeCme
 0.3			Stretch        [Rs]
 1.8			ApexHeight     [Rs]
 600                     uCme           [km/s]
-
-
 
 First five parameters are common for all types of EE generators. If UseCme is 
 .true. the generator may be applied permanently, usually via the boundary
