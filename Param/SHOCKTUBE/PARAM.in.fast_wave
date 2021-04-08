@@ -1,14 +1,14 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
+#TEST
+orig			StringTest
+
 #TIMING
 T			UseTiming
 -1			DnTiming
 -1			nDepthTiming
 tree			TypeTimingReport
-
-#TEST
-FASTUPDATE		StringTest
 
 #PLANET
 NONE			NamePlanet
@@ -124,14 +124,8 @@ periodic		TypeBc5
 periodic		TypeBc6
 
 #SCHEME
-2			nOrder
+1			nOrder
 Rusanov			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
-
-#TIMESTEPPING
-1			nStage
-0.8			CflExpl
 
 #FIXEDTIMESTEP
 T			UseDtFixed
@@ -170,7 +164,94 @@ z=0 mhd idl_ascii		StringPlot
 
 #STOP
 -1			MaxIteration
+20.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+40.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+60.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
+80.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
 100.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			BetaLimiter
+
+#TEST
+orig			StringTest
+
+#STOP
+-1			MaxIteration
+120.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+140.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+160.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
+180.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
+200.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -178,12 +259,48 @@ z=0 mhd idl_ascii		StringPlot
 2			nOrder
 Linde			TypeFlux
 mc3			TypeLimiter
-1.2			LimiterBeta
+1.2			BetaLimiter
 
-#TIMESTEPPING
-1			nStage
-0.8			CflExpl
+#TEST
+orig
 
 #STOP
 -1			MaxIteration
-200.0			tSimulationMax
+220.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+240.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUUPDATE		StringTest
+
+#STOP
+-1			MaxIteration
+260.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+GPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
+280.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#TEST
+CPUPRIM			StringTest
+
+#STOP
+-1			MaxIteration
+300.0			tSimulationMax
+
