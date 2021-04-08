@@ -2369,7 +2369,12 @@ contains
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
        case("#COORDSYSTEM","#COORDINATESYSTEM")
-          if(.not.is_first_session())CYCLE READPARAM
+          if(TypeCoordSystem /= 'HGC')then
+             ! HGC is the only type of coordinate system
+             ! which can be switched to different coordinate
+             ! system in the course of run
+             if(.not.is_first_session())CYCLE READPARAM
+          end if
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
           select case(NameThisComp)
           case('GM')
