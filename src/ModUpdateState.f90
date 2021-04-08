@@ -87,7 +87,7 @@ contains
 
     ! Note must copy state to old state only if iStage is 1.
     if(iStage==1) then
-       !$acc loop vector collapse(4)
+       !$acc loop vector collapse(3)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
          StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
        enddo; enddo; enddo; enddo
@@ -217,7 +217,7 @@ contains
        end do; end do; end do
     end if
 
-    !$acc loop vector collapse(4)
+    !$acc loop vector collapse(3)
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
        Source_VCI(iVar,i,j,k,iGang) = &
@@ -460,7 +460,7 @@ contains
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
 
-         !$acc loop vector collapse(4)
+         !$acc loop vector collapse(3)
          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
             State_VGB(iVar,i,j,k,iBlock) = &
                  StateOld_VGB(iVar,i,j,k,iBlock) + Source_VCI(iVar,i,j,k,iGang)

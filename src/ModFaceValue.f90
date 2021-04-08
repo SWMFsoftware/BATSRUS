@@ -410,7 +410,7 @@ contains
     end if
 #endif
 
-    !$acc loop vector collapse(4) independent
+    !$acc loop vector collapse(3) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VGI(iVar,i,j,k,iGang) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do

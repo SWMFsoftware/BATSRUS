@@ -112,12 +112,12 @@ contains
     iGang = iBlock
 #endif
 
-    !$acc loop vector collapse(4)
+    !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do
 
-    !$acc loop vector collapse(4)
+    !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do
@@ -700,7 +700,7 @@ contains
 #endif
 
     if(IsMhd) then
-       !$acc loop vector collapse(4)
+       !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
           Source_VCI(iVar,i,j,k,iGang) = &
                Source_VCI(iVar,i,j,k,iGang) + SourceMhd_VCI(iVar,i,j,k,iGang)
