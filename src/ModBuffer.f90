@@ -144,6 +144,10 @@ contains
 
     ! Get the target state from the spherical buffer grid
     call interpolate_from_global_buffer(Sph_D, nVar, State_V)
+
+    ! Transform to primitive variables
+    State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+
     ! Transform vector variables from SC to IH
     if(TypeCoordSource /= TypeCoordSystem)then
        State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
@@ -151,8 +155,7 @@ contains
             TypeCoordSource, TypeCoordSystem)*Si2No_V(UnitU_)
        if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
     end if
-    ! Transform to primitive variables
-    State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+
     if(SignB_>1)then
        if(DoThinCurrentSheet)then
           ! In both IH and OH we have no B0, so we ignore that !
