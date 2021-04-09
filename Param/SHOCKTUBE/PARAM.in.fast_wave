@@ -210,7 +210,7 @@ Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			BetaLimiter
 
-#TEST
+TEST
 orig			StringTest
 
 #STOP
@@ -261,7 +261,7 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.2			BetaLimiter
 
-#TEST
+TEST
 orig
 
 #STOP
