@@ -6,21 +6,20 @@ module ModUpdateStateFast
 
   ! Calculate each face twice
 
+  use ModUpdateParamFast, ONLY: &
+       DoLf, BetaLimiter, nStage, iStage, nOrder, &
+       IsCartesian, IsCartesianGrid, UseNonConservative, &
+       UseHyperbolicDivB
   use ModVarIndexes
-  use ModFaceFlux,  ONLY: DoLf
-  use ModFaceValue, ONLY: BetaLimiter
-  use ModMain, ONLY: nStage, iStage, Cfl, Dt, nOrder
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, &
        Flux_VXI, Flux_VYI, Flux_VZI, StateOld_VGB, EnergyOld_CBI, &
        time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-#ifndef OPENACC
-  use BATL_lib, ONLY: IsCartesianGrid, CellFace_DFB, FaceNormal_DDFB
-#endif
+  use BATL_lib, ONLY: CellFace_DFB, FaceNormal_DDFB
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
-  use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp
+  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
 
   implicit none
@@ -821,21 +820,23 @@ module ModUpdateStatePrim
 
   ! Save Primitive_VG array
 
+  ! Calculate each face twice
+
+  use ModUpdateParamFast, ONLY: &
+       DoLf, BetaLimiter, nStage, iStage, nOrder, IsCartesian, &
+       UseNonConservative
   use ModVarIndexes
   use ModAdvance, ONLY: Flux_VXI, Flux_VYI, Flux_VZI
-  use ModFaceFlux, ONLY: print_face_values, DoLf, DoHll
-  use ModMain, ONLY: nStage, iStage, Cfl, Dt, nOrder
+  use ModMain, ONLY: Cfl, Dt
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, Primitive_VGI, &
-       StateOld_VGB, EnergyOld_CBI
-!!!  time_BLK
+       StateOld_VGB, EnergyOld_CBI, time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
-#ifndef OPENACC
-  use BATL_lib, ONLY: IsCartesianGrid, CellFace_DFB, FaceNormal_DDFB
-#endif
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
+       CellFace_DFB, FaceNormal_DDFB
+
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
-  use ModMain, ONLY: UseB, UseHyperbolicDivb, SpeedHyp
+  use ModMain, ONLY: UseB, SpeedHyp
   use ModNumConst, ONLY: cUnit_DD
 
   use ModUpdateStateFast, ONLY: &

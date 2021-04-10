@@ -105,6 +105,7 @@ OBJECTS = \
 	ModViscosity.o \
 	ModWaves.o \
 	ModWriteTecplot.o \
+	ModUpdateParamFast.o \
 	ModUpdateStateFast.o \
 	ModUpdateState.o \
 	ModWriteLogSatFile.o \
