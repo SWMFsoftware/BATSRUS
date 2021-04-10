@@ -1595,7 +1595,7 @@ The default value corresponding to reflection is shown above.
 	 <parameter name="nRBuff" type="integer" min="2" default="2" />
 	 <parameter name="nLonBuff" type="integer" min="2" default="90" />
 	 <parameter name="nLatBuff" type="integer" min="2" default="45" />
-	 <parameter name="RBuffMin" type="real" min="1" default="19" />
+	 <parameter name="RBuffMin" type="real" min="0" default="19" />
 	 <parameter name="RBuffMax" type="real" min="$rBuffMin" default="21" />
 	 <parameter name="LonBuffMin" type="real" min="0" max="360"
 	 	    		      		  	   default="0" />
