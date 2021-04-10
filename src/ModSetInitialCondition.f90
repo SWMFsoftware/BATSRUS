@@ -174,12 +174,12 @@ contains
   subroutine add_rotational_velocity(iSign, iBlockIn)
 
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
-    use ModMain,     ONLY: Unused_B
+    use ModMain,     ONLY: Unused_B, NameThisComp
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: true_cell
     use ModPhysics,  ONLY: OmegaBody
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I
-    use BATL_lib,    ONLY: Xyz_DGB
+    use BATL_lib,    ONLY: Xyz_DGB, iProc
 
     integer, intent(in):: iSign
     integer, optional, intent(in):: iBlockIn
@@ -203,6 +203,8 @@ contains
        iBlockFirst = iBlockIn; iBlockLast = iBlockIn
     else
        iBlockFirst = 1; iBlockLast = nBlock
+       if(iProc==0)write(*,'(a)')&
+            NameThisComp//': add rotational velocity to convert coords'
     end if
 
     do iBlock = iBlockFirst, iBlockLast
