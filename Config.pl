@@ -88,6 +88,10 @@ my $nMaterialNew;
 my $ChargeState;
 my $nChargeStateAll;
 
+# Settings for fast update
+my $ParamFastFile = "src/ModUpdateParamFast.f90";
+my $SetFast;
+
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
 
@@ -114,6 +118,8 @@ foreach (@Arguments){
     if(/^-cs=(.*)/)           {$ChargeState.="$1";            next};
     if(/^-ng$/i)              {print "ng=$GhostCell\n"; next};
     if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
+    if(/^-set$/)              {$SetFast="show";  next};
+    if(/^-set=(.*)$/)         {$SetFast=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
@@ -152,7 +158,104 @@ my $Settings = &current_settings; print $Settings if $Show;
 # (Re)Create Makefile.RULES file(s) based on current settings
 &create_makefile_rules($Settings);
 
+# Optimize settings in ModUpdateParamFast.f90
+&set_fast_parameters if $SetFast;
+
 exit 0;
+
+#############################################################################
+sub set_fast_parameters{
+
+    # Read current settings
+    my %SetFast;
+    open(FILE, $ParamFastFile) or die "$ERROR could not open $ParamFastFile\n";
+    while(<FILE>){
+	$SetFast{$1}=" " if /^\s+(\w+)(\s*,\s*\&)?\s*$/;
+	$SetFast{$1}=$2  if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
+	last if /^\s*contains\s*$/;
+    }
+    close(FILE);
+    print "-" x 70, "\nCurrent settings for fast update:\n";
+    my $name;
+    foreach $name (sort keys %SetFast){
+	print "$name = $SetFast{$name}\n";
+    }
+    return if $SetFast eq "show";
+
+    # Process -set=... argument in $SetFast
+    print "-" x 70, "\nSetFast = $SetFast\n";
+    print "-" x 70, "\nNew settings for fast update:\n";
+
+    my @SetFast = split(/,/, $SetFast);
+    my $Change;
+    foreach (@SetFast){
+	my $newvalue=" ";
+	$newvalue = $1 if s/[:=](.*)//;
+	my $oldvalue = $SetFast{$_};
+	if(not $oldvalue){
+	    print "$ERROR Invalid variable name=$_\n";
+	    next;
+	}
+	if($newvalue ne $oldvalue){
+	    $Change = 1;
+	    # Pring out modified value
+	    print "$_: $oldvalue -> $newvalue\n";
+	    $SetFast{$_} = $newvalue;
+	}
+    }
+    if(not $Change){
+	# Nothing else to be done
+	print "No changes in $ParamFastFile\n";
+	return;
+    }
+    # Edit the file
+    print "Modifying $ParamFastFile\n";
+    my $parameters; # true inside setting parameters part
+    my $checks;     # true inside checking parameters part
+    @ARGV = ($ParamFastFile);
+    while(<>){
+	if(/^\s+(\w+)(\s*,\s*\&)?\s*$/){
+	    my $name = $1;
+	    s/$name/${name}Orig => $name/ if $SetFast{$name} ne ' ';
+	}
+	if(/^\s+\w+Orig\s*=>\s*(\w+)$/){
+	    my $name = $1;
+	    s/${name}Orig\s*=>\s*// if $SetFast{$name} eq ' ';
+	}
+	$parameters = 0 if /^\s*contains/;
+	next if $parameters; # remove original parameters
+	if(/Fixed values/){
+	    print;
+	    $parameters = 1;
+	    foreach my $name (sort keys %SetFast){
+		my $value = $SetFast{$name};
+		next if $value eq ' ';
+		my $type = 'real';
+		$type = 'logical' if $name =~ /^(Is|Use|Do|Done)[A-Z]/;
+		$type = 'integer' if $name =~ /^([i-n]|Int[A-Z])/;
+		print "  $type, parameter:: $name = $value\n";
+	    }
+	    print "\n";
+	    next;
+	}
+	$checks = 0 if /^\s+end subroutine check/;
+	next if $checks; # remove original checks
+	if(/Check fixed/){
+	    print;
+	    $checks = 1;
+	    foreach my $name (sort keys %SetFast){
+		my $value = $SetFast{$name};
+		next if $value eq ' ';
+		my $ne = "/=";
+		$ne = ".neqv." if $name =~ /^(Is|Use|Do|Done)[A-Z]/;
+		print "    if($name $ne ${name}Orig) &\n".
+		    "         call CON_stop(NameSub//': $name=',$name)\n\n";
+	    }
+	}
+	print;
+    }
+}
+
 
 #############################################################################
 

@@ -121,6 +121,10 @@ OBJECTS = \
 ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
 
+# Default fast parameter settings
+ModUpdateParamFast.f90:
+	cp ModUpdateParamFast_orig.f90 ModUpdateParamFast.f90
+
 ############################################################################
 
 DEPEND:
@@ -219,3 +223,4 @@ distclean: clean
 	rm -f ModUser.f90.safe
 	-mv ModUser.f90 ModUser.f90.safe
 	rm -f ModEquation.f90 ModHdf5.f90 ModImplHypre.f90
+	rm -f src/ModUpdateParamFast.f90

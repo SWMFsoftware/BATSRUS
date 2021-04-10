@@ -12,7 +12,7 @@ module ModUpdateParamFast
   use ModFaceValue, ONLY: &
        BetaLimiter
   use ModMain, ONLY: &
-       nStageOrig => nStage, &
+       nStage, &
        iStage, &
        nOrder, &
        UseHyperBolicDivB
@@ -25,7 +25,6 @@ module ModUpdateParamFast
   implicit none
 
   ! Fixed values
-  integer, parameter:: nStage = 2
 
 contains
   !============================================================================
@@ -36,10 +35,7 @@ contains
     write(*,'(a)')NameSub//' checking parameters...'
 
     ! Check fixed values
-    if(nStage /= nStageOrig) &
-         call CON_stop(NameSub//': nStage=',nStage)
-
-    ! Check fixed values
+    
   end subroutine check_update_param_fast
   !============================================================================
 end module ModUpdateParamFast
