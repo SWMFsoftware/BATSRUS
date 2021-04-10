@@ -208,7 +208,7 @@ CPUPRIM			StringTest
 2			nOrder
 Rusanov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 TEST
 orig			StringTest
@@ -259,7 +259,7 @@ CPUPRIM			StringTest
 2			nOrder
 Linde			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 TEST
 orig
