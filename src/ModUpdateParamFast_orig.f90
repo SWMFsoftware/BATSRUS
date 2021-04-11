@@ -6,21 +6,24 @@ module ModUpdateParamFast
   use ModUtilities, ONLY: CON_stop
 
   use ModAdvance, ONLY: &
-       UseNonConservative
+       UseNonConservative => UseNonConservative
+  use ModB0, ONLY: &
+       UseB0 => UseB0
   use ModFaceFlux, ONLY: &
-       DoLf
+       DoLf => DoLf
   use ModFaceValue, ONLY: &
-       BetaLimiter
+       BetaLimiter => BetaLimiter
   use ModMain, ONLY: &
-       nStage, &
-       iStage, &
-       nOrder, &
-       UseHyperBolicDivB
+       IsTimeAccurate => time_accurate, &
+       nStage => nStage, &
+       iStage => iStage, &
+       nOrder => nOrder, &
+       UseHyperBolicDivB => UseHyperBolicDivB
   use ModBorisCorrection, ONLY: &
-       UseBorisCorrection
+       UseBorisCorrection => UseBorisCorrection
   use BATL_lib, ONLY: &
-       IsCartesian, &
-       IsCartesianGrid
+       IsCartesian => IsCartesian, &
+       IsCartesianGrid => IsCartesianGrid
 
   implicit none
 
