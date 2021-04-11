@@ -164,6 +164,25 @@ my $Settings = &current_settings; print $Settings if $Show;
 exit 0;
 
 #############################################################################
+sub check_var{
+    my $oldvalue = $_[0];
+    my $newvalue = $_[1];
+    my $first    = $_[2];
+
+    return if $oldvalue eq "any"; # already adjustable
+
+    $newvalue =~ s/^\s+//;          # remove leading space
+    $newvalue =~ s/\s+.*\n//;       # remove comment
+    $newvalue =~ s/^T|1$/.true./;   # logical true
+    $newvalue =~ s/^F|0$/.false./;  # logical false
+    
+    if($first){
+	$_[0] = $newvalue; # first use of new value, make it fixed
+    }elsif($newvalue ne $oldvalue){
+	$_[0] = "any"; # two different values, cannot be fixed
+    }
+}
+#############################################################################
 sub set_fast_parameters{
 
     # Read current settings
@@ -188,34 +207,118 @@ sub set_fast_parameters{
 
     my $Change; # set to 1 is settings change
 
-    # -set=any means that nothing is fixed
-    if($SetFast =~ s/^any,?//i){
-	foreach my $name (sort keys %SetFast){
-	    next if $SetFast{$name} eq 'any';
-	    printf "%-20s%9s -> any\n", "$name:", $SetFast{$name};
-	    $SetFast{$name} = 'any';
-	    $Change = 1;
-	}
-    }
+    if($SetFast =~ /PARAM\.in/){
+	# Read settings from some PARAM.in file
+	# Default settings
+	my %Set = (
+	    nOrder              => 1,
+            BetaLimiter         => "1.0",
+            DoLf                => ".true.",
+            IsCartesian         => ".true.",
+            IsCartesianGrid     => ".true.",
+            UseBorisCorrection  => ".false.",
+            UseHyperBolicDivB   => ".false.",
+            UseNonConservative  => ".false.",
+            iStage              => 1,
+            nStage              => 1,
+            nOrder              => 1,
+	    );
 
-    # replace =F and =T with =.false. and =.true.
-    $SetFast =~ s/=F/=.false./g;
-    $SetFast =~ s/=T/=.true./g;
-
-    my @SetFast = split(/,/, $SetFast);
-    foreach (@SetFast){
-	my $newvalue = "any";
-	$newvalue = $1 if s/=(.*)//;
-	my $oldvalue = $SetFast{$_};
-	if(not $oldvalue){
-	    print "$ERROR Invalid variable name=$_\n";
-	    next;
+	print "processing parameter file $SetFast\n";
+	my $first = 1; # true in the first session
+	open(FILE, $SetFast) or die "$ERROR could not open $SetFast\n";
+	while(<FILE>){
+	    last if /^#END\b/;
+	    $first = 0 if /^\#RUN\b/; # not first session
+	    if(/^#SCHEME\b/){
+		my $norder = <FILE>;
+		check_var($Set{"nOrder"}, $norder, $first);
+		check_var($Set{"nStage"}, $norder, $first); # default nStage
+		my $scheme = <FILE>;
+		if($scheme =~ /^\s*Rusanov/i){
+		    check_var($Set{"DoLf"}, "T", $first);
+		}else{
+		    check_var($Set{"DoLf"}, "F", $first);
+		}
+		if($norder > 1){
+		    my $limiter = <FILE>;
+		    if($limiter =~ /^\s*minmod/){
+			check_var($Set{"BetaLimiter"}, "1.0", $first);
+		    }else{
+			my $beta = <FILE>;
+			check_var($Set{"BetaLimiter"}, $beta, $first);
+		    }
+		}
+	    }elsif(/^#TIMESTEPPING\b/){
+		my $nStage = <FILE>;
+		check_var($Set{"nStage"}, $nStage, $first);
+		check_var($Set{"iStage"}, "any", $first) if $nStage !~ /^\s*1/;
+	    }elsif(/^#BORIS\b/){
+		my $boris = <FILE>;
+		check_var($Set{"UseBorisCorrection"}, $boris, $first);
+	    }elsif(/^#NONCONSERVATIVE\b/){
+		my $noncons = <FILE>;
+		check_var($Set{"UseNonConservative"}, $noncons, $first);
+	    }elsif(/^#HYPERBOLICDIVB\b/){
+		my $usehyp = <FILE>;
+		check_var($Set{"UseHyperbolicDivb"}, $usehyp, $first);
+	    }elsif(/^#GRIDGEOMETRY\b/){
+		my $geometry = <FILE>;
+		if($geometry =~ /^cartesian/){
+		    check_var($Set{"Cartesian"}, "T", $first);
+		    check_var($Set{"CartesianGrid"}, "T", $first);
+		}elsif($geometry =~ /^rz/){
+		    check_var($Set{"Cartesian"}, "T", $first);
+		    check_var($Set{"CartesianGrid"}, "F", $first);
+		}else{
+		    check_var($Set{"Cartesian"}, "F", $first);
+		    check_var($Set{"CartesianGrid"}, "F", $first);
+		}
+	    }
 	}
-	if($newvalue ne $oldvalue){
-	    $Change = 1;
-	    # Pring out modified value
-	    printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
-	    $SetFast{$_} = $newvalue;
+	close(FILE);
+
+	foreach $name (sort keys %Set){
+	    if($Set{$name} ne $SetFast{$name}){
+		$SetFast{$name} = $Set{$name};
+		$Change = 1;
+	    }
+	}
+	if($Change){
+	    foreach $name (sort keys %SetFast){
+		printf "%-30s = %s\n", $name, $SetFast{$name};
+	    }
+	}
+    }else{
+	# -set=any means that nothing is fixed
+	if($SetFast =~ s/^any,?//i){
+	    foreach my $name (sort keys %SetFast){
+		next if $SetFast{$name} eq 'any';
+		printf "%-20s%9s -> any\n", "$name:", $SetFast{$name};
+		$SetFast{$name} = 'any';
+		$Change = 1;
+	    }
+	}
+
+	# replace =F and =T with =.false. and =.true.
+	$SetFast =~ s/=F/=.false./g;
+	$SetFast =~ s/=T/=.true./g;
+
+	my @SetFast = split(/,/, $SetFast);
+	foreach (@SetFast){
+	    my $newvalue = "any";
+	    $newvalue = $1 if s/=(.*)//;
+	    my $oldvalue = $SetFast{$_};
+	    if(not $oldvalue){
+		print "$ERROR Invalid variable name=$_\n";
+		next;
+	    }
+	    if($newvalue ne $oldvalue){
+		$Change = 1;
+		# Print out modified value
+		printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
+		$SetFast{$_} = $newvalue;
+	    }
 	}
     }
     if(not $Change){
