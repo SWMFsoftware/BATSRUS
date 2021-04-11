@@ -170,8 +170,8 @@ sub set_fast_parameters{
     my %SetFast;
     open(FILE, $ParamFastFile) or die "$ERROR could not open $ParamFastFile\n";
     while(<FILE>){
-	$SetFast{$1}=" " if /^\s+(\w+)(\s*,\s*\&)?\s*$/;
-	$SetFast{$1}=$2  if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
+	$SetFast{$1} = 'any' if /^\s+(\w+)(\s*,\s*\&)?\s*$/;
+	$SetFast{$1} = $2  if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
 	last if /^\s*contains\s*$/;
     }
     close(FILE);
@@ -183,14 +183,29 @@ sub set_fast_parameters{
     return if $SetFast eq "show";
 
     # Process -set=... argument in $SetFast
-    print "-" x 70, "\nSetFast = $SetFast\n";
+    print "-" x 70, "\n-set=$SetFast\n";
     print "-" x 70, "\nNew settings for fast update:\n";
 
+    my $Change; # set to 1 is settings change
+
+    # -set=any means that nothing is fixed
+    if($SetFast =~ s/^any,?//i){
+	foreach my $name (sort keys %SetFast){
+	    next if $SetFast{$name} eq 'any';
+	    print "$name: $SetFast{$name} -> any\n";
+	    $SetFast{$name} = 'any';
+	    $Change = 1;
+	}
+    }
+
+    # replace =F and =T with =.false. and =.true.
+    $SetFast =~ s/=F/=.false./g;
+    $SetFast =~ s/=T/=.true./g;
+
     my @SetFast = split(/,/, $SetFast);
-    my $Change;
     foreach (@SetFast){
-	my $newvalue=" ";
-	$newvalue = $1 if s/[:=](.*)//;
+	my $newvalue = "any";
+	$newvalue = $1 if s/=(.*)//;
 	my $oldvalue = $SetFast{$_};
 	if(not $oldvalue){
 	    print "$ERROR Invalid variable name=$_\n";
@@ -216,11 +231,11 @@ sub set_fast_parameters{
     while(<>){
 	if(/^\s+(\w+)(\s*,\s*\&)?\s*$/){
 	    my $name = $1;
-	    s/$name/${name}Orig => $name/ if $SetFast{$name} ne ' ';
+	    s/$name/${name}Orig => $name/ if $SetFast{$name} ne 'any';
 	}
-	if(/^\s+\w+Orig\s*=>\s*(\w+)$/){
+	if(/^\s+\w+Orig\s*\=\>\s*(\w+)/){
 	    my $name = $1;
-	    s/${name}Orig\s*=>\s*// if $SetFast{$name} eq ' ';
+	    s/${name}Orig\s*=>\s*// if $SetFast{$name} eq 'any';
 	}
 	$parameters = 0 if /^\s*contains/;
 	next if $parameters; # remove original parameters
@@ -229,7 +244,7 @@ sub set_fast_parameters{
 	    $parameters = 1;
 	    foreach my $name (sort keys %SetFast){
 		my $value = $SetFast{$name};
-		next if $value eq ' ';
+		next if $value eq 'any';
 		my $type = 'real';
 		$type = 'logical' if $name =~ /^(Is|Use|Do|Done)[A-Z]/;
 		$type = 'integer' if $name =~ /^([i-n]|Int[A-Z])/;
@@ -245,12 +260,20 @@ sub set_fast_parameters{
 	    $checks = 1;
 	    foreach my $name (sort keys %SetFast){
 		my $value = $SetFast{$name};
-		next if $value eq ' ';
+		next if $value eq 'any';
+		my $check = "${name}Orig /= $value";
+		if($name =~ /^(Is|Use|Do|Done)[A-Z]/){
+		    $check = ".not. ${name}Orig" if $value eq ".true.";
+		    $check = "${name}Orig"       if $value eq ".false.";
+		}
 		my $ne = "/=";
-		$ne = ".neqv." if $name =~ /^(Is|Use|Do|Done)[A-Z]/;
-		print "    if($name $ne ${name}Orig) &\n".
-		    "         call CON_stop(NameSub//': $name=',$name)\n\n";
+		$ne = ".neqv." if 
+		print "    if($check) call CON_stop(NameSub// &\n".
+		    "         ': $name=',${name}Orig)".
+		    "\n";
 	    }
+	    print "\n";
+	    next;
 	}
 	print;
     }
@@ -639,43 +662,47 @@ sub print_help{
     print "
 Additional options for BATSRUS/Config.pl:
 
--g=NI,NJ,NK
-                Set grid size. NI, NJ and NK are the number of cells 
+-g=NI,NJ,NK     Set grid block size. NI, NJ and NK are the number of cells 
                 in the I, J and K directions, respectively. 
                 If NK = 1, the 3rd dimension is ignored: 2D grid.
                 If NJ=NK=1, the 2nd and 3rd dimensions are ignored: 1D grid.
                 In non-ignored dimensions NI, NJ, NK have to be even integers.
                 To allow AMR, the number of cells has to be 4 or more in all 
-                non-ignored directions. 
+                non-ignored directions. Use -f to set the value 2 (no AMR). 
 
 -ng             Print current setting for number of ghost cell layers.
 
--ng=GHOSTCELL   Set number of ghost cell layers around grid blocks. 
-                The value GHOSTCELL has to be 2, 3, 4 or 5, but  
+-ng=NG          Set number of ghost cell layers to NG around grid blocks. 
+                The value of NG can be 2, 3, 4 or 5, but  
                 not more than NI/2, NJ/2 (if NJ>1), and NK/2 (if NK>1).
-                Default value is GHOSTCELL=2.
+                Default value is NG=2.
 
--f              Force the -g and -ng settings even if GHOSTCELL 
-                exceeds NI/2, NJ/2 (if NJ>1), NK/2 (if NK>1) limits.
+-f              Force the -g and -ng settings.
 
 -e              List all available equation modules.
 
 -e=EQUATION     Select equation EQUATION. 
 
--u              List all the available user modules.
+-u              List all available user modules.
 
 -u=USERMODULE   Select the user module USERMODULE. 
 
--nWave=NWAVE
-                Set the number of wave bins used for radiation or wave
+-set            Show current parameter settings for the fast update code.
+                Variables without a value are adjustable from PARAM.in.
+
+-set=STRING     Set parameters for fast update code. STRING is a comma 
+                separated list consisting of either NAME or NAME=any elements
+                for adjustable parameters, or NAME=VALUE for fixed parameters.
+		For logical variables, T and F can be used as VALUE.
+	        If STRING starts with 'any', all values are set adjustable.
+
+-nWave=NWAVE    Set the number of wave bins used for radiation or wave
                 turbulence to NWAVE for the selected EQUATION module.
 
--nMaterial=NMATERIAL
-                Set the number of material levels to NMATERIAL
+-nMaterial=NM   Set the number of material levels to NM
                 for the selected EQUATION module.
 
--cs=ELEMENT_I
-                Set the + delimited list of element names for charge 
+-cs=ELEMENT_I   Set the + delimited list of element names for charge 
                 state calculation.
                 Only the 30 first elements of the periodic table are possible.
                 Works with equation module AwsomChargeState in IH and SC 
@@ -687,9 +714,9 @@ List available options for equations and user modules:
 
     Config.pl -e -u
 
-Select the MHD equations, the Default user module:
+Select the MHD equations, the Default user module and set some parameters:
 
-    Config.pl -e=MHD -u=Default
+    Config.pl -e=MHD -u=Default -set=any,nOrder=2,nStage=2,IsCartesian=T
 
 Select the CRASH equation and user modules and 
 set the number of materials to 5 and number of radiation groups to 30:
