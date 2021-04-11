@@ -7,7 +7,7 @@ module GM_couple_im
 
   use BATL_lib, ONLY: iProc, iComm
   use ModMpi
-  use ModNumConst, ONLY: cRadToDeg, cDegToRad
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad, cHalfPi
   use CON_coupler, ONLY: Grid_C, ncell_id, &
        nVarBuffer_CC, iVarSource_VCC, GM_, IM_, lComp_I
 

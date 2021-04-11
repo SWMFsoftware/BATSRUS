@@ -1,7 +1,7 @@
 module GM_couple_ps
 
   ! use ModMpi
-  ! use ModNumConst, ONLY: cRadToDeg, cDegToRad
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use CON_coupler, ONLY: Grid_C, ncell_id
 
   ! use ModMain, ONLY: n_step
