@@ -228,7 +228,7 @@ sub set_optimization{
 	    IsTimeAccurate      => ".true.",
 	    UseB0               => ".true.",
             UseBorisCorrection  => ".false.",
-            UseHyperBolicDivB   => ".false.",
+            UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
             iStage              => 1,
             nStage              => 1,
@@ -293,13 +293,17 @@ sub set_optimization{
 		}
 	    }elsif(/^#HYPERBOLICDIVB\b/){
 		my $usehyp = <FILE>;
-		check_var($Set{"UseHyperbolicDivb"}, $usehyp, $first);
+		check_var($Set{"UseHyperbolicDivB"}, $usehyp, $first);
 	    }elsif(/^#NONCONSERVATIVE\b/){
 		my $noncons = <FILE>;
 		check_var($Set{"UseNonConservative"}, $noncons, $first);
 	    }elsif(/^#USEB0\b/){
 		my $useb0 = <FILE>;
 		check_var($Set{"UseB0"}, $useb0, $first);
+	    }elsif(/^#PLANET\b/){
+		my $planet = <FILE>;
+		check_var($Set{"UseB0"}, "F", $first)
+		    if $planet =~ /^\s*(NONE|VENUS)/i;
 	    }
 	}
 	close(FILE);
@@ -400,7 +404,7 @@ sub set_optimization{
 			print "    if(${name}Orig) ".
 			    "call CON_stop(NameSub//': $name=T')\n"
 		    }
-		}else{
+		}elsif($name ne 'iStage'){  # iStage cannot be checked
 		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';
 		    print "    if(${name}Orig /= $value) ".
 			"call CON_stop(NameSub//': $name=',${name}Orig)\n";
