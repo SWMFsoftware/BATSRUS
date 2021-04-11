@@ -12,7 +12,7 @@ module ModUpdateParamFast
   use ModFaceFlux, ONLY: &
        DoLf => DoLf
   use ModFaceValue, ONLY: &
-       BetaLimiter => BetaLimiter
+       LimiterBeta => BetaLimiter
   use ModMain, ONLY: &
        IsTimeAccurate => time_accurate, &
        nStage => nStage, &

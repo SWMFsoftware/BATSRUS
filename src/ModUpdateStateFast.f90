@@ -7,9 +7,9 @@ module ModUpdateStateFast
   ! Calculate each face twice
 
   use ModUpdateParamFast, ONLY: &
-       DoLf, BetaLimiter, nStage, iStage, nOrder, &
+       DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, &
-       UseHyperbolicDivB
+       UseHyperbolicDivB, IsTimeAccurate
   use ModVarIndexes
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, &
        Flux_VXI, Flux_VYI, Flux_VZI, StateOld_VGB, EnergyOld_CBI, &
@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  use BATL_lib, ONLY: CellFace_DFB, FaceNormal_DDFB
+  use BATL_lib, ONLY: CellVolume_GB, CellFace_DFB, FaceNormal_DDFB
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
@@ -107,9 +107,16 @@ contains
                + Flux_VZI(:,i,j,k,iGang) - Flux_VZI(:,i,j,k+1,iGang)
 
           ! Time step divided by cell volume
-!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-!!!                 *real(iStage)/nStage
-          DtPerDv = (iStage*Dt)/(nStage*CellVolume_B(iBlock))
+          if(IsTimeAccurate)then
+             DtPerDv = iStage*Dt
+          else
+             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+          end if
+          if(IsCartesian)then
+             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
+          else
+             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+          end if
 
           ! Update state
           if(iStage == 1)then
@@ -256,9 +263,17 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              ! Time step divided by cell volume
-!!!          DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-             DtPerDv = Dt/CellVolume_B(iBlock)/nStage
-
+             if(IsTimeAccurate)then
+                DtPerDv = Dt
+             else
+                DtPerDv = Cfl*time_BLK(i,j,k,iBlock)
+             end if
+             if(IsCartesian)then
+                DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
+             else
+                DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+             end if
+             
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
              Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
@@ -284,8 +299,16 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              ! Time step divided by cell volume
-!!!          DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-             DtPerDv = Dt/CellVolume_B(iBlock)
+             if(IsTimeAccurate)then
+                DtPerDv = Dt
+             else
+                DtPerDv = Cfl*time_BLK(i,j,k,iBlock)
+             end if
+             if(IsCartesian)then
+                DtPerDv = DtPerDv/CellVolume_B(iBlock)
+             else
+                DtPerDv = DtPerDv/CellVolume_GB(i,j,k,iBlock)
+             end if
 
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
@@ -500,26 +523,25 @@ contains
     !$acc routine seq
     integer, intent(in) :: i, j, k, iBlock, iDir
     real,    intent(out):: NormalX, NormalY, NormalZ, Area
-#ifndef OPENACC
     !--------------------------------------------------------------------------
-    if(IsCartesianGrid)then
-#endif
+    if(IsCartesian)then
        Area = CellFace_DB(iDir,iBlock)
-       NormalX = cUnit_DD(iDir,1)
-       NormalY = cUnit_DD(iDir,2)
-       NormalZ = cUnit_DD(iDir,3)
-#ifndef OPENACC
     else
        Area = CellFace_DFB(iDir,i,j,k,iBlock)
        if(Area == 0.0)then
           NormalX = 1.0; NormalY = 0.0; NormalZ = 0.0
           RETURN
        end if
+    end if
+    if(IsCartesianGrid)then
+       NormalX = cUnit_DD(iDir,1)
+       NormalY = cUnit_DD(iDir,2)
+       NormalZ = cUnit_DD(iDir,3)
+    else
        NormalX = FaceNormal_DDFB(1,1,i,j,k,iBlock)/Area
        NormalY = FaceNormal_DDFB(2,1,i,j,k,iBlock)/Area
        NormalZ = FaceNormal_DDFB(3,1,i,j,k,iBlock)/Area
     end if
-#endif
 
   end subroutine get_normal
   !============================================================================
@@ -801,9 +823,9 @@ contains
     real, parameter:: cThird = 1./3.
     real:: Slope21, Slope32, Slope43
     !--------------------------------------------------------------------------
-    Slope21 = BetaLimiter*(Var2 - Var1)
-    Slope32 = BetaLimiter*(Var3 - Var2)
-    Slope43 = BetaLimiter*(Var4 - Var3)
+    Slope21 = LimiterBeta*(Var2 - Var1)
+    Slope32 = LimiterBeta*(Var3 - Var2)
+    Slope43 = LimiterBeta*(Var4 - Var3)
 
     VarLeft  = Var2 + (sign(0.25,Slope32) + sign(0.25,Slope21))*&
          min(abs(Slope32), abs(Slope21), cThird*abs(2*Var3-Var1-Var2))
@@ -823,17 +845,17 @@ module ModUpdateStatePrim
   ! Calculate each face twice
 
   use ModUpdateParamFast, ONLY: &
-       DoLf, BetaLimiter, nStage, iStage, nOrder, IsCartesian, &
-       UseNonConservative
+       DoLf, LimiterBeta, nStage, iStage, nOrder, IsCartesian, &
+       UseNonConservative, IsTimeAccurate
   use ModVarIndexes
   use ModAdvance, ONLY: Flux_VXI, Flux_VYI, Flux_VZI
   use ModMain, ONLY: Cfl, Dt
   use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, Primitive_VGI, &
        StateOld_VGB, EnergyOld_CBI, time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       CellFace_DFB, FaceNormal_DDFB
+       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellVolume_GB, &
+       CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
   use ModMain, ONLY: UseB, SpeedHyp
@@ -932,8 +954,16 @@ contains
                + Flux_VZI(:,i,j,k,iGang) - Flux_VZI(:,i,j,k+1,iGang)
 
           ! Time step divided by cell volume
-!!!       DtPerDv = Cfl*time_BLK(i,j,k,iBlock)/CellVolume_GB(i,j,k,iBlock)
-          DtPerDv = (iStage*Dt)/(nStage*CellVolume_B(iBlock))
+          if(IsTimeAccurate)then
+             DtPerDv = iStage*Dt
+          else
+             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+          end if
+          if(IsCartesian)then
+             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
+          else
+             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+          end if
 
           ! Update state
           if(iStage == 1)then
@@ -1081,9 +1111,17 @@ contains
           end if
 
           ! Time step divided by cell volume
-!!!       DtPerDv = (Cfl*time_BLK(i,j,k,iBlock)*iStage) &
-!!!                 /(nStage*CellVolume_GB(i,j,k,iBlock))
-          DtPerDv = (Dt*iStage)/(CellVolume_B(iBlock)*nStage)
+          if(IsTimeAccurate)then
+             DtPerDv = iStage*Dt
+          else
+             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+          end if
+          if(IsCartesian)then
+             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
+          else
+             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+          end if
+
           ! Update state
           if(iStage == 1)then
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
