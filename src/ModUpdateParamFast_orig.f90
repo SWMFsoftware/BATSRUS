@@ -18,7 +18,7 @@ module ModUpdateParamFast
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
-       UseHyperBolicDivB => UseHyperBolicDivB
+       UseHyperbolicDivB => UseHyperBolicDivB
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use BATL_lib, ONLY: &
