@@ -178,7 +178,7 @@ sub set_fast_parameters{
     print "-" x 70, "\nCurrent settings for fast update:\n";
     my $name;
     foreach $name (sort keys %SetFast){
-	print "$name = $SetFast{$name}\n";
+	printf "%-30s = %s\n", $name, $SetFast{$name};
     }
     return if $SetFast eq "show";
 
@@ -192,7 +192,7 @@ sub set_fast_parameters{
     if($SetFast =~ s/^any,?//i){
 	foreach my $name (sort keys %SetFast){
 	    next if $SetFast{$name} eq 'any';
-	    print "$name: $SetFast{$name} -> any\n";
+	    printf "%-20s%9s -> any\n", "$name:", $SetFast{$name};
 	    $SetFast{$name} = 'any';
 	    $Change = 1;
 	}
@@ -214,7 +214,7 @@ sub set_fast_parameters{
 	if($newvalue ne $oldvalue){
 	    $Change = 1;
 	    # Pring out modified value
-	    print "$_: $oldvalue -> $newvalue\n";
+	    printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
 	    $SetFast{$_} = $newvalue;
 	}
     }
@@ -266,8 +266,6 @@ sub set_fast_parameters{
 		    $check = ".not. ${name}Orig" if $value eq ".true.";
 		    $check = "${name}Orig"       if $value eq ".false.";
 		}
-		my $ne = "/=";
-		$ne = ".neqv." if 
 		print "    if($check) call CON_stop(NameSub// &\n".
 		    "         ': $name=',${name}Orig)".
 		    "\n";
