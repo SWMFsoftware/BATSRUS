@@ -273,7 +273,7 @@ contains
              else
                 DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
              end if
-             
+
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
              Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
