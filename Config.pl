@@ -88,9 +88,9 @@ my $nMaterialNew;
 my $ChargeState;
 my $nChargeStateAll;
 
-# Settings for fast update
-my $ParamFastFile = "src/ModUpdateParamFast.f90";
-my $SetFast;
+# Settings for optimization
+my $OptFile = "src/ModUpdateParamFast.f90";
+my $Opt;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -118,8 +118,8 @@ foreach (@Arguments){
     if(/^-cs=(.*)/)           {$ChargeState.="$1";            next};
     if(/^-ng$/i)              {print "ng=$GhostCell\n"; next};
     if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
-    if(/^-set$/)              {$SetFast="show";  next};
-    if(/^-set=(.*)$/)         {$SetFast=$1; next};
+    if(/^-opt$/)              {$Opt="show";  next};
+    if(/^-opt=(.*)$/)         {$Opt=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
@@ -158,64 +158,75 @@ my $Settings = &current_settings; print $Settings if $Show;
 # (Re)Create Makefile.RULES file(s) based on current settings
 &create_makefile_rules($Settings);
 
-# Optimize settings in ModUpdateParamFast.f90
-&set_fast_parameters if $SetFast;
+# Optimize settings in $OptFile
+&set_optimization if $Opt;
 
 exit 0;
 
 #############################################################################
 sub check_var{
+
+    # modify the first argument "oldvalue" as needed
+
     my $oldvalue = $_[0];
     my $newvalue = $_[1];
     my $first    = $_[2];
 
+    print "oldvalue=$oldvalue newvalue=$newvalue first=$first\n" if $Verbose;
+    
     return if $oldvalue eq "any"; # already adjustable
 
-    $newvalue =~ s/^\s+//;          # remove leading space
-    $newvalue =~ s/\s+.*\n//;       # remove comment
-    $newvalue =~ s/^T|1$/.true./;   # logical true
-    $newvalue =~ s/^F|0$/.false./;  # logical false
+    $newvalue =~ s/^\s+//;        # remove leading space
+    $newvalue =~ s/\s+.*\n//;     # remove comment
+    $newvalue =~ s/^T$/.true./;   # logical true
+    $newvalue =~ s/^F$/.false./;  # logical false
     
-    if($first){
+    if($first or $oldvalue eq ""){
 	$_[0] = $newvalue; # first use of new value, make it fixed
     }elsif($newvalue ne $oldvalue){
 	$_[0] = "any"; # two different values, cannot be fixed
     }
+
+    print "modified oldvalue=$_[0]\n" if $Verbose;
+
 }
 #############################################################################
-sub set_fast_parameters{
+sub set_optimization{
 
     # Read current settings
-    my %SetFast;
-    open(FILE, $ParamFastFile) or die "$ERROR could not open $ParamFastFile\n";
+    my %Opt;
+    open(FILE, $OptFile) or die "$ERROR could not open $OptFile\n";
     while(<FILE>){
-	$SetFast{$1} = 'any' if /^\s+(\w+)(\s*,\s*\&)?\s*$/;
-	$SetFast{$1} = $2  if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
+	# Extract adjustables: NAME => ... lines without Orig
+	$Opt{$1} = 'any' if /^\s+(\w+)\s*\=\>/ and not /Orig/;
+	# Extract fixed params: parameter:: NAME = VALUE
+	$Opt{$1} = $2    if /parameter\s*::\s*(\w+)\s*=\s*(\S+)/;
 	last if /^\s*contains\s*$/;
     }
     close(FILE);
-    print "-" x 70, "\nCurrent settings for fast update:\n";
+    print "-" x 70, "\nCurrent optimization:\n";
     my $name;
-    foreach $name (sort keys %SetFast){
-	printf "%-30s = %s\n", $name, $SetFast{$name};
+    foreach $name (sort keys %Opt){
+	printf "%-30s = %s\n", $name, $Opt{$name};
     }
-    return if $SetFast eq "show";
+    return if $Opt eq "show";
 
-    # Process -set=... argument in $SetFast
-    print "-" x 70, "\n-set=$SetFast\n";
-    print "-" x 70, "\nNew settings for fast update:\n";
+    # Process -opt=... argument in $Opt
+    print "-" x 70, "\n-opt=$Opt\n";
+    print "-" x 70, "\nNew optimization:\n";
 
     my $Change; # set to 1 is settings change
 
-    if($SetFast =~ /PARAM\.in/){
+    if($Opt =~ /PARAM\.in/){
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
 	    nOrder              => 1,
-            BetaLimiter         => "1.0",
             DoLf                => ".true.",
             IsCartesian         => ".true.",
             IsCartesianGrid     => ".true.",
+	    IsTimeAccurate      => ".true.",
+	    UseB0               => ".true.",
             UseBorisCorrection  => ".false.",
             UseHyperBolicDivB   => ".false.",
             UseNonConservative  => ".false.",
@@ -224,16 +235,32 @@ sub set_fast_parameters{
             nOrder              => 1,
 	    );
 
-	print "processing parameter file $SetFast\n";
-	my $first = 1; # true in the first session
-	open(FILE, $SetFast) or die "$ERROR could not open $SetFast\n";
+	# Default for UseB0 depends on the component !!!
+	
+	print "processing parameter file $Opt\n";
+	my $first = 1;  # true in the first session
+	my $nstage = 1; # default value for nStage
+	open(FILE, $Opt) or die "$ERROR could not open $Opt\n";
 	while(<FILE>){
-	    last if /^#END\b/;
-	    $first = 0 if /^\#RUN\b/; # not first session
-	    if(/^#SCHEME\b/){
+	    if(/^\#RUN\b/ or /^\#END\b/ or eof(FILE)){
+		check_var($Set{"nStage"}, $nstage, $first);
+		check_var($Set{"iStage"}, "any", $first) if $nstage !~ /^\s*1/;
+		last unless /^#RUN\b/;
+		$first = 0; # end of first session
+	    }
+	    # Read settings from various commands
+	    if(/^#TIMEACCURATE\b/){
+		my $timeacc = <FILE>;
+		check_var($Set{"IsTimeAccurate"}, $timeacc, $first);
+	    }elsif(/^#TIMESTEPLIMIT\b/){
+		my $do = <FILE>; # not time accurate if limiting time step
+		check_var($Set{"IsTimeAccurate"},'F',$first) if $do =~ /^\s*T/;
+	    }elsif(/^#(TIMESTEPPING|RUNGEKUTTA|RK)\b/){
+		$nstage = <FILE>;
+	    }elsif(/^#SCHEME\b/){
 		my $norder = <FILE>;
 		check_var($Set{"nOrder"}, $norder, $first);
-		check_var($Set{"nStage"}, $norder, $first); # default nStage
+		$nstage = $norder; # default nStage follows nOrder
 		my $scheme = <FILE>;
 		if($scheme =~ /^\s*Rusanov/i){
 		    check_var($Set{"DoLf"}, "T", $first);
@@ -243,25 +270,15 @@ sub set_fast_parameters{
 		if($norder > 1){
 		    my $limiter = <FILE>;
 		    if($limiter =~ /^\s*minmod/){
-			check_var($Set{"BetaLimiter"}, "1.0", $first);
+			check_var($Set{"LimiterBeta"}, "1.0", $first);
 		    }else{
 			my $beta = <FILE>;
-			check_var($Set{"BetaLimiter"}, $beta, $first);
+			check_var($Set{"LimiterBeta"}, $beta, $first);
 		    }
 		}
-	    }elsif(/^#TIMESTEPPING\b/){
-		my $nStage = <FILE>;
-		check_var($Set{"nStage"}, $nStage, $first);
-		check_var($Set{"iStage"}, "any", $first) if $nStage !~ /^\s*1/;
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
-	    }elsif(/^#NONCONSERVATIVE\b/){
-		my $noncons = <FILE>;
-		check_var($Set{"UseNonConservative"}, $noncons, $first);
-	    }elsif(/^#HYPERBOLICDIVB\b/){
-		my $usehyp = <FILE>;
-		check_var($Set{"UseHyperbolicDivb"}, $usehyp, $first);
 	    }elsif(/^#GRIDGEOMETRY\b/){
 		my $geometry = <FILE>;
 		if($geometry =~ /^cartesian/){
@@ -274,41 +291,50 @@ sub set_fast_parameters{
 		    check_var($Set{"Cartesian"}, "F", $first);
 		    check_var($Set{"CartesianGrid"}, "F", $first);
 		}
+	    }elsif(/^#HYPERBOLICDIVB\b/){
+		my $usehyp = <FILE>;
+		check_var($Set{"UseHyperbolicDivb"}, $usehyp, $first);
+	    }elsif(/^#NONCONSERVATIVE\b/){
+		my $noncons = <FILE>;
+		check_var($Set{"UseNonConservative"}, $noncons, $first);
+	    }elsif(/^#USEB0\b/){
+		my $useb0 = <FILE>;
+		check_var($Set{"UseB0"}, $useb0, $first);
 	    }
 	}
 	close(FILE);
 
 	foreach $name (sort keys %Set){
-	    if($Set{$name} ne $SetFast{$name}){
-		$SetFast{$name} = $Set{$name};
+	    if($Set{$name} ne $Opt{$name}){
+		$Opt{$name} = $Set{$name};
 		$Change = 1;
 	    }
 	}
 	if($Change){
-	    foreach $name (sort keys %SetFast){
-		printf "%-30s = %s\n", $name, $SetFast{$name};
+	    foreach $name (sort keys %Opt){
+		printf "%-30s = %s\n", $name, $Opt{$name};
 	    }
 	}
     }else{
-	# -set=any means that nothing is fixed
-	if($SetFast =~ s/^any,?//i){
-	    foreach my $name (sort keys %SetFast){
-		next if $SetFast{$name} eq 'any';
-		printf "%-20s%9s -> any\n", "$name:", $SetFast{$name};
-		$SetFast{$name} = 'any';
+	# -opt=any means that nothing is fixed
+	if($Opt =~ s/^any,?//i){
+	    foreach $name (sort keys %Opt){
+		next if $Opt{$name} eq 'any';
+		printf "%-20s%9s -> any\n", "$name:", $Opt{$name};
+		$Opt{$name} = 'any';
 		$Change = 1;
 	    }
 	}
 
 	# replace =F and =T with =.false. and =.true.
-	$SetFast =~ s/=F/=.false./g;
-	$SetFast =~ s/=T/=.true./g;
+	$Opt =~ s/=F/=.false./g;
+	$Opt =~ s/=T/=.true./g;
 
-	my @SetFast = split(/,/, $SetFast);
-	foreach (@SetFast){
+	my @Opt = split(/,/, $Opt);
+	foreach (@Opt){
 	    my $newvalue = "any";
 	    $newvalue = $1 if s/=(.*)//;
-	    my $oldvalue = $SetFast{$_};
+	    my $oldvalue = $Opt{$_};
 	    if(not $oldvalue){
 		print "$ERROR Invalid variable name=$_\n";
 		next;
@@ -317,36 +343,38 @@ sub set_fast_parameters{
 		$Change = 1;
 		# Print out modified value
 		printf "%-20s%9s -> %s\n", "$_:", $oldvalue, $newvalue;
-		$SetFast{$_} = $newvalue;
+		$Opt{$_} = $newvalue;
 	    }
 	}
     }
     if(not $Change){
 	# Nothing else to be done
-	print "No changes in $ParamFastFile\n";
+	print "No changes in $OptFile\n";
 	return;
     }
     # Edit the file
-    print "Modifying $ParamFastFile\n";
+    print "Modifying $OptFile\n";
     my $parameters; # true inside setting parameters part
     my $checks;     # true inside checking parameters part
-    @ARGV = ($ParamFastFile);
+    @ARGV = ($OptFile);
+
+    print "Opt{nStage}=$Opt{nStage}\n";
     while(<>){
-	if(/^\s+(\w+)(\s*,\s*\&)?\s*$/){
+	# Change the Name => ... and NameOrig => lines
+	if(/(\w+)Orig\s+=>/){
+	    $name=$1;
+	    if($Opt{$name} eq "any"){s/Orig//};
+	}elsif(/(\w+)\s+=>/){
 	    my $name = $1;
-	    s/$name/${name}Orig => $name/ if $SetFast{$name} ne 'any';
-	}
-	if(/^\s+\w+Orig\s*\=\>\s*(\w+)/){
-	    my $name = $1;
-	    s/${name}Orig\s*=>\s*// if $SetFast{$name} eq 'any';
+	    if($Opt{$name} ne "any" and $Opt{$name} ne ""){s/\s+=>/Orig =>/};
 	}
 	$parameters = 0 if /^\s*contains/;
 	next if $parameters; # remove original parameters
 	if(/Fixed values/){
 	    print;
 	    $parameters = 1;
-	    foreach my $name (sort keys %SetFast){
-		my $value = $SetFast{$name};
+	    foreach my $name (sort keys %Opt){
+		my $value = $Opt{$name};
 		next if $value eq 'any';
 		my $type = 'real';
 		$type = 'logical' if $name =~ /^(Is|Use|Do|Done)[A-Z]/;
@@ -361,17 +389,21 @@ sub set_fast_parameters{
 	if(/Check fixed/){
 	    print;
 	    $checks = 1;
-	    foreach my $name (sort keys %SetFast){
-		my $value = $SetFast{$name};
+	    foreach my $name (sort keys %Opt){
+		my $value = $Opt{$name};
 		next if $value eq 'any';
-		my $check = "${name}Orig /= $value";
 		if($name =~ /^(Is|Use|Do|Done)[A-Z]/){
-		    $check = ".not. ${name}Orig" if $value eq ".true.";
-		    $check = "${name}Orig"       if $value eq ".false.";
+		    if($value eq ".true."){
+			print "    if(.not. ${name}Orig) ".
+			    "call CON_stop(NameSub//': $name=F')\n"
+		    }else{
+			print "    if(${name}Orig) ".
+			    "call CON_stop(NameSub//': $name=T')\n"
+		    }
+		}else{
+		    print "    if(${name}Orig /= $value) ".
+			"call CON_stop(NameSub//': $name=',${name}Orig)\n";
 		}
-		print "    if($check) call CON_stop(NameSub// &\n".
-		    "         ': $name=',${name}Orig)".
-		    "\n";
 	    }
 	    print "\n";
 	    next;
@@ -788,12 +820,13 @@ Additional options for BATSRUS/Config.pl:
 
 -u=USERMODULE   Select the user module USERMODULE. 
 
--set            Show current parameter settings for the fast update code.
+-opt            Show current parameter settings for optimized code.
                 Variables without a value are adjustable from PARAM.in.
 
--set=STRING     Set parameters for fast update code. STRING is a comma 
-                separated list consisting of either NAME or NAME=any elements
-                for adjustable parameters, or NAME=VALUE for fixed parameters.
+-opt=STRING     Set parameters for optimized code. STRING can be a parameter
+		file name that is analyzed for settings. Otherwise STRING is a 
+		comma separated list consisting of NAME or NAME=any elements 
+		for adjustable parameters, or NAME=VALUE for fixed parameters.
 		For logical variables, T and F can be used as VALUE.
 	        If STRING starts with 'any', all values are set adjustable.
 
@@ -811,18 +844,18 @@ Additional options for BATSRUS/Config.pl:
 
 Examples for BATSRUS/Config.pl:
 
-List available options for equations and user modules:
+List available options for equations and user modules and show optimizations:
 
-    Config.pl -e -u
+    Config.pl -e -u -opt
 
-Select the MHD equations, the Default user module and set some parameters:
+Select the MHD equations, the Default user module and optimize some parameters:
 
-    Config.pl -e=MHD -u=Default -set=any,nOrder=2,nStage=2,IsCartesian=T
+    Config.pl -e=MHD -u=Default -opt=any,nOrder=2,nStage=2,IsCartesian=T
 
-Select the CRASH equation and user modules and 
-set the number of materials to 5 and number of radiation groups to 30:
+Select the CRASH equation and user modules and optimize for run/PARAM.in file.
+Set the number of materials to 5 and number of radiation groups to 30:
 
-    Config.pl -e=Crash -u=Crash -nMaterial=5 -nWave=30
+    Config.pl -e=Crash -u=Crash -opt=run/PARAM.in -nMaterial=5 -nWave=30
 
 Set list of elements for charge state calculation
 
