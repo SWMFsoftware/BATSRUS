@@ -85,9 +85,9 @@ contains
        call get_tree_position(iNode, PositionMin_D, PositionMax_D)
        PositionMin_D = CoordMin_D + (DomainSize_D)*PositionMin_D
        PositionMax_D = CoordMin_D + (DomainSize_D)*PositionMax_D
-       write(*,'(i6,4es13.5)') iNode, &
+       write(*,'(i6,12es13.5)') iNode, &
             Dd%CoordBlock_DI(:,iNode), Dd%DCoordCell_DI(:,iNode), &
-            PositionMin_D, PositionMax_D - PositionMin_D
+            PositionMin_D, (PositionMax_D - PositionMin_D)/Dd%nCell_D
     enddo
 
     write(*,*)'!!! Done with show_domain_decomp'
@@ -142,9 +142,10 @@ contains
           Domain%iDD_II(BLK_,iNode) = iTree_IA(Block_,iNode)
        end if
     end do
-
-    call show_domain_decomp(Domain)
-    stop
+    ! Check 04/11/2021: routine works as it should. Igor.
+    ! call complete(Domain)
+    ! call show_domain_decomp(Domain)
+    ! call CON_stop('After domain decomposition')
   end subroutine get_batl_tree
   !============================================================================
   subroutine MH_get_roots_dd(Domain)
