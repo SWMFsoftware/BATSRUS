@@ -401,6 +401,7 @@ sub set_optimization{
 			    "call CON_stop(NameSub//': $name=T')\n"
 		    }
 		}else{
+		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';
 		    print "    if(${name}Orig /= $value) ".
 			"call CON_stop(NameSub//': $name=',${name}Orig)\n";
 		}
