@@ -24,12 +24,6 @@ module MH_domain_decomposition
   ! Local variables and constants
   integer, private:: iLastGrid = -1, iLastDecomposition = -1
 
-  integer, parameter, private::    &
-       PELast_      = 5, &
-       LEV_         = 6, &
-       LEVmin_      = 7, &
-       LEVmax_      = 8
-
   ! Position of children relative to the parent block
   ! in the Morton ordering
   integer, parameter, private:: iShiftMorton_DI(3,8)= reshape( [ &
@@ -49,21 +43,22 @@ contains
   !============================================================================
 
   subroutine show_domain_decomp(Dd)
-    use BATL_lib, ONLY: iProc
+    use BATL_lib, ONLY: iProc, DomainSize_D, get_tree_position, MaxDim, &
+         CoordMin_D
 
     type(DomainType),intent(in):: Dd
-    integer:: iNode, iChild
+    real    :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
+    integer :: iNode, iChild
     !--------------------------------------------------------------------------
     if(iProc /= 0) RETURN
 
     write(*,*)'!!! Starting show_domain_decomp'
     write(*,*)'!!! CompID_            =', Dd%CompID_
     write(*,*)'!!! nDim               =', Dd%nDim
-    write(*,*)'!!! CoordMin_D           =', Dd%CoordMin_D
-    write(*,*)'!!! CoordMax_D           =', Dd%CoordMax_D
+    write(*,*)'!!! CoordMin_D         =', Dd%CoordMin_D
+    write(*,*)'!!! CoordMax_D         =', Dd%CoordMax_D
     write(*,*)'!!! iRootMapDim_D      =', Dd%iRootMapDim_D
-    write(*,*)'!!! IsTreeDecomposition=', Dd%IsTreeDecomposition
-    write(*,*)'!!! nDimTree           =', Dd%nDimTree
+    write(*,*)'!!! IsTreeDD           =', Dd%IsTreeDD
     write(*,*)'!!! nChildren          =', Dd%nChildren
     write(*,*)'!!! nDim               =', Dd%nDim
     write(*,*)'!!! nTreeNodes         =', Dd%nTreeNodes
@@ -72,23 +67,27 @@ contains
     write(*,*)'!!! DoGlueMargins      =', Dd%DoGlueMargins
     write(*,*)'!!! iRealization       =', Dd%iRealization
     write(*,*)'!!! IsLocal            =', Dd%IsLocal
-    write(*,*)'!!! MinBlock           =', Dd%MinBlock
-    write(*,*)'!!! MaxBlock           =', Dd%MaxBlock
     write(*,*)'!!! nBlockAll          =', Dd%nBlockAll
-    if(Dd%IsTreeDecomposition)then
+    if(Dd%IsTreeDD)then
        write(*,*)'!!! iChild, iShift_DI'
        do iChild = 1, Dd%nChildren
           write(*,*) iChild, Dd%iShift_DI(:,iChild)
        end do
     end if
-    write(*,*)'!!! iNode, iDecomposition_II'
+    write(*,*)'!!! iNode, iDD_II'
     do iNode = 1, Dd%nTreeNodes
-       write(*,*) iNode, Dd%iDecomposition_II(:,iNode)
+       write(*,*) iNode, Dd%iDD_II(:,iNode)
     end do
 
-    write(*,*)'!!! iNode, CoordBlock_DI,  DCoord_DI'
+    write(*,*)&
+         '!!! iNode, CoordBlock_DI,  DCoord_DI BATL/CoordMin_DB BATL/DCoordDB'
     do iNode = 1, Dd%nTreeNodes
-       write(*,*) iNode, Dd%CoordBlock_DI(:,iNode), Dd%DCoordCell_DI(:,iNode)
+       call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+       PositionMin_D = CoordMin_D + (DomainSize_D)*PositionMin_D
+       PositionMax_D = CoordMin_D + (DomainSize_D)*PositionMax_D
+       write(*,'(i6,4es13.5)') iNode, &
+            Dd%CoordBlock_DI(:,iNode), Dd%DCoordCell_DI(:,iNode), &
+            PositionMin_D, PositionMax_D - PositionMin_D
     enddo
 
     write(*,*)'!!! Done with show_domain_decomp'
@@ -115,15 +114,15 @@ contains
        iNodeParent = iTree_IA(ParentBatl_,iNode)
        if(iNodeParent == Unset_)then
           ! For root blocks coupling toolkit seems to set parent to itself
-          Domain%iDecomposition_II(Parent_,iNode) = iNode
+          Domain%iDD_II(Parent_,iNode) = iNode
           ! For root blocks coupling toolkit seems to set child index to 0
-          Domain%iDecomposition_II(MyNumberAsAChild_,iNode) = 0
+          Domain%iDD_II(MyNumberAsAChild_,iNode) = 0
        else
-          Domain%iDecomposition_II(Parent_,iNode) = iNodeParent
+          Domain%iDD_II(Parent_,iNode) = iNodeParent
           ! Find child index
           do iChild = 1, nChild
              if(iTree_IA(Child0_+iChild,iNodeParent) == iNode) then
-                Domain%iDecomposition_II(MyNumberAsAChild_,iNode)&
+                Domain%iDD_II(MyNumberAsAChild_,iNode)&
                      =iChild
                 EXIT
              end if
@@ -133,31 +132,19 @@ contains
        if(iTree_IA(Status_,iNode) == Unused_)then
           do iChild = 1, nChild
              ! iChildOrder_II may be required here !!!
-             Domain%iDecomposition_II(iChild,iNode) = &
+             Domain%iDD_II(iChild,iNode) = &
                   iTree_IA(Child0_+iChild,iNode)
           end do
        else
-          Domain%iDecomposition_II(FirstChild_,iNode) = &
-               None_
-          Domain%iDecomposition_II(GlobalBlock_,iNode) = &
-               iMortonNode_A(iNode)
-          Domain%iDecomposition_II(ProcToolkit_,iNode) = &
-               iTree_IA(Proc_,iNode)
-          Domain%iDecomposition_II(PELast_,iNode) = &
-               iTree_IA(Proc_,iNode)
-          Domain%iDecomposition_II(BLK_,iNode) = &
-               iTree_IA(Block_,iNode)
-          Domain%iDecomposition_II(LEV_,iNode) = &
-               iTree_IA(Level_,iNode)
-          Domain%iDecomposition_II(LEVmin_,iNode) = &
-               iTree_IA(MinLevel_,iNode)
-          Domain%iDecomposition_II(LEVmax_,iNode) = &
-               iTree_IA(MaxLevel_,iNode)
+          Domain%iDD_II(FirstChild_,iNode)  = None_
+          Domain%iDD_II(GlobalBlock_,iNode) = iMortonNode_A(iNode)
+          Domain%iDD_II(ProcToolkit_,iNode) = iTree_IA(Proc_,iNode)
+          Domain%iDD_II(BLK_,iNode) = iTree_IA(Block_,iNode)
        end if
     end do
 
-    ! call show_domain_decomp(Domain)
-
+    call show_domain_decomp(Domain)
+    stop
   end subroutine get_batl_tree
   !============================================================================
   subroutine MH_get_roots_dd(Domain)
@@ -185,7 +172,7 @@ contains
        iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
     end if
     call get_root_decomposition_dd(&
-         Domain,       & ! Decomposition to be constructed
+         Domain,       & ! DD to be constructed
          nRoot_D,                   & ! As in DomainType
          CoordMin_D,                & ! As in DomainType
          CoordMax_D,                & ! As in DomainType
@@ -224,7 +211,7 @@ contains
        iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
     end if
     call get_root_decomposition_id(&
-         GridID_,                   & ! Decomposition to be constructed
+         GridID_,                   & ! DD to be constructed
          nRoot_D,                   & ! As in DomainType
          CoordMin_D,                & ! As in DomainType
          CoordMax_D,                & ! As in DomainType
@@ -251,10 +238,9 @@ contains
 
     call get_batl_tree(Domain)
 
-    Domain%iRealization = &
-         mod(Domain%iRealization+1, 1000)
-    iLastDecomposition = iNewDecomposition
-    iLastGrid          = iNewGrid
+    Domain%iRealization = mod(Domain%iRealization + 1, 1000)
+    iLastDecomposition  = iNewDecomposition
+    iLastGrid           = iNewGrid
     call complete(Domain)
 
   end subroutine MH_update_local_decomposition
