@@ -97,7 +97,6 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
-	./Config.pl -noacc -double
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
@@ -261,7 +260,8 @@ test_shocktube_1d:
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
-	./Config.pl -noopenmp ${OPENACC} -double -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
+	./Config.pl -noopenmp ${OPENACC} -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
+	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.hyp.1d
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -326,7 +326,8 @@ test_fast_wave:
 	$(MAKE) test_fast_wave_check
 
 test_fast_wave_compile:
-	./Config.pl -noopenmp ${OPENACC} -double -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -noopenmp ${OPENACC} -u=Waves -e=Mhd -g=10,10,10
+	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
 	make PIDL
 
