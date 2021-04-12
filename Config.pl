@@ -362,7 +362,6 @@ sub set_optimization{
     my $checks;     # true inside checking parameters part
     @ARGV = ($OptFile);
 
-    print "Opt{nStage}=$Opt{nStage}\n";
     while(<>){
 	# Change the Name => ... and NameOrig => lines
 	if(/(\w+)Orig\s+=>/){
