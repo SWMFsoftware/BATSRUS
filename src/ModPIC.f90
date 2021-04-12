@@ -1191,7 +1191,7 @@ contains
          message_pass_cell, CellSize_DB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, Bx_, By_, Bz_, Rho_, &
-         x_, y_, z_, Ux_, Uy_, Uz_
+         x_, y_, z_, Ux_, Uy_, Uz_, p_
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: UseB0, B0_DGB
@@ -1240,6 +1240,9 @@ contains
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
                *Io2No_V(UnitU_)/Io2No_V(UnitX_)
        case('divcurv')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
+       case('beta')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
        end select
@@ -1355,6 +1358,9 @@ contains
                 CriteriaValue = DivU_CB(i,j,k,iBlock)
              case('divcurv')
                 CriteriaValue = DivCurvature_CB(i,j,k,iBlock) * (CellSize_DB(1, iBlock)**2)
+             case('beta')                
+                CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
+                     /sum(FullB_DGB(:,i,j,k,iBlock)**2)
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
