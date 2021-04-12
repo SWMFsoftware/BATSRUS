@@ -127,7 +127,7 @@ periodic		TypeBc6
 2			nOrder
 Rusanov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #FIXEDTIMESTEP
 T			UseDtFixed
@@ -262,7 +262,7 @@ CPUPRIM			StringTest
 Rusanov			TypeFlux
 
 #TEST
-orig
+orig			StringTest
 
 #STOP
 -1			MaxIteration
