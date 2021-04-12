@@ -124,8 +124,10 @@ periodic		TypeBc5
 periodic		TypeBc6
 
 #SCHEME
-1			nOrder
+2			nOrder
 Rusanov			TypeFlux
+mc3			TypeLimiter
+1.2			BetaLimiter
 
 #FIXEDTIMESTEP
 T			UseDtFixed
@@ -206,11 +208,11 @@ CPUPRIM			StringTest
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-TEST
+#TEST
 orig			StringTest
 
 #STOP
@@ -256,12 +258,10 @@ CPUPRIM			StringTest
 #RUN ##########################################################################
 
 #SCHEME
-2			nOrder
-Linde			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
+1			nOrder
+Rusanov			TypeFlux
 
-TEST
+#TEST
 orig
 
 #STOP
