@@ -4,8 +4,11 @@
 ! MHD grid in BATSRUS
 module MH_domain_decomposition
 
-  use CON_grid_storage, ProcToolkit_ => Pe_
-
+  use CON_grid_storage
+  use CON_domain_decomposition, ONLY: ProcToolkit_ => Pe_, &
+       BLK_, GlobalBlock_, Parent_, MyNumberAsAChild_, &
+       FirstChild_, None_, check_octree_allocation, complete
+  
   implicit none
 
   SAVE
@@ -61,7 +64,7 @@ contains
     write(*,*)'!!! IsTreeDD           =', Dd%IsTreeDD
     write(*,*)'!!! nChildren          =', Dd%nChildren
     write(*,*)'!!! nDim               =', Dd%nDim
-    write(*,*)'!!! nTreeNodes         =', Dd%nTreeNodes
+    write(*,*)'!!! nTreeNode         =', Dd%nTreeNode
     write(*,*)'!!! nAllocatedNodes    =', Dd%nAllocatedNodes
     write(*,*)'!!! IsPeriodic_D       =', Dd%IsPeriodic_D
     write(*,*)'!!! DoGlueMargins      =', Dd%DoGlueMargins
@@ -75,13 +78,13 @@ contains
        end do
     end if
     write(*,*)'!!! iNode, iDD_II'
-    do iNode = 1, Dd%nTreeNodes
+    do iNode = 1, Dd%nTreeNode
        write(*,*) iNode, Dd%iDD_II(:,iNode)
     end do
 
     write(*,*)&
          '!!! iNode, CoordBlock_DI,  DCoord_DI BATL/CoordMin_DB BATL/DCoordDB'
-    do iNode = 1, Dd%nTreeNodes
+    do iNode = 1, Dd%nTreeNode
        call get_tree_position(iNode, PositionMin_D, PositionMax_D)
        PositionMin_D = CoordMin_D + (DomainSize_D)*PositionMin_D
        PositionMax_D = CoordMin_D + (DomainSize_D)*PositionMax_D
@@ -105,7 +108,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
-    Domain%nTreeNodes = nNode
+    Domain%nTreeNode = nNode
     call check_octree_allocation(Domain)
 
     ! Here we assume that there are no holes in the BATL tree
