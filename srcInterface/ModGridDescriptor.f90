@@ -8,7 +8,7 @@ module MH_domain_decomposition
   use CON_domain_decomposition, ONLY: ProcToolkit_ => Pe_, &
        BLK_, GlobalBlock_, Parent_, MyNumberAsAChild_, &
        FirstChild_, None_, check_octree_allocation, complete
-  
+
   implicit none
 
   SAVE

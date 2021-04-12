@@ -1358,7 +1358,7 @@ contains
                 CriteriaValue = DivU_CB(i,j,k,iBlock)
              case('divcurv')
                 CriteriaValue = DivCurvature_CB(i,j,k,iBlock) * (CellSize_DB(1, iBlock)**2)
-             case('beta')                
+             case('beta')
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
              end select
