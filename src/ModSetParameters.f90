@@ -3656,16 +3656,18 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+      ! Update parameters on the GPU that are not done in the init_mod_* routines
+      
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
-      !$acc update device(TypeLimiter)
+      !$acc update device(TypeLimiter, BetaLimiter)
       !$acc update device(nOrderProlong)
-      !$acc update device(UseConstrainB)
       !$acc update device(UseHighResChange)
 
-      !$acc update device(UseDivbSource)
+      !$acc update device(UseB0)
+      !$acc update device(UseDivbSource, UseHyperbolicDivb, UseConstrainB)
 
       !$acc update device(DoConserveNeutrals, UseNonConservative, nConservCrit)
 
