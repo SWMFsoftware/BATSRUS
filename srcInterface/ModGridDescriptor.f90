@@ -6,7 +6,7 @@ module MH_domain_decomposition
 
   use CON_grid_storage
   use CON_domain_decomposition, ONLY: ProcToolkit_ => Pe_, &
-       BLK_, GlobalBlock_, Parent_, MyNumberAsAChild_, &
+       BLK_, Parent_, MyNumberAsAChild_,                   &
        FirstChild_, None_, check_octree_allocation, complete
 
   implicit none
@@ -70,7 +70,6 @@ contains
     write(*,*)'!!! DoGlueMargins      =', Dd%DoGlueMargins
     write(*,*)'!!! iRealization       =', Dd%iRealization
     write(*,*)'!!! IsLocal            =', Dd%IsLocal
-    write(*,*)'!!! nBlockAll          =', Dd%nBlockAll
     if(Dd%IsTreeDD)then
        write(*,*)'!!! iChild, iShift_DI'
        do iChild = 1, Dd%nChildren
@@ -140,7 +139,6 @@ contains
           end do
        else
           Domain%iDD_II(FirstChild_,iNode)  = None_
-          Domain%iDD_II(GlobalBlock_,iNode) = iMortonNode_A(iNode)
           Domain%iDD_II(ProcToolkit_,iNode) = iTree_IA(Proc_,iNode)
           Domain%iDD_II(BLK_,iNode) = iTree_IA(Block_,iNode)
        end if
@@ -148,7 +146,6 @@ contains
     ! Check 04/11/2021: routine works as it should. Igor.
     ! call complete(Domain)
     ! call show_domain_decomp(Domain)
-    ! call CON_stop('After domain decomposition')
   end subroutine get_batl_tree
   !============================================================================
   subroutine MH_get_roots_dd(Domain)
