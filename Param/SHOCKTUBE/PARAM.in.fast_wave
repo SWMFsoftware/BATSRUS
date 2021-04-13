@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #TEST
-orig			StringTest
+GPUUPDATE		StringTest
 
 #TIMING
 T			UseTiming
@@ -124,10 +124,8 @@ periodic		TypeBc5
 periodic		TypeBc6
 
 #SCHEME
-2			nOrder
+1			nOrder
 Rusanov			TypeFlux
-mc3			TypeLimiter
-1.2			LimiterBeta
 
 #FIXEDTIMESTEP
 T			UseDtFixed
@@ -208,7 +206,7 @@ CPUPRIM			StringTest
 
 #SCHEME
 2			nOrder
-Linde			TypeFlux
+Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -258,11 +256,13 @@ CPUPRIM			StringTest
 #RUN ##########################################################################
 
 #SCHEME
-1			nOrder
-Rusanov			TypeFlux
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #TEST
-orig			StringTest
+orig
 
 #STOP
 -1			MaxIteration
