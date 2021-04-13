@@ -1038,7 +1038,7 @@ contains
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: pic_find_region, pic_find_region_active, &
          pic_find_region_criteria, IsPicCrit_CB,&
-         calc_crit_jb, calc_crit_jbperp, CriteriaB1
+         calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
@@ -1728,6 +1728,15 @@ contains
              call calc_crit_jbperp(i, j, k, iBlock, FullB_DG,&
                   CriteriaB1, PlotVar(i,j,k,iVar))
           end do; end do; end do
+       case('divcurv')
+          if(allocated(DivCurvature_CB)) then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar(i,j,k,iVar) = DivCurvature_CB(i,j,k,iBlock)
+             end do; end do; end do
+          else
+             PlotVar(:,:,:,iVar) = -777.0
+          end if
+
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
