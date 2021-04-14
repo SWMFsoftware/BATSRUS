@@ -72,6 +72,7 @@ contains
        end do; end do; end do
 
        if(nDim > 1)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
              call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
                   uDotArea_YII(i,j,k,:,iGang))
@@ -79,6 +80,7 @@ contains
        end if
 
        if(nDim > 2)then
+          !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
              call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
                   uDotArea_ZII(i,j,k,:,iGang))
