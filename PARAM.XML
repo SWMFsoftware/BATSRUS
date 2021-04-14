@@ -2054,13 +2054,18 @@ The roundcube grid can be used to make the inner or outer boundary
 spherical without a singularity. It works in 2D and 3D. The rRound0
 parameter indicates the distance where no stretching is applied,
 so the grid is Cartesian. The rRound1 parameter indicates the distance
-where full stretching is applied, so the grid becomes round and the grid
+along X, Y and Z on the original grid where full stretching is applied,
+so the grid becomes round and the grid
 cells will lie on a circle in 2D, or a spherical surface in 3D.
 When rRound0 is less than rRound1, the grid is Cartesian up to rRound0.
 Outside rRound0 the grid is stretched outward so that it becomes perfectly
-round at rRound1 and remains round at the outer boundary.
+round at a radius of rRound1*sqrt(2) in 2D and rRound1*sqrt(3) in 3D,
+and it remains round all the way to the outer boundary. 
 For this case the transformation does not affect the
 main diagonals and the maximum stretching is applied along the main axes.
+To reach the perfectly round shape at the outer boundary, the
+xMin ... zMax parameters of the #GRID command should be equal or larger
+than sqrt(nDim)*rRound1.
 If rRound0 is larger than rRound1 then the grid is
 contracted inwards. At the origin there is no distortion. Moving outward
 the distortion is increased so that at rRound1 the grid becomes round.
