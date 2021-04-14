@@ -1844,7 +1844,7 @@ contains
     ! Recalculate B0 face values at resolution changes
     call set_b0_reschange
     if(UseFieldLineThreads)then
-       call set_threads
+       call set_threads(NameSub)
        call exchange_messages
     end if
     call timing_stop(NameSub)

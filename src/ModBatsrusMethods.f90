@@ -295,7 +295,7 @@ contains
 
       ! Fix face centered B0 at resolution changes
       if(UseB0)call set_b0_reschange
-      if(UseFieldLineThreads)call set_threads
+      if(UseFieldLineThreads)call set_threads(NameSub)
 
       ! Ensure zero divergence for the CT scheme
       if(UseConstrainB)then
@@ -389,7 +389,7 @@ contains
     ! Allow the user to add a perturbation to the initial condition.
     if (UseUserPerturbation) then
        call user_initial_perturbation
-       if(UseCme .and. UseFieldLineThreads) call set_threads
+       if(UseCme .and. UseFieldLineThreads) call set_threads(NameSub)
        UseUserPerturbation=.false.
     end if
 
