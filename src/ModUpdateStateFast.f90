@@ -67,23 +67,20 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          call get_flux_x(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
-               uDotArea_XII(i,j,k,:,iGang))
+          call get_flux_x(i, j, k, iBlock) 
        end do; end do; end do
 
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
-                  uDotArea_YII(i,j,k,:,iGang))
+             call get_flux_y(i, j, k, iBlock)
           end do; end do; end do
        end if
 
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
-                  uDotArea_ZII(i,j,k,:,iGang))
+             call get_flux_z(i, j, k, iBlock)
           end do; end do; end do
        end if
 
@@ -154,60 +151,75 @@ contains
 
   end subroutine update_state_cpu
   !============================================================================
-  subroutine get_flux_x(i, j,  k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_x(i, j,  k, iBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
     
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
+    integer:: iGang
     !--------------------------------------------------------------------------
+#ifdef OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
     call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), &
+         uDotArea_XII(i,j,k,1,iGang))
 
   end subroutine get_flux_x
   !============================================================================
-  subroutine get_flux_y(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_y(i, j, k, iBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
 
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
+    integer:: iGang
     !--------------------------------------------------------------------------
+#ifdef OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
     call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), &
+         uDotArea_YII(i,j,k,1,iGang))
 
   end subroutine get_flux_y
   !============================================================================
-  subroutine get_flux_z(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_z(i, j, k, iBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
 
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
+    integer:: iGang
     !--------------------------------------------------------------------------
+#ifdef OPENACC
+       iGang = iBlock
+#else
+       iGang = 1
+#endif
     call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), &
+         uDotArea_ZII(i,j,k,1,iGang))
 
   end subroutine get_flux_z
   !============================================================================
@@ -377,7 +389,7 @@ contains
     end select
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, &
-         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I(1))
 
     Change_V = Change_V + Flux_V
 
@@ -393,8 +405,8 @@ contains
 
     integer:: i, j, k
 
-    !$acc loop vector collapse(3) independent
     !--------------------------------------------------------------------------
+    !$acc loop vector collapse(3) independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
        EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
@@ -671,13 +683,13 @@ contains
   end subroutine get_face_z
   !============================================================================
   subroutine get_numerical_flux(NormalX, NormalY, NormalZ, &
-       Area,  StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+       Area,  StateLeft_V, StateRight_V, Flux_V, Unormal)
     !$acc routine seq
 
     real, intent(in)   :: NormalX, NormalY, NormalZ, Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFlux)
-    real, intent(out)  :: Unormal_I(nFluid+1)
+    real, intent(out)  :: Unormal
 
     ! Average state
     real:: State_V(nVar)
@@ -711,10 +723,10 @@ contains
             +             Cmax*(StateLeftCons_V - StateRightCons_V))
 
        if(UseNonConservative)then
-          Unormal_I(1:nFluid) = Area*0.5* &
-               ( (StateLeft_V(iUx_I) + StateRight_V(iUx_I))*NormalX &
-               + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*NormalY &
-               + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*NormalZ )
+          Unormal = Area*0.5* &
+               ( (StateLeft_V(Ux_) + StateRight_V(Ux_))*NormalX &
+               + (StateLeft_V(Uy_) + StateRight_V(Uy_))*NormalY &
+               + (StateLeft_V(Uz_) + StateRight_V(Uz_))*NormalZ )
        end if
     else
        ! Linde scheme
@@ -769,10 +781,10 @@ contains
             *CInvDiff
 
        if(UseNonConservative)then
-          Unormal_I(1:nFluid) = Area*CInvDiff* &
-               ( Cright*(StateLeft_V(iUx_I) - Cleft*StateRight_V(iUx_I))*NormalX &
-               + Cright*(StateLeft_V(iUy_I) - Cleft*StateRight_V(iUy_I))*NormalY &
-               + Cright*(StateLeft_V(iUz_I) - Cleft*StateRight_V(iUz_I))*NormalZ )
+          Unormal = Area*CInvDiff* &
+               ( Cright*(StateLeft_V(Ux_) - Cleft*StateRight_V(Ux_))*NormalX &
+               + Cright*(StateLeft_V(Uy_) - Cleft*StateRight_V(Uy_))*NormalY &
+               + Cright*(StateLeft_V(Uz_) - Cleft*StateRight_V(Uz_))*NormalZ )
        end if
        
        if(UseB)then
@@ -956,7 +968,7 @@ contains
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
-               uDotArea_XII(i,j,k,:,iGang))
+               uDotArea_XII(i,j,k,1,iGang))
 
        end do; end do; end do
 
@@ -968,7 +980,7 @@ contains
              !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
-                  uDotArea_YII(i,j,k,:,iGang))
+                  uDotArea_YII(i,j,k,1,iGang))
 
           end do; end do; end do
        end if
@@ -981,7 +993,7 @@ contains
              !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
-                  uDotArea_ZII(i,j,k,:,iGang))
+                  uDotArea_ZII(i,j,k,1,iGang))
 
           end do; end do; end do
        end if
@@ -1053,12 +1065,12 @@ contains
 
   end subroutine update_state_cpu_prim
   !============================================================================
-  subroutine get_flux_x(i, j,  k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_x(i, j,  k, iBlock, Flux_V, Unormal)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Unormal
 
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1068,16 +1080,16 @@ contains
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_x
   !============================================================================
-  subroutine get_flux_y(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_y(i, j, k, iBlock, Flux_V, Unormal)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Unormal
 
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1087,16 +1099,16 @@ contains
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_y
   !============================================================================
-  subroutine get_flux_z(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_z(i, j, k, iBlock, Flux_V, Unormal)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Unormal
 
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1106,7 +1118,7 @@ contains
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_z
   !============================================================================
@@ -1219,7 +1231,7 @@ contains
 
     real:: Area, NormalX, NormalY, NormalZ
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
-    real:: Unormal_I(nFluid+1)
+    real:: Unormal
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -1246,12 +1258,12 @@ contains
     end select
 
     call get_numerical_flux(NormalX, NormalY, NormalZ, &
-         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         Area, StateLeft_V, StateRight_V, Flux_V, Unormal)
 
     Change_V = Change_V + Flux_V
 
     if(UseNonConservative) Change_V(p_) = Change_V(p_) &
-         + GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+         + GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*Unormal
 
   end subroutine do_face
   !============================================================================
