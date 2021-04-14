@@ -12,8 +12,9 @@ module ModUpdateStateFast
        UseHyperbolicDivB, IsTimeAccurate
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
-  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI, &
-       Flux_VXI, Flux_VYI, Flux_VZI, uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
+  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
+       Flux_VXI, Flux_VYI, Flux_VZI, &
+       uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
        time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
@@ -31,7 +32,8 @@ module ModUpdateStateFast
   public:: update_state_gpu ! optimal for GPU but works on CPU too
 
   ! Used by ModUpdateStatePrim
-  public:: set_energy_pressure, get_normal, get_primitive, get_numerical_flux,&
+  public:: energy_to_pressure, pressure_to_energy, &
+       get_normal, get_primitive, get_numerical_flux,&
        limiter2, set_old_state
 
   logical:: DoTestCell= .false.
@@ -119,24 +121,31 @@ contains
 
           ! Update state
           if(iStage == 1)then
+             if(.not.UseNonConservative)then
+                ! Overwrite pressure and change with energy
+                call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           else
+             if(.not.UseNonConservative)then
+                ! Overwrite old pressure and change with energy
+                call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           end if
-          call set_energy_pressure(i,j,k,iBlock)
+          ! Convert energy back to pressure
+          if(.not.UseNonConservative) &
+               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
           if(DoTestCell)then
              write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-             write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
              write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
@@ -252,7 +261,7 @@ contains
                .and. iBlock == iBlockTest
 #endif
 
-          ! Set StateOld and EnergyOld here?
+          ! Set StateOld here?
 
           ! Initialize change in State_VGB
           Change_V = 0.0
@@ -291,12 +300,18 @@ contains
                 DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
              end if
 
+             if(.not.UseNonConservative)then
+                ! Overwrite pressure and change with energy
+                call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
+             ! Update
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
-             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_VC(nVar+1,i,j,k)
 
-             call set_energy_pressure(i,j,k,iBlock)
+             ! Convert energy back to pressure
+             if(.not.UseNonConservative) &
+                  call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -304,7 +319,6 @@ contains
              if(DoTestCell)then
                 write(*,*)'iStage    =', iStage
                 write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-                write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
                 write(*,*)'Change_V  =', Change_VC(:,i,j,k)
                 write(*,*)'DtPerDv   =', DtPerDv
              end if
@@ -327,12 +341,17 @@ contains
                 DtPerDv = DtPerDv/CellVolume_GB(i,j,k,iBlock)
              end if
 
+             if(.not.UseNonConservative)then
+                ! Overwrite pressure and change with energy
+                call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
+             ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
-             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_VC(nVar+1,i,j,k)
-
-             call set_energy_pressure(i,j,k,iBlock)
+             ! Convert energy back to pressure
+             if(.not.UseNonConservative) &
+                  call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -340,7 +359,6 @@ contains
              if(DoTestCell)then
                 write(*,*)'iStage    =', iStage
                 write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-                write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
                 write(*,*)'Change_V  =', Change_VC(:,i,j,k)
                 write(*,*)'DtPerDv   =', DtPerDv
              end if
@@ -409,7 +427,6 @@ contains
     !$acc loop vector collapse(3) independent
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
-       EnergyOld_CBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1)
     end do; end do; end do
 
   end subroutine set_old_state
@@ -816,40 +833,47 @@ contains
 
   end subroutine get_numerical_flux
   !============================================================================
-  subroutine set_energy_pressure(i, j, k, iBlock)
+  subroutine energy_to_pressure(State_V)
     !$acc routine seq
 
-    ! Calculate energy from pressure or vice-versa
-
-    integer, intent(in):: i, j, k, iBlock
+    ! Calculate energy from pressure
+    real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
-    if(UseNonConservative) RETURN
 
     ! Calculate pressure from energy
     if(UseB)then
-       State_VGB(p_,i,j,k,iBlock) = &
-            GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
-            0.5*( &
-            ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
-            )/State_VGB(Rho_,i,j,k,iBlock)      &
-            + State_VGB(Bx_,i,j,k,iBlock)**2    &
-            + State_VGB(By_,i,j,k,iBlock)**2    &
-            + State_VGB(Bz_,i,j,k,iBlock)**2    &
-            )          )
+       State_V(p_) = &
+            GammaMinus1_I(1)*( State_V(p_) - 0.5*( &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            + sum(State_V(Bx_:Bz_)**2)         ) ) )
     else
-       State_VGB(p_,i,j,k,iBlock) = &
-            GammaMinus1_I(1)*( Energy_GBI(i,j,k,iBlock,1) - &
-            0.5*( &
-            ( State_VGB(RhoUx_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUy_,i,j,k,iBlock)**2 &
-            + State_VGB(RhoUz_,i,j,k,iBlock)**2 &
-            )/State_VGB(Rho_,i,j,k,iBlock)      &
-            )          )
+       State_V(p_) = &
+            GammaMinus1_I(1)*( State_V(p_) - 0.5*( &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            + sum(State_V(Bx_:Bz_)**2)         ) ) )
     end if
        
-  end subroutine set_energy_pressure
+  end subroutine energy_to_pressure
+  !============================================================================
+  subroutine pressure_to_energy(State_V)
+    !$acc routine seq
+
+    ! Calculate pressure from energy
+    real, intent(inout):: State_V(nVar)
+    !--------------------------------------------------------------------------
+
+    ! Calculate pressure from energy
+    if(UseB)then
+       State_V(p_) = State_V(p_)*InvGammaMinus1 + 0.5*( &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            + sum(State_V(Bx_:Bz_)**2) ) )
+    else
+       State_V(p_) = State_V(p_)*InvGammaMinus1 - 0.5*( &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            + sum(State_V(Bx_:Bz_)**2) ) )
+    end if
+       
+  end subroutine pressure_to_energy
   !============================================================================
   subroutine get_primitive(State_V, Primitive_V)
     !$acc routine seq
@@ -899,8 +923,9 @@ module ModUpdateStatePrim
        UseNonConservative, IsTimeAccurate
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
-  use ModAdvance, ONLY: nFlux, State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI, &
-       Flux_VXI, Flux_VYI, Flux_VZI, uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
+  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
+       Flux_VXI, Flux_VYI, Flux_VZI, &
+       uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
        time_BLK
   use ModAdvance, ONLY: Primitive_VGI
   use ModMain, ONLY: Cfl, Dt
@@ -914,7 +939,8 @@ module ModUpdateStatePrim
   use ModNumConst, ONLY: cUnit_DD
 
   use ModUpdateStateFast, ONLY: &
-       set_energy_pressure, get_normal, get_primitive, get_numerical_flux, &
+       pressure_to_energy, energy_to_pressure, &
+       get_normal, get_primitive, get_numerical_flux, &
        limiter2, set_old_state
 
   implicit none
@@ -1033,25 +1059,31 @@ contains
 
           ! Update state
           if(iStage == 1)then
+             if(.not.UseNonConservative)then
+                ! Overwrite pressure and change with energy
+                call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           else
+             if(.not.UseNonConservative)then
+                ! Overwrite old pressure and change with energy
+                call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           end if
-
-          call set_energy_pressure(i,j,k,iBlock)
+          ! Convert energy back to pressure
+          if(.not.UseNonConservative) &
+               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
           if(DoTestCell)then
              write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-             write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
              write(*,*)'Change_V  =', Change_V
              write(*,*)'DtPerDv   =', DtPerDv
           end if
@@ -1191,25 +1223,31 @@ contains
 
           ! Update state
           if(iStage == 1)then
+             if(.not.UseNonConservative)then
+                ! Overwrite pressure and change with energy
+                call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           else
+             if(.not.UseNonConservative)then
+                ! Overwrite old pressure and change with energy
+                call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
+                Change_V(nVar) = Change_V(nVar+1)
+             end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
-             Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1) &
-                  + DtPerDv*Change_V(nVar+1)
           end if
-
-          call set_energy_pressure(i,j,k,iBlock)
+          ! Convert energy back to pressure
+          if(.not.UseNonConservative) &
+               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
           !     .and. iBlock == iBlockTest
           !if(DoTestCell)then
           !   write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-          !   write(*,*)'Energy_GBI=', Energy_GBI(i,j,k,iBlock,:)
           !   write(*,*)'Change_V  =', Change_V
           !   write(*,*)'DtPerDv   =', DtPerDv
           !end if
