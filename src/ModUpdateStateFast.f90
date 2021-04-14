@@ -23,7 +23,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
-  
+
   implicit none
 
   private ! except
@@ -69,7 +69,7 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          call get_flux_x(i, j, k, iBlock) 
+          call get_flux_x(i, j, k, iBlock)
        end do; end do; end do
 
        if(nDim > 1)then
@@ -164,7 +164,7 @@ contains
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    
+
     real :: Area, NormalX, NormalY, NormalZ
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
@@ -423,8 +423,8 @@ contains
 
     integer:: i, j, k
 
-    !--------------------------------------------------------------------------
     !$acc loop vector collapse(3) independent
+    !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        StateOld_VGB(:,i,j,k,iBlock)  = State_VGB(:,i,j,k,iBlock)
     end do; end do; end do
@@ -803,7 +803,7 @@ contains
                + Cright*(StateLeft_V(Uy_) - Cleft*StateRight_V(Uy_))*NormalY &
                + Cright*(StateLeft_V(Uz_) - Cleft*StateRight_V(Uz_))*NormalZ )
        end if
-       
+
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
              ! Overwrite the flux of the Hyp field with the Lax-Friedrichs flux
@@ -852,7 +852,7 @@ contains
             ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
             + sum(State_V(Bx_:Bz_)**2)         ) ) )
     end if
-       
+
   end subroutine energy_to_pressure
   !============================================================================
   subroutine pressure_to_energy(State_V)
@@ -872,7 +872,7 @@ contains
             ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
             + sum(State_V(Bx_:Bz_)**2) ) )
     end if
-       
+
   end subroutine pressure_to_energy
   !============================================================================
   subroutine get_primitive(State_V, Primitive_V)
@@ -1044,7 +1044,7 @@ contains
              Change_V(p_) = Change_V(p_) &
                   - GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*DivU
           end if
-          
+
           ! Time step divided by cell volume
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
@@ -1190,7 +1190,7 @@ contains
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-          !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+          ! DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
           !     .and. iBlock == iBlockTest
 
           ! Initialize change in State_VGB
@@ -1244,13 +1244,13 @@ contains
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
-          !DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+          ! DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
           !     .and. iBlock == iBlockTest
-          !if(DoTestCell)then
+          ! if(DoTestCell)then
           !   write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
           !   write(*,*)'Change_V  =', Change_V
           !   write(*,*)'DtPerDv   =', DtPerDv
-          !end if
+          ! end if
 #endif
        enddo; enddo; enddo
     end do
