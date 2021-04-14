@@ -287,7 +287,7 @@ contains
 
     if(UseResistivity) call set_resistivity
     if(UseB0)call set_b0_reschange
-    if(UseFieldLineThreads)call set_threads
+    if(UseFieldLineThreads)call set_threads(NameSub)
     call test_stop(NameSub, DoTest)
   end subroutine set_batsrus_state
   !============================================================================

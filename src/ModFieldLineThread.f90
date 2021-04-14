@@ -363,11 +363,13 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine deallocate_thread_b
   !============================================================================
-  subroutine set_threads
+  subroutine set_threads(NameCaller)
     use BATL_lib,     ONLY: MaxBlock, Unused_B, nBlock
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
+    use ModMain,     ONLY: n_step
     use ModMpi
+    character(len=*), intent(in) :: NameCaller
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
     real   :: dCoord1UniformPe = -1.0
@@ -487,7 +489,8 @@ contains
        nThread = sum(nThread_P)
     end if
     if(nBlockSetAll > 0.and.iProc==0)then
-       write(*,*)'Set threads in ',nBlockSetAll,' blocks'
+       write(*,*)'Set threads in ',nBlockSetAll,' blocks on iteration ', &
+            n_step, ' is called from '//NameCaller
        write(*,*)'nPointMin = ',nPointMinAll
        if(IsUniformGrid)then
           write(*,*)'dCoord1Uniform =', dCoord1Uniform
