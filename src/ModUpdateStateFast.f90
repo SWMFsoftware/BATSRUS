@@ -124,7 +124,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -132,7 +132,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -303,7 +303,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_VC(p_,i,j,k) = Change_VC(Energy_,i,j,k)
              end if
              ! Update
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
@@ -344,7 +344,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_VC(p_,i,j,k) = Change_VC(Energy_,i,j,k)
              end if
              ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -1062,7 +1062,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1070,7 +1070,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1226,7 +1226,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1234,7 +1234,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(nVar) = Change_V(nVar+1)
+                Change_V(p_) = Change_V(Energy_)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
