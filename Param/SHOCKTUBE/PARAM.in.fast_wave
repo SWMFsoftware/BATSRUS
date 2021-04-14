@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #TEST
-GPUUPDATE		StringTest
+orig			StringTest
 
 #TIMING
 T			UseTiming
@@ -262,7 +262,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #TEST
-orig
+orig			StringTest
 
 #STOP
 -1			MaxIteration
