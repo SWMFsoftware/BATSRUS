@@ -355,6 +355,7 @@ contains
     integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
+    real :: x_D(3)
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
     !$omp threadprivate( UseFirstOrderBc )
@@ -450,7 +451,18 @@ contains
           NumDensR = StateRight_V(Rho_)/TeFraction
        end if
        if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-          call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+          select case(iDir)
+          case(1)
+             x_D = 0.5*(Xyz_DGB(:,iFace-1,jFace,kFace,iBlock) &
+                  +     Xyz_DGB(:,iFace  ,jFace,kFace,iBlock))
+          case(2)
+             x_D = 0.5*(Xyz_DGB(:,iFace,jFace-1,kFace,iBlock) &
+                  +     Xyz_DGB(:,iFace,jFace  ,kFace,iBlock))
+          case(3)
+             x_D = 0.5*(Xyz_DGB(:,iFace,jFace,kFace-1,iBlock) &
+                  +     Xyz_DGB(:,iFace,jFace,kFace  ,iBlock))
+          end select
+          call get_gamma_collisionless(x_D, GammaTmp)
           CvL = NumDensL/(GammaTmp - 1)
           CvR = NumDensR/(GammaTmp - 1)
        else
