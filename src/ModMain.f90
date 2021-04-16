@@ -117,10 +117,37 @@ module ModMain
        xMinBc_ = 1, xMaxBc_ = 2, &
        yMinBc_ = 3, yMaxBc_ = 4, &
        zMinBc_ = 5, zMaxBc_ = 6
+       
+  integer,  parameter :: &
+       UnknownBC_            = 0, &
+       NoneBC_               = 1,  NoneSemiBC_              =  -1, &
+       GradPotBC_            = 2,  GradPotSemiBC_           =  -2, &
+       CoupledBC_            = 3,  CoupledSemiBC_           =  -3, &
+       PeriodicBC_           = 4,  PeriodicSemiBC_          =  -4, &
+       FloatBC_              = 5,  FloatSemiBC_             =  -5, &
+       OutFlowBC_            = 6,  OutFlowSemiBC_           =  -6, &
+       ReflectBC_            = 7,  ReflectSemiBC_           =  -7, &
+       LinetiedBC_           = 8,  LinetiedSemiBC_          =  -8, &
+       FixedBC_              = 9,  FixedSemiBC_             =  -9, &
+       InFlowBC_             = 10, InFlowSemiBC_            =  -10, &
+       VaryBC_               = 11, VarySemiBC_              =  -11, &
+       IHBufferBC_           = 12, IHBufferSemiBC_          =  -12, &
+       FixedB1BC_            = 13, FixedB1SemiBC_           =  -13, &
+       ShearBC_              = 14, ShearSemiBC_             =  -14, &
+       FieldLineThreadsBC_   = 15, FieldLineThreadsSemiBC_  =  -15, &
+       UserBC_               = 16, UserSemiBC_              =  -16
+
+  character(len=20) :: BCList_I(NoneBC_:UserBC_)
+
+  ! = [ 'none', 'gradpot', &
+  !      'coupled', 'periodic', 'float', 'outflow', 'reflect', 'linetied', &
+  !      'fixed', 'inflow', 'vary', 'ihbuffer', 'fixedb1', 'shear', &
+  !      'fieldlinethreads', 'user']
 
   ! Inner and outer boundary conditions
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
-  !$acc declare create(TypeCellBc_I)
+  integer :: TypeCellBcInt_I(Coord1MinBc_:Coord3MaxBc_)
+  !$acc declare create(TypeCellBc_I, TypeCellBcInt_I)
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
   type :: CellBCType
@@ -336,6 +363,24 @@ contains
        dt_BLK = 0.0
        !$acc update device(Dt_BLK)
     end if
+
+    BCList_I(NoneBC_)              = 'none'
+    BCList_I(GradPotBC_)           = 'gradpot'
+    BCList_I(CoupledBC_)           = 'coupled'
+    BCList_I(PeriodicBC_)          = 'periodic'
+    BCList_I(FloatBC_)             = 'float'
+    BCList_I(OutFlowBC_)           = 'outflow'
+    BCList_I(ReflectBC_)           = 'reflect'
+    BCList_I(LinetiedBC_)          = 'linetied'
+    BCList_I(FixedBC_)             = 'fixed'
+    BCList_I(InFlowBC_)            = 'inflow'
+    BCList_I(VaryBC_)              = 'vary'
+    BCList_I(IHBufferBC_)          = 'ihbuffer'
+    BCList_I(FixedBC_)             = 'fixed'
+    BCList_I(ShearBC_)             = 'shear'    
+    BCList_I(FieldLineThreadsBC_)  = 'fieldlinethreads'
+    BCList_I(UserBC_)              = 'user'
+    
   end subroutine init_mod_main
   !============================================================================
   subroutine clean_mod_main

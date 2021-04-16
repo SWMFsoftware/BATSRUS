@@ -3044,12 +3044,17 @@ contains
       use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
       use ModRestartFile, ONLY: NameVarRestart_V
       use ModFieldLineThread, ONLY: DoPlotThreads
+      use ModMain, ONLY: TypeCellBcInt_I, BCList_I, UnknownBC_, &
+           NoneBC_, GradPotBC_, CoupledBC_, PeriodicBC_, FloatBC_,&
+           OutFlowBC_, ReflectBC_, LinetiedBC_, FixedBC_, InFlowBC_, VaryBC_, &
+           IHBufferBC_, FixedB1BC_, ShearBC_, FieldLineThreadsBC_, UserBC_
 
       ! option and module parameters
       character (len=40) :: Name
       real               :: Version
       logical            :: IsOn
 
+      integer :: iTypeBC
       real    :: BetaProlongOrig = 0.0
       logical :: IsFirstCheck = .true.
       character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
@@ -3278,6 +3283,20 @@ contains
               TypeCellBc_I(i:i+1) = 'periodic'
       end do
 
+      ! Find the integer of the corresponding boundary type. 
+      do i=Coord1MinBc_,Coord3MaxBc_
+         TypeCellBcInt_I(i) = UnknownBC_
+         do iTypeBC = NoneBC_, UserBC_
+            if(TypeCellBc_I(i) == BCList_I(iTypeBC)) then
+               TypeCellBcInt_I(i) = iTypeBC
+            end if
+         end do
+#ifdef OPENACC
+         if(TypeCellBcInt_I(i) == UnknownBC_) call stop_mpi( &
+              'GPU code does not support boundary '//TypeCellBc_I(i))
+#endif         
+      end do
+      
       ! Set UseBufferGrid logical
       UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 
