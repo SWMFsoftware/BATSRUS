@@ -58,6 +58,7 @@ module ModGeometry
 
   ! True for blocks next to the cell based boundaries
   logical, allocatable :: far_field_BCs_BLK(:)
+  !$acc declare create(far_field_BCs_BLK)
 
   ! Radial distance from origin and second body
   real, allocatable :: R_BLK(:,:,:,:)

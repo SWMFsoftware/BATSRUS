@@ -20,7 +20,8 @@ contains
 
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
-
+    !$acc routine vector
+    
     ! Set ghost cells values in State_VG based on TypeCellBc_I.
     ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
 
@@ -77,6 +78,7 @@ contains
        RETURN
     end if
 
+#ifndef OPENACC    
     if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
          iBlock, neiLEV(:,iBlock)
 
@@ -124,6 +126,7 @@ contains
           end if
        end do
     end if
+#endif    
 
     allocate(SymmCoeff_V(nVarState))
 
@@ -194,6 +197,9 @@ contains
        if(nK==1) kMin = 1
        if(nK==1) kMax = 1
 
+#ifdef OPENACC
+       call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
+#else               
        if(present(TypeBcIn))then
           TypeBc = TypeBcIn
        else
@@ -214,13 +220,14 @@ contains
 
        case('coupled')
           ! For SC-IH coupling the extra wave energy variable needs a BC
-          if(NameThisComp == 'SC') call set_float_bc(ScalarFirst_, ScalarLast_)
+          if(NameThisComp == 'SC') call set_float_bc(&
+               ScalarFirst_, ScalarLast_, iSide, CBC, nVarState, State_VG)
 
        case('periodic', 'periodic_semi')
           call stop_mpi('The neighbors are not defined at periodic boundaries')
 
        case('float', 'outflow')
-          call set_float_bc(1, nVarState)
+          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
           if(UseOutflowPressure .and. TypeBc == 'outflow') &
                call set_fixed_bc(p_, p_, [pOutflow] )
           if(UseHyperbolicDivb) &
@@ -229,7 +236,7 @@ contains
                call set_fixed_bc(HypE_, HypE_, [0.0] )
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
-
+          
        case('float_semi', 'outflow_semi')
           do iVar = iVarSemiMin, iVarSemiMax
              if(iVar < iErImplFirst .or. iVar > iErImplLast)then
@@ -237,7 +244,7 @@ contains
                 if(IsLinear)then
                    State_VG(iVar,imin:imax,jmin:jmax,kmin:kmax) = 0.0
                 else
-                   call set_float_bc(iVar, iVar)
+                   call set_float_bc(iVar, iVar, iSide, CBC, nVarState, State_VG)
                 end if
              elseif(iVar == iErImplFirst .or. nVarState == 1)then
                 ! For radiation variables (only call once when unsplit)
@@ -299,7 +306,7 @@ contains
           end if
        case('linetied')
           ! Most variables float
-          call set_float_bc(1, nVarState)
+          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 
           if(.not.present(iImplBlock))then
              ! The density and momentum use symmetric/antisymmetric BCs
@@ -312,7 +319,7 @@ contains
 
        case('linetied_semi')
           ! For semi-implicit scheme all variables float
-          call set_float_bc(1, nVarState)
+          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 
        case('fixed', 'inflow', 'vary', 'ihbuffer')
           if(time_accurate &
@@ -379,9 +386,10 @@ contains
           end if
           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
        end select
-
+#endif
     end do
 
+#ifndef OPENACC    
     if(DoTest)then
        do iVar = 1, nVarState
           if(.not.present(iImplBlock)) then
@@ -397,6 +405,7 @@ contains
           end if
        end do
     end if
+#endif    
 
     end associate
 
@@ -464,11 +473,12 @@ contains
     end subroutine set_gradpot_bc
     !==========================================================================
 
-    subroutine set_float_bc(iVarMin, iVarMax)
-
+    subroutine set_float_bc(iVarMin, iVarMax, iSide, CBC, nVarState, State_VG)
+      !$acc routine vector
       ! Continuous: ghost = phys1
-      integer, intent(in) :: iVarMin, iVarMax
-
+      integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState
+      type(CellBCType), intent(in) :: CBC
+      real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
       integer:: i, j, k, iVar
 
       !------------------------------------------------------------------------
@@ -478,37 +488,37 @@ contains
 
       select case(iSide)
       case(1)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,1,j,k)
          end do; end do; end do
       case(2)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,nI,j,k)
          end do; end do; end do
       case(3)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,1,k)
          end do; end do; end do
       case(4)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,nJ,k)
          end do; end do; end do
       case(5)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,1)
          end do; end do; end do
       case(6)
-         !$acc parallel loop collapse(3) gang vector present(State_VG)
+         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,nK)
@@ -531,7 +541,7 @@ contains
       character(len=*), parameter:: NameSub = 'set_shear_bc'
       !------------------------------------------------------------------------
       ! For the corners and boundaries 5 and 6 fill with unsheared data first
-      call set_float_bc(1, nVarState)
+      call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 
       ! If the shock is not tilted, there is nothing to do
       if(ShockSlope == 0.0) RETURN
@@ -740,7 +750,6 @@ contains
 
       integer:: i, j, k
       !------------------------------------------------------------------------
-      !$acc parallel loop gang vector collapse(3) present(State_VG) copyin(State_V)
         do k = CBC%kMin, CBC%kMax
            do j = CBC%jMin, CBC%jMax
               do i = CBC%iMin, CBC%iMax

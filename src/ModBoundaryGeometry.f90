@@ -236,6 +236,7 @@ contains
     end if
 
     !$acc update device(true_cell, body_BLK)
+    !$acc update device(far_field_BCs_BLK)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_block_geometry

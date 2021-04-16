@@ -3666,6 +3666,8 @@ contains
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)
 
+      !$acc update device(TypeCellBc_I)
+
       !$acc update device(UseB0)
       !$acc update device(UseDivbSource, UseHyperbolicDivb, UseConstrainB)
 

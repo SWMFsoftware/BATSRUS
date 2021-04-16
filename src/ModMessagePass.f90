@@ -124,7 +124,7 @@ contains
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
-
+    
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
@@ -214,7 +214,6 @@ contains
     !$omp parallel do
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
-#ifndef OPENACC
        ! The corner ghost cells outside the domain are updated
        ! from the ghost cells inside the domain, so the outer
        ! boundary condition have to be reapplied.
@@ -223,12 +222,16 @@ contains
           if (far_field_BCs_BLK(iBlock)) then
              call set_cell_boundary( &
                   nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+             
+#ifndef OPENACC
              ! Fill in boundary cells with hybrid particles
              if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
+#endif             
           end if
+#ifndef OPENACC                       
           if(UseBuffer)call fill_in_from_buffer(iBlock)
+#endif          
        end if
-#endif
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
 
