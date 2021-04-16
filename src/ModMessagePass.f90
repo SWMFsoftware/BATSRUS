@@ -124,7 +124,7 @@ contains
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
-    
+
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
@@ -222,15 +222,15 @@ contains
           if (far_field_BCs_BLK(iBlock)) then
              call set_cell_boundary( &
                   nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-             
+
 #ifndef OPENACC
              ! Fill in boundary cells with hybrid particles
              if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
-#endif             
+#endif
           end if
-#ifndef OPENACC                       
+#ifndef OPENACC
           if(UseBuffer)call fill_in_from_buffer(iBlock)
-#endif          
+#endif
        end if
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)

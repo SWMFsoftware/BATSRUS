@@ -21,7 +21,7 @@ contains
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
     !$acc routine vector
-    
+
     ! Set ghost cells values in State_VG based on TypeCellBc_I.
     ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
 
@@ -78,7 +78,7 @@ contains
        RETURN
     end if
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
          iBlock, neiLEV(:,iBlock)
 
@@ -126,7 +126,7 @@ contains
           end if
        end do
     end if
-#endif    
+#endif
 
     allocate(SymmCoeff_V(nVarState))
 
@@ -199,7 +199,7 @@ contains
 
 #ifdef OPENACC
        call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
-#else               
+#else
        if(present(TypeBcIn))then
           TypeBc = TypeBcIn
        else
@@ -236,7 +236,7 @@ contains
                call set_fixed_bc(HypE_, HypE_, [0.0] )
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
-          
+
        case('float_semi', 'outflow_semi')
           do iVar = iVarSemiMin, iVarSemiMax
              if(iVar < iErImplFirst .or. iVar > iErImplLast)then
@@ -389,7 +389,7 @@ contains
 #endif
     end do
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoTest)then
        do iVar = 1, nVarState
           if(.not.present(iImplBlock)) then
@@ -405,7 +405,7 @@ contains
           end if
        end do
     end if
-#endif    
+#endif
 
     end associate
 
