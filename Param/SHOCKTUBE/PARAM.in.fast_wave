@@ -127,6 +127,9 @@ periodic		TypeBc6
 1			nOrder
 Rusanov			TypeFlux
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
 #FIXEDTIMESTEP
 T			UseDtFixed
 0.5			DtFixedDim [sec] (read if UseDtFixed is true)
