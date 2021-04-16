@@ -63,7 +63,7 @@ contains
     type(CellBCType) :: CBC
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
-    real, allocatable:: SymmCoeff_V(:)
+    real:: SymmCoeff_V(nVarState)
 
     integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
     logical :: IsFound
@@ -127,8 +127,6 @@ contains
        end do
     end if
 #endif
-
-    allocate(SymmCoeff_V(nVarState))
 
     if(present(iSideIn)) then
        iSideMin = iSideIn
@@ -408,8 +406,6 @@ contains
 #endif
 
     end associate
-
-    deallocate(SymmCoeff_V)
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
