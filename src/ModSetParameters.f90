@@ -3296,7 +3296,7 @@ contains
       BCList_I(InFlowBC_)            = 'inflow'
       BCList_I(VaryBC_)              = 'vary'
       BCList_I(IHBufferBC_)          = 'ihbuffer'
-      BCList_I(FixedBC_)             = 'fixed'
+      BCList_I(FixedB1BC_)           = 'fixedb1'
       BCList_I(ShearBC_)             = 'shear'    
       BCList_I(FieldLineThreadsBC_)  = 'fieldlinethreads'
       BCList_I(UserBC_)              = 'user'
