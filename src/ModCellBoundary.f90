@@ -210,14 +210,14 @@ contains
 #ifndef  OPENACC
           TypeBc = TypeCellBc_I(iSide)
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
-#endif          
+#endif
        end if
 
        if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBCInt)
-#ifndef OPENACC          
+#ifndef OPENACC
        case(GradPotBC_)
           ! set boundary condition for electric potential as
           ! grad(potential) = E
@@ -235,7 +235,7 @@ contains
 #endif
        case(FloatBC_, OutFlowBC_)
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
-#ifndef OPENACC          
+#ifndef OPENACC
           if(UseOutflowPressure .and. TypeBCInt == OutFlowBC_) &
                call set_fixed_bc(p_, p_, [pOutflow] )
           if(UseHyperbolicDivb) &
@@ -348,7 +348,7 @@ contains
              else
                 call set_fixed_semi_bc
              end if
-          end if          
+          end if
        case(FixedB1BC_)
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
        case(FixedB1SemiBC_)
@@ -392,7 +392,7 @@ contains
              call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
-#endif          
+#endif
        end select
     end do
 

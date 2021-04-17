@@ -3283,7 +3283,7 @@ contains
          if(any(TypeCellBc_I(i:i+1) == 'periodic')) &
               TypeCellBc_I(i:i+1) = 'periodic'
       end do
-      
+
       BCList_I(NoneBC_)              = 'none'
       BCList_I(GradPotBC_)           = 'gradpot'
       BCList_I(CoupledBC_)           = 'coupled'
@@ -3297,13 +3297,13 @@ contains
       BCList_I(VaryBC_)              = 'vary'
       BCList_I(IHBufferBC_)          = 'ihbuffer'
       BCList_I(FixedB1BC_)           = 'fixedb1'
-      BCList_I(ShearBC_)             = 'shear'    
+      BCList_I(ShearBC_)             = 'shear'
       BCList_I(FieldLineThreadsBC_)  = 'fieldlinethreads'
       BCList_I(UserBC_)              = 'user'
       BCList_I(UserFixValueBC_)      = 'userfixvalue'
       BCList_I(UserNoInflowBC_)      = 'usernoinflow'
-      
-      ! Find the integer of the corresponding boundary type. 
+
+      ! Find the integer of the corresponding boundary type.
       do i=Coord1MinBc_,Coord3MaxBc_
          TypeCellBcInt_I(i) = UnknownBC_
          do iTypeBC = 1, nTypeBC
@@ -3315,9 +3315,9 @@ contains
 #ifdef OPENACC
          if(TypeCellBcInt_I(i) == UnknownBC_) call stop_mpi( &
               'GPU code does not support boundary '//TypeCellBc_I(i))
-#endif         
+#endif
       end do
-      
+
       ! Set UseBufferGrid logical
       UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 

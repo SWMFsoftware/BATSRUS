@@ -117,7 +117,7 @@ module ModMain
        xMinBc_ = 1, xMaxBc_ = 2, &
        yMinBc_ = 3, yMaxBc_ = 4, &
        zMinBc_ = 5, zMaxBc_ = 6
-       
+
   ! How to add a boundary condition?
   ! 1) Add an index for this boundary.
   ! 2) Increase nTypeBC
@@ -366,7 +366,7 @@ contains
        allocate(dt_BLK(MaxBlock))
        dt_BLK = 0.0
        !$acc update device(Dt_BLK)
-    end if    
+    end if
   end subroutine init_mod_main
   !============================================================================
   subroutine clean_mod_main
