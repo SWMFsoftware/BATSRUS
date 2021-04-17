@@ -27,7 +27,7 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB
+  use ModMain,         ONLY: n_step, UseB, FloatBC_, GradPotBC_
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
@@ -123,7 +123,7 @@ contains
        ! Fill outer ghost cells with floating values
        if(far_field_bcs_blk(iBlock)) &
             call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
-            TypeBcIn = 'float')
+            TypeBcIn = FloatBC_)
     end do
 
     call test_stop(NameSub, DoTest)
@@ -559,7 +559,7 @@ contains
 
     integer:: iBlock, i, j, k
     real:: rInside
-    character(len=10):: TypeBc
+    integer:: TypeBc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_potential'
     !--------------------------------------------------------------------------
@@ -569,10 +569,10 @@ contains
 
     if(IsLinear)then
        ! In the linear stage use float BC that corresponds to E_normal=0
-       TypeBc = 'float'
+       TypeBc = FloatBC_
     else
        ! Apply gradient(potential) = Enormal BC
-       TypeBc = 'gradpot'
+       TypeBc = GradPotBC_
     end if
 
     ! Fill outer ghost cells

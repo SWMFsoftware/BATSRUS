@@ -21,16 +21,23 @@ contains
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
     !$acc routine vector
-
-    ! Set ghost cells values in State_VG based on TypeCellBc_I.
-    ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
+    ! Set ghost cells values in State_VG based on TypeCellBcInt_I.
+    ! TypeBcIn can override the boundary condition defined in TypeCellBcInt_I
 
     use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, TypeCellBc_I, time_accurate, time_loop, CellBCType
+         UseHyperbolicDivb, time_accurate, time_loop, CellBCType, &
+         TypeCellBc_I, TypeCellBcInt_I,  UnknownBC_, &
+         NoneBC_, GradPotBC_, CoupledBC_, PeriodicBC_, FloatBC_,&
+         OutFlowBC_, ReflectBC_, LinetiedBC_, FixedBC_, InFlowBC_, VaryBC_, &
+         IHBufferBC_, FixedB1BC_, ShearBC_, FieldLineThreadsBC_, UserBC_, &
+         NoneSemiBC_, GradPotSemiBC_, CoupledSemiBC_, PeriodicSemiBC_, &
+         FloatSemiBC_, OutFlowSemiBC_, ReflectSemiBC_, LinetiedSemiBC_, &
+         FixedSemiBC_, InFlowSemiBC_, VarySemiBC_, IHBufferSemiBC_, &
+         FixedB1SemiBC_, ShearSemiBC_, FieldLineThreadsSemiBC_, UserSemiBC_
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, XyzMin_D
@@ -56,7 +63,7 @@ contains
     ! Optional arguments when called by semi-implicit scheme or something else
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
-    character(len=*), optional, intent(in):: TypeBcIn
+    integer, optional, intent(in):: TypeBcIn
     integer,          optional, intent(in):: iSideIn
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
@@ -139,7 +146,7 @@ contains
     associate(iMin => CBC%iMin, iMax => CBC%iMax, &
          jMin => CBC%jMin, jMax => CBC%jMax, &
          kMin => CBC%kMin, kMax => CBC%kMax, &
-         TypeBc => CBC%TypeBc)
+         TypeBc => CBC%TypeBc, TypeBcInt => CBC%TypeBcInt)
 
     ! Loop through all sides
     do iSide = iSideMin, iSideMax
@@ -149,7 +156,7 @@ contains
        if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
 
        ! Apply cell BC when TypeCellBc_I(1:6) is set
-       if(TypeCellBc_I(iSide)=='none') CYCLE
+       if(TypeCellBcInt_I(iSide) == NoneBC_) CYCLE
 
        ! Do not apply cell boundary conditions at the pole
        ! This is either handled by message passing or supercell
@@ -195,38 +202,41 @@ contains
        if(nK==1) kMin = 1
        if(nK==1) kMax = 1
 
-#ifdef OPENACC
-       call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
-#else
        if(present(TypeBcIn))then
-          TypeBc = TypeBcIn
+          TypeBCInt = TypeBcIn
        else
+          TypeBcInt = TypeCellBcInt_I(iSide)
+          if(present(iImplBlock)) TypeBcInt = - abs(TypeBcInt)
+#ifndef  OPENACC
           TypeBc = TypeCellBc_I(iSide)
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
+#endif          
        end if
 
        if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
-       select case(TypeBc)
-       case('gradpot')
+       select case(TypeBCInt)
+#ifndef OPENACC          
+       case(GradPotBC_)
           ! set boundary condition for electric potential as
           ! grad(potential) = E
           if(nVarState /= 1) &
                call stop_mpi(NameSub//': gradpot BC is for scalar variable only')
           call set_gradpot_bc
 
-       case('coupled')
+       case(CoupledBC_)
           ! For SC-IH coupling the extra wave energy variable needs a BC
           if(NameThisComp == 'SC') call set_float_bc(&
                ScalarFirst_, ScalarLast_, iSide, CBC, nVarState, State_VG)
 
-       case('periodic', 'periodic_semi')
+       case(PeriodicBC_, PeriodicSemiBC_)
           call stop_mpi('The neighbors are not defined at periodic boundaries')
-
-       case('float', 'outflow')
+#endif
+       case(FloatBC_, OutFlowBC_)
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
-          if(UseOutflowPressure .and. TypeBc == 'outflow') &
+#ifndef OPENACC          
+          if(UseOutflowPressure .and. TypeBCInt == OutFlowBC_) &
                call set_fixed_bc(p_, p_, [pOutflow] )
           if(UseHyperbolicDivb) &
                call set_fixed_bc(Hyp_, Hyp_, [0.0] )
@@ -234,8 +244,7 @@ contains
                call set_fixed_bc(HypE_, HypE_, [0.0] )
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
-
-       case('float_semi', 'outflow_semi')
+       case(FloatSemiBC_, OutFlowSemiBC_)
           do iVar = iVarSemiMin, iVarSemiMax
              if(iVar < iErImplFirst .or. iVar > iErImplLast)then
                 ! For non-radiation variables
@@ -251,7 +260,7 @@ contains
              end if
           end do
 
-       case('reflect')
+       case(ReflectBC_)
           if(IsCartesianGrid)then
              ! Scalars are symmetric
              SymmCoeff_V = 1.0
@@ -277,7 +286,7 @@ contains
           else
              call set_reflect_bc(nVectorVar, iVectorVar_I)
           end if
-       case('reflect_semi')
+       case(ReflectSemiBC_)
           if(IsCartesianGrid .or. TypeSemiImplicit(1:6) /= 'resist')then
              ! Scalars are symmetric
              SymmCoeff_V = 1.0
@@ -302,7 +311,7 @@ contains
           else
              call set_reflect_bc(nVectorSemi, iVectorSemi_I)
           end if
-       case('linetied')
+       case(LinetiedBC_)
           ! Most variables float
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 
@@ -315,50 +324,50 @@ contains
              end do
           end if
 
-       case('linetied_semi')
+       case(LinetiedSemiBC_)
           ! For semi-implicit scheme all variables float
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 
-       case('fixed', 'inflow', 'vary', 'ihbuffer')
+       case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
           if(time_accurate &
-               .and.(TypeBc == 'vary'.or. TypeBc == 'inflow'))then
+               .and.(TypeBCInt == VaryBC_ .or. TypeBCInt == InFlowBC_))then
              call set_solar_wind_bc
-          else if(TypeBc == 'ihbuffer' .and. time_loop)then
+          else if(TypeBCInt == IHBufferBC_ .and. time_loop)then
              call set_solar_wind_bc_buffer
           else
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
              if(UseB0)call fix_b0(Bx_,Bz_)
           end if
-       case('fixed_semi', 'inflow_semi', 'vary_semi')
+       case(FixedSemiBC_, InFlowSemiBC_, VarySemiBC_)
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
              if(time_accurate &
-                  .and.(TypeBc == 'vary'.or. TypeBc == 'inflow'))then
+                  .and.(TypeBCInt == VaryBC_ .or. TypeBCInt == InFlowBC_))then
                 call set_solar_wind_bc
              else
                 call set_fixed_semi_bc
              end if
-          end if
-       case('fixedb1')
+          end if          
+       case(FixedB1BC_)
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
-       case('fixedb1_semi')
+       case(FixedB1SemiBC_)
           State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-       case('shear', 'shear_semi')
+       case(ShearBC_, ShearSemiBC_)
           call set_shear_bc
-       case('none')
-       case('none_semi')
+       case(NoneBC_)
+       case(NoneSemiBC_)
           if(IsLinear) State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-       case('fieldlinethreads')
+       case(FieldLineThreadsBC_)
           call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG)
-       case('fieldlinethreads_semi')
+       case(FieldLineThreadsSemiBC_)
           if(IsLinear)then
              State_VG(:,0,jMin:jMax,kMin:kMax) = 0.0
           else
              call set_field_line_thread_bc( &
                   nGhost, iBlock, nVarState, State_VG, iImplBlock)
           end if
-       case('user_semi')
+       case(UserSemiBC_)
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
              TypeBc = 'usersemilinear'
@@ -372,7 +381,7 @@ contains
           end if
        case default
           IsFound=.false.
-          if(CBC%TypeBc(1:4) == 'user')then
+          if(TypeBc(1:4) == 'user')then
              if(present(IsLinear))then
                 if(IsLinear)then
                    ! Linear semi-implicit BC. Default is zero
@@ -383,8 +392,8 @@ contains
              call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
+#endif          
        end select
-#endif
     end do
 
 #ifndef OPENACC

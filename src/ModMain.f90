@@ -118,6 +118,10 @@ module ModMain
        yMinBc_ = 3, yMaxBc_ = 4, &
        zMinBc_ = 5, zMaxBc_ = 6
        
+  ! How to add a boundary condition?
+  ! 1) Add an index for this boundary.
+  ! 2) Increase nTypeBC
+  ! 3) Add the name of this boundary to BCList_I.
   integer,  parameter :: &
        UnknownBC_            = 0, &
        NoneBC_               = 1,  NoneSemiBC_              =  -1, &
@@ -135,14 +139,13 @@ module ModMain
        FixedB1BC_            = 13, FixedB1SemiBC_           =  -13, &
        ShearBC_              = 14, ShearSemiBC_             =  -14, &
        FieldLineThreadsBC_   = 15, FieldLineThreadsSemiBC_  =  -15, &
-       UserBC_               = 16, UserSemiBC_              =  -16
+       UserBC_               = 16, UserSemiBC_              =  -16, &
+       UserFixValueBC_       = 17,                                  &
+       UserNoInflowBC_       = 18
 
-  character(len=20) :: BCList_I(NoneBC_:UserBC_)
+  integer, parameter :: nTypeBC = 18
 
-  ! = [ 'none', 'gradpot', &
-  !      'coupled', 'periodic', 'float', 'outflow', 'reflect', 'linetied', &
-  !      'fixed', 'inflow', 'vary', 'ihbuffer', 'fixedb1', 'shear', &
-  !      'fieldlinethreads', 'user']
+  character(len=20) :: BCList_I(1:nTypeBC)
 
   ! Inner and outer boundary conditions
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
@@ -156,6 +159,7 @@ module ModMain
      integer :: iMin, iMax, jMin, jMax, kMin, kMax
      ! Type of boundary for one side
      character(len=30):: TypeBc
+     integer :: TypeBCInt
   end type CellBCType
 
   type :: FaceBCType
@@ -362,25 +366,7 @@ contains
        allocate(dt_BLK(MaxBlock))
        dt_BLK = 0.0
        !$acc update device(Dt_BLK)
-    end if
-
-    BCList_I(NoneBC_)              = 'none'
-    BCList_I(GradPotBC_)           = 'gradpot'
-    BCList_I(CoupledBC_)           = 'coupled'
-    BCList_I(PeriodicBC_)          = 'periodic'
-    BCList_I(FloatBC_)             = 'float'
-    BCList_I(OutFlowBC_)           = 'outflow'
-    BCList_I(ReflectBC_)           = 'reflect'
-    BCList_I(LinetiedBC_)          = 'linetied'
-    BCList_I(FixedBC_)             = 'fixed'
-    BCList_I(InFlowBC_)            = 'inflow'
-    BCList_I(VaryBC_)              = 'vary'
-    BCList_I(IHBufferBC_)          = 'ihbuffer'
-    BCList_I(FixedBC_)             = 'fixed'
-    BCList_I(ShearBC_)             = 'shear'    
-    BCList_I(FieldLineThreadsBC_)  = 'fieldlinethreads'
-    BCList_I(UserBC_)              = 'user'
-    
+    end if    
   end subroutine init_mod_main
   !============================================================================
   subroutine clean_mod_main
