@@ -509,6 +509,7 @@ contains
 
     ! We are advancing in time.
     time_loop = .true.
+    !$acc update device(time_loop)
 
     ! Exchange messages if some information was received
     ! from another SWMF component, for example.

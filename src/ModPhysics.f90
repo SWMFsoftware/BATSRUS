@@ -177,7 +177,9 @@ module ModPhysics
 
   ! Boundary pressure for subsonic outflow
   logical :: UseOutflowPressure = .false.
+  !$acc declare create(UseOutflowPressure)
   real :: pOutflowSi = -1.0, pOutflow = -1.0
+  !$acc declare create(pOutflow)
 
   ! Relaxation time for anisotropic pressure
   logical :: UseConstantTau_I(nFluid)   =  nIonFluid > 1
@@ -210,6 +212,7 @@ module ModPhysics
        FaceState_VI, FaceStateDim_VI
   real, dimension(nVar,Coord1MinBc_:Coord3MaxBc_):: &
        CellState_VI, CellStateDim_VI
+  !$acc declare create(CellState_VI)
 
   ! Units for normalization of variables
   character (len=20) :: TypeNormalization="PLANETARY"
@@ -719,6 +722,9 @@ contains
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
     !$acc update device(SpeedHyp, InvClight, InvClight2)
+    !$acc update device(pOutflow)
+
+    !$acc update device(CellState_VI)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants

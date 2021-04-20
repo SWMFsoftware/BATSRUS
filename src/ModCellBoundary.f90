@@ -21,6 +21,7 @@ contains
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
     !$acc routine vector
+
     ! Set ghost cells values in State_VG based on TypeCellBcInt_I.
     ! TypeBcIn can override the boundary condition defined in TypeCellBcInt_I
 
@@ -237,11 +238,11 @@ contains
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
 #ifndef OPENACC
           if(UseOutflowPressure .and. TypeBCInt == OutFlowBC_) &
-               call set_fixed_bc(p_, p_, [pOutflow] )
+               call set_fixed_bc(p_, p_, [pOutflow] , CBC,  nVarState, State_VG)
           if(UseHyperbolicDivb) &
-               call set_fixed_bc(Hyp_, Hyp_, [0.0] )
+               call set_fixed_bc(Hyp_, Hyp_, [0.0] , CBC,  nVarState, State_VG)
           if(UseEfield)         &
-               call set_fixed_bc(HypE_, HypE_, [0.0] )
+               call set_fixed_bc(HypE_, HypE_, [0.0] , CBC,  nVarState, State_VG)
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
        case(FloatSemiBC_, OutFlowSemiBC_)
@@ -327,17 +328,24 @@ contains
        case(LinetiedSemiBC_)
           ! For semi-implicit scheme all variables float
           call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
-
+#endif
        case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
           if(time_accurate &
                .and.(TypeBCInt == VaryBC_ .or. TypeBCInt == InFlowBC_))then
+#ifndef OPENACC
              call set_solar_wind_bc
+#endif
           else if(TypeBCInt == IHBufferBC_ .and. time_loop)then
+#ifndef OPENACC
              call set_solar_wind_bc_buffer
+#endif
           else
-             call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
+             call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), CBC,  nVarState, State_VG)
+#ifndef OPENACC
              if(UseB0)call fix_b0(Bx_,Bz_)
+#endif
           end if
+#ifndef OPENACC
        case(FixedSemiBC_, InFlowSemiBC_, VarySemiBC_)
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
@@ -350,7 +358,7 @@ contains
              end if
           end if
        case(FixedB1BC_)
-          call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
+          call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), CBC,  nVarState, State_VG)
        case(FixedB1SemiBC_)
           State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
        case(ShearBC_, ShearSemiBC_)
@@ -746,15 +754,20 @@ contains
 
     end subroutine set_reflect_bc
     !==========================================================================
-    subroutine set_fixed_bc(iVarMin, iVarMax, State_V)
+    subroutine set_fixed_bc(iVarMin, iVarMax, State_V, CBC,  nVarState, State_VG)
+      !$acc routine vector
 
       ! ghost = State_V
 
       integer, intent(in):: iVarMin, iVarMax
       real,    intent(in):: State_V(iVarMin:iVarMax)
+      type(CellBCType), intent(in) :: CBC
+      integer, intent(in):: nVarState
+      real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
       integer:: i, j, k
       !------------------------------------------------------------------------
+      !$acc loop vector collapse(3)
         do k = CBC%kMin, CBC%kMax
            do j = CBC%jMin, CBC%jMax
               do i = CBC%iMin, CBC%iMax

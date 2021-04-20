@@ -51,6 +51,7 @@ program BATSRUS
 
   ! Not yet doing the computation
   time_loop = .false.
+  !$acc update device(time_loop)
 
   ! Show git information
   if(iProc==0)then
@@ -128,6 +129,7 @@ program BATSRUS
 
   end do SESSIONLOOP
   time_loop = .false.
+  !$acc update device(time_loop)
 
   if(iProc == 0 .and. lVerbose >= 0)then
      write(*,*)
