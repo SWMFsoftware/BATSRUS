@@ -146,6 +146,12 @@ T			UseNe4Source
 
 #USERINPUTEND -------------------------------------
 
+#LOOKUPTABLE
+ChargeExchange            NameTable
+load                    NameCommand
+Param/OUTERHELIO/ExchangeRate.dat    NameFile
+ascii                   TypeFile
+
 #STOP
 50			MaxIteration
 -1.0			tSimulationMax
