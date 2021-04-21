@@ -117,7 +117,7 @@ module ModMain
        xMinBc_ = 1, xMaxBc_ = 2, &
        yMinBc_ = 3, yMaxBc_ = 4, &
        zMinBc_ = 5, zMaxBc_ = 6
-  
+
   ! Inner and outer boundary conditions
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
   integer :: TypeCellBcInt_I(Coord1MinBc_:Coord3MaxBc_)
