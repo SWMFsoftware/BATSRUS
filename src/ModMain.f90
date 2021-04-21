@@ -117,36 +117,7 @@ module ModMain
        xMinBc_ = 1, xMaxBc_ = 2, &
        yMinBc_ = 3, yMaxBc_ = 4, &
        zMinBc_ = 5, zMaxBc_ = 6
-
-  ! How to add a boundary condition?
-  ! 1) Add an index for this boundary.
-  ! 2) Increase nTypeBC
-  ! 3) Add the name of this boundary to BCList_I.
-  integer,  parameter :: &
-       UnknownBC_            = 0, &
-       NoneBC_               = 1,  NoneSemiBC_              =  -1, &
-       GradPotBC_            = 2,  GradPotSemiBC_           =  -2, &
-       CoupledBC_            = 3,  CoupledSemiBC_           =  -3, &
-       PeriodicBC_           = 4,  PeriodicSemiBC_          =  -4, &
-       FloatBC_              = 5,  FloatSemiBC_             =  -5, &
-       OutFlowBC_            = 6,  OutFlowSemiBC_           =  -6, &
-       ReflectBC_            = 7,  ReflectSemiBC_           =  -7, &
-       LinetiedBC_           = 8,  LinetiedSemiBC_          =  -8, &
-       FixedBC_              = 9,  FixedSemiBC_             =  -9, &
-       InFlowBC_             = 10, InFlowSemiBC_            =  -10, &
-       VaryBC_               = 11, VarySemiBC_              =  -11, &
-       IHBufferBC_           = 12, IHBufferSemiBC_          =  -12, &
-       FixedB1BC_            = 13, FixedB1SemiBC_           =  -13, &
-       ShearBC_              = 14, ShearSemiBC_             =  -14, &
-       FieldLineThreadsBC_   = 15, FieldLineThreadsSemiBC_  =  -15, &
-       UserBC_               = 16, UserSemiBC_              =  -16, &
-       UserFixValueBC_       = 17,                                  &
-       UserNoInflowBC_       = 18
-
-  integer, parameter :: nTypeBC = 18
-
-  character(len=20) :: BCList_I(1:nTypeBC)
-
+  
   ! Inner and outer boundary conditions
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
   integer :: TypeCellBcInt_I(Coord1MinBc_:Coord3MaxBc_)

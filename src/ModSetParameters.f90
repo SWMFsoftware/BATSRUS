@@ -3044,12 +3044,9 @@ contains
       use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
       use ModRestartFile, ONLY: NameVarRestart_V
       use ModFieldLineThread, ONLY: DoPlotThreads
-      use ModMain, ONLY: TypeCellBcInt_I, BCList_I, nTypeBC, UnknownBC_, &
-           NoneBC_, GradPotBC_, CoupledBC_, PeriodicBC_, FloatBC_,&
-           OutFlowBC_, ReflectBC_, LinetiedBC_, FixedBC_, InFlowBC_, VaryBC_, &
-           IHBufferBC_, FixedB1BC_, ShearBC_, FieldLineThreadsBC_, UserBC_, &
-           UserFixValueBC_, UserNoInflowBC_
-
+      use ModMain, ONLY: TypeCellBcInt_I
+      use ModCellBoundary, ONLY: NameCellBc_I, nTypeBC, UnknownBC_
+      
       ! option and module parameters
       character (len=40) :: Name
       real               :: Version
@@ -3284,38 +3281,15 @@ contains
               TypeCellBc_I(i:i+1) = 'periodic'
       end do
 
-      BCList_I(NoneBC_)              = 'none'
-      BCList_I(GradPotBC_)           = 'gradpot'
-      BCList_I(CoupledBC_)           = 'coupled'
-      BCList_I(PeriodicBC_)          = 'periodic'
-      BCList_I(FloatBC_)             = 'float'
-      BCList_I(OutFlowBC_)           = 'outflow'
-      BCList_I(ReflectBC_)           = 'reflect'
-      BCList_I(LinetiedBC_)          = 'linetied'
-      BCList_I(FixedBC_)             = 'fixed'
-      BCList_I(InFlowBC_)            = 'inflow'
-      BCList_I(VaryBC_)              = 'vary'
-      BCList_I(IHBufferBC_)          = 'ihbuffer'
-      BCList_I(FixedB1BC_)           = 'fixedb1'
-      BCList_I(ShearBC_)             = 'shear'
-      BCList_I(FieldLineThreadsBC_)  = 'fieldlinethreads'
-      BCList_I(UserBC_)              = 'user'
-      BCList_I(UserFixValueBC_)      = 'userfixvalue'
-      BCList_I(UserNoInflowBC_)      = 'usernoinflow'
-
       ! Find the integer of the corresponding boundary type.
       do i=Coord1MinBc_,Coord3MaxBc_
          TypeCellBcInt_I(i) = UnknownBC_
          do iTypeBC = 1, nTypeBC
-            if(TypeCellBc_I(i) == BCList_I(iTypeBC)) then
+            if(TypeCellBc_I(i) == trim(NameCellBc_I(iTypeBC))) then
                TypeCellBcInt_I(i) = iTypeBC
                EXIT
             end if
          end do
-#ifdef OPENACC
-         if(TypeCellBcInt_I(i) == UnknownBC_) call stop_mpi( &
-              'GPU code does not support boundary '//TypeCellBc_I(i))
-#endif
       end do
 
       ! Set UseBufferGrid logical

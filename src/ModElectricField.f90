@@ -27,9 +27,9 @@ module ModElectricField
        iProc, iComm, message_pass_cell
 
   use ModAdvance,      ONLY: Efield_DGB
-  use ModMain,         ONLY: n_step, UseB, FloatBC_, GradPotBC_
+  use ModMain,         ONLY: n_step, UseB
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
-  use ModCellBoundary, ONLY: set_cell_boundary
+  use ModCellBoundary, ONLY: set_cell_boundary, FloatBC_, GradPotBC_
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
   use ModLinearSolver, ONLY: LinearSolverParamType, solve_linear_multiblock
   use ModVarIndexes,   ONLY: IsMhd
