@@ -157,7 +157,8 @@ contains
     use ModBatlInterface, ONLY: set_batsrus_grid
     use ModParallel, ONLY: init_mod_parallel
     use ModPhysics, ONLY: init_vector_variables, set_physics_constants, iVectorVar_I
-    use ModMain, ONLY: init_mod_main, TypeCellBc_I
+    use ModMain, ONLY: init_mod_main, TypeCellBc_I,  TypeCellBcInt_I
+    use ModCellBoundary, ONLY: FloatBC_
     use ModAdvance, ONLY: init_mod_advance, clean_mod_advance, State_VGB, iTypeAdvance_BP, iTypeAdvance_B
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells
     use ModVarIndexes, ONLY: NameVar_V, nVar, nFluid
@@ -190,6 +191,7 @@ contains
 
     UseHighFDGeometry = .false.
     TypeCellBc_I = ['float','float','float','float','float','float']
+    TypeCellBcInt_I = FloatBC_
     call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
          TypeGeometryBatl, TypeCellBc_I(1:2*nDim-1:2) == 'periodic', &
          nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
