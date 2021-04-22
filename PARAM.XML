@@ -4310,7 +4310,8 @@ The HDF output works only if the HDF library is installed,
 the appropriate parallel HDF module is loaded and BATSRUS/SWMF is
 configured with the -hdf flag.
 The "IDL" format can be read with the IDL visualization macros
-(getpict, animate, slice) in BATSRUS/Idl or with the SpacePy python package.
+(read\_data and animate\_data)
+in BATSRUS/Idl or with the SpacePy python package.
 The ASCII "IDL" format can be easily read with any other plotting software.
 
 The PlotArea string defines a 1, 2, or 3D volume for plotting:
@@ -4597,8 +4598,10 @@ following:
 \end{verbatim}
 
 Most plot files are written in parallel: each processor
-writes out part of the data. These intermediate files are ASCII in 'tec'
-and 'tcp' format and can be either binary or ASCII in 'idl' format
+writes out part of the data. These intermediate files are
+typically ASCII for the 'tec' and 'tcp' formats
+(see the #SAVETECBINARY command, which is useful for conversion to vtk format)
+and can be either binary or ASCII in 'idl' format
 as chosen with the #SAVEBINARY command (default is binary).
 The name of the files are
 \begin{verbatim}
