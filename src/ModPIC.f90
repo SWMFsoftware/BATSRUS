@@ -56,7 +56,7 @@ module ModPIC
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
   real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
        CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
-  real, public :: CriteriaB1=0.0
+  real, public :: CriteriaB1=0.0, CriteriaB1Dim=0.0
   integer, public:: nPatchExtend_D(3)=0
 
   ! Description of the region where the pic region is fixed there
@@ -175,8 +175,9 @@ contains
           call read_var('CriteriaMinPic_I', CriteriaMinPicDim_I(iCriteria))
           call read_var('CriteriaMaxPic_I', CriteriaMaxPicDim_I(iCriteria))
           if(NameCriteriaPic_I(iCriteria)=='j/b' .or.&
-               NameCriteriaPic_I(iCriteria)=='j/bperp')&
-               call read_var('CriteriaB1', CriteriaB1)
+               NameCriteriaPic_I(iCriteria)=='j/bperp') then
+             call read_var('CriteriaB1', CriteriaB1Dim)
+          end if
        end do
 
     case("#PICPATCHEXTEND")
@@ -1231,9 +1232,11 @@ contains
        case('j/b')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
+          CriteriaB1 = CriteriaB1Dim * Io2No_V(UnitB_)
        case('j/bperp')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
+          CriteriaB1 = CriteriaB1Dim * Io2No_V(UnitB_)
        case('divu')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)&
                *Io2No_V(UnitU_)/Io2No_V(UnitX_)
@@ -1275,10 +1278,18 @@ contains
        case('divcurv')
           allocate(UnitBfield_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(Curvature_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
-          allocate(DivCurvature_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          if(.not. allocated(DivCurvature_CB)) then
+             allocate(DivCurvature_CB(minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+             DivCurvature_CB = 0.0
+          end if
           allocate(GradUnitBx_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(GradUnitBy_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
           allocate(GradUnitBz_DGB(nDim,minI:maxI,minJ:maxJ,minK:maxK,MaxBlock))
+          UnitBfield_DGB = 0.0
+          Curvature_DGB = 0.0
+          GradUnitBx_DGB = 0.0
+          GradUnitBy_DGB = 0.0
+          GradUnitBz_DGB = 0.0
        end select
     end do
 
@@ -1295,12 +1306,8 @@ contains
        if(allocated(DivCurvature_CB)) then
 
           do k=minK,maxK; do j=minJ,maxJ; do i=minI,maxI
-             bNorm = FullB_DGB(x_,i,j,k,iBlock)**2
-             if(nJ>1) bNorm = bNorm + FullB_DGB(y_,i,j,k,iBlock)**2
-             if(nK>1) bNorm = bNorm + FullB_DGB(z_,i,j,k,iBlock)**2
-             bNorm = sqrt(bNorm)
              UnitBfield_DGB(1:nDim,i,j,k,iBlock) = &
-                  FullB_DGB(1:nDim,i,j,k,iBlock) / bNorm
+                  FullB_DGB(1:nDim,i,j,k,iBlock) / max(norm2(FullB_DGB(1:nDim,i,j,k,iBlock)),1e-30)
           end do; end do; end do
 
           ! Notice that Gradient B field only have physical cell values
@@ -1335,10 +1342,13 @@ contains
        if(Unused_B(iBlock)) CYCLE
        if(.not. IsPicNode_A(iNode_B(iBlock))) CYCLE
 
-       if(allocated(Curvature_DGB)) &
-            call calc_divergence(iBlock, Curvature_DGB(:,:,:,:,iBlock), &
-            nG, DivCurvature_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
-
+       if(allocated(Curvature_DGB)) then
+          call calc_divergence(iBlock, Curvature_DGB(:,:,:,:,iBlock), &
+               nG, DivCurvature_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
+          DivCurvature_CB(:,:,:,iBlock) = DivCurvature_CB(:,:,:,iBlock)*&
+               (CellSize_DB(1, iBlock)**2)
+       end if
+       
        FullB_DG = FullB_DGB(:,:,:,:,iBlock)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1357,7 +1367,7 @@ contains
              case('divu')
                 CriteriaValue = DivU_CB(i,j,k,iBlock)
              case('divcurv')
-                CriteriaValue = DivCurvature_CB(i,j,k,iBlock) * (CellSize_DB(1, iBlock)**2)
+                CriteriaValue = DivCurvature_CB(i,j,k,iBlock)
              case('beta')
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
