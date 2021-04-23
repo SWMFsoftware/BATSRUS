@@ -1348,7 +1348,7 @@ contains
           DivCurvature_CB(:,:,:,iBlock) = DivCurvature_CB(:,:,:,iBlock)*&
                (CellSize_DB(1, iBlock)**2)
        end if
-       
+
        FullB_DG = FullB_DGB(:,:,:,:,iBlock)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
