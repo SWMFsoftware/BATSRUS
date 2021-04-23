@@ -320,8 +320,8 @@ sub set_optimization{
 	    }
 	}
     }else{
-	# -opt=any means that nothing is fixed
-	if($Opt =~ s/^any,?//i){
+	# -opt=none means that nothing is fixed
+	if($Opt =~ s/^(any|none),?//i){
 	    foreach $name (sort keys %Opt){
 		next if $Opt{$name} eq 'any';
 		printf "%-20s%9s -> any\n", "$name:", $Opt{$name};
@@ -831,8 +831,8 @@ Additional options for BATSRUS/Config.pl:
 		file name that is analyzed for settings. Otherwise STRING is a 
 		comma separated list consisting of NAME or NAME=any elements 
 		for adjustable parameters, or NAME=VALUE for fixed parameters.
-		For logical variables, T and F can be used as VALUE.
-	        If STRING starts with 'any', all values are set adjustable.
+		For logical variables, T and F can be used as VALUE. If 
+		STRING starts with 'any' or 'none', all values are adjustable.
 
 -nWave=NWAVE    Set the number of wave bins used for radiation or wave
                 turbulence to NWAVE for the selected EQUATION module.
@@ -854,7 +854,7 @@ List available options for equations and user modules and show optimizations:
 
 Select the MHD equations, the Default user module and optimize some parameters:
 
-    Config.pl -e=MHD -u=Default -opt=any,nOrder=2,nStage=2,IsCartesian=T
+    Config.pl -e=MHD -u=Default -opt=none,nOrder=2,nStage=2,IsCartesian=T
 
 Select the CRASH equation and user modules and optimize for run/PARAM.in file.
 Set the number of materials to 5 and number of radiation groups to 30:
