@@ -141,10 +141,10 @@ T                       UseNe4Source
 #USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
-ChargeExchange            NameTable
-load                    NameCommand
-Param/OUTERHELIO/ExchangeRate.dat    NameFile
-ascii                   TypeFile
+ChargeExchange		NameTable
+load			NameCommand
+Param/OUTERHELIO/ExchangeRate.dat		NameFile
+ascii			TypeFile
 
 #STOP
 -1			MaxIteration
