@@ -165,7 +165,7 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
@@ -174,11 +174,11 @@ contains
 #else
        iGang = 1
 #endif
-    call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), &
          uDotArea_XII(i,j,k,1,iGang))
 
@@ -189,7 +189,7 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
@@ -198,11 +198,11 @@ contains
 #else
        iGang = 1
 #endif
-    call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), &
          uDotArea_YII(i,j,k,1,iGang))
 
@@ -213,7 +213,7 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
@@ -222,11 +222,11 @@ contains
 #else
        iGang = 1
 #endif
-    call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), &
          uDotArea_ZII(i,j,k,1,iGang))
 
@@ -378,35 +378,35 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, NormalX, NormalY, NormalZ
+    real:: Area, Normal_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
     real:: Unormal_I(nFluid+1)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
-       call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
-       call get_normal(1, i+1, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
-       call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(4)
-       call get_normal(2, i, j+1, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
     case(5)
-       call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(6)
-       call get_normal(3, i, j, k+1, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, &
+    call get_numerical_flux(Normal_D, &
          Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I(1))
 
     Change_V = Change_V + Flux_V
@@ -431,102 +431,71 @@ contains
 
   end subroutine set_old_state
   !============================================================================
-  subroutine get_physical_flux(State_V, NormalX, NormalY, NormalZ, &
-       StateCons_V, Flux_V)
+  subroutine get_physical_flux(State_V, Normal_D, StateCons_V, Flux_V)
     !$acc routine seq
 
     real, intent(in) :: State_V(nVar)      ! primitive state vector
-    real, intent(in) :: NormalX, NormalY, NormalZ ! face normal
+    real, intent(in) :: Normal_D(3)        ! face normal
     real, intent(out):: StateCons_V(nFlux) ! conservative state vector
     real, intent(out):: Flux_V(nFlux)      ! conservative flux
 
-    real:: Rho, Ux, Uy, Uz, Bx, By, Bz, Hyp, p, e, Un, Bn, pB, pTot
+    real:: Rho, Un, Bn, pB, e
     !--------------------------------------------------------------------------
-    Rho = State_V(Rho_)
-    Ux  = State_V(Ux_)
-    Uy  = State_V(Uy_)
-    Uz  = State_V(Uz_)
-    Bx  = State_V(Bx_)
-    By  = State_V(By_)
-    Bz  = State_V(Bz_)
-    if(Hyp_ > 1) Hyp = State_V(Hyp_)
-    p   = State_V(p_)
-
     ! Convenient variables
-    Un  = Ux*NormalX + Uy*NormalY + Uz*NormalZ
-    Bn  = Bx*NormalX + By*NormalY + Bz*NormalZ
-    pB  = 0.5*(Bx**2 + By**2 + Bz**2)
-
-    ! Hydro energy density
-    e   = InvGammaMinus1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+    Rho = State_V(Rho_)
+    Un  = sum(State_V(Ux_:Uz_)*Normal_D)
+    Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
+    pB  = 0.5*sum(State_V(Bx_:Bz_)**2)
+    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)
 
     ! Conservative state for the Rusanov solver
-    StateCons_V(Rho_)    = Rho
-    StateCons_V(RhoUx_)  = Rho*Ux
-    StateCons_V(RhoUy_)  = Rho*Uy
-    StateCons_V(RhoUz_)  = Rho*Uz
-    StateCons_V(Bx_)     = Bx
-    StateCons_V(By_)     = By
-    StateCons_V(Bz_)     = Bz
-    if(Hyp_ > 1) StateCons_V(Hyp_) = Hyp
-    StateCons_V(p_)      = p
-    StateCons_V(Energy_) = e + pB  ! Add magnetic energy density
+    StateCons_V(1:nVar) = State_V
+    StateCons_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_)
+    StateCons_V(Energy_) = e + pB ! Add magnetic energy density
 
     ! Physical flux
-    pTot = p + pB
-    Flux_V(Rho_)    = Rho*Un
-    Flux_V(RhoUx_)  = Un*Rho*Ux - Bn*Bx + NormalX*pTot
-    Flux_V(RhoUy_)  = Un*Rho*Uy - Bn*By + NormalY*pTot
-    Flux_V(RhoUz_)  = Un*Rho*Uz - Bn*Bz + NormalZ*pTot
+    Flux_V(Rho_) = Rho*Un
+    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) - Bn*State_V(Bx_:Bz_) &
+         + Normal_D*(State_V(p_) + pB)
     if(Hyp_ > 1)then
-       Flux_V(Bx_)  =  Un*Bx - Ux*Bn + NormalX*SpeedHyp*Hyp
-       Flux_V(By_)  =  Un*By - Uy*Bn + NormalY*SpeedHyp*Hyp
-       Flux_V(Bz_)  =  Un*Bz - Uz*Bn + NormalZ*SpeedHyp*Hyp
-       Flux_V(Hyp_) =  SpeedHyp*Bn
+       Flux_V(Bx_:Bz_) = Un*State_V(Bx_:Bz_) - State_V(Ux_:Uz_)*Bn &
+            + Normal_D*SpeedHyp*State_V(Hyp_)
+       Flux_V(Hyp_) = SpeedHyp*Bn
     else
-       Flux_V(Bx_)  =  Un*Bx - Ux*Bn
-       Flux_V(By_)  =  Un*By - Uy*Bn
-       Flux_V(Bz_)  =  Un*Bz - Uz*Bn
+       Flux_V(Bx_:Bz_) = Un*State_V(Bx_:Bz_) - State_V(Ux_:Uz_)*Bn
     end if
-    Flux_V(p_)      =  Un*p
-    Flux_V(Energy_) =  Un*(e + p) &
-         + Flux_V(Bx_)*Bx + Flux_V(By_)*By + Flux_V(Bz_)*Bz ! Poynting flux
+    Flux_V(p_)      =  Un*State_V(p_)
+    Flux_V(Energy_) =  Un*(e + State_V(p_)) &
+         + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
   end subroutine get_physical_flux
   !============================================================================
-  subroutine get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+  subroutine get_speed_max(State_V, Normal_D, &
        Un, Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
     ! normal velocity and wave speeds.
 
-    real, intent(in) :: State_V(nVar), NormalX, NormalY, NormalZ
+    real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
 
-    real:: InvRho, p, Bx, By, Bz, Bn, B2
-    real:: Sound2, Alfven2, Alfven2Normal, Fast2, Discr, Fast
-
+    real:: InvRho, Bn, B2
+    real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
     InvRho = 1.0/State_V(Rho_)
-    Bx  = State_V(Bx_)
-    By  = State_V(By_)
-    Bz  = State_V(Bz_)
-    p   = State_V(p_)
-    Bn  = Bx*NormalX + By*NormalY + Bz*NormalZ
-    B2  = Bx**2 + By**2 + Bz**2
+    Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
+    B2  = sum(State_V(Bx_:Bz_)**2)
 
-    Sound2        = InvRho*p*Gamma
-    Alfven2       = InvRho*B2
-    Alfven2Normal = InvRho*Bn**2
-    Fast2 = Sound2 + Alfven2
-    Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
+    Sound2= InvRho*State_V(p_)*Gamma
+    Fast2 = Sound2 + InvRho*B2
+    Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
     Fast  = sqrt( 0.5*(Fast2 + Discr) )
 
-    Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
+    Un = sum(State_V(Ux_:Uz_)*Normal_D)
     if(present(Cmax))   Cmax   = abs(Un) + Fast
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
@@ -547,38 +516,34 @@ contains
        write(*,*) &
             ' Fast2, Discr          =', Fast2, Discr
        write(*,*) &
-            ' Sound2, Alfven2       =', Sound2, Alfven2
+            ' Sound2, Alfven2       =', Sound2, InvRho*B2
        write(*,*) &
-            ' FullBn, Alfven2Normal =', Bn, Alfven2Normal
+            ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2
        write(*,*) &
-            ' FullBx, FullBy, FullBz=', Bx, By, Bz
+            ' FullBx, FullBy, FullBz=', State_V(Bx_:Bz_)
     end if
 #endif
 
   end subroutine get_speed_max
   !============================================================================
-  subroutine get_normal(iDir, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+  subroutine get_normal(iDir, i, j, k, iBlock, Normal_D, Area)
     !$acc routine seq
     integer, intent(in) :: i, j, k, iBlock, iDir
-    real,    intent(out):: NormalX, NormalY, NormalZ, Area
+    real,    intent(out):: Normal_D(3), Area
     !--------------------------------------------------------------------------
     if(IsCartesian)then
        Area = CellFace_DB(iDir,iBlock)
     else
        Area = CellFace_DFB(iDir,i,j,k,iBlock)
        if(Area == 0.0)then
-          NormalX = 1.0; NormalY = 0.0; NormalZ = 0.0
+          Normal_D = [1.0, 0.0, 0.0]
           RETURN
        end if
     end if
     if(IsCartesianGrid)then
-       NormalX = cUnit_DD(iDir,1)
-       NormalY = cUnit_DD(iDir,2)
-       NormalZ = cUnit_DD(iDir,3)
+       Normal_D = cUnit_DD(:,iDir)
     else
-       NormalX = FaceNormal_DDFB(1,1,i,j,k,iBlock)/Area
-       NormalY = FaceNormal_DDFB(2,1,i,j,k,iBlock)/Area
-       NormalZ = FaceNormal_DDFB(3,1,i,j,k,iBlock)/Area
+       Normal_D = FaceNormal_DDFB(:,iDir,i,j,k,iBlock)/Area
     end if
 
   end subroutine get_normal
@@ -699,11 +664,11 @@ contains
 
   end subroutine get_face_z
   !============================================================================
-  subroutine get_numerical_flux(NormalX, NormalY, NormalZ, &
+  subroutine get_numerical_flux(Normal_D, &
        Area,  StateLeft_V, StateRight_V, Flux_V, Unormal)
     !$acc routine seq
 
-    real, intent(in)   :: NormalX, NormalY, NormalZ, Area
+    real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFlux)
     real, intent(out)  :: Unormal
@@ -728,11 +693,10 @@ contains
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
-       call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
-            Un, Cmax)
-       call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
+       call get_speed_max(State_V, Normal_D, Un, Cmax)
+       call get_physical_flux(StateLeft_V, Normal_D, &
             StateLeftCons_V, FluxLeft_V)
-       call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
+       call get_physical_flux(StateRight_V, Normal_D, &
             StateRightCons_V, FluxRight_V)
 
        ! Lax-Friedrichs flux
@@ -741,42 +705,31 @@ contains
 
        if(UseNonConservative)then
           Unormal = Area*0.5* &
-               ( (StateLeft_V(Ux_) + StateRight_V(Ux_))*NormalX &
-               + (StateLeft_V(Uy_) + StateRight_V(Uy_))*NormalY &
-               + (StateLeft_V(Uz_) + StateRight_V(Uz_))*NormalZ )
+               sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
        end if
     else
        ! Linde scheme
        if(UseB)then
           ! Sokolov's algorithm
           ! Calculate the jump in the normal magnetic field vector
-          DiffBn = 0.5* &
-               ( NormalX*(StateRight_V(Bx_) - StateLeft_V(Bx_)) &
-               + NormalY*(StateRight_V(By_) - StateLeft_V(By_)) &
-               + NormalZ*(StateRight_V(Bz_) - StateLeft_V(Bz_)) )
+          DiffBn = &
+               0.5*sum(Normal_D*(StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)))
 
           ! Remove the jump in the normal magnetic field
-          StateLeft_V(Bx_)  =  StateLeft_V(Bx_)  + DiffBn*NormalX
-          StateLeft_V(By_)  =  StateLeft_V(By_)  + DiffBn*NormalY
-          StateLeft_V(Bz_)  =  StateLeft_V(Bz_)  + DiffBn*NormalZ
-          StateRight_V(Bx_) =  StateRight_V(Bx_) - DiffBn*NormalX
-          StateRight_V(By_) =  StateRight_V(By_) - DiffBn*NormalY
-          StateRight_V(Bz_) =  StateRight_V(Bz_) - DiffBn*NormalZ
-
+          StateLeft_V(Bx_:Bz_)  = StateLeft_V(Bx_:Bz_)  + DiffBn*Normal_D
+          StateRight_V(Bx_:Bz_) = StateRight_V(Bx_:Bz_) - DiffBn*Normal_D
        end if
 
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
-       call get_speed_max(StateLeft_V, NormalX, NormalY, NormalZ, &
-            Un, Cleft=Cleft)
+       call get_speed_max(StateLeft_V, Normal_D, Un, Cleft=Cleft)
 
        ! Right speed of right state
-       call get_speed_max(StateRight_V, NormalX, NormalY, NormalZ, &
-            Un, Cright=Cright)
+       call get_speed_max(StateRight_V, Normal_D, Un, Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
-       call get_speed_max(State_V, NormalX, NormalY, NormalZ, &
+       call get_speed_max(State_V, Normal_D, &
             Un, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
@@ -784,9 +737,9 @@ contains
        Cright = max(0.0, Cright, CrightAverage)
 
        ! Physical flux
-       call get_physical_flux(StateLeft_V, NormalX, NormalY, NormalZ, &
+       call get_physical_flux(StateLeft_V, Normal_D, &
             StateLeftCons_V, FluxLeft_V)
-       call get_physical_flux(StateRight_V, NormalX, NormalY, NormalZ, &
+       call get_physical_flux(StateRight_V, Normal_D, &
             StateRightCons_V, FluxRight_V)
 
        CMulti = Cright*Cleft
@@ -799,9 +752,9 @@ contains
 
        if(UseNonConservative)then
           Unormal = Area*CInvDiff* &
-               ( Cright*(StateLeft_V(Ux_) - Cleft*StateRight_V(Ux_))*NormalX &
-               + Cright*(StateLeft_V(Uy_) - Cleft*StateRight_V(Uy_))*NormalY &
-               + Cright*(StateLeft_V(Uz_) - Cleft*StateRight_V(Uz_))*NormalZ )
+               ( Cright*(StateLeft_V(Ux_) - Cleft*StateRight_V(Ux_))*Normal_D(1) &
+               + Cright*(StateLeft_V(Uy_) - Cleft*StateRight_V(Uy_))*Normal_D(2) &
+               + Cright*(StateLeft_V(Uz_) - Cleft*StateRight_V(Uz_))*Normal_D(3) )
        end if
 
        if(UseB)then
@@ -814,17 +767,13 @@ contains
 
           ! Linde scheme: use Lax-Friedrichs flux for Bn
           ! The original jump was removed, now we add it with Cmax
-          Flux_V(Bx_) = Flux_V(Bx_) - Cmax*DiffBn*NormalX
-          Flux_V(By_) = Flux_V(By_) - Cmax*DiffBn*NormalY
-          Flux_V(Bz_) = Flux_V(Bz_) - Cmax*DiffBn*NormalZ
+          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) - Cmax*DiffBn*Normal_D
 
           ! Fix the energy diffusion
           ! The energy jump is also modified by
           ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
           Flux_V(Energy_) = Flux_V(Energy_) - Cmax*0.5*DiffBn* &
-               ( NormalX*(StateRight_V(Bx_) + StateLeft_V(Bx_)) &
-               + NormalY*(StateRight_V(By_) + StateLeft_V(By_)) &
-               + NormalZ*(StateRight_V(Bz_) + StateLeft_V(Bz_)) )
+               sum( Normal_D*(StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_)))
        end if
 
        Flux_V = Area*Flux_V
@@ -1104,14 +1053,14 @@ contains
     real,    intent(out):: Flux_V(nFlux)
     real,    intent(out):: Unormal
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
-    call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_x
@@ -1123,14 +1072,14 @@ contains
     real,    intent(out):: Flux_V(nFlux)
     real,    intent(out):: Unormal
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
-    call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_y
@@ -1142,14 +1091,14 @@ contains
     real,    intent(out):: Flux_V(nFlux)
     real,    intent(out):: Unormal
 
-    real :: Area, NormalX, NormalY, NormalZ
+    real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
-    call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+    call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, Area, &
+    call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, Unormal)
 
   end subroutine get_flux_z
@@ -1267,36 +1216,36 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, NormalX, NormalY, NormalZ
+    real:: Area, Normal_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
     real:: Unormal
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
-       call get_normal(1, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
-       call get_normal(1, i+1, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
-       call get_normal(2, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(4)
-       call get_normal(2, i, j+1, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
     case(5)
-       call get_normal(3, i, j, k, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(6)
-       call get_normal(3, i, j, k+1, iBlock, NormalX, NormalY, NormalZ, Area)
+       call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
-    call get_numerical_flux(NormalX, NormalY, NormalZ, &
-         Area, StateLeft_V, StateRight_V, Flux_V, Unormal)
+    call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
+         Flux_V, Unormal)
 
     Change_V = Change_V + Flux_V
 
