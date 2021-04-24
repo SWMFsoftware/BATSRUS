@@ -440,8 +440,8 @@ contains
     real, intent(out):: Flux_V(nFlux)      ! conservative flux
 
     real:: Rho, Un, Bn, pB, e
-    !--------------------------------------------------------------------------
     ! Convenient variables
+    !--------------------------------------------------------------------------
     Rho = State_V(Rho_)
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
     Bn  = sum(State_V(Bx_:Bz_)*Normal_D)

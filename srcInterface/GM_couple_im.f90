@@ -123,7 +123,7 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
     use CON_planet_field,  ONLY: map_planet_field
-    
+
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
@@ -164,7 +164,7 @@ contains
     else
        KpOut = -1
     endif
-    
+
     ! If Ae is being calculated, share it.  Otherwise, share -1.
     if(DoCalcAe) then
        AeOut = AeIndex_I(3)
@@ -172,10 +172,9 @@ contains
        AeOut = -1
     endif
 
-
-    ! Set buffer variable indexes 
+    ! Set buffer variable indexes
     if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-5, NameSub)
-    
+
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
 
@@ -228,19 +227,19 @@ contains
 
              Buffer_IIV(iLat,iLon,3) = BufferLine_VI(4,iLocBmin) ! Bmin
 
-             !get the conjugage point in SMG coordinates and pass it
+             ! get the conjugage point in SMG coordinates and pass it
              XyzEndSm_D=matmul(SmGm_DD,Buffer_VI(2:4,iPoint))
              call map_planet_field(Time_Simulation, XyzEndSm_D, 'SMG NORM', &
                   RadiusIono, XyzEndSmIono_D, iHemisphere)
-             
-             !SmLat of conjugate point
+
+             ! SmLat of conjugate point
              Buffer_IIV(iLat,iLon,4) = 90.0-acos(XyzEndSmIono_D(3)&
-                  /sqrt(sum(XyzEndSmIono_D(:)**2)))*cRadToDeg 
-             !SmLon of conjugate point
+                  /sqrt(sum(XyzEndSmIono_D(:)**2)))*cRadToDeg
+             ! SmLon of conjugate point
              Buffer_IIV(iLat,iLon,5) = atan2(XyzEndSm_D(2),XyzEndSmIono_D(1))*cRadToDeg
-             
+
              ! Put coupled variables (densities and pressures) into buffer
-             Buffer_IIV(iLat,iLon,6:) = Buffer_VI(4+iVarCouple_V,iLocBmin) 
+             Buffer_IIV(iLat,iLon,6:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
 
              ! write(*,*) 'iVarCouple_V in GM_copuple_im'
              ! write(*,*) iVarCouple_V

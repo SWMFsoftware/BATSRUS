@@ -40,9 +40,8 @@ module ModGroundMagPerturb
   integer, public, parameter:: nKpMag = 24, nAeMag = 24
   real, public, allocatable :: MagHistory_DII(:,:,:)  ! Mag time history.
   real, public              :: AeIndex_I(4)
-  
-  ! Local variables ------
 
+  ! Local variables ------
 
   integer            :: nMagnetometer=0
   real, allocatable  :: PosMagnetometer_II(:,:)
