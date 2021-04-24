@@ -106,8 +106,9 @@ contains
   end subroutine GM_get_for_im_trace_crcm
   !============================================================================
 
-  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nDensityIn, &
-       nVarIn, BufferLine_VI, nVarLine, nPointLine, BufferSolarWind_V, NameVar)
+  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut, AeOut, iSizeIn, jSizeIn, &
+       nDensityIn, nVarIn, BufferLine_VI, nVarLine, nPointLine, &
+       BufferSolarWind_V, NameVar)
 
     use ModGeometry, ONLY: x2
     use ModIoUnit, ONLY: UNITTMP_
@@ -119,14 +120,16 @@ contains
          UnitN_, UnitU_, UnitB_, UnitP_, rBody
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModConst, ONLY: cProtonMass
-    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
-
+    use ModNumConst, ONLY: cRadToDeg
+    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp, DoCalcAe, AeIndex_I
+    use CON_planet_field,  ONLY: map_planet_field
+    
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
 
     integer, intent(in) :: iSizeIn, jSizeIn, nDensityIn, nVarIn
-    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut
+    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut, AeOut
 
     integer, intent(in) :: nPointLine, nVarLine
     real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
@@ -140,15 +143,20 @@ contains
     real, allocatable :: Buffer_VI(:,:)
 
     integer :: iLat,iLon,iLine,iLocBmin,iIon
-    real    :: SmGm_DD(3,3), XyzBminSm_D(3)
+    real    :: SmGm_DD(3,3), XyzBminSm_D(3), XyzEndSm_D(3), XyzEndSmIono_D(3)
     real    :: SolarWind_V(nVar)
     character(len=100) :: NameOut
 
+    real :: RadiusIono
+    integer :: iHemisphere
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_get_for_im_crcm'
     !--------------------------------------------------------------------------
     if(iProc /= 0) RETURN
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! The CRCM ionosphere radius in normalized units
+    RadiusIono = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
 
     ! If Kp is being calculated, share it.  Otherwise, share -1.
     if(DoCalcKp) then
@@ -156,10 +164,18 @@ contains
     else
        KpOut = -1
     endif
+    
+    ! If Ae is being calculated, share it.  Otherwise, share -1.
+    if(DoCalcAe) then
+       AeOut = AeIndex_I(3)
+    else
+       AeOut = -1
+    endif
 
-    ! Set buffer variable indexes
-    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-3, NameSub)
 
+    ! Set buffer variable indexes 
+    if(.not.allocated(iVarCouple_V)) call set_buffer_indexes(nVarIn-5, NameSub)
+    
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
 
@@ -212,8 +228,19 @@ contains
 
              Buffer_IIV(iLat,iLon,3) = BufferLine_VI(4,iLocBmin) ! Bmin
 
+             !get the conjugage point in SMG coordinates and pass it
+             XyzEndSm_D=matmul(SmGm_DD,Buffer_VI(2:4,iPoint))
+             call map_planet_field(Time_Simulation, XyzEndSm_D, 'SMG NORM', &
+                  RadiusIono, XyzEndSmIono_D, iHemisphere)
+             
+             !SmLat of conjugate point
+             Buffer_IIV(iLat,iLon,4) = 90.0-acos(XyzEndSmIono_D(3)&
+                  /sqrt(sum(XyzEndSmIono_D(:)**2)))*cRadToDeg 
+             !SmLon of conjugate point
+             Buffer_IIV(iLat,iLon,5) = atan2(XyzEndSm_D(2),XyzEndSmIono_D(1))*cRadToDeg
+             
              ! Put coupled variables (densities and pressures) into buffer
-             Buffer_IIV(iLat,iLon,4:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
+             Buffer_IIV(iLat,iLon,6:) = Buffer_VI(4+iVarCouple_V,iLocBmin) 
 
              ! write(*,*) 'iVarCouple_V in GM_copuple_im'
              ! write(*,*) iVarCouple_V
