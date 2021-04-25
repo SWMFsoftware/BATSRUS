@@ -41,8 +41,8 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
-    use ModUpdateStatePrim, ONLY: update_state_gpu_prim, update_state_cpu_prim
-    use ModUpdateStateFast, ONLY: update_state_gpu, update_state_cpu
+    use ModUpdateStateFast, ONLY: update_state_gpu, update_state_cpu, &
+         update_state_gpu_prim, update_state_cpu_prim
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
