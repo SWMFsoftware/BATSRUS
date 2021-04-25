@@ -1224,25 +1224,25 @@ contains
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
-       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x_prim(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
-       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y_prim(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
-       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
+       call get_face_z_prim(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
