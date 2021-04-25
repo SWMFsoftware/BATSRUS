@@ -814,7 +814,7 @@ contains
     State_V(iP_I) = State_V(iP_I)*InvGammaMinus1_I - 0.5* &
          ( State_V(iRhoUx_I)**2 &
          + State_V(iRhoUy_I)**2 &
-         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) 
+         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I)
 
     ! Add magnetic energy to first fluid for MHD
     if(IsMhd) State_V(p_) = State_V(p_) + sum(State_V(Bx_:Bz_)**2)
@@ -855,10 +855,10 @@ contains
   end subroutine limiter2
   !============================================================================
 
-!end module ModUpdateStateFast
+! end module ModUpdateStateFast
 !!==============================================================================
 !
-!module ModUpdateStatePrim
+! module ModUpdateStatePrim
 !
 !  ! Save Primitive_VG array
 !
@@ -898,8 +898,7 @@ contains
 !
 !  logical:: DoTestCell= .false.
 !
-!contains
-  !============================================================================
+! contains
   subroutine update_state_cpu_prim
 
     ! optimal for CPU (face value and face flux calculated only once)
