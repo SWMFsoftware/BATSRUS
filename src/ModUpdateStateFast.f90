@@ -11,16 +11,17 @@ module ModUpdateStateFast
        IsCartesian, IsCartesianGrid, UseNonConservative, &
        UseHyperbolicDivB, IsTimeAccurate
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
+  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, &
+       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
        time_BLK
-  use BATL_lib, ONLY: nDim, nI, nJ, nK, &
+  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use BATL_lib, ONLY: CellVolume_GB, CellFace_DFB, FaceNormal_DDFB
-  use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
+  use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
+       GammaMinus1_I, InvGammaMinus1_I
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
 
@@ -28,13 +29,10 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: update_state_cpu ! optimal for CPU, does not work on GPU
-  public:: update_state_gpu ! optimal for GPU but works on CPU too
-
-  ! Used by ModUpdateStatePrim
-  public:: energy_to_pressure, pressure_to_energy, &
-       get_normal, get_primitive, get_numerical_flux,&
-       limiter2, set_old_state
+  public:: update_state_cpu      ! save flux, recalculate primitive vars
+  public:: update_state_gpu      ! recalculate flux and primitive vars
+  public:: update_state_cpu_prim ! save flux and primitive vars
+  public:: update_state_gpu_prim ! recalculate flux, save primitive vars
 
   logical:: DoTestCell= .false.
 
@@ -44,7 +42,7 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang
+    integer:: i, j, k, iBlock, iGang, iFluid, iP
 
     real:: DtPerDv, DivU, Change_V(nFlux)
     !$acc declare create (Change_V)
@@ -98,13 +96,17 @@ contains
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
-             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU &
-                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
-             if(nK > 1) DivU = DivU &
-                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
-             Change_V(p_) = Change_V(p_) &
-                  - GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*DivU
+             do iFluid = 1, nFluid
+                iP = iP_I(iFluid)
+                DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
+                     - uDotArea_IXI(iFluid,i  ,j,k,iGang)
+                if(nJ > 1) DivU = DivU + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
+                     -                   uDotArea_IYI(iFluid,i,j,k,iGang)
+                if(nK > 1) DivU = DivU + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
+                     -                   uDotArea_IZI(iFluid,i,j,k,iGang)
+                Change_V(iP) = Change_V(iP) &
+                     - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
+             end do
           end if
 
           ! Time step divided by cell volume
@@ -124,7 +126,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -132,7 +134,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -303,7 +305,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_VC(p_,i,j,k) = Change_VC(Energy_,i,j,k)
+                Change_VC(iP_I,i,j,k) = Change_VC(Energy_:,i,j,k)
              end if
              ! Update
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
@@ -344,7 +346,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_VC(p_,i,j,k) = Change_VC(Energy_,i,j,k)
+                Change_VC(iP_I,i,j,k) = Change_VC(Energy_:,i,j,k)
              end if
              ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -407,12 +409,12 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, &
-         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I(1))
+         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I)
 
     Change_V = Change_V + Flux_V
 
-    if(UseNonConservative) Change_V(p_) = Change_V(p_) &
-         + GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+    if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
+         + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
 
   end subroutine do_face
   !============================================================================
@@ -665,13 +667,13 @@ contains
   end subroutine get_face_z
   !============================================================================
   subroutine get_numerical_flux(Normal_D, &
-       Area,  StateLeft_V, StateRight_V, Flux_V, Unormal)
+       Area,  StateLeft_V, StateRight_V, Flux_V, Unormal_I)
     !$acc routine seq
 
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFlux)
-    real, intent(out)  :: Unormal
+    real, intent(out)  :: Unormal_I(nFluid+1)
 
     ! Average state
     real:: State_V(nVar)
@@ -703,10 +705,10 @@ contains
        Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
             +             Cmax*(StateLeftCons_V - StateRightCons_V))
 
-       if(UseNonConservative)then
-          Unormal = Area*0.5* &
-               sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
-       end if
+       if(UseNonConservative) Unormal_I(1:nFluid) = Area*0.5* &
+               ( (StateLeft_V(iUx_I) + StateRight_V(iUx_I))*Normal_D(1) &
+               + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*Normal_D(2) &
+               + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
     else
        ! Linde scheme
        if(UseB)then
@@ -750,12 +752,13 @@ contains
             + CMulti*(StateRightCons_V - StateLeftCons_V) ) &
             *CInvDiff
 
-       if(UseNonConservative)then
-          Unormal = Area*CInvDiff* &
-               ( Cright*(StateLeft_V(Ux_) - Cleft*StateRight_V(Ux_))*Normal_D(1) &
-               + Cright*(StateLeft_V(Uy_) - Cleft*StateRight_V(Uy_))*Normal_D(2) &
-               + Cright*(StateLeft_V(Uz_) - Cleft*StateRight_V(Uz_))*Normal_D(3) )
-       end if
+       if(UseNonConservative) Unormal_I(1:nFluid) = Area*CInvDiff*  &
+            ( (Cright*StateLeft_V(iUx_I)              &
+            -  Cleft*StateRight_V(iUx_I))*Normal_D(1) &
+            + (Cright*StateLeft_V(iUy_I)              &
+            -  Cleft*StateRight_V(iUy_I))*Normal_D(2) &
+            + (Cright*StateLeft_V(iUz_I)              &
+            -  Cleft*StateRight_V(iUz_I))*Normal_D(3) )
 
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
@@ -785,42 +788,36 @@ contains
   subroutine energy_to_pressure(State_V)
     !$acc routine seq
 
-    ! Calculate energy from pressure
+    ! Calculate pressure from energy density
     real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
 
-    ! Calculate pressure from energy
-    if(UseB)then
-       State_V(p_) = &
-            GammaMinus1_I(1)*( State_V(p_) - 0.5*( &
-            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
-            + sum(State_V(Bx_:Bz_)**2)         ) ) )
-    else
-       State_V(p_) = &
-            GammaMinus1_I(1)*( State_V(p_) - 0.5*( &
-            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
-            + sum(State_V(Bx_:Bz_)**2)         ) ) )
-    end if
+    ! Subtract magnetic energy from the first fluid for MHD
+    if(IsMhd) State_V(p_) = State_V(p_) -  0.5*sum(State_V(Bx_:Bz_)**2)
+
+    ! Convert hydro energy density to pressure
+    State_V(iP_I) = GammaMinus1_I*( State_V(iP_I) - 0.5* &
+         ( State_V(iRhoUx_I)**2 &
+         + State_V(iRhoUy_I)**2 &
+         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
 
   end subroutine energy_to_pressure
   !============================================================================
   subroutine pressure_to_energy(State_V)
     !$acc routine seq
 
-    ! Calculate pressure from energy
+    ! Calculate energy density from pressure
     real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
 
-    ! Calculate pressure from energy
-    if(UseB)then
-       State_V(p_) = State_V(p_)*InvGammaMinus1 + 0.5*( &
-            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
-            + sum(State_V(Bx_:Bz_)**2) ) )
-    else
-       State_V(p_) = State_V(p_)*InvGammaMinus1 - 0.5*( &
-            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
-            + sum(State_V(Bx_:Bz_)**2) ) )
-    end if
+    ! Calculy hydro energy density
+    State_V(iP_I) = State_V(iP_I)*InvGammaMinus1_I - 0.5* &
+         ( State_V(iRhoUx_I)**2 &
+         + State_V(iRhoUy_I)**2 &
+         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) 
+
+    ! Add magnetic energy to first fluid for MHD
+    if(IsMhd) State_V(p_) = State_V(p_) + sum(State_V(Bx_:Bz_)**2)
 
   end subroutine pressure_to_energy
   !============================================================================
@@ -858,56 +855,56 @@ contains
   end subroutine limiter2
   !============================================================================
 
-end module ModUpdateStateFast
-!==============================================================================
-
-module ModUpdateStatePrim
-
-  ! Save Primitive_VG array
-
-  ! Calculate each face twice
-
-  use ModUpdateParamFast, ONLY: &
-       DoLf, LimiterBeta, nStage, iStage, nOrder, IsCartesian, &
-       UseNonConservative, IsTimeAccurate
-  use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
-  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, &
-       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
-       time_BLK
-  use ModAdvance, ONLY: Primitive_VGI
-  use ModMain, ONLY: Cfl, Dt
-  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellVolume_GB, &
-       CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
-
-  use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
-  use ModMain, ONLY: UseB, SpeedHyp
-  use ModNumConst, ONLY: cUnit_DD
-
-  use ModUpdateStateFast, ONLY: &
-       pressure_to_energy, energy_to_pressure, &
-       get_normal, get_primitive, get_numerical_flux, &
-       limiter2, set_old_state
-
-  implicit none
-
-  private ! except
-
-  public:: update_state_cpu_prim ! optimal for CPU
-  public:: update_state_gpu_prim ! optimal for GPU
-
-  logical:: DoTestCell= .false.
-
-contains
+!end module ModUpdateStateFast
+!!==============================================================================
+!
+!module ModUpdateStatePrim
+!
+!  ! Save Primitive_VG array
+!
+!  ! Calculate each face twice
+!
+!  use ModUpdateParamFast, ONLY: &
+!       DoLf, LimiterBeta, nStage, iStage, nOrder, IsCartesian, &
+!       UseNonConservative, IsTimeAccurate
+!  use ModVarIndexes
+!  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
+!  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
+!       Flux_VXI, Flux_VYI, Flux_VZI, &
+!       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
+!       time_BLK
+!  use ModAdvance, ONLY: Primitive_VGI
+!  use ModMain, ONLY: Cfl, Dt
+!  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+!       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellVolume_GB, &
+!       CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
+!       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+!
+!  use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
+!  use ModMain, ONLY: UseB, SpeedHyp
+!  use ModNumConst, ONLY: cUnit_DD
+!
+!  use ModUpdateStateFast, ONLY: &
+!       pressure_to_energy, energy_to_pressure, &
+!       get_normal, get_primitive, get_numerical_flux, &
+!       limiter2, set_old_state
+!
+!  implicit none
+!
+!  private ! except
+!
+!  public:: update_state_cpu_prim ! optimal for CPU
+!  public:: update_state_gpu_prim ! optimal for GPU
+!
+!  logical:: DoTestCell= .false.
+!
+!contains
   !============================================================================
   subroutine update_state_cpu_prim
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang
+    integer:: i, j, k, iBlock, iGang, iFluid, iP
 
     real:: DivU, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
@@ -942,7 +939,7 @@ contains
           ! DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
-          call get_flux_x(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
+          call get_flux_x_prim(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
                uDotArea_IXI(1,i,j,k,iGang))
 
        end do; end do; end do
@@ -954,7 +951,7 @@ contains
              ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
              !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 
-             call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
+             call get_flux_y_prim(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
                   uDotArea_IYI(1,i,j,k,iGang))
 
           end do; end do; end do
@@ -967,7 +964,7 @@ contains
              ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
              !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
-             call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
+             call get_flux_z_prim(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
                   uDotArea_IZI(1,i,j,k,iGang))
 
           end do; end do; end do
@@ -985,13 +982,17 @@ contains
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
-             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU &
-                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
-             if(nK > 1) DivU = DivU &
-                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
-             Change_V(p_) = Change_V(p_) &
-                  - GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*DivU
+             do iFluid = 1, nFluid
+                iP = iP_I(iFluid)
+                DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
+                     - uDotArea_IXI(iFluid,i  ,j,k,iGang)
+                if(nJ > 1) DivU = DivU + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
+                     -                   uDotArea_IYI(iFluid,i,j,k,iGang)
+                if(nK > 1) DivU = DivU + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
+                     -                   uDotArea_IZI(iFluid,i,j,k,iGang)
+                Change_V(iP) = Change_V(iP) &
+                     - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
+             end do
           end if
 
           ! Time step divided by cell volume
@@ -1011,7 +1012,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1019,7 +1020,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1046,62 +1047,62 @@ contains
 
   end subroutine update_state_cpu_prim
   !============================================================================
-  subroutine get_flux_x(i, j,  k, iBlock, Flux_V, Unormal)
+  subroutine get_flux_x_prim(i, j,  k, iBlock, Flux_V, Unormal_I)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal
+    real,    intent(out):: Unormal_I(nFluid+1)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal)
+         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
 
-  end subroutine get_flux_x
+  end subroutine get_flux_x_prim
   !============================================================================
-  subroutine get_flux_y(i, j, k, iBlock, Flux_V, Unormal)
+  subroutine get_flux_y_prim(i, j, k, iBlock, Flux_V, Unormal_I)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal
+    real,    intent(out):: Unormal_I(nFluid+1)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal)
+         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
 
-  end subroutine get_flux_y
+  end subroutine get_flux_y_prim
   !============================================================================
-  subroutine get_flux_z(i, j, k, iBlock, Flux_V, Unormal)
+  subroutine get_flux_z_prim(i, j, k, iBlock, Flux_V, Unormal_I)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal
+    real,    intent(out):: Unormal_I(nFluid+1)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal)
+         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
 
-  end subroutine get_flux_z
+  end subroutine get_flux_z_prim
   !============================================================================
   subroutine update_state_gpu_prim
 
@@ -1145,17 +1146,17 @@ contains
           ! Initialize change in State_VGB
           Change_V = 0.0
 
-          call do_face(1, i, j, k, iBlock, Change_V)
-          call do_face(2, i, j, k, iBlock, Change_V)
+          call do_face_prim(1, i, j, k, iBlock, Change_V)
+          call do_face_prim(2, i, j, k, iBlock, Change_V)
 
           if(nDim > 1)then
-             call do_face(3, i, j, k, iBlock, Change_V)
-             call do_face(4, i, j, k, iBlock, Change_V)
+             call do_face_prim(3, i, j, k, iBlock, Change_V)
+             call do_face_prim(4, i, j, k, iBlock, Change_V)
           end if
 
           if(nDim > 2)then
-             call do_face(5, i, j, k, iBlock, Change_V)
-             call do_face(6, i, j, k, iBlock, Change_V)
+             call do_face_prim(5, i, j, k, iBlock, Change_V)
+             call do_face_prim(6, i, j, k, iBlock, Change_V)
           end if
 
           ! Time step divided by cell volume
@@ -1175,7 +1176,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1183,7 +1184,7 @@ contains
              if(.not.UseNonConservative)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(p_) = Change_V(Energy_)
+                Change_V(iP_I) = Change_V(Energy_:)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1210,7 +1211,7 @@ contains
 #endif
   end subroutine update_state_gpu_prim
   !============================================================================
-  subroutine do_face(iFace, i, j, k, iBlock, Change_V)
+  subroutine do_face_prim(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
     integer, intent(in):: iFace, i, j, k, iBlock
@@ -1218,7 +1219,7 @@ contains
 
     real:: Area, Normal_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
-    real:: Unormal
+    real:: Unormal_I(nFluid+1)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -1245,16 +1246,16 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, Unormal)
+         Flux_V, Unormal_I)
 
     Change_V = Change_V + Flux_V
 
-    if(UseNonConservative) Change_V(p_) = Change_V(p_) &
-         + GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*Unormal
+    if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
+         + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
 
-  end subroutine do_face
+  end subroutine do_face_prim
   !============================================================================
-  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1284,9 +1285,9 @@ contains
        end do
     end if
 
-  end subroutine get_face_x
+  end subroutine get_face_x_prim
   !============================================================================
-  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1316,9 +1317,9 @@ contains
        end do
     end if
 
-  end subroutine get_face_y
+  end subroutine get_face_y_prim
   !============================================================================
-  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1348,7 +1349,7 @@ contains
        end do
     end if
 
-  end subroutine get_face_z
+  end subroutine get_face_z_prim
   !============================================================================
-end module ModUpdateStatePrim
+end module ModUpdateStateFast
 !==============================================================================
