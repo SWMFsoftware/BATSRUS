@@ -265,7 +265,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VXI, Flux_VYI, Flux_VZI, &
-         uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
+         uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
          LeftState_VXI,      &  ! Face Left  X
          RightState_VXI,     &  ! Face Right X
@@ -1198,7 +1198,7 @@ contains
                Cell_I(iMin-nG:iMax-1+nG) = &
                     Primitive_VGI(Ux_,iMin-nG:iMax-1+nG,j,k,iGang)
                call limit_var(iMin, iMax, Ux_)
-               uDotArea_XII(iMin:iMax,j,k,1,iGang) = CellFace_DB(1,iBlock) &
+               uDotArea_IXI(1,iMin:iMax,j,k,iGang) = CellFace_DB(1,iBlock) &
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
 
                ! Interpolate cell centered split fluxes to the face
@@ -1362,7 +1362,7 @@ contains
                Cell_I(jMin-nG:jMax-1+nG) = &
                     Primitive_VGI(Uy_,i,jMin-nG:jMax-1+nG,k,iGang)
                call limit_var(jMin, jMax, Uy_)
-               uDotArea_YII(i,jMin:jMax,k,1,iGang) = CellFace_DB(2,iBlock) &
+               uDotArea_IYI(1,i,jMin:jMax,k,iGang) = CellFace_DB(2,iBlock) &
                     *0.5*(FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax))
 
                ! Interpolate cell centered split fluxes to the face
@@ -1524,7 +1524,7 @@ contains
                     Primitive_VGI(Uz_,i,j,kMin-nG:kMax-1+nG,iGang)
 
                call limit_var(kMin, kMax, Uz_)
-               uDotArea_ZII(i,j,kMin:kMax,1,iGang) = CellFace_DB(3,iBlock) &
+               uDotArea_IZI(1,i,j,kMin:kMax,iGang) = CellFace_DB(3,iBlock) &
                     *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
 
                ! Interpolate cell centered split fluxes to the face

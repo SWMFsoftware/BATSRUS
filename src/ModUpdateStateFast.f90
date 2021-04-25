@@ -14,7 +14,7 @@ module ModUpdateStateFast
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
-       uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
+       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
        time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
@@ -98,11 +98,11 @@ contains
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
-             DivU = uDotArea_XII(i+1,j,k,1,iGang) - uDotArea_XII(i,j,k,1,iGang)
+             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,1,iGang) - uDotArea_YII(i,j,k,1,iGang)
+                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,1,iGang) - uDotArea_ZII(i,j,k,1,iGang)
+                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
              Change_V(p_) = Change_V(p_) &
                   - GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*DivU
           end if
@@ -180,7 +180,7 @@ contains
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), &
-         uDotArea_XII(i,j,k,1,iGang))
+         uDotArea_IXI(1,i,j,k,iGang))
 
   end subroutine get_flux_x
   !============================================================================
@@ -204,7 +204,7 @@ contains
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), &
-         uDotArea_YII(i,j,k,1,iGang))
+         uDotArea_IYI(1,i,j,k,iGang))
 
   end subroutine get_flux_y
   !============================================================================
@@ -228,7 +228,7 @@ contains
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), &
-         uDotArea_ZII(i,j,k,1,iGang))
+         uDotArea_IZI(1,i,j,k,iGang))
 
   end subroutine get_flux_z
   !============================================================================
@@ -874,7 +874,7 @@ module ModUpdateStatePrim
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, &
-       uDotArea_XII, uDotArea_YII, uDotArea_ZII, &
+       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
        time_BLK
   use ModAdvance, ONLY: Primitive_VGI
   use ModMain, ONLY: Cfl, Dt
@@ -943,7 +943,7 @@ contains
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
           call get_flux_x(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
-               uDotArea_XII(i,j,k,1,iGang))
+               uDotArea_IXI(1,i,j,k,iGang))
 
        end do; end do; end do
 
@@ -955,7 +955,7 @@ contains
              !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 
              call get_flux_y(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
-                  uDotArea_YII(i,j,k,1,iGang))
+                  uDotArea_IYI(1,i,j,k,iGang))
 
           end do; end do; end do
        end if
@@ -968,7 +968,7 @@ contains
              !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
              call get_flux_z(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
-                  uDotArea_ZII(i,j,k,1,iGang))
+                  uDotArea_IZI(1,i,j,k,iGang))
 
           end do; end do; end do
        end if
@@ -985,11 +985,11 @@ contains
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
-             DivU = uDotArea_XII(i+1,j,k,1,iGang) - uDotArea_XII(i,j,k,1,iGang)
+             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,1,iGang) - uDotArea_YII(i,j,k,1,iGang)
+                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,1,iGang) - uDotArea_ZII(i,j,k,1,iGang)
+                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
              Change_V(p_) = Change_V(p_) &
                   - GammaMinus1_I(1)*State_VGB(p_,i,j,k,iBlock)*DivU
           end if

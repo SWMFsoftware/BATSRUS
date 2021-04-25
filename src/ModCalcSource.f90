@@ -220,11 +220,11 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-             DivU = uDotArea_XII(i+1,j,k,iFluid,iGang) - uDotArea_XII(i,j,k,iFluid,iGang)
+             DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) - uDotArea_IXI(iFluid,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,iFluid,iGang) - uDotArea_YII(i,j,k,iFluid,iGang)
+                  + uDotArea_IYI(iFluid,i,j+1,k,iGang) - uDotArea_IYI(iFluid,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,iFluid,iGang) - uDotArea_ZII(i,j,k,iFluid,iGang)
+                  + uDotArea_IZI(iFluid,i,j,k+1,iGang) - uDotArea_IZI(iFluid,i,j,k,iGang)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
@@ -268,17 +268,18 @@ contains
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
-             DivU = uDotArea_XII(i+1,j,k,eFluid_,iGang) - uDotArea_XII(i,j,k,eFluid_,iGang)
-             if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,eFluid_,iGang) - uDotArea_YII(i,j,k,eFluid_,iGang)
-             if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,eFluid_,iGang) - uDotArea_ZII(i,j,k,eFluid_,iGang)
+             DivU = uDotArea_IXI(eFluid_,i+1,j,k,iGang) &
+                  - uDotArea_IXI(eFluid_,i,j,k,iGang)
+             if(nJ > 1) DivU = DivU + uDotArea_IYI(eFluid_,i,j+1,k,iGang) &
+                  -                   uDotArea_IYI(eFluid_,i,j,k,iGang)
+             if(nK > 1) DivU = DivU + uDotArea_IZI(eFluid_,i,j,k+1,iGang) &
+                  -                   uDotArea_IZI(eFluid_,i,j,k,iGang)
           else
-             DivU = uDotArea_XII(i+1,j,k,1,iGang) - uDotArea_XII(i,j,k,1,iGang)
+             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_YII(i,j+1,k,1,iGang) - uDotArea_YII(i,j,k,1,iGang)
+                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_ZII(i,j,k+1,1,iGang) - uDotArea_ZII(i,j,k,1,iGang)
+                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
           end if
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
@@ -409,11 +410,12 @@ contains
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          DivU = uDotArea_XII(i+1,j,k,eFluid_,iGang) - uDotArea_XII(i,j,k,eFluid_,iGang)
-          if(nJ > 1) DivU = DivU &
-               + uDotArea_YII(i,j+1,k,eFluid_,iGang) - uDotArea_YII(i,j,k,eFluid_,iGang)
-          if(nK > 1) DivU = DivU &
-               + uDotArea_ZII(i,j,k+1,eFluid_,iGang) - uDotArea_ZII(i,j,k,eFluid_,iGang)
+          DivU = uDotArea_IXI(eFluid_,i+1,j,k,iGang) &
+               - uDotArea_IXI(eFluid_,i,j,k,iGang)
+          if(nJ > 1) DivU = DivU + uDotArea_IYI(eFluid_,i,j+1,k,iGang) &
+               -                   uDotArea_IYI(eFluid_,i,j,k,iGang)
+          if(nK > 1) DivU = DivU + uDotArea_IZI(eFluid_,i,j,k+1,iGang) &
+               -                   uDotArea_IZI(eFluid_,i,j,k,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
@@ -833,9 +835,11 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
-          DivU            =        uDotArea_XII(i+1,j,k,1,iGang) -uDotArea_XII(i,j,k,1,iGang)
-          if(nJ > 1) DivU = DivU + uDotArea_YII(i,j+1,k,1,iGang) -uDotArea_YII(i,j,k,1,iGang)
-          if(nK > 1) DivU = DivU + uDotArea_ZII(i,j,k+1,1,iGang) -uDotArea_ZII(i,j,k,1,iGang)
+          DivU = uDotArea_IXI(1,i+1,j,k,iGang) -uDotArea_IXI(1,i,j,k,iGang)
+          if(nJ > 1) DivU = DivU + uDotArea_IYI(1,i,j+1,k,iGang) &
+               -                   uDotArea_IYI(1,i,j,k,iGang)
+          if(nK > 1) DivU = DivU + uDotArea_IZI(1,i,j,k+1,iGang) &
+               -                   uDotArea_IZI(1,i,j,k,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Source_VCI(SignB_,i,j,k,iGang) = Source_VCI(SignB_,i,j,k,iGang) &

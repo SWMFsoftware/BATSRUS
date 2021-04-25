@@ -190,9 +190,9 @@ module ModAdvance
 
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable, dimension(:,:,:,:,:):: &
-       uDotArea_XII, uDotArea_YII, uDotArea_ZII
-  !$omp threadprivate( uDotArea_XII, uDotArea_YII, uDotArea_ZII )
-  !$acc declare create( uDotArea_XII, uDotArea_YII, uDotArea_ZII )
+       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI
+  !$omp threadprivate( uDotArea_IXI, uDotArea_IYI, uDotArea_IZI )
+  !$acc declare create( uDotArea_IXI, uDotArea_IYI, uDotArea_IZI )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
   real, allocatable, dimension(:,:,:,:,:):: &
@@ -312,8 +312,8 @@ contains
     allocate(Flux_VXI(nFlux,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VXI( &
          RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(uDotArea_XII( &
-         nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1,nGang))
+    allocate(uDotArea_IXI( &
+         nFluid+1,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     Flux_VXI = 0.0; MhdFlux_VXI = 0.0
 
     allocate(LeftState_VYI( &
@@ -324,8 +324,8 @@ contains
     allocate(Flux_VYI(nFlux,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VYI( &
          RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    allocate(uDotArea_YII( &
-         iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1,nGang))
+    allocate(uDotArea_IYI( &
+         nFluid+1,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     Flux_VYI = 0.0; MhdFlux_VYI = 0.0
 
     allocate(LeftState_VZI( &
@@ -336,8 +336,8 @@ contains
     allocate(Flux_VZI(nFlux,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     allocate(MhdFlux_VZI( &
          RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    allocate(uDotArea_ZII( &
-         iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1,nGang))
+    allocate(uDotArea_IZI( &
+         nFluid+1,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     Flux_VZI = 0.0; MhdFlux_VZI = 0.0
 
     allocate(FaceDivU_IXI( &
@@ -400,9 +400,9 @@ contains
     if(allocated(Flux_VXI))         deallocate(Flux_VXI)
     if(allocated(Flux_VYI))         deallocate(Flux_VYI)
     if(allocated(Flux_VZI))         deallocate(Flux_VZI)
-    if(allocated(uDotArea_XII))     deallocate(uDotArea_XII)
-    if(allocated(uDotArea_YII))     deallocate(uDotArea_YII)
-    if(allocated(uDotArea_ZII))     deallocate(uDotArea_ZII)
+    if(allocated(uDotArea_IXI))     deallocate(uDotArea_IXI)
+    if(allocated(uDotArea_IYI))     deallocate(uDotArea_IYI)
+    if(allocated(uDotArea_IZI))     deallocate(uDotArea_IZI)
     if(allocated(bCrossArea_DXI))   deallocate(bCrossArea_DXI)
     if(allocated(bCrossArea_DYI))   deallocate(bCrossArea_DYI)
     if(allocated(bCrossArea_DZI))   deallocate(bCrossArea_DZI)

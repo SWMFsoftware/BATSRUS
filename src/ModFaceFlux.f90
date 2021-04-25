@@ -25,7 +25,7 @@ module ModFaceFlux
        RightState_VXI, RightState_VYI, RightState_VZI, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                   &! out: flux*Area
        VdtFace_XI, VdtFace_YI, VdtFace_ZI,       &! out: cMax*Area for CFL
-       uDotArea_XII, uDotArea_YII, uDotArea_ZII, &! out: U.Area for P source
+       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &! out: U.Area for P source
        bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI,&! out: B x Area for J
        MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! out: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
@@ -627,7 +627,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_XII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IXI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -650,7 +650,7 @@ contains
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
          VdtFace_xI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*RFF_I(Area_)
+         uDotArea_IXI(:,iFace,jFace,kFace,iGang)   = Unormal_I*RFF_I(Area_)
       end do; end do; end do
 #else
       iGang = 1
@@ -667,7 +667,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_XII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IXI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -713,7 +713,7 @@ contains
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_XII(iFace,jFace,kFace,:,iGang)   = Unormal_I*Area
+         uDotArea_IXI(:,iFace,jFace,kFace,iGang)   = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
@@ -793,7 +793,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_YII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IYI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -816,7 +816,7 @@ contains
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
          VdtFace_yI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
+         uDotArea_IYI(:,iFace,jFace,kFace,iGang) = Unormal_I*RFF_I(Area_)
       end do; end do; end do
 #else
       iGang = 1
@@ -833,7 +833,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_YII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IYI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -878,7 +878,7 @@ contains
 
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_YII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
+         uDotArea_IYI(:,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
@@ -960,7 +960,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_ZII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IZI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -982,8 +982,8 @@ contains
               MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
-         VdtFace_zI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*RFF_I(Area_)
+         VdtFace_ZI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
+         uDotArea_IZI(:,iFace,jFace,kFace,iGang)  = Unormal_I*RFF_I(Area_)
 
       end do; end do; end do
 
@@ -1002,7 +1002,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_ZII(iFace,jFace,kFace,:,iGang) = 0.0
+            uDotArea_IZI(:,iFace,jFace,kFace,iGang) = 0.0
             VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
@@ -1046,7 +1046,7 @@ contains
 
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_ZII(iFace,jFace,kFace, :,iGang)  = Unormal_I*Area
+         uDotArea_IZI(:,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
