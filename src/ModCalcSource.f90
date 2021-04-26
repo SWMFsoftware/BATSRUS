@@ -127,7 +127,7 @@ contains
        do iFluid=1,nFluid
           if(nFluid > 1) call select_fluid(iFluid)
 
-#ifndef OPENACC          
+#ifndef OPENACC
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
 
@@ -215,7 +215,7 @@ contains
                   call write_source('After bDotGradparU')
 
           end if
-#endif          
+#endif
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -240,14 +240,14 @@ contains
              end if
           end do; end do; end do
 
-#ifndef OPENACC          
+#ifndef OPENACC
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
-#endif          
+#endif
        end do ! iFluid
     end if ! UseAnisoPressure.or.UseNonConservative
 
 #ifndef OPENACC
-    
+
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin
        do k=1,nK; do j=1,nJ; do i=1,nI
