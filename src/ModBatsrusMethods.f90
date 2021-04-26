@@ -306,8 +306,8 @@ contains
             call BATS_init_constrain_b
          end if
       end if
-      
-      !$acc update device(State_VGB)      
+
+      !$acc update device(State_VGB)
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
          ! within the region covered by this grid

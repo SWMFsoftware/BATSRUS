@@ -286,6 +286,7 @@ contains
     iDiffRadMax = iDiffRadLast
     iPointSemi  = 1
 
+    !$acc update device(GammaWave)
     call test_stop(NameSub, DoTest)
   end subroutine init_rad_diffusion
   !============================================================================
