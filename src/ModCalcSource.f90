@@ -220,11 +220,14 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-             DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) - uDotArea_IXI(iFluid,i,j,k,iGang)
+             DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
+                  - uDotArea_IXI(iFluid,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_IYI(iFluid,i,j+1,k,iGang) - uDotArea_IYI(iFluid,i,j,k,iGang)
+                  + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
+                  - uDotArea_IYI(iFluid,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_IZI(iFluid,i,j,k+1,iGang) - uDotArea_IZI(iFluid,i,j,k,iGang)
+                  + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
+                  - uDotArea_IZI(iFluid,i,j,k,iGang)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
