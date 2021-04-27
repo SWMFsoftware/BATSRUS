@@ -3676,6 +3676,8 @@ contains
       !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
+      !$acc update device(UseTvdResChange, UseAccurateResChange)
+
       !$acc update device(TypeLimiter, BetaLimiter)
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)

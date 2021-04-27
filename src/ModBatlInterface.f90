@@ -246,9 +246,15 @@ contains
 
     call fix_block_geometry(iBlock)
 
-  !$acc update device(neiLtop, neiLbot)
-  !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
-  !$acc update device(neiLEV)
+    !$acc update device(neiLtop, neiLbot)
+    !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
+    !$acc update device(neiLEV)
+
+    !$acc update device(neiPE, neiBLK)
+    !$acc update device(neiPtop, neiPbot)
+    !$acc udpate device(neiBtop, neiBbot)
+    !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
+    !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_batsrus_block

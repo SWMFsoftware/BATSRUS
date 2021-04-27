@@ -39,6 +39,7 @@ module ModFaceValue
   logical, public :: UseLimiter4          = .false.
   integer, public :: nGUsed               = nG
   !$acc declare create(UseAccurateResChange, DoLimitMomentum, UseVolumeIntegral4)
+  !$acc declare create(UseTvdResChange)
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -242,6 +243,184 @@ contains
   end subroutine read_face_value_param
   !============================================================================
 
+    subroutine correct_monotone_restrict(iBlock)
+    !$acc routine vector
+
+    ! Correct the result of the first order monotone restriction by modifying
+    ! the coarse ghost cell values such that the slope remains the same
+    ! while the cell center is moved from the fine cell distance to the
+    ! coarse cell distance.
+    !
+    ! This operation should be performed at most once per exchange messages.
+    ! To avoid multiple modifications in schemes which switch off some blocks,
+    ! the correction is not done if any of the finer block neighbors are unused
+
+    use ModSize
+    use ModVarIndexes, ONLY: DefaultState_V, nVar, &
+         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModAdvance,    ONLY: State_VGB
+    use ModParallel,   ONLY: neiLEV, &
+         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
+         neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
+         neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
+    use BATL_lib,  ONLY: Unused_BP
+
+    ! For debugging
+
+    integer, intent(in) :: iBlock
+    integer             :: i, j, k
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
+    !--------------------------------------------------------------------------
+#ifndef OPENACC
+    call test_start(NameSub, DoTest, iBlock)
+#endif
+    if(all(neiLEV(:,iBlock) /= -1))RETURN
+
+#ifndef OPENACC
+    if(DoTest)write(*,*)NameSub, ' state before: ',&
+         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
+#endif
+
+    if(.not.DoLimitMomentum)then
+       ! Convert momenta to velocities (that will be limited)
+       !$acc loop vector collapse(3)
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+       end do; end do; end do
+    end if
+
+    if(neiLeast(iBlock) == -1)then
+       if(        .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do k=1,nK;do j=1,nJ
+             State_VGB(1:nVar,0,j,k,iBlock) = &
+                  State_VGB(1:nVar,0,j,k,iBlock) + cThird*(&
+                  State_VGB(1:nVar,0,j,k,iBlock) - &
+                  State_VGB(1:nVar,1,j,k,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,0,j,k,iBlock) = &
+                  max(State_VGB(1:nVar,0,j,k,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLwest(iBlock) == -1)then
+       if(        .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do k=1,nK;do j=1,nJ
+             State_VGB(1:nVar,nI+1,j,k,iBlock) = &
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) - &
+                  State_VGB(1:nVar,nI,  j,k,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) = &
+                  max(State_VGB(1:nVar,nI+1,j,k,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLsouth(iBlock) == -1 .and. nJ > 1)then
+       if(        .not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do k=1,nK;do i=1,nI
+             State_VGB(1:nVar,i,0,k,iBlock) = &
+                  State_VGB(1:nVar,i,0,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,0,k,iBlock) - &
+                  State_VGB(1:nVar,i,1,k,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,0,k,iBlock) = &
+                  max(State_VGB(1:nVar,i,0,k,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLnorth(iBlock) == -1 .and. nJ > 1)then
+       if(     .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do k=1,nK;do i=1,nI
+             State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) - &
+                  State_VGB(1:nVar,i,nJ,k,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) = &
+                  max(State_VGB(1:nVar,i,nJ+1,k,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLbot(iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do j=1,nJ;do i=1,nI
+             State_VGB(1:nVar,i,j,0,iBlock) = &
+                  State_VGB(1:nVar,i,j,0,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,j,0,iBlock) - &
+                  State_VGB(1:nVar,i,j,1,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,j,0,iBlock) = &
+                  max(State_VGB(1:nVar,i,j,0,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLtop(iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock)))then
+          !$acc loop vector collapse(2)
+          do j=1,nJ;do i=1,nI
+             State_VGB(1:nVar,i,j,nK+1,iBlock) = &
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) + cThird*(&
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) - &
+                  State_VGB(1:nVar,i,j,nK,iBlock))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) = &
+                  max(State_VGB(1:nVar,i,j,nK+1,iBlock), 1e-30)
+          end do; end do
+       end if
+    end if
+
+    if(.not.DoLimitMomentum)then
+       ! Convert velocities back to momenta
+       !$acc loop vector collapse(3)
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
+       end do; end do; end do
+    end if
+
+#ifndef OPENACC
+    if(DoTest)write(*,*)NameSub, ' state after: ',&
+         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
+
+    call test_stop(NameSub, DoTest, iBlock)
+#endif
+  end subroutine correct_monotone_restrict
+  !============================================================================
+
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
     !$acc routine vector
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
@@ -381,13 +560,12 @@ contains
 
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
-#ifndef OPENACC
     if(.not.DoResChangeOnly & ! In order not to call it twice
          .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange) &
          .and. DoMonotoneRestrict) &
          call correct_monotone_restrict(iBlock)
-#endif
+
     ! first, calculate the CELL values for the variables to be limited
     ! for non-boris corrections they are: density, velocity, pressure
     ! for boris correction momentum is used instead of the velocity
@@ -4168,169 +4346,6 @@ contains
     end select
 
   end subroutine limiter
-  !============================================================================
-
-  subroutine correct_monotone_restrict(iBlock)
-
-    ! Correct the result of the first order monotone restriction by modifying
-    ! the coarse ghost cell values such that the slope remains the same
-    ! while the cell center is moved from the fine cell distance to the
-    ! coarse cell distance.
-    !
-    ! This operation should be performed at most once per exchange messages.
-    ! To avoid multiple modifications in schemes which switch off some blocks,
-    ! the correction is not done if any of the finer block neighbors are unused
-
-    use ModSize
-    use ModVarIndexes, ONLY: DefaultState_V, nVar, &
-         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModAdvance,    ONLY: State_VGB
-    use ModParallel,   ONLY: neiLEV, &
-         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
-         neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
-         neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
-    use BATL_lib,  ONLY: Unused_BP
-
-    ! For debugging
-
-    integer, intent(in) :: iBlock
-    integer             :: i, j, k
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    if(all(neiLEV(:,iBlock) /= -1))RETURN
-
-    if(DoTest)write(*,*)NameSub, ' state before: ',&
-         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
-
-    if(.not.DoLimitMomentum)then
-       ! Convert momenta to velocities (that will be limited)
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
-          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
-          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
-       end do; end do; end do
-    end if
-
-    if(neiLeast(iBlock) == -1)then
-       if(        .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)) &
-            .and. .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
-          do k=1,nK;do j=1,nJ
-             State_VGB(1:nVar,0,j,k,iBlock) = &
-                  State_VGB(1:nVar,0,j,k,iBlock) + cThird*(&
-                  State_VGB(1:nVar,0,j,k,iBlock) - &
-                  State_VGB(1:nVar,1,j,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,0,j,k,iBlock) = &
-                  max(State_VGB(1:nVar,0,j,k,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLwest(iBlock) == -1)then
-       if(        .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)) &
-            .and. .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
-          do k=1,nK;do j=1,nJ
-             State_VGB(1:nVar,nI+1,j,k,iBlock) = &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) - &
-                  State_VGB(1:nVar,nI,  j,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,nI+1,j,k,iBlock) = &
-                  max(State_VGB(1:nVar,nI+1,j,k,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLsouth(iBlock) == -1 .and. nJ > 1)then
-       if(        .not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)) &
-            .and. .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
-          do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,0,k,iBlock) = &
-                  State_VGB(1:nVar,i,0,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,0,k,iBlock) - &
-                  State_VGB(1:nVar,i,1,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,0,k,iBlock) = &
-                  max(State_VGB(1:nVar,i,0,k,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLnorth(iBlock) == -1 .and. nJ > 1)then
-       if(     .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)) &
-            .and. .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
-          do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) - &
-                  State_VGB(1:nVar,i,nJ,k,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,nJ+1,k,iBlock) = &
-                  max(State_VGB(1:nVar,i,nJ+1,k,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLbot(iBlock) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)) &
-            .and. .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
-          do j=1,nJ;do i=1,nI
-             State_VGB(1:nVar,i,j,0,iBlock) = &
-                  State_VGB(1:nVar,i,j,0,iBlock) + cThird*( &
-                  State_VGB(1:nVar,i,j,0,iBlock) - &
-                  State_VGB(1:nVar,i,j,1,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,0,iBlock) = &
-                  max(State_VGB(1:nVar,i,j,0,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLtop(iBlock) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)) &
-            .and. .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock)))then
-          do j=1,nJ;do i=1,nI
-             State_VGB(1:nVar,i,j,nK+1,iBlock) = &
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) + cThird*(&
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) - &
-                  State_VGB(1:nVar,i,j,nK,iBlock))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,nK+1,iBlock) = &
-                  max(State_VGB(1:nVar,i,j,nK+1,iBlock), 1e-30)
-          end do; end do
-       end if
-    end if
-
-    if(.not.DoLimitMomentum)then
-       ! Convert velocities back to momenta
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
-          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
-          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
-       end do; end do; end do
-    end if
-
-    if(DoTest)write(*,*)NameSub, ' state after: ',&
-         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine correct_monotone_restrict
   !============================================================================
 
 end module ModFaceValue

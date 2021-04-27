@@ -45,9 +45,12 @@ module ModParallel
   integer, allocatable :: neiBwest(:,:)
   integer, allocatable :: neiBnorth(:,:)
   integer, allocatable :: neiBsouth(:,:)
+  !$acc declare create(neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth)
+  !$acc declare create(neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth)
 
   integer, allocatable :: neiPE(:,:,:)
   integer, allocatable :: neiBLK(:,:,:)
+  !$acc declare create(neiPE, neiBLK)
 
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
