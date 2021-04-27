@@ -243,7 +243,7 @@ contains
   end subroutine read_face_value_param
   !============================================================================
 
-    subroutine correct_monotone_restrict(iBlock)
+  subroutine correct_monotone_restrict(iBlock)
     !$acc routine vector
 
     ! Correct the result of the first order monotone restriction by modifying
@@ -784,27 +784,26 @@ contains
        ! Now take care of faces at resolution changes
        if(nOrderProlong==1 .and..not.UseConstrainB &
             .and. .not.UseHighResChange)then
-#ifndef OPENACC
           ! If nOrderProlong is 1 then use TVD reschange or accurate reschange
           ! scheme and overwrite face values at resolution changes
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
              do iSide = 1, 2
-                if(neiLev(iSide,iBlock) == 1)call get_face_accurate1d(iSide)
+                if(neiLev(iSide,iBlock) == 1)call get_face_accurate1d(iSide, iBlock)
              end do
           elseif (UseAccurateResChange)then
              if(nK == 1)then
                 do iSide = 1, 4
-                   if(neilev(iSide,iBlock) == 1)call get_face_accurate2d(iSide)
+                   if(neilev(iSide,iBlock) == 1)call get_face_accurate2d(iSide, iBlock)
                 end do
              else
                 do iSide = 1, 6
-                   if(neilev(iSide,iBlock) == 1)call get_face_accurate3d(iSide)
+                   if(neilev(iSide,iBlock) == 1)call get_face_accurate3d(iSide, iBlock)
                 end do
              end if
           else if(UseTvdResChange)then
              do iSide=1,6
-                if(neilev(iSide,iBlock) == +1)call get_face_tvd(iSide)
+                if(neilev(iSide,iBlock) == +1)call get_face_tvd(iSide, iBlock)
              end do
           else
              ! First order facevalues at resolution change
@@ -821,7 +820,6 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace,iBlock)
           end if
-#endif
        else if(DoResChangeOnly) then
           if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order face values at resolution changes
@@ -1837,12 +1835,21 @@ contains
 #endif
     end subroutine get_facez_first
     !==========================================================================
-    subroutine get_face_accurate3d(iSideIn)
-      integer, intent(in):: iSideIn
-
+    subroutine get_face_accurate3d(iSideIn,  iBlock)
+      !$acc routine vector
+      integer, intent(in):: iSideIn, iBlock
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       select case(iSideIn)
       case(1)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
                  all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -1870,6 +1877,7 @@ contains
             end if
          end do; end do
       case(2)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                  all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -1897,6 +1905,7 @@ contains
             end if
          end do; end do
       case(3)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
@@ -1924,6 +1933,7 @@ contains
             end if
          end do; end do
       case(4)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
@@ -1951,6 +1961,7 @@ contains
             end if
          end do; end do
       case(5)
+         !$acc loop vector collapse(2)
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
@@ -1978,6 +1989,7 @@ contains
             end if
          end do; end do
       case(6)
+         !$acc loop vector collapse(2)
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
@@ -2007,10 +2019,17 @@ contains
       end select
     end subroutine get_face_accurate3d
     !==========================================================================
-    subroutine get_face_accurate1d(iSideIn)
-      integer, intent(in):: iSideIn
+    subroutine get_face_accurate1d(iSideIn, iBlock)
+      !$acc routine vector
+      integer, intent(in):: iSideIn, iBlock
+      integer:: iGang
 
       !------------------------------------------------------------------------
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       select case(iSideIn)
       case(1)
          call accurate_reschange1d(&
@@ -2034,12 +2053,21 @@ contains
 
     end subroutine get_face_accurate1d
     !==========================================================================
-    subroutine get_face_accurate2d(iSideIn)
-      integer, intent(in):: iSideIn
-
+    subroutine get_face_accurate2d(iSideIn, iBlock)
+      !$acc routine vector
+      integer, intent(in):: iSideIn, iBlock
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       select case(iSideIn)
       case(1)
+         !$acc loop vector
          do j=1,nJ,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VGI(:,-1,j,1,iGang)         ,&
@@ -2051,6 +2079,7 @@ contains
                  FineF_VI        = LeftState_VXI(:, 2,j:j+1,1,iGang))
          end do
       case(2)
+         !$acc loop vector
          do j=1,nJ,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VGI(:,nI+2,j,1,iGang)       ,&
@@ -2062,6 +2091,7 @@ contains
                  FineF_VI        =RightState_VXI(:,nI  ,j:j+1,1,iGang))
          end do
       case(3)
+         !$acc loop vector
          do i=1,nI,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VGI(:,i,-1,1,iGang)         ,&
@@ -2073,6 +2103,7 @@ contains
                  FineF_VI        = LeftState_VYI(:,i:i+1,2,1,iGang))
          end do
       case(4)
+         !$acc loop vector
          do i=1,nI,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VGI(:,i,nJ+2,1,iGang)       ,&
@@ -2086,12 +2117,21 @@ contains
       end select
     end subroutine get_face_accurate2d
     !==========================================================================
-    subroutine get_face_tvd(iSideIn)
-      integer,intent(in)::iSideIn
-
+    subroutine get_face_tvd(iSideIn, iBlock)
+      !$acc routine vector
+      integer,intent(in)::iSideIn, iBlock
+      integer:: i, j, k
+      integer:: iGang
       !------------------------------------------------------------------------
+
+      iGang = 1
+#ifdef OPENACC
+      iGang = iBlock
+#endif
+
       select case(iSideIn)
       case(1)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
                call tvd_reschange_body(&
@@ -2118,6 +2158,7 @@ contains
             end if
          end do; end do
       case(2)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
                call tvd_reschange_body(&
@@ -2144,6 +2185,7 @@ contains
             end if
          end do; end do
       case(3)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
                call tvd_reschange_body(&
@@ -2170,6 +2212,7 @@ contains
             end if
          end do; end do
       case(4)
+         !$acc loop vector collapse(2)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
                call tvd_reschange_body(&
@@ -2196,6 +2239,7 @@ contains
             end if
          end do; end do
       case(5)
+         !$acc loop vector collapse(2)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
                call tvd_reschange_body(&
@@ -2222,6 +2266,7 @@ contains
             end if
          end do; end do
       case(6)
+         !$acc loop vector collapse(2)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
                call tvd_reschange_body(&
@@ -2640,6 +2685,8 @@ contains
     ! _____________|_____________|_F1_V__|__F2_V_|_
     !              |             |       |       |
 
+    !$acc routine seq
+
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
     real, intent(in):: Fine1_VII(:,:,:)          ! dimension(nVar,2,2)
@@ -2739,6 +2786,8 @@ contains
     ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
 
+    !$acc routine seq
+
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
     real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
     real, intent(inout):: CoarseToFineF_VII(:,:,:)        ! dimension(nVar,2,2)
@@ -2816,6 +2865,8 @@ contains
     ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
     !              | C1_V       |        |       |
+
+    !$acc routine seq
 
     real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
     real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
@@ -2963,6 +3014,8 @@ contains
     !              |            |        |       |
     !              | C1_V       |        |       |
 
+    !$acc routine seq
+
     real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
     real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
     real, intent(in) :: Fine1_VI(:,:)           ! dimension(nVar,2)
@@ -3100,6 +3153,8 @@ contains
     !              |        CToF |FToC FF|       |
     !  C2_V        |C1_V         |F1_V   | F2_V  |
     ! _____________|_____________|_______|_______|_
+
+    !$acc routine seq
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
