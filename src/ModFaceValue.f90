@@ -3238,7 +3238,6 @@ contains
     real, parameter:: cSmall = 1e-6
 
     logical:: DoTest
-
     character(len=*), parameter:: NameSub = 'set_low_order_face'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
