@@ -413,8 +413,13 @@ contains
 
     Change_V = Change_V + Flux_V
 
-    if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-         + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+    if(nFluid == 1)then
+       if(UseNonConservative) Change_V(p_) = Change_V(p_) &
+            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+    else
+       if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
+            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+    end if
 
   end subroutine do_face
   !============================================================================
@@ -705,10 +710,15 @@ contains
        Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
             +             Cmax*(StateLeftCons_V - StateRightCons_V))
 
-       if(UseNonConservative) Unormal_I(1:nFluid) = Area*0.5* &
+       if(nFluid == 1)then
+          if(UseNonConservative) Unormal_I(1) = Area*0.5* &
+               sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
+       else
+          if(UseNonConservative) Unormal_I(1:nFluid) = Area*0.5* &
                ( (StateLeft_V(iUx_I) + StateRight_V(iUx_I))*Normal_D(1) &
                + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*Normal_D(2) &
                + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
+       end if
     else
        ! Linde scheme
        if(UseB)then
@@ -752,13 +762,23 @@ contains
             + CMulti*(StateRightCons_V - StateLeftCons_V) ) &
             *CInvDiff
 
-       if(UseNonConservative) Unormal_I(1:nFluid) = Area*CInvDiff*  &
-            ( (Cright*StateLeft_V(iUx_I)              &
-            -  Cleft*StateRight_V(iUx_I))*Normal_D(1) &
-            + (Cright*StateLeft_V(iUy_I)              &
-            -  Cleft*StateRight_V(iUy_I))*Normal_D(2) &
-            + (Cright*StateLeft_V(iUz_I)              &
-            -  Cleft*StateRight_V(iUz_I))*Normal_D(3) )
+       if(nFluid == 1)then
+          if(UseNonConservative)Unormal_I(1) = Area*CInvDiff* &
+               ( Cright*(StateLeft_V(Ux_) &
+               - Cleft*StateRight_V(Ux_))*Normal_D(1) &
+               + Cright*(StateLeft_V(Uy_) &
+               - Cleft*StateRight_V(Uy_))*Normal_D(2) &
+               + Cright*(StateLeft_V(Uz_) &
+               - Cleft*StateRight_V(Uz_))*Normal_D(3) )
+       else
+          if(UseNonConservative) Unormal_I(1:nFluid) = Area*CInvDiff*  &
+               ( (Cright*StateLeft_V(iUx_I)              &
+               -  Cleft*StateRight_V(iUx_I))*Normal_D(1) &
+               + (Cright*StateLeft_V(iUy_I)              &
+               -  Cleft*StateRight_V(iUy_I))*Normal_D(2) &
+               + (Cright*StateLeft_V(iUz_I)              &
+               -  Cleft*StateRight_V(iUz_I))*Normal_D(3) )
+       end if
 
        if(UseB)then
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
@@ -854,51 +874,6 @@ contains
 
   end subroutine limiter2
   !============================================================================
-
-! end module ModUpdateStateFast
-!!==============================================================================
-!
-! module ModUpdateStatePrim
-!
-!  ! Save Primitive_VG array
-!
-!  ! Calculate each face twice
-!
-!  use ModUpdateParamFast, ONLY: &
-!       DoLf, LimiterBeta, nStage, iStage, nOrder, IsCartesian, &
-!       UseNonConservative, IsTimeAccurate
-!  use ModVarIndexes
-!  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
-!  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-!       Flux_VXI, Flux_VYI, Flux_VZI, &
-!       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
-!       time_BLK
-!  use ModAdvance, ONLY: Primitive_VGI
-!  use ModMain, ONLY: Cfl, Dt
-!  use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-!       nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellVolume_GB, &
-!       CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
-!       test_start, test_stop, iTest, jTest, kTest, iBlockTest
-!
-!  use ModPhysics, ONLY: Gamma, InvGammaMinus1, GammaMinus1_I
-!  use ModMain, ONLY: UseB, SpeedHyp
-!  use ModNumConst, ONLY: cUnit_DD
-!
-!  use ModUpdateStateFast, ONLY: &
-!       pressure_to_energy, energy_to_pressure, &
-!       get_normal, get_primitive, get_numerical_flux, &
-!       limiter2, set_old_state
-!
-!  implicit none
-!
-!  private ! except
-!
-!  public:: update_state_cpu_prim ! optimal for CPU
-!  public:: update_state_gpu_prim ! optimal for GPU
-!
-!  logical:: DoTestCell= .false.
-!
-! contains
   subroutine update_state_cpu_prim
 
     ! optimal for CPU (face value and face flux calculated only once)
@@ -1249,8 +1224,13 @@ contains
 
     Change_V = Change_V + Flux_V
 
-    if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-         + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+    if(nFluid == 1)then
+       if(UseNonConservative) Change_V(p_) = Change_V(p_) &
+            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+    else
+       if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
+            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+    end if
 
   end subroutine do_face_prim
   !============================================================================
