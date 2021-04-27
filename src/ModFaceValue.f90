@@ -280,6 +280,8 @@ contains
     integer, intent(in) :: iBlock
     integer             :: i, j, k
 
+    real:: Rho_I(nFluid), InvRho_I(nFluid)
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
     !--------------------------------------------------------------------------
@@ -295,14 +297,15 @@ contains
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
-       !$acc loop vector collapse(3)
+       !$acc loop vector collapse(3) private(InvRho_I)
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+          InvRho_I = 1.0/State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
+               * InvRho_I
           State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
+               * InvRho_I
           State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
-               / State_VGB(iRho_I,i,j,k,iBlock)
+               * InvRho_I
        end do; end do; end do
     end if
 
@@ -411,14 +414,15 @@ contains
 
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
-       !$acc loop vector collapse(3)
+       !$acc loop vector collapse(3) private(Rho_I)
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
+          Rho_I = State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
+               * Rho_I
           State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
+               * Rho_I
           State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
-               * State_VGB(iRho_I,i,j,k,iBlock)
+               * Rho_I
        end do; end do; end do
     end if
 
@@ -429,13 +433,13 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 #endif
   end subroutine correct_monotone_restrict
-  !==========================================================================
+  !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
     !$acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     iGang = 1
 #ifdef OPENACC
@@ -613,13 +617,13 @@ contains
        end do; end do
     end select
   end subroutine get_face_accurate3d
-  !==========================================================================
+  !============================================================================
   subroutine get_face_accurate1d(iSideIn, iBlock)
     !$acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: iGang
 
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     iGang = 1
 #ifdef OPENACC
     iGang = iBlock
@@ -647,13 +651,13 @@ contains
     end select
 
   end subroutine get_face_accurate1d
-  !==========================================================================
+  !============================================================================
   subroutine get_face_accurate2d(iSideIn, iBlock)
     !$acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     iGang = 1
 #ifdef OPENACC
@@ -711,13 +715,13 @@ contains
        end do
     end select
   end subroutine get_face_accurate2d
-  !==========================================================================
+  !============================================================================
   subroutine get_face_tvd(iSideIn, iBlock)
     !$acc routine vector
     integer,intent(in)::iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     iGang = 1
 #ifdef OPENACC
@@ -3234,9 +3238,9 @@ contains
     real, parameter:: cSmall = 1e-6
 
     logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'set_low_order_face'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
 
     if(nOrder<=2) then
