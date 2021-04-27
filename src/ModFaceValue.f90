@@ -13,8 +13,17 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes
+  use ModGeometry, ONLY: true_cell, body_BLK
   use ModAdvance, ONLY: nFlux, UseFDFaceFlux, UseLowOrder, &
-       UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, Primitive_VGI
+       UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, &
+       State_VGB, Primitive_VGI,  &
+       LeftState_VXI,  &  ! Face Left  X
+       RightState_VXI, &  ! Face Right X
+       LeftState_VYI,  &  ! Face Left  Y
+       RightState_VYI, &  ! Face Right Y
+       LeftState_VZI,  &  ! Face Left  Z
+       RightState_VZI     ! Face Right Z
+
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
        UseBorisRegion, set_clight_cell, set_clight_face, Clight_G
@@ -27,6 +36,8 @@ module ModFaceValue
   public:: read_face_value_param
   public:: calc_face_value
   public:: correct_monotone_restrict
+  public:: get_face_accurate1d, get_face_accurate2d, get_face_accurate3d
+  public:: get_face_tvd
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
   public:: clean_mod_face_value
@@ -258,7 +269,6 @@ contains
     use ModSize
     use ModVarIndexes, ONLY: DefaultState_V, nVar, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModAdvance,    ONLY: State_VGB
     use ModParallel,   ONLY: neiLEV, &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
          neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
@@ -419,8 +429,467 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 #endif
   end subroutine correct_monotone_restrict
-  !============================================================================
+  !==========================================================================
+  subroutine get_face_accurate3d(iSideIn,  iBlock)
+    !$acc routine vector
+    integer, intent(in):: iSideIn, iBlock
+    integer:: i, j, k
+    integer:: iGang
+    !------------------------------------------------------------------------
 
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
+    select case(iSideIn)
+    case(1)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do j=1,nJ,2
+          if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
+               all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
+                  Coarse1_VII  =    Primitive_VGI(:, 0,j-2:j+3,k-2:k+3,iGang),&
+                  Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
+          else
+             call tvd_reschange_body(                                 &
+                  Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II   = true_cell( 2,j:j+1,k:k+1,iBlock))
+          end if
+       end do; end do
+    case(2)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do j=1,nJ,2
+          if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
+               all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:, nI+2,j,k,iGang)         ,&
+                  Coarse1_VII  =    Primitive_VGI(:, nI+1,j-2:j+3,k-2:k+3,iGang) ,&
+                  Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
+                  FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
+          else
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
+                  Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
+                  IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
+          end if
+       end do; end do
+    case(3)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do i=1,nI,2
+          if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
+               all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
+                  Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,0,k-2:k+3,iGang),&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
+          else
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
+          end if
+       end do; end do
+    case(4)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do i=1,nI,2
+          if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
+               all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
+                  Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,nJ+1,k-2:k+3,iGang),&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
+          else
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang)  ,&
+                  IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
+          end if
+       end do; end do
+    case(5)
+       !$acc loop vector collapse(2)
+       do j=1,nJ,2; do i=1,nI,2
+          if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
+               all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
+                  Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,0,iGang),&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
+          else
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
+                  IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
+          end if
+       end do; end do
+    case(6)
+       !$acc loop vector collapse(2)
+       do j=1,nJ,2; do i=1,nI,2
+          if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
+               all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
+             call accurate_reschange3d(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
+                  Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,nK+1,iGang),&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
+                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
+                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
+          else
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
+                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
+                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
+                  IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
+                  IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
+                  IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
+          end if
+       end do; end do
+    end select
+  end subroutine get_face_accurate3d
+  !==========================================================================
+  subroutine get_face_accurate1d(iSideIn, iBlock)
+    !$acc routine vector
+    integer, intent(in):: iSideIn, iBlock
+    integer:: iGang
+
+    !------------------------------------------------------------------------
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
+    select case(iSideIn)
+    case(1)
+       call accurate_reschange1d(&
+            Coarse2_V       = Primitive_VGI(:,-1,1,1,iGang)     ,&
+            Coarse1_V       = Primitive_VGI(:, 0,1,1,iGang)     ,&
+            Fine1_V         = Primitive_VGI(:, 1,1,1,iGang)     ,&
+            Fine2_V         = Primitive_VGI(:, 2,1,1,iGang)     ,&
+            CoarseToFineF_V = LeftState_VXI(:, 1,1,1,iGang)     ,&
+            FineToCoarseF_V =RightState_VXI(:, 1,1,1,iGang)     ,&
+            FineF_V         = LeftState_VXI(:, 2,1,1,iGang))
+    case(2)
+       call accurate_reschange1d(&
+            Coarse2_V       = Primitive_VGI(:,nI+2,1,1,iGang)   ,&
+            Coarse1_V       = Primitive_VGI(:,nI+1,1,1,iGang)   ,&
+            Fine1_V         = Primitive_VGI(:,nI  ,1,1,iGang)   ,&
+            Fine2_V         = Primitive_VGI(:,nI-1,1,1,iGang)   ,&
+            CoarseToFineF_V =RightState_VXI(:,nI+1,1,1,iGang)   ,&
+            FineToCoarseF_V = LeftState_VXI(:,nI+1,1,1,iGang)   ,&
+            FineF_V         =RightState_VXI(:,nI  ,1,1,iGang))
+    end select
+
+  end subroutine get_face_accurate1d
+  !==========================================================================
+  subroutine get_face_accurate2d(iSideIn, iBlock)
+    !$acc routine vector
+    integer, intent(in):: iSideIn, iBlock
+    integer:: i, j, k
+    integer:: iGang
+    !------------------------------------------------------------------------
+
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
+    select case(iSideIn)
+    case(1)
+       !$acc loop vector
+       do j=1,nJ,2
+          call accurate_reschange2d(&
+               Coarse2_V       = Primitive_VGI(:,-1,j,1,iGang)         ,&
+               Coarse1_VI      = Primitive_VGI(:, 0,j-2:j+3,1,iGang)   ,&
+               Fine1_VI        = Primitive_VGI(:, 1,j:j+1,1,iGang)     ,&
+               Fine2_VI        = Primitive_VGI(:, 2,j:j+1,1,iGang)     ,&
+               CoarseToFineF_VI= LeftState_VXI(:, 1,j:j+1,1,iGang)     ,&
+               FineToCoarseF_VI=RightState_VXI(:, 1,j:j+1,1,iGang)     ,&
+               FineF_VI        = LeftState_VXI(:, 2,j:j+1,1,iGang))
+       end do
+    case(2)
+       !$acc loop vector
+       do j=1,nJ,2
+          call accurate_reschange2d(&
+               Coarse2_V       = Primitive_VGI(:,nI+2,j,1,iGang)       ,&
+               Coarse1_VI      = Primitive_VGI(:,nI+1,j-2:j+3,1,iGang) ,&
+               Fine1_VI        = Primitive_VGI(:,nI  ,j:j+1,1,iGang)   ,&
+               Fine2_VI        = Primitive_VGI(:,nI-1,j:j+1,1,iGang)   ,&
+               CoarseToFineF_VI=RightState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
+               FineToCoarseF_VI= LeftState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
+               FineF_VI        =RightState_VXI(:,nI  ,j:j+1,1,iGang))
+       end do
+    case(3)
+       !$acc loop vector
+       do i=1,nI,2
+          call accurate_reschange2d(&
+               Coarse2_V       = Primitive_VGI(:,i,-1,1,iGang)         ,&
+               Coarse1_VI      = Primitive_VGI(:,i-2:i+3,0,1,iGang)    ,&
+               Fine1_VI        = Primitive_VGI(:,i:i+1,1,1,iGang)      ,&
+               Fine2_VI        = Primitive_VGI(:,i:i+1,2,1,iGang)      ,&
+               CoarseToFineF_VI= LeftState_VYI(:,i:i+1,1,1,iGang)      ,&
+               FineToCoarseF_VI=RightState_VYI(:,i:i+1,1,1,iGang)      ,&
+               FineF_VI        = LeftState_VYI(:,i:i+1,2,1,iGang))
+       end do
+    case(4)
+       !$acc loop vector
+       do i=1,nI,2
+          call accurate_reschange2d(&
+               Coarse2_V       = Primitive_VGI(:,i,nJ+2,1,iGang)       ,&
+               Coarse1_VI      = Primitive_VGI(:,i-2:i+3,nJ+1,1,iGang) ,&
+               Fine1_VI        = Primitive_VGI(:,i:i+1,nJ,1,iGang)     ,&
+               Fine2_VI        = Primitive_VGI(:,i:i+1,nJ-1,1,iGang)   ,&
+               CoarseToFineF_VI=RightState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
+               FineToCoarseF_VI= LeftState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
+               FineF_VI        =RightState_VYI(:,i:i+1,nJ,1,iGang))
+       end do
+    end select
+  end subroutine get_face_accurate2d
+  !==========================================================================
+  subroutine get_face_tvd(iSideIn, iBlock)
+    !$acc routine vector
+    integer,intent(in)::iSideIn, iBlock
+    integer:: i, j, k
+    integer:: iGang
+    !------------------------------------------------------------------------
+
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
+    select case(iSideIn)
+    case(1)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do j=1,nJ,2
+          if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
+          end if
+       end do; end do
+    case(2)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do j=1,nJ,2
+          if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
+                  Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
+                  IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
+                  Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
+                  FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
+          end if
+       end do; end do
+    case(3)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
+                  FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
+          end if
+       end do; end do
+    case(4)
+       !$acc loop vector collapse(2)
+       do k=1,nK,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang)  ,&
+                  IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
+                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
+                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
+          end if
+       end do; end do
+    case(5)
+       !$acc loop vector collapse(2)
+       do j=1,nJ,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
+                  IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
+                  IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
+                  IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
+                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
+          end if
+       end do; end do
+    case(6)
+       !$acc loop vector collapse(2)
+       do j=1,nJ,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
+             call tvd_reschange_body(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
+                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
+                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
+                  IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
+                  IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
+                  IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
+                  Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
+                  Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
+                  Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
+                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
+                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
+                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
+          end if
+       end do; end do
+    end select
+  end subroutine get_face_tvd
+  !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
     !$acc routine vector
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
@@ -438,20 +907,13 @@ contains
          iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
          UseHighResChange
 
-    use ModGeometry, ONLY : true_cell, body_BLK
     use ModPhysics, ONLY: GammaWave
     use ModB0
-    use ModAdvance, ONLY: State_VGB, Energy_GBI, &
+    use ModAdvance, ONLY: Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VXI, Flux_VYI, Flux_VZI, &
          uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
-         LeftState_VXI,      &  ! Face Left  X
-         RightState_VXI,     &  ! Face Right X
-         LeftState_VYI,      &  ! Face Left  Y
-         RightState_VYI,     &  ! Face Right Y
-         LeftState_VZI,      &  ! Face Left  Z
-         RightState_VZI,     &  ! Face Right Z
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
 
     use ModParallel, ONLY : &
@@ -493,7 +955,7 @@ contains
     end if
     iGang = 1
 #ifdef OPENACC
-      iGang = iBlock
+    iGang = iBlock
 #endif
 
 #ifndef OPENACC
@@ -1835,466 +2297,6 @@ contains
 #endif
     end subroutine get_facez_first
     !==========================================================================
-    subroutine get_face_accurate3d(iSideIn,  iBlock)
-      !$acc routine vector
-      integer, intent(in):: iSideIn, iBlock
-      integer:: i, j, k
-      integer:: iGang
-      !------------------------------------------------------------------------
-
-      iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-
-      select case(iSideIn)
-      case(1)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do j=1,nJ,2
-            if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
-                 all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
-                    Coarse1_VII  =    Primitive_VGI(:, 0,j-2:j+3,k-2:k+3,iGang),&
-                    Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
-            else
-               call tvd_reschange_body(                                 &
-                    Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
-                    IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                    IsTrueFine2_II   = true_cell( 2,j:j+1,k:k+1,iBlock))
-            end if
-         end do; end do
-      case(2)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do j=1,nJ,2
-            if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
-                 all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:, nI+2,j,k,iGang)         ,&
-                    Coarse1_VII  =    Primitive_VGI(:, nI+1,j-2:j+3,k-2:k+3,iGang) ,&
-                    Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                    FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
-            else
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
-                    Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
-                    IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
-                    IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
-                    IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
-            end if
-         end do; end do
-      case(3)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do i=1,nI,2
-            if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
-                 all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
-                    Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,0,k-2:k+3,iGang),&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
-            else
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
-                    IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
-            end if
-         end do; end do
-      case(4)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do i=1,nI,2
-            if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
-                 all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
-                    Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,nJ+1,k-2:k+3,iGang),&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
-            else
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang)  ,&
-                    IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
-                    IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
-                    IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
-            end if
-         end do; end do
-      case(5)
-         !$acc loop vector collapse(2)
-         do j=1,nJ,2; do i=1,nI,2
-            if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
-                 all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
-                    Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,0,iGang),&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
-            else
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
-                    IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
-            end if
-         end do; end do
-      case(6)
-         !$acc loop vector collapse(2)
-         do j=1,nJ,2; do i=1,nI,2
-            if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
-                 all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
-               call accurate_reschange3d(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
-                    Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,nK+1,iGang),&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                    CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                    FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
-            else
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                    CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                    FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
-                    IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
-                    IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
-                    IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
-                    IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
-            end if
-         end do; end do
-      end select
-    end subroutine get_face_accurate3d
-    !==========================================================================
-    subroutine get_face_accurate1d(iSideIn, iBlock)
-      !$acc routine vector
-      integer, intent(in):: iSideIn, iBlock
-      integer:: iGang
-
-      !------------------------------------------------------------------------
-      iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-
-      select case(iSideIn)
-      case(1)
-         call accurate_reschange1d(&
-              Coarse2_V       = Primitive_VGI(:,-1,1,1,iGang)     ,&
-              Coarse1_V       = Primitive_VGI(:, 0,1,1,iGang)     ,&
-              Fine1_V         = Primitive_VGI(:, 1,1,1,iGang)     ,&
-              Fine2_V         = Primitive_VGI(:, 2,1,1,iGang)     ,&
-              CoarseToFineF_V = LeftState_VXI(:, 1,1,1,iGang)     ,&
-              FineToCoarseF_V =RightState_VXI(:, 1,1,1,iGang)     ,&
-              FineF_V         = LeftState_VXI(:, 2,1,1,iGang))
-      case(2)
-         call accurate_reschange1d(&
-              Coarse2_V       = Primitive_VGI(:,nI+2,1,1,iGang)   ,&
-              Coarse1_V       = Primitive_VGI(:,nI+1,1,1,iGang)   ,&
-              Fine1_V         = Primitive_VGI(:,nI  ,1,1,iGang)   ,&
-              Fine2_V         = Primitive_VGI(:,nI-1,1,1,iGang)   ,&
-              CoarseToFineF_V =RightState_VXI(:,nI+1,1,1,iGang)   ,&
-              FineToCoarseF_V = LeftState_VXI(:,nI+1,1,1,iGang)   ,&
-              FineF_V         =RightState_VXI(:,nI  ,1,1,iGang))
-      end select
-
-    end subroutine get_face_accurate1d
-    !==========================================================================
-    subroutine get_face_accurate2d(iSideIn, iBlock)
-      !$acc routine vector
-      integer, intent(in):: iSideIn, iBlock
-      integer:: i, j, k
-      integer:: iGang
-      !------------------------------------------------------------------------
-
-      iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-
-      select case(iSideIn)
-      case(1)
-         !$acc loop vector
-         do j=1,nJ,2
-            call accurate_reschange2d(&
-                 Coarse2_V       = Primitive_VGI(:,-1,j,1,iGang)         ,&
-                 Coarse1_VI      = Primitive_VGI(:, 0,j-2:j+3,1,iGang)   ,&
-                 Fine1_VI        = Primitive_VGI(:, 1,j:j+1,1,iGang)     ,&
-                 Fine2_VI        = Primitive_VGI(:, 2,j:j+1,1,iGang)     ,&
-                 CoarseToFineF_VI= LeftState_VXI(:, 1,j:j+1,1,iGang)     ,&
-                 FineToCoarseF_VI=RightState_VXI(:, 1,j:j+1,1,iGang)     ,&
-                 FineF_VI        = LeftState_VXI(:, 2,j:j+1,1,iGang))
-         end do
-      case(2)
-         !$acc loop vector
-         do j=1,nJ,2
-            call accurate_reschange2d(&
-                 Coarse2_V       = Primitive_VGI(:,nI+2,j,1,iGang)       ,&
-                 Coarse1_VI      = Primitive_VGI(:,nI+1,j-2:j+3,1,iGang) ,&
-                 Fine1_VI        = Primitive_VGI(:,nI  ,j:j+1,1,iGang)   ,&
-                 Fine2_VI        = Primitive_VGI(:,nI-1,j:j+1,1,iGang)   ,&
-                 CoarseToFineF_VI=RightState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
-                 FineToCoarseF_VI= LeftState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
-                 FineF_VI        =RightState_VXI(:,nI  ,j:j+1,1,iGang))
-         end do
-      case(3)
-         !$acc loop vector
-         do i=1,nI,2
-            call accurate_reschange2d(&
-                 Coarse2_V       = Primitive_VGI(:,i,-1,1,iGang)         ,&
-                 Coarse1_VI      = Primitive_VGI(:,i-2:i+3,0,1,iGang)    ,&
-                 Fine1_VI        = Primitive_VGI(:,i:i+1,1,1,iGang)      ,&
-                 Fine2_VI        = Primitive_VGI(:,i:i+1,2,1,iGang)      ,&
-                 CoarseToFineF_VI= LeftState_VYI(:,i:i+1,1,1,iGang)      ,&
-                 FineToCoarseF_VI=RightState_VYI(:,i:i+1,1,1,iGang)      ,&
-                 FineF_VI        = LeftState_VYI(:,i:i+1,2,1,iGang))
-         end do
-      case(4)
-         !$acc loop vector
-         do i=1,nI,2
-            call accurate_reschange2d(&
-                 Coarse2_V       = Primitive_VGI(:,i,nJ+2,1,iGang)       ,&
-                 Coarse1_VI      = Primitive_VGI(:,i-2:i+3,nJ+1,1,iGang) ,&
-                 Fine1_VI        = Primitive_VGI(:,i:i+1,nJ,1,iGang)     ,&
-                 Fine2_VI        = Primitive_VGI(:,i:i+1,nJ-1,1,iGang)   ,&
-                 CoarseToFineF_VI=RightState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
-                 FineToCoarseF_VI= LeftState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
-                 FineF_VI        =RightState_VYI(:,i:i+1,nJ,1,iGang))
-         end do
-      end select
-    end subroutine get_face_accurate2d
-    !==========================================================================
-    subroutine get_face_tvd(iSideIn, iBlock)
-      !$acc routine vector
-      integer,intent(in)::iSideIn, iBlock
-      integer:: i, j, k
-      integer:: iGang
-      !------------------------------------------------------------------------
-
-      iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-
-      select case(iSideIn)
-      case(1)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do j=1,nJ,2
-            if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
-                    IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
-            end if
-         end do; end do
-      case(2)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do j=1,nJ,2
-            if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
-                    Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
-                    IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
-                    IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
-                    IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
-                    Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                    FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
-            end if
-         end do; end do
-      case(3)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
-                    IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                    FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
-            end if
-         end do; end do
-      case(4)
-         !$acc loop vector collapse(2)
-         do k=1,nK,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang)  ,&
-                    IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
-                    IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
-                    IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,i,nJ+2,k,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                    CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                    FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
-            end if
-         end do; end do
-      case(5)
-         !$acc loop vector collapse(2)
-         do j=1,nJ,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
-                    IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
-                    IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
-                    IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
-                    IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                    CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                    FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
-            end if
-         end do; end do
-      case(6)
-         !$acc loop vector collapse(2)
-         do j=1,nJ,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
-               call tvd_reschange_body(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                    CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                    FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
-                    IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
-                    IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
-                    IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
-                    IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
-            else
-               call tvd_reschange(&
-                    Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
-                    Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
-                    Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
-                    Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                    CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                    FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                    FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
-            end if
-         end do; end do
-      end select
-    end subroutine get_face_tvd
-    !==========================================================================
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
       !$acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
@@ -3212,7 +3214,6 @@ contains
 
     use ModMain,  ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
          kMinFace, kMaxFace, nIFace, nJFace, nKFace, nOrder, nBlock
-    use ModGeometry, ONLY : true_cell
     use ModB0
     use ModPhysics, ONLY: Gamma_I
     use ModAdvance, ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
