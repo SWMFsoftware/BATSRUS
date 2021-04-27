@@ -19,6 +19,9 @@ NONE			TypeIoUnit
 #NORMALIZATION
 NONE			TypeNormalization
 
+#CONSERVEFLUX
+F			DoConserveFlux
+
 #GRID
 5			nRootBlock1
 5			nRootBlock2
@@ -30,8 +33,23 @@ NONE			TypeNormalization
 -181.02			zMin
  181.02			zMax
 
+
+#GRIDLEVEL
+1			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+1			nLevel
+box			StringShape
+-1.0			xMinBox
+ 1.0			yMinBox
+-1.0			zMinBox
+ 1.0			xMaxBox
+-1.0			yMaxBox
+ 1.0			zMaxBox
+
 #GRIDBLOCKALL
-510			MaxBlock
+520			MaxBlock
 
 #SHOCKPOSITION
 0.0			ShockPosition
