@@ -181,7 +181,7 @@ T			DoSaveInitial
 z=0 mhd idl_ascii		StringPlot
 -1			DnSavePlot
 100.0			DtSavePlot
-0.0			DxSavePlot
+-1.0			DxSavePlot
 
 #STOP
 -1			MaxIteration
