@@ -764,12 +764,12 @@ contains
 
        if(nFluid == 1)then
           if(UseNonConservative)Unormal_I(1) = Area*CInvDiff* &
-               ( Cright*(StateLeft_V(Ux_) &
-               - Cleft*StateRight_V(Ux_))*Normal_D(1) &
-               + Cright*(StateLeft_V(Uy_) &
-               - Cleft*StateRight_V(Uy_))*Normal_D(2) &
-               + Cright*(StateLeft_V(Uz_) &
-               - Cleft*StateRight_V(Uz_))*Normal_D(3) )
+               ( (Cright*StateLeft_V(Ux_) &
+               -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
+               + (Cright*StateLeft_V(Uy_) &
+               -  Cleft*StateRight_V(Uy_))*Normal_D(2) &
+               + (Cright*StateLeft_V(Uz_) &
+               -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
        else
           if(UseNonConservative) Unormal_I(1:nFluid) = Area*CInvDiff*  &
                ( (Cright*StateLeft_V(iUx_I)              &
