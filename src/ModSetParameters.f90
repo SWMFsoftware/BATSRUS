@@ -3673,7 +3673,8 @@ contains
       ! Update parameters on the GPU that are not done in the init_mod_* routines
 
       !$acc update device(MaxBlock)
-      !$acc update device(nOrder, nStage, UseHalfStep, time_accurate, UseDtFixed)
+      !$acc update device(nOrder, nStage, nOrderProlong)
+      !$acc update device(UseHalfStep, time_accurate, UseDtFixed)
       !$acc update device(DoCorrectFace, UseFDFaceFlux)
 
       !$acc update device(UseTvdResChange, UseAccurateResChange)
