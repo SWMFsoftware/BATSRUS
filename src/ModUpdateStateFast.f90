@@ -13,9 +13,9 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
-       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &
-       time_BLK
+       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, &
+       Primitive_VGI, &
+       DtMax_CB => time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
@@ -42,7 +42,7 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP
+    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
 
     real:: DtPerDv, DivU, Change_V(nFlux)
     !$acc declare create (Change_V)
@@ -88,22 +88,23 @@ contains
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-          Change_V =  Flux_VXI(:,i,j,k,iGang) - Flux_VXI(:,i+1,j,k,iGang)
-          if(nDim > 1) Change_V = Change_V &
-               + Flux_VYI(:,i,j,k,iGang) - Flux_VYI(:,i,j+1,k,iGang)
-          if(nDim > 2) Change_V = Change_V &
-               + Flux_VZI(:,i,j,k,iGang) - Flux_VZI(:,i,j,k+1,iGang)
+          Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
+               -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
+          if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
+               -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
+          if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
+               -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
              do iFluid = 1, nFluid
-                iP = iP_I(iFluid)
-                DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
-                     - uDotArea_IXI(iFluid,i  ,j,k,iGang)
-                if(nJ > 1) DivU = DivU + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
-                     -                   uDotArea_IYI(iFluid,i,j,k,iGang)
-                if(nK > 1) DivU = DivU + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
-                     -                   uDotArea_IZI(iFluid,i,j,k,iGang)
+                iP  = iP_I(iFluid)
+                iUn = UnFirst_ + iFluid - 1
+                DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
+                if(nJ > 1) DivU = DivU &
+                     + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
+                if(nK > 1) DivU = DivU &
+                     + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
                 Change_V(iP) = Change_V(iP) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
              end do
@@ -113,7 +114,7 @@ contains
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
           else
-             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
           end if
           if(IsCartesian)then
              DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
@@ -181,8 +182,7 @@ contains
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), &
-         uDotArea_IXI(1,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang))
 
   end subroutine get_flux_x
   !============================================================================
@@ -205,8 +205,7 @@ contains
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), &
-         uDotArea_IYI(1,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang))
 
   end subroutine get_flux_y
   !============================================================================
@@ -229,8 +228,7 @@ contains
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), &
-         uDotArea_IZI(1,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang))
 
   end subroutine get_flux_z
   !============================================================================
@@ -294,7 +292,7 @@ contains
              if(IsTimeAccurate)then
                 DtPerDv = Dt
              else
-                DtPerDv = Cfl*time_BLK(i,j,k,iBlock)
+                DtPerDv = Cfl*DtMax_CB(i,j,k,iBlock)
              end if
              if(IsCartesian)then
                 DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
@@ -335,7 +333,7 @@ contains
              if(IsTimeAccurate)then
                 DtPerDv = Dt
              else
-                DtPerDv = Cfl*time_BLK(i,j,k,iBlock)
+                DtPerDv = Cfl*DtMax_CB(i,j,k,iBlock)
              end if
              if(IsCartesian)then
                 DtPerDv = DtPerDv/CellVolume_B(iBlock)
@@ -381,8 +379,7 @@ contains
     real, intent(inout):: Change_V(nFlux)
 
     real:: Area, Normal_D(3)
-    real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
-    real:: Unormal_I(nFluid+1)
+    real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -409,16 +406,17 @@ contains
     end select
 
     call get_numerical_flux(Normal_D, &
-         Area, StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         Area, StateLeft_V, StateRight_V, Flux_V)
 
-    Change_V = Change_V + Flux_V
+    Change_V = Change_V + Flux_V(1:nFlux)
 
     if(nFluid == 1)then
        if(UseNonConservative) Change_V(p_) = Change_V(p_) &
-            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
     else
        if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock) &
+            *Flux_V(UnFirst_:UnFirst_+nFluid-1)
     end if
 
   end subroutine do_face
@@ -672,13 +670,12 @@ contains
   end subroutine get_face_z
   !============================================================================
   subroutine get_numerical_flux(Normal_D, &
-       Area,  StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+       Area,  StateLeft_V, StateRight_V, Flux_V)
     !$acc routine seq
 
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
-    real, intent(out)  :: Flux_V(nFlux)
-    real, intent(out)  :: Unormal_I(nFluid+1)
+    real, intent(out)  :: Flux_V(nFaceValue)
 
     ! Average state
     real:: State_V(nVar)
@@ -707,14 +704,15 @@ contains
             StateRightCons_V, FluxRight_V)
 
        ! Lax-Friedrichs flux
-       Flux_V = Area*0.5*((FluxLeft_V + FluxRight_V) &
-            +             Cmax*(StateLeftCons_V - StateRightCons_V))
+       Flux_V(1:nFlux) = Area*0.5*((FluxLeft_V + FluxRight_V) &
+            +                      Cmax*(StateLeftCons_V - StateRightCons_V))
 
        if(nFluid == 1)then
-          if(UseNonConservative) Unormal_I(1) = Area*0.5* &
+          if(UseNonConservative) Flux_V(UnFirst_) = Area*0.5* &
                sum((StateLeft_V(Ux_:Uz_) + StateRight_V(Ux_:Uz_))*Normal_D)
        else
-          if(UseNonConservative) Unormal_I(1:nFluid) = Area*0.5* &
+          if(UseNonConservative) Flux_V(UnFirst_:UnFirst_+nFluid-1) = &
+               Area*0.5* &
                ( (StateLeft_V(iUx_I) + StateRight_V(iUx_I))*Normal_D(1) &
                + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*Normal_D(2) &
                + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
@@ -757,13 +755,13 @@ contains
        CMulti = Cright*Cleft
        CInvDiff = 1./(Cright - Cleft)
        ! HLLE flux
-       Flux_V = &
+       Flux_V(1:nFlux) = &
             ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
             + CMulti*(StateRightCons_V - StateLeftCons_V) ) &
             *CInvDiff
 
        if(nFluid == 1)then
-          if(UseNonConservative)Unormal_I(1) = Area*CInvDiff* &
+          if(UseNonConservative)Flux_V(UnFirst_) = Area*CInvDiff* &
                ( (Cright*StateLeft_V(Ux_) &
                -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
                + (Cright*StateLeft_V(Uy_) &
@@ -771,7 +769,8 @@ contains
                + (Cright*StateLeft_V(Uz_) &
                -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
        else
-          if(UseNonConservative) Unormal_I(1:nFluid) = Area*CInvDiff*  &
+          if(UseNonConservative) Flux_V(UnFirst_:UnFirst_+nFluid-1) = &
+               Area*CInvDiff*  &
                ( (Cright*StateLeft_V(iUx_I)              &
                -  Cleft*StateRight_V(iUx_I))*Normal_D(1) &
                + (Cright*StateLeft_V(iUy_I)              &
@@ -878,7 +877,7 @@ contains
 
     ! optimal for CPU (face value and face flux calculated only once)
 
-    integer:: i, j, k, iBlock, iGang, iFluid, iP
+    integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
 
     real:: DivU, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
@@ -913,8 +912,7 @@ contains
           ! DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
           !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
 
-          call get_flux_x_prim(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang), &
-               uDotArea_IXI(1,i,j,k,iGang))
+          call get_flux_x_prim(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang))
 
        end do; end do; end do
 
@@ -925,8 +923,7 @@ contains
              ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
              !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 
-             call get_flux_y_prim(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang), &
-                  uDotArea_IYI(1,i,j,k,iGang))
+             call get_flux_y_prim(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang))
 
           end do; end do; end do
        end if
@@ -938,8 +935,7 @@ contains
              ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
              !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 
-             call get_flux_z_prim(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang), &
-                  uDotArea_IZI(1,i,j,k,iGang))
+             call get_flux_z_prim(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang))
 
           end do; end do; end do
        end if
@@ -948,22 +944,23 @@ contains
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-          Change_V =  Flux_VXI(:,i,j,k,iGang) - Flux_VXI(:,i+1,j,k,iGang)
-          if(nDim > 1) Change_V = Change_V &
-               + Flux_VYI(:,i,j,k,iGang) - Flux_VYI(:,i,j+1,k,iGang)
-          if(nDim > 2) Change_V = Change_V &
-               + Flux_VZI(:,i,j,k,iGang) - Flux_VZI(:,i,j,k+1,iGang)
+          Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
+               -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
+          if(nDim > 1) Change_V = Change_V + Flux_VYI(1:nFlux,i,j,k,iGang) &
+               -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
+          if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
+               -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
              do iFluid = 1, nFluid
                 iP = iP_I(iFluid)
-                DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
-                     - uDotArea_IXI(iFluid,i  ,j,k,iGang)
-                if(nJ > 1) DivU = DivU + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
-                     -                   uDotArea_IYI(iFluid,i,j,k,iGang)
-                if(nK > 1) DivU = DivU + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
-                     -                   uDotArea_IZI(iFluid,i,j,k,iGang)
+                iUn = UnFirst_ + iFluid - 1
+                DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
+                if(nJ > 1) DivU = DivU &
+                     + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
+                if(nK > 1) DivU = DivU &
+                     + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
                 Change_V(iP) = Change_V(iP) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
              end do
@@ -973,7 +970,7 @@ contains
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
           else
-             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
           end if
           if(IsCartesian)then
              DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
@@ -1021,12 +1018,11 @@ contains
 
   end subroutine update_state_cpu_prim
   !============================================================================
-  subroutine get_flux_x_prim(i, j,  k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_x_prim(i, j,  k, iBlock, Flux_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Flux_V(nFaceValue)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1036,16 +1032,15 @@ contains
     call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_x_prim
   !============================================================================
-  subroutine get_flux_y_prim(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_y_prim(i, j, k, iBlock, Flux_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Flux_V(nFaceValue)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1055,16 +1050,15 @@ contains
     call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_y_prim
   !============================================================================
-  subroutine get_flux_z_prim(i, j, k, iBlock, Flux_V, Unormal_I)
+  subroutine get_flux_z_prim(i, j, k, iBlock, Flux_V)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(out):: Flux_V(nFlux)
-    real,    intent(out):: Unormal_I(nFluid+1)
+    real,    intent(out):: Flux_V(nFaceValue)
 
     real :: Area, Normal_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -1074,7 +1068,7 @@ contains
     call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V, Unormal_I)
+         StateLeft_V, StateRight_V, Flux_V)
 
   end subroutine get_flux_z_prim
   !============================================================================
@@ -1137,7 +1131,7 @@ contains
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
           else
-             DtPerDv = iStage*Cfl*time_BLK(i,j,k,iBlock)
+             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
           end if
           if(IsCartesian)then
              DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
@@ -1192,8 +1186,7 @@ contains
     real, intent(inout):: Change_V(nFlux)
 
     real:: Area, Normal_D(3)
-    real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFlux)
-    real:: Unormal_I(nFluid+1)
+    real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
@@ -1219,17 +1212,17 @@ contains
        call get_face_z_prim(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
-    call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
-         Flux_V, Unormal_I)
+    call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, Flux_V)
 
-    Change_V = Change_V + Flux_V
+    Change_V = Change_V + Flux_V(1:nFlux)
 
     if(nFluid == 1)then
        if(UseNonConservative) Change_V(p_) = Change_V(p_) &
-            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Unormal_I(1)
+            + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
     else
        if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)*Unormal_I(1:nFluid)
+            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)&
+            *Flux_V(UnFirst_:UnFirst_+nFluid-1)
     end if
 
   end subroutine do_face_prim

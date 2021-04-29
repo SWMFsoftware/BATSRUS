@@ -30,6 +30,25 @@ module ModAdvance
   ! Total number of fluxes and sources: nVar state variables + nFluid energies
   integer, parameter:: nFlux = nVar + nFluid, nSource = nVar + nFluid
 
+  ! indexes for other face centered variables
+  integer, parameter :: &
+       UnFirst_ = nFlux+1, UnLast_ = UnFirst_ + nFluid, &
+       Vdt_ = UnLast_ + 1
+
+  ! The normal components of the magnetic field is exchaned only for
+  ! B_>U_ (UseB_ is true)
+  integer, parameter :: BnL_ = Vdt_ + min(1, B_-U_)
+  integer, parameter :: BnR_ = BnL_ + min(1, B_-U_)
+
+  integer, parameter :: nFaceValue = BnL_
+  
+  ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
+  ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
+  ! UseEField (Ex_>1)
+  integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
+  integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
+  integer, parameter :: nCorrectedFaceValue = MhdRhoUz_
+  
   ! Logical and number of species for multi-species equations
   logical, parameter:: UseMultiSpecies = SpeciesFirst_ > 1
   integer, parameter:: nSpecies = SpeciesLast_ - SpeciesFirst_ + 1
@@ -165,13 +184,8 @@ module ModAdvance
        FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI
   !$omp threadprivate( FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI )
 
-  ! V/dt for CFL time step limit
-  real, allocatable:: &
-       VdtFace_XI(:,:,:,:), VdtFace_YI(:,:,:,:), VdtFace_ZI(:,:,:,:)
-  !$omp threadprivate( VdtFace_XI, VdtFace_YI, VdtFace_ZI )
-  !$acc declare create(VdtFace_XI, VdtFace_YI, VdtFace_ZI)
-
-  ! Fluxes are for conservative variables (momentum)
+  ! Fluxes are for all state variables including energies,
+  ! for source terrms (div U, div B), and for time step calculatino Vmax*dt. 
   real, allocatable:: &
        Flux_VXI(:,:,:,:,:), Flux_VYI(:,:,:,:,:), Flux_VZI(:,:,:,:,:)
   !$omp threadprivate( Flux_VXI, Flux_VYI, Flux_VZI )
@@ -187,12 +201,6 @@ module ModAdvance
   !$acc declare create(DoCorrectFace, UseFDFaceFlux)
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
   !$omp threadprivate( FluxCenter_VGD )
-
-  ! Velocity . area vector for div(U) in various source terms. Per fluid.
-  real, allocatable, dimension(:,:,:,:,:):: &
-       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI
-  !$omp threadprivate( uDotArea_IXI, uDotArea_IYI, uDotArea_IZI )
-  !$acc declare create( uDotArea_IXI, uDotArea_IYI, uDotArea_IZI )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
   real, allocatable, dimension(:,:,:,:,:):: &
@@ -308,36 +316,30 @@ contains
          nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
     allocate(RightState_VXI( &
          nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
-    allocate(VdtFace_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(Flux_VXI(nFlux,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
+    allocate(Flux_VXI( &
+         nFaceValue,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VXI( &
          RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(uDotArea_IXI( &
-         nFluid+1,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     Flux_VXI = 0.0; MhdFlux_VXI = 0.0
 
     allocate(LeftState_VYI( &
          nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
     allocate(RightState_VYI( &
          nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
-    allocate(VdtFace_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    allocate(Flux_VYI(nFlux,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
+    allocate(Flux_VYI( &
+         nFaceValue,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VYI( &
          RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    allocate(uDotArea_IYI( &
-         nFluid+1,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     Flux_VYI = 0.0; MhdFlux_VYI = 0.0
 
     allocate(LeftState_VZI( &
          nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
     allocate(RightState_VZI( &
          nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
-    allocate(VdtFace_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    allocate(Flux_VZI(nFlux,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
+    allocate(Flux_VZI( &
+         nFaceValue,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     allocate(MhdFlux_VZI( &
          RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    allocate(uDotArea_IZI( &
-         nFluid+1,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     Flux_VZI = 0.0; MhdFlux_VZI = 0.0
 
     allocate(FaceDivU_IXI( &
@@ -394,15 +396,9 @@ contains
     if(allocated(LeftState_VXI))    deallocate(LeftState_VXI, RightState_VXI)
     if(allocated(LeftState_VYI))    deallocate(LeftState_VYI, RightState_VYI)
     if(allocated(LeftState_VZI))    deallocate(LeftState_VZI, RightState_VZI)
-    if(allocated(VdtFace_XI))       deallocate(VdtFace_XI)
-    if(allocated(VdtFace_YI))       deallocate(VdtFace_YI)
-    if(allocated(VdtFace_ZI))       deallocate(VdtFace_ZI)
     if(allocated(Flux_VXI))         deallocate(Flux_VXI)
     if(allocated(Flux_VYI))         deallocate(Flux_VYI)
     if(allocated(Flux_VZI))         deallocate(Flux_VZI)
-    if(allocated(uDotArea_IXI))     deallocate(uDotArea_IXI)
-    if(allocated(uDotArea_IYI))     deallocate(uDotArea_IYI)
-    if(allocated(uDotArea_IZI))     deallocate(uDotArea_IZI)
     if(allocated(bCrossArea_DXI))   deallocate(bCrossArea_DXI)
     if(allocated(bCrossArea_DYI))   deallocate(bCrossArea_DYI)
     if(allocated(bCrossArea_DZI))   deallocate(bCrossArea_DZI)

@@ -61,8 +61,7 @@ contains
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iVar, iFluid
-    integer:: iGang
+    integer :: i, j, k, iVar, iFluid, iUn, iGang
     real :: Pe, Pwave, DivU
     real :: Coef
 
@@ -124,8 +123,9 @@ contains
 
     ! Calculate source terms for ion pressure
     if(UseNonconservative .or. UseAnisoPressure)then
-       do iFluid=1,nFluid
+       do iFluid = 1, nFluid
           if(nFluid > 1) call select_fluid(iFluid)
+          iUn = UnFirst_ + iFluid - 1
 
 #ifndef OPENACC
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
@@ -160,7 +160,8 @@ contains
                    bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
-                   Source_VCI(iPpar,i,j,k,iGang) = Source_VCI(iPpar,i,j,k,iGang) &
+                   Source_VCI(iPpar,i,j,k,iGang) = &
+                        Source_VCI(iPpar,i,j,k,iGang) &
                         - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
@@ -221,14 +222,11 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-             DivU = uDotArea_IXI(iFluid,i+1,j,k,iGang) &
-                  - uDotArea_IXI(iFluid,i,j,k,iGang)
+             DivU = Flux_VXI(iUn,i+1,j,k,iGang) - Flux_VXI(iUn,i,j,k,iGang)
              if(nJ > 1) DivU = DivU &
-                  + uDotArea_IYI(iFluid,i,j+1,k,iGang) &
-                  - uDotArea_IYI(iFluid,i,j,k,iGang)
+                  + Flux_VYI(iUn,i,j+1,k,iGang) - Flux_VYI(iUn,i,j,k,iGang)
              if(nK > 1) DivU = DivU &
-                  + uDotArea_IZI(iFluid,i,j,k+1,iGang) &
-                  - uDotArea_IZI(iFluid,i,j,k,iGang)
+                  + Flux_VZI(iUn,i,j,k+1,iGang) - Flux_VZI(iUn,i,j,k,iGang)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VCI(iP,i,j,k,iGang) = Source_VCI(iP,i,j,k,iGang) &
@@ -276,18 +274,19 @@ contains
           if(UseMultiIon)then
              ! The following should be Div(Uplus). For zero Hall velocity
              ! this is the same as Div(Ue).
-             DivU = uDotArea_IXI(eFluid_,i+1,j,k,iGang) &
-                  - uDotArea_IXI(eFluid_,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU + uDotArea_IYI(eFluid_,i,j+1,k,iGang) &
-                  -                   uDotArea_IYI(eFluid_,i,j,k,iGang)
-             if(nK > 1) DivU = DivU + uDotArea_IZI(eFluid_,i,j,k+1,iGang) &
-                  -                   uDotArea_IZI(eFluid_,i,j,k,iGang)
+             DivU =                   Flux_VXI(UnLast_,i+1,j,k,iGang) &
+                  -                   Flux_VXI(UnLast_,i,j,k,iGang)
+             if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
+                  -                   Flux_VYI(UnLast_,i,j,k,iGang)
+             if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
+                  -                   Flux_VZI(UnLast_,i,j,k,iGang)
           else
-             DivU = uDotArea_IXI(1,i+1,j,k,iGang) - uDotArea_IXI(1,i,j,k,iGang)
-             if(nJ > 1) DivU = DivU &
-                  + uDotArea_IYI(1,i,j+1,k,iGang) - uDotArea_IYI(1,i,j,k,iGang)
-             if(nK > 1) DivU = DivU &
-                  + uDotArea_IZI(1,i,j,k+1,iGang) - uDotArea_IZI(1,i,j,k,iGang)
+             DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
+                  -                   Flux_VXI(UnFirst_,i,j,k,iGang)
+             if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
+                  -                   Flux_VYI(UnFirst_,i,j,k,iGang)
+             if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
+                  -                   Flux_VZI(UnFirst_,i,j,k,iGang)
           end if
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
@@ -418,12 +417,12 @@ contains
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          DivU = uDotArea_IXI(eFluid_,i+1,j,k,iGang) &
-               - uDotArea_IXI(eFluid_,i,j,k,iGang)
-          if(nJ > 1) DivU = DivU + uDotArea_IYI(eFluid_,i,j+1,k,iGang) &
-               -                   uDotArea_IYI(eFluid_,i,j,k,iGang)
-          if(nK > 1) DivU = DivU + uDotArea_IZI(eFluid_,i,j,k+1,iGang) &
-               -                   uDotArea_IZI(eFluid_,i,j,k,iGang)
+          DivU = Flux_VXI(UnLast_,i+1,j,k,iGang) &
+               - Flux_VXI(UnLast_,i,j,k,iGang)
+          if(nJ > 1) DivU = DivU + Flux_VYI(UnLast_,i,j+1,k,iGang) &
+               -                   Flux_VYI(UnLast_,i,j,k,iGang)
+          if(nK > 1) DivU = DivU + Flux_VZI(UnLast_,i,j,k+1,iGang) &
+               -                   Flux_VZI(UnLast_,i,j,k,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
@@ -843,11 +842,12 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! Note that the velocity of the first (and only) fluid is used
-          DivU = uDotArea_IXI(1,i+1,j,k,iGang) -uDotArea_IXI(1,i,j,k,iGang)
-          if(nJ > 1) DivU = DivU + uDotArea_IYI(1,i,j+1,k,iGang) &
-               -                   uDotArea_IYI(1,i,j,k,iGang)
-          if(nK > 1) DivU = DivU + uDotArea_IZI(1,i,j,k+1,iGang) &
-               -                   uDotArea_IZI(1,i,j,k,iGang)
+          DivU =                   Flux_VXI(UnFirst_,i+1,j,k,iGang) &
+               -                   Flux_VXI(UnFirst_,i,j,k,iGang)
+          if(nJ > 1) DivU = DivU + Flux_VYI(UnFirst_,i,j+1,k,iGang) &
+               -                   Flux_VYI(UnFirst_,i,j,k,iGang)
+          if(nK > 1) DivU = DivU + Flux_VZI(UnFirst_,i,j,k+1,iGang) &
+               -                   Flux_VZI(UnFirst_,i,j,k,iGang)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Source_VCI(SignB_,i,j,k,iGang) = Source_VCI(SignB_,i,j,k,iGang) &

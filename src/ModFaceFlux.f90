@@ -1,4 +1,3 @@
-
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
@@ -24,12 +23,12 @@ module ModFaceFlux
        LeftState_VXI, LeftState_VYI, LeftState_VZI,  &! in: left  face state
        RightState_VXI, RightState_VYI, RightState_VZI, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                   &! out: flux*Area
-       VdtFace_XI, VdtFace_YI, VdtFace_ZI,       &! out: cMax*Area for CFL
-       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, &! out: U.Area for P source
        bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI,&! out: B x Area for J
        MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! out: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        nFlux,   &                        ! number of fluxes: nVar+nFluid
+       nFaceValue, &                     ! number of all face values
+       UnFirst_, UnLast_, Vdt_, &        ! indexes for face values
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
        FluxCenter_VGD, DoCorrectFace, &
@@ -627,8 +626,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_IXI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VXI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -643,14 +641,15 @@ contains
          StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
          StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
 
-         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang) ,  &
+         call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang), &
               IsFF_I, IFF_I, RFF_I, StateLeft_V, StateRight_V, &
               FluxLeft_V, FluxRight_V, Normal_D, MhdFlux_V, &
               MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
-         VdtFace_xI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_IXI(:,iFace,jFace,kFace,iGang)   = Unormal_I*RFF_I(Area_)
+         Flux_VXI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) &
+              = Unormal_I*RFF_I(Area_)
+         Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
       end do; end do; end do
 #else
       iGang = 1
@@ -667,8 +666,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_IXI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_XI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VXI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -700,20 +698,21 @@ contains
 
          call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
 
-         if(UseMhdMomentumFlux) MhdFlux_VXI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         if(UseMhdMomentumFlux) &
+              MhdFlux_VXI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IXI(:,iFace,jFace,kFace,iGang)
-            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang), &
+            call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
 
-         VdtFace_xI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+         Flux_VXI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_IXI(:,iFace,jFace,kFace,iGang)   = Unormal_I*Area
+         Flux_VXI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
@@ -731,8 +730,8 @@ contains
                     >= cLowOrder) CYCLE
             endif
             do iFlux = 1, nFlux
-               Flux_VXI(iFlux,iFace,jFace,kFace,iGang)  = &
-                    correct_face_value(Flux_VXI(iFlux,iFace,jFace,kFace,iGang) ,&
+               Flux_VXI(iFlux,iFace,jFace,kFace,iGang)  = correct_face_value( &
+                    Flux_VXI(iFlux,iFace,jFace,kFace,iGang),&
                     FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,iGang))
             enddo
          end do; end do; enddo
@@ -793,8 +792,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_IYI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VYI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -815,8 +813,9 @@ contains
               MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
-         VdtFace_yI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_IYI(:,iFace,jFace,kFace,iGang) = Unormal_I*RFF_I(Area_)
+         Flux_VYI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = &
+              Unormal_I*RFF_I(Area_)
+         Flux_VYI(Vdt_,iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
       end do; end do; end do
 #else
       iGang = 1
@@ -833,8 +832,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_IYI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_YI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VYI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -866,19 +864,20 @@ contains
 
          call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
 
-         if(UseMhdMomentumFlux) MhdFlux_VYI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         if(UseMhdMomentumFlux) &
+              MhdFlux_VYI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IYI(:,iFace,jFace,kFace,iGang)
-            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang), &
+            call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
 
-         VdtFace_yI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+         Flux_VYI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_IYI(:,iFace,jFace,kFace,iGang) = Unormal_I*Area
+         Flux_VYI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
@@ -960,8 +959,7 @@ contains
 
          if(  .not. true_cell(IFF_I(iLeft_),IFF_I(jLeft_),IFF_I(kLeft_),iBlock) .and. &
               .not. true_cell(IFF_I(iRight_),IFF_I(jRight_),IFF_I(kRight_),iBlock)) then
-            uDotArea_IZI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VZI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -982,8 +980,9 @@ contains
               MhdFluxLeft_V, MhdFluxRight_V, Unormal_I, UnLeft_I, UnRight_I, &
               bCrossArea_D, Tangent1_D, Tangent2_D)
 
-         VdtFace_ZI(iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
-         uDotArea_IZI(:,iFace,jFace,kFace,iGang)  = Unormal_I*RFF_I(Area_)
+         Flux_VZI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) &
+              = Unormal_I*RFF_I(Area_)
+         Flux_VZI(Vdt_,iFace,jFace,kFace,iGang) = RFF_I(CmaxDt_)*RFF_I(Area_)
 
       end do; end do; end do
 
@@ -1002,8 +1001,7 @@ contains
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
-            uDotArea_IZI(:,iFace,jFace,kFace,iGang) = 0.0
-            VdtFace_ZI(iFace,jFace,kFace,iGang) = 0.0
+            Flux_VZI(UnFirst_:Vdt_,iFace,jFace,kFace,iGang) = 0.0
             CYCLE
          endif
 
@@ -1034,19 +1032,20 @@ contains
 
          call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
 
-         if(UseMhdMomentumFlux) MhdFlux_VZI(:,iFace,jFace,kFace,iGang)  = MhdFlux_V
+         if(UseMhdMomentumFlux) &
+              MhdFlux_VZI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZI(:,iFace,jFace,kFace,iGang)
-            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang), &
+            call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
 
-         VdtFace_zI(iFace,jFace,kFace,iGang) = CmaxDt*Area
+         Flux_VZI(Vdt_,iFace,jFace,kFace,iGang) = CmaxDt*Area
 
          if(DoCorrectFace) call correct_u_normal(IFF_I, RFF_I, Unormal_I)
 
-         uDotArea_IZI(:,iFace,jFace,kFace,iGang) = Unormal_I*Area
+         Flux_VZI(UnFirst_:UnLast_,iFace,jFace,kFace,iGang) = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
@@ -3074,7 +3073,7 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
 #endif
 
-    real, intent(out):: Flux_V(nFlux)
+    real, intent(out):: Flux_V(nFaceValue)
 
 #ifdef OPENACC
     logical,  intent(inout):: IsFF_I(:)
@@ -3518,9 +3517,8 @@ contains
       ! Restore
       iFluidMin = 1; iFluidMax = nFluid
 
-      ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
-
-      Flux_V = Flux_V*Area
+      ! Multiply Flux by Area
+      Flux_V(1:nFlux) = Flux_V(1:nFlux)*Area
       if(UseMhdMomentumFlux) MhdFlux_V = MhdFlux_V*Area
 
       ! Increase maximum speed with the sum of diffusion speeds
@@ -4631,7 +4629,7 @@ contains
              /(RhoR*(sR-UnR) - RhoL*(sL-UnL))
 
         if(sL >= 0.)then
-           Flux_V    = FluxLeft_V
+           Flux_V(1:nFlux) = FluxLeft_V
            Unormal_I = UnLeft_I
         elseif(sL < 0. .and. UnStar >= 0.)then
            StateStarCons_V = StateLeftCons_V
@@ -4639,7 +4637,8 @@ contains
            StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
                 + (UnStar-UnL)*(RhoL*UnStar + TotalPresL/(sL-UnL))
            StateStarCons_V = StateStarCons_V*(sL-UnL)/(sL-UnStar)
-           Flux_V    = FluxLeft_V  + sL*(StateStarCons_V - StateLeftCons_V)
+           Flux_V(1:nFlux) = &
+                FluxLeft_V + sL*(StateStarCons_V - StateLeftCons_V)
            Unormal_I = UnStar
         elseif(UnStar < 0. .and. sR >= 0.)then
            StateStarCons_V = StateRightCons_V
@@ -4647,10 +4646,11 @@ contains
            StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
                 + (UnStar-UnR)*(RhoR*UnStar + TotalPresR/(sR-UnR))
            StateStarCons_V = StateStarCons_V*(sR-UnR)/(sR-UnStar)
-           Flux_V    = FluxRight_V + sR*(StateStarCons_V - StateRightCons_V)
+           Flux_V(1:nFlux) = &
+                FluxRight_V + sR*(StateStarCons_V - StateRightCons_V)
            Unormal_I = UnStar
         else
-           Flux_V    = FluxRight_V
+           Flux_V(1:nFlux) = FluxRight_V
            Unormal_I = UnRight_I
         endif
 
@@ -4701,7 +4701,7 @@ contains
 
         write(*,*)'Eigenvalue_maxabs=', Cmax
         write(*,*)'CmaxDt           =', CmaxDt
-        do iVar = 1, nVar + nFluid
+        do iVar = 1, nFlux
            write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
                 NameVar_V(iVar),&
                 Flux_V(iVar), &
@@ -4845,15 +4845,15 @@ contains
                   case(1)
                      if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
                           k>0 .and. k<=nK) &
-                          VdtFace_XI(i,j,k,iGang) = CmaxArea
+                          Flux_VXI(Vdt_,i,j,k,iGang) = CmaxArea
                   case(2)
                      if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
                           k>0 .and. k<=nK) &
-                          VdtFace_YI(i,j,k,iGang) = CmaxArea
+                          Flux_VYI(Vdt_,i,j,k,iGang) = CmaxArea
                   case(3)
                      if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
                           k>0 .and. k<=nK+1) &
-                          VdtFace_ZI(i,j,k,iGang) = CmaxArea
+                          Flux_VZI(Vdt_,i,j,k,iGang) = CmaxArea
                   end select
 
                end do

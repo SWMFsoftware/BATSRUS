@@ -115,7 +115,7 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
              UseDtLimit, DtLimit
-    use ModAdvance, ONLY : VdtFace_XI, VdtFace_YI, VdtFace_ZI, time_BLK, &
+    use ModAdvance, ONLY : time_BLK, Flux_VXI, Flux_VYI, Flux_VZI, Vdt_, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
     use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
@@ -162,9 +162,11 @@ contains
        if(.not. true_cell(i,j,k,iBlock)) then
           time_BLK(i,j,k,iBlock) = 0
        else
-          Vdt = max(VdtFace_xI(i,j,k,iGang),VdtFace_xI(i+1,j,k,iGang))
-          if(nJ > 1) Vdt = Vdt + max(VdtFace_yI(i,j,k,iGang), VdtFace_yI(i,j+1,k,iGang))
-          if(nK > 1) Vdt = Vdt + max(VdtFace_zI(i,j,k,iGang), VdtFace_zI(i,j,k+1,iGang))
+          Vdt =  max(Flux_VXI(Vdt_,i,j,k,iGang), Flux_VXI(Vdt_,i+1,j,k,iGang))
+          if(nJ > 1) Vdt = Vdt &
+               + max(Flux_VYI(Vdt_,i,j,k,iGang), Flux_VYI(Vdt_,i,j+1,k,iGang))
+          if(nK > 1) Vdt = Vdt &
+               + max(Flux_VZI(Vdt_,i,j,k,iGang), Flux_VZI(Vdt_,i,j,k+1,iGang))
           time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
        end if
     end do; end do; end do
@@ -265,12 +267,12 @@ contains
     end if
 
     if(DoTest)then
-       write(*,*)NameSub,' VdtFace_XI(iTest:iTest+1)=', &
-            VdtFace_xI(iTest:iTest+1,jTest,kTest,iGang)
-       if(nJ>1) write(*,*) NameSub,' VdtFace_YI(jTest:jTest+1)=', &
-            VdtFace_yI(iTest,jTest:jTest+1,kTest,iGang)
-       if(nK>1) write(*,*) NameSub,' VdtFace_ZI(kTest:kTest+1)=', &
-            VdtFace_zI(iTest,jTest,kTest:kTest+1,iGang)
+       write(*,*)NameSub,' Vdt_X(iTest:iTest+1)=', &
+            Flux_VXI(Vdt_,iTest:iTest+1,jTest,kTest,iGang)
+       if(nJ>1) write(*,*) NameSub,' Vdt_Y(jTest:jTest+1)=', &
+            Flux_VYI(Vdt_,iTest,jTest:jTest+1,kTest,iGang)
+       if(nK>1) write(*,*) NameSub,' Vdt_Z(kTest:kTest+1)=', &
+            Flux_VZI(Vdt_,iTest,jTest,kTest:kTest+1,iGang)
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
 

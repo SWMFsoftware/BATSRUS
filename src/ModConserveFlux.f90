@@ -10,14 +10,12 @@ module ModConserveFlux
   use ModSize, ONLY: nI, nJ, nK, MaxBlock, MaxDim
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_, Ex_
 
-  use ModMain, ONLY:     UseB
+  use ModMain, ONLY: UseB
   use ModAdvance, ONLY: &
-       Flux_VXI, Flux_VYI, Flux_VZI, &
-       VdtFace_XI, VdtFace_YI, VdtFace_ZI, &
+       Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, &
        LeftState_VXI, LeftState_VYI, LeftState_VZI, &
        RightState_VXI, RightState_VYI, RightState_VZI, &
-       uDotArea_IXI, uDotArea_IYI, uDotArea_IZI, UseMhdMomentumFlux, &
-       MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI
+       UseMhdMomentumFlux, MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI
 
   use ModGeometry,  ONLY: true_cell
   use ModParallel, ONLY : &
@@ -44,15 +42,6 @@ module ModConserveFlux
 
   ! Correct face flux near resolution change.
   logical :: DoConserveFlux = .true.
-
-  integer, parameter :: &
-       FluxLast_ = nVar + nFluid, &
-       UnFirst_ = FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
-       Vdt_ = UnLast_ + 1
-  ! The normal components of the magnetic field is exchaned only for
-  ! B_>U_ (UseB_ is true)
-  integer,parameter :: BnL_ = Vdt_ + min(1, B_-U_)
-  integer,parameter :: BnR_ = BnL_ + min(1, B_-U_)
 
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
@@ -145,14 +134,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k=1,nK; do j=1,nJ
-         CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceTo,iBlock)  &
-              = Flux_VXI(1:nVar+nFluid, lFaceFrom,j,k,iGang)
-
-         CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceTo,iBlock) &
-              = uDotArea_IXI(:,lFaceFrom,j,k,iGang)
-
-         CorrectedFlux_VXB(Vdt_,j,k,lFaceTo,iBlock)          &
-              = VdtFace_xI(lFaceFrom,j,k,iGang)
+         CorrectedFlux_VXB(1:Vdt_,j,k,lFaceTo,iBlock)  &
+              = Flux_VXI(1:Vdt_, lFaceFrom,j,k,iGang)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -194,9 +177,9 @@ contains
 
       if(DoTest)then
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
-         do i = 1, nFluid+1
+         do i = UnFirst_, UnLast_
             write(*,*)NameSub,' iVar, uDotA=', &
-                 uDotArea_IXI(i,lFaceFrom,jTest,kTest,iGang)
+                 Flux_VXI(i,lFaceFrom,jTest,kTest,iGang)
          end do
          do i = 1, nCorrectedFaceValues
             write(*,*)NameSub,' iVar, flux=', i, &
@@ -212,14 +195,9 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do k=1,nK;do i=1,nI
-         CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceTo,iBlock)    &
-              = Flux_VYI(1:FluxLast_,i,lFaceFrom,k,iGang)
+         CorrectedFlux_VYB(1:Vdt_,i,k,lFaceTo,iBlock)    &
+              = Flux_VYI(1:Vdt_,i,lFaceFrom,k,iGang)
 
-         CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceTo,iBlock) &
-              = uDotArea_IYI(:,i,lFaceFrom,k,iGang)
-
-         CorrectedFlux_VYB(Vdt_,i,k,lFaceTo,iBlock)         &
-              = VdtFace_yI(i,lFaceFrom,k,iGang)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -255,14 +233,8 @@ contains
       !------------------------------------------------------------------------
       iGang = 1
       do j=1,nJ;do i=1,nI
-         CorrectedFlux_VZB(1:FluxLast_,  i,j,lFaceTo,iBlock)    &
-              = Flux_VZI(1:FluxLast_,i,j,lFaceFrom,iGang)
-
-         CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceTo,iBlock) &
-              = uDotArea_IZI(:,i,j,lFaceFrom,iGang)
-
-         CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,iBlock)           &
-              = VdtFace_zI(i,j,lFaceFrom,iGang)
+         CorrectedFlux_VZB(1:Vdt_,  i,j,lFaceTo,iBlock)    &
+              = Flux_VZI(1:Vdt_,i,j,lFaceFrom,iGang)
       end do; end do
 
       if(.not.UseB)RETURN
@@ -386,12 +358,9 @@ contains
          if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
          if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
 
-         Flux_VXI(1:FluxLast_,lFaceTo,j,k,iGang)  = &
-              CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
-         uDotArea_IXI(:,lFaceTo,j,k,iGang) = &
-              CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
-         VdtFace_XI(lFaceTo,j,k,iGang) = &
-              CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
+         Flux_VXI(1:Vdt_,lFaceTo,j,k,iGang)  = &
+              CorrectedFlux_VXB(1:Vdt_,j,k,lFaceFrom,iBlock)
+
          ! if(UseMhdMomentumFlux) &
          !     MhdFlux_VXI(:,lFaceTo,j,k,iGang)  = CorrectedFlux_VXB(&
          !     MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
@@ -426,12 +395,9 @@ contains
          if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
          if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
 
-         Flux_VYI(1:FluxLast_,i,lFaceTo,k,iGang)  = &
-              CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
-         uDotArea_IYI(:,i,lFaceTo,k,iGang) = &
-              CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
-         VdtFace_yI(i,lFaceTo,k,iGang)= &
-              CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
+         Flux_VYI(1:Vdt_,i,lFaceTo,k,iGang)  = &
+              CorrectedFlux_VYB(1:Vdt_,i,k,lFaceFrom,iBlock)
+
          ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VYI(:,i,lFaceTo,k,iGang)  = CorrectedFlux_VYB(&
          !     MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
@@ -456,12 +422,9 @@ contains
          if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
          if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
 
-         Flux_VZI(1:FluxLast_,i,j,lFaceTo,iGang)  = &
-              CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
-         uDotArea_IZI(:,i,j,lFaceTo,iGang) = &
-              CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
-         VdtFace_zI(i,j,lFaceTo,iGang) = &
-              CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
+         Flux_VZI(1:Vdt_,i,j,lFaceTo,iGang)  = &
+              CorrectedFlux_VZB(1:Vdt_,i,j,lFaceFrom,iBlock)
+
          ! if(UseMhdMomentumFlux)&
          !     MhdFlux_VZI(:,i,j,lFaceTo,iGang)  = CorrectedFlux_VZB(&
          !     MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
