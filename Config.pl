@@ -228,6 +228,7 @@ sub set_optimization{
 	    IsTimeAccurate      => ".true.",
 	    UseB0               => ".true.",
             UseBorisCorrection  => ".false.",
+	    UseDivbSource       => ".true.", 
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
             iStage              => 1,
@@ -291,6 +292,9 @@ sub set_optimization{
 		    check_var($Set{"Cartesian"}, "F", $first);
 		    check_var($Set{"CartesianGrid"}, "F", $first);
 		}
+	    }elsif(/^#DIVB\b/){
+		my $use8wave = <FILE>;
+		check_var($Set{"UseDivbSource"}, $use8wave, $first);
 	    }elsif(/^#HYPERBOLICDIVB\b/){
 		my $usehyp = <FILE>;
 		check_var($Set{"UseHyperbolicDivB"}, $usehyp, $first);
