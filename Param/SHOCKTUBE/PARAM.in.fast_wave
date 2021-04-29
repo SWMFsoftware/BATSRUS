@@ -2,7 +2,7 @@
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
 #TEST
-orig			StringTest
+GPUUPDATE		StringTest
 
 #TIMING
 T			UseTiming
@@ -21,6 +21,10 @@ NONE			TypeNormalization
 
 #CONSERVEFLUX
 F			DoConserveFlux
+
+! Switch of TVD and Accurate res change
+#PROLONGATION
+2			nOrderProlong
 
 #GRID
 5			nRootBlock1
@@ -112,6 +116,15 @@ dt			= 0.2*dtmax   = 1.066
 32.0			LambdaZ
 0.0			Phase
 
+Add a small div B error for sake of testing
+#WAVE
+5			Bx_
+1000.0			Width
+0.0004			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #WAVE
 6			By_
@@ -152,18 +165,6 @@ T			UseNonConservative
 T			UseDtFixed
 0.5			DtFixedDim [sec] (read if UseDtFixed is true)
 
-#STRICT
-F			UseStrict
-
-#DIVB
-F			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
-#STRICT
-T			UseStrict
-
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLog
@@ -184,17 +185,8 @@ z=0 mhd idl_ascii		StringPlot
 -1.0			DxSavePlot
 
 #STOP
--1			MaxIteration
-20.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#TEST
-GPUUPDATE		StringTest
-
-#STOP
--1			MaxIteration
-40.0			tSimulationMax
+10			MaxIteration
+25.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -203,7 +195,7 @@ CPUUPDATE		StringTest
 
 #STOP
 -1			MaxIteration
-60.0			tSimulationMax
+50.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -212,7 +204,7 @@ GPUPRIM			StringTest
 
 #STOP
 -1			MaxIteration
-80.0			tSimulationMax
+75.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -232,20 +224,11 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #TEST
-orig			StringTest
-
-#STOP
--1			MaxIteration
-120.0			tSimulationMax
-
-#RUN ##########################################################################
-
-#TEST
 GPUUPDATE		StringTest
 
 #STOP
 -1			MaxIteration
-140.0			tSimulationMax
+125.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -254,7 +237,7 @@ CPUUPDATE		StringTest
 
 #STOP
 -1			MaxIteration
-160.0			tSimulationMax
+150.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -263,7 +246,7 @@ GPUPRIM			StringTest
 
 #STOP
 -1			MaxIteration
-180.0			tSimulationMax
+175.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -285,18 +268,12 @@ mc3			TypeLimiter
 #TEST
 orig			StringTest
 
-#STOP
--1			MaxIteration
-220.0			tSimulationMax
-
-#RUN ##########################################################################
-
 #TEST
 GPUUPDATE		StringTest
 
 #STOP
 -1			MaxIteration
-240.0			tSimulationMax
+225.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -305,7 +282,7 @@ CPUUPDATE		StringTest
 
 #STOP
 -1			MaxIteration
-260.0			tSimulationMax
+250.0			tSimulationMax
 
 #RUN ##########################################################################
 
@@ -314,7 +291,7 @@ GPUPRIM			StringTest
 
 #STOP
 -1			MaxIteration
-280.0			tSimulationMax
+275.0			tSimulationMax
 
 #RUN ##########################################################################
 
