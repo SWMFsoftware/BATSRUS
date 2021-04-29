@@ -255,7 +255,7 @@ contains
   !============================================================================
 
   subroutine correct_monotone_restrict(iBlock)
-    !$acc routine vector
+    !!! acc routine vector
 
     ! Correct the result of the first order monotone restriction by modifying
     ! the coarse ghost cell values such that the slope remains the same
@@ -297,7 +297,7 @@ contains
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
-       !$acc loop vector collapse(3) private(InvRho_I)
+       !!! acc loop vector collapse(3) private(InvRho_I)
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           InvRho_I = 1.0/State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
@@ -314,7 +314,7 @@ contains
             .and. .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)) &
             .and. .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)) &
             .and. .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,0,j,k,iBlock) = &
                   State_VGB(1:nVar,0,j,k,iBlock) + cThird*(&
@@ -331,7 +331,7 @@ contains
             .and. .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)) &
             .and. .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)) &
             .and. .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,nI+1,j,k,iBlock) = &
                   State_VGB(1:nVar,nI+1,j,k,iBlock) + cThird*( &
@@ -348,7 +348,7 @@ contains
             .and. .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)) &
             .and. .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)) &
             .and. .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,0,k,iBlock) = &
                   State_VGB(1:nVar,i,0,k,iBlock) + cThird*( &
@@ -365,7 +365,7 @@ contains
             .and. .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)) &
             .and. .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)) &
             .and. .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
                   State_VGB(1:nVar,i,nJ+1,k,iBlock) + cThird*( &
@@ -382,7 +382,7 @@ contains
             .and. .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)) &
             .and. .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)) &
             .and. .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,0,iBlock) = &
                   State_VGB(1:nVar,i,j,0,iBlock) + cThird*( &
@@ -399,7 +399,7 @@ contains
             .and. .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)) &
             .and. .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)) &
             .and. .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock)))then
-          !$acc loop vector collapse(2)
+          !!! acc loop vector collapse(2)
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,nK+1,iBlock) = &
                   State_VGB(1:nVar,i,j,nK+1,iBlock) + cThird*(&
@@ -414,7 +414,7 @@ contains
 
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
-       !$acc loop vector collapse(3) private(Rho_I)
+       !!! acc loop vector collapse(3) private(Rho_I)
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           Rho_I = State_VGB(iRho_I,i,j,k,iBlock)
           State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
@@ -435,7 +435,7 @@ contains
   end subroutine correct_monotone_restrict
   !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
-    !$acc routine vector
+    !!! acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
@@ -448,7 +448,7 @@ contains
 
     select case(iSideIn)
     case(1)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
           if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
                all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -476,7 +476,7 @@ contains
           end if
        end do; end do
     case(2)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
           if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -504,7 +504,7 @@ contains
           end if
        end do; end do
     case(3)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
           if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
@@ -532,7 +532,7 @@ contains
           end if
        end do; end do
     case(4)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
           if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
                all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
@@ -560,7 +560,7 @@ contains
           end if
        end do; end do
     case(5)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
           if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
                all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
@@ -588,7 +588,7 @@ contains
           end if
        end do; end do
     case(6)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
           if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
                all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
@@ -619,7 +619,7 @@ contains
   end subroutine get_face_accurate3d
   !============================================================================
   subroutine get_face_accurate1d(iSideIn, iBlock)
-    !$acc routine vector
+    !!! acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: iGang
 
@@ -653,7 +653,7 @@ contains
   end subroutine get_face_accurate1d
   !============================================================================
   subroutine get_face_accurate2d(iSideIn, iBlock)
-    !$acc routine vector
+    !!! acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
@@ -666,7 +666,7 @@ contains
 
     select case(iSideIn)
     case(1)
-       !$acc loop vector
+       !!! acc loop vector
        do j=1,nJ,2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VGI(:,-1,j,1,iGang)         ,&
@@ -678,7 +678,7 @@ contains
                FineF_VI        = LeftState_VXI(:, 2,j:j+1,1,iGang))
        end do
     case(2)
-       !$acc loop vector
+       !!! acc loop vector
        do j=1,nJ,2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VGI(:,nI+2,j,1,iGang)       ,&
@@ -690,7 +690,7 @@ contains
                FineF_VI        =RightState_VXI(:,nI  ,j:j+1,1,iGang))
        end do
     case(3)
-       !$acc loop vector
+       !!! acc loop vector
        do i=1,nI,2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VGI(:,i,-1,1,iGang)         ,&
@@ -702,7 +702,7 @@ contains
                FineF_VI        = LeftState_VYI(:,i:i+1,2,1,iGang))
        end do
     case(4)
-       !$acc loop vector
+       !!! acc loop vector
        do i=1,nI,2
           call accurate_reschange2d(&
                Coarse2_V       = Primitive_VGI(:,i,nJ+2,1,iGang)       ,&
@@ -717,7 +717,7 @@ contains
   end subroutine get_face_accurate2d
   !============================================================================
   subroutine get_face_tvd(iSideIn, iBlock)
-    !$acc routine vector
+    !!! acc routine vector
     integer,intent(in)::iSideIn, iBlock
     integer:: i, j, k
     integer:: iGang
@@ -730,7 +730,7 @@ contains
 
     select case(iSideIn)
     case(1)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
           if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
@@ -757,7 +757,7 @@ contains
           end if
        end do; end do
     case(2)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do j=1,nJ,2
           if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
              call tvd_reschange_body(&
@@ -784,7 +784,7 @@ contains
           end if
        end do; end do
     case(3)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
           if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
@@ -811,7 +811,7 @@ contains
           end if
        end do; end do
     case(4)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do k=1,nK,2; do i=1,nI,2
           if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
              call tvd_reschange_body(&
@@ -838,7 +838,7 @@ contains
           end if
        end do; end do
     case(5)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
           if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
              call tvd_reschange_body(&
@@ -865,7 +865,7 @@ contains
           end if
        end do; end do
     case(6)
-       !$acc loop vector collapse(2)
+       !!! acc loop vector collapse(2)
        do j=1,nJ,2; do i=1,nI,2
           if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
              call tvd_reschange_body(&
@@ -895,7 +895,7 @@ contains
   end subroutine get_face_tvd
   !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
-    !$acc routine vector
+    !!! acc routine vector
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
     ! The subroutine calculates right and left face values (primitive
@@ -1053,13 +1053,13 @@ contains
     end if
 #endif
 
-    !$acc loop vector collapse(3) independent
+    !!! acc loop vector collapse(3) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VGI(iVar,i,j,k,iGang) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
     if(UseAccurateResChange .or. nOrder==4)then
-       !$acc loop vector collapse(3) private(IArguments_I) independent
+       !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
           IArguments_I(y_) = j
@@ -1141,7 +1141,7 @@ contains
           end do; end do; end do
        end if
     else
-       !$acc loop vector collapse(3) private(IArguments_I) independent
+       !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
@@ -1156,7 +1156,7 @@ contains
        if(nJ > 1)then
           ! TODO: Only parallelized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc loop vector collapse(2) private(IArguments_I) independent
+          !!! acc loop vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 IArguments_I(x_) = i
@@ -1175,7 +1175,7 @@ contains
        if(nK > 1)then
           ! TODO: Only parallized the first 2 loops with openacc as
           !      the first try. Optimize later.
-          !$acc loop vector collapse(2) private(IArguments_I) independent
+          !!! acc loop vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 IArguments_I(x_) = i
@@ -1652,7 +1652,7 @@ contains
     !==========================================================================
 
     subroutine calc_primitives(IArguments_I,iBlock)
-      !$acc routine seq
+      !!! acc routine seq
       use ModPhysics, ONLY: InvClight2
 
       integer, intent(in):: IArguments_I(MaxDim)
@@ -2228,7 +2228,7 @@ contains
     !==========================================================================
 
     subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k
       integer:: iGang
@@ -2238,7 +2238,7 @@ contains
       iGang = iBlock
 #endif
 
-      !$acc loop vector collapse(3)
+      !!! acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i-1,j,k,iGang)
          RightState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
@@ -2253,7 +2253,7 @@ contains
     end subroutine get_facex_first
     !==========================================================================
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k, iVar
       integer:: iGang
@@ -2262,7 +2262,7 @@ contains
 #ifdef OPENACC
       iGang = iBlock
 #endif
-      !$acc loop vector collapse(3)
+      !!! acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j-1,k,iGang)
          RightState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
@@ -2277,7 +2277,7 @@ contains
     end subroutine get_facey_first
     !==========================================================================
     subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k, iVar
       integer:: iGang
@@ -2286,7 +2286,7 @@ contains
 #ifdef OPENACC
       iGang = iBlock
 #endif
-      !$acc loop vector collapse(3)
+      !!! acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k-1,iGang)
          RightState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
@@ -2301,7 +2301,7 @@ contains
     end subroutine get_facez_first
     !==========================================================================
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::i1, iMinSharp, iMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2325,7 +2325,7 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
-      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do j=jMin, jMax
          Primitive_VI(:,iMin-2:iMax+1) = Primitive_VGI(:,iMin-2:iMax+1,j,k,iGang)
          if(UseTrueCell)then
@@ -2364,7 +2364,7 @@ contains
     end subroutine get_facex_second
     !==========================================================================
     subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::j1, jMinSharp, jMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2388,7 +2388,7 @@ contains
               min(jMax, max(jMin - 1, nJ + 1 - nFaceLimiterResChange))
       endif
 
-      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do i=iMin,iMax
          Primitive_VI(:,jMin-2:jMax+1) = Primitive_VGI(:,i,jMin-2:jMax+1,k,iGang)
          if(UseTrueCell)then
@@ -2427,7 +2427,7 @@ contains
     end subroutine get_facey_second
     !==========================================================================
     subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !$acc routine vector
+      !!! acc routine vector
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::k1, kMinSharp, kMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2451,7 +2451,7 @@ contains
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
 
-      !$acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
+      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do j=jMin,jMax; do i=iMin,iMax;
          Primitive_VI(:,kMin-2:kMax+1) = Primitive_VGI(:,i,j,kMin-2:kMax+1,iGang)
          if(UseTrueCell)then
@@ -2690,7 +2690,7 @@ contains
     ! _____________|_____________|_F1_V__|__F2_V_|_
     !              |             |       |       |
 
-    !$acc routine seq
+    !!! acc routine seq
 
     real, intent(in):: Coarse2_V(:)              ! dimension(nVar)
     real, intent(in):: Coarse1_V(:)              ! dimension(nVar)
@@ -2791,7 +2791,7 @@ contains
     ! _____________|____________|__F1_V__! __F2_V_|_
     !              |            |        |       |
 
-    !$acc routine seq
+    !!! acc routine seq
 
     real, intent(in):: Coarse2_V(:), Coarse1_V(:)         ! dimension(nVar)
     real, intent(in):: Fine1_VII(:,:,:), Fine2_VII(:,:,:) ! dimension(nVar,2,2)
@@ -2871,7 +2871,7 @@ contains
     !              |            |        |       |
     !              | C1_V       |        |       |
 
-    !$acc routine seq
+    !!! acc routine seq
 
     real, intent(in) :: Coarse2_V(:)               ! dimension(nVar)
     real, intent(in) :: Coarse1_VII(:,:,:)         ! dimension(nVar,6,6)
@@ -3019,7 +3019,7 @@ contains
     !              |            |        |       |
     !              | C1_V       |        |       |
 
-    !$acc routine seq
+    !!! acc routine seq
 
     real, intent(in) :: Coarse2_V(:)            ! dimension(nVar)
     real, intent(in) :: Coarse1_VI(:,:)         ! dimension(nVar,6)
@@ -3159,7 +3159,7 @@ contains
     !  C2_V        |C1_V         |F1_V   | F2_V  |
     ! _____________|_____________|_______|_______|_
 
-    !$acc routine seq
+    !!! acc routine seq
 
     real, intent(in) :: Coarse2_V(:)         ! dimension(nVar)
     real, intent(in) :: Coarse1_V(:)         ! dimension(nVar)
@@ -3323,7 +3323,7 @@ contains
        endif ! UseLowOrder
     endif ! nOrder
 
-    !$acc update device(IsLowOrderOnly_B)
+    !!! acc update device(IsLowOrderOnly_B)
     call test_stop(NameSub, DoTest)
 
   contains
@@ -4220,7 +4220,7 @@ contains
   !       left_face  = central_value - limited_slope_left
   !       right_face = central_value + limited_slope_right
   subroutine limiter_body(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
-    !$acc routine seq
+    !!! acc routine seq
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
     real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -4318,7 +4318,7 @@ contains
   !============================================================================
 
   subroutine limiter(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
-    !$acc routine seq
+    !!! acc routine seq
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
     real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
