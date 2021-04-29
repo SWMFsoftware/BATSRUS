@@ -9,11 +9,11 @@ module ModUpdateStateFast
   use ModUpdateParamFast, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, &
-       UseHyperbolicDivB, IsTimeAccurate
+       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, &
+       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, &
        Primitive_VGI, &
        DtMax_CB => time_BLK
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -44,7 +44,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
 
-    real:: DtPerDv, DivU, Change_V(nFlux)
+    real:: DtPerDv, DivU, DivB, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
     logical:: DoTest
@@ -94,6 +94,22 @@ contains
                -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
           if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
                -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+
+          if(UseB .and. UseDivbSource)then
+             DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
+             if(nJ > 1) DivB = DivB + &
+                  Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
+             if(nK > 1) DivB = DivB + &
+                  Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
+             InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
+             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+                  - DivB*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+             Change_V(Energy_) = Change_V(Energy_) &
+                  - DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  *                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+          end if
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
@@ -378,7 +394,7 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, Normal_D(3)
+    real:: Area, Normal_D(3), InvRho
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
@@ -408,8 +424,10 @@ contains
     call get_numerical_flux(Normal_D, &
          Area, StateLeft_V, StateRight_V, Flux_V)
 
+    ! Change due to fluxes through this face
     Change_V = Change_V + Flux_V(1:nFlux)
 
+    ! Change due to -(gama-1)*divU source terms
     if(nFluid == 1)then
        if(UseNonConservative) Change_V(p_) = Change_V(p_) &
             + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
@@ -419,6 +437,18 @@ contains
             *Flux_V(UnFirst_:UnFirst_+nFluid-1)
     end if
 
+    ! Change due to 8-wave source terms
+    if(UseB .and. UseDivbSource)then
+       InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + Flux_V(Bn_)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+            + Flux_V(Bn_)*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+       Change_V(Energy_) = Change_V(Energy_) &
+            + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+    end if
+    
   end subroutine do_face
   !============================================================================
   subroutine set_old_state(iBlock)
@@ -689,7 +719,7 @@ contains
     ! Left, right and maximum speeds, normal velocity, jump in Bn
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
 
-    real :: CInvDiff, CMulti
+    real :: AreaInvCdiff, Cproduct, Bn
     !--------------------------------------------------------------------------
     if(DoLf)then
        ! Rusanov scheme
@@ -717,6 +747,11 @@ contains
                + (StateLeft_V(iUy_I) + StateRight_V(iUy_I))*Normal_D(2) &
                + (StateLeft_V(iUz_I) + StateRight_V(iUz_I))*Normal_D(3) )
        end if
+
+       ! Store Bnormal
+       if(UseB .and. UseDivbSource) Flux_V(Bn_) = 0.5*Area* &
+            sum((StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))*Normal_D)
+
     else
        ! Linde scheme
        if(UseB)then
@@ -752,16 +787,15 @@ contains
        call get_physical_flux(StateRight_V, Normal_D, &
             StateRightCons_V, FluxRight_V)
 
-       CMulti = Cright*Cleft
-       CInvDiff = 1./(Cright - Cleft)
+       Cproduct     = Cright*Cleft
+       AreaInvCdiff = Area/(Cright - Cleft)
        ! HLLE flux
-       Flux_V(1:nFlux) = &
+       Flux_V(1:nFlux) = AreaInvCdiff *&
             ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
-            + CMulti*(StateRightCons_V - StateLeftCons_V) ) &
-            *CInvDiff
+            + Cproduct*(StateRightCons_V - StateLeftCons_V) )
 
        if(nFluid == 1)then
-          if(UseNonConservative)Flux_V(UnFirst_) = Area*CInvDiff* &
+          if(UseNonConservative)Flux_V(UnFirst_) = AreaInvCDiff* &
                ( (Cright*StateLeft_V(Ux_) &
                -  Cleft*StateRight_V(Ux_))*Normal_D(1) &
                + (Cright*StateLeft_V(Uy_) &
@@ -770,7 +804,7 @@ contains
                -  Cleft*StateRight_V(Uz_))*Normal_D(3) )
        else
           if(UseNonConservative) Flux_V(UnFirst_:UnFirst_+nFluid-1) = &
-               Area*CInvDiff*  &
+               AreaInvCdiff*  &
                ( (Cright*StateLeft_V(iUx_I)              &
                -  Cleft*StateRight_V(iUx_I))*Normal_D(1) &
                + (Cright*StateLeft_V(iUy_I)              &
@@ -783,23 +817,26 @@ contains
           if(Hyp_ > 1 .and. UseHyperbolicDivb) then
              ! Overwrite the flux of the Hyp field with the Lax-Friedrichs flux
              Cmax = max(Cmax, SpeedHyp)
-             Flux_V(Hyp_) = 0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
+             Flux_V(Hyp_) = 0.5*Area*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
                   - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
           end if
-
+          
           ! Linde scheme: use Lax-Friedrichs flux for Bn
           ! The original jump was removed, now we add it with Cmax
-          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) - Cmax*DiffBn*Normal_D
-
+          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) - Area*Cmax*DiffBn*Normal_D
+          
           ! Fix the energy diffusion
           ! The energy jump is also modified by
           ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
-          Flux_V(Energy_) = Flux_V(Energy_) - Cmax*0.5*DiffBn* &
-               sum( Normal_D*(StateRight_V(Bx_:Bz_) + StateLeft_V(Bx_:Bz_)))
+          ! Note that BnLeft = BnRight, no need to average
+          Bn = sum(Normal_D*StateLeft_V(Bx_:Bz_))
+          Flux_V(Energy_) = Flux_V(Energy_) - Area*Cmax*DiffBn*Bn
+
+          ! Store Bnormal
+          if(UseDivbSource) Flux_V(Bn_) = Area*Bn
+
        end if
-
-       Flux_V = Area*Flux_V
-
+       
     end if
 
   end subroutine get_numerical_flux
@@ -879,7 +916,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
 
-    real:: DivU, DtPerDv, Change_V(nFlux)
+    real:: DivU, DivB, InvRho, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
     logical:: DoTest
@@ -950,6 +987,22 @@ contains
                -                             Flux_VYI(1:nFlux,i,j+1,k,iGang)
           if(nDim > 2) Change_V = Change_V + Flux_VZI(1:nFlux,i,j,k,iGang) &
                -                             Flux_VZI(1:nFlux,i,j,k+1,iGang)
+
+          if(UseB .and. UseDivbSource)then
+             DivB = Flux_VXI(Bn_,i+1,j,k,iGang) - Flux_VXI(Bn_,i,j,k,iGang)
+             if(nJ > 1) DivB = DivB + &
+                  Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
+             if(nK > 1) DivB = DivB + &
+                  Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
+             InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
+             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) - &
+                  DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) - &
+                  DivB*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+             Change_V(Energy_) = Change_V(Energy_) - &
+                  DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  *               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+          end if
 
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
@@ -1185,37 +1238,39 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, Normal_D(3)
+    real:: Area, Normal_D(3), InvRho
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
-       call get_face_x_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_x_prim(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x_prim(i+1, j, k, iBlock, StateLeft_V, StateRight_V)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
-       call get_face_y_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_y_prim(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y_prim(i, j+1, k, iBlock, StateLeft_V, StateRight_V)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_z_prim(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
+       call get_face_z_prim(i, j, k+1, iBlock, StateLeft_V, StateRight_V)
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, Flux_V)
 
+    ! Change due to fluxes through this face
     Change_V = Change_V + Flux_V(1:nFlux)
 
+    ! Change due to -(gama-1)*divU source terms
     if(nFluid == 1)then
        if(UseNonConservative) Change_V(p_) = Change_V(p_) &
             + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
@@ -1225,6 +1280,18 @@ contains
             *Flux_V(UnFirst_:UnFirst_+nFluid-1)
     end if
 
+    ! Change due to 8-wave source terms
+    if(UseB .and. UseDivbSource)then
+       InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + Flux_V(Bn_)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+            + Flux_V(Bn_)*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+       Change_V(Energy_) = Change_V(Energy_) &
+            + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+    end if
+    
   end subroutine do_face_prim
   !============================================================================
   subroutine get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
