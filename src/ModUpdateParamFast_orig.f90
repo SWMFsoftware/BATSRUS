@@ -18,6 +18,7 @@ module ModUpdateParamFast
        nStage => nStage, &
        iStage => iStage, &
        nOrder => nOrder, &
+       UseDivbSource => UseDivbSource, &
        UseHyperbolicDivB => UseHyperBolicDivB
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
