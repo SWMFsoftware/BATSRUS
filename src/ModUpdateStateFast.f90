@@ -448,7 +448,7 @@ contains
             + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
-    
+
   end subroutine do_face
   !============================================================================
   subroutine set_old_state(iBlock)
@@ -820,11 +820,11 @@ contains
              Flux_V(Hyp_) = 0.5*Area*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
                   - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
           end if
-          
+
           ! Linde scheme: use Lax-Friedrichs flux for Bn
           ! The original jump was removed, now we add it with Cmax
           Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) - Area*Cmax*DiffBn*Normal_D
-          
+
           ! Fix the energy diffusion
           ! The energy jump is also modified by
           ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
@@ -836,7 +836,7 @@ contains
           if(UseDivbSource) Flux_V(Bn_) = Area*Bn
 
        end if
-       
+
     end if
 
   end subroutine get_numerical_flux
@@ -1291,7 +1291,7 @@ contains
             + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
-    
+
   end subroutine do_face_prim
   !============================================================================
   subroutine get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)

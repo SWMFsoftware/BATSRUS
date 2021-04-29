@@ -41,14 +41,14 @@ module ModAdvance
   integer, parameter :: BnR_ = BnL_ + min(1, B_-U_)
 
   integer, parameter :: nFaceValue = BnL_
-  
+
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
   ! UseEField (Ex_>1)
   integer, parameter :: MhdRhoUx_ = BnR_ +        min(max(2-Ex_,0), B_-U_)
   integer, parameter :: MhdRhoUz_ = BnR_ + MaxDim*min(max(2-Ex_,0), B_-U_)
   integer, parameter :: nCorrectedFaceValue = MhdRhoUz_
-  
+
   ! Logical and number of species for multi-species equations
   logical, parameter:: UseMultiSpecies = SpeciesFirst_ > 1
   integer, parameter:: nSpecies = SpeciesLast_ - SpeciesFirst_ + 1
@@ -185,7 +185,7 @@ module ModAdvance
   !$omp threadprivate( FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI )
 
   ! Fluxes are for all state variables including energies,
-  ! for source terrms (div U, div B), and for time step calculatino Vmax*dt. 
+  ! for source terrms (div U, div B), and for time step calculatino Vmax*dt.
   real, allocatable:: &
        Flux_VXI(:,:,:,:,:), Flux_VYI(:,:,:,:,:), Flux_VZI(:,:,:,:,:)
   !$omp threadprivate( Flux_VXI, Flux_VYI, Flux_VZI )
