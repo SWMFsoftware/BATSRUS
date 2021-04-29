@@ -185,7 +185,7 @@ z=0 mhd idl_ascii		StringPlot
 -1.0			DxSavePlot
 
 #STOP
-10			MaxIteration
+-1			MaxIteration
 25.0			tSimulationMax
 
 #RUN ##########################################################################
