@@ -122,7 +122,7 @@ ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
 
 # Default fast parameter settings
-ModUpdateParamFast.f90:
+ModUpdateParamFast.f90: ModUpdateParamFast_orig.f90
 	cp ModUpdateParamFast_orig.f90 ModUpdateParamFast.f90
 
 ############################################################################
