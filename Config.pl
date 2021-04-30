@@ -226,9 +226,9 @@ sub set_optimization{
             IsCartesian         => ".true.",
             IsCartesianGrid     => ".true.",
 	    IsTimeAccurate      => ".true.",
-	    UseB0               => ".true.",
+	    UseB0               => "UseB"  ,
             UseBorisCorrection  => ".false.",
-	    UseDivbSource       => ".true.", 
+	    UseDivbSource       => "UseB .and. nDim>1", 
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
             iStage              => 1,
@@ -403,9 +403,12 @@ sub set_optimization{
 		    if($value eq ".true."){
 			print "    if(.not. ${name}Orig) ".
 			    "call CON_stop(NameSub//': $name=F')\n"
-		    }else{
+		    }elsif($value eq ".false."){
 			print "    if(${name}Orig) ".
 			    "call CON_stop(NameSub//': $name=T')\n"
+		    }else{
+			print "    if(${name}Orig .neqv. $value) ".
+			    "call CON_stop(NameSub//': $name=',${name}Orig)\n"
 		    }
 		}elsif($name ne 'iStage'){  # iStage cannot be checked
 		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';

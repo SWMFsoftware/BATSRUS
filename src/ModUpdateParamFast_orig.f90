@@ -5,6 +5,9 @@ module ModUpdateParamFast
 
   use ModUtilities, ONLY: CON_stop
 
+  use ModAdvance, ONLY: UseB
+  use BATL_lib,   ONLY: nDim
+  
   use ModAdvance, ONLY: &
        UseNonConservative => UseNonConservative
   use ModB0, ONLY: &
