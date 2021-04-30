@@ -159,7 +159,7 @@ rundir:
 		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
 		cp ${DIR}/share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/; \
 		rm -f ${RUNDIR}/*_TMP_* ${DIR}/share/JobScripts/*_TMP_*; \
-		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
+		cp -f Param/EARTH/PARAM.in ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \

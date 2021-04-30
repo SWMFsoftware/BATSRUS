@@ -1567,13 +1567,14 @@ contains
 
        case("#NONCONSERVATIVE")
           call read_var('UseNonConservative',UseNonConservative)
+          if(.not.UseNonConservative) nConservCrit = 0
 
        case("#CONSERVATIVECRITERIA")
-          call read_var('nConservCrit',nConservCrit)
+          call read_var('nConservCrit', nConservCrit)
           if(nConservCrit > 0) then
              if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
              allocate( TypeConservCrit_I(nConservCrit) )
-             do i=1,nConservCrit
+             do i = 1, nConservCrit
                 call read_var('TypeConservCrit',TypeConservCrit_I(i),&
                      IsLowerCase=.true.)
                 select case(TypeConservCrit_I(i))
