@@ -24,7 +24,7 @@ F			DoConserveFlux
 
 ! Switch of TVD and Accurate res change
 #PROLONGATION
-2			nOrderProlong
+1			nOrderProlong
 
 #GRID
 5			nRootBlock1
@@ -264,9 +264,6 @@ CPUPRIM			StringTest
 Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
-
-#TEST
-orig			StringTest
 
 #TEST
 GPUUPDATE		StringTest
