@@ -91,16 +91,16 @@ module ModAdvance
   logical :: UseSingleIonTemperature = .false.
 
   ! Conservative/Non-conservative parameters
-  logical :: UseNonConservative
+  logical :: UseNonConservative = .false.
   !$acc declare create(UseNonConservative)
 
   ! Number and type of criteria
-  integer :: nConservCrit
+  integer :: nConservCrit = 0
   !$acc declare create(nConservCrit)
-  character (len=10), allocatable :: TypeConservCrit_I(:)
+  character(len=10), allocatable :: TypeConservCrit_I(:)
 
   ! Geometrical parameters
-  real    :: rConserv, xParabolaConserv, yParabolaConserv
+  real    :: rConserv=-1.0, xParabolaConserv, yParabolaConserv
 
   ! Physics based parameters (to locate shocks)
   real    :: pCoeffConserv, GradPCoeffConserv

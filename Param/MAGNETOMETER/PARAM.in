@@ -32,6 +32,11 @@ T			UseBody
 10.0			BodyNDim
 25000.0			BodyTDim
 
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.0			rConserv
+
 #GRID
 1			nRootBlock1
 1			nRootBlock2

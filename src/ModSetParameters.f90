@@ -315,14 +315,6 @@ contains
             .and. IsFirstSession)then
           body1 = .false.
           rBody = 0.0
-          ! Change the default conservative criteria when there is no planet
-          ! and the #CONSERVATIVECRITERIA command did not occur
-          if(i_line_command("#CONSERVATIVECRITERIA") < 0)then
-             nConservCrit = 0
-             deallocate(TypeConservCrit_I)
-             if(i_line_command("#NONCONSERVATIVE") < 0) &
-                  UseNonConservative = .false.
-          end if
        end if
 
        ! Initialize axes (coordinate transformation matrices)
@@ -1567,11 +1559,15 @@ contains
 
        case("#NONCONSERVATIVE")
           call read_var('UseNonConservative',UseNonConservative)
-          if(.not.UseNonConservative) nConservCrit = 0
+          if(.not.UseNonConservative)then
+             nConservCrit = 0
+             if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
+          end if
 
        case("#CONSERVATIVECRITERIA")
           call read_var('nConservCrit', nConservCrit)
           if(nConservCrit > 0) then
+             UseNonConservative = .true.
              if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
              allocate( TypeConservCrit_I(nConservCrit) )
              do i = 1, nConservCrit
@@ -2947,14 +2943,8 @@ contains
          Rbody      = 1.0
          Rcurrents  =-1.0
 
-         ! Non Conservative Parameters
-         UseNonConservative   = .false.
-         nConservCrit         = 0
-         rConserv             = -1.
-
          ! Boundary Conditions
          ! Default boundary type is 'none'.
-
          BodyTDim_I            = 2.85E06    ! K
          BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
          BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
@@ -3014,13 +3004,6 @@ contains
          body1      = .true.
          Rbody      = 3.0
          Rcurrents  = 4.0
-
-         ! Non Conservative Parameters
-         UseNonConservative   = .true.
-         nConservCrit         = 1
-         allocate( TypeConservCrit_I(nConservCrit) )
-         TypeConservCrit_I(1) = 'r'
-         rConserv             = 2*rBody
 
          ! Boundary Conditions and Normalization
          ! Default BC type is 'none'.

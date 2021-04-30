@@ -6505,7 +6505,7 @@ commands.
 </command>
 
 <command name="NONCONSERVATIVE">
-	<parameter name="UseNonConservative" type="logical" default="T"/>
+	<parameter name="UseNonConservative" type="logical" default="F"/>
 #NONCONSERVATIVE
 T		UseNonConservative
 
@@ -6517,9 +6517,7 @@ and magnetic energy densities either everywhere (if nConservCrit=0),
 or in the regions defined in the #CONSERVATIVECRITERIA command.
 For further control of neutral fluids see the #NEUTRALFLUID command.
 
-For the GM component the default is using non-conservative pressure equations within 6 planet
-radii as long as NamePlanet is not set to NONE (see the #PLANET command). Otherwise, and also
-for the other components, the default is using the conservative energy equation everywhere.
+The default is using the conservative equations.
 </command>
 
 <command name="CONSERVATIVECRITERIA">
@@ -6577,10 +6575,8 @@ select cells which use the non-conservative scheme if ALL of them are true:
  'r'        - radial distance of the cell is less than rConserv
  'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
 \end{verbatim}
-For the GM component with a planet the default values are nConservCrit = 1
-with TypeConservCrit = 'r' and rConserv=6. If there is no planet
-(PLANET="NONE") or for the EE, SC, IH and OH components, the default is to
-have no conservative criteria: nConservCrit = 0.
+
+The default is to have no conservative criteria: nConservCrit = 0.
 </command>
 
 <command name="UPDATECHECK">
