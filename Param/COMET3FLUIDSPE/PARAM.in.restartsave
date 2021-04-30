@@ -125,9 +125,6 @@ T			DoSaveRestart Rest of parameters read if true
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #PROGRESS
 1			DnProgressShort (frequency of short reports to STDOUT)
 10			DnProgressLong (frequency of summaries to STDOUT)

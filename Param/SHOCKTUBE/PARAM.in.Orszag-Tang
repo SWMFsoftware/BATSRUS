@@ -10,9 +10,6 @@ NONE			NameIoUnits
 #NORMALIZATION
 NONE			NameNormalization
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #CHECKGRIDSIZE
 8			nI
 8			nJ

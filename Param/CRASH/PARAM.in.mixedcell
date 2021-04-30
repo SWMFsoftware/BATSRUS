@@ -54,9 +54,6 @@ T			IsTimeAccurate
 0.0			RightState EInt
 2.0e+4			RightState p
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #USERINPUTBEGIN ------------------------------------------------
 
 #MIXEDCELL

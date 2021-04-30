@@ -175,9 +175,6 @@ T			DoNormalizeCell
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #GRAVITY
 T			UseGravity
 0			iDirGravity

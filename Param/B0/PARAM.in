@@ -8,9 +8,6 @@ Param/B0/PARAM.in: check equilibrium
 #NONCONSERVATIVE
 F			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConserativeCrit
-
 ! Large errors if B0 source terms are switched off
 DIVBSOURCE
 F			UseB0Source

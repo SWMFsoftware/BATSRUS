@@ -7,19 +7,19 @@ EXAMPLE FOR POINT IMPLICIT SOURCE, Toth
 1.0
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #IOUNITS
-NONE
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE
+NONE			TypeNormalization
 
 #GRID
-1                       nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--10.			xMin	   
+1                       nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-10.			xMin
  10.			xMax	   
 -1.			yMin	   
  1.			yMax	   
@@ -60,7 +60,7 @@ float			zMaxBc
 
 ! Works with conservative too, but pressure changes slightly
 #NONCONSERVATIVE
-T		UseNonConservative
+T			UseNonConservative
 
 ! Any numerical scheme works
 #SCHEME

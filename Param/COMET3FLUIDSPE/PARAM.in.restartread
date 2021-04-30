@@ -98,9 +98,6 @@ F			DoSaveRestart Rest of parameters read if true
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #SAVELOGFILE
 T			DoSaveLogfile rest of parameters read if true
 VAR step date time		StringLog

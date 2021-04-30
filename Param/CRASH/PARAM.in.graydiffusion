@@ -10,9 +10,6 @@ NONE			TypeIoUnit
 #NORMALIZATION
 USER			TypeNormalization
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #CHECKGRIDSIZE
 32			nI
 4			nJ

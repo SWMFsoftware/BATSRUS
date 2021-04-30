@@ -27,9 +27,6 @@ Should work both with conservative energy and non-conservative pressure equation
 #NONCONSERVATIVE
 F			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConserativeCrit
-
 #SAVERESTART
 F			DoSaveRestart
 

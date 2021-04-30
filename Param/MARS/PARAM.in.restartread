@@ -28,9 +28,6 @@ F			IsTimeAccurate
 Linde			TypeFlux
 minmod			TypeLimiter
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR step time		StringLog

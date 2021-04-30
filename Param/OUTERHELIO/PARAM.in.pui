@@ -164,9 +164,6 @@ Linde			TypeFlux
 1			nStage (1 or 2)
 0.80			CflExpl
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart
@@ -310,10 +307,6 @@ minmod			TypeLimiter
 Linde			TypeFlux
 mc			TypeLimiter
 1.5			LimiterBeta
-
-! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
-#NONCONSERVATIVE
-F			UseNonConservative
 
 #USERSWITCH
 +source_expl -progress +perturb		StringSwitch

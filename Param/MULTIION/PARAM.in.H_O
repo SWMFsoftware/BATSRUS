@@ -165,24 +165,24 @@ user			innerBCtype
 T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-1
-parabola
-10.0
-25.0
+1			nConservCrit
+parabola		TypeConservCrit
+10.0			xParabolaConserv
+25.0			yParabolaConserv
 
 #DIVBSOURCE
 T                       UseB0Source
 
 #SAVELOGFILE
-T
-RAW
+T			DoSaveLogfile
+RAW			StringLog
 1			DnOutput
 -1.			DtOutput
 
 #SAVEPLOT
 3                       nplotfiles
 x=0 FUL idl             plot_string
-20                       DnOutput
+20			DnOutput
 -1.			DtOutput
 -1.                     dx (resolution, 0. maximum, -1. unstructured)
 y=0 FUL idl             plot_string

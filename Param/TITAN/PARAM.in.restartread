@@ -23,9 +23,6 @@ F			IsTimeAccurate
 Linde			TypeFlux
 minmod			TypeLimiter
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #TEST
 init_hall_resist		StringTest
 update_states calc_sources calc_facefluxes calc_timestep

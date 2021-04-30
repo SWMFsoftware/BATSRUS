@@ -103,9 +103,6 @@ periodic                TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux

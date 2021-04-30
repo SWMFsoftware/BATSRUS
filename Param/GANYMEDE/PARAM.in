@@ -76,12 +76,6 @@ SOLARWIND
 #MINIMUMDENSITY
 0.1			RhoMinDim
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #RESTARTOUTFILE
 one			StringRestartOutFile
 

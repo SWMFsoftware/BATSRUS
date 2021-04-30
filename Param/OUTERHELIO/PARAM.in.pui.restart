@@ -50,9 +50,6 @@ mc			TypeLimiter
 2			nStage
 0.6			CflExpl
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart

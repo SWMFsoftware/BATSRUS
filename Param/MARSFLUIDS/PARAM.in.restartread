@@ -39,10 +39,6 @@ minmod			TypeLimiter
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW step time		StringLog

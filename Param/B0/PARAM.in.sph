@@ -16,11 +16,8 @@ TEST
 update_states update_states_mhd calc_sources set_b0_reschange 
 
 ! Should work with conservative energy and non-conservative pressure equation (trivial)
-#NONCONSERVATIVE
+NONCONSERVATIVE
 F			UseNonConservative
-
-#CONSERVATIVECRITERIA
-0			nConserativeCrit
 
 ! Large errors if B0 source terms are switched off
 DIVBSOURCE
