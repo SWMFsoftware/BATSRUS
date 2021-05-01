@@ -391,7 +391,7 @@ contains
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
-      
+
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
@@ -406,22 +406,22 @@ contains
                  State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
          end do; end do; end do
       end if
-      
+
       ! Move energy source terms to pressure index as needed
       if(.not.UseNonConservative)then
          do k = 1, nK; do j = 1, nJ; do i =1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
-            Source_VCI(iP_I,i,j,k,iGang) = Source_VCI(Energy_:,i,j,k,iGang) 
+            Source_VCI(iP_I,i,j,k,iGang) = Source_VCI(Energy_:,i,j,k,iGang)
          end do; end do; end do
       elseif(nConservCrit > 0)then
          ! Move energy source terms to pressure index
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-            Source_VCI(iP_I,i,j,k,iGang) = Source_VCI(Energy_:,i,j,k,iGang) 
+            Source_VCI(iP_I,i,j,k,iGang) = Source_VCI(Energy_:,i,j,k,iGang)
          end do; end do; end do
       end if
-         
+
       ! Now update State_VGB
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state

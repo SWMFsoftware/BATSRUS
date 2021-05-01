@@ -52,7 +52,7 @@ contains
     integer, intent(in):: iBlock
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    
+
     integer:: i,j,k,iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pressure_to_energy'
@@ -72,12 +72,12 @@ contains
 
     ! A mix of conservative and non-conservative scheme (at least for the ions)
     FLUIDLOOP: do iFluid = 1, nFluid
-       
+
        ! If all neutrals are non-conservative exit from the loop
        if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if(UseNonConservative)then
@@ -108,8 +108,8 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine pressure_to_energy
-
   !============================================================================
+
   subroutine energy_to_pressure(iBlock, State_VGB)
     !$acc routine vector
     ! Calculate energy from pressure depending on
@@ -121,7 +121,7 @@ contains
 
     integer:: i,j,k,iFluid
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'pressure_to_energy'
+    character(len=*), parameter:: NameSub = 'energy_to_pressure'
     !--------------------------------------------------------------------------
     ! Fully non-conservative scheme
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
@@ -134,12 +134,12 @@ contains
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
     FLUIDLOOP: do iFluid = 1, nFluid
-       
+
        ! If all neutrals are non-conservative exit from the loop
        if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if(UseNonConservative)then
@@ -158,7 +158,7 @@ contains
                   State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
           end if
-          
+
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
                GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
@@ -175,7 +175,6 @@ contains
 
   end subroutine energy_to_pressure
   !============================================================================
-
 
   subroutine calc_energy_or_pressure(iBlock)
     !$acc routine vector
