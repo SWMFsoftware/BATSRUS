@@ -121,6 +121,14 @@ Linde			TypeFlux  1=Roe, 2=Rusanov, 3=Linde
 mc			TypeLimiter ! Only for nordder=2
 1.2			LimiterBeta
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.			rConserv
+
 #STOP
 50			MaxIteration
 -1.0			tSimulationMax

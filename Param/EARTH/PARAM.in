@@ -130,6 +130,14 @@ float			TypeBcTop
 1			nOrder
 Rusanov			TypeFlux
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.			rConserv
+
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile

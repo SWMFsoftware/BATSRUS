@@ -1,7 +1,7 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
-#^CFG FILE TESTING
 
 my $DefaultExe = "BATSRUS.exe";
 my $Help   = $h;
@@ -26,9 +26,8 @@ my $Table  =$ARGV[0];
 
 my $Empty = "-Planet=earth_simple -Grid=earth_211 -Res=1.0".
     " -Length=tiny_simple".
-    " -B0source=empty -Cfl=empty -Conservative=empty".
-    " -Corotation=empty -Divb=empty -Reschange=empty".
-    " -Implicit=empty".                                    #^CFG IF IMPLICIT
+    " -B0source=empty -Cfl=empty -Conservative=r6".
+    " -Corotation=empty -Divb=empty -Reschange=empty -Implicit=empty".
     " -Inner=ionosphere -Message=empty -Outer=inflowsidesfixed".
     " -Stage=empty -Time=empty -Timestep=empty -Upstream=empty";
 
@@ -48,45 +47,35 @@ if($Table =~ /test/i){
 }elsif($Table =~ /func/i){
 ###########################################################################
 
-    &execute($testbatsrus,"-beta -rusanov -idltecamr");   #^CFG IF RUSANOVFLUX
-    &execute($testbatsrus,"-beta -linde");                #^CFG IF LINDEFLUX
-    &execute($testbatsrus,"-beta -sokolov -idltecamr");   #^CFG IF AWFLUX
-    &execute($testbatsrus,"-mc -roe -Reschange=tvd");     #^CFG IF ROEFLUX
-
-    &execute($testbatsrus,"-Conservative=r6 -rusanov");   #^CFG IF RUSANOVFLUX
-    &execute($testbatsrus,"-Conservative=adapt -linde");  #^CFG IF LINDEFLUX
-    &execute($testbatsrus,"-Conservative=r6 -sokolov");   #^CFG IF AWFLUX
-    &execute($testbatsrus,"-Conservative=r6 -roeold");    #^CFG IF ROEFLUX
-
-                                                    #^CFG IF BORISCORR BEGIN
-    &execute($testbatsrus,"-borisfull -rusanov");         #^CFG IF RUSANOVFLUX
-    &execute($testbatsrus,"-borisfull -linde");           #^CFG IF LINDEFLUX
-    &execute($testbatsrus,"-borisfull -sokolov");         #^CFG IF AWFLUX
-                                                    #^CFG END BORISCORR
-                                                    #^CFG IF SIMPLEBORIS BEGIN
-    &execute($testbatsrus,"-borissimple -rusanov");       #^CFG IF RUSANOVFLUX
-    &execute($testbatsrus,"-borissimple -linde");         #^CFG IF LINDEFLUX
-                                                    #^CFG END SIMPLEBORIS
-
+    &execute($testbatsrus,"-beta -rusanov -idltecamr");
+    &execute($testbatsrus,"-beta -linde");             
+    &execute($testbatsrus,"-beta -sokolov -idltecamr");
+    &execute($testbatsrus,"-mc -roe -Reschange=tvd");  
+    &execute($testbatsrus,"-Conservative=r6 -rusanov");
+    &execute($testbatsrus,"-Conservative=adapt -linde")
+    &execute($testbatsrus,"-Conservative=r6 -sokolov");
+    &execute($testbatsrus,"-Conservative=r6 -roeold");    
+    &execute($testbatsrus,"-borisfull -rusanov");
+    &execute($testbatsrus,"-borisfull -linde");  
+    &execute($testbatsrus,"-borisfull -sokolov");
+    &execute($testbatsrus,"-borissimple -rusanov");
+    &execute($testbatsrus,"-borissimple -linde");  
     &execute($testbatsrus,"-ta -hlld -Conservative=r6 -idltecamr");
-    &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF BORISCORR 
-		 "-borisfull");                           #^CFG IF BORISCORR 
-    &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF SIMPLEBORIS
-		 "-borissimple");                         #^CFG IF SIMPLEBORIS
+    &execute($testbatsrus,"-ta -Conservative=r6 -borisfull");
+    &execute($testbatsrus,"-ta -Conservative=r6 -borissimple");
     &execute($testbatsrus,"-Inner=float"); 
     &execute($testbatsrus,"-Inner=reflect"); 
-
     &execute($testbatsrus,"-Limiter=mc -Resist=hall");
     &execute($testbatsrus,"-Limiter=mc3 -hlld");
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
 	     "-hall -logsatmove -Reschange=accurate -Length=tiny_ta");
 
-    &execute($testbatsrus,"-ta -Stage=2 -constrain",                      #^CFG IF CONSTRAINB
-	     "-Grid=earth_uniform -Res=2.0 -Length=tiny_ta_noamr");       #^CFG IF CONSTRAINB
-    &execute($testbatsrus,"-ta -Stage=2 -project -Length=tiny_ta");       #^CFG IF PROJECTION
-    &execute($testbatsrus,"-ta -Stage=2 -diffuse -Length=tiny_ta");       #^CFG IF DIVBDIFFUSE
+    &execute($testbatsrus,"-ta -Stage=2 -constrain",                  
+	     "-Grid=earth_uniform -Res=2.0 -Length=tiny_ta_noamr");
 
-    &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Length=tiny_ta");    #^CFG IF IMPLICIT
+    &execute($testbatsrus,"-ta -Stage=2 -project -Length=tiny_ta");
+    &execute($testbatsrus,"-ta -Stage=2 -diffuse -Length=tiny_ta");
+    &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Length=tiny_ta");
 
     &execute($testbatsrus,"-Limiter=mc3 -hlld",
 		"-Restart=saveone -Length=restartsave");
@@ -101,26 +90,17 @@ if($Table =~ /test/i){
 		"-Restart=read -Length=restartread");
 
     &execute($testbatsrus,"-ta -Corotation=ideal,updateb0 -Length=tiny_ta");
-
-    &execute($testbatsrus,"-Plottype=ray -Logtype=ray -nsturning_1nT_tilt");  #^CFG IF RAYTRACE
-
+    &execute($testbatsrus,"-Plottype=ray -Logtype=ray -nsturning_1nT_tilt");
     &execute($testbatsrus,"-Plottype=sph -Logtype=logpntflx");
-
     &execute($testbatsrus,"-Plottype=los");
-
     &execute($testbatsrus, $Empty);
-
-    &execute($testbatsrus,"-Plottype=raynew -Logtype=ray -nsturning_1nT_tilt"); #^CFG IF RAYTRACE
+    &execute($testbatsrus,"-Plottype=raynew -Logtype=ray -nsturning_1nT_tilt");
 
 ###########################################################################
 }elsif($Table =~ /robust/i){
 ###########################################################################
 
     &execute($testbatsrus,"-SSSS -N_5nT -Logs=10");
-
-                                               #^CFG IF IONOSPHERE BEGIN
-                                                  #^CFG IF BORISCORR BEGIN
-                                                     #^CFG IF RUSANOVFLUX BEGIN
     &execute($testbatsrus,
              "-ta -Plots=3minute -Logs=10", 
              "-borisfull_0.005 -full_ionosphere -Length=hour_restart",
@@ -131,8 +111,6 @@ if($Table =~ /test/i){
              "-borisfull_0.005 -full_ionosphere -Length=20minute_restart",
              "-Solver=rusanov",
              "-Upstream=ppulse_inc20,ppulse_dec10");
-                                                     #^CFG END RUSANOVFLUX
-                                                     #^CFG IF AWFLUX BEGIN
     &execute($testbatsrus,
              "-ta -Plots=3minute -Logs=10", 
              "-borisfull_0.005 -full_ionosphere -Length=hour_restart",
@@ -143,8 +121,6 @@ if($Table =~ /test/i){
              "-borisfull_0.005 -full_ionosphere -Length=20minute_restart",
              "-Solver=sokolov",
              "-Upstream=ppulse_inc20,ppulse_dec10");
-                                                     #^CFG END AWFLUX
-                                                     #^CFG IF LINDEFLUX BEGIN
     &execute($testbatsrus,
              "-ta -Plots=3minute -Logs=10", 
              "-borisfull_0.005 -full_ionosphere -Length=hour_restart",
@@ -160,24 +136,16 @@ if($Table =~ /test/i){
              "-borisfull_0.005 -full_ionosphere -Length=hour_restart",
              "-Solver=linde",
              "-Upstream=varying");
-                                                        #^CFG IF IMPLICIT BEGIN
     &execute($testbatsrus,
              "-ta -Plots=3minute -Logs=10 -partimpl05", 
              "-borisfull -full_ionosphere -Length=20minute_restart",
              "-Solver=linde,",
              "-Upstream=nsturning_5nT");
-                                                        #^CFG END IMPLICIT
-                                                     #^CFG END LINDEFLUX
-                                                  #^CFG END BORISCORR
-                                                  #^CFG IF ROEFLUX BEGIN
     &execute($testbatsrus,
              "-ta -Plots=3minute -Logs=10", 
              "-noboris -full_ionosphere -Length=20minute_restart",
              "-Solver=roe",
              "-Upstream=nsturning_5nT");
-                                                  #^CFG END ROEFLUX
-                                               #^CFG END IONOSPHERE
-
 }else{
     print "ERROR: unknown option for testsuite!\n";
     print_help;

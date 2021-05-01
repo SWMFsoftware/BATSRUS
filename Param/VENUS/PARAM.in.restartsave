@@ -107,6 +107,14 @@ Linde			TypeFlux
 mc			TypeLimiter
 1.2			LimiterBeta
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.			rConserv
+
 #STOP
 25			MaxIteration
 -1.0			tSimulationMax

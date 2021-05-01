@@ -29,8 +29,6 @@ T			IsTimeAccurate
 #ROTATION
 F			UseRotation
 
-#BEGIN_COMP GM ---------------------------------------------------------------
-
 #MAGNETOSPHERE
 T			UseBody
 2.5			rBody
@@ -55,7 +53,6 @@ T			UseBody
 #GRIDRESOLUTION
 2.0			Resolution
 initial			StringShape
-
 
 !refine inside 1.5*rcurrents, rcurrents = 3.5
 #GRIDRESOLUTION
@@ -180,6 +177,14 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat		NameSolarWindFile
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.			rConserv
 
 #END_COMP GM -----------------------------------------------------------------
 
