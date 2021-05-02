@@ -463,7 +463,8 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
-         UseAnisoPressure, Source_VCI
+         UseAnisoPressure, Source_VCI, LeftState_VXI, RightState_VXI, &
+         LeftState_VYI, RightState_VYI, LeftState_VZI, RightState_VZI
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
@@ -471,10 +472,13 @@ contains
          WaveDissipation_VC
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitT_
     use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, WaveFirst_, WaveLast_
     use ModFaceValue, ONLY: calc_face_value
     use ModB0, ONLY: set_b0_face
     use ModMultiFluid, ONLY: IonFirst_, IonLast_
+    use BATL_lib, ONLY: nDim, MaxDim, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
+    use ModHeatConduction, ONLY: get_heat_flux
+    use ModUtilities, ONLY: norm2
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -493,6 +497,13 @@ contains
     real :: QePerQtotal
     real :: Coef
     logical :: IsNewBlockAlfven
+
+    integer :: iFace, jFace, kFace, iDir, iMax, jMax, kMax, iLeft, jLeft, kLeft
+    real, allocatable :: HeatFlux_DF(:,:,:,:)
+    real :: AreaX, AreaY, AreaZ, Area2, Area, Normal_D(nDim)
+    real :: HeatCondCoefNormal, HeatFlux
+    logical :: IsNewBlockHeatCond
+    real :: StateLeft_V(nVar), StateRight_V(nVar)
 
     logical:: DoTest
 
@@ -597,6 +608,78 @@ contains
        end if
        NameIdlUnit = '-'
        NameTecUnit = '-'
+
+    case('divq')
+       ! some of the heating terms need face values
+       IsNewBlockHeatCond = .true.
+       call set_b0_face(iBlock)
+       call calc_face_value(iBlock, DoResChangeOnly = .false., &
+            DoMonotoneRestrict = .false.)
+       if (.not.allocated(HeatFlux_DF)) then
+          allocate(HeatFlux_DF(MaxDim,nI+1,nJ+1,nK+1))
+       endif
+       do iDir = 1, nDim
+          iMax = nI
+          jMax = nJ
+          kMax = nK
+          select case(iDir)
+          case(1)
+            iMax = nI + 1
+          case(2)
+            jMax = nJ + 1
+          case(3)
+            kMax = nK + 1
+          end select
+
+          do kFace = 1, kMax; do jFace = 1, jMax; do iFace = 1, iMax
+             select case(iDir)
+             case(1)
+                StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
+                StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
+                iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
+             case(2)
+                StateLeft_V  = LeftState_VYI(:,iFace,jFace,kFace,iGang)
+                StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
+                iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
+             case(3)
+                StateLeft_V  = LeftState_VZI(:,iFace,jFace,kFace,iGang)
+                StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+                iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
+             end select
+             AreaX = FaceNormal_DDFB(x_,iDir,iFace,jFace,kFace,iBlock)
+             AreaY = FaceNormal_DDFB(y_,iDir,iFace,jFace,kFace,iBlock)
+             AreaZ = FaceNormal_DDFB(z_,iDir,iFace,jFace,kFace,iBlock)
+             Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+             if(Area2 < 1e-30)then
+                ! The face is at the pole
+                Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlock) &
+                     -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlock)
+                Normal_D = Normal_D/norm2(Normal_D)
+                Area  = 0.0
+                Area2 = 0.0
+             else
+                Area = sqrt(Area2)
+                Normal_D = [AreaX, AreaY, AreaZ]/Area
+             end if
+
+             call get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
+                  StateLeft_V, StateRight_V, Normal_D, &
+                  HeatCondCoefNormal, HeatFlux, IsNewBlockHeatCond)
+             HeatFlux_DF(iDir,iFace,jFace,kFace) = HeatFlux*Area
+          enddo; enddo; enddo
+       enddo
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = &
+               HeatFlux_DF(1,i+1,j,k) - HeatFlux_DF(1,i,j,k) + &
+               HeatFlux_DF(2,i,j+1,k) - HeatFlux_DF(2,i,j,k) + &
+               HeatFlux_DF(3,i,j,k+1) - HeatFlux_DF(3,i,j,k)
+          PlotVar_G(i,j,k) = - PlotVar_G(i,j,k) / CellVolume_GB(i,j,k,iBlock) &
+               * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
+       enddo; enddo; enddo
+
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
 
     case default
        IsFound = .false.
