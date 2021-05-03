@@ -15,7 +15,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, &
        Primitive_VGI, &
-       DtMax_CB => time_BLK
+       DtMax_CB => time_BLK, Vdt_
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
@@ -24,6 +24,7 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
+  use ModTimeStepControl, ONLY: calc_timestep
 
   implicit none
 
@@ -171,6 +172,8 @@ contains
 #endif
 
        enddo; enddo; enddo
+
+       call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
@@ -381,6 +384,9 @@ contains
 #endif
           enddo; enddo; enddo
        end if
+
+       call calc_timestep(iBlock)
+
     end do
     !$acc end parallel
 
@@ -839,6 +845,8 @@ contains
 
     end if
 
+    Flux_V(Vdt_) = Cmax*Area
+
   end subroutine get_numerical_flux
   !============================================================================
   subroutine energy_to_pressure(State_V)
@@ -1064,6 +1072,8 @@ contains
 #endif
        enddo; enddo; enddo
 
+       call calc_timestep(iBlock)
+
     end do
     !$acc end parallel
 
@@ -1224,6 +1234,9 @@ contains
           ! end if
 #endif
        enddo; enddo; enddo
+
+       call calc_timestep(iBlock)
+
     end do
     !$acc end parallel
 

@@ -275,6 +275,7 @@ contains
             Flux_VZI(Vdt_,iTest,jTest,kTest:kTest+1,iGang)
        write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
+#endif
 
     ! Compute maximum stable time step for this solution block
     if(true_BLK(iBlock)) then
@@ -290,6 +291,7 @@ contains
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
     end if
 
+#ifndef OPENACC
     if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
@@ -368,6 +370,8 @@ contains
        nTimeLevel = 0
     end if
 
+    !$acc serial
+
     if(UseDtFixed)then
        Dt = DtFixed
     elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
@@ -389,10 +393,16 @@ contains
                maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock)))
        end if
 
+#ifndef OPENACC
        ! Set Dt to minimum time step over all the PE-s
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
+#else
+       DtMin = DtMinPe
+#endif
+
        Dt = DtMin
 
+#ifndef OPENACC
        if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
@@ -454,7 +464,7 @@ contains
 
           Dt = DtMax
        end if
-
+#endif
     end if
 
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
@@ -469,6 +479,8 @@ contains
           DtMin = DtMax/2**nTimeLevel
        end if
     end if
+
+    !$acc end serial
 
     !$acc parallel loop gang
     !$omp parallel do
@@ -504,12 +516,17 @@ contains
     end do
     !$omp end parallel do
 
+#ifndef  OPENACC
     ! Collect time level information from all processors
     if(UseMaxTimeStep .and. nProc > 1) call MPI_allreduce(MPI_IN_PLACE, &
          iTimeLevel_A, nNode, MPI_INTEGER, MPI_SUM, iComm, iError)
+#endif
 
+    !$acc serial
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
+    !$acc end serial
+    !$acc update host(Dt)
 
     if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
          Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
