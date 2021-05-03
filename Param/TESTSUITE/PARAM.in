@@ -1,13 +1,6 @@
 #DESCRIPTION
 Param/TESTSUITE/PARAM.in: TestSuite for BATSRUS.
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #INCLUDE
 Planet
 
