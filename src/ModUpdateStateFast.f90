@@ -13,7 +13,7 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, &
+       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, Vdt_, &
        Primitive_VGI, &
        DtMax_CB => time_BLK, Vdt_
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -842,8 +842,10 @@ contains
           if(UseDivbSource) Flux_V(Bn_) = Area*Bn
 
        end if
-
     end if
+    
+    ! Store time step constraint (to be generalized for multifluid)
+    Flux_V(Vdt_) = abs(Area)*Cmax
 
     Flux_V(Vdt_) = Cmax*Area
 
