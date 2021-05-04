@@ -829,8 +829,8 @@ contains
 
     end subroutine get_flux_z
     !==========================================================================
-
     subroutine add_artificial_viscosity(Flux_V, IFF_I, RFF_I)
+      
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
       ! equations.
@@ -841,6 +841,7 @@ contains
       use ModAdvance, ONLY: State_VGB
       use ModPhysics, ONLY: Gamma_I
       use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
+      use ModEnergy, ONLY: energy_i
 
       real, intent(inout):: Flux_V(nFlux)
 
@@ -887,11 +888,11 @@ contains
               State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))
 
          ! Energy flux
-         ! Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
-         !     (Energy_GBI(iFace,jFace,kFace,iBlockFace,iFluid) - &
-         !     Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
+         Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
+              ( energy_i(State_VGB(:,iFace,jFace,kFace,iBlockFace), iFluid) &
+              - energy_i(State_VGB(:,iLeft,jLeft,kLeft,iBlockFace), iFluid) )
 
-         If(iFluid == 1) then
+         if(iFluid == 1) then
             ! Diffuse scalars with the same coef of the first fluid.
             do iVar=ScalarFirst_, ScalarLast_
                Flux_V(iVar) = &

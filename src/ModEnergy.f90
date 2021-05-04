@@ -27,6 +27,7 @@ module ModEnergy
   public:: energy_to_pressure_cell  ! e -> p in physical cells for implicit
   public:: pressure_to_energy       ! p -> e conditionally for explicit
   public:: pressure_to_energy_block ! p -> e in a block for part implicit
+  public:: energy_i                 ! energy of fluid iFluid from State_V
   public:: calc_energy              ! p -> e in a range of cells/fluids
   public:: calc_energy_point        ! p -> e in one cell for all fluids
   public:: calc_energy_cell         ! p -> e in physical cells
@@ -41,6 +42,7 @@ module ModEnergy
 contains
   !============================================================================
   subroutine pressure_to_energy(iBlock, State_VGB)
+    !$acc routine vector
     ! Calculate energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -105,6 +107,27 @@ contains
 
   end subroutine pressure_to_energy
   !============================================================================
+  real function energy_i(State_V, iFluid)
+
+    ! Return energy of fluid iFluid from State_V
+
+    real, intent(in):: State_V(nVar)
+    integer, intent(in):: iFluid
+    !--------------------------------------------------------------------------
+    if(iFluid == 1 .and. IsMhd) then
+       ! MHD energy density
+       energy_i = InvGammaMinus1*State_V(p_) + 0.5* &
+            ( sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) &
+            + sum(State_V(Bx_:Bz_)**2) )
+    else
+       ! Hydro energy density
+       if(nFluid > 1) call select_fluid(iFluid)
+       energy_i = InvGammaMinus1_I(iFluid)*State_V(iP) &
+            + 0.5*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
+    end if
+       
+  end function energy_i
+  !============================================================================
   subroutine pressure_to_energy_block(State_VG, &
        iMin, iMax, jMin, jMax, kMin, kMax)
 
@@ -135,15 +158,17 @@ contains
 
   end subroutine pressure_to_energy_block
   !============================================================================
-  subroutine energy_to_pressure(iBlock, State_VGB)
+  subroutine energy_to_pressure(iBlock, State_VGB, IsOld)
 
     ! Convert energy to pressure in State_VGB depending on
     ! the value of UseNonConservative and IsConserv_CB
+    ! Do not limit pressure if IsOld is present (argument is StateOld_VGB)
 
     integer, intent(in):: iBlock
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-
+    logical, intent(in), optional:: IsOld
+    
     integer:: i, j, k, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'energy_to_pressure'
@@ -152,10 +177,11 @@ contains
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
          .not. (UseNeutralFluid .and. DoConserveNeutrals))then
 
-       ! Make sure pressure is larger than floor value
-       ! write(*,*) NameSub,' !!! call limit_pressure'
-       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-
+       if(.not.present(IsOld))then
+          ! Make sure pressure is larger than floor value
+          ! write(*,*) NameSub,' !!! call limit_pressure'
+          call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+       end if
        RETURN
     end if
 
@@ -201,9 +227,11 @@ contains
 
     end do FLUIDLOOP
 
-    ! Make sure final pressure is larger than floor value
-    ! write(*,*) NameSub,' !!! call limit_pressure'
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+    if(.not.present(IsOld))then
+       ! Make sure final pressure is larger than floor value
+       ! write(*,*) NameSub,' !!! call limit_pressure'
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
 
@@ -260,6 +288,7 @@ contains
   !============================================================================
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
+    !$acc routine vector
 
     ! Calculate total energy (excluding B0):
     !
@@ -320,6 +349,7 @@ contains
   !============================================================================
 
   subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn, UseOpenACCIn)
+    !$acc routine vector
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock
@@ -355,6 +385,7 @@ contains
           ! MHD energy
 
           if(UseOpenACC) then
+             !$acc loop vector collapse(3)
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
                    Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
