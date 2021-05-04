@@ -27,6 +27,7 @@ contains
     !$acc routine vector
     use ModMain
     use ModAdvance
+    use ModEnergy,     ONLY: limit_pressure
     use ModMultiFluid, ONLY: nFluid
     use BATL_lib,      ONLY: CellVolume_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -101,8 +102,9 @@ contains
 #ifndef OPENACC
     ! The first call may set UseUserUpdateStates to false
     if(UseUserUpdateStates)       call user_update_states(iBlock)
-#endif
     if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
+    ! write(*,*) NameSub,' !!! call limit_pressure after update_state_*'
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
 #ifndef OPENACC
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
@@ -138,20 +140,19 @@ contains
          IsDynamicPointImplicit, update_point_implicit
     use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
          multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
-    use ModEnergy
+    use ModEnergy, ONLY: energy_to_pressure, pressure_to_energy, limit_pressure
     use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
          UseWavePressure, UseWavePressureLtd, UseAlfvenWaves, DoAdvectWaves, &
          update_wave_group_advection
     use ModResistivity, ONLY: UseResistivity, UseResistiveFlux, &
          calc_resistivity_source
-    use ModFaceValue, ONLY: UseFaceIntegral4
     use BATL_lib, ONLY: CellVolume_GB
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
          ion_electron_init_point_impl, HypEDecay
     use ModMultiFluid,  ONLY: ChargePerMass_I, iRhoUxIon_I, iRhoUyIon_I, &
-         iRhoUzIon_I, nIonFluid
+         iRhoUzIon_I, iPIon_I, nIonFluid, UseNeutralFluid, DoConserveNeutrals
 
     integer, intent(in) :: iBlock
 
@@ -228,52 +229,6 @@ contains
             /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do; end do
 
-#ifndef OPENACC
-    if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
-       ! Integrate fluxes in the transverse direction (eq. 20)
-       ! <F> = F + Laplace_transverse(F)/24
-       do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Coeff = DtFactor*time_BLK(i,j,k,iBlock) &
-               /  (24.0*CellVolume_GB(i,j,k,iBlock))
-          ! Add f
-          Source_VCI(:,i,j,k,iGang) = Source_VCI(:,i,j,k,iGang) + Coeff* &
-               ( Flux_VXI(:,i,j+1,k,iGang)  &
-               + Flux_VXI(:,i,j-1,k,iGang)  &
-               - 2*(nDim-1)*Flux_VXI(:,i,j,k,iGang)  &
-               - Flux_VXI(:,i+1,j+1,k,iGang)  &
-               - Flux_VXI(:,i+1,j-1,k,iGang)  &
-               + 2*(nDim-1)*Flux_VXI(:,i+1,j,k,iGang)  &
-               + Flux_VYI(:,i+1,j,k,iGang)  &
-               + Flux_VYI(:,i-1,j,k,iGang)  &
-               - 2*(nDim-1)*Flux_VYI(:,i,j,k,iGang)  &
-               - Flux_VYI(:,i+1,j+1,k,iGang)  &
-               - Flux_VYI(:,i-1,j+1,k,iGang)  &
-               + 2*(nDim-1)*Flux_VYI(:,i,j+1,k,iGang)  )
-          if(nK == 1) CYCLE
-          ! Remaining terms for 3D
-          Source_VCI(:,i,j,k,iGang) = Source_VCI(:,i,j,k,iGang) + Coeff* &
-               ( Flux_VXI(:,i,j,k+1,iGang)  &
-               + Flux_VXI(:,i,j,k-1,iGang)  &
-               - Flux_VXI(:,i+1,j,k+1,iGang)  &
-               - Flux_VXI(:,i+1,j,k-1,iGang)  &
-               + Flux_VYI(:,i,j,k+1,iGang)  &
-               + Flux_VYI(:,i,j,k-1,iGang)  &
-               - Flux_VYI(:,i,j+1,k+1,iGang)  &
-               - Flux_VYI(:,i,j+1,k-1,iGang)  &
-               + Flux_VZI(:,i+1,j,k,iGang)  &
-               + Flux_VZI(:,i-1,j,k,iGang)  &
-               + Flux_VZI(:,i,j+1,k,iGang)  &
-               + Flux_VZI(:,i,j-1,k,iGang)  &
-               - 4*Flux_VZI(:,i,j,k,iGang)  &
-               - Flux_VZI(:,i+1,j,k+1,iGang)  &
-               - Flux_VZI(:,i-1,j,k+1,iGang)  &
-               - Flux_VZI(:,i,j+1,k+1,iGang)  &
-               - Flux_VZI(:,i,j-1,k+1,iGang)  &
-               + 4*Flux_VZI(:,i,j,k+1,iGang)  )
-
-       end do; end do; end do
-    end if
-
     if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)
 
     if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -289,7 +244,8 @@ contains
          (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
        call fix_multi_ion_update(iBlock)
-       call calc_energy_cell(iBlock)
+       ! write(*,*) NameSub,' !!! call limit_pressure after fix_multi_ion_update'
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after fix multiion update           =', &
@@ -363,12 +319,14 @@ contains
                 ! would not contribute to the pressure. It requires that
                 ! the user provide the corresponding source terms for
                 ! the energy equation in the user file.
-                call calc_pressure_cell(iBlock)
+                call energy_to_pressure(iBlock, State_VGB)
              else
-                call calc_energy_cell(iBlock)
+                ! write(*,*) NameSub,' !!! call limit_pressure'
+                call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
              end if
           else
-             call calc_energy_cell(iBlock)
+             ! write(*,*) NameSub,' !!! call limit_pressure'
+             call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
           end if
 
           if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -429,9 +387,16 @@ contains
 #ifdef OPENACC
       iGang = iBlock
 #endif
+=======
 
-#ifndef OPENACC
+      ! Convert pressure to energy for the conservative scheme
+      call pressure_to_energy(iBlock, StateOld_VGB)
+
+      if(.not.(UseHalfStep .or. nStage == 1 .or. nStage == 4)) &
+         call pressure_to_energy(iBlock, State_VGB)
+
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
+         ! Convert classical momentum and energy to relativistic      
          call mhd_to_boris(iBlock)
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -439,7 +404,7 @@ contains
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
-#endif
+
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
@@ -455,12 +420,34 @@ contains
          end do; end do; end do
       end if
 
+      ! Move energy source terms to pressure index as needed
+      ! Ions first
+      if(.not.UseNonConservative)then
+         do k = 1, nK; do j = 1, nJ; do i =1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
+                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang) 
+         end do; end do; end do
+      elseif(nConservCrit > 0)then
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
+            Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
+                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang) 
+         end do; end do; end do
+      end if
+      ! Neutrals next
+      if(UseNeutralFluid .and. DoConserveNeutrals)then
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            Source_VCI(iP_I(IonLast_+1:),i,j,k,iGang) = &
+                 Source_VCI(Energy_+IonLast_:,i,j,k,iGang) 
+         end do; end do; end do
+      end if
+            
       ! Now update State_VGB
-
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
-
-         !$acc loop vector collapse(3)
          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
             State_VGB(iVar,i,j,k,iBlock) = &
                  StateOld_VGB(iVar,i,j,k,iBlock) + Source_VCI(iVar,i,j,k,iGang)
@@ -474,7 +461,7 @@ contains
                  + Source_VCI(nVar+iFluid,i,j,k,iGang)
          end do; end do; end do; end do
       else
-         ! Update state variables starting from previous stage
+         ! Update state variables starting from previous stage (RK schemes)
          do k=1,nK; do j=1,nJ; do i=1,nI
             State_VGB(:,i,j,k,iBlock) = &
                  State_VGB(:,i,j,k,iBlock) + Source_VCI(1:nVar,i,j,k,iGang)
@@ -580,6 +567,7 @@ contains
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
+         ! Convert relativistic momentum/energy back to classical
          call boris_to_mhd(iBlock)
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -623,7 +611,7 @@ contains
 #endif
       end if
 
-#ifndef OPENACC
+      ! Check minimum density
       if(any(RhoMin_I > 0.0))then
          do iFluid = 1, nFluid
             if(RhoMin_I(iFluid) < 0) CYCLE
@@ -682,10 +670,10 @@ contains
          end if
       end if
 #endif
-      ! Update energy or pressure based on UseConservative and IsConserv_CB
-      call calc_energy_or_pressure(iBlock)
+      ! Convert energy back to pressure as needed
+      call energy_to_pressure(iBlock, State_VGB)
+      call energy_to_pressure(iBlock, StateOld_VGB)
 
-#ifndef OPENACC
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
@@ -770,7 +758,6 @@ contains
     use ModGeometry, ONLY : true_cell
     use ModNumConst, ONLY: cTiny
     use ModMpi
-    use ModEnergy
     use ModMultiFluid, ONLY: IsMhd
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
     use BATL_lib, ONLY: Xyz_DGB
@@ -1781,7 +1768,6 @@ contains
     use CON_axes,         ONLY: get_axes
     use ModNumConst,      ONLY: cRadToDeg
     use ModIO,            ONLY: iUnitOut, write_prefix
-    use ModEnergy,        ONLY: calc_energy_ghost
     use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use ModMessagePass,   ONLY: exchange_messages
