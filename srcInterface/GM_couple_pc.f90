@@ -274,7 +274,6 @@ contains
     use ModB0,        ONLY: B0_DGB
     use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_, HypE_
     use ModMultiFluid, ONLY: nIonFluid
-    use ModEnergy,    ONLY: calc_energy
     use ModVarIndexes, ONLY: DefaultState_V
 
     character(len=*), intent(inout):: NameVar ! List of variables
@@ -376,7 +375,6 @@ contains
                    endif
                 enddo
 
-                call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
              else
                 ! Provide position to PC
                 Pos_DI(1:nDim,iPoint) = &

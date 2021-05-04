@@ -41,7 +41,7 @@ contains
     use ModGeometry, ONLY: far_field_BCs_BLK
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
-    use ModEnergy,   ONLY: calc_energy_ghost, correctP
+    use ModEnergy,   ONLY: limit_pressure
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
     use ModBuffer,   ONLY: fill_in_from_buffer
@@ -84,7 +84,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
-
     call test_start(NameSub, DoTest)
     if(DoExtraMessagePass)then
        if(DoTest) write(*,*) NameSub,': doing extra message pass'
@@ -137,8 +136,6 @@ contains
                   call set_edge_corner_ghost&
                   (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
           endif
-          if(UseConstrainB)call correctP(iBlock)
-          if(UseProjection)call correctP(iBlock)
        end do
     end if
 
@@ -233,14 +230,19 @@ contains
 #endif
        end if
 
-       call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
-
+       ! Maybe only ghost cells at res changes need this
+       ! write(*,*)NameSub,' !!! call limit_pressure'
+       call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
+            1, nFluid)
+!!! DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
+       
 #ifndef OPENACC
        if(UseResistivePlanet) then
           CBC%TypeBc = 'ResistivePlanet'
           call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
        end if
 #endif
+       
     end do
     !$omp end parallel do
 

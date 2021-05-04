@@ -277,7 +277,6 @@ contains
 
   subroutine read_restart_files
 
-    use ModEnergy, ONLY: calc_energy_cell
     use ModBuffer, ONLY: DoRestartBuffer, read_buffer_restart
     integer :: iBlock
     logical:: DoTest
@@ -324,12 +323,6 @@ contains
     deallocate(State4_VC)
     deallocate(StateRead_VCB)
     if(allocated(ImplOldRead_VCB)) deallocate(ImplOldRead_VCB)
-
-    if (TypeRestartInFile == 'block') then
-       do iBlock = 1, nBlock
-          if (.not.Unused_B(iBlock)) call calc_energy_cell(iBlock)
-       end do
-    end if
 
     do iBlock = 1, nBlock
        if (.not.Unused_B(iBlock)) call fix_block_geometry(iBlock)

@@ -665,7 +665,6 @@ contains
     use ModMain, ONLY : UseConstrainB
     use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK, &
          Bface2Bcenter, bound_bface
-    use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nBlock,Unused_B
 
     ! Arguments
@@ -720,8 +719,7 @@ contains
           call bound_Bface(iBlock)
           ! Recalculate the cell centered B
           call Bface2Bcenter(iBlock)
-          ! Keep pressure and modify energy for sake of positivity
-          call calc_energy_cell(iBlock)
+
        end do
 
        if(DoTest)write(*,*)'proj_correction new Bzface=',&

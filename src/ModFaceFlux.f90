@@ -1081,7 +1081,7 @@ contains
       ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
       ! for more details.
 
-      use ModAdvance, ONLY: State_VGB, Energy_GBI
+      use ModAdvance, ONLY: State_VGB
       use ModPhysics, ONLY: Gamma_I
       use ModMultiFluid, ONLY: select_fluid, iRho, iRhoUx, iRhoUz, iP
 
@@ -1140,9 +1140,9 @@ contains
                 State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))
 
            ! Energy flux
-           Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
-                (Energy_GBI(iFace,jFace,kFace,iBlockFace,iFluid) - &
-                Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
+           !Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
+           !     (Energy_GBI(iFace,jFace,kFace,iBlockFace,iFluid) - &
+           !     Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
 
            If(iFluid == 1) then
               ! Diffuse scalars with the same coef of the first fluid.

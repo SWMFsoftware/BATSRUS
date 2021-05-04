@@ -1704,7 +1704,6 @@ test_earthsph_rundir: test_rundir
 
 test_earthsph_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_earthsph_check:

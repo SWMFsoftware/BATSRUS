@@ -497,7 +497,6 @@ contains
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, UseAnisoPe
-    use ModEnergy,     ONLY: calc_energy_cell
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -592,7 +591,6 @@ contains
 
        end do; end do; end do
 
-       call calc_energy_cell(iBlock)
     end do
     !$omp end parallel do
 
@@ -1524,7 +1522,6 @@ contains
   subroutine update_impl_resistivity(iBlock, NewSemiAll_VC)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nVarSemiAll
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModGeometry,   ONLY: true_cell
@@ -1543,8 +1540,6 @@ contains
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = NewSemiAll_VC(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do
-
-    call calc_energy_cell(iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_resistivity

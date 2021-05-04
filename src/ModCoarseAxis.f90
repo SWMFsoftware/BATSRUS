@@ -9,6 +9,7 @@ module ModCoarseAxis
   SAVE
   logical:: UseCoarseAxis = .false.
   integer:: nCoarseLayer = 3
+  
   ! In case nCoarseLayer=1, then each pair of the cells near the axis are merged
   !----------a x i s---------------
   ! |   |   |          first layer "|" denote the cell boundaries
@@ -30,10 +31,11 @@ module ModCoarseAxis
   ! | | | | | | | | |  fourth layer
   ! ..............
   !
+
   integer,parameter:: NorthHemiSph_ = 2, SouthHemiSph_ = 1
+
 contains
   !============================================================================
-  !-------------------------------------
   subroutine read_coarse_axis_param
     use ModReadParam, ONLY:read_var
     use ModSize, ONLY: nJ
@@ -100,15 +102,15 @@ contains
   end subroutine calc_coarse_axis_timestep
   !============================================================================
   subroutine coarsen_axis_cells
+
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B
-    use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI
-    use ModEnergy, ONLY: calc_energy_point
+    use ModAdvance, ONLY: nVar, State_VGB
     use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsRLonLat
     use ModNumConst, ONLY: cHalfPi
 
     integer :: i, j, k, iBlock,&
-         jMerge, jStart, jLast, iVar, kLayer, kStride, jFIne
+         jMerge, jStart, jLast, iVar, kLayer, kStride
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'coarsen_axis_cells'
@@ -118,8 +120,7 @@ contains
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' initial state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
     end if
 
     if(.not.IsRLonLat) &
@@ -145,9 +146,6 @@ contains
                    State_VGB(iVar,i,jStart:jLast,k,iBlock) = &
                         sum(State_VGB(iVar,i,jStart:jLast,k,iBlock))/jMerge
                 end do
-                do jFine=jStart, jLast
-                   call calc_energy_point(i,jFine,k ,iBlock)
-                end do
              end do
           end do
        end do
@@ -155,10 +153,10 @@ contains
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' final state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
     end if
     call test_stop(NameSub, DoTest)
+
   end subroutine coarsen_axis_cells
   !============================================================================
 end module ModCoarseAxis

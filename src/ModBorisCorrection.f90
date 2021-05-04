@@ -1,16 +1,17 @@
 module ModBorisCorrection
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, &
-       Ux_, Uy_, Uz_, IsMhd
+       Ux_, Uy_, Uz_, p_, IsMhd
   use ModConst, ONLY: cLightSpeed
   use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
   use ModCoordTransform, ONLY: cross_product
   use ModMain,    ONLY: UseB0, UseHalfStep, nStage
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VCI, &
-       Energy_GBI, EnergyOld_CBI, &
+       UseNonConservative, nConservCrit, IsConserv_CB, &
        LeftState_VXI, RightState_VXI, &
-       LeftState_VYI, RightState_VYI, LeftState_VZI, RightState_VZI
+       LeftState_VYI, RightState_VYI, &
+       LeftState_VZI, RightState_VZI
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
        x_, y_, z_, &
@@ -159,12 +160,11 @@ contains
 
           if(UseBorisRegion) InvClight2Cell = 1/Clight_G(i,j,k)**2
 
-          call mhd_to_boris_cell(StateOld_VGB(:,i,j,k,iBlock), &
-               EnergyOld_CBI(i,j,k,iBlock,1))
+          call mhd_to_boris_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+
           ! State_VGB is not used in 1-stage and HalfStep schemes
           if(.not.UseHalfStep .and. nStage > 1) &
-               call mhd_to_boris_cell(State_VGB(:,i,j,k,iBlock), &
-               Energy_GBI(i,j,k,iBlock,1))
+               call mhd_to_boris_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
 
        end do; end do; end do
     elseif(UseBorisSimple)then
@@ -191,10 +191,10 @@ contains
   contains
     !==========================================================================
 
-    subroutine mhd_to_boris_cell(State_V, Energy)
+    subroutine mhd_to_boris_cell(State_V, i, j, k, iBlock)
 
       real, intent(inout):: State_V(nVar)
-      real, intent(inout):: Energy
+      integer, intent(in):: i, j, k, iBlock
 
       real:: Rho, b_D(3), u_D(3)
       !------------------------------------------------------------------------
@@ -211,8 +211,14 @@ contains
       State_V(RhoUx_:RhoUz_) = u_D*(Rho + sum(b_D**2)*InvClight2Cell) &
            - b_D*sum(u_D*b_D)*InvClight2Cell
 
+      ! No need to set energy for non-conservative scheme
+      if(UseNonConservative)then
+         if(nConservCrit == 0) RETURN
+         if(.not.IsConserv_CB(i,j,k,iBlock)) RETURN
+      end if
       ! e_Boris = e + (UxB)^2/(2 c^2)   eq 92
-      Energy = Energy + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
+      State_V(p_) = State_V(p_) &
+           + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
 
     end subroutine mhd_to_boris_cell
     !==========================================================================
@@ -270,10 +276,8 @@ contains
              InvClight2Cell = 1/Clight2Cell
           end if
 
-          call boris_to_mhd_cell(StateOld_VGB(:,i,j,k,iBlock), &
-               EnergyOld_CBI(i,j,k,iBlock,1))
-          call boris_to_mhd_cell(State_VGB(:,i,j,k,iBlock), &
-               Energy_GBI(i,j,k,iBlock,1))
+          call boris_to_mhd_cell(StateOld_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
+          call boris_to_mhd_cell(State_VGB(:,i,j,k,iBlock), i, j, k, iBlock)
 
        end do; end do; end do
     elseif(UseBorisSimple)then
@@ -294,13 +298,14 @@ contains
 
   contains
     !==========================================================================
-    subroutine boris_to_mhd_cell(State_V, Energy)
+    subroutine boris_to_mhd_cell(State_V, i, j, k, iBlock)
 
       real, intent(inout):: State_V(nVar)
-      real, intent(inout):: Energy
+      integer, intent(in):: i, j, k, iBlock
 
       ! Replace semi-relativistic momentum with classical momentum in State_V.
       ! Replace semi-relativistic energy density Energy with classical value.
+      ! for conservative scheme.
       ! Use B0=B0_D in the total magnetic field if present.
 
       real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3)
@@ -319,9 +324,15 @@ contains
       State_V(RhoUx_:RhoUz_) =(RhoC2*RhoUBoris_D + b_D*sum(b_D*RhoUBoris_D)) &
            /(RhoC2 + sum(b_D**2))
 
+      ! No need to set energy for non-conservative scheme
+      if(UseNonConservative)then
+         if(nConservCrit == 0) RETURN
+         if(.not.IsConserv_CB(i,j,k,iBlock)) RETURN
+      end if
       ! e = e_boris - (U x B)^2/(2 c^2)   eq 92
       u_D = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
-      Energy = Energy - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
+      State_V(p_) = State_V(p_) &
+           - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2Cell
 
     end subroutine boris_to_mhd_cell
     !==========================================================================

@@ -45,11 +45,8 @@ module ModFaceValue
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
-  logical, public :: UseVolumeIntegral4   = .false.
-  logical, public :: UseFaceIntegral4     = .false.
-  logical, public :: UseLimiter4          = .false.
   integer, public :: nGUsed               = nG
-  !$acc declare create(UseAccurateResChange, DoLimitMomentum, UseVolumeIntegral4)
+  !$acc declare create(UseAccurateResChange, DoLimitMomentum)
   !$acc declare create(UseTvdResChange)
 
   real,             public :: BetaLimiter = 1.0
@@ -105,13 +102,6 @@ module ModFaceValue
   !$omp threadprivate( iVarLimitRatio_I )
   !$acc declare create(iVarLimitRatio_I)
 
-  ! Colella's flattening scheme
-  logical :: UseFlattening = .true.
-  logical :: UseDuFlat     = .false.
-  real    :: FlatDelta     = 0.33
-  real    :: FlatRatioMin  = 0.75
-  real    :: FlatRatioMax  = 0.85
-
   ! Maximum length of the stencil in 1D
   integer, parameter:: MaxIJK = max(nI,nJ,nK)
 
@@ -138,11 +128,11 @@ module ModFaceValue
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
+  
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
   !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
-
   !$acc declare create(iMin, iMax, jMin, jMax, kMin, kMax)
   !$acc declare create(Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG)
 
@@ -223,14 +213,6 @@ contains
     case("#LIMITPTOTAL")
        call read_var('UsePtotalLtd', UsePtotalLtd)
 
-    case("#FLATTENING")
-       call read_var('UseFlattening', UseFlattening)
-       if(UseFlattening)then
-          call read_var('UseDuFlat',     UseDuFlat)
-          call read_var('FlatDelta',     FlatDelta)
-          call read_var('FlatRatioMin',  FlatRatioMin)
-          call read_var('FlatRatioMax',  FlatRatioMax)
-       end if
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion)
        UseLowOrderRegion = .true.
@@ -913,7 +895,7 @@ contains
 
     use ModPhysics, ONLY: GammaWave
     use ModB0
-    use ModAdvance, ONLY: Energy_GBI, &
+    use ModAdvance, ONLY: &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, &
          UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
@@ -921,10 +903,6 @@ contains
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-
-    use ModEnergy, ONLY: calc_pressure
-
-    use ModViscosity, ONLY: UseArtificialVisco
 
     use BATL_lib, ONLY: CellFace_DB
 
@@ -1038,8 +1016,6 @@ contains
     ! Number of cells away from the cell center
     if(nOrder == 5)then
        nStencil = 3
-    elseif(nOrder == 4)then
-       nStencil = nG
     else
        nStencil = nOrder
     end if
@@ -1058,7 +1034,7 @@ contains
        Primitive_VGI(iVar,i,j,k,iGang) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
-    if(UseAccurateResChange .or. nOrder==4)then
+    if(UseAccurateResChange)then
        !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
@@ -1066,80 +1042,6 @@ contains
           IArguments_I(z_) = k
           call calc_primitives(IArguments_I,iBlock)         ! all cells
        end do; end do; end do
-
-       if(nOrder == 4 .and. UseVolumeIntegral4)then
-          ! Calculate 4th order accurate cell averaged primitive variables
-
-          ! First get 4th order accurate cell centered conservative vars
-          iMin = MinI + 1; iMax = MaxI - 1
-          jMin = MinJ + jDim_; jMax = MaxJ - jDim_
-          kMin = MinK + kDim_; kMax = MaxK - kDim_
-
-          ! Store primitive and conservative values based on cell averages
-          ! These are used to do the Laplace operators for corrections
-          Prim_VG = Primitive_VGI(:,:,:,:,iGang)
-
-          ! Convert to pointwise conservative variable (eq. 12)
-          do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-
-             ! Store cell averaged value
-             State_V = State_VGB(:,i,j,k,iBlock)
-
-             ! Calculate 4th order accurate cell center value (eq 12)
-             Laplace_V = -2*nDim*State_V + &
-                  State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock)
-             if(nJ > 1) Laplace_V = Laplace_V + &
-                  State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock)
-             if(nK > 1) Laplace_V = Laplace_V + &
-                  State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock)
-             State_VGB(:,i,j,k,iBlock) = State_V - c24th*Laplace_V
-
-             do iFluid = 1, nFluid
-                ! Store cell averaged energy
-                Energy = Energy_GBI(i,j,k,iBlock,iFluid)
-
-                ! Calculate 4th order accurate cell center energy
-                Laplace = -2*nDim*Energy &
-                     + Energy_GBI(i-1,j,k,iBlock,iFluid) &
-                     + Energy_GBI(i+1,j,k,iBlock,iFluid)
-                if(nJ > 1) Laplace = Laplace &
-                     + Energy_GBI(i,j-1,k,iBlock,iFluid) &
-                     + Energy_GBI(i,j+1,k,iBlock,iFluid)
-                if(nK > 1) Laplace = Laplace &
-                     + Energy_GBI(i,j,k-1,iBlock,iFluid) &
-                     + Energy_GBI(i,j,k+1,iBlock,iFluid)
-                Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
-                ! check positivity !!!
-
-#ifndef OPENACC
-                ! Get 4th order accurate cell center pressure
-                call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
-#endif
-
-                ! Restore cell averaged energy
-                Energy_GBI(i,j,k,iBlock,iFluid) = Energy
-             end do
-
-             ! Convert to pointwise primitive variables
-             IArguments_I(x_) = i
-             IArguments_I(y_) = j
-             IArguments_I(z_) = k
-             call calc_primitives(IArguments_I,iBlock)
-
-             ! Convert to cell averaged primitive variables (eq. 16)
-             Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
-                  - 2*nDim*Prim_VG(:,i,j,k)
-             if(nJ > 1) Laplace_V = Laplace_V &
-                  + Prim_VG(:,i,j-1,k) + Prim_VG(:,i,j+1,k)
-             if(nK > 1) Laplace_V = Laplace_V &
-                  + Prim_VG(:,i,j,k-1) + Prim_VG(:,i,j,k+1)
-
-             Primitive_VGI(:,i,j,k,iGang) = Primitive_VGI(:,i,j,k,iGang) + c24th*Laplace_V
-
-             ! Restore cell averaged state
-             State_VGB(:,i,j,k,iBlock) = State_V
-          end do; end do; end do
-       end if
     else
        !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
@@ -1192,10 +1094,6 @@ contains
           end do; end do
        end if
     end if
-
-#ifndef OPENACC
-    if(UseArtificialVisco) call calc_face_div_u(iBlock)
-#endif
 
     ! Now the first or second order face values are calculated
     select case(nOrder)
@@ -1392,13 +1290,6 @@ contains
           end if
        end if
 
-       if(nOrder==4 .and. UseFlattening .and. .not.DoResChangeOnly)then
-          if(UseVolumeIntegral4)then
-             call flatten(Prim_VG)
-          else
-             call flatten(Primitive_VGI(:,:,:,:,iGang))
-          end if
-       end if
 #endif
     end select  ! nOrder
 
@@ -1444,9 +1335,7 @@ contains
       DoCalcWeight = .false.
       if(present(DoCalcWeightIn)) DoCalcWeight = DoCalcWeightIn
 
-      if(nOrder == 4)then
-         call limiter_ppm4(lMin, lMax, iVar)
-      elseif(UseCweno) then
+      if(UseCweno) then
          if (UsePerVarLimiter .or. DoCalcWeight) &
               call calc_cweno_weight(lMin, lMax)
          call limiter_cweno5(lMin, lMax, Cell_I, Cell_I, iVar)
@@ -1765,7 +1654,7 @@ contains
             if(UseLowOrder) then
                Primitive_VI(:,iMin-2:iMax+1)=Primitive_VGI(:,iMin-2:iMax+1,j,k,iGang)
                if(nLowOrder==2) then
-                  ! IsTrueCell needed by limiter_body and ppm4 limiter
+                  ! IsTrueCell needed by limiter_body
                   IsTrueCell_I(iMin-nG:iMax-1+nG) = &
                        true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
                   ! Get 2nd order limited slopes
@@ -1859,42 +1748,6 @@ contains
             endif
          end do; end do
 
-      end if
-
-      if(nOrder == 4 .and. UseFaceIntegral4)then
-         if(.not.allocated(State_VX)) allocate( &
-              State_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
-
-         ! Convert from face averaged to face centered variables (eq 18)
-         State_VX = LeftState_VXI(:,:,:,:,iGang)
-         do k = kMinFace,kMaxFace; do j = jMinFace,jMaxFace; do i = iMin,iMax
-            Laplace_V = -2*(nDim-1)*State_VX(:,i,j,k) &
-                 + State_VX(:,i,j-1,k) + State_VX(:,i,j+1,k)
-            if(nK>1) Laplace_V = Laplace_V &
-                 + State_VX(:,i,j,k-1) + State_VX(:,i,j,k+1)
-            LeftState_VXI(:,i,j,k,iGang) = State_VX(:,i,j,k) - c24th*Laplace_V
-            ! Keep positivity
-            do iVar = 1, nVar
-               if(DefaultState_V(iVar)>0 .and. LeftState_VXI(iVar,i,j,k,iGang)<0) &
-                    LeftState_VXI(iVar,i,j,k,iGang) = State_VX(iVar,i,j,k)
-            end do
-         end do; end do; end do
-         if(TypeLimiter /= 'no')then
-            State_VX = RightState_VXI(:,:,:,:,iGang)
-            do k=kMinFace,kMaxFace; do j=jMinFace,jMaxFace; do i=iMin,iMax
-               Laplace_V = -2*(nDim-1)*State_VX(:,i,j,k) &
-                    + State_VX(:,i,j-1,k) + State_VX(:,i,j+1,k)
-               if(nK>1) Laplace_V = Laplace_V &
-                    + State_VX(:,i,j,k-1) + State_VX(:,i,j,k+1)
-               RightState_VXI(:,i,j,k,iGang) = State_VX(:,i,j,k) - c24th*Laplace_V
-
-               ! Keep positivity
-               do iVar = 1, nVar
-                  if(DefaultState_V(iVar)>0.and.RightState_VXI(iVar,i,j,k,iGang)<0) &
-                       RightState_VXI(iVar,i,j,k,iGang) = State_VX(iVar,i,j,k)
-               end do
-            end do; end do; end do
-         end if
       end if
 
       if(TypeLimiter == 'no') RightState_VXI= LeftState_VXI
@@ -2025,41 +1878,6 @@ contains
          end do; end do
       end if
 
-      if(nOrder == 4 .and. UseFaceIntegral4)then
-         if(.not.allocated(State_VY)) allocate( &
-              State_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
-
-         ! Convert from face averaged to face centered variables (eq 18)
-         State_VY = LeftState_VYI(:,:,:,:,iGang)
-         do k = kMinFace,kMaxFace; do j = jMin,jMax; do i = iMinFace,iMaxFace;
-            Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
-                 + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
-            if(nK>1) Laplace_V = Laplace_V &
-                 + State_VY(:,i,j,k-1) + State_VY(:,i,j,k+1)
-            LeftState_VYI(:,i,j,k,iGang) = State_VY(:,i,j,k) - c24th*Laplace_V
-            ! Keep positivity
-            do iVar = 1, nVar
-               if(DefaultState_V(iVar)>0.and.LeftState_VYI(iVar,i,j,k,iGang)<0) &
-                    LeftState_VYI(iVar,i,j,k,iGang) = State_VY(iVar,i,j,k)
-            end do
-         end do; end do; end do
-         if(TypeLimiter /= 'no')then
-            State_VY = RightState_VYI(:,:,:,:,iGang)
-            do k=kMinFace,kMaxFace; do j=jMin,jMax; do i=iMinFace,iMaxFace;
-               Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
-                    + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
-               if(nK>1) Laplace_V = Laplace_V &
-                    + State_VY(:,i,j,k-1) + State_VY(:,i,j,k+1)
-               RightState_VYI(:,i,j,k,iGang) = State_VY(:,i,j,k) - c24th*Laplace_V
-               ! Keep positivity
-               do iVar = 1, nVar
-                  if(DefaultState_V(iVar)>0.and.RightState_VYI(iVar,i,j,k,iGang)<0) &
-                       RightState_VYI(iVar,i,j,k,iGang) = State_VY(iVar,i,j,k)
-               end do
-            end do; end do; end do
-         end if
-      end if
-
       if(TypeLimiter == 'no') RightState_VYI= LeftState_VYI
       if(DoLimitMomentum)call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
@@ -2184,39 +2002,6 @@ contains
                end do
             endif
          end do; end do
-      end if
-
-      if(nOrder == 4 .and. UseFaceIntegral4)then
-         if(.not.allocated(State_VZ)) allocate( &
-              State_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
-
-         ! Convert from face averaged to face centered variables (eq 18)
-         State_VZ = LeftState_VZI(:,:,:,:,iGang)
-         do k = kMin,kMax; do j = jMinFace,jMaxFace; do i = iMinFace,iMaxFace
-            Laplace_V = -4*State_VZ(:,i,j,k) &
-                 + State_VZ(:,i-1,j,k) + State_VZ(:,i+1,j,k) &
-                 + State_VZ(:,i,j-1,k) + State_VZ(:,i,j+1,k)
-            LeftState_VZI(:,i,j,k,iGang) = State_VZ(:,i,j,k) - c24th*Laplace_V
-            ! Keep positivity
-            do iVar = 1, nVar
-               if(DefaultState_V(iVar)>0 .and. LeftState_VZI(iVar,i,j,k,iGang)<0) &
-                    LeftState_VZI(iVar,i,j,k,iGang) = State_VZ(iVar,i,j,k)
-            end do
-         end do; end do; end do
-         if(TypeLimiter /= 'no')then
-            State_VZ = RightState_VZI(:,:,:,:,iGang)
-            do k=kMin,kMax; do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
-               Laplace_V = -4*State_VZ(:,i,j,k) &
-                    + State_VZ(:,i-1,j,k) + State_VZ(:,i+1,j,k) &
-                    + State_VZ(:,i,j-1,k) + State_VZ(:,i,j+1,k)
-               RightState_VZI(:,i,j,k,iGang) = State_VZ(:,i,j,k) - c24th*Laplace_V
-               ! Keep positivity
-               do iVar = 1, nVar
-                  if(DefaultState_V(iVar)>0.and.RightState_VZI(iVar,i,j,k,iGang)<0) &
-                       RightState_VZI(iVar,i,j,k,iGang) = State_VZ(iVar,i,j,k)
-               end do
-            end do; end do; end do
-         end if
       end if
 
       if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2488,183 +2273,6 @@ contains
 #endif
 
     end subroutine get_facez_second
-    !==========================================================================
-
-    subroutine flatten(Prim_VG)
-
-      use ModMultiFluid, ONLY: iRho, iUx, iUy, iUz, iP, select_fluid
-
-      real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-      real:: InvRatioRange
-
-      real:: pL, pR, Dp, Ratio, Coef1, Coef
-
-      real:: FlatCoef_I(-1:MaxIJK+2)
-      real, allocatable, save:: FlatCoef_G(:,:,:)
-
-      integer:: i, j, k, iFluid
-      !------------------------------------------------------------------------
-      ! call timing_start('flatten')
-
-      if(.not.allocated(FlatCoef_G)) &
-           allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
-
-      InvRatioRange = 1.0/(FlatRatioMax - FlatRatioMin)
-
-      FLUIDLOOP: do iFluid = 1, nFluid
-
-         if(nFluid > 1) call select_fluid(iFluid)
-
-         do k = 1-kDim_,nK+kDim_; do j = 1-jDim_,nJ+jDim_
-            do i = -1, nI+2
-
-               ! Coef = 1 preserves the high order face value
-               FlatCoef_I(i) = 1.0
-
-               if(UseDuFlat)then
-                  ! Check if there is compression
-                  ! Note: Balsara suggests to look at rarefactions too...)
-                  if(Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k) <= 0)CYCLE
-               end if
-
-               pL = Prim_VG(iP,i-1,j,k)
-               pR = Prim_VG(iP,i+1,j,k)
-               Dp = abs(pR - pL)
-
-               ! Check the shock strength. Nothing to do for weak shock
-               if(Dp < FlatDelta*min(pL, pR)) CYCLE
-
-               ! Calculate the shock width parameter
-               pL = Prim_VG(iP,i-2,j,k)
-               pR = Prim_VG(iP,i+2,j,k)
-               Ratio = Dp / max(1e-30, abs(pR - pL))
-
-               if(Ratio > FlatRatioMax)then
-                  FlatCoef_I(i) = 0
-               elseif(Ratio > FlatRatioMin)then
-                  FlatCoef_I(i) = InvRatioRange*(FlatRatioMax - Ratio)
-               end if
-            end do
-
-            do i = 0, nI+1
-               FlatCoef_G(i,j,k) = minval(FlatCoef_I(i-1:i+1))
-            end do
-         end do; end do
-
-         if(nDim > 1)then
-            do k = 1-kDim_,nK+kDim_; do i = 0, nI+1
-               do j = -1, nJ+2
-                  FlatCoef_I(j) = 1.0
-
-                  if(UseDuFlat)then
-                     if(Prim_VG(iUy,i,j-1,k) - Prim_VG(iUy,i,j+1,k) <= 0)CYCLE
-                  end if
-
-                  pL = Prim_VG(iP,i,j-1,k)
-                  pR = Prim_VG(iP,i,j+1,k)
-                  Dp = abs(pR - pL)
-
-                  if(Dp < FlatDelta*min(pL, pR)) CYCLE
-
-                  pL = Prim_VG(iP,i,j-2,k)
-                  pR = Prim_VG(iP,i,j+2,k)
-                  Ratio = Dp / max(1e-30, abs(pR - pL))
-
-                  if(Ratio > FlatRatioMax)then
-                     FlatCoef_I(j) = 0
-                  elseif(Ratio > FlatRatioMin)then
-                     FlatCoef_I(j) = InvRatioRange*(FlatRatioMax - Ratio)
-                  end if
-               end do
-
-               do j = 0, nJ+1
-                  FlatCoef_G(i,j,k) = &
-                       min(FlatCoef_G(i,j,k), minval(FlatCoef_I(j-1:j+1)))
-               end do
-            end do; end do
-         end if
-
-         if(nDim > 2)then
-            do j = 0, nJ+1; do i = 0, nI+1
-               do k = -1, nK+2
-                  FlatCoef_I(k) = 1.0
-                  if(UseDuFlat)then
-                     if(Prim_VG(iUz,i,j,k-1) - Prim_VG(iUz,i,j,k+1) <= 0)CYCLE
-                  end if
-
-                  pL = Prim_VG(iP,i,j,k-1)
-                  pR = Prim_VG(iP,i,j,k+1)
-                  Dp = abs(pR - pL)
-
-                  if(Dp < FlatDelta*min(pL, pR)) CYCLE
-
-                  pL = Prim_VG(iP,i,j,k-2)
-                  pR = Prim_VG(iP,i,j,k+2)
-                  Ratio = Dp / max(1e-30, abs(pR - pL))
-
-                  if(Ratio > FlatRatioMax)then
-                     FlatCoef_I(k) = 0
-                  elseif(Ratio > FlatRatioMin)then
-                     FlatCoef_I(k) = InvRatioRange*(FlatRatioMax - Ratio)
-                  end if
-               end do
-
-               do k = 0, nK+1
-                  FlatCoef_G(i,j,k) = &
-                       min(FlatCoef_G(i,j,k), minval(FlatCoef_I(k-1:k+1)))
-               end do
-            end do; end do
-         end if
-
-         do k = kMinFace, kMaxFace; do j = jMinFace, jMaxFace; do i = 0, nI+1
-            Coef = FlatCoef_G(i,j,k)
-
-            ! Coef is the final flattening parameter in eq. 34a,b
-            if(Coef > 1 - 1e-12) CYCLE
-
-            Coef1 = 1.0 - Coef
-            if(i<=nI) LeftState_VXI(iRho:iP,i+1,j,k,iGang) = &
-                 Coef*LeftState_VXI(iRho:iP,i+1,j,k,iGang)   &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-            if(i> 0 ) RightState_VXI(iRho:iP,i,j,k,iGang)  = &
-                 Coef*RightState_VXI(iRho:iP,i,j,k,iGang)    &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-         end do; end do; end do
-
-         if(nDim == 1) CYCLE FLUIDLOOP
-
-         do k = kMinFace, kMaxFace; do j = 0, nJ+1; do i = iMinFace,iMaxFace
-            Coef = FlatCoef_G(i,j,k)
-            if(Coef > 1 - 1e-12) CYCLE
-            Coef1 = 1.0 - Coef
-            if(j<=nJ) LeftState_VYI(iRho:iP,i,j+1,k,iGang) = &
-                 Coef*LeftState_VYI(iRho:iP,i,j+1,k,iGang)   &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-            if(j> 0 ) RightState_VYI(iRho:iP,i,j,k,iGang)  = &
-                 Coef*RightState_VYI(iRho:iP,i,j,k,iGang)    &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-         end do; end do; end do
-
-         if(nDim == 2) CYCLE FLUIDLOOP
-
-         do k = 0, nK+1; do j = jMinFace, jMaxFace; do i = iMinFace,iMaxFace
-            Coef = FlatCoef_G(i,j,k)
-            if(Coef > 1 - 1e-12) CYCLE
-            Coef1 = 1.0 - Coef
-            if(k<=nK) LeftState_VZI(iRho:iP,i,j,k+1,iGang) = &
-                 Coef*LeftState_VZI(iRho:iP,i,j,k+1,iGang)   &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-            if(k> 0 ) RightState_VZI(iRho:iP,i,j,k,iGang)  = &
-                 Coef*RightState_VZI(iRho:iP,i,j,k,iGang)    &
-                 + Coef1*Prim_VG(iRho:iP,i,j,k)
-         end do; end do; end do
-
-      end do FLUIDLOOP
-
-      ! call timing_stop('flatten')
-
-    end subroutine flatten
     !==========================================================================
 
   end subroutine calc_face_value
@@ -3527,123 +3135,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_cell_norm_velocity
   !============================================================================
-
-  subroutine calc_face_div_u(iBlock)
-    ! This subroutine 'estimates' div(V)*dl at the cell faces, where
-    ! 'dl' is the cell size.
-    ! The algorithm is implemented based on the paper of
-    ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
-    ! for more details.
-
-    use ModAdvance, ONLY: FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI, &
-         Vel_IDGB
-    use BATL_size,   ONLY: nDim, jDim_, kDim_
-    use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
-         kMaxFace, nIFace, nJFace, nKFace
-    integer, intent(in)::iBlock
-
-    integer :: iRho, iRhoUx, iRhoUy, iRhoUz
-    integer :: iFluid, iFace, jFace, kFace
-    integer :: iMin, iMax, jMin, jMax, kMin, kMax
-    integer:: iGang
-    real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-    character(len=*), parameter:: NameSub = 'calc_face_div_u'
-    !--------------------------------------------------------------------------
-    call timing_start(NameSub)
-    iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
-
-    iMin = 1 - nG;       iMax = nI + nG
-    jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
-    kMin = 1 - nG*kDim_; kMax = nK + nG*kDim_
-
-    do iFluid = 1, nFluid
-       iRho = iRho_I(iFluid)
-       iRhoUx = iRhoUx_I(iFluid)
-       iRhoUy = iRhoUy_I(iFluid)
-       iRhoUz = iRhoUz_I(iFluid)
-
-       Vel_DG = Vel_IDGB(iFluid,:,:,:,:,iBlock)
-
-       ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IXI/Y/Z = div(U)*dl
-       ! See eq(35) of P. McCorquodale and P. Colella (2010)
-       do kFace=kMinFace,kMaxFace
-          do jFace=jMinFace,jMaxFace
-             do iFace=1,nIFace
-                FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
-                     (Vel_DG(x_,iFace,jFace,kFace) - &
-                     Vel_DG(x_,iFace-1,jFace,kFace))
-
-                if(nDim>1) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
-                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
-                     (Vel_DG(y_,iFace,jFace+1,kFace) - &
-                     Vel_DG(y_,iFace,jFace-1,kFace) + &
-                     Vel_DG(y_,iFace-1,jFace+1,kFace) - &
-                     Vel_DG(y_,iFace-1,jFace-1,kFace))/4
-
-                if(nDim>2) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
-                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
-                     (Vel_DG(z_,iFace,jFace,kFace+1) - &
-                     Vel_DG(z_,iFace,jFace,kFace-1) + &
-                     Vel_DG(z_,iFace-1,jFace,kFace+1) - &
-                     Vel_DG(z_,iFace-1,jFace,kFace-1))/4
-
-             enddo
-          enddo
-       enddo
-
-       If(nDim>1) then
-          do kFace=kMinFace,kMaxFace
-             do jFace=1,nJFace
-                do iFace=iMinFace,iMaxFace
-                   FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
-                        (Vel_DG(y_,iFace,jFace,kFace) - &
-                        Vel_DG(y_,iFace,jFace-1,kFace)) + &
-                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
-                        Vel_DG(x_,iFace-1,jFace,kFace) + &
-                        Vel_DG(x_,iFace+1,jFace-1,kFace) - &
-                        Vel_DG(x_,iFace-1,jFace-1,kFace))/4
-
-                   if(nDim>2) FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
-                        FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) + &
-                        (Vel_DG(z_,iFace,jFace,kFace+1) - &
-                        Vel_DG(z_,iFace,jFace,kFace-1) + &
-                        Vel_DG(z_,iFace,jFace-1,kFace+1) - &
-                        Vel_DG(z_,iFace,jFace-1,kFace-1))/4
-                enddo
-             enddo
-          enddo
-       endif
-
-       if(nDim>2) then
-          do kFace=1,nKFace
-             do jFace=jMinFace,jMaxFace
-                do iFace=iMinFace,iMaxFace
-                   FaceDivU_IZI(iFluid,iFace,jFace,kFace,iGang) = &
-                        (Vel_DG(z_,iFace,jFace,kFace) - &
-                        Vel_DG(z_,iFace,jFace,kFace-1)) + &
-                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
-                        Vel_DG(x_,iFace-1,jFace,kFace) + &
-                        Vel_DG(x_,iFace+1,jFace,kFace-1) - &
-                        Vel_DG(x_,iFace-1,jFace,kFace-1))/4 + &
-                        (Vel_DG(y_,iFace,jFace+1,kFace) - &
-                        Vel_DG(y_,iFace,jFace-1,kFace) + &
-                        Vel_DG(y_,iFace,jFace+1,kFace-1) - &
-                        Vel_DG(y_,iFace,jFace-1,kFace-1))/4
-                enddo
-             enddo
-          enddo
-       endif
-
-    enddo ! iFluid
-
-    call timing_stop(NameSub)
-  end subroutine calc_face_div_u
-  !============================================================================
-
   subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
@@ -4052,175 +3543,39 @@ contains
 
   end subroutine limiter_cweno5
   !============================================================================
-  subroutine limiter_ppm4(lMin, lMax, iVar)
-
-    integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
-    integer, intent(in):: iVar        ! variable to check for positivity
-
-    ! Apply 4th order PPM limiter as described by
-    !
-    ! "A high-order finite volume method for hyperbolic conservation laws
-    ! on locally-refined grids",
-    ! P. McCorquodale and P. Colella, 2010, LBNL document
-    !
-    ! Input: cell centered primitive variables Cell_I(lMin-nG:lMax-1+nG)
-    ! Output: limited 4th order accurate left  StateL_I(lMin:lMax)
-    !                          and right face  StateR_I(lMin:lMax)
-    !
-    ! The code may also set StateR_I(lMin-1) and StateL_I(lMax+1)
-    ! (this could be excluded).
-    !
-    ! For now the implementation is done per variable
-    ! Optimization can be done once it works
-
-    ! Various constants
-    real, parameter:: c0 = 1e-12, c2 = 1.25, c3 = 0.1, c6=6.0
-
-    ! Second derivative based on cell center values
-    real:: D2c_I(2-nG:MaxIJK+nG-1)
-
-    ! Third derivative is needed between cells where D2c is known
-    real:: D3Face_I(3-nG:MaxIJK+nG-1), D3max, D3min
-
-    real:: Dfm, Dfp, D2f, D2lim, D2Ratio
-
-    integer:: l
-
-    ! Fourth order interpolation scheme
-    ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
-
-    character(len=*), parameter:: NameSub = 'limiter_ppm4'
-    !--------------------------------------------------------------------------
-    do l = lMin - 1, lMax + 1
-       Face_I(l) = c7over12*(Cell_I(l-1) + Cell_I(l)) &
-            -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
-    end do
-
-    ! Second derivative based on cell values
-    do l = lMin+1-nG, lMax-2+nG
-       D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1)
-    end do
-
-    if(UseLimiter4 .and. .not.UseTrueCell)then
-       ! Third derivative at face based on cell values
-       ! Don't use this in "body" blocks, so the stencil is smaller
-       do l = lMin-2, lMax+2
-          D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
-       end do
-    end if
-
-    ! Loop through cells and modify FaceL and FaceR values if needed
-    ! Start  at lMin-1 so that FaceL_I(lMin) gets set.
-    ! Finish at lMax   so that FaceR_I(lMax) gets set.
-    do l = lMin - 1, lMax
-
-       if(UseTrueCell)then
-          ! The PPM limiter seems to use these cells only
-          if(.not.all(IsTrueCell_I(l-2:l+2))) CYCLE
-       end if
-
-       ! Set unlimited values as default
-       FaceR_I(l)   = Face_I(l)
-       FaceL_I(l+1) = Face_I(l+1)
-
-       ! Definitions at bottom of page 6
-       Dfm = Cell_I(l) - Face_I(l)
-       Dfp = Face_I(l+1) - Cell_I(l)
-
-       ! Check for local extremum on two different stencils
-       ! Eqs. (24) and (25)
-       if(Dfm*Dfp < 0 .or. &
-            (Cell_I(l+2) - Cell_I(l)  )* &
-            (Cell_I(l)   - Cell_I(l-2)) < 0)then
-
-          ! Second derivative based on face value (22.3)
-          D2f = c6*(Face_I(l+1) + Face_I(l) - 2*Cell_I(l))
-
-          ! Check if second derivative is almost zero (26.1)
-          if(abs(D2f) <= c0*maxval(abs(Cell_I(l-2:l+2))))then
-             D2Ratio = 0.0
-          else
-             ! Get limited value for second derivative (26)
-             ! First assume that all second derivatives are positive
-             D2lim = min(c2*minval(D2c_I(l-1:l+1)), D2f)
-             ! If this is negative, try the all negative case, else set 0
-             if(D2lim < 0.0) &
-                  D2lim = min(0.0, max(c2*maxval(D2c_I(l-1:l+1)), D2f))
-
-             D2Ratio = D2lim / D2f
-
-             ! If D2Ratio is close to 1, no need to limit
-             if(D2Ratio >= 1 - c0) CYCLE
-
-             if(UseLimiter4 .and. .not.UseTrueCell)then
-                ! Check 3rd derivative condition (28)
-                D3min = minval(D3Face_I(l-1:l+2))
-                D3max = maxval(D3Face_I(l-1:l+2))
-                if(c3*max(abs(D3max),abs(D3min)) > D3max - D3min) CYCLE
-             end if
-          end if
-          if(Dfm*Dfp <= 0)then
-             ! Eqs. (29) and (30)
-             FaceR_I(l)   = Cell_I(l) - D2Ratio*Dfm
-             FaceL_I(l+1) = Cell_I(l) + D2Ratio*Dfp
-          elseif(abs(Dfm) >= 2*abs(Dfp))then
-             ! Eq. (31)
-             FaceR_I(l)   = Cell_I(l) - 2*(1-D2Ratio)*Dfp - D2Ratio*Dfm
-          elseif(abs(Dfp) >= 2*abs(Dfm))then
-             ! Eq. (32)
-             FaceL_I(l+1) = Cell_I(l) + 2*(1-D2Ratio)*Dfm + D2Ratio*Dfp
-          end if
-       elseif(abs(Dfm) >= 2*abs(Dfp))then
-          ! Eq. (33)
-          FaceR_I(l)  = Cell_I(l) - 2*Dfp
-       elseif(abs(Dfp) >= 2*abs(Dfm))then
-          ! Eq. (34)
-          FaceL_I(l+1) = Cell_I(l) + 2*Dfm
-       end if
-
-       ! Make sure positive variables remain positive
-       if(DefaultState_V(iVar) > 0.0)then
-          if(FaceR_I(l) < 0) &
-               FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
-          if(FaceL_I(l+1) < 0)&
-               FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
-       end if
-
-    end do
-
-  end subroutine limiter_ppm4
-  !============================================================================
-  ! TVD limiters:
-  ! mimod limiter:
-  !                slim = minmod(s1,s2)
-  !
-  ! generalized MC (monotonized central) limiter:
-  !                slim = minmod(beta*s1, beta*s2, (s1+s2)/2)
-  !
-  ! Koren limiter (mc3):
-  !                slimL = minmod(beta*s1, beta*s2, (s1+2*s2)/3)
-  !                slimR = minmod(beta*s1, beta*s2, (2*s1+s2)/3)
-  !
-  ! beta-limiter   slim = maxmod(minmod(beta*s1,s2), minmod(beta*s2,s1))
-  !
-  !                (see C.Hirsch, Numerical computation of
-  !                 internal and external flows, Volume 2, page 544-545.)
-  !
-  ! where s1 and s2 are the unlimited slopes, the minmod function
-  ! is zero if the arguments have different signs, otherwise it
-  ! select the argument with the smallest absolute value, while
-  ! the maxmod function selects the argument with the largest absolute value.
-  !
-  ! For beta=1.0 the MC and the beta limiters coincide with minmod.
-  ! For beta=2.0 the beta limiter becomes the superbee limiter.
-  !
-  ! Note: the subroutines limiter() and limiter_body() calculate the
-  !       HALF of the limited difference, so it can be applied simply as
-  !
-  !       left_face  = central_value - limited_slope_left
-  !       right_face = central_value + limited_slope_right
   subroutine limiter_body(lMin, lMax, Beta, Primitive_VI,dVarLimL_VI,dVarLimR_VI)
     !!! acc routine seq
+
+    ! TVD limiters:
+    ! mimod limiter:
+    !                slim = minmod(s1,s2)
+    !
+    ! generalized MC (monotonized central) limiter:
+    !                slim = minmod(beta*s1, beta*s2, (s1+s2)/2)
+    !
+    ! Koren limiter (mc3):
+    !                slimL = minmod(beta*s1, beta*s2, (s1+2*s2)/3)
+    !                slimR = minmod(beta*s1, beta*s2, (2*s1+s2)/3)
+    !
+    ! beta-limiter   slim = maxmod(minmod(beta*s1,s2), minmod(beta*s2,s1))
+    !
+    !                (see C.Hirsch, Numerical computation of
+    !                 internal and external flows, Volume 2, page 544-545.)
+    !
+    ! where s1 and s2 are the unlimited slopes, the minmod function
+    ! is zero if the arguments have different signs, otherwise it
+    ! select the argument with the smallest absolute value, while
+    ! the maxmod function selects the argument with the largest absolute value.
+    !
+    ! For beta=1.0 the MC and the beta limiters coincide with minmod.
+    ! For beta=2.0 the beta limiter becomes the superbee limiter.
+    !
+    ! Note: the subroutines limiter() and limiter_body() calculate the
+    !       HALF of the limited difference, so it can be applied simply as
+    !
+    !       left_face  = central_value - limited_slope_left
+    !       right_face = central_value + limited_slope_right
+
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
     real, intent(inout):: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)

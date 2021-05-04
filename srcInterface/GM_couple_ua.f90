@@ -126,7 +126,6 @@ contains
     use ModB0,        ONLY: B0_DGB
     use ModAdvance,   ONLY: State_VGB, Bx_, Bz_
     use ModMultiFluid, ONLY: nIonFluid
-    use ModEnergy,    ONLY: calc_energy
     use CON_coupler,  ONLY: Grid_C, GM_, nVarBuffer, iVarTarget_V
 !!!    use ModUaCoupling, ONLY: nDenNuSpecies_fromUA
     ! use CON_couple_gm_ua, ONLY: State_VGB_UA
@@ -213,7 +212,6 @@ contains
     !                   !     .not. DoCoupleVar_V(ElectronPressure_)then
     !                   ! if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
     !                  !      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-    !                   ! call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
     !                else
     !                   Pos_DI(:,iPoint) = Xyz_gitm(:,iLons,iLats,iAlts,iBlock)! Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
     !          end if
@@ -285,7 +283,6 @@ contains
              !     .not. DoCoupleVar_V(ElectronPressure_)then
              ! if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
             !      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-             ! call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
           else
              ! Provide position to GM
              ! write(*,*) 'Xyz_DGB: ',Xyz_DGB(:,i,j,k,iBlock)

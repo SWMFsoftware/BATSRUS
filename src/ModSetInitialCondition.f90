@@ -30,7 +30,6 @@ contains
     use ModUserInterface ! user_set_ics
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
-    use ModEnergy, ONLY: calc_energy_ghost
     use ModRestartFile, ONLY: UseRestartWithFullB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
     use BATL_lib, ONLY: Xyz_DGB
@@ -158,9 +157,6 @@ contains
        end if ! not restart
 
     end if ! Unused_B
-
-    ! Compute energy from set values above.
-    call calc_energy_ghost(iBlock)
 
     if(DoTest)write(*,*) &
          NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)

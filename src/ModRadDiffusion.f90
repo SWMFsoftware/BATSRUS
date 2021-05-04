@@ -1760,7 +1760,6 @@ contains
     ! of the extremely advanced PGF90 12.9 compiler
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
-    use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iErImplFirst, SemiImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
@@ -1893,8 +1892,6 @@ contains
        end if
 
     end do; end do; end do
-
-    call calc_energy_cell(iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_rad_diff

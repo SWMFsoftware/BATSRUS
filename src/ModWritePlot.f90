@@ -34,6 +34,7 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
+    use ModEnergy, ONLY: calc_energy_ghost
     use ModAdvance, ONLY : State_VGB, Energy_GBI
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
@@ -125,8 +126,14 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !$acc update host(State_VGB, Energy_GBI)
+    !$acc update host(State_VGB)
 
+    ! Fill up energy variable
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       call calc_energy_ghost(iBlock)
+    end do
+    
     ! Initialize stuff
 
     plotvar_inBody = 0.0

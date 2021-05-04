@@ -315,7 +315,6 @@ contains
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModEnergy, ONLY: calc_energy_cell
     use ModFieldTrace, ONLY: trace_field_grid
 
     real :: Factor
@@ -509,9 +508,6 @@ contains
              end where
           end do
        end if
-
-       ! Now get the energy that corresponds to these new values
-       call calc_energy_cell(iBlock)
 
     end do
 

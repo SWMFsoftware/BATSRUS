@@ -1391,7 +1391,6 @@ contains
     use ModAdvance,   ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_, UnitX_, No2Si_V
     use ModGeometry,  ONLY: Xyz_DGB
-    use ModEnergy,    ONLY: calc_energy_cell
     use BATL_lib,     ONLY: nI, nJ, nK, nBlock, Unused_B, nDim, MaxDim, &
          iComm, CellVolume_GB, message_pass_cell, interpolate_state_vector
     use ModMpi
@@ -1454,8 +1453,6 @@ contains
              endif
 
           end do; end do; end do
-          call calc_energy_cell(iBlock)
-
        end do
        ! End of UseAwsom
     else
@@ -1565,8 +1562,6 @@ contains
                 endif
              end if
           end do; end do; end do
-
-          call calc_energy_cell(iBlock)
 
        end do
        call MPI_reduce(Mass, MassTotal, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)

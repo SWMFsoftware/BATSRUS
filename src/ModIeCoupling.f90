@@ -736,7 +736,6 @@ contains
     use ModGeometry, ONLY: r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, calc_corotation_velocity
-    use ModEnergy,  ONLY: calc_energy_cell
     use BATL_lib,   ONLY: Xyz_DGB
 
     real :: Factor, RhoUdotB
@@ -808,9 +807,6 @@ contains
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = RhoU_D
 
        end do; end do; end do
-
-       ! Recalculate the energy
-       call calc_energy_cell(iBlock)
 
     end do
 

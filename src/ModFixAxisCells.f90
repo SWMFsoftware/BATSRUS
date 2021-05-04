@@ -15,15 +15,13 @@ module ModFixAxisCells
 
 contains
   !============================================================================
-
   subroutine fix_axis_cells
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B,    &
           x_, y_
-    use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
+    use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
     use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, CellSize1Min, &
          r_BLK, rMin_BLK, far_field_bcs_blk
-    use ModEnergy, ONLY: calc_energy_point
     use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
          IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen, &
          Xyz_DGB, CellVolume_GB, iComm
@@ -49,8 +47,7 @@ contains
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' initial state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
     end if
 
     if(IsCylindrical)then
@@ -190,7 +187,6 @@ contains
                   + dStateDx_V*Xyz_DGB(x_,i,j,k,iBlock) &
                   + dStateDy_V*Xyz_DGB(y_,i,j,k,iBlock)
 
-             call calc_energy_point(i,j,k ,iBlock)
           end do; end do
        end do
 
@@ -201,8 +197,7 @@ contains
     if(DoTest)then
        if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' final state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
     end if
 
     call test_stop(NameSub, DoTest)
@@ -213,7 +208,6 @@ contains
     use ModMain, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_
     use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, CellSize1Min
-    use ModEnergy, ONLY: calc_energy_point
     use ModMpi
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, r_, &
          iComm
@@ -354,7 +348,6 @@ contains
                   + dStateDx_V*Xyz_DGB(x_,i,j,k,iBlock) &
                   + dStateDy_V*Xyz_DGB(y_,i,j,k,iBlock)
 
-             call calc_energy_point(i,j,k,iBlock)
           end do; end do
 
           ! write(*,*)'!!! After =',State_VGB(1,nAxisCell,1:nJ,1,iBlock)

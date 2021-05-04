@@ -771,7 +771,6 @@ contains
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, &
                              UseIdealEos
-    use ModEnergy,     ONLY: calc_energy_cell
     use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
     use ModUserInterface ! user_material_properties
 
@@ -849,7 +848,6 @@ contains
                + DtLocal*HeatExchangePeP
        end do; end do; end do
 
-       call calc_energy_cell(iBlock)
     end do
 
     call test_stop(NameSub, DoTest)
@@ -1483,7 +1481,6 @@ contains
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
-    use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
@@ -1582,8 +1579,6 @@ contains
           end if
        end if
     end do; end do; end do
-
-    call calc_energy_cell(iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_heat_cond

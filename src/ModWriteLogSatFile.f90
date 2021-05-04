@@ -26,10 +26,12 @@ contains
   !============================================================================
 
   subroutine write_logfile(iSatIn, iFile, TimeSatHeaderIn)
+
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY  : State_VGB, tmp1_BLK
-    use ModPhysics, ONLY  : Si2Io_V, Si2No_V, UnitT_
+    use ModEnergy,  ONLY: calc_energy_ghost
+    use ModAdvance, ONLY: State_VGB, tmp1_BLK
+    use ModPhysics, ONLY: Si2Io_V, Si2No_V, UnitT_
     use ModIO
     use ModIoUnit, ONLY   : io_unit_new
     use ModUtilities, ONLY: flush_unit, split_string, open_file
@@ -72,13 +74,13 @@ contains
 
     ! Coordinate system transformation
     real:: Convert_DD(3,3)
-    integer:: iVar
+    integer:: iVar, iBlock
 
     ! Event date for filename
     character(len=19) :: EventDateTime
 
     ! Header for the sat file in time accurate
-    real ::  TimeSatHeader
+    real:: TimeSatHeader
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
@@ -92,6 +94,12 @@ contains
     end if
 
     DoWritePosition = .false.
+
+    ! Fill up energy variable (do we need all fluids?)
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       call calc_energy_ghost(iBlock)
+    end do
 
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
          index(StringTest,'show_pmax')>0 ) ) then

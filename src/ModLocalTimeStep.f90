@@ -63,14 +63,13 @@ contains
          nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
-    use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
+    use ModAdvance,    ONLY: nFluid, nVar, State_VGB, &
          Flux_VXI, Flux_VYI, Flux_VZI
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
-    use ModEnergy,     ONLY: calc_energy_ghost
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
     use ModCalcSource, ONLY: calc_source
     use ModTimeStepControl, ONLY: calc_timestep, DtMin, DtMax
@@ -82,7 +81,7 @@ contains
     use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
-    real,    intent(in) :: TimeSimulationLimit
+    real, intent(in) :: TimeSimulationLimit
 
     ! Advance the solution by one time step. After the time step
     ! the simulation time should not exceed TimeSimulationLimit.
@@ -218,9 +217,6 @@ contains
           if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
                nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 
-          ! Make sure energy is set in the ghost cells
-          call calc_energy_ghost(iBlock)
-
           call timing_start('calc_facevalues')
           call calc_face_value(iBlock, DoResChangeOnly = .false., DoMonotoneRestrict = .true.)
           call timing_stop('calc_facevalues')
@@ -292,7 +288,7 @@ contains
                State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
           call apply_flux_correction( &
-               nVar, nFluid, State_VGB, Energy_GBI, &
+               nVar, nFluid, State_VGB, &
                Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStageLocal/nStage, &
                DoReschangeOnlyIn=.not.UseMaxTimeStep, DoTestIn=DoTest)
 

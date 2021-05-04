@@ -396,7 +396,7 @@ contains
          iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, nFluid, iP
-    use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
+    use ModAdvance, ONLY : State_VGB, StateOld_VGB, &
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
     use ModAdvanceExplicit, ONLY: advance_explicit
@@ -404,7 +404,7 @@ contains
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModLinearSolver, ONLY: solve_linear_multiblock
-    use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
+    use ModEnergy, ONLY: pressure_to_energy_block, energy_to_pressure_cell
     use ModMessagePass, ONLY: exchange_messages
     use ModResistivity, ONLY: UseResistivity, init_impl_resistivity, &
          init_impl_hall_resist
@@ -486,13 +486,8 @@ contains
              if(iTypeAdvance_B(iBlock) /= ExplBlock_)CYCLE
              ImplOld_VCB(:,:,:,:,iBlock) = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
 
-             if(.not. UseImplicitEnergy) CYCLE
-             ! Overwrite pressure with energy
-             do iFluid=1,nFluid
-                if(nFluid > 1) call select_fluid(iFluid)
-                ImplOld_VCB(iP,:,:,:,iBlock) = &
-                     Energy_GBI(1:nI,1:nJ,1:nK,iBlock,iFluid)
-             end do
+             if(UseImplicitEnergy) call pressure_to_energy_block(&
+                  ImplOld_VCB(:,:,:,:,iBlock), 1, nI, 1, nJ, 1, nK)
           end do
           !$omp end parallel do
        end if
@@ -726,21 +721,14 @@ contains
     if(UseNewton.and.DoTest)write(*,*)NameSub,': final nIterNewton, NormX=',&
          nIterNewton, NormX
 
-    ! Restore StateOld and EnergyOld in the implicit blocks
+    ! Restore StateOld in the implicit blocks
     !$omp parallel do private( iBlock )
     do iBlockImpl=1,nBlockImpl
        iBlock = iBlockFromImpl_B(iBlockImpl)
        StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
 
-       if(UseImplicitEnergy) then
-          do iFluid=1,nFluid
-             if(nFluid > 1) call select_fluid(iFluid)
-             EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
-          end do
-          call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
-       else
-          call calc_old_energy(iBlock) ! restore EnergyOld_CBI
-       end if
+       if(UseImplicitEnergy) &
+            call energy_to_pressure_cell(iBlock, StateOld_VGB)
     end do
     !$omp end parallel do
 
@@ -784,7 +772,6 @@ contains
              if(Unused_B(iBlock)) CYCLE
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                   = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-             Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)= EnergyOld_CBI(:,:,:,iBlock,:)
              time_BLK(1:nI,1:nJ,1:nK,iBlock)    = 0.0
           end do
           !$omp end parallel do
@@ -1965,12 +1952,13 @@ contains
     ! Convert data structure Var_VGB of the implicit code to the explicit code
 
     use ModMain
-    use ModAdvance, ONLY : State_VGB, Energy_GBI
-    use ModMultiFluid, ONLY: select_fluid, nFluid, iP, iRho_I
+    use ModEnergy,  ONLY: pressure_to_energy_block
+    use ModAdvance, ONLY: State_VGB
     use ModSize, ONLY: nG, nI, nJ, nK
 
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-    real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxBlockImpl)
+    real,  intent(out):: &
+         Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxBlockImpl)
 
     integer :: iBlockImpl, iBlock, i, j, k, iFluid
 
@@ -1981,8 +1969,6 @@ contains
     if(DoTest)write(*,*)'Starting explicit2implicit: ',&
          'iMin,iMax,jMin,jMax,kMin,kMax=', iMin, iMax, jMin, jMax, kMin, kMax
 
-    if(DoTest)write(*,*)'E=',Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
-
     call timing_start('expl2impl')
 
     !$omp parallel do private( iBlock )
@@ -1991,20 +1977,15 @@ contains
        Var_VGB(:,:,:,:,iBlockImpl) = &
             State_VGB(:,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
 
-       if(UseImplicitEnergy)then
-          do iFluid=1,nFluid
-             if(nFluid > 1) call select_fluid(iFluid)
-             Var_VGB(iP,:,:,:,iBlockImpl) = &
-                  Energy_GBI(iMin:iMax,jMin:jMax,kMin:kMax,iBlock,iFluid)
-          end do
-       end if
+       if(UseImplicitEnergy) call pressure_to_energy_block( &
+            Var_VGB(:,:,:,:,iBlockImpl), iMin, iMax, jMin, jMax, kMin, kMax)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-       ! The max velocity at each face is calculated later in get_cmax_face(),
-       ! which is calculated block-by-block. If a cell is not an implicit cell
-       ! and is not a 'ghost' cell of a implicit cell, then set the
-       ! density to 1 and all the other variables to 0, so that the maximum
-       ! velocities at these faces are 0.
+          ! The max velocity at each face is calculated later in get_cmax_face(),
+          ! which is calculated block-by-block. If a cell is not an implicit cell
+          ! and is not a 'ghost' cell of an implicit cell, then set the
+          ! density to 1 and all the other variables to 0, so that the maximum
+          ! velocities at these faces are 0.
           if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
                max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
              Var_VGB(:,i,j,k,iBlockImpl) = 0
@@ -2029,8 +2010,8 @@ contains
     ! Convert the implicit block Var_VC to block iBlock of the explicit code
 
     use ModSize,       ONLY: nI, nJ, nK
-    use ModAdvance,    ONLY: nVar, State_VGB, Energy_GBI
-    use ModEnergy,     ONLY: calc_pressure_cell, calc_energy_cell
+    use ModEnergy,     ONLY: energy_to_pressure_cell
+    use ModAdvance,    ONLY: nVar, State_VGB
     use ModMultiFluid, ONLY: nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
 
@@ -2058,18 +2039,8 @@ contains
        end do; end do; end do
     end do
 
-    if(UseImplicitEnergy)then
-       do iFluid=1,nFluid
-          iP = iP_I(iFluid)
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if(.not.IsImplCell_CB(i,j,k,iBlock)) CYCLE
-             Energy_GBI(i,j,k,iBlock,iFluid) = Var_VC(iP,i,j,k)
-          end do; end do; end do
-       end do
-       call calc_pressure_cell(iBlock)
-    else
-       call calc_energy_cell(iBlock)
-    end if
+    if(UseImplicitEnergy) &
+         call energy_to_pressure_cell(iBlock, State_VGB)
 
     call timing_stop('impl2expl')
 

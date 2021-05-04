@@ -115,8 +115,7 @@ module ModAdvance
 
   ! Block cell-centered MHD solution old state
   real, allocatable :: StateOld_VGB(:,:,:,:,:)
-  real, allocatable :: EnergyOld_CBI(:,:,:,:,:)
-  !$acc declare create(StateOld_VGB, EnergyOld_CBI)
+  !$acc declare create(StateOld_VGB)
 
   ! Block cell-centered intrinsic magnetic field, time, and temporary storage
   real, allocatable :: tmp1_BLK(:,:,:,:)
@@ -295,7 +294,6 @@ contains
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock,nFluid))
     allocate(StateOld_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(EnergyOld_CBI(nI,nJ,nK,MaxBlock,nFluid))
     allocate(tmp1_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(time_BLK(nI,nJ,nK,MaxBlock))
@@ -374,7 +372,6 @@ contains
     if(allocated(State_VGB))       deallocate(State_VGB)
     if(allocated(Energy_GBI))      deallocate(Energy_GBI)
     if(allocated(StateOld_VGB))    deallocate(StateOld_VGB)
-    if(allocated(EnergyOld_CBI))   deallocate(EnergyOld_CBI)
     if(allocated(tmp1_BLK))        deallocate(tmp1_BLK)
     if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)
     if(allocated(time_BLK))        deallocate(time_BLK)

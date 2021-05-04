@@ -1549,7 +1549,6 @@ contains
     use ModVarIndexes, ONLY: Pe_
     use ModGeometry, ONLY: x1
     use ModUserInterface ! user_material_properties
-    use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
          CoordMax_D, IsRzGeometry, Xyz_DGB, x_
 	use ModNumConst, ONLY: cHalfPi, cPi
@@ -1658,7 +1657,6 @@ contains
           end if
        end do; end do; end do
 
-       call calc_energy_cell(iBlock)
     end do
 
     call timing_stop(NameSub)

@@ -145,14 +145,11 @@ contains
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
 #ifdef OPENACC
-      iGang = iBlock
+    iGang = iBlock
+#else
+    iGang = 1
 #endif
-    if(iBlock==iBlockTest)then
-    else
-       DoTest=.false.
-    endif
 
     if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
@@ -541,7 +538,7 @@ contains
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
          DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
     use ModAdvance,  ONLY: Rho_, p_, &
-         State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI, time_BLK
+         State_VGB, StateOld_VGB, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
     use ModGeometry, ONLY: true_cell
     use ModMpi
@@ -600,7 +597,6 @@ contains
           if(Unused_B(iBlock)) CYCLE
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock)  &
                = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-          Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:) = EnergyOld_CBI(:,:,:,iBlock,:)
           time_BLK(1:nI,1:nJ,1:nK,iBlock)     = 0.0
        end do
        ! Reduce next time step

@@ -1090,7 +1090,6 @@ contains
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModVarIndexes
-    use ModEnergy,   ONLY: calc_energy_ghost
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
@@ -1247,13 +1246,11 @@ contains
              end if
 
           end do; end do; end do
-          call calc_energy_ghost(iBlock)
        case(2)
           State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(p_,nI+1:MaxI,:,:,iBlock)     = 1.0 - 0.1*&
                (Xyz_DGB(x_,nI+1:MaxI,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
-          call calc_energy_ghost(iBlock)
        case(3)
           State_VGB(:,:,0,:,iBlock) = State_VGB(:,:,1,:,iBlock)
           State_VGB(:,:,-1,:,iBlock) = State_VGB(:,:,1,:,iBlock)

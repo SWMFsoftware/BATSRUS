@@ -60,8 +60,7 @@ contains
     use ModReadParam
     use ModMessagePass,   ONLY: DoOneCoarserLayer
     use ModFaceValue,     ONLY: &
-         UseTvdResChange, UseAccurateResChange, &
-         UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
+         UseTvdResChange, UseAccurateResChange, nGUsed, &
          DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
          TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
@@ -1509,14 +1508,6 @@ contains
              DoConserveFlux = .false.
           endif
 
-       case("#SCHEME4")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
-          call read_var('UseFaceIntegral4',   UseFaceIntegral4)
-          call read_var('UseLimiter4',        UseLimiter4)
-          ! There is no face integral in 1D
-          if(nDim == 1) UseFaceIntegral4 = .false.
-
        case("#SCHEME5")
           ! If UseFDFaceFlux is true, use ECHO scheme, which is based on
           ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
@@ -1554,7 +1545,7 @@ contains
           call read_var('DoBurgers', DoBurgers)
 
        case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
-            '#LIMITPTOTAL', '#FLATTENING', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
+            '#LIMITPTOTAL', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
           call read_face_value_param(NameCommand)
 
        case("#NONCONSERVATIVE")
@@ -3047,42 +3038,17 @@ contains
       if(IsFirstCheck)then
          call correct_grid_geometry
 
-         if( (.not.IsCartesian .or. &
-              i_line_command("#BOXBOUNDARY", iSessionIn=iSessionFirst) < 0 ) &
-              .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
-            if(iProc==0)then
-               if(.not. IsCartesian) write(*,'(a)')NameSub//&
-                    ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
-                    'for Cartesian grid only!'
-
-               if(i_line_command("#BOXBOUNDARY", iSessionIn=iSessionFirst)<0) &
-                    write(*,'(a)')NameSub//&
-                    ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
-                    'for cell based boundaries only!'
-
-               if (UseStrict) call stop_mpi('Correct PARAM.in!')
-               write(*,*)NameSub//' Setting Use*Integral4 = .false.'
-            end if
-            UseVolumeIntegral4 = .false.
-            UseFaceIntegral4   = .false.
-         end if
-
-         if(UseConstrainB .or. UseFaceIntegral4) then
+         if(UseConstrainB) then
             ! Extend face index range in the orthogonal direction
             ! The CT scheme needs 1 extra layers
-            ! the 4th order face integrals need 1 and 2 ghost layers
             iMinFace = 0; iMaxFace = nI+1
             jMinFace = 1 - min(1,nJ-1); jMaxFace = nJ + min(1,nJ-1)
             kMinFace = 1 - min(1,nK-1); kMaxFace = nK + min(1,nK-1)
-            if(UseFaceIntegral4)then
-               iMinFace2 = -1; iMaxFace2 = nI+2
-               jMinFace2 = 1 - 2*min(1,nJ-1); jMaxFace2 = nJ + 2*min(1,nJ-1)
-               kMinFace2 = 1 - 2*min(1,nK-1); kMaxFace2 = nK + 2*min(1,nK-1)
-            else
-               iMinFace2 = iMinFace; iMaxFace2 = iMaxFace
-               jMinFace2 = jMinFace; jMaxFace2 = jMaxFace
-               kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
-            end if
+
+            iMinFace2 = iMinFace; iMaxFace2 = iMaxFace
+            jMinFace2 = jMinFace; jMaxFace2 = jMaxFace
+            kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
+
          end if
       else if(nOrderOld /=5 .and. nOrder==5 .and. UseFDFaceFlux) then
          ! calculate high-order geometry coefficients
@@ -3095,16 +3061,6 @@ contains
       select case(nOrder)
       case(1, 2)
          nGUsed = nOrder
-      case(4)
-         ! 4th order interpolation formula needs 2 ghost cells
-         nGUsed = 2
-         ! Volume integral needs an extra ghost cell layer
-         if(UseVolumeIntegral4) nGUsed = nGUsed + 1
-         if(TypeLimiter /= 'no')then
-            ! PPM limiter needs another 1 or 2 ghost cell layers
-            nGUsed = nGUsed + 1
-            if(UseLimiter4) nGUsed = nGUsed + 1
-         end if
       case(5)
          ! MP5 scheme needs 3 ghost cell layers
          nGUsed = 3

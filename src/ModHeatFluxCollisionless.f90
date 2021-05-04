@@ -72,7 +72,7 @@ contains
     use ModSize
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: InvGammaElectronMinus1
-    use ModEnergy,     ONLY: calc_energy_cell
+    use ModEnergy,     ONLY: limit_pressure
 
     integer, intent(in) :: iBlock
 
@@ -100,8 +100,9 @@ contains
             *(1.0/(GammaHere - 1) - InvGammaElectronMinus1)
     end do; end do; end do
 
-    call calc_energy_cell(iBlock)
-
+    ! write(*,*)NameSub,' !!! call limit_pressure'
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_heatflux_collisionless
   !============================================================================

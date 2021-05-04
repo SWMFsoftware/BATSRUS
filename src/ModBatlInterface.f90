@@ -268,7 +268,6 @@ contains
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          set_amr_geometry
-    use ModEnergy, ONLY: calc_energy_ghost
     use ModResistivity, ONLY: UseResistivity, set_resistivity
     use ModUserInterface ! user_specify_refinement
 
@@ -287,7 +286,6 @@ contains
 
        ! Update all kinds of extra block variables
        call calc_other_vars(iBlock)
-       call calc_energy_ghost(iBlock)
        call set_amr_geometry(iBlock)
     end do
 

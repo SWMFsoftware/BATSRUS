@@ -701,11 +701,11 @@ contains
     !   - take care of minor fluids with very small densities
     !   - take care of conservation of total density and energy
 
-    use ModEnergy, ONLY: calc_energy
     use ModAdvance, ONLY: State_VGB, &
          Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure
     use ModPhysics, ONLY: ElectronTemperatureRatio, LowDensityRatio
-
+    use ModEnergy,  ONLY: limit_pressure
+    
     integer, intent(in) :: iBlock
     logical, intent(in) :: IsFinal  ! true for the final update
 
@@ -852,9 +852,9 @@ contains
 
     end do; end do; end do
 
-    ! Reset total and ion energies
-    call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
-
+    ! write(*,*) NameSub,' !!! call limit_pressure'
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
+    
     if(DoTest)write(*,*) NameSub,' finishing with testvar=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
