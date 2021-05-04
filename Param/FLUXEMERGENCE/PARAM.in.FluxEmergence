@@ -1,6 +1,9 @@
 #INCLUDE
 restartIN/restart.H
 
+#DESCRIPTION
+Param/PARAM.in.FluxEmergence:restart		StringDescription
+
 #PROGRESS
 10			DnProgressShort
 100			DnProgressLong

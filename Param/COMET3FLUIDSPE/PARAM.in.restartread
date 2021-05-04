@@ -1,6 +1,9 @@
 #INCLUDE
 GM/restartIN/restart.H
 
+#DESCRIPTION
+Param/COMET3FLUIDSPE/PARAM.in.restartread		StringDescription
+
 #BODY
 F			UseBody
 

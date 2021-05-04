@@ -78,9 +78,6 @@ NONE			TypeNormalization
 float			TypeBc1
 float			TypeBc2
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
