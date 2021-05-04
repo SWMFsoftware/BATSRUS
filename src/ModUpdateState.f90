@@ -24,7 +24,7 @@ contains
   !============================================================================
 
   subroutine update_state(iBlock)
-    !$acc routine vector
+
     use ModMain
     use ModAdvance
     use ModEnergy,     ONLY: limit_pressure
@@ -37,18 +37,14 @@ contains
 
     integer, intent(in) :: iBlock
     integer :: iVar, iFluid, i, j, k
-    integer:: iGang
+    integer, parameter:: iGang=1
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
-
 #ifndef OPENACC
+    call test_start(NameSub, DoTest, iBlock)
+
     if(DoTest)then
        write(*,*)NameSub,' n_step=', n_step,' iStage=', iStage,     &
             ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
@@ -58,10 +54,6 @@ contains
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-       end do
-       do iFluid = 1, nFluid
-          write(*,'(2x,a,i2,a,es23.15)') &
-               'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
        write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
@@ -84,29 +76,20 @@ contains
             -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)  )                      &
             /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
-#endif
 
     ! Note must copy state to old state only if iStage is 1.
     if(iStage==1) then
-       !$acc loop vector collapse(3)
        do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar
          StateOld_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)
        enddo; enddo; enddo; enddo
-
-       !$acc loop vector collapse(4)
-       do iFluid = 1, nFluid; do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          EnergyOld_CBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid)
-       enddo; enddo; enddo; enddo
     end if
 
-#ifndef OPENACC
     ! The first call may set UseUserUpdateStates to false
     if(UseUserUpdateStates)       call user_update_states(iBlock)
     if(.not. UseUserUpdateStates) call update_state_normal(iBlock)
     ! write(*,*) NameSub,' !!! call limit_pressure after update_state_*'
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
-#ifndef OPENACC
     if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
@@ -118,18 +101,13 @@ contains
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
-       do iFluid = 1, nFluid
-          write(*,'(2x,a,i2,a,es23.15)') &
-               'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
-       end do
     end if
-#endif
     call test_stop(NameSub, DoTest, iBlock)
+#endif
   end subroutine update_state
   !============================================================================
 
   subroutine update_state_normal(iBlock)
-    !$acc routine vector
     use ModMain
     use ModAdvance
     use ModPhysics
@@ -157,7 +135,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iVar
-    integer:: iGang
+    integer, parameter:: iGang=1
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, Coeff, SourceIonEnergy_I(nIonFluid)
@@ -165,11 +143,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
+#ifndef OPENACC
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
+
     ! Nothing to do if time step is zero
     if(time_accurate .and. Dt == 0.0) RETURN
 
@@ -177,7 +153,6 @@ contains
     ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
     ! and heat exchange between electrons and ions (mult-ion is not coded).
 
-#ifndef OPENACC
     if(.not.UseMultiIon .and. UseResistivity .and. &
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
@@ -185,10 +160,8 @@ contains
        call calc_resistivity_source(iBlock)
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after add_resistive_source          =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
     end if
-#endif
 
     ! Calculate partial step size compared to largest stable time step
     if(nStage==4.or.UseFlic)then
@@ -218,7 +191,6 @@ contains
        end do; end do; end do
     end if
 
-    !$acc loop vector collapse(3)
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
        Source_VCI(iVar,i,j,k,iGang) = &
@@ -233,13 +205,10 @@ contains
 
     if(DoTest)write(*,'(2x,2a,15es20.12)') &
          NameSub, ' original testvar and energy         =', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-         Energy_GBI(iTest,jTest,kTest,iBlock,:)
-#endif
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     call update_explicit(iBlock, DoTest)
 
-#ifndef OPENACC
     if(UseMultiIon .and. &
          (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
@@ -249,8 +218,7 @@ contains
 
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after fix multiion update           =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     end if
 
@@ -259,8 +227,7 @@ contains
 
        if(DoTest)write(*,'(2x,2a,15es20.12)')  &
             NameSub, ' after multiion update1              =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     end if
 
@@ -291,6 +258,9 @@ contains
           ! Make sure that energy is consistent
           if(UseEfield)then
              if(.not. UseNonconservative) then
+
+                call pressure_to_energy(iBlock, State_VGB)
+                
                 ! Add q/m rhou.E to ion energy source terms for the
                 ! energy equation, q/m*rho*(E dot u) if UseEfield.
                 ! Tests show that putting the energy source terms after
@@ -309,8 +279,8 @@ contains
 
                    SourceIonEnergy_I = SourceIonEnergy_I*DtLocal
 
-                   Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_) =     &
-                        Energy_GBI(i,j,k,iBlock,IonFirst_:IonLast_)  &
+                   State_VGB(iPIon_I,i,j,k,iBlock) =     &
+                        State_VGB(iPIon_I,i,j,k,iBlock)  &
                         + SourceIonEnergy_I
                 end do; end do; end do
 
@@ -331,8 +301,7 @@ contains
 
           if(DoTest)write(*,'(2x,2a,15es20.12)') &
                NameSub, ' after point impl state              =', &
-               State_VGB(iVarTest, iTest,jTest,kTest,iBlock),      &
-               Energy_GBI(iTest,jTest,kTest,iBlock,:)
+               State_VGB(iVarTest, iTest,jTest,kTest,iBlock)
        end if
     end if
 
@@ -340,8 +309,7 @@ contains
        call multi_ion_update(iBlock, IsFinal = .true.)
        if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after multiion update2              =', &
-            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
     end if
 
     ! The parabolic div B decay is only done in the last stage.
@@ -359,15 +327,12 @@ contains
 
     if(DoTest)write(*,'(2x,2a,15es20.12)') &
          NameSub, ' final state                         =', &
-         State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-         Energy_GBI(iTest,jTest,kTest,iBlock,:)
-#endif
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine update_explicit(iBlock, DoTest)
-      !$acc routine vector
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
            mhd_to_boris, boris_to_mhd
 
@@ -375,20 +340,14 @@ contains
       logical, intent(in):: DoTest
 
       ! Allocatable storage for classical 4th order Runge-Kutta scheme
-      real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
+      real, allocatable, save:: Rk4_VCB(:,:,:,:,:)
 
       real, parameter:: cThird = 1./3.
       real:: Coeff1, Coeff2
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      integer:: iGang
+      integer, parameter:: iGang=1
       !------------------------------------------------------------------------
-      iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-=======
-
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)
 
@@ -401,8 +360,7 @@ contains
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-              Energy_GBI(iTest,jTest,kTest,iBlock,:)
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
 
       if(UseElectronPressure .and. UseElectronEntropy)then
@@ -452,34 +410,17 @@ contains
             State_VGB(iVar,i,j,k,iBlock) = &
                  StateOld_VGB(iVar,i,j,k,iBlock) + Source_VCI(iVar,i,j,k,iGang)
          end do; end do; end do; end do
-
-         ! Update energy variables
-         !$acc loop vector collapse(4)
-         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-            Energy_GBI(i,j,k,iBlock,iFluid) = &
-                 EnergyOld_CBI(i,j,k,iBlock,iFluid) &
-                 + Source_VCI(nVar+iFluid,i,j,k,iGang)
-         end do; end do; end do; end do
       else
          ! Update state variables starting from previous stage (RK schemes)
          do k=1,nK; do j=1,nJ; do i=1,nI
             State_VGB(:,i,j,k,iBlock) = &
                  State_VGB(:,i,j,k,iBlock) + Source_VCI(1:nVar,i,j,k,iGang)
          end do; end do; end do
-
-         ! Update energy variables
-         do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-            Energy_GBI(i,j,k,iBlock,iFluid) = &
-                 Energy_GBI(i,j,k,iBlock,iFluid) + Source_VCI(nVar+iFluid,i,j,k,iGang)
-         end do; end do; end do; end do
       end if
 
-#ifndef OPENACC
       if(nStage == 4)then
          ! Classical 4th order Runge-Kutta scheme. Requires extra storage.
-         if(.not.allocated(Rk4_VCB)) allocate( &
-              Rk4_VCB(nVar,nI,nJ,nK,MaxBlock), &
-              Rk4_CBI(nI,nJ,nK,MaxBlock,nFluid))
+         if(.not.allocated(Rk4_VCB)) allocate(Rk4_VCB(nVar,nI,nJ,nK,MaxBlock))
 
          select case(iStage)
          case(1)
@@ -487,9 +428,6 @@ contains
             do k=1,nK; do j=1,nJ; do i=1,nI
                Rk4_VCB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
             end do; end do; end do
-            do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-               Rk4_CBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid)
-            end do; end do; end do; end do
          case(2)
             ! U2 = Un + Dt/2*R1
             ! Rk4 = Rk4 + 2*U2 = 3*Un + Dt/2*Rn + Dt*R1
@@ -497,10 +435,6 @@ contains
                Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
                     + 2*State_VGB(:,i,j,k,iBlock)
             end do; end do; end do
-            do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-               Rk4_CBI(i,j,k,iBlock,iFluid) = Rk4_CBI(i,j,k,iBlock,iFluid) &
-                    + 2*Energy_GBI(i,j,k,iBlock,iFluid)
-            end do; end do; end do; end do
          case(3)
             ! U3 = Un + Dt*R2
             ! Rk4 = Rk4 + U3 - 4Un = Dt/2*Rn + Dt*R1 + Dt*R2
@@ -509,11 +443,6 @@ contains
                     + State_VGB(:,i,j,k,iBlock) &
                     - 4*StateOld_VGB(:,i,j,k,iBlock)
             end do; end do; end do
-            do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-               Rk4_CBI(i,j,k,iBlock,iFluid) = Rk4_CBI(i,j,k,iBlock,iFluid) &
-                    + Energy_GBI(i,j,k,iBlock,iFluid) &
-                    - 4*EnergyOld_CBI(i,j,k,iBlock,iFluid)
-            end do; end do; end do; end do
          case(4)
             ! U4 = Un + Dt/6*R3
             ! Un+1 = U4 + Rk4/3 = Un + Dt/6*(Rn + 2*R1 + 2*R2 + R3)
@@ -522,11 +451,6 @@ contains
                     + State_VGB(:,i,j,k,iBlock) &
                     + cThird*Rk4_VCB(:,i,j,k,iBlock)
             end do; end do; end do
-            do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-               Energy_GBI(i,j,k,iBlock,iFluid) = &
-                    + Energy_GBI(i,j,k,iBlock,iFluid) &
-                    + cThird*Rk4_CBI(i,j,k,iBlock,iFluid)
-            end do; end do; end do; end do
          end select
       elseif(.not.UseHalfStep .and. iStage > 1)then
          ! Interpolation step for 2nd and 3rd order Runge-Kutta schemes
@@ -549,22 +473,11 @@ contains
                  Coeff1*StateOld_VGB(:,i,j,k,iBlock) + &
                  Coeff2*State_VGB(:,i,j,k,iBlock)
          end do; end do; end do
-
-         ! Interpolate energies
-         do iFluid=1,nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-            Energy_GBI(i,j,k,iBlock,iFluid) = &
-                 Coeff1*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-                 Coeff2*Energy_GBI(i,j,k,iBlock,iFluid)
-         end do; end do; end do; end do
-
       endif
-#endif
 
-#ifndef OPENACC
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after flux/source                   =', &
-           State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-           Energy_GBI(iTest,jTest,kTest,iBlock,:)
+           State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
          ! Convert relativistic momentum/energy back to classical
@@ -572,10 +485,8 @@ contains
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-              Energy_GBI(iTest,jTest,kTest,iBlock,:)
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       endif
-#endif
 
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron entropy back to pressure
@@ -604,11 +515,10 @@ contains
             end do; end do; end do
          end if
 
-#ifndef OPENACC
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after multispecies correct          =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-#endif
+
       end if
 
       ! Check minimum density
@@ -626,9 +536,9 @@ contains
               NameSub, ' after min density correct densities =', &
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
-#endif
 
       if( IsMhd .and. &
+           (.not. (UseNonConservative .and. nConservCrit == 0)) .and. &
            ((nStage==1.and..not.time_accurate) &
            .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
 
@@ -637,21 +547,19 @@ contains
          ! for half+full step method. But it cannot be used for RK schemes!
 
          do k=1,nK; do j=1,nJ; do i=1,nI
-            Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + 0.5*( &
-                 Source_VCI(Bx_,i,j,k,iGang)**2 + &
-                 Source_VCI(By_,i,j,k,iGang)**2 + &
-                 Source_VCI(Bz_,i,j,k,iGang)**2)
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(UseNonConservative)then
+               if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
+            end if
+            State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                 + 0.5*sum(Source_VCI(Bx_:Bz_,i,j,k,iGang)**2)
          end do; end do; end do
 
-#ifndef OPENACC
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after energy dB correct             =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-              Energy_GBI(iTest,jTest,kTest,iBlock,:)
-#endif
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       end if
 
-#ifndef OPENACC
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
               call update_wave_group_advection(iBlock)
@@ -669,19 +577,17 @@ contains
             end do; end do; end do
          end if
       end if
-#endif
+
       ! Convert energy back to pressure as needed
       call energy_to_pressure(iBlock, State_VGB)
       call energy_to_pressure(iBlock, StateOld_VGB)
 
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
-           State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-           Energy_GBI(iTest,jTest,kTest,iBlock,:)
+           State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 #endif
     end subroutine update_explicit
     !==========================================================================
-
     subroutine deduct_expl_source()
       integer:: iVarSemi_
 
@@ -707,10 +613,8 @@ contains
 
     end subroutine deduct_expl_source
     !==========================================================================
-
   end subroutine update_state_normal
   !============================================================================
-
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V
@@ -1195,16 +1099,10 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-
     subroutine fix_update(i,j,k,iBlock,time_fraction)
 
       integer, intent(in):: i,j,k,iBlock
       real,    intent(in):: time_fraction
-
-      logical :: IsConserv
-      real :: fullBx, fullBy, fullBz, fullBB, UdotBc2, rhoc2, gA2_Boris
-      real :: rhoUx_Boris, rhoUy_Boris, rhoUz_Boris, E_Boris, &
-           rhoUx_o_Boris, rhoUy_o_Boris, rhoUz_o_Boris, E_o_Boris
 
       logical, parameter :: DoTestCell = .false.
 
@@ -1213,219 +1111,9 @@ contains
 
       character(len=*), parameter:: NameSub = 'fix_update'
       !------------------------------------------------------------------------
-      if(allocated(IsConserv_CB))then
-         IsConserv = IsConserv_CB(i,j,k,iBlock)
-      else
-         IsConserv = .not. UseNonConservative
-      end if
-
-      if(DoTestCell)then
-         write(*,*)NameSub,' IsConserv    =',IsConserv
-         write(*,*)NameSub,' initial state=',State_VGB(:,i,j,k,iBlock)
-         write(*,*)NameSub,' old     state=',StateOld_VGB(:,i,j,k,iBlock)
-      end if
-
-      if(UseBorisCorrection .and. nFluid==1) then
-
-         ! Convert old state
-         if(UseB0)then
-            fullBx = B0_DGB(x_,i,j,k,iBlock) + StateOld_VGB(Bx_,i,j,k,iBlock)
-            fullBy = B0_DGB(y_,i,j,k,iBlock) + StateOld_VGB(By_,i,j,k,iBlock)
-            fullBz = B0_DGB(z_,i,j,k,iBlock) + StateOld_VGB(Bz_,i,j,k,iBlock)
-         else
-            fullBx = StateOld_VGB(Bx_,i,j,k,iBlock)
-            fullBy = StateOld_VGB(By_,i,j,k,iBlock)
-            fullBz = StateOld_VGB(Bz_,i,j,k,iBlock)
-         end if
-         fullBB = fullBx**2 + fullBy**2 + fullBz**2
-         rhoc2  = &
-              StateOld_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-         UdotBc2= (StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
-              StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBy + &
-              StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
-         gA2_Boris=1.+fullBB/rhoc2
-
-         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
-         !            = rhoU + (U B^2 - B U.B)/c^2
-         !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
-         rhoUx_o_Boris = StateOld_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
-              fullBx*UdotBc2
-         rhoUy_o_Boris = StateOld_VGB(rhoUy_,i,j,k,iBlock)*ga2_Boris - &
-              fullBy*UdotBc2
-         rhoUz_o_Boris = StateOld_VGB(rhoUz_,i,j,k,iBlock)*ga2_Boris - &
-              fullBz*UdotBc2
-
-         if(IsConserv)then
-            ! e_boris = e + 0.5/c^2 * (V x B)^2
-            E_o_Boris = EnergyOld_CBI(i,j,k,iBlock,1) + (0.5/c2LIGHT)*( &
-                 ((StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
-                 -StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
-                 +(StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
-                 -StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBx)**2 &
-                 +(StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBy     &
-                 -StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
-                 )/StateOld_VGB(rho_,i,j,k,iBlock)**2                 )
-         end if
-
-         ! Convert current state
-         if(UseB0)then
-            fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-            fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-            fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
-         else
-            fullBx = State_VGB(Bx_,i,j,k,iBlock)
-            fullBy = State_VGB(By_,i,j,k,iBlock)
-            fullBz = State_VGB(Bz_,i,j,k,iBlock)
-         end if
-         fullBB = fullBx**2 + fullBy**2 + fullBz**2
-         rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-         UdotBc2= (State_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
-              State_VGB(rhoUy_,i,j,k,iBlock)*fullBy + &
-              State_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
-         gA2_Boris = 1 + fullBB/rhoc2
-
-         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
-         !            = rhoU + (U B^2 - B U.B)/c^2
-         !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
-         rhoUx_Boris = State_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
-              fullBx*UdotBc2
-         rhoUy_Boris = State_VGB(rhoUy_,i,j,k,iBlock)*ga2_Boris - &
-              fullBy*UdotBc2
-         rhoUz_Boris = State_VGB(rhoUz_,i,j,k,iBlock)*ga2_Boris - &
-              fullBz*UdotBc2
-
-         if(IsConserv)then
-            ! e_boris = e + 0.5/c^2 * (V x B)^2
-            E_Boris = Energy_GBI(i,j,k,iBlock,1) + (0.5/c2LIGHT)*( &
-                 ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
-                 -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
-                 +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
-                 -State_VGB(rhoUz_,i,j,k,iBlock)*fullBx)**2 &
-                 +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBy     &
-                 -State_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
-                 )/State_VGB(rho_,i,j,k,iBlock)**2                 )
-         end if
-
-         ! Interpolate
-         ! For possible extension to multifluid:
-         ! State_VGB(iRho_I,i,j,k,iBlock) = &
-         !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
-         !     (1.0-time_fraction) * StateOld_VGB(iRho_I,i,j,k,iBlock)
-         State_VGB(rho_,i,j,k,iBlock) = &
-              (    time_fraction) *    State_VGB(rho_,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(rho_,i,j,k,iBlock)
-         rhoUx_Boris = &
-              (    time_fraction) * rhoUx_Boris + &
-              (1.0-time_fraction) * rhoUx_o_Boris
-         rhoUy_Boris = &
-              (    time_fraction) * rhoUy_Boris + &
-              (1.0-time_fraction) * rhoUy_o_Boris
-         rhoUz_Boris = &
-              (    time_fraction) * rhoUz_Boris + &
-              (1.0-time_fraction) * rhoUz_o_Boris
-         State_VGB(Bx_,i,j,k,iBlock) = &
-              (    time_fraction) *    State_VGB(Bx_,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(Bx_,i,j,k,iBlock)
-         State_VGB(By_,i,j,k,iBlock) = &
-              (    time_fraction) *    State_VGB(By_,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(By_,i,j,k,iBlock)
-         State_VGB(Bz_,i,j,k,iBlock) = &
-              (    time_fraction) *    State_VGB(Bz_,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(Bz_,i,j,k,iBlock)
-
-         ! Convert Back
-         if(UseB0)then
-            fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-            fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-            fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
-         else
-            fullBx = State_VGB(Bx_,i,j,k,iBlock)
-            fullBy = State_VGB(By_,i,j,k,iBlock)
-            fullBz = State_VGB(Bz_,i,j,k,iBlock)
-         end if
-         fullBB = fullBx**2 + fullBy**2 + fullBz**2
-         rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-         UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + &
-              rhoUz_Boris*fullBz) / rhoc2
-         gA2_Boris= 1.0/(1.0+fullBB/rhoc2)
-
-         ! rhoU = 1/(rho c^2 + B^2) * (I rho c^2 + B B) * rhoU_Boris
-         !      = 1/[1+BB/(rho c^2)]* (rhoU_Boris + (rhoUBorisdotB/(rho c^2)*B)
-
-         State_VGB(rhoUx_,i,j,k,iBlock) = gA2_Boris*(rhoUx_Boris + &
-              UdotBc2*fullBx)
-         State_VGB(rhoUy_,i,j,k,iBlock) = gA2_Boris*(rhoUy_Boris + &
-              UdotBc2*fullBy)
-         State_VGB(rhoUz_,i,j,k,iBlock) = gA2_Boris*(rhoUz_Boris + &
-              UdotBc2*fullBz)
-
-         if(IsConserv)then
-            E_boris= &
-                 (    time_fraction) * E_Boris + &
-                 (1.0-time_fraction) * E_o_Boris
-
-            ! E = E_boris - 0.5/c^2 * (V x B)^2
-            Energy_GBI(i,j,k,iBlock,1) = E_Boris - (0.5/c2LIGHT)*( &
-                 ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
-                 -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
-                 +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
-                 -State_VGB(rhoUz_,i,j,k,iBlock)*fullBx)**2 &
-                 +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBy     &
-                 -State_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
-                 )/State_VGB(rho_,i,j,k,iBlock)**2               )
-
-            if((nStage==1 .and. .not.time_accurate) .or. &
-                 (nStage > 1 .and. iStage == 1)) &
-                 Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
-                 (0.5/time_fraction - 0.5)*&
-                 ((State_VGB(Bx_,i,j,k,iBlock) - &
-                 StateOld_VGB(Bx_,i,j,k,iBlock))**2 +&
-                 (State_VGB(By_,i,j,k,iBlock) - &
-                 StateOld_VGB(By_,i,j,k,iBlock))**2 +&
-                 (State_VGB(Bz_,i,j,k,iBlock) - &
-                 StateOld_VGB(Bz_,i,j,k,iBlock))**2 )
-
-            call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
-
-            ! For multifluid update all other energies and
-            ! call calc_pressure_point
-         else
-            ! For possible extension to multifluid
-            ! State_VGB(iP_I,i,j,k,iBlock) = &
-            !     (   time_fraction) *   State_VGB(iP_I,i,j,k,iBlock) + &
-            !     (1.0-time_fraction) * StateOld_VGB(iP_I,i,j,k,iBlock)
-            ! call calc_energy_point(i,j,k,iBlock)
-
-            State_VGB(p_,i,j,k,iBlock) = &
-                 (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
-                 (1.0-time_fraction) * StateOld_VGB(p_,i,j,k,iBlock)
-
-            call calc_energy(i,i,j,j,k,k,iBlock,1,1)
-         end if
-      else ! Non-Boris interpolation
-
-         State_VGB(:,i,j,k,iBlock) = &
-              (    time_fraction) *    State_VGB(:,i,j,k,iBlock) + &
-              (1.0-time_fraction) * StateOld_VGB(:,i,j,k,iBlock)
-         if(IsConserv)then
-            Energy_GBI(i,j,k,iBlock,:) = &
-                 (    time_fraction) *    Energy_GBI(i,j,k,iBlock,:) + &
-                 (1.0-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
-
-            if(IsMhd .and. (nStage==1.and..not.time_accurate).or.&
-                 (nStage>1.and.iStage==1)) then
-               Energy_GBI(i,j,k,iBlock,1) = &
-                    Energy_GBI(i,j,k,iBlock,1) - &
-                    (0.5/time_fraction - 0.5)*&
-                    sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-                    StateOld_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
-            end if
-
-            call calc_pressure_point(i,j,k,iBlock)
-         else
-            call calc_energy_point(i,j,k,iBlock)
-         end if
-      end if
+      State_VGB(:,i,j,k,iBlock) = &
+           (    time_fraction) *    State_VGB(:,i,j,k,iBlock) + &
+           (1.0-time_fraction) * StateOld_VGB(:,i,j,k,iBlock)
 
       time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
 
@@ -1446,6 +1134,7 @@ contains
     use ModAdvance
     use ModB0, ONLY: B0_DGB
     use ModGeometry
+    use ModPhysics, ONLY: GammaMinus1, InvGammaMinus1
     use BATL_lib, ONLY: Xyz_DGB
 
     integer :: iBlock, iCrit, i, j, k
@@ -1494,29 +1183,27 @@ contains
           do iCrit = 1, nConservCrit
              select case(TypeConservCrit_I(iCrit))
              case('p')
+                ! Check if pressure is > pCoeffConserv*energy_density
                 if(UseB0)then
                    do k=1,nK; do j=1,nJ; do i=1,nI
                       IsConserv_CB(i,j,k,iBlock) = &
                            IsConserv_CB(i,j,k,iBlock) .or. &
-                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
-                           (Energy_GBI(i,j,k,iBlock,1) + 0.5 * &
-                           ((State_VGB(Bx_,i,j,k,iBlock) &
-                           + B0_DGB(x_,i,j,k,iBlock))**2 &
-                           +(State_VGB(By_,i,j,k,iBlock) &
-                           + B0_DGB(y_,i,j,k,iBlock))**2 &
-                           +(State_VGB(Bz_,i,j,k,iBlock) &
-                           + B0_DGB(z_,i,j,k,iBlock))**2 &
-                           -State_VGB(Bx_,i,j,k,iBlock)**2 &
-                           -State_VGB(By_,i,j,k,iBlock)**2 &
-                           -State_VGB(Bz_,i,j,k,iBlock)**2 &
-                           ))
+                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv *   &
+                           ( InvGammaMinus1*State_VGB(P_,i,j,k,iBlock)    &
+                           + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)&
+                           / State_VGB(Rho_,i,j,k,iBlock)                 &
+                           + 0.5*sum((State_VGB(Bx_:Bz_,i,j,k,iBlock)     &
+                           +          B0_DGB(:,i,j,k,iBlock))**2))
                    end do;end do;end do
                 else
                    do k=1,nK; do j=1,nJ; do i=1,nI
                       IsConserv_CB(i,j,k,iBlock) = &
                            IsConserv_CB(i,j,k,iBlock) .or. &
-                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
-                           Energy_GBI(i,j,k,iBlock,1)
+                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv *   &
+                           ( InvGammaMinus1*State_VGB(P_,i,j,k,iBlock)    &
+                           + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)&
+                           / State_VGB(Rho_,i,j,k,iBlock)                 &
+                           + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
                    end do;end do;end do
                 end if
              case('gradp')
@@ -1821,10 +1508,6 @@ contains
              State_VGB(Bz_,:,:,:,iBlock)=0.0
           end where
        end if
-
-       ! Recalculate energy
-       call calc_energy_ghost(iBlock)
-
     end do
 
     ! Recalculate B0 face values at resolution changes
