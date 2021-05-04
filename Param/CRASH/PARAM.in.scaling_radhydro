@@ -1,3 +1,6 @@
+#DESCRIPTION
+Param/CRASH/PARAM.in.scaling_radhydro: Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
+
 #INCLUDE
 Param/CRASH/START.in
 
@@ -9,9 +12,6 @@ Param/CRASH/3D.in
 
 #INCLUDE
 Param/CRASH/MULTIGROUPCOND.in
-
-#DESCRIPTION
-Param/CRASH/PARAM.in.scaling_radhydro: Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_multigroupcond
 
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
