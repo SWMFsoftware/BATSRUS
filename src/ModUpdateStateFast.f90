@@ -385,7 +385,8 @@ contains
           enddo; enddo; enddo
        end if
 
-       call calc_timestep(iBlock)
+       ! Flux_V is a local variable so generic calc_timestep does not work
+       ! call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
@@ -1237,7 +1238,8 @@ contains
 #endif
        enddo; enddo; enddo
 
-       call calc_timestep(iBlock)
+       ! Flux_V is a local variable so generic calc_timestep does not work
+       ! call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
