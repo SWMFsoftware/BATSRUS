@@ -37,6 +37,7 @@ module ModFaceValue
   public:: get_face_tvd
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
+  
   public:: clean_mod_face_value
 
   logical, public :: UseAccurateResChange = .false.
@@ -878,6 +879,8 @@ contains
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
+    use ModViscosity, ONLY: UseArtificialVisco
+    
     use BATL_lib, ONLY: CellFace_DB
 
     logical, intent(in):: DoResChangeOnly
@@ -1050,6 +1053,8 @@ contains
        end if
     end if
 
+    if(UseArtificialVisco) call calc_face_div_u(iBlock)
+    
     ! Now the first or second order face values are calculated
     select case(nOrder)
     case(1)
@@ -3036,6 +3041,121 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_cell_norm_velocity
+  !============================================================================
+  subroutine calc_face_div_u(iBlock)
+    ! This subroutine 'estimates' div(V)*dl at the cell faces, where
+    ! 'dl' is the cell size.
+    ! The algorithm is implemented based on the paper of
+    ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
+    ! for more details.
+
+    use ModAdvance, ONLY: FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI, &
+         Vel_IDGB
+    use BATL_size,   ONLY: nDim, jDim_, kDim_
+    use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
+         kMaxFace, nIFace, nJFace, nKFace
+    integer, intent(in)::iBlock
+
+    integer :: iRho, iRhoUx, iRhoUy, iRhoUz
+    integer :: iFluid, iFace, jFace, kFace
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax
+    integer:: iGang
+    real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    character(len=*), parameter:: NameSub = 'calc_face_div_u'
+    !--------------------------------------------------------------------------
+    call timing_start(NameSub)
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
+    iMin = 1 - nG;       iMax = nI + nG
+    jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
+    kMin = 1 - nG*kDim_; kMax = nK + nG*kDim_
+
+    do iFluid = 1, nFluid
+       iRho = iRho_I(iFluid)
+       iRhoUx = iRhoUx_I(iFluid)
+       iRhoUy = iRhoUy_I(iFluid)
+       iRhoUz = iRhoUz_I(iFluid)
+
+       Vel_DG = Vel_IDGB(iFluid,:,:,:,:,iBlock)
+
+       ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IXI/Y/Z = div(U)*dl
+       ! See eq(35) of P. McCorquodale and P. Colella (2010)
+       do kFace=kMinFace,kMaxFace
+          do jFace=jMinFace,jMaxFace
+             do iFace=1,nIFace
+                FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
+                     (Vel_DG(x_,iFace,jFace,kFace) - &
+                     Vel_DG(x_,iFace-1,jFace,kFace))
+
+                if(nDim>1) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
+                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
+                     (Vel_DG(y_,iFace,jFace+1,kFace) - &
+                     Vel_DG(y_,iFace,jFace-1,kFace) + &
+                     Vel_DG(y_,iFace-1,jFace+1,kFace) - &
+                     Vel_DG(y_,iFace-1,jFace-1,kFace))/4
+
+                if(nDim>2) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
+                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
+                     (Vel_DG(z_,iFace,jFace,kFace+1) - &
+                     Vel_DG(z_,iFace,jFace,kFace-1) + &
+                     Vel_DG(z_,iFace-1,jFace,kFace+1) - &
+                     Vel_DG(z_,iFace-1,jFace,kFace-1))/4
+
+             enddo
+          enddo
+       enddo
+
+       If(nDim>1) then
+          do kFace=kMinFace,kMaxFace
+             do jFace=1,nJFace
+                do iFace=iMinFace,iMaxFace
+                   FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
+                        (Vel_DG(y_,iFace,jFace,kFace) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace)) + &
+                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace) + &
+                        Vel_DG(x_,iFace+1,jFace-1,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace-1,kFace))/4
+
+                   if(nDim>2) FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
+                        FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) + &
+                        (Vel_DG(z_,iFace,jFace,kFace+1) - &
+                        Vel_DG(z_,iFace,jFace,kFace-1) + &
+                        Vel_DG(z_,iFace,jFace-1,kFace+1) - &
+                        Vel_DG(z_,iFace,jFace-1,kFace-1))/4
+                enddo
+             enddo
+          enddo
+       endif
+
+       if(nDim>2) then
+          do kFace=1,nKFace
+             do jFace=jMinFace,jMaxFace
+                do iFace=iMinFace,iMaxFace
+                   FaceDivU_IZI(iFluid,iFace,jFace,kFace,iGang) = &
+                        (Vel_DG(z_,iFace,jFace,kFace) - &
+                        Vel_DG(z_,iFace,jFace,kFace-1)) + &
+                        (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace) + &
+                        Vel_DG(x_,iFace+1,jFace,kFace-1) - &
+                        Vel_DG(x_,iFace-1,jFace,kFace-1))/4 + &
+                        (Vel_DG(y_,iFace,jFace+1,kFace) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace) + &
+                        Vel_DG(y_,iFace,jFace+1,kFace-1) - &
+                        Vel_DG(y_,iFace,jFace-1,kFace-1))/4
+                enddo
+             enddo
+          enddo
+       endif
+
+    enddo ! iFluid
+
+    call timing_stop(NameSub)
+  end subroutine calc_face_div_u
   !============================================================================
   subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
 
