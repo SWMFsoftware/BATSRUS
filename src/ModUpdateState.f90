@@ -585,7 +585,7 @@ contains
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
-#endif
+
     end subroutine update_explicit
     !==========================================================================
     subroutine deduct_expl_source()
@@ -613,6 +613,7 @@ contains
 
     end subroutine deduct_expl_source
     !==========================================================================
+#endif
   end subroutine update_state_normal
   !============================================================================
   subroutine update_te0

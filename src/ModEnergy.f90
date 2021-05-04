@@ -41,7 +41,6 @@ module ModEnergy
 contains
   !============================================================================
   subroutine pressure_to_energy(iBlock, State_VGB)
-    !$acc routine vector
     ! Calculate energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
@@ -261,7 +260,6 @@ contains
   !============================================================================
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
-    !$acc routine vector
 
     ! Calculate total energy (excluding B0):
     !
@@ -322,7 +320,6 @@ contains
   !============================================================================
 
   subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn, UseOpenACCIn)
-    !$acc routine vector
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock
@@ -358,7 +355,6 @@ contains
           ! MHD energy
 
           if(UseOpenACC) then
-             !$acc loop vector collapse(3)
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
                    Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
