@@ -102,7 +102,7 @@ contains
 
     ! write(*,*)NameSub,' !!! call limit_pressure'
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
-    
+
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_heatflux_collisionless
   !============================================================================

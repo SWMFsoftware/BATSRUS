@@ -204,9 +204,8 @@ contains
              if(DoTest .and. UseAnisoPressure .and. &
                   (iVarTest == iPparIon_I(IonFirst_) .or. iVarTest == p_)) &
                   call write_source('After bDotGradparU')
-             
-          end if
 
+          end if
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -229,7 +228,7 @@ contains
           end do; end do; end do
 
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
-          
+
        end do ! iFluid
     end if ! UseAnisoPressure.or.UseNonConservative
 

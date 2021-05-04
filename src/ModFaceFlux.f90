@@ -743,7 +743,7 @@ contains
       logical:: IsFF_I(nFFLogic)
       integer:: IFF_I(nFFInt)
       real:: RFF_I(nFFReal)
-      !------------------------------------------------------------------------      
+      !------------------------------------------------------------------------
 
       iGang = 1
       iBlockFace = iBlock
@@ -887,7 +887,7 @@ contains
               State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))
 
          ! Energy flux
-         !Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
+         ! Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
          !     (Energy_GBI(iFace,jFace,kFace,iBlockFace,iFluid) - &
          !     Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
 
@@ -1673,10 +1673,9 @@ contains
 
     integer:: iVar, iFluid
 
+    ! Calculate conservative state
     character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
-
-    ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
 
     ! Make sure normal electric field is initialized
@@ -1902,8 +1901,8 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, PeAdd
       real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
@@ -2305,8 +2304,8 @@ contains
       use ModPhysics, ONLY: Clight, C2light
 
       real :: Ex, Ey, Ez
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
 
       ! dB/dt + div F = 0
@@ -2798,8 +2797,8 @@ contains
     subroutine modify_flux(Flux_V, Un, MhdFlux_V)
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux), MhdFlux_V(MaxDim)
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       ! Conservative update for the total flux for multi-ion MHD
       ! if(.not.UseJCrossBForce) MhdFlux_V = &
@@ -2952,9 +2951,9 @@ contains
       real:: Cleft, Cright
       real:: WeightLeft, WeightRight, Diffusion, DiffusionDw
       real:: Nu1, Nu2, Nu, CsoundL, CsoundR, Cdw
-      !------------------------------------------------------------------------
 
       ! Get the max, left and right speeds for HLL (and DW?)
+      !------------------------------------------------------------------------
       call get_speed_max(State_V, Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
       Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
@@ -3080,8 +3079,8 @@ contains
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
-      !------------------------------------------------------------------------     
       ! The propagation speeds are modified by the DoAw = .true. !
+      !------------------------------------------------------------------------
       call get_speed_max(State_V, &
            Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
            UseAwSpeedIn = .true.)

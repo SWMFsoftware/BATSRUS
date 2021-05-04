@@ -235,14 +235,14 @@ contains
        call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
             1, nFluid)
 !!! DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
-       
+
 #ifndef OPENACC
        if(UseResistivePlanet) then
           CBC%TypeBc = 'ResistivePlanet'
           call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
        end if
 #endif
-       
+
     end do
     !$omp end parallel do
 

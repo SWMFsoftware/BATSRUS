@@ -18,7 +18,7 @@ module ModEnergy
        pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        MaxBlock, Used_GB
-  
+
   implicit none
 
   private ! except
@@ -47,7 +47,7 @@ contains
     integer, intent(in):: iBlock
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    
+
     integer:: i,j,k,iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pressure_to_energy'
@@ -68,12 +68,12 @@ contains
 
     ! A mix of conservative and non-conservative scheme (at least for the ions)
     FLUIDLOOP: do iFluid = 1, nFluid
-       
+
        ! If all neutrals are non-conservative exit from the loop
        if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if(UseNonConservative .and. iFluid <= IonLast_)then
@@ -115,9 +115,9 @@ contains
     integer:: i, j, k, iFluid
     !--------------------------------------------------------------------------
     do iFluid = 1, nFluid
-       
+
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
 
           ! Convert to hydro energy density
@@ -158,7 +158,7 @@ contains
 
        RETURN
     end if
-    
+
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)write(*,*)NameSub, &
@@ -166,12 +166,12 @@ contains
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
     FLUIDLOOP: do iFluid = 1, nFluid
-       
+
        ! If all neutrals are non-conservative exit from the loop
        if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           if(UseNonConservative .and. iFluid <= IonLast_)then
@@ -191,7 +191,7 @@ contains
                   State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
           end if
-          
+
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
                GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
@@ -219,7 +219,7 @@ contains
 
     integer:: i,j,k,iFluid
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'pressure_to_energy'
+    character(len=*), parameter:: NameSub = 'energy_to_pressure_cell'
     !--------------------------------------------------------------------------
     ! Fully non-conservative scheme
     if(UseNonConservative .and. nConservCrit <= 0 .and. &
@@ -232,19 +232,19 @@ contains
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
     FLUIDLOOP: do iFluid = 1, nFluid
-       
+
        if(nFluid > 1) call select_fluid(iFluid)
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! Leave the body cells alone
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-          
+
           ! Subtract the magnetic energy density
           if(iFluid == 1 .and. IsMhd) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if
-          
+
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
                GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
@@ -271,9 +271,9 @@ contains
     integer:: i,j,k,iFluid
 
 #ifndef OPENACC
+    ! write(*,*) NameSub,' !!! call limit_pressure'
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
-    ! write(*,*) NameSub,' !!! call limit_pressure'
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
@@ -436,9 +436,9 @@ contains
     integer:: i, j, k, iFluid
     real :: NumDens, p, pMin, Ne
 
+#ifndef OPENACC
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)

@@ -9,7 +9,7 @@ module ModCoarseAxis
   SAVE
   logical:: UseCoarseAxis = .false.
   integer:: nCoarseLayer = 3
-  
+
   ! In case nCoarseLayer=1, then each pair of the cells near the axis are merged
   !----------a x i s---------------
   ! |   |   |          first layer "|" denote the cell boundaries

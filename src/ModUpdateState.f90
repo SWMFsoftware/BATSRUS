@@ -257,7 +257,7 @@ contains
              if(.not. UseNonconservative) then
 
                 call pressure_to_energy(iBlock, State_VGB)
-                
+
                 ! Add q/m rhou.E to ion energy source terms for the
                 ! energy equation, q/m*rho*(E dot u) if UseEfield.
                 ! Tests show that putting the energy source terms after
@@ -352,7 +352,7 @@ contains
          call pressure_to_energy(iBlock, State_VGB)
 
       if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
-         ! Convert classical momentum and energy to relativistic      
+         ! Convert classical momentum and energy to relativistic
          call mhd_to_boris(iBlock)
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
@@ -381,14 +381,14 @@ contains
          do k = 1, nK; do j = 1, nJ; do i =1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
-                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang) 
+                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
          end do; end do; end do
       elseif(nConservCrit > 0)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
-                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang) 
+                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
          end do; end do; end do
       end if
       ! Neutrals next
@@ -396,10 +396,10 @@ contains
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(IonLast_+1:),i,j,k,iGang) = &
-                 Source_VCI(Energy_+IonLast_:,i,j,k,iGang) 
+                 Source_VCI(Energy_+IonLast_:,i,j,k,iGang)
          end do; end do; end do
       end if
-            
+
       ! Now update State_VGB
       if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
          ! Update state variables starting from level n (=old) state
@@ -610,9 +610,9 @@ contains
 
     end subroutine deduct_expl_source
     !==========================================================================
-  end subroutine update_state_normal  
+  end subroutine update_state_normal
   !============================================================================
-  
+
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V

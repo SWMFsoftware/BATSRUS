@@ -133,7 +133,7 @@ contains
        if (Unused_B(iBlock)) CYCLE
        call calc_energy_ghost(iBlock)
     end do
-    
+
     ! Initialize stuff
 
     plotvar_inBody = 0.0

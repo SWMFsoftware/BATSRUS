@@ -125,7 +125,7 @@ module ModFaceValue
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
-  
+
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
@@ -908,7 +908,7 @@ contains
     else
        DoTest=.false.
     end if
-    
+
     iGang = 1
 
     if(DoTest)then
@@ -2131,7 +2131,7 @@ contains
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-      
+
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
