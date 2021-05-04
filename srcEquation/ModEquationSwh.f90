@@ -12,7 +12,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationSwh.f90"
 
-  ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: &
        NameEquation='Solar wind protons with extra indexes'
 

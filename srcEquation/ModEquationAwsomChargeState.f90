@@ -24,7 +24,8 @@ module ModVarIndexes
 
   save
 
-  ! This equation module contains the standard MHD equations with wave energy
+  ! This equation module contains the anisotropic ion pressure MHD equations
+  ! with wave energy, electron pressure and charge states
   character (len=*), parameter :: &
        NameEquation='MHD + Alfven waves + Pe + aniso Pi + charge states'
   character (len=*), parameter :: &

@@ -14,8 +14,8 @@ module ModVarIndexes
 
   character(*),parameter:: NameEquationFile="ModEquationMhdEuropa3FluidsPe.f90"
 
-  ! This equation module contains the standard MHD equations
-  ! with electron pressure
+  ! This equation module contains the multi-ion equations for 3 fluids
+  ! (O+, O2+ and hot O+) and electron pressure
   character (len=*), parameter :: NameEquation= &
        'Three-Ion-fluid Pe MHD for Europa'
 

@@ -14,7 +14,7 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationSixMoment.f90"
 
-  ! This equation module contains the standard MHD equations with
+  ! This equation module contains the six-moment equations with
   ! anisotropic ion pressure.
   character (len=*), parameter :: &
        NameEquation='Six Moment Closure with anisotropic pressure'

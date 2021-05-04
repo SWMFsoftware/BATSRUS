@@ -12,7 +12,7 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationHd.f90"
 
-  ! This equation module contains the standard MHD equations.
+  ! This equation module contains the standard hydro equations.
   character (len=*), parameter :: NameEquation='HD'
 
   integer, parameter :: nVar = 5

@@ -20,7 +20,6 @@ module ModVarIndexes
   ! Based on ModEquationMhdIons and ModEquationMhdSwIono(Hansen, 2006)
   ! Welling, 2010.
 
-  ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='MHD with SW and Iono Hydrogen'
 
   integer, parameter :: nVar = 18

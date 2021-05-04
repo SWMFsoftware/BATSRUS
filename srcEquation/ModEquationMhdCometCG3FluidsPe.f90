@@ -12,19 +12,18 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationMhdCometCG3FluidsPe.f90"
+  character(len=*), parameter :: &
+       NameEquationFile = "ModEquationMhdCometCG3FluidsPe.f90"
 
-  ! This equation module contains the standard MHD equations
-  ! with electron pressure
-  character (len=*), parameter :: NameEquation= &
-       '2-fluid + Pe MHD + 1-Neutral for Comet CG'
+  character(len=*), parameter :: &
+       NameEquation = "2-fluid + Pe MHD + 1-Neutral for Comet CG"
 
   integer, parameter :: nVar = 19
 
   integer, parameter :: nFluid    = 3
   integer, parameter :: IonFirst_ = 1        ! First individual ion fluid
   integer, parameter :: IonLast_  = 2        ! Last individual ion fluid
-  logical, parameter :: IsMhd     = .false.   ! First total ion fluid obeys MHD
+  logical, parameter :: IsMhd     = .false.  ! multi-ion is not MHD
   real               :: MassFluid_I(1:nFluid) = [1.0, 17.0, 17.0]
 
   ! Fluids: total fluid, solar wind protons, cometary water ions

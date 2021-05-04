@@ -19,7 +19,8 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationAwsomFluidsAnisoPi.f90"
 
-  ! This equation module contains the standard MHD equations with wave energy
+  ! This equation module contains the multi-ion anisotropic ion pressure equations
+  ! with wave energy and electron pressure
   character (len=*), parameter :: NameEquation = &
        'Multi-fluid MHD + Alfven waves + isotropic Pe + anisotropic Pi'
 

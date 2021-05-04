@@ -12,7 +12,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationIonsHNO.f90"
 
-  ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='H N O ions'
 
   integer, parameter :: nVar = 18

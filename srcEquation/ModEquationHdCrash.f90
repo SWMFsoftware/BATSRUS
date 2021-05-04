@@ -18,7 +18,6 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationHdCrash.f90"
 
-  ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='HD+Ionization+Levels'
 
   ! loop variable for implied do-loop over material levels

@@ -15,8 +15,8 @@ module ModVarIndexes
 
   character (len=*), parameter :: NameEquationFile = "ModEquationSixMomentHyp.f90"
 
-  ! This equation module contains the standard MHD equations with
-  ! anisotropic ion pressure.
+  ! This equation module contains six-moment equations with
+  ! anisotropic ion pressure and hyperbolic cleaning.
   character (len=*), parameter :: &
        NameEquation='Six Moment Closure with hyperbolic div B cleaning'
 
