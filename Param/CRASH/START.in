@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #PLANET
 NONE			NamePlanet
 
@@ -12,12 +9,6 @@ READ			TypeNormalization
 1.0e-6			No2SiUnitX Micron
 1.0e+3			No2SiUnitU km/s
 1000.0			No2SiUnitRho g/cm^3
-
-#UPDATECHECK
-F			UseUpdateCheck
-
-#NONCONSERVATIVE
-F			UseNonConservative
 
 #LIMITER
 F			UseLogRhoLimiter
