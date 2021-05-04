@@ -577,7 +577,7 @@ contains
 
       ! Convert energy back to pressure as needed
       call energy_to_pressure(iBlock, State_VGB)
-      call energy_to_pressure(iBlock, StateOld_VGB)
+      call energy_to_pressure(iBlock, StateOld_VGB, IsOld=.true.)
 
       if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
