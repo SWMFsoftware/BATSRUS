@@ -6180,7 +6180,6 @@ limited by the minimum and maximum levels only
 	<parameter name="nOrder" type="integer" input="select">
 	    <option name="1st order"  value="1"/>
 	    <option name="TVD2"       value="2" default="T"/>
-	    <option name="FIVOL4"     value="4"/>
 	    <option name="MP5/CWENO5" value="5"/>
 	</parameter>
 	<parameter name="TypeFlux" type="string" input="select" case="upper">
@@ -6206,7 +6205,7 @@ limited by the minimum and maximum levels only
 			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
 #SCHEME
-5			nOrder (1, 2, 4 or 5)
+5			nOrder (1, 2 or 5)
 Rusanov			TypeFlux
 mc3			TypeLimiter ! Only read for Order>1 and flux not Simple
 1.2			LimiterBeta ! Only read if TypeLimiter is NOT 'minmod'
@@ -6217,18 +6216,13 @@ The spatially first order scheme uses a one-stage time integration.
 The spatially second order MUSCL scheme either uses
 an explicit two-stage Runge-Kutta or an implicit three-level BDF2
 time discretization.
-The 4th order finite volume scheme (FIVOL4)
-uses the classical 4th order Runge-Kutta scheme for time integration.
 The spatially 5th order schemes uses the 3rd order Runge-Kutta scheme.
 
-NOTE 1: 4th order scheme is not recommended, and it may be
-removed in the future! The #SCHEME4 command has more options for it.
-
-NOTE 2: The 5th order scheme requires 3 ghost cells and at least 6x6x6
+NOTE 1: The 5th order scheme requires 3 ghost cells and at least 6x6x6
 grid blocks (to be set with Config.pl -g=... -ng=...). The 1st and 2nd
 order schemes work with 2 ghost cells and can have 4x4x4 blocks.
 
-NOTE 3: the time discretization scheme can be modified
+NOTE 2: the time discretization scheme can be modified
 with the #TIMESTEPPING, #RUNGEKUTTA or #RK commands after the #SCHEME command.
 \noindent
 Possible values for TypeFlux:
@@ -6329,111 +6323,6 @@ dVel. When dVel is smaller than VelCrit, then the high order schemes are used.
 When dVel is larger than VelCrit, further check the value of pRatio. If pRatio is
 larger/smaller that pCritLow/pCritHigh, then a low/high order face value will be
 used, otherwise, use a linear combination of the low and high order value.
-
-
-</command>
-
-<command name="SCHEME4" if="$_IsFirstSession">
-	<parameter name="UseVolumeIntegral4" type="logical" default="F"/>
-	<parameter name="UseFaceIntegral4"   type="logical" default="F"/>
-        <parameter name="UseLimiter4"        type="logical" default="F"/>
-#SCHEME4
-F			UseVolumeIntegral4
-F			UseFaceIntegral4
-F			UseLimiter4
-
-This command has to be used in the first session, because it determines
-the size of various arrays that are allocated at the beginning of the run.
-The command reads three parameters used by the 4th order finite volume
-scheme FIVOL4, which can be activated in any session by setting
-nOrder=4 in the #SCHEME command.
-
-If UseVolumeIntegral4 is true then the cell averaged variables
-are converted into cell centered variables and back as needed.
-This requires an extra ghost cell layer.
-Currently this option only works for Cartesian grids and
-with cell based boundary conditions (no inner body).
-
-If UseFaceIntegral4 is true, then the face averaged face values
-and face fluxes are converted to face centered variables
-and back as needed. This option can only be used on 2D and 3D
-Cartesian grids and with cell based boundary conditions (no inner body).
-
-If UseLimiter4 is true then the truely 4th order limiter is used,
-however this requires an extra ghost cell layer, and the improvement
-is marginal at best.
-
-If all 3 logicals are true and nOrder is set to 4 in the #SCHEME
-command then the fully 4th order accurate FIVOL4 scheme is used.
-This, however, requires extra ghost cell layers and extra face flux
-calculations. In practice the fully 4th order FIVOL4 scheme is much
-more expensive but not much more accurate than the simplified shceme
-with all three logicals set to false.
-
-IMPORTANT: the number of ghost cell layers set with Config.pl -ng=..
-has to be sufficient for the selected scheme!
-The FIVOL4 scheme needs 3 to 5 layers.
-The minimum 3 layers are needed if both UseVolumeIntegral4 and UseLimiter4
-are false. If one of these logicals is true, 4 layers are required.
-If both are true then the maximum 5 ghost cells layers are needed.
-
-The default is false for all 3 logicals.
-</command>
-
-
-<command name="FLATTENING">
-	 <parameter name="UseFlattening" type="logical" default="T"/>
-	 <if expr="$UseFlattening">
-	 	<parameter name="UseDuFlat" type="logical" default="F"/>
-	 	<parameter name="FlatDelta" type="real"
-			   min="0" max="1" default="0.33"/>
-		<parameter name="FlatRatioMin" type="real"
-			   min="0" max="1" default="0.75"/>
-		<parameter name="FlatRatioMax" type="real"
-			   min="$FlatRatioMin" max="1" default="0.85"/>
-	</if>
-
-#FLATTENING
-T		UseFlattening (rest of parameters are read if true)
-F		UseDuFlat
-0.33		FlatDelta
-0.75		FlatRatioMin
-0.85		FlatRatioMax
-
-This command controls the parameters of Phil Collela's flattening
-algorithm used by the 4th order scheme (nOrder=4 in the #SCHEME command).
-The flattening scheme uses a linear combination of the first order and the 4th
-order accurate face values. Near strong shocks it switches to the first
-order scheme, elsewhere it uses the 4th order accurate face value.
-
-If the UseFlattening parameter is true, the flattening scheme is switched on.
-
-The UseDuFlat parameter determines if the velocity gradient is used as
-a condition for flattening. The "official" algorithm uses this check,
-in some cases it seems to be better not to use it, and it is not clear
-if there is any advantage using it.
-
-The FlatDelta parameter determines the threshold for the relative
-pressure jump. If pR and pL are the pressures in the i+1 and i-1 cells,
-then the flattening is applied only if abs(pR - pL) is greater than
-FlatDelta*min(pR, pL).
-
-The FlatRatioMin parameter determines the lower threshold for the shock width
-ratio = abs(p(i+2) - p(i-2))/abs(pR - pL). If the ratio is less than
-FlatRatioMin, no flattening is applied.
-
-The FlatRatioMax parameter determines the upper threshold for the shock width
-ratio. If the ratio is above FlatRatioMax, the first order scheme is used.
-If the ratio is between the FlatRatioMin and FlatRatioMax values, the
-1st order and 4th order face values are linearly combined with a
-weight (Ratio - FlatRatioMin)/(FlatRatioMax - FlatRatioMin).
-
-In the actual scheme, the flattening parameters are calculated for all
-dimensions and all cells first, and then the minimum is taken over
-a 3 point stencil in each dimension, and then a minimum is taken over
-the dimensions. See Miller and Colella 2005, APJS, 160, 199.
-
-The default values are shown in the example.
 </command>
 
 <command name="SCHEME5">
@@ -6827,11 +6716,11 @@ F		DoConserveNeutrals
 Linde		TypeFluxNeutral (default, Rusanov or Linde)
 
 If DoConserveNeutrals is false, the pressure equation is used
-for neutrals even where the energy equation is used for the ions.
+for neutrals even when the energy equation is used for the ions.
 If DoConserveNeutrals is true, the neutrals do the same as ions.
 The neutral fluid uses the flux function set by TypeFluxNeutral.
 The default is to use the same as the ion fluid if possible.
-Currently only the Rusanov and Linde schemes are available for
+Currently only the Rusanov and Linde (HLLE) schemes are available for
 the neutrals. If the ion fluid uses any other flux function,
 the neutrals will use the Linde scheme.
 
