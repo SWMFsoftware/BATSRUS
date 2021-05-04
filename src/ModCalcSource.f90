@@ -6,9 +6,6 @@ module ModCalcSource
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, iTest, jTest, kTest, &
        iBlockTest, iVarTest
-#ifdef OPENACC
-  use ModUtilities, ONLY: norm2
-#endif
 
   implicit none
   SAVE
@@ -22,7 +19,6 @@ contains
   !============================================================================
 
   subroutine calc_source(iBlock)
-    !$acc routine vector
     use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
          UseUserSourceExpl, UseUserSourceImpl
@@ -107,16 +103,11 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
-    !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do
 
-    !$acc loop vector collapse(3)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VCI(iVar,i,j,k,iGang) = 0
     end do; end do; end do; end do
@@ -127,7 +118,6 @@ contains
           if(nFluid > 1) call select_fluid(iFluid)
           iUn = UnFirst_ + iFluid - 1
 
-#ifndef OPENACC
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
 
@@ -214,9 +204,9 @@ contains
              if(DoTest .and. UseAnisoPressure .and. &
                   (iVarTest == iPparIon_I(IonFirst_) .or. iVarTest == p_)) &
                   call write_source('After bDotGradparU')
-
+             
           end if
-#endif
+
 
           ! Adiabatic heating: -(g-1)*P*Div(U)
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -238,13 +228,10 @@ contains
              end if
           end do; end do; end do
 
-#ifndef OPENACC
           if(DoTest .and. iVarTest==iP)call write_source('After p div U')
-#endif
+          
        end do ! iFluid
     end if ! UseAnisoPressure.or.UseNonConservative
-
-#ifndef OPENACC
 
     if(UseSpeedMin)then
        ! push radial ion speed above SpeedMin outside rSpeedMin
@@ -586,15 +573,12 @@ contains
     !   +curl(B0) x B0    - add this if curl B0 is not 0
 
     if(UseB0) call set_b0_source(iBlock)
-#endif
 
     if(UseB .and. UseDivbSource)then
        if(IsCartesian)then
           call calc_divb_source(iBlock)
        else
-#ifndef OPENACC
           call calc_divb_source_gencoord
-#endif
        end if
 
        if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
@@ -602,7 +586,6 @@ contains
             call write_source('After B0B1 source')
 
        ! Add contributions to other source terms
-       !$acc loop vector collapse(3) private(U_D)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -645,7 +628,7 @@ contains
        end do; end do; end do
 
        if(DoTest)call write_source('After divb source')
-#ifndef OPENACC
+
        if(UseB0Source .and. UseMhdMomentumFlux)then
 
           !   -B1 div(B0)     - div(B0) source
@@ -667,14 +650,11 @@ contains
              call write_source('After B0 source')
           end if
        end if
-#endif
+
     else
-#ifndef OPENACC
        if(UseB)call calc_divb(iBlock)
-#endif
     end if
 
-#ifndef OPENACC
     if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -706,17 +686,14 @@ contains
        if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
             call write_source('After E div E')
     end if
-#endif
 
     if(IsMhd) then
-       !$acc loop vector collapse(3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
           Source_VCI(iVar,i,j,k,iGang) = &
                Source_VCI(iVar,i,j,k,iGang) + SourceMhd_VCI(iVar,i,j,k,iGang)
        end do; end do; end do; end do
     endif
 
-#ifndef OPENACC
     ! The electric field in the comoving frame is needed
     if(UseMhdMomentumFlux)&
          call get_efield_in_comoving_frame(iBlock)
@@ -867,7 +844,6 @@ contains
     end if
 
     if(DoTest) call write_source('final')
-#endif
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
@@ -1047,7 +1023,6 @@ contains
     end subroutine get_uPlus
     !==========================================================================
     subroutine calc_divb_source(iBlock)
-      !$acc  routine vector
       integer, intent(in):: iBlock
 
       integer::  i, j, k
@@ -1064,16 +1039,9 @@ contains
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
-      !$acc loop vector collapse(3)
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-#ifdef OPENACC
-         iGang = iBlock
-         DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
-         DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
-         DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
-#endif
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
@@ -1327,13 +1295,10 @@ contains
     !==========================================================================
 
     subroutine write_source(String)
-      !$acc routine seq
       character(len=*), intent(in) :: String
       !------------------------------------------------------------------------
-#ifndef OPENACC
       write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
            Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
-#endif
     end subroutine write_source
     !==========================================================================
 
@@ -1365,9 +1330,6 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     InvDx            = 1/CellSize_DB(x_,iBlock)
     if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)

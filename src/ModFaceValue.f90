@@ -7,9 +7,6 @@ module ModFaceValue
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, &
        iDimTest
-#ifdef OPENACC
-  use ModUtilities, ONLY: norm2
-#endif
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_, MaxDim
   use ModVarIndexes
@@ -267,15 +264,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     call test_start(NameSub, DoTest, iBlock)
-#endif
+
     if(all(neiLEV(:,iBlock) /= -1))RETURN
 
-#ifndef OPENACC
     if(DoTest)write(*,*)NameSub, ' state before: ',&
          State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
-#endif
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
@@ -408,12 +402,10 @@ contains
        end do; end do; end do
     end if
 
-#ifndef OPENACC
     if(DoTest)write(*,*)NameSub, ' state after: ',&
          State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
-#endif
   end subroutine correct_monotone_restrict
   !============================================================================
   subroutine get_face_accurate3d(iSideIn,  iBlock)
@@ -422,11 +414,7 @@ contains
     integer:: i, j, k
     integer:: iGang
     !--------------------------------------------------------------------------
-
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     select case(iSideIn)
     case(1)
@@ -604,12 +592,8 @@ contains
     !!! acc routine vector
     integer, intent(in):: iSideIn, iBlock
     integer:: iGang
-
     !--------------------------------------------------------------------------
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     select case(iSideIn)
     case(1)
@@ -640,11 +624,7 @@ contains
     integer:: i, j, k
     integer:: iGang
     !--------------------------------------------------------------------------
-
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     select case(iSideIn)
     case(1)
@@ -704,11 +684,7 @@ contains
     integer:: i, j, k
     integer:: iGang
     !--------------------------------------------------------------------------
-
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     select case(iSideIn)
     case(1)
@@ -877,9 +853,6 @@ contains
   end subroutine get_face_tvd
   !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
-    !!! acc routine vector
-    use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
-
     ! The subroutine calculates right and left face values (primitive
     ! variables) LeftState_VXI.. RightState_VZIfor block iBlock from
     ! the cell centered State_VGB.
@@ -887,6 +860,7 @@ contains
     ! If DoResChangeOnly is true, only facevalues next to a coarser
     ! neighbor block are calculated.
 
+    use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
     use ModMain,     ONLY: nOrder, nOrderProlong, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
@@ -934,12 +908,9 @@ contains
     else
        DoTest=.false.
     end if
+    
     iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
-#ifndef OPENACC
     if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1)then
@@ -971,11 +942,6 @@ contains
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
        allocate(WeightR_II(-2:2,0:MaxIJK+1))
     endif
-#endif
-
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     UseTrueCell = body_BLK(iBlock)
 
@@ -1020,22 +986,18 @@ contains
        nStencil = nOrder
     end if
 
-#ifndef OPENACC
     if(DoLimitMomentum)then
        if(UseBorisRegion)then
           call set_clight_cell(iBlock)
           call set_clight_face(iBlock)
        end if
     end if
-#endif
 
-    !!! acc loop vector collapse(3) independent
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI; do iVar = 1, nVar
        Primitive_VGI(iVar,i,j,k,iGang) = State_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
     if(UseAccurateResChange)then
-       !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           IArguments_I(x_) = i
           IArguments_I(y_) = j
@@ -1043,7 +1005,6 @@ contains
           call calc_primitives(IArguments_I,iBlock)         ! all cells
        end do; end do; end do
     else
-       !!! acc loop vector collapse(3) private(IArguments_I) independent
        do k=kMinFace,kMaxFace
           do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
@@ -1056,9 +1017,6 @@ contains
        end do
 
        if(nJ > 1)then
-          ! TODO: Only parallelized the first 2 loops with openacc as
-          !      the first try. Optimize later.
-          !!! acc loop vector collapse(2) private(IArguments_I) independent
           do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
                 IArguments_I(x_) = i
@@ -1075,9 +1033,6 @@ contains
           end do; end do
        end if
        if(nK > 1)then
-          ! TODO: Only parallized the first 2 loops with openacc as
-          !      the first try. Optimize later.
-          !!! acc loop vector collapse(2) private(IArguments_I) independent
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
                 IArguments_I(x_) = i
@@ -1132,7 +1087,6 @@ contains
              if(nK > 1) call get_faceZ_second(&
                   iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace,iBlock)
           else
-#ifndef OPENACC
              ! High order scheme
              call get_facex_high(&
                   1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2,iBlock)
@@ -1140,7 +1094,6 @@ contains
                   iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2,iBlock)
              if(nK > 1) call get_facez_high(&
                   iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace,iBlock)
-#endif
           end if
        end if
 
@@ -1199,7 +1152,6 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace,iBlock)
           else
-#ifndef OPENACC
              ! High order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_high(1,1,1,nJ,1,nK,iBlock)
@@ -1213,11 +1165,9 @@ contains
                   call get_faceZ_high(1,nI,1,nJ,1,1,iBlock)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace,iBlock)
-#endif
           end if
        endif
 
-#ifndef OPENACC
        if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
@@ -1289,11 +1239,8 @@ contains
                   jMinFace,jMaxFace,1,nKFace)
           end if
        end if
-
-#endif
     end select  ! nOrder
 
-#ifndef OPENACC
     if(DoTest)then
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1) &
@@ -1318,7 +1265,6 @@ contains
             RightState_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
 
     end if
-#endif
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
@@ -1541,7 +1487,6 @@ contains
     !==========================================================================
 
     subroutine calc_primitives(IArguments_I,iBlock)
-      !!! acc routine seq
       use ModPhysics, ONLY: InvClight2
 
       integer, intent(in):: IArguments_I(MaxDim)
@@ -1554,9 +1499,6 @@ contains
       !------------------------------------------------------------------------
       i = IArguments_I(x_); j = IArguments_I(y_); k = IArguments_I(z_)
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
 
       RhoInv = 1/Primitive_VGI(Rho_,i,j,k,iGang)
 
@@ -2013,80 +1955,60 @@ contains
     !==========================================================================
 
     subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
 
-      !!! acc loop vector collapse(3)
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i-1,j,k,iGang)
          RightState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
     end subroutine get_facex_first
     !==========================================================================
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k, iVar
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-      !!! acc loop vector collapse(3)
+
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j-1,k,iGang)
          RightState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
     end subroutine get_facey_first
     !==========================================================================
     subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: i, j, k, iVar
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-      !!! acc loop vector collapse(3)
+
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k-1,iGang)
          RightState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
     end subroutine get_facez_first
     !==========================================================================
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::i1, iMinSharp, iMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2097,9 +2019,6 @@ contains
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
 
       iMinSharp = iMin
       iMaxSharp = iMax
@@ -2110,7 +2029,6 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
-      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do j=jMin, jMax
          Primitive_VI(:,iMin-2:iMax+1) = Primitive_VGI(:,iMin-2:iMax+1,j,k,iGang)
          if(UseTrueCell)then
@@ -2142,14 +2060,11 @@ contains
          end do
       end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
 
     end subroutine get_facex_second
     !==========================================================================
     subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::j1, jMinSharp, jMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2160,9 +2075,6 @@ contains
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
 
       jMinSharp = jMin
       jMaxSharp = jMax
@@ -2173,7 +2085,6 @@ contains
               min(jMax, max(jMin - 1, nJ + 1 - nFaceLimiterResChange))
       endif
 
-      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do k=kMin, kMax; do i=iMin,iMax
          Primitive_VI(:,jMin-2:jMax+1) = Primitive_VGI(:,i,jMin-2:jMax+1,k,iGang)
          if(UseTrueCell)then
@@ -2205,14 +2116,11 @@ contains
          end do
       end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
 
     end subroutine get_facey_second
     !==========================================================================
     subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      !!! acc routine vector
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer::k1, kMinSharp, kMaxSharp
       real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
@@ -2223,10 +2131,7 @@ contains
       integer:: iGang
       !------------------------------------------------------------------------
       iGang = 1
-#ifdef OPENACC
-      iGang = iBlock
-#endif
-
+      
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2236,7 +2141,6 @@ contains
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
 
-      !!! acc loop vector collapse(2) private(Primitive_VI,dVarLimL_VI,dVarLimR_VI)
       do j=jMin,jMax; do i=iMin,iMax;
          Primitive_VI(:,kMin-2:kMax+1) = Primitive_VGI(:,i,j,kMin-2:kMax+1,iGang)
          if(UseTrueCell)then
@@ -2268,9 +2172,7 @@ contains
          end do
       end do; end do
 
-#ifndef OPENACC
       if(DoLimitMomentum) call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
-#endif
 
     end subroutine get_facez_second
     !==========================================================================
@@ -3664,9 +3566,7 @@ contains
           end if
        end do
     case default
-#ifndef OPENACC
        call stop_mpi('limiter_body: unknown TypeLimiter='//TypeLimiter)
-#endif
     end select
 
   end subroutine limiter_body
@@ -3753,9 +3653,7 @@ contains
                cThird*abs(dVar1_V+2*dVar2_V))
        end do
     case default
-#ifndef OPENACC
        call stop_mpi('limiter: unknown TypeLimiter='//TypeLimiter)
-#endif
     end select
 
   end subroutine limiter

@@ -42,7 +42,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -103,7 +102,6 @@ contains
        end do
     end if
     call test_stop(NameSub, DoTest, iBlock)
-#endif
   end subroutine update_state
   !============================================================================
 
@@ -143,7 +141,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
     ! Nothing to do if time step is zero
@@ -613,9 +610,9 @@ contains
 
     end subroutine deduct_expl_source
     !==========================================================================
-#endif
-  end subroutine update_state_normal
+  end subroutine update_state_normal  
   !============================================================================
+  
   subroutine update_te0
 
     use ModPhysics, ONLY: UnitTemperature_,Si2No_V
