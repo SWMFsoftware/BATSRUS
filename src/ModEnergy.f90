@@ -6,32 +6,32 @@ module ModEnergy
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModExtraVariables, ONLY: Pepar_
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
+  use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, IonLast_, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, &
+       UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
-  use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
+  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VGB, &
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
   use ModPhysics,    ONLY: GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
        pMin_I, PeMin, Tmin_I, TeMin
-
+  use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       MaxBlock, Used_GB
+  
   implicit none
 
   private ! except
 
-  public:: calc_energy_or_pressure  ! p -> e or e -> p
-  public:: calc_pressure            ! e -> p in a range of cells/fluids
-  public:: calc_pressure_point      ! e -> p in 1 cell for all fluids
-  public:: calc_pressure_cell       ! e -> p in physical cells
+  public:: energy_to_pressure       ! e -> p conditionally for explicit
+  public:: energy_to_pressure_cell  ! e -> p in physical cells for implicit
+  public:: pressure_to_energy       ! p -> e conditionally for explicit
+  public:: pressure_to_energy_block ! p -> e in a block for part implicit
   public:: calc_energy              ! p -> e in a range of cells/fluids
   public:: calc_energy_point        ! p -> e in one cell for all fluids
   public:: calc_energy_cell         ! p -> e in physical cells
   public:: calc_energy_ghost        ! p -> e in ghost cells
-  public:: calc_old_pressure        ! eold -> pold (ModPartImplicit)
-  public:: calc_old_energy          ! pold -> eold (ModPartImplicit)
-  public:: correctP                 ! obsolete method for CT and projection
+  public:: limit_pressure           ! Enforce minimum pressure and temperature
 
   ! It is possible to add the hyperbolic scalar energy to the total energy
   ! (Tricco & Price 2012, J. Comput. Phys. 231, 7214).
@@ -40,261 +40,225 @@ module ModEnergy
 
 contains
   !============================================================================
-
-  subroutine calc_energy_or_pressure(iBlock)
+  subroutine pressure_to_energy(iBlock, State_VGB)
     !$acc routine vector
-    ! Calculate pressure from energy or energy from pressure depending on
+    ! Calculate energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
-    integer, intent(in) :: iBlock
+    integer, intent(in):: iBlock
+    real, intent(inout):: &
+         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    
     integer:: i,j,k,iFluid
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_energy_or_pressure'
+    character(len=*), parameter:: NameSub = 'pressure_to_energy'
     !--------------------------------------------------------------------------
+    ! Make sure pressure is larger than floor value
+    ! write(*,*) NameSub,' !!! call limit_pressure'
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+
+    ! Fully non-conservative scheme
+    if(UseNonConservative .and. nConservCrit <= 0 .and. &
+         .not. (UseNeutralFluid .and. DoConserveNeutrals)) RETURN
+
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)write(*,*)NameSub, &
          ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
-    if(.not. UseNonConservative)then
-       if(DoConserveNeutrals) then
-          ! All cells are conservative
-          call calc_pressure_cell(iBlock)
-       else
-          ! Ions are conservative, neutrals are non-conservative
-          call calc_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1         , IonLast_)
-          call calc_energy(  1, nI, 1, nJ, 1, nK, iBlock, IonLast_+1, nFluid)
-       end if
-       RETURN
-    end if
-#ifndef OPENACC
-    if(UseNonConservative .and. nConservCrit <= 0)then
-       ! All cells are non-conservative
-       call calc_energy_cell(iBlock)
-       RETURN
-    end if
-
-    ! Make sure pressure used for energy is larger than floor value
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
-
     ! A mix of conservative and non-conservative scheme (at least for the ions)
     FLUIDLOOP: do iFluid = 1, nFluid
-
-       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) then
-          ! Do all neutrals non-conservative and exit from the loop
-          call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
-          EXIT FLUIDLOOP
-       end if
+       
+       ! If all neutrals are non-conservative exit from the loop
+       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
 
        if(nFluid > 1) call select_fluid(iFluid)
+       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(IsConserv_CB(i,j,k,iBlock)) then
-             State_VGB(iP,i,j,k,iBlock) =                                 &
-                  GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) &
-                  - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)     &
-                  /State_VGB(iRho,i,j,k,iBlock) )
-          else
-             Energy_GBI(i,j,k,iBlock,iFluid) =                        &
-                  InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
-                  + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
-                  /State_VGB(iRho,i,j,k,iBlock)
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          if(UseNonConservative .and. iFluid <= IonLast_)then
+             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
+          ! Convert to hydro energy density
+          State_VGB(iP,i,j,k,iBlock) =                             &
+               InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
+               + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               /State_VGB(iRho,i,j,k,iBlock)
+
+          ! Done with all fluids except first MHD fluid
+          if(iFluid > 1 .or. .not. IsMhd) CYCLE
+
+          ! Add magnetic energy density
+          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+
+          if(Hyp_ <=1 .or. .not. UseHypEnergy) CYCLE
+          ! Add hyperbolic scalar energy density (idea of Daniel Price)
+          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+
        end do; end do; end do
-
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(IsConserv_CB(i,j,k,iBlock)) then
-             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  - GammaMinus1_I(iFluid)*0.5 * &
-                  sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          else
-             Energy_GBI(i,j,k,iBlock,iFluid) = &
-                  Energy_GBI(i,j,k,iBlock,iFluid) + &
-                  0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-          end if
-       end do; end do; end do
-
-       if(Hyp_ > 1 .and. UseHypEnergy)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(IsConserv_CB(i,j,k,iBlock)) then
-                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                     - GammaMinus1_I(iFluid)*0.5 * &
-                     State_VGB(Hyp_,i,j,k,iBlock)**2
-             else
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) + &
-                     0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
-             end if
-          end do; end do; end do
-       endif
 
     end do FLUIDLOOP
 
-    ! Make sure pressure used for energy is larger than floor value
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, &
-         DoUpdateEnergy = .true.)
-#endif
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine calc_energy_or_pressure
+
+  end subroutine pressure_to_energy
   !============================================================================
+  subroutine pressure_to_energy_block(State_VG, &
+       iMin, iMax, jMin, jMax, kMin, kMax)
 
-  subroutine calc_old_pressure(iBlock)
+    ! Convert pressure to energy in all cells of State_VG
+    integer, intent(in)::  iMin, iMax, jMin, jMax, kMin, kMax
+    real, intent(inout):: State_VG(nVar,iMin:iMax,jMin:jMax,kMin:kMax)
 
-    ! Calculate pressure from energy for the old state
-    !
-    !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
-    !
-
-    integer, intent(in) :: iBlock
-    integer :: i, j, k, iFluid
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_old_pressure'
+    integer:: i, j, k, iFluid
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
+       
        if(nFluid > 1) call select_fluid(iFluid)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VGB(iP, i, j, k,iBlock) = &
-               GammaMinus1_I(iFluid)*                           &
-               ( EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5 *     &
-               sum(StateOld_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
-               /StateOld_VGB(iRho,i,j,k,iBlock) )
+       
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+
+          ! Convert to hydro energy density
+          State_VG(iP,i,j,k) =                             &
+               InvGammaMinus1_I(iFluid)*State_VG(iP,i,j,k) &
+               + 0.5*sum(State_VG(iRhoUx:iRhoUz,i,j,k)**2) &
+               /State_VG(iRho,i,j,k)
+
+          ! Add magnetic energy density
+          if(iFluid == 1 .and. IsMhd) State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
+               + 0.5*sum(State_VG(Bx_:Bz_,i,j,k)**2)
+
        end do; end do; end do
-
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VGB(iP,i,j,k,iBlock) = StateOld_VGB(iP,i,j,k,iBlock) &
-               - GammaMinus1_I(iFluid)*0.5* &
-               sum(StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-       end do; end do; end do
-
-       if(Hyp_ > 1 .and. UseHypEnergy)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StateOld_VGB(iP,i,j,k,iBlock) = StateOld_VGB(iP,i,j,k,iBlock) &
-                  - GammaMinus1_I(iFluid)*0.5* &
-                  StateOld_VGB(Hyp_,i,j,k,iBlock)**2
-          end do; end do; end do
-       end if
-
     end do
 
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine calc_old_pressure
+  end subroutine pressure_to_energy_block
   !============================================================================
+  subroutine energy_to_pressure(iBlock, State_VGB)
 
-  subroutine calc_old_energy(iBlock)
+    ! Convert energy to pressure in State_VGB depending on
+    ! the value of UseNonConservative and IsConserv_CB
 
-    ! Calculate energy from pressure for the old state
-    !
-    !   E = P/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
+    integer, intent(in):: iBlock
+    real, intent(inout):: &
+         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-    integer, intent(in) :: iBlock
-    integer :: i, j, k, iFluid
-
+    integer:: i, j, k, iFluid
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_old_energy'
+    character(len=*), parameter:: NameSub = 'energy_to_pressure'
     !--------------------------------------------------------------------------
+    ! Fully non-conservative scheme
+    if(UseNonConservative .and. nConservCrit <= 0 .and. &
+         .not. (UseNeutralFluid .and. DoConserveNeutrals))then
+
+       ! Make sure pressure is larger than floor value
+       ! write(*,*) NameSub,' !!! call limit_pressure'
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
+
+       RETURN
+    end if
+    
     call test_start(NameSub, DoTest, iBlock)
-    do iFluid = 1, nFluid
+
+    if(DoTest)write(*,*)NameSub, &
+         ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
+         UseNonConservative, DoConserveNeutrals, nConservCrit
+
+    FLUIDLOOP: do iFluid = 1, nFluid
+       
+       ! If all neutrals are non-conservative exit from the loop
+       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) EXIT FLUIDLOOP
+
        if(nFluid > 1) call select_fluid(iFluid)
-       ! Calculate thermal plus kinetic energy
+       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if (StateOld_VGB(iRho,i,j,k,iBlock) <= 0.0)then
-             EnergyOld_CBI(i,j,k,iBlock,iFluid) = 0.0
-          else
-             EnergyOld_CBI(i,j,k,iBlock,iFluid) =                 &
-                  InvGammaMinus1_I(iFluid)*StateOld_VGB(iP,i,j,k,iBlock) &
-                  + 0.5*(sum(StateOld_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
-                  StateOld_VGB(iRho,i,j,k,iBlock))
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          if(UseNonConservative .and. iFluid <= IonLast_)then
+             ! Apply conservative criteria for the ions
+             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
+
+          if(iFluid == 1 .and. IsMhd) then
+             ! Deal with first MHD fluid
+
+             ! Subtract the magnetic energy density
+             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+
+             ! Subtract hyperbolic scalar energy density (from Daniel Price)
+             if(Hyp_ > 1 .and. UseHypEnergy) &
+                  State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  - 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+          end if
+          
+          ! Convert from hydro energy density to pressure
+          State_VGB(iP,i,j,k,iBlock) =                             &
+               GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
+               - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               /State_VGB(iRho,i,j,k,iBlock))
        end do; end do; end do
 
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE
+    end do FLUIDLOOP
 
-       ! Add magnetic energy for ion fluid
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
-               EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-               0.5*sum(StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-       end do; end do; end do
-
-       if(Hyp_ > 1 .and. UseHypEnergy)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
-                  EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-                  0.5*StateOld_VGB(Hyp_,i,j,k,iBlock)**2
-          end do; end do; end do
-       end if
-
-    end do
+    ! Make sure final pressure is larger than floor value
+    ! write(*,*) NameSub,' !!! call limit_pressure'
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine calc_old_energy
+
+  end subroutine energy_to_pressure
   !============================================================================
+  subroutine energy_to_pressure_cell(iBlock, State_VGB)
 
-  subroutine calc_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
-       iFluidMin, iFluidMax)
-    !$acc routine vector
+    ! Convert energy to pressure in physical cells of block iBlock of State_VGB
 
-    ! Calculate pressure from energy
-    !
-    !   P = (gamma-1)*(E - 0.5*rho*u^2 - 0.5*b1^2)
-    !
+    integer, intent(in):: iBlock
+    real, intent(inout):: &
+         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-    integer, intent(in) :: iFluidMin, iFluidMax
-    integer :: i, j, k, iFluid
-
-    character(len=*), parameter:: NameSub = 'calc_pressure'
+    integer:: i,j,k,iFluid
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pressure_to_energy'
     !--------------------------------------------------------------------------
-    do iFluid = iFluidMin, iFluidMax
+    ! Fully non-conservative scheme
+    if(UseNonConservative .and. nConservCrit <= 0 .and. &
+         .not. (UseNeutralFluid .and. DoConserveNeutrals)) RETURN
+
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(DoTest)write(*,*)NameSub, &
+         ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
+         UseNonConservative, DoConserveNeutrals, nConservCrit
+
+    FLUIDLOOP: do iFluid = 1, nFluid
+       
        if(nFluid > 1) call select_fluid(iFluid)
-       !$acc loop vector collapse(3)
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          State_VGB(iP,i,j,k,iBlock) = &
-               GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) - &
-               0.5*(State_VGB(iRhoUx,i,j,k,iBlock)**2 + &
-               State_VGB(iRhoUy,i,j,k,iBlock)**2 + &
-               State_VGB(iRhoUz,i,j,k,iBlock)**2) &
-               /State_VGB(iRho,i,j,k,iBlock) )
-       end do; end do; end do
-
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE
-
-       ! Subtract magnetic energy
-       !$acc loop vector collapse(3)
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               - GammaMinus1_I(iFluid)*0.5* &
-               (State_VGB(Bx_,i,j,k,iBlock)**2 + &
-               State_VGB(By_,i,j,k,iBlock)**2 + &
-               State_VGB(Bz_,i,j,k,iBlock)**2 )
-       end do; end do; end do
-
-       if(Hyp_ > 1 .and. UseHypEnergy)then
-          ! Subtract energy associated with the Hyp scalar
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Leave the body cells alone
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+          
+          ! Subtract the magnetic energy density
+          if(iFluid == 1 .and. IsMhd) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  - GammaMinus1_I(iFluid)*0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
-          end do; end do; end do
-       end if
-    end do
+                  - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+          end if
+          
+          ! Convert from hydro energy density to pressure
+          State_VGB(iP,i,j,k,iBlock) =                             &
+               GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
+               - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               /State_VGB(iRho,i,j,k,iBlock))
+       end do; end do; end do
 
-    call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
-         iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
+    end do FLUIDLOOP
 
-    ! if(DoTest)then
-    !   write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
-    !   write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
-    ! end if
+    call test_stop(NameSub, DoTest, iBlock)
 
-  end subroutine calc_pressure
+  end subroutine energy_to_pressure_cell
   !============================================================================
-
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
     !$acc routine vector
@@ -311,6 +275,7 @@ contains
 #ifndef OPENACC
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
+    ! write(*,*) NameSub,' !!! call limit_pressure'
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
@@ -349,29 +314,6 @@ contains
 #endif
   end subroutine calc_energy
   !============================================================================
-
-  subroutine calc_pressure_cell(iBlock)
-    !$acc routine vector
-    integer, intent(in) :: iBlock
-    !--------------------------------------------------------------------------
-    call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
-  end subroutine calc_pressure_cell
-  !============================================================================
-
-  subroutine calc_pressure_ghost(iBlock)
-    integer, intent(in) :: iBlock
-    !--------------------------------------------------------------------------
-    call calc_pressure(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-  end subroutine calc_pressure_ghost
-  !============================================================================
-
-  subroutine calc_pressure_point(i, j, k, iBlock)
-    integer, intent(in) :: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    call calc_pressure(i,i,j,j,k,k,iBlock,1,nFluid)
-  end subroutine calc_pressure_point
-  !============================================================================
-
   subroutine calc_energy_cell(iBlock)
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
@@ -406,6 +348,7 @@ contains
     if( DoResChangeOnly ) then
        if( .not.any(abs(DiLevelNei_IIIB(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
     end if
+    ! write(*,*) NameSub,' !!! call limit_pressure'
     call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
 
     do iFluid = 1, nFluid
@@ -476,7 +419,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_ghost
   !============================================================================
-
   subroutine calc_energy_point(i, j, k, iBlock)
     integer, intent(in) :: i, j, k, iBlock
     !--------------------------------------------------------------------------
@@ -485,17 +427,15 @@ contains
   !============================================================================
 
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
-       iFluidMin, iFluidMax, DoUpdateEnergy)
+       iFluidMin, iFluidMax)
     !$acc routine vector
     ! Keep pressure(s) in State_VGB above pMin_I limit
-    ! If DoUpdateEnergy is present, also modify energy to remain consistent
 
     use ModAdvance, ONLY: UseAnisoPressure, UseAnisoPe
     use ModMultiFluid, ONLY: IsIon_I, iPparIon_I
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
-    logical, intent(in), optional:: DoUpdateEnergy ! if present should be true
 
     integer:: i, j, k, iFluid
     real :: NumDens, p, pMin, Ne
@@ -507,57 +447,25 @@ contains
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)
        iP = iP_I(iFluid)
-       if(present(DoUpdateEnergy))then
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             p = State_VGB(iP,i,j,k,iBlock)
-             if(p < pMin)then
-                State_VGB(iP,i,j,k,iBlock) = pMin
-                Energy_GBI(i,j,k,iBlock,iFluid) =      &
-                     Energy_GBI(i,j,k,iBlock,iFluid) + &
-                     InvGammaMinus1_I(iFluid)*(pMin - p)
-             end if
-             if(UseAnisoPressure .and. IsIon_I(iFluid)) &
-                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
-          end do; end do; end do
-       else
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
-             if(UseAnisoPressure .and. IsIon_I(iFluid))&
-                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
-          end do; end do; end do
-       end if
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+          if(UseAnisoPressure .and. IsIon_I(iFluid))&
+               State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+               min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
+       end do; end do; end do
     end do
 
     do iFluid = iFluidMin, iFluidMax
        if(Tmin_I(iFluid) < 0.0) CYCLE
        iP = iP_I(iFluid)
-       if(present(DoUpdateEnergy))then
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             p = State_VGB(iP,i,j,k,iBlock)
-             NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
-             pMin = NumDens*Tmin_I(iFluid)
-             if(p < pMin)then
-                State_VGB(iP,i,j,k,iBlock) = pMin
-                Energy_GBI(i,j,k,iBlock,iFluid) =      &
-                     Energy_GBI(i,j,k,iBlock,iFluid) + &
-                     InvGammaMinus1_I(iFluid)*(pMin - p)
-             end if
-             if(UseAnisoPressure .and. IsIon_I(iFluid))&
-                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
-          end do; end do; end do
-       else
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
-             pMin = NumDens*Tmin_I(iFluid)
-             State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
-             if(UseAnisoPressure .and. IsIon_I(iFluid))&
-                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
-                  min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
-          end do; end do; end do
-       end if
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
+          pMin = NumDens*Tmin_I(iFluid)
+          State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+          if(UseAnisoPressure .and. IsIon_I(iFluid))&
+               State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+               min(max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock)),(3*State_VGB(iP_I(iFluid),i,j,k,iBlock) - 2*pMin))
+       end do; end do; end do
     end do
 
     if(UseElectronPressure .and. iFluidMin == 1)then
@@ -581,125 +489,6 @@ contains
     end if
 #endif
   end subroutine limit_pressure
-  !============================================================================
-
-  ! moved from file exchange_messages.f90
-  subroutine correctP(iBlock)
-
-    ! Make pressure and energy consistent and maintain thermal energy ratio
-    ! at a reasonable value (this also excludes negative pressure)
-
-    use ModMain,       ONLY: nI,nJ,nK
-    use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
-    use ModAdvance,    ONLY: State_VGB, Energy_GBI
-    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, Pratio_hi, Pratio_lo
-    use ModGeometry,   ONLY: true_cell
-    use BATL_lib,      ONLY: Xyz_DGB, iProc
-
-    integer, intent(in) :: iBlock
-
-    integer :: i,j,k
-    real :: inv_dratio, qp, qe, qth, qratio, qd, qde, qpmin, &
-         qdesum, qdesumabs, qderelmax
-
-    real, dimension(1:nI,1:nJ,1:nK) :: P_old
-
-    integer :: ierror1=-1, ierror2=-1, ierror3=-1, loc(3)
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'correctP'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    if(iBlock==iBlockTest)then
-    else
-       DoTest=.false.; DoTest=.false.
-    end if
-
-    qpmin=1.
-    qdesum=0.
-    qdesumabs=0.
-    qderelmax=0.
-
-    P_old=State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
-
-    inv_dratio=1./(Pratio_hi-Pratio_lo)
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-
-       if(.not.true_cell(i,j,k,iBlock))CYCLE
-
-       ! Pressure and total energy
-       qp=P_old(i,j,k)
-       qe=Energy_GBI(i,j,k,iBlock,1)
-
-       if(DoTest.and.i==iTest.and.J==jTest.and.K==kTest)&
-            write(*,*)'CorrectP at me,BLK,i,j,k=',&
-            iProc,iBlockTest,iTest,jTest,kTest, &
-            ', initial P,E=',qp,qe
-
-       ! Memorize smallest pressure
-       qpmin=min(qp,qpmin)
-
-       ! Thermal energy
-       qth=InvGammaMinus1*qp
-
-       ! Deviation=extra total energy=qe-inv_gm1*qp-(rhoU**2/rho+B**2)/2
-       qd=qE-qth                                                         &
-            -0.5*(State_VGB(rhoUx_,i,j,k,iBlock)**2+                         &
-            State_VGB(rhoUy_,i,j,k,iBlock)**2+                               &
-            State_VGB(rhoUz_,i,j,k,iBlock)**2)/State_VGB(rho_,i,j,k,iBlock)  &
-            -0.5*(State_VGB(Bx_,i,j,k,iBlock)**2+                            &
-            State_VGB(By_,i,j,k,iBlock)**2+                                  &
-            State_VGB(Bz_,i,j,k,iBlock)**2)
-
-       ! Limited thermal/total energy ratio for correction
-       qratio=min(Pratio_hi,max(Pratio_lo,min(qth,qth+qd)/qe))
-
-       ! Total energy is modified by qde (=0 if qratio==Pratio_hi)
-       qde=qd*(Pratio_hi-qratio)*inv_dratio
-
-       ! Collect total energy change
-       qdesum   =qdesum   -qde
-       qdesumabs=qdesumabs+abs(qde)
-       qderelmax=max(qderelmax,qde/qe)
-
-       ! Pressure is modified
-       State_VGB(P_,i,j,k,iBlock)=GammaMinus1*(qth+qd-qde)
-
-       ! We should now have E=inv_gm1*P+(rhoU**2/rho+B**2)/2:
-       !
-       ! qp*inv_gm1+qd-qde + (rhoU**2/rho+B**2)/2 = qe-qde = E
-       !
-       ! Correct!
-
-       if(DoTest.and.i==iTest.and.J==jTest.and.K==kTest)then
-          write(*,*)'qp,qth,qe,qd,qratio,qde=',qp,qth,qe,qd,qratio,qde
-          write(*,*)'CorrectP, final P=',State_VGB(P_,i,j,k,iBlock)
-       end if
-
-    end do; end do; end do
-
-    if(qpmin<0.)then
-       if(ierror1==-1)then
-          loc=minloc(P_old)
-          write(*,*)'Negative P at me,iBlock,I,J,K,x,y,z,val',&
-               iProc,iBlock,loc,&
-               Xyz_DGB(:,loc(1),loc(2),loc(3),iBlock), &
-               P_old(loc(1),loc(2),loc(3))
-       end if
-       call error_report('Negative P in exchange msgs, min(P)', &
-            qpmin,ierror1,.true.)
-    end if
-    if(qderelmax>1.0E-3)then
-       call error_report('E change in exchange_msgs, dE',qdesum,ierror2,.false.)
-       call error_report('|E| change in exchange_msgs, d|E|',qdesumabs,ierror3,&
-            .false.)
-    end if
-
-    if(DoTest)write(*,*)'CorrectP qpmin=',qpmin
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine correctP
   !============================================================================
 
 end module ModEnergy
