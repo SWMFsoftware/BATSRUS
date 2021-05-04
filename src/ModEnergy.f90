@@ -125,7 +125,7 @@ contains
        energy_i = InvGammaMinus1_I(iFluid)*State_V(iP) &
             + 0.5*sum(State_V(iRhoUx:iRhoUz)**2)/State_V(iRho)
     end if
-       
+
   end function energy_i
   !============================================================================
   subroutine pressure_to_energy_block(State_VG, &
@@ -168,7 +168,7 @@ contains
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     logical, intent(in), optional:: IsOld
-    
+
     integer:: i, j, k, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'energy_to_pressure'

@@ -830,7 +830,7 @@ contains
     end subroutine get_flux_z
     !==========================================================================
     subroutine add_artificial_viscosity(Flux_V, IFF_I, RFF_I)
-      
+
       ! This subroutine adds artificial viscosity to the fluid
       ! density/moment/energy/pressure equations, but not the EM field
       ! equations.
