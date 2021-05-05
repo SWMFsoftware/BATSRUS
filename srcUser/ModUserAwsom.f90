@@ -262,12 +262,23 @@ contains
     ! variables for iterative Parker solution
     integer :: IterCount
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
+    real :: Coef, rParker, Temperature
 
     real, parameter :: Epsilon = 1.0e-6
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+    rParker = 1.0
+    if(NchromoSi > nCoronaSi .and. UseAwsom)then
+       ! In the following, we do not generate a jump in the density,
+       ! but we do connect a exponentially stratified atmosphere with
+       ! the Parker solution at rParker. This avoids problems with a
+       ! strong density jump at the innner boundary otherwise.
+       Coef = -GBody/rBody*MassIon_I(1)/Tchromo
+       rParker = rBody/(1.0 + log(nCoronaSi/nChromoSi)/Coef)
+    end if
 
     ! normalize with isothermal sound speed.
     Usound  = sqrt(tCorona*(1.0 + AverageIonCharge)/MassIon_I(1))
@@ -296,59 +307,70 @@ contains
        r = r_BLK(i,j,k,iBlock)
        r_D = [x,y,z]
 
-       if(r > rTransonic)then
-
-          ! Inside supersonic region
-          Ur0 = 1.0
-          IterCount = 0
-          do
-             IterCount = IterCount + 1
-             Ur1 = sqrt(Uescape**2/r - 3.0 + 2.0*log(16.0*Ur0*r**2/Uescape**4))
-             del = abs(Ur1 - Ur0)
-             if(del < Epsilon)then
-                Ur = Ur1
-                EXIT
-             elseif(IterCount < 1000)then
-                Ur0 = Ur1
-                CYCLE
-             else
-                call stop_mpi('PARKER > 1000 it.')
-             end if
-          end do
+       if(r < rParker)then
+          ! Atmosphere with exponential scaleheight (AWSoM only)
+          Ur = 0.0
+          Rho = Nchromo*MassIon_I(1)*exp(Coef*(rBody/r - 1.0))
+          Temperature = Tchromo
        else
+          ! Construct 1D Parker solution
+          if(r > rTransonic)then
 
-          ! Inside subsonic region
-          Ur0 = 1.0
-          IterCount = 0
-          do
-             IterCount = IterCount + 1
-             Ur1 = (Uescape**2/(4.0*r))**2 &
-                  *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
-             del = abs(Ur1 - Ur0)
-             if(del < Epsilon)then
-                Ur = Ur1
-                EXIT
-             elseif(IterCount < 1000)then
-                Ur0 = Ur1
-                CYCLE
-             else
-                call CON_stop('PARKER > 1000 it.')
-             end if
-          end do
+             ! Inside supersonic region
+             Ur0 = 1.0
+             IterCount = 0
+             do
+                IterCount = IterCount + 1
+                Ur1 = sqrt(Uescape**2/r - 3.0 &
+                     + 2.0*log(16.0*Ur0*r**2/Uescape**4))
+                del = abs(Ur1 - Ur0)
+                if(del < Epsilon)then
+                   Ur = Ur1
+                   EXIT
+                elseif(IterCount < 1000)then
+                   Ur0 = Ur1
+                   CYCLE
+                else
+                   call stop_mpi('PARKER > 1000 it.')
+                end if
+             end do
+          else
+
+             ! Inside subsonic region
+             Ur0 = 1.0
+             IterCount = 0
+             do
+                IterCount = IterCount + 1
+                Ur1 = (Uescape**2/(4.0*r))**2 &
+                     *exp(0.5*(Ur0**2 + 3.0 - Uescape**2/r))
+                del = abs(Ur1 - Ur0)
+                if(del < Epsilon)then
+                   Ur = Ur1
+                   EXIT
+                elseif(IterCount < 1000)then
+                   Ur0 = Ur1
+                   CYCLE
+                else
+                   call CON_stop('PARKER > 1000 it.')
+                end if
+             end do
+          end if
+
+          Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
+          Temperature = tCorona
        end if
-
-       Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
 
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
 
        if(UseElectronPressure)then
-          State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
-          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
+          State_VGB(p_,i,j,k,iBlock) = NumDensIon*Temperature
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Temperature
           if(UseAnisoPressure) &
                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)
        else
-          State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*tCorona
+          State_VGB(p_,i,j,k,iBlock) = &
+               (NumDensIon + NumDensElectron)*Temperature
        end if
        State_VGB(Rho_,i,j,k,iBlock) = Rho
 
@@ -361,8 +383,7 @@ contains
        if(UseAlfvenWaves)then
           Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
           if (Br >= 0.0) then
-             State_VGB(WaveFirst_,i,j,k,iBlock) =  &
-                  PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+             State_VGB(WaveFirst_,i,j,k,iBlock) = PoyntingFluxPerB*sqrt(Rho)
              if(UseTurbulentCascade)then
                 State_VGB(WaveLast_,i,j,k,iBlock) = &
                      1e-3*State_VGB(WaveFirst_,i,j,k,iBlock)
@@ -370,8 +391,7 @@ contains
                 State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
              end if
           else
-             State_VGB(WaveLast_,i,j,k,iBlock) =  &
-                  PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+             State_VGB(WaveLast_,i,j,k,iBlock) = PoyntingFluxPerB*sqrt(Rho)
              if(UseTurbulentCascade)then
                 State_VGB(WaveFirst_,i,j,k,iBlock) = &
                      1e-3*State_VGB(WaveLast_,i,j,k,iBlock)
