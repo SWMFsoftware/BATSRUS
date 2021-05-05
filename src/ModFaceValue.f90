@@ -37,7 +37,7 @@ module ModFaceValue
   public:: get_face_tvd
   public:: set_low_order_face
   public:: calc_cell_norm_velocity
-  
+
   public:: clean_mod_face_value
 
   logical, public :: UseAccurateResChange = .false.
@@ -880,7 +880,7 @@ contains
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
     use ModViscosity, ONLY: UseArtificialVisco
-    
+
     use BATL_lib, ONLY: CellFace_DB
 
     logical, intent(in):: DoResChangeOnly
@@ -1054,7 +1054,7 @@ contains
     end if
 
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
-    
+
     ! Now the first or second order face values are calculated
     select case(nOrder)
     case(1)
