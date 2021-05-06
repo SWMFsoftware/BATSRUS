@@ -270,7 +270,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    rParker = 1.0
+    rParker = -1.0
     if(NchromoSi > nCoronaSi .and. UseAwsom)then
        ! In the following, we do not generate a jump in the density,
        ! but we do connect a exponentially stratified atmosphere with
@@ -307,7 +307,7 @@ contains
        r = r_BLK(i,j,k,iBlock)
        r_D = [x,y,z]
 
-       if(r < rParker)then
+       if(r < rParker .and. UseAwsom)then
           ! Atmosphere with exponential scaleheight (AWSoM only)
           Ur = 0.0
           Rho = Nchromo*MassIon_I(1)*exp(Coef*(rBody/r - 1.0))
