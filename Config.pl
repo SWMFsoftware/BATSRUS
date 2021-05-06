@@ -89,7 +89,8 @@ my $ChargeState;
 my $nChargeStateAll;
 
 # Settings for optimization
-my $OptFile = "src/ModUpdateParamFast.f90";
+my $OptFile     = "src/ModOptimizeParam.f90";
+my $OptFileOrig = "src/ModOptimizeParam_orig.f90";
 my $Opt;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
@@ -195,6 +196,7 @@ sub set_optimization{
 
     # Read current settings
     my %Opt;
+    `cp $OptFileOrig $OptFile` unless -f $OptFile;
     open(FILE, $OptFile) or die "$ERROR could not open $OptFile\n";
     while(<FILE>){
 	# Extract adjustables: NAME => ... lines without Orig
@@ -228,7 +230,8 @@ sub set_optimization{
 	    IsTimeAccurate      => ".true.",
 	    UseB0               => "UseB"  ,
             UseBorisCorrection  => ".false.",
-	    UseDivbSource       => "UseB .and. nDim>1", 
+	    UseDivbSource       => "UseB .and. nDim>1",
+	    UseDtFixed          => ".false.", 
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
             iStage              => 1,
@@ -283,14 +286,14 @@ sub set_optimization{
 	    }elsif(/^#GRIDGEOMETRY\b/){
 		my $geometry = <FILE>;
 		if($geometry =~ /^cartesian/){
-		    check_var($Set{"Cartesian"}, "T", $first);
-		    check_var($Set{"CartesianGrid"}, "T", $first);
+		    check_var($Set{"IsCartesian"}, "T", $first);
+		    check_var($Set{"IsCartesianGrid"}, "T", $first);
 		}elsif($geometry =~ /^rz/){
-		    check_var($Set{"Cartesian"}, "T", $first);
-		    check_var($Set{"CartesianGrid"}, "F", $first);
+		    check_var($Set{"IsCartesian"}, "T", $first);
+		    check_var($Set{"IsCartesianGrid"}, "F", $first);
 		}else{
-		    check_var($Set{"Cartesian"}, "F", $first);
-		    check_var($Set{"CartesianGrid"}, "F", $first);
+		    check_var($Set{"IsCartesian"}, "F", $first);
+		    check_var($Set{"IsCartesianGrid"}, "F", $first);
 		}
 	    }elsif(/^#DIVB\b/){
 		my $use8wave = <FILE>;
@@ -308,6 +311,9 @@ sub set_optimization{
 		my $planet = <FILE>;
 		check_var($Set{"UseB0"}, "F", $first)
 		    if $planet =~ /^\s*(NONE|VENUS)/i;
+	    }elsif(/^#FIXEDTIMESTEP\b/){
+		my $usedtfixed = <FILE>;
+		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
 	    }
 	}
 	close(FILE);
