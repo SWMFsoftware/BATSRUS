@@ -71,6 +71,7 @@ OBJECTS = \
 	ModMultiFluid.o \
 	ModMultiIon.o \
 	ModNodes.o \
+	ModOptimizeParam.o \
 	ModParallel.o \
 	ModParticleFieldLine.o \
 	ModParticleMover.o \
@@ -105,7 +106,6 @@ OBJECTS = \
 	ModViscosity.o \
 	ModWaves.o \
 	ModWriteTecplot.o \
-	ModUpdateParamFast.o \
 	ModUpdateStateFast.o \
 	ModUpdateState.o \
 	ModWriteLogSatFile.o \
@@ -122,8 +122,8 @@ ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
 
 # Default fast parameter settings
-ModUpdateParamFast.f90: ModUpdateParamFast_orig.f90
-	cp ModUpdateParamFast_orig.f90 ModUpdateParamFast.f90
+ModOptimizeParam.f90: ModOptimizeParam_orig.f90
+	cp ModOptimizeParam_orig.f90 ModOptimizeParam.f90
 
 ############################################################################
 
@@ -223,4 +223,4 @@ distclean: clean
 	rm -f ModUser.f90.safe
 	-mv ModUser.f90 ModUser.f90.safe
 	rm -f ModEquation.f90 ModHdf5.f90 ModImplHypre.f90
-	rm -f src/ModUpdateParamFast.f90
+	rm -f src/ModOptimizeParam.f90

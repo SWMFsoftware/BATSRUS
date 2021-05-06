@@ -6,10 +6,10 @@ module ModUpdateStateFast
 
   ! Calculate each face twice
 
-  use ModUpdateParamFast, ONLY: &
+  use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, &
-       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate
+       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
@@ -173,7 +173,7 @@ contains
 
        enddo; enddo; enddo
 
-       call calc_timestep(iBlock)
+       if(.not.UseDtFixed) call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
@@ -1075,7 +1075,7 @@ contains
 #endif
        enddo; enddo; enddo
 
-       call calc_timestep(iBlock)
+       if(.not.UseDtFixed) call calc_timestep(iBlock)
 
     end do
     !$acc end parallel

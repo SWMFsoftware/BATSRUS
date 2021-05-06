@@ -1,7 +1,8 @@
-module ModUpdateParamFast
+module ModOptimizeParam
 
-  ! Contains all variables that may be fixed
-  ! so that ModUpdateStateFast runs faster
+  ! Optimize code performance by declaring various algorithmic choices
+  ! as fixed parameters. This file is copied into ModOptimizParam.f90
+  ! and edited by GM/BATSRUS/Config.pl before compilation.
 
   use ModUtilities, ONLY: CON_stop
 
@@ -22,7 +23,8 @@ module ModUpdateParamFast
        iStage => iStage, &
        nOrder => nOrder, &
        UseDivbSource => UseDivbSource, &
-       UseHyperbolicDivB => UseHyperBolicDivB
+       UseHyperbolicDivB => UseHyperBolicDivB, &
+       UseDtFixed => UseDtFixed
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use BATL_lib, ONLY: &
@@ -35,15 +37,15 @@ module ModUpdateParamFast
 
 contains
   !============================================================================
-  subroutine check_update_param_fast
+  subroutine check_optimize_param
 
-    character(len=*), parameter:: NameSub = 'check_update_param_fast'
+    character(len=*), parameter:: NameSub = 'check_optimize_param'
     !--------------------------------------------------------------------------
     write(*,'(a)')NameSub//' checking parameters...'
 
     ! Check fixed values
 
-  end subroutine check_update_param_fast
+  end subroutine check_optimize_param
   !============================================================================
-end module ModUpdateParamFast
+end module ModOptimizeParam
 !==============================================================================

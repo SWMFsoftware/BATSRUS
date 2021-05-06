@@ -141,7 +141,7 @@ contains
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
 
-    use ModUpdateParamFast, ONLY: check_update_param_fast
+    use ModOptimizeParam, ONLY: check_optimize_param
 
     character (len=17) :: NameSub='MH_set_parameters'
 
@@ -473,7 +473,7 @@ contains
        end if
 
        if(index(StringTest,'PUUPDATE')>0 .or. index(StringTest,'PUPRIM')>0 &
-            .and. iProc == 0) call check_update_param_fast
+            .and. iProc == 0) call check_optimize_param
 
        IsFirstSession = .false.
 
