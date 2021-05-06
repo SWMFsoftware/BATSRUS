@@ -75,6 +75,7 @@ module ModB0
   real, allocatable :: B0ResChange_DXSB(:,:,:,:,:)
   real, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
   real, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
+  !$acc declare create(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
 contains
   !============================================================================
@@ -241,12 +242,15 @@ contains
     if(DoTest)write(*,*)'B0*Cell_BLK=',&
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
+    !$acc update device(B0_DGB)
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_cell
   !============================================================================
 
   subroutine set_b0_face(iBlock)
-
+    !$acc routine vector
+    
     ! Calculate the face centered B0 for block iBlock
 
     use ModParallel, ONLY: NeiLev
@@ -447,6 +451,8 @@ contains
        end if
     end do
 
+    !$acc update device(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
+    
     call test_stop(NameSub, DoTest)
   end subroutine set_b0_reschange
   !============================================================================

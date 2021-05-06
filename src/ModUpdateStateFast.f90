@@ -9,7 +9,7 @@ module ModUpdateStateFast
   use ModUpdateParamFast, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, &
-       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate
+       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseB0
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
@@ -25,6 +25,7 @@ module ModUpdateStateFast
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
+  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
 
   implicit none
 
@@ -66,6 +67,8 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
+       if(UseB0) call set_b0_face(iBlock)
+
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
           call get_flux_x(i, j, k, iBlock)
@@ -88,6 +91,10 @@ contains
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+#ifndef OPENACC
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+               .and. iBlock == iBlockTest
+#endif
 
           Change_V =  Flux_VXI(1:nFlux,i,j,k,iGang) &
                -      Flux_VXI(1:nFlux,i+1,j,k,iGang)
@@ -162,8 +169,6 @@ contains
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
-          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
-               .and. iBlock == iBlockTest
           if(DoTestCell)then
              write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
              write(*,*)'Change_V  =', Change_V
@@ -187,21 +192,24 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
 #ifdef OPENACC
-       iGang = iBlock
+    iGang = iBlock
 #else
-       iGang = 1
+    iGang = 1
 #endif
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DX(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D)
 
   end subroutine get_flux_x
   !============================================================================
@@ -210,21 +218,24 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
 #ifdef OPENACC
-       iGang = iBlock
+    iGang = iBlock
 #else
-       iGang = 1
+    iGang = 1
 #endif
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DY(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D)
 
   end subroutine get_flux_y
   !============================================================================
@@ -233,21 +244,24 @@ contains
 
     integer, intent(in):: i, j, k, iBlock
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
     !--------------------------------------------------------------------------
 #ifdef OPENACC
-       iGang = iBlock
+    iGang = iBlock
 #else
-       iGang = 1
+    iGang = 1
 #endif
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DZ(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang))
+         StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D)
 
   end subroutine get_flux_z
   !============================================================================
@@ -272,6 +286,8 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
+       if(UseB0) call set_b0_face(iBlock)
+       
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -401,35 +417,42 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, Normal_D(3), InvRho
+    real:: Area, Normal_D(3), InvRho, B0_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
+    B0_D = 0
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DX(:,i,j,k)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DX(:,i+1,j,k)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DY(:,i,j,k)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DY(:,i,j+1,k)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DZ(:,i,j,k)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DZ(:,i,j,k+1)
     end select
 
     call get_numerical_flux(Normal_D, &
-         Area, StateLeft_V, StateRight_V, Flux_V)
+         Area, StateLeft_V, StateRight_V, Flux_V, B0_D)
 
     ! Change due to fluxes through this face
     Change_V = Change_V + Flux_V(1:nFlux)
@@ -473,23 +496,34 @@ contains
 
   end subroutine set_old_state
   !============================================================================
-  subroutine get_physical_flux(State_V, Normal_D, StateCons_V, Flux_V)
+    
+  subroutine get_physical_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
     !$acc routine seq
 
     real, intent(in) :: State_V(nVar)      ! primitive state vector
     real, intent(in) :: Normal_D(3)        ! face normal
     real, intent(out):: StateCons_V(nFlux) ! conservative state vector
     real, intent(out):: Flux_V(nFlux)      ! conservative flux
+    real, intent(in) :: B0_D(3)
 
     real:: Rho, Un, Bn, pB, e
+    real:: B0B1, FullB_D(3), B0n,  FullBn
     ! Convenient variables
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
+    
+    FullB_D = State_V(Bx_:Bz_) + B0_D
+    
     Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
+    B0n = sum(B0_D*Normal_D)
+    FullBn = Bn + B0n
+    
+    B0B1= sum(State_V(Bx_:Bz_)*B0_D)
     pB  = 0.5*sum(State_V(Bx_:Bz_)**2)
-    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)
-
+    
+    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)    
+    
     ! Conservative state for the Rusanov solver
     StateCons_V(1:nVar) = State_V
     StateCons_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_)
@@ -497,23 +531,23 @@ contains
 
     ! Physical flux
     Flux_V(Rho_) = Rho*Un
-    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) - Bn*State_V(Bx_:Bz_) &
-         + Normal_D*(State_V(p_) + pB)
+    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) + Normal_D*State_V(p_) &
+         -Bn*FullB_D - B0n*State_V(Bx_:Bz_) + (pB + B0B1)*Normal_D
     if(Hyp_ > 1)then
-       Flux_V(Bx_:Bz_) = Un*State_V(Bx_:Bz_) - State_V(Ux_:Uz_)*Bn &
+       Flux_V(Bx_:Bz_) = Un*FullB_D - State_V(Ux_:Uz_)*FullBn &
             + Normal_D*SpeedHyp*State_V(Hyp_)
        Flux_V(Hyp_) = SpeedHyp*Bn
     else
-       Flux_V(Bx_:Bz_) = Un*State_V(Bx_:Bz_) - State_V(Ux_:Uz_)*Bn
+       Flux_V(Bx_:Bz_) = Un*FullB_D - State_V(Ux_:Uz_)*FullBn
     end if
     Flux_V(p_)      =  Un*State_V(p_)
     Flux_V(Energy_) =  Un*(e + State_V(p_)) &
-         + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
+         + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux   
 
   end subroutine get_physical_flux
   !============================================================================
   subroutine get_speed_max(State_V, Normal_D, &
-       Un, Cmax, Cleft, Cright)
+       Un, B0_D, Cmax, Cleft, Cright)
     !$acc routine seq
 
     ! Using primitive variable State_V and normal direction get
@@ -521,6 +555,7 @@ contains
 
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
+    real, intent(in) :: B0_D(3)
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
@@ -529,8 +564,8 @@ contains
     real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
     InvRho = 1.0/State_V(Rho_)
-    Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
-    B2  = sum(State_V(Bx_:Bz_)**2)
+    Bn  = sum((State_V(Bx_:Bz_)+B0_D)*Normal_D)
+    B2  = sum((State_V(Bx_:Bz_)+B0_D)**2)
 
     Sound2= InvRho*State_V(p_)*Gamma
     Fast2 = Sound2 + InvRho*B2
@@ -562,7 +597,7 @@ contains
        write(*,*) &
             ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2
        write(*,*) &
-            ' FullBx, FullBy, FullBz=', State_V(Bx_:Bz_)
+            ' FullBx, FullBy, FullBz=', State_V(Bx_:Bz_)+B0_D
     end if
 #endif
 
@@ -707,12 +742,13 @@ contains
   end subroutine get_face_z
   !============================================================================
   subroutine get_numerical_flux(Normal_D, &
-       Area,  StateLeft_V, StateRight_V, Flux_V)
+       Area,  StateLeft_V, StateRight_V, Flux_V, B0_D)
     !$acc routine seq
 
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFaceValue)
+    real, intent(in)   :: B0_D(3)
 
     ! Average state
     real:: State_V(nVar)
@@ -734,11 +770,11 @@ contains
        ! average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
-       call get_speed_max(State_V, Normal_D, Un, Cmax)
+       call get_speed_max(State_V, Normal_D, Un, B0_D, Cmax)
        call get_physical_flux(StateLeft_V, Normal_D, &
-            StateLeftCons_V, FluxLeft_V)
+            StateLeftCons_V, FluxLeft_V, B0_D)
        call get_physical_flux(StateRight_V, Normal_D, &
-            StateRightCons_V, FluxRight_V)
+            StateRightCons_V, FluxRight_V, B0_D)
 
        ! Lax-Friedrichs flux
        Flux_V(1:nFlux) = Area*0.5*((FluxLeft_V + FluxRight_V) &
@@ -774,15 +810,15 @@ contains
 
        ! This implementation is for non-relativistic MHD only
        ! Left speed of left state
-       call get_speed_max(StateLeft_V, Normal_D, Un, Cleft=Cleft)
+       call get_speed_max(StateLeft_V, Normal_D, Un, B0_D, Cleft=Cleft)
 
        ! Right speed of right state
-       call get_speed_max(StateRight_V, Normal_D, Un, Cright=Cright)
+       call get_speed_max(StateRight_V, Normal_D, Un, B0_D, Cright=Cright)
 
        ! Speeds of average state
        State_V = 0.5*(StateLeft_V + StateRight_V)
        call get_speed_max(State_V, Normal_D, &
-            Un, Cmax, CleftAverage, CrightAverage)
+            Un, B0_D, Cmax, CleftAverage, CrightAverage)
 
        ! Limited left and right speeds
        Cleft  = min(0.0, Cleft,  CleftAverage)
@@ -790,9 +826,9 @@ contains
 
        ! Physical flux
        call get_physical_flux(StateLeft_V, Normal_D, &
-            StateLeftCons_V, FluxLeft_V)
+            StateLeftCons_V, FluxLeft_V, B0_D)
        call get_physical_flux(StateRight_V, Normal_D, &
-            StateRightCons_V, FluxRight_V)
+            StateRightCons_V, FluxRight_V, B0_D)
 
        Cproduct     = Cright*Cleft
        AreaInvCdiff = Area/(Cright - Cleft)
@@ -948,6 +984,8 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
+       if(UseB0) call set_b0_face(iBlock)
+       
        ! Calculate the primitive variables
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -1090,15 +1128,18 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFaceValue)
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DX(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V)
+         StateLeft_V, StateRight_V, Flux_V, B0_D)
 
   end subroutine get_flux_x_prim
   !============================================================================
@@ -1108,15 +1149,18 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFaceValue)
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DY(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V)
+         StateLeft_V, StateRight_V, Flux_V, B0_D)
 
   end subroutine get_flux_y_prim
   !============================================================================
@@ -1126,15 +1170,18 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Flux_V(nFaceValue)
 
-    real :: Area, Normal_D(3)
+    real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
     call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
+    B0_D = 0
+    if(UseB0) B0_D = B0_DZ(:,i,j,k)
+    
     call get_numerical_flux(Normal_D, Area, &
-         StateLeft_V, StateRight_V, Flux_V)
+         StateLeft_V, StateRight_V, Flux_V, B0_D)
 
   end subroutine get_flux_z_prim
   !============================================================================
@@ -1166,6 +1213,8 @@ contains
 #endif
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
+       if(UseB0) call set_b0_face(iBlock)
+       
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VGI(:,i,j,k,iGang))
@@ -1255,34 +1304,42 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux)
 
-    real:: Area, Normal_D(3), InvRho
+    real:: Area, Normal_D(3), InvRho, B0_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
+    B0_D = 0
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DX(:,i,j,k)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x_prim(i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DX(:,i+1,j,k)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DY(:,i,j,k)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y_prim(i, j+1, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DY(:,i,j+1,k)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DZ(:,i,j,k)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z_prim(i, j, k+1, iBlock, StateLeft_V, StateRight_V)
+       if(UseB0) B0_D = B0_DZ(:,i,j,k+1)
     end select
 
-    call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, Flux_V)
+    call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
+         Flux_V, B0_D)
 
     ! Change due to fluxes through this face
     Change_V = Change_V + Flux_V(1:nFlux)
