@@ -385,7 +385,7 @@ contains
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
              ! Convert energy back to pressure
              if(IsConserv) call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
-             
+
 #ifndef OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest
@@ -476,7 +476,7 @@ contains
        iDim = (iFace+1)/2
        Change_V(nFlux+iDim) = max(Change_V(nFlux+iDim), Flux_V(Vdt_))
     end if
-    
+
   end subroutine do_face
   !============================================================================
   subroutine set_old_state(iBlock)

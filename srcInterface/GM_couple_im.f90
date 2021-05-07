@@ -236,10 +236,8 @@ contains
              Buffer_IIV(iLat,iLon,4) = 90.0-acos(XyzEndSmIono_D(3)&
                   /sqrt(sum(XyzEndSmIono_D(:)**2)))*cRadToDeg
 
-             
-             !SmLon of conjugate point
+             ! SmLon of conjugate point
              Buffer_IIV(iLat,iLon,5) = atan2(XyzEndSm_D(2),XyzEndSmIono_D(1))*cRadToDeg
-
 
              ! Put coupled variables (densities and pressures) into buffer
              Buffer_IIV(iLat,iLon,6:) = Buffer_VI(4+iVarCouple_V,iLocBmin)
