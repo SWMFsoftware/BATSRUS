@@ -181,7 +181,7 @@ sub check_var{
     $newvalue =~ s/\s+.*\n//;     # remove comment
     $newvalue =~ s/^T$/.true./;   # logical true
     $newvalue =~ s/^F$/.false./;  # logical false
-    
+
     if($first or $oldvalue eq ""){
 	$_[0] = $newvalue; # first use of new value, make it fixed
     }elsif($newvalue ne $oldvalue){
@@ -224,6 +224,7 @@ sub set_optimization{
 	# Default settings
 	my %Set = (
 	    nOrder              => 1,
+	    nConservCrit        => 0,
             DoLf                => ".true.",
             IsCartesian         => ".true.",
             IsCartesianGrid     => ".true.",
@@ -248,7 +249,7 @@ sub set_optimization{
 	while(<FILE>){
 	    if(/^\#RUN\b/ or /^\#END\b/ or eof(FILE)){
 		check_var($Set{"nStage"}, $nstage, $first);
-		check_var($Set{"iStage"}, "any", $first) if $nstage !~ /^\s*1/;
+		check_var($Set{"iStage"}, "any", $first) if $nstage != 1;
 		last unless /^#RUN\b/;
 		$first = 0; # end of first session
 	    }
@@ -260,7 +261,7 @@ sub set_optimization{
 		my $do = <FILE>; # not time accurate if limiting time step
 		check_var($Set{"IsTimeAccurate"},'F',$first) if $do =~ /^\s*T/;
 	    }elsif(/^#(TIMESTEPPING|RUNGEKUTTA|RK)\b/){
-		$nstage = <FILE>;
+		$nstage = <FILE>; $nstage =~ s/^\s*(\d+).*\n/$1/;
 	    }elsif(/^#SCHEME\b/){
 		my $norder = <FILE>;
 		check_var($Set{"nOrder"}, $norder, $first);
@@ -304,6 +305,10 @@ sub set_optimization{
 	    }elsif(/^#NONCONSERVATIVE\b/){
 		my $noncons = <FILE>;
 		check_var($Set{"UseNonConservative"}, $noncons, $first);
+	    }elsif(/^#CONSERVATIVECRITERIA\b/){
+		my $ncrit = <FILE>; $ncrit =~ s/^\s*(\d+).*\n/$1/;
+		check_var($Set{"nConservCrit"}, $ncrit, $first);
+		check_var($Set{"UseNonConservative"}, "T", $first) if $ncrit;
 	    }elsif(/^#USEB0\b/){
 		my $useb0 = <FILE>;
 		check_var($Set{"UseB0"}, $useb0, $first);
