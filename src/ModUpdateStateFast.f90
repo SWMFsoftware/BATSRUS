@@ -13,7 +13,7 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, Vdt_, &
+       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, &
        Primitive_VGI, IsConserv_CB, &
        DtMax_CB => time_BLK, Vdt_
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -471,7 +471,7 @@ contains
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
-    ! Calculate
+    ! Calculate maximum of Cmax*Area from the faces per dimension
     if(.not.UseDtFixed)then
        iDim = (iFace+1)/2
        Change_V(nFlux+iDim) = max(Change_V(nFlux+iDim), Flux_V(Vdt_))
@@ -868,8 +868,6 @@ contains
 
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
-
-    Flux_V(Vdt_) = Cmax*Area
 
   end subroutine get_numerical_flux
   !============================================================================
