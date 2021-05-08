@@ -55,18 +55,8 @@ help:
 info:
 	@echo "Total lines of Fortran: `wc -l src*/*.f* share/Library/src/*.f* | tail -1`"
 
-install: src/ModHdf5.f90 src/ModImplHypre.f90 \
-	srcBATL/BATL_size.f90 src/show_git_info.h
-	./Config.pl -u=Default -e=Mhd
-
-src/show_git_info.h: src/show_git_info.h.orig
-	cp -f src/show_git_info.h.orig src/show_git_info.h 
-
-src/ModHdf5.f90: src/ModHdf5_empty.f90
-	cp -f src/ModHdf5_empty.f90 src/ModHdf5.f90
-
-src/ModImplHypre.f90: src/ModImplHypre_empty.f90
-	 cp -f src/ModImplHypre_empty.f90 src/ModImplHypre.f90
+install: srcBATL/BATL_size.f90
+	cd src; make install
 
 srcBATL/BATL_size.f90: srcBATL/BATL_size_orig.f90
 	cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90
