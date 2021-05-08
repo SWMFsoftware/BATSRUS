@@ -117,17 +117,30 @@ OBJECTS = \
 	ModFaceFluxParameters.o \
 	user_interface.o
 
-# Default user module
+# Default options
+INSTALLFILES = ModEquation.f90 ModUser.f90 \
+	ModOptimizeParam.f90 ModHdf5.f90 ModImplHypre.f90 
+
+install: ${INSTALLFILES}
+
+ModEquation.f90:
+	cp ../srcEquation/ModEquationMhd.f90 ModEquation.f90
+
 ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
 
-# Default fast parameter settings
 ModOptimizeParam.f90: ModOptimizeParam_orig.f90
 	cp ModOptimizeParam_orig.f90 ModOptimizeParam.f90
 
+ModHdf5.f90: ModHdf5_empty.f90
+	cp -f ModHdf5_empty.f90 ModHdf5.f90
+
+ModImplHypre.f90: ModImplHypre_empty.f90
+	 cp -f ModImplHypre_empty.f90 ModImplHypre.f90
+
 ############################################################################
 
-DEPEND:
+DEPEND: ${INSTALLFILES}
 	perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
@@ -222,5 +235,4 @@ clean: cleanfiles
 distclean: clean
 	rm -f ModUser.f90.safe
 	-mv ModUser.f90 ModUser.f90.safe
-	rm -f ModEquation.f90 ModHdf5.f90 ModImplHypre.f90
-	rm -f src/ModOptimizeParam.f90
+	rm -f ${INSTALLFILES}
