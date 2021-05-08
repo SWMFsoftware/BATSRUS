@@ -10095,6 +10095,14 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
     <option name="preset"/>
     <option name="import"/>
   </parameter>
+  <parameter name="UseBRAlignment" type="logical" default="F"/>
+  <parameter name="CosBRAngleMax" type="real" min="0.01" max="0.99"
+	     default="0.1" if="$UseBRAlignment"/>
+  <parameter name="UseBUAlignment" type="logical" default="F"/>
+  <parameter name="CosBUAngleMax" type="real" min="0.01" max="0.99"
+	     default="0.85" if="$UseBUAlignment"/>
+
+  
   
 #PARTICLELINE
 T			UseParticles
@@ -10103,10 +10111,11 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-T			UseCorrection
-1.25                    rCorrectionMin
--1                      rCorrectionMax
+T                       UseBRAlignment
+0.1                     ConBRAngleMax
+T                       UseBUAlignment
+0.85                    ConBUAngleMax
+
 
 The command defines the class of advected magnetic field lines, consisting of
 "particles" which are essentially the Lagrangian grid points. Initially, the

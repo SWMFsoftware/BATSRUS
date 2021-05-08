@@ -24,8 +24,6 @@ module ModParticleFieldLine
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: NameThisComp
-  use ModCellGradient, ONLY: calc_gradient_ghost, &
-       GradCosBR_DGB => GradVar_DGB
   implicit none
   SAVE
   private ! except
@@ -41,9 +39,7 @@ module ModParticleFieldLine
   ! use particles in the simulation
   logical, public :: UseParticles = .false.
   ! kinds of particles used to generate a magnetic field line
-  integer :: &
-       KindEnd_ = -1, &
-       KindReg_ = -1
+  integer :: KindEnd_ = -1, KindReg_ = -1
 
   ! variable in the state vector of a particle
   integer, parameter:: &
@@ -53,12 +49,8 @@ module ModParticleFieldLine
        XOld_ = 4, YOld_ = 5, ZOld_ = 6, &
        ! stepsize during line extraction
        Ds_   = 7, &
-       ! grad CosBR at the beginning of extraction iteration
-       GradCosBRX_= 8, GradCosBRZ_ = 10, &
-       ! value of CosBR at the beginning of extraction iteration
-       CosBR_   =  11, &
        ! previous direction
-       DirX_ = 12, DirZ_ = 14
+       DirX_ = 8, DirZ_ = 10
 
   ! indices of a particle
   integer, parameter:: &
@@ -91,13 +83,9 @@ module ModParticleFieldLine
   real   :: SpaceStepMin = 0.0
   real   :: SpaceStepMax = HUGE(SpaceStepMin)
 
-  ! ordering mode of particles along field lines
-  integer:: iOrderMode = -1
-  integer, parameter:: Field_ = 0, Radius_  = 1
-
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 14
+  integer, parameter:: nVarParticleEnd = 10
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 3
@@ -118,20 +106,24 @@ module ModParticleFieldLine
   !   of this line is stopped
   real:: RSoftBoundary = -1.0
 
-  ! may need to apply corrections during line tracing
-  logical:: UseCorrection=.false.
-  real:: RCorrectionMin = 0.0, RCorrectionMax = Huge(1.0)
-
   ! field line random walk (FLRW)
-  logical:: UseFLRW = .false.
-  real:: DeltaPhiFLRW = 0.0
+  logical :: UseFLRW = .false.
+  real    :: DeltaPhiFLRW = 0.0
 
   ! initialization related info
-  integer:: nLineInit
+  integer :: nLineInit
   real, allocatable:: XyzLineInit_DI(:,:)
   ! Shared variavles
   ! direction of tracing: -1 -> backward, +1 -> forward
-  integer:: iDirTrace
+  integer :: iDirTrace
+  ! Parameters of a tool preventing the magnetic field line from
+  ! reconnection and returning to the Sun. The tool limits the angle
+  ! bewtween the magnetic field line and radial direction
+  ! (if UseBRAlignment = .true.), or between the magnetic field line
+  ! and streamline in corotating frame (if UseBUAlignment = .true.),
+  ! which in the steady state should be parallel or antiparallel.
+  logical :: UseBRAlignment = .false., UseBUAlignment = .false.
+  real    :: CosBRAngleMax = 0.10, CosBUAngleMax = 0.85
 
   ! state and indexes for particles:
   real,    pointer::  StateEnd_VI(:,:), StateReg_VI(:,:)
@@ -157,81 +149,64 @@ contains
     select case(NameCommand)
     case("#PARTICLELINE")
        call read_var('UseParticles', UseParticles)
-       if(UseParticles)then
-          ! read info on size of the arrays to be allocated:
-          ! max total number of field lines (on all procs)
-          call read_var('nFieldLineMax', nFieldLineMax)
-          ! number of particles per field line (average)
-          call read_var('nParticlePerLine', nParticlePerLine)
-          ! check correctness
-          if(nFieldLineMax <= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid max number of field lines')
-          if(nParticlePerLine <= 0) call stop_mpi(&
-               NameThisComp//':'//NameSub//&
-               ': invalid number of particles per field lines')
-          !--------------------------------------------------------------
-          ! read min and max values for space step
-          ! based on their values space step may be
-          ! - both negative => automatic (defined by grid resolution)
-          ! - otherwise     => restricted by min and/or max
-          !                    whichever is positive
-          call read_var('SpaceStepMin', SpaceStepMin)
-          call read_var('SpaceStepMax', SpaceStepMax)
-          ! negative value means "undefined"
-          if(SpaceStepMin < 0) SpaceStepMin = 0
-          if(SpaceStepMax < 0) SpaceStepMax = HUGE(SpaceStepMin)
-          !--------------------------------------------------------------
-          call read_var('InitMode', StringInitMode, IsLowerCase=.true.)
-          ! Initialization modes:
-          ! - preset: starting points are set from PARAM.in file
-          if(index(StringInitMode, 'preset') > 0)then
-             call read_var('nLineInit', nLineInit)
-             if(nLineInit <= 0)&
-                  call stop_mpi(&
-                  NameThisComp//':'//NameSub // &
-                  ": invalid number of initialized particle lines")
-             allocate(XyzLineInit_DI(MaxDim, nLineInit))
-             do iLine = 1, nLineInit; do iDim = 1, MaxDim
-                call read_var('XyzLineInit_DI', XyzLineInit_DI(iDim, iLine))
-             end do; end do
-          elseif(index(StringInitMode, 'import') > 0)then
-             ! do nothing: particles are imported from elsewhere
-          else
-             call stop_mpi(&
-                  NameThisComp//':'//NameSub //": unknown initialization mode")
-          end if
-          !--------------------------------------------------------------
-          call read_var('OrderMode', StringOrderMode, IsLowerCase=.true.)
-          ! Ordering modes, particle index increases with:
-          ! - radius:  distance from the center
-          ! - field: along the direction of the magnetic field
-          if(    index(StringOrderMode, 'field') > 0)then
-             iOrderMode = Field_
-          elseif(index(StringOrderMode, 'radius' ) > 0)then
-             iOrderMode = Radius_
-          else
-             call stop_mpi(NameThisComp//':'//NameSub //&
-                  ": unknown ordering mode")
-          end if
-          !--------------------------------------------------------------
-          ! field lines may need to be corrected during tracing
-          call read_var('UseCorrection', UseCorrection)
-          if(UseCorrection)then
-             ! use may specify the boundaries where the correction is applied
-             call read_var('RCorrectionMin', RCorrectionMin)
-             if(RCorrectionMin < 0.0) RCorrectionMin = 0.0
-             call read_var('RCorrectionMax', RCorrectionMax)
-             if(RCorrectionMax < 0.0) RCorrectionMax = Huge(1.0)
-          end if
+       if(.not.UseParticles)then
+          call test_stop(NameSub, DoTest)
+          RETURN
        end if
+       ! read info on size of the arrays to be allocated:
+       ! max total number of field lines (on all procs)
+       call read_var('nFieldLineMax', nFieldLineMax)
+       ! number of particles per field line (average)
+       call read_var('nParticlePerLine', nParticlePerLine)
+       ! check correctness
+       if(nFieldLineMax <= 0) call stop_mpi(&
+            NameThisComp//':'//NameSub//&
+            ': invalid max number of field lines')
+       if(nParticlePerLine <= 0) call stop_mpi(&
+            NameThisComp//':'//NameSub//&
+            ': invalid number of particles per field lines')
+       !--------------------------------------------------------------
+       ! read min and max values for space step
+       ! based on their values space step may be
+       ! - both negative => automatic (defined by grid resolution)
+       ! - otherwise     => restricted by min and/or max
+       !                    whichever is positive
+       call read_var('SpaceStepMin', SpaceStepMin)
+       call read_var('SpaceStepMax', SpaceStepMax)
+       ! negative value means "undefined"
+       if(SpaceStepMin < 0) SpaceStepMin = 0
+       if(SpaceStepMax < 0) SpaceStepMax = HUGE(SpaceStepMin)
+       !--------------------------------------------------------------
+       call read_var('InitMode', StringInitMode, IsLowerCase=.true.)
+       ! Initialization modes:
+       ! - preset: starting points are set from PARAM.in file
+       if(index(StringInitMode, 'preset') > 0)then
+          call read_var('nLineInit', nLineInit)
+          if(nLineInit <= 0)&
+               call stop_mpi(&
+               NameThisComp//':'//NameSub // &
+               ": invalid number of initialized particle lines")
+          allocate(XyzLineInit_DI(MaxDim, nLineInit))
+          do iLine = 1, nLineInit; do iDim = 1, MaxDim
+             call read_var('XyzLineInit_DI', XyzLineInit_DI(iDim, iLine))
+          end do; end do
+       elseif(index(StringInitMode, 'import') > 0)then
+          ! do nothing: particles are imported from elsewhere
+       else
+          call stop_mpi(&
+               NameThisComp//':'//NameSub //": unknown initialization mode")
+       end if
+       call read_var('UseBRAlignment', UseBRAlignment)
+       if(UseBRAlignment)call read_var('CosBRAngleMax', CosBRAngleMax)
+       call read_var('UseBRAlignment', UseBUAlignment)
+       if(UseBUAlignment)call read_var('CosBUAngleMax', CosBUAngleMax)
     case("#PARTICLELINERANDOMWALK")
        ! field line random walk may be enabled
        call read_var('UseFLRW', UseFLRW)
        if(UseFLRW)then
           ! read root-mean-square angle of field line diffusion coefficient
           call read_var('DeltaPhiFLRW [degree]', DeltaPhiFLRW)
-          DeltaPhiFLRW = DeltaPhiFLRW * cPi / 180
+          DeltaPhiFLRW = DeltaPhiFLRW*cPi/180
        end if
     end select
     call test_stop(NameSub, DoTest)
@@ -270,6 +245,8 @@ contains
   !============================================================================
   subroutine extract_particle_line(Xyz_DI, iTraceModeIn, &
        iIndex_II, UseInputInGenCoord)
+    use ModMpi
+    integer:: iError
     ! extract nFieldLineIn magnetic field lines starting at Xyz_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -277,9 +254,9 @@ contains
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
     ! NOTE: different sets of lines may be request on different processors!
-    real,            intent(in) ::Xyz_DI(:, :)
+    real,            intent(in) :: Xyz_DI(:, :)
     ! mode of tracing (forward, backward or both ways)
-    integer,optional,intent(in) ::iTraceModeIn
+    integer,optional,intent(in) :: iTraceModeIn
     ! initial particle indices for starting particles
     integer,optional,intent(in) :: iIndex_II(:,:)
 
@@ -292,10 +269,6 @@ contains
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
-
-    ! Cosine between direction of the field and radial direction:
-    ! for correcting the line's direction to prevent it from closing
-    real, allocatable:: CosBR_CB(:,:,:,:)
 
     ! initialize field lines
     logical:: DoTest
@@ -312,29 +285,25 @@ contains
          nParticlePE        = nLineThisProc)
 
     ! how many lines have been started on all processors
-    call count_new_lines() ! nLineAllProc = sum(nLineThisProc)
+    if(nProc>1)then
+       call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
+            MPI_INTEGER, MPI_SUM, iComm, iError)
+    else
+       nLineAllProc = nLineThisProc
+    end if
     nFieldLine    = nFieldLine + nLineAllProc
-    if(nFieldLine > nFieldLineMax)&
-         call stop_mpi(NameThisComp//':'//NameSub//&
+    if(nFieldLine > nFieldLineMax) call stop_mpi(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
     ! Save number of regular particles
     nParticleOld  = Particle_I(KindReg_)%nParticle
     ! Copy end points to regular points. Note, that new regular points
     ! have numbers nParticleOld+1:nParticleOld+nLineThisProc
     call copy_end_to_regular
-    ! allocate containers for cosine of angle between B and radial direction
-    allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock)); CosBR_CB = 0
-    call compute_cosbr
-    call calc_gradient_ghost(CosBR_CB)
-    ! free space
-    deallocate(CosBR_CB)
 
     ! Trace field lines
-
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
-       if(abs(iTraceModeIn) > 1)&
-            call stop_mpi(&
+       if(abs(iTraceModeIn) > 1)call stop_mpi(&
             NameThisComp//':'//NameSub//': incorrect tracing mode')
        iTraceMode = iTraceModeIn
     else
@@ -380,21 +349,6 @@ contains
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
-    subroutine count_new_lines()
-      ! gather information from all processors on how many new field lines
-      ! have been started
-      use ModMpi
-      integer:: iError
-
-      !------------------------------------------------------------------------
-      if(nProc>1)then
-         call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
-              MPI_INTEGER, MPI_SUM, iComm, iError)
-      else
-         nLineAllProc = nLineThisProc
-      end if
-    end subroutine count_new_lines
-    !==========================================================================
     subroutine count_all_particles()
       ! gather information from all processors on how many new field lines
       ! have been started
@@ -410,33 +364,6 @@ contains
       end if
     end subroutine count_all_particles
     !==========================================================================
-    subroutine compute_cosbr()
-      use ModMain, ONLY: UseB0
-      use ModB0, ONLY: B0_DGB
-      use ModGeometry, ONLY: R_BLK
-
-      integer :: iBlock, i, j, k ! loop variables
-      real    :: XyzCell_D(nDim), BCell_D(nDim)
-
-      ! precompute CosBR on the grid for all active blocks
-
-      !------------------------------------------------------------------------
-      do iBlock = 1, nBlock
-         if(Unused_B(iBlock))CYCLE
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            XyzCell_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
-            Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
-            if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
-            if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
-               CosBR_CB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
-                    (norm2(BCell_D)*R_BLK(i,j,k,iBlock))
-            else
-               CosBR_CB(i,j,k,iBlock) = 0.0
-            end if
-         end do; end do; end do
-      end do
-    end subroutine compute_cosbr
-    !==========================================================================
     subroutine get_alignment()
       ! determine alignment of particle indexing with direction
       ! of the magnetic field
@@ -445,11 +372,6 @@ contains
 
       !------------------------------------------------------------------------
       iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = DoneFromScratch_
-      if(iOrderMode == Field_)then
-         iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
-         RETURN
-      end if
-
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
          call get_b_dir(iParticle, DirB_D)
          iIndexEnd_II(Alignment_, iParticle) = &
@@ -512,6 +434,10 @@ contains
 
     ! direction of the magnetic field
     real :: DirB_D(MaxDim)
+    ! direction of the velocity in corotating coordinate system
+    real :: DirU_D(MaxDim)
+    ! radial direction
+    real :: DirR_D(MaxDim)
     ! direction of the tangent to the line: may be parallel or
     ! antiparallel to DirB. The direction may be corrected if needed
     real :: DirLine_D(MaxDim)
@@ -533,8 +459,8 @@ contains
 
        ! Initialize the radial direction that corresponds
        ! to the previous step
-       StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
-            StateEnd_VI(x_:z_,  iParticle) / &
+       StateEnd_VI(DirX_:DirZ_,iParticle) = iDirTrace* &
+            StateEnd_VI(x_:z_,iParticle) / &
             norm2(StateEnd_VI(x_:z_, iParticle))
        iIndexEnd_II(Pass_, iParticle) = Normal_
 
@@ -543,8 +469,7 @@ contains
     case(Normal_)
 
        ! increase particle index & copy to regular
-       iIndexEnd_II(id_,iParticle) = &
-            iIndexEnd_II(id_,iParticle) + iDirTrace
+       iIndexEnd_II(id_,iParticle) = iIndexEnd_II(id_,iParticle) + iDirTrace
        call copy_end_to_regular(iParticle)
 
        call stage1
@@ -561,8 +486,8 @@ contains
     subroutine stage1
       !------------------------------------------------------------------------
       if(RSoftBoundary > 0.0)then
-         if(sum(StateEnd_VI(1:nDim,iParticle)**2) &
-              > RSoftBoundary**2)then
+         if(norm2(StateEnd_VI(1:nDim,iParticle)) &
+              > RSoftBoundary)then
             call mark_undefined(KindEnd_, iParticle)
             IsEndOfSegment = .true.
             RETURN
@@ -570,42 +495,36 @@ contains
       end if
       ! First stage of RK2 method
       ! copy last known coordinates to old coords
-      StateEnd_VI(XOld_:ZOld_,iParticle) = &
-           StateEnd_VI(x_:z_, iParticle)
+      StateEnd_VI(XOld_:ZOld_,iParticle) = StateEnd_VI(x_:z_, iParticle)
       ! get the direction of the magnetic field at original location
       ! get and save gradient of cosine of angle between field and
       ! radial direction
       ! get and save step size
-      call get_b_dir(iParticle, DirB_D,&
-           Grad_D  = StateEnd_VI(GradCosBRX_:GradCosBRZ_,iParticle),&
+      call get_b_dir(iParticle, DirB_D         ,&
+           DirU_D  = DirU_D                    ,&
            StepSize= StateEnd_VI(Ds_,iParticle),&
            IsBody  = IsEndOfSegment)
       ! particle's location may be inside central body
       if(IsEndOfSegment)RETURN
-      ! get cosine of angle between field and radial direction
-      !
-      CosBR =  sum(StateEnd_VI(x_:z_, iParticle)*DirB_D) / &
-           norm2(StateEnd_VI(x_:z_, iParticle))
-      ! save cos(b,r) for the second stage
-      StateEnd_VI(CosBR_, iParticle) = CosBR
 
       ! Limit the interpolated time step
       StateEnd_VI(Ds_, iParticle) = &
-           MIN(SpaceStepMax, MAX(SpaceStepMin,&
-           StateEnd_VI(Ds_, iParticle)))
+           MIN(SpaceStepMax, MAX(SpaceStepMin, StateEnd_VI(Ds_,iParticle)))
 
       ! get line direction
-      DirLine_D = DirB_D * &
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-
+      DirLine_D = DirB_D*iDirTrace*iIndexEnd_II(Alignment_,iParticle)
+      ! get radial direction
+      DirR_D    = StateEnd_VI(x_:z_,iParticle) / &
+           norm2( StateEnd_VI(x_:z_,iParticle))
       ! correct the direction to prevent the line from closing
-      if(UseCorrection) &
-           call correct(DirLine_D)
+      if(UseBUAlignment) &
+           call correct(DirLine_D, iDirTrace*DirU_D, CosBUAngleMax)
+      if(UseBRAlignment) &
+           call correct(DirLine_D, iDirTrace*DirR_D, CosBRAngleMax)
 
       ! get middle location
-      StateEnd_VI(x_:z_, iParticle) = &
-           StateEnd_VI(x_:z_, iParticle) + &
-           0.50*StateEnd_VI(Ds_, iParticle)*DirLine_D
+      StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle) + &
+           0.50*StateEnd_VI(Ds_,iParticle)*DirLine_D
 
       ! check location, schedule for message pass, if needed
       call check_particle_location(  &
@@ -626,40 +545,32 @@ contains
       real :: ROld, RNew, DirR_D(MaxDim)
       !------------------------------------------------------------------------
       ! get the direction of the magnetic field in the middle
-      call get_b_dir(iParticle, DirB_D,&
-           IsBody  = IsEndOfSegment)
+      call get_b_dir(iParticle, DirB_D, IsBody = IsEndOfSegment)
       if(IsEndOfSegment) RETURN
       ! direction at the 2nd stage
-      DirLine_D = DirB_D *&
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-      ! get cos of angle between b and r
-      CosBR = StateEnd_VI(CosBR_, iParticle)
+      DirLine_D = DirB_D*iDirTrace*iIndexEnd_II(Alignment_,iParticle)
+      ! get radial direction
+      DirR_D    = StateEnd_VI(x_:z_,iParticle) / &
+           norm2( StateEnd_VI(x_:z_,iParticle))
       ! correct the direction to prevent the line from closing
-      if(UseCorrection) &
-           call correct(DirLine_D)
+      if(UseBUAlignment) &
+           call correct(DirLine_D, iDirTrace*DirU_D, CosBUAngleMax)
+      if(UseBRAlignment) &
+           call correct(DirLine_D, iDirTrace*DirR_D, CosBRAngleMax)
 
       ! check whether direction reverses in a sharp turn:
       ! this is an indicator of a problem, break tracing of the line
-      if(sum(StateEnd_VI(DirX_:DirZ_,  iParticle) * DirLine_D) < 0)then
+      if(sum(StateEnd_VI(DirX_:DirZ_,iParticle)*DirLine_D) < 0)then
          call mark_undefined(KindEnd_, iParticle)
          IsEndOfSegment = .true.
          RETURN
       end if
 
       ! save the direction to correct the next step
-      StateEnd_VI(DirX_:DirZ_,  iParticle) = DirLine_D
+      StateEnd_VI(DirX_:DirZ_,iParticle) = DirLine_D
       ! get final location
-      StateEnd_VI(x_:z_,iParticle) = &
-           StateEnd_VI(XOld_:ZOld_,iParticle) + &
+      StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(XOld_:ZOld_,iParticle) + &
            StateEnd_VI(Ds_, iParticle)*DirLine_D
-      ! Achieve that the change in the radial distance
-      ! equals StateEnd_VI(Ds_, iParticle)*sum(Dir_D*DirR_D)
-      ROld = norm2(StateEnd_VI(XOld_:ZOld_,iParticle))
-      DirR_D = StateEnd_VI(XOld_:ZOld_,iParticle)/ROld
-
-      RNew = norm2(StateEnd_VI(x_:z_,iParticle))
-      StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle)/RNew*&
-           ( ROld + StateEnd_VI(Ds_, iParticle)*sum(DirLine_D*DirR_D) )
 
       if(UseFLRW) call apply_random_walk(DirLine_D)
 
@@ -675,83 +586,36 @@ contains
       IsEndOfSegment = IsGone.or.DoMove
     end subroutine stage2
     !==========================================================================
-    subroutine correct(Dir_D)
+    subroutine correct(Dir_D, DirLim_D, CosAngleMax)
       ! corrects the direction to prevent the line from closing:
-      ! if CosBR is far enough from the value of the alginment (+/-1),
-      ! Dir_D is changed to a vector with max radial component
-      ! \perp \nabla CosBR to avoid reaching region with opposite sign of CosBR
+      ! if sum(Dir_D*DirLim_D) < CosMax, modify vector Dir_D to
+      ! achieve that sum(Dir_D*DirLim_D) = CosMax
 
       ! current direction
       real, intent(inout):: Dir_D(MaxDim)
-      ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
-      ! from outward radial direction, OR
-      ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
-      ! from inward radial direction.
-      real:: DCosBR
-      ! threshold for such deviation to apply correction
-      real:: DCosBRMax = 0.15
-      ! Heliocentric distance
-      real :: R
-      ! unit vector of a radial direction
-      real :: R_D(MaxDim)
-      ! Unit vector parallel or antiparallel to GradCosBR
-      real :: DirGradCosBR_D(MaxDim)
-      ! Dot product of these two vestors
-      real :: DirRDotDirGradCosBR
-      ! scalars to define parameters of the correction
-      ! to avoid exessive line curvature.
-      ! Dot product of the old and new directions
-      real :: DirOldDotDirNew
-      real, parameter :: cDirOldDotDirNewMin = 0.995
+      ! direction with which the angle should be limited
+      real, intent(in)   :: DirLim_D(MaxDim)
+      ! minimal allowed cosine angle between Dir_D and DirLim_D
+      real, intent(in)   :: CosAngleMax
+      ! actual angle between Dir_D and DirLim_D
+      real :: CosAngle
+      ! weight coefficients
+      real :: Weight, WeightLim
+      ! actual angle between Dir_D and DirLim_D
       !------------------------------------------------------------------------
-      ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
-      ! from outward radial direction, OR
-      ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
-      ! from inward radial direction.
-      DCosBR = abs(CosBR - iIndexEnd_II(Alignment_,iParticle))
-      ! Heliocentric distance, to compare with RCorrection
-      R = norm2(StateEnd_VI(x_:z_,iParticle))
-
-      ! if the line deviates to0 much -> correct its direction
-      ! to go along surface B_R = 0
-      if(DCosBR > DCosBRMax .and. &
-           R > RCorrectionMin .and. R < RCorrectionMax)then
-         ! unit vector of a radial direction
-         R_D = StateEnd_VI(x_:z_, iParticle)/R
-         ! unit vector along gradient of cosBR
-         DirGradCosBR_D = &
-              StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)/ &
-              norm2(StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle))
-         ! Change the direction of line for the unit vector, which
-         ! (1) is perpendicular to GradCosBR (or, the same, is parallel
-         !    to the current sheet surface, CosBR=0=const
-         ! (2) has a maximum possible radial component
-         ! First, calculate the cosine of angle between radial direction and
-         ! the direction of GradCosBR:
-         DirRDotDirGradCosBR = sum(DirGradCosBR_D*R_D)
-         ! get the corrected line direction
-         Dir_D = iDirTrace*(R_D - DirGradCosBR_D*DirRDotDirGradCosBR)/&
-              sqrt(1 - DirRDotDirGradCosBR**2)
-         ! Why???
+      CosAngle = sum(Dir_D*DirLim_D)
+      if(CosAngle >=  CosAngleMax)RETURN
+      if(CosAngle <= -CosAngleMax)then
+         ! Flip the sign of projection onto DirLim_D
+         Dir_D = Dir_D - 2*CosAngle*DirLim_D
          RETURN
       end if
-
-      ! the line doesn't deviate much, but it may just have exited the region
-      ! where the correction above has been applied;
-      ! to prevent sharp changes in the direction -> limit line's curvature
-      DirOldDotDirNew = sum(Dir_D*StateEnd_VI(DirX_:DirZ_, iParticle))
-      ! Do not correct, if cosine of angle between old and new direction is
-      ! close enough to 1:
-      if(DirOldDotDirNew > cDirOldDotDirNewMin) RETURN
-      ! Direction needs to be corrected
-      ! eliminate the component of the current direction parallel
-      ! to the one during the previous step;
-      Dir_D = Dir_D - DirOldDotDirNew*StateEnd_VI(DirX_:DirZ_,iParticle)
-      ! components \perp to it are scaled accordingly to keep ||Dir_D|| = 1
-      Dir_D = Dir_D/sqrt(1 - DirOldDotDirNew**2)
-      ! Floor the cosine of angle between the old and new direction
-      Dir_D = cDirOldDotDirNewMin*StateEnd_VI(DirX_:DirZ_,iParticle) + &
-           sqrt(1 - cDirOldDotDirNewMin**2)*Dir_D
+      ! Corrected direction vector is Weight*Dir_D + WeightLim*DirLim_D
+      ! Solve the weight coefficients, such that the resulting vector
+      ! has a unity length and cosine of its angle with DirLim_D is CosMax:
+      Weight = sqrt( (1 - CosAngleMax**2)/(1 - CosAngle**2) )
+      WeightLim = CosAngleMax - CosAngle*Weight
+      Dir_D = Weight*Dir_D + WeightLim*DirLim_D
     end subroutine correct
     !==========================================================================
     subroutine apply_random_walk(Dir_D)
@@ -819,7 +683,7 @@ contains
        if(Particle_I(KindReg_)%nParticle == nParticlePerLine*nFieldLineMax)&
             call stop_mpi(&
             NameThisComp//':'//NameSub//': max number of particles exceeded')
-       Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
+       Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle + 1
        StateReg_VI(iVarCopy_I, Particle_I(KindReg_)%nParticle) =&
             StateEnd_VI(iVarCopy_I, iParticle)
        iIndexReg_II(iIndexCopy_I, Particle_I(KindReg_)%nParticle) =&
@@ -828,14 +692,14 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine copy_end_to_regular
   !============================================================================
-  subroutine get_b_dir(iParticle, Dir_D, Grad_D, StepSize, IsBody)
-    use ModMain, ONLY: UseB0
+  subroutine get_b_dir(iParticle, DirB_D, DirU_D, StepSize, IsBody)
+    use ModMain, ONLY: UseB0, UseRotatingFrame
     use ModB0, ONLY: get_b0
-
+    use ModPhysics,  ONLY: OmegaBody
     ! returns the direction of magnetic field for a given particle
     integer, intent(in):: iParticle
-    real,    intent(out):: Dir_D(MaxDim)
-    real,    optional, intent(out):: Grad_D(MaxDim)
+    real,    intent(out):: DirB_D(MaxDim)
+    real,    optional, intent(out):: DirU_D(MaxDim)
     real,    optional, intent(out):: StepSize
     logical, optional, intent(out):: IsBody
 
@@ -844,7 +708,7 @@ contains
     integer  :: iBlock
 
     ! magnetic field
-    real   :: B_D(MaxDim) = 0.0
+    real   :: B_D(MaxDim) = 0.0, U_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
@@ -856,8 +720,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_b_dir'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    Dir_D = 0; B_D = 0
-    if(present(Grad_D))Grad_D = 0
+    DirB_D = 0; B_D = 0; U_D = 0
     if(present(StepSize))StepSize = 0.0
     ! Coordinates and block #
     Xyz_D   = StateEnd_VI(x_:z_, iParticle)
@@ -877,6 +740,8 @@ contains
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
        B_D = B_D + &
             State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+       U_D = U_D + &
+            State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
 
     if(all(B_D==0))then
@@ -888,16 +753,7 @@ contains
        call stop_mpi(StringError)
     end if
     ! normalize vector to unity
-    Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
-    if(present(Grad_D))then
-       ! interpolate grad(cos b.r)
-       do iCell = 1, nCell
-          i_D = 1
-          i_D(1:nDim) = iCell_II(1:nDim, iCell)
-          Grad_D(1:nDim) = Grad_D(1:nDim) + &
-               GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-       end do
-    end if
+    DirB_D(1:nDim) = B_D(1:nDim) / norm2(B_D)
     if(present(StepSize))then
        ! interpolate cell sizes. For non-cartesian grids
        ! the metic tensor is used
@@ -905,10 +761,29 @@ contains
           i_D = 1
           i_D(1:nDim) = iCell_II(1:nDim, iCell)
           StepSize = StepSize + &
-               CellVolume_GB(i_D(1),i_D(2),i_D(3),iBlock) * Weight_I(iCell)
+               CellVolume_GB(i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        end do
        ! take a fraction of cubic root of inteprolated cell volume as step size
-       StepSize = 0.1 * StepSize**(1.0/3.0)
+       StepSize = 0.1*StepSize**(1.0/3.0)
+    end if
+    if(present(DirU_D))then
+       if(.not.UseRotatingFrame)then
+          ! In the inertial frame the rotational velocity, \omega\times\vec{R}
+          ! is added to the velocity in corotating frame. Hence, add
+          ! -\omega\times\vec{R} to get the velocity in corotating frame,
+          ! which may be aligned with magnetic field
+          U_D(x_) = U_D(x_) + OmegaBody*Xyz_D(y_)
+          U_D(y_) = U_D(y_) - OmegaBody*Xyz_D(x_)
+       end if
+       if(all(U_D==0))then
+          write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
+               NameThisComp//':'//NameSub//&
+               ': trying to use streamline at region with zero velocity'//&
+               ' at location X = ', &
+               Xyz_D(1), ' Y = ', Xyz_D(2), ' Z = ', Xyz_D(3)
+          call stop_mpi(StringError)
+       end if
+       DirU_D = 0; DirU_D(1:nDim) = U_D(1:nDim)/norm2(U_D)
     end if
     call test_stop(NameSub, DoTest)
   end subroutine get_b_dir
@@ -962,8 +837,7 @@ contains
        call get_v
        if(IsEndOfSegment) RETURN
        ! get next location
-       StateReg_VI(x_:z_, iParticle) = &
-            StateReg_VI(x_:z_, iParticle) + 0.5 * Dt * V_D
+       StateReg_VI(x_:z_,iParticle) = StateReg_VI(x_:z_,iParticle) + 0.5*Dt*V_D
 
        ! check location, schedule for message pass, if needed
        call check_particle_location(  &
@@ -1044,7 +918,6 @@ contains
     !==========================================================================
   end subroutine advect_particle
   !============================================================================
-
   subroutine check_done_advect(Done)
     ! check whether all paritcles have been advected full time step
     logical, intent(out):: Done
@@ -1052,9 +925,7 @@ contains
     Done = all(iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle)==Normal_)
   end subroutine check_done_advect
   !============================================================================
-
-  !================ACCESS TO THE PARTICLE DATA==============================
-
+  !===================ACCESS TO THE PARTICLE DATA==============================
   subroutine get_particle_data(nSize, NameVar, DataOut_VI)
     use ModUtilities, ONLY: split=>split_string
     ! the subroutine gets variables specified in the string StringVar
@@ -1116,7 +987,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_particle_data
   !============================================================================
-
   subroutine write_plot_particle(iFile)
 
     ! Save particle data
@@ -1152,7 +1022,8 @@ contains
        NameVar = trim(NameVar)//', "FieldLine"'
     case default
        call stop_mpi(&
-            NameThisComp//':'//NameSub//' ERROR invalid plot form='//plot_form(iFile))
+            NameThisComp//':'//NameSub//' ERROR invalid plot form='//&
+            plot_form(iFile))
     end select
 
     ! name of output files
