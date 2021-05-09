@@ -118,10 +118,13 @@ OBJECTS = \
 	user_interface.o
 
 # Default options
-INSTALLFILES = ModEquation.f90 ModUser.f90 \
+INSTALLFILES = ModEquation.f90 ModUser.f90 show_git_info.h \
 	ModOptimizeParam.f90 ModHdf5.f90 ModImplHypre.f90 
 
 install: ${INSTALLFILES}
+
+show_git_info.h:
+	cp show_git_info.h.orig show_git_info.h
 
 ModEquation.f90:
 	cp ../srcEquation/ModEquationMhd.f90 ModEquation.f90
