@@ -10102,7 +10102,8 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
   <parameter name="CosBUAngleMax" type="real" min="0.01" max="0.99"
 	     default="0.85" if="$UseBUAlignment"/>
 
-  
+Recommended version for IH/OH (the field line and particle numbers depend
+on both pratical needs and available computational resources)
   
 #PARTICLELINE
 T			UseParticles
@@ -10116,6 +10117,20 @@ T                       UseBRAlignment
 T                       UseBUAlignment
 0.85                    ConBUAngleMax
 
+Recommended version for SC 
+  
+#PARTICLELINE
+T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+T                       UseBRAlignment
+0.7                     ConBRAngleMax
+F                       UseBUAlignment
+
+
 
 The command defines the class of advected magnetic field lines, consisting of
 "particles" which are essentially the Lagrangian grid points. Initially, the
@@ -10125,17 +10140,18 @@ model or just preset in the parameter file).
 
 Based on values of SpaceStepMin and SpaceStepMax space step may be
  - both negative => automatic (defined by grid resolution)
- - otherwise     => restricted by min and/or max
-                    whichever is positive
+ - otherwise     => restricted by min and/or max, whichever is positive
 
- Ordering modes, particle index increases with:
- - radius:  distance from the center
- - field: along the direction of the magnetic field
-
- Field lines may need to be corrected during tracing. In this case
- user may specify the boundaries where the correction is applied.
- Again, negative value means that the minimum or maximum value of the
- heliocentric distance at which the correction is applied.
+Field lines may need to be corrected during tracing. If the line 'too much
+deviates' from radial direcction (turns toward the Sun or tends to turn), its
+direction is corrected to keep outward direction. If the tracing occurs just
+after computing the steady state solution of the solar wind the corrrection
+limits the angle between the line direction (= the magnetic field vector
+direction) and that of the solar wind velocity in the corotating frame of
+reference. The magnetic field and velocity vectors may be parallel or
+antiparallel. In case the magnetic field line intersects the current sheet,
+the traced line is gradually switched between parallel and antiparallel
+directions, keeping the general direction along the Parker spiral.  
 
 </command>
 </commandgroup>
