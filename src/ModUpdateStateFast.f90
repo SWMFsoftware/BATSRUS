@@ -25,7 +25,8 @@ module ModUpdateStateFast
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
+  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB, set_b0_face
+  use ModGeometry, ONLY: true_cell
 
   implicit none
 
@@ -71,12 +72,26 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+          
+          if(  .not. true_cell(i-1,j,k,iBlock) .and. &
+               .not. true_cell(i,j,k,iBlock)) then
+             Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+             CYCLE
+          endif
+
           call get_flux_x(i, j, k, iBlock)
        end do; end do; end do
 
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+
+             if(  .not. true_cell(i,j-1,k,iBlock) .and. &
+                  .not. true_cell(i,j,k,iBlock)) then
+                Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+                CYCLE
+             endif
+             
              call get_flux_y(i, j, k, iBlock)
           end do; end do; end do
        end if
@@ -84,13 +99,22 @@ contains
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+             
+             if(  .not. true_cell(i,j,k-1,iBlock) .and. &
+                  .not. true_cell(i,j,k,iBlock)) then
+                Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+                CYCLE
+             endif
+             
              call get_flux_z(i, j, k, iBlock)
           end do; end do; end do
        end if
-
+       
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. true_cell(i,j,k,iBlock)) CYCLE
+          
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
@@ -117,6 +141,11 @@ contains
              Change_V(Energy_) = Change_V(Energy_) &
                   - DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+
+             if(UseB0) then                
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     - DivB*B0_DGB(:,i,j,k,iBlock)                
+             endif
           end if
 
           if(UseNonConservative)then
