@@ -26,7 +26,8 @@ module ModUpdateStateFast
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB, set_b0_face
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry, ONLY: true_cell,  Body_BLK
+  use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_  
 
   implicit none
 
@@ -236,7 +237,19 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DX(:,i,j,k)
-    
+
+    if(Body_BLK(iBlock)) then 
+       if (true_cell(i-1,j,k,iBlock) .and. &
+            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+          call set_face(StateLeft_V, StateRight_V)          
+       endif
+
+       if (true_cell(i,j,k,iBlock) .and. &
+            iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
+          call set_face(StateRight_V, StateLeft_V)          
+       endif      
+    endif
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D)
 
@@ -262,7 +275,19 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DY(:,i,j,k)
-    
+
+    if(Body_BLK(iBlock)) then 
+       if (true_cell(i,j-1,k,iBlock) .and. &
+            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+          call set_face(StateLeft_V, StateRight_V)
+       endif
+
+       if (true_cell(i,j,k,iBlock) .and. &
+            iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
+          call set_face(StateRight_V, StateLeft_V)
+       endif
+    endif
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D)
 
@@ -288,7 +313,19 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DZ(:,i,j,k)
-    
+
+    if(Body_BLK(iBlock)) then 
+       if (true_cell(i,j,k-1,iBlock) .and. &
+            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+          call set_face(StateLeft_V, StateRight_V)
+       endif
+
+       if (true_cell(i,j,k,iBlock) .and. &
+            iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
+          call set_face(StateRight_V, StateLeft_V)
+       endif
+    endif
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D)
 
@@ -440,6 +477,20 @@ contains
 
   end subroutine update_state_gpu
   !============================================================================
+
+  subroutine set_face(VarsTrueFace_V, VarsGhostFace_V)
+    real, intent(in)   :: VarsTrueFace_V(nVar)
+    real, intent(out)  :: VarsGhostFace_V(nVar)    
+
+    ! 'ionospherefloat'
+    VarsGhostFace_V        =  VarsTrueFace_V
+    VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
+    VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
+    VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
+
+  end subroutine set_face
+  !============================================================================
+  
   subroutine do_face(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
