@@ -1082,19 +1082,19 @@ contains
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace1    &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace2
-                                    
+
                   if(nJ > 1) &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace3   &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace4
-                  
+
                   if(nK > 1) &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace5     &
-                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace6                  
-               else 
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace6
+               else
                   SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                        -B0_DX(:,i,j,k)*dB1nFace1    &

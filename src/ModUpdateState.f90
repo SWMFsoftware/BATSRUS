@@ -556,7 +556,7 @@ contains
               NameSub, ' after energy dB correct             =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       end if
-      
+
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
               call update_wave_group_advection(iBlock)

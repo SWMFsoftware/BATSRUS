@@ -171,7 +171,7 @@ contains
        allocate( &
             B0_DXB(MaxDim,nI+1,nJ,nK,MaxBlock), &
              B0_DYB(MaxDim,nI,nJ+1,nK,MaxBlock), &
-             B0_DZB(MaxDim,nI,nJ,nK+1,MaxBlock))       
+             B0_DZB(MaxDim,nI,nJ,nK+1,MaxBlock))
     endif
 
     call init_magnetogram_lookup_table(iComm)
@@ -308,9 +308,9 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_face_all
   !============================================================================
-  
+
   subroutine set_b0_face(iBlock)
-    
+
     ! Calculate the face centered B0 for block iBlock
 
     use ModParallel, ONLY: NeiLev
@@ -512,7 +512,7 @@ contains
     endif
 
     call set_b0_face_all
-    
+
     !$acc update device(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
     call test_stop(NameSub, DoTest)

@@ -320,10 +320,10 @@ module ModMain
   logical :: UseResistivePlanet = .false.
   !$acc declare create(UseResistivePlanet)
 
-  ! Modifies a few places so that the simulation result is the 
+  ! Modifies a few places so that the simulation result is the
   ! same as that of the fast update methods
   logical :: DoCompareFastUpdate = .false.
-  
+
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
   character(len=200):: NameVarComp2

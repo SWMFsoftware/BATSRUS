@@ -27,7 +27,7 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModB0, ONLY: B0_DXB, B0_DYB, B0_DZB, B0_DGB
   use ModGeometry, ONLY: true_cell,  Body_BLK
-  use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_  
+  use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_
 
   implicit none
 
@@ -71,7 +71,7 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          
+
           if(  .not. true_cell(i-1,j,k,iBlock) .and. &
                .not. true_cell(i,j,k,iBlock)) then
              Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
@@ -90,7 +90,7 @@ contains
                 Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              endif
-             
+
              call get_flux_y(i, j, k, iBlock)
           end do; end do; end do
        end if
@@ -98,22 +98,22 @@ contains
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             
+
              if(  .not. true_cell(i,j,k-1,iBlock) .and. &
                   .not. true_cell(i,j,k,iBlock)) then
                 Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              endif
-             
+
              call get_flux_z(i, j, k, iBlock)
           end do; end do; end do
        end if
-       
+
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock)) CYCLE
-          
+
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
@@ -141,9 +141,9 @@ contains
                   - DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 
-             if(UseB0) then                
+             if(UseB0) then
                 Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     - DivB*B0_DGB(:,i,j,k,iBlock)                
+                     - DivB*B0_DGB(:,i,j,k,iBlock)
              endif
           end if
 
@@ -236,16 +236,16 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then 
+    if(Body_BLK(iBlock)) then
        if (true_cell(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V)          
+          call set_face(StateLeft_V, StateRight_V)
        endif
 
        if (true_cell(i,j,k,iBlock) .and. &
             iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V)          
-       endif      
+          call set_face(StateRight_V, StateLeft_V)
+       endif
     endif
 
     call get_numerical_flux(Normal_D, Area, &
@@ -274,7 +274,7 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then 
+    if(Body_BLK(iBlock)) then
        if (true_cell(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V)
@@ -312,7 +312,7 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then 
+    if(Body_BLK(iBlock)) then
        if (true_cell(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V)
@@ -351,7 +351,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-       
+
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -491,9 +491,10 @@ contains
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V)
     !$acc routine seq
     real, intent(in)   :: VarsTrueFace_V(nVar)
-    real, intent(out)  :: VarsGhostFace_V(nVar)    
-    
+    real, intent(out)  :: VarsGhostFace_V(nVar)
+
     ! 'ionospherefloat'
+    !--------------------------------------------------------------------------
     VarsGhostFace_V        =  VarsTrueFace_V
     VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
     VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
@@ -501,7 +502,7 @@ contains
 
   end subroutine set_face
   !============================================================================
-  
+
   subroutine do_face(iFace, i, j, k, iBlock, Change_V)
     !$acc routine seq
 
@@ -594,7 +595,7 @@ contains
 
   end subroutine set_old_state
   !============================================================================
-    
+
   subroutine get_physical_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
     !$acc routine seq
 
@@ -610,18 +611,18 @@ contains
     !--------------------------------------------------------------------------
     Rho = State_V(Rho_)
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
-    
+
     FullB_D = State_V(Bx_:Bz_) + B0_D
-    
+
     Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
     B0n = sum(B0_D*Normal_D)
     FullBn = Bn + B0n
-    
+
     B0B1= sum(State_V(Bx_:Bz_)*B0_D)
     pB  = 0.5*sum(State_V(Bx_:Bz_)**2)
-    
-    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)    
-    
+
+    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)
+
     ! Conservative state for the Rusanov solver
     StateCons_V(1:nVar) = State_V
     StateCons_V(RhoUx_:RhoUz_) = State_V(Rho_)*State_V(Ux_:Uz_)
@@ -640,7 +641,7 @@ contains
     end if
     Flux_V(p_)      =  Un*State_V(p_)
     Flux_V(Energy_) =  Un*(e + State_V(p_)) &
-         + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux   
+         + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
   end subroutine get_physical_flux
   !============================================================================
@@ -1079,7 +1080,7 @@ contains
 #endif
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-       
+
        ! Calculate the primitive variables
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -1231,7 +1232,7 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
-    
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
 
@@ -1252,7 +1253,7 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
-    
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
 
@@ -1273,7 +1274,7 @@ contains
 
     B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
-    
+
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
 
@@ -1306,7 +1307,7 @@ contains
        iGang = 1
 #endif
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-       
+
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VGI(:,i,j,k,iGang))
