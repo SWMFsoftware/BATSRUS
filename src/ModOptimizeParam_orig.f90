@@ -1,7 +1,7 @@
 module ModOptimizeParam
 
   ! Optimize code performance by declaring various algorithmic choices
-  ! as fixed parameters. This file is copied into ModOptimizParam.f90
+  ! as fixed parameters. This file is copied into ModOptimizeParam.f90
   ! and edited by GM/BATSRUS/Config.pl before compilation.
 
   use ModUtilities, ONLY: CON_stop

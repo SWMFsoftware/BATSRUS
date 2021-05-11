@@ -20,7 +20,7 @@ Doc/STANDARDS.pdf
 
 gitinfo.txt
 src/show_git_info.h
-src/ModUpdateParamFast.f90
+src/ModOptimizeParam.f90
 
 run*/
 Makefile.conf
