@@ -21,7 +21,7 @@ contains
   subroutine calc_source(iBlock)
     use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
-         UseUserSourceExpl, UseUserSourceImpl
+         UseUserSourceExpl, UseUserSourceImpl, DoCompareFastUpdate
     use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
@@ -1077,22 +1077,41 @@ contains
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
             if(UseMhdMomentumFlux.and.UseB0) then
-               SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
-                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
-                    -B0_DX(:,i,j,k)*dB1nFace1    &
-                    -B0_DX(:,i+1,j,k)*dB1nFace2
+               if(DoCompareFastUpdate) then
+                  SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace1    &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace2
+                                    
+                  if(nJ > 1) &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace3   &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace4
+                  
+                  if(nK > 1) &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace5     &
+                       -B0_DGB(:,i,j,k,iBlock)*dB1nFace6                  
+               else 
+                  SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DX(:,i,j,k)*dB1nFace1    &
+                       -B0_DX(:,i+1,j,k)*dB1nFace2
 
-               if(nJ > 1) &
-                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
-                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
-                    -B0_DY(:,i,j,k)*dB1nFace3   &
-                    -B0_DY(:,i,j+1,k)*dB1nFace4
+                  if(nJ > 1) &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DY(:,i,j,k)*dB1nFace3   &
+                       -B0_DY(:,i,j+1,k)*dB1nFace4
 
-               if(nK > 1) &
-                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
-                    SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
-                    -B0_DZ(:,i,j,k)*dB1nFace5     &
-                    -B0_DZ(:,i,j,k+1)*dB1nFace6
+                  if(nK > 1) &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
+                       SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
+                       -B0_DZ(:,i,j,k)*dB1nFace5     &
+                       -B0_DZ(:,i,j,k+1)*dB1nFace6
+               endif
             endif
          endif
 

@@ -534,7 +534,7 @@ contains
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
 
-      if( IsMhd .and. &
+      if((.not.DoCompareFastUpdate) .and. IsMhd .and. &
            (.not. (UseNonConservative .and. nConservCrit == 0)) .and. &
            ((nStage==1.and..not.time_accurate) &
            .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
@@ -556,7 +556,7 @@ contains
               NameSub, ' after energy dB correct             =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
       end if
-
+      
       if(UseWavePressure)then
          if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
               call update_wave_group_advection(iBlock)
