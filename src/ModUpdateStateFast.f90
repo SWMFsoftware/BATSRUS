@@ -479,6 +479,7 @@ contains
   !============================================================================
 
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V)
+    !$acc routine seq
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)    
 
