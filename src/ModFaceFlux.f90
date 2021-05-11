@@ -2882,9 +2882,11 @@ contains
     end subroutine lax_friedrichs_flux
     !==========================================================================
     subroutine harten_lax_vanleer_flux
+      use ModMultiFluid, ONLY: iUxIon_I, iUzIon_I
+
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
-      real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
+      real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion, Un
       !------------------------------------------------------------------------
       call get_speed_max(StateLeft_V, Cleft_I =CleftStateLeft_I)
 
@@ -2936,6 +2938,26 @@ contains
          if(UseMultiIon)&
               Pe = WeightRight*PeRight   + WeightLeft*PeLeft
       end if
+
+      ! The following should be calculated last to avoid overwriting
+      ! variables. Alternatively, rename the variables
+      if(ChargeStateLast_ > 1)then
+         Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
+         Cleft  = min(1e-30, Un, UnLeft_I(1))
+         Cright = max(1e-30, Un, UnRight_I(1))
+
+         WeightLeft  = Cright/(Cright - Cleft)
+         WeightRight = 1.0 - WeightLeft
+         Diffusion   = Cright*WeightRight
+
+         Flux_V(ChargeStateFirst_:ChargeStateLast_) = &
+              ( WeightRight*FluxRight_V(ChargeStateFirst_:ChargeStateLast_) &
+              + WeightLeft*FluxLeft_V(ChargeStateFirst_:ChargeStateLast_) &
+              - Diffusion* &
+              ( StateRightCons_V(ChargeStateFirst_:ChargeStateLast_) &
+              - StateLeftCons_V(ChargeStateFirst_:ChargeStateLast_)) )
+      end if
+
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
 
