@@ -2946,7 +2946,7 @@ contains
          Cleft  = min(0.0, Un, UnLeft_I(1))
          Cright = max(0.0, Un, UnRight_I(1))
 
-         WeightLeft  = Cright/max(1e-30, (Cright - Cleft))
+         WeightLeft  = Cright/(Cright - Cleft)
          WeightRight = 1.0 - WeightLeft
          Diffusion   = Cright*WeightRight
 
