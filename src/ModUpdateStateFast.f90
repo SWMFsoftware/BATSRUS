@@ -25,7 +25,7 @@ module ModUpdateStateFast
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB, set_b0_face
+  use ModB0, ONLY: B0_DXB, B0_DYB, B0_DZB, B0_DGB
   use ModGeometry, ONLY: true_cell,  Body_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_  
 
@@ -68,8 +68,6 @@ contains
 #endif
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-
-       if(UseB0) call set_b0_face(iBlock)
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
@@ -236,7 +234,7 @@ contains
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DX(:,i,j,k)
+    if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
     if(Body_BLK(iBlock)) then 
        if (true_cell(i-1,j,k,iBlock) .and. &
@@ -274,7 +272,7 @@ contains
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DY(:,i,j,k)
+    if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
     if(Body_BLK(iBlock)) then 
        if (true_cell(i,j-1,k,iBlock) .and. &
@@ -312,7 +310,7 @@ contains
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DZ(:,i,j,k)
+    if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
     if(Body_BLK(iBlock)) then 
        if (true_cell(i,j,k-1,iBlock) .and. &
@@ -353,8 +351,6 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-
-       if(UseB0) call set_b0_face(iBlock)
        
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -496,7 +492,7 @@ contains
     !$acc routine seq
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)    
-
+    
     ! 'ionospherefloat'
     VarsGhostFace_V        =  VarsTrueFace_V
     VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
@@ -521,30 +517,30 @@ contains
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DX(:,i,j,k)
+       if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DX(:,i+1,j,k)
+       if(UseB0) B0_D = B0_DXB(:,i+1,j,k,iBlock)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DY(:,i,j,k)
+       if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DY(:,i,j+1,k)
+       if(UseB0) B0_D = B0_DYB(:,i,j+1,k,iBlock)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DZ(:,i,j,k)
+       if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DZ(:,i,j,k+1)
+       if(UseB0) B0_D = B0_DZB(:,i,j,k+1,iBlock)
     end select
 
     call get_numerical_flux(Normal_D, &
@@ -1083,8 +1079,6 @@ contains
 #endif
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-
-       if(UseB0) call set_b0_face(iBlock)
        
        ! Calculate the primitive variables
        !$acc loop vector collapse(3) independent
@@ -1236,7 +1230,7 @@ contains
     call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DX(:,i,j,k)
+    if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
     
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -1257,7 +1251,7 @@ contains
     call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DY(:,i,j,k)
+    if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
     
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -1278,7 +1272,7 @@ contains
     call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
     B0_D = 0
-    if(UseB0) B0_D = B0_DZ(:,i,j,k)
+    if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
     
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -1312,8 +1306,6 @@ contains
        iGang = 1
 #endif
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
-
-       if(UseB0) call set_b0_face(iBlock)
        
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -1412,30 +1404,30 @@ contains
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
        call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DX(:,i,j,k)
+       if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x_prim(i+1, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DX(:,i+1,j,k)
+       if(UseB0) B0_D = B0_DXB(:,i+1,j,k,iBlock)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DY(:,i,j,k)
+       if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_y_prim(i, j+1, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DY(:,i,j+1,k)
+       if(UseB0) B0_D = B0_DYB(:,i,j+1,k,iBlock)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DZ(:,i,j,k)
+       if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_z_prim(i, j, k+1, iBlock, StateLeft_V, StateRight_V)
-       if(UseB0) B0_D = B0_DZ(:,i,j,k+1)
+       if(UseB0) B0_D = B0_DZB(:,i,j,k+1,iBlock)
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
