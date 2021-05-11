@@ -23,6 +23,7 @@ module ModBoundaryGeometry
 
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
   integer, allocatable, public :: iBoundary_GB(:,:,:,:)
+  !$acc declare create(iBoundary_GB)
 
   ! Cells inside domain have index domain_ that is smaller than smallest
   ! boundary index (SolidBc_ = -3)
@@ -235,7 +236,7 @@ contains
             true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
     end if
 
-    !$acc update device(true_cell, body_BLK)
+    !$acc update device(true_cell, body_BLK, iBoundary_GB)
     !$acc update device(far_field_BCs_BLK)
 
     call test_stop(NameSub, DoTest, iBlock)

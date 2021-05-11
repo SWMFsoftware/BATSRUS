@@ -1622,6 +1622,9 @@ contains
           UseTvdResChange = .false.
           UseAccurateResChange = .false.
 
+       case("#COMPAREFASTUPDATE")
+          call read_var('DoCompareFastUpdate', DoCompareFastUpdate)
+          
        case("#MESSAGEPASS","#OPTIMIZE")
           call read_var('TypeMessagePass', optimize_message_pass)
 
