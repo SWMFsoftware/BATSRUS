@@ -2943,10 +2943,10 @@ contains
       ! variables. Alternatively, rename the variables
       if(ChargeStateLast_ > 1)then
          Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
-         Cleft  = min(1e-30, Un, UnLeft_I(1))
-         Cright = max(1e-30, Un, UnRight_I(1))
+         Cleft  = min(0.0, Un, UnLeft_I(1))
+         Cright = max(0.0, Un, UnRight_I(1))
 
-         WeightLeft  = Cright/(Cright - Cleft)
+         WeightLeft  = Cright/max(1e-30, (Cright - Cleft))
          WeightRight = 1.0 - WeightLeft
          Diffusion   = Cright*WeightRight
 
