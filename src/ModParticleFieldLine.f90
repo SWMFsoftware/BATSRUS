@@ -247,13 +247,12 @@ contains
        iIndex_II, UseInputInGenCoord)
     use ModMpi
     integer:: iError
-    ! extract nFieldLineIn magnetic field lines starting at Xyz_DI;
+    ! extract magnetic field lines starting at Xyz_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
     ! requested coordinates may be different for different processor,
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
-    ! NOTE: different sets of lines may be request on different processors!
     real,            intent(in) :: Xyz_DI(:, :)
     ! mode of tracing (forward, backward or both ways)
     integer,optional,intent(in) :: iTraceModeIn
@@ -269,6 +268,12 @@ contains
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
+
+    ! Loop variable for particles
+    integer :: iParticle
+
+    ! Magnetic field direction vector
+    real   :: DirB_D(MaxDim)
 
     ! initialize field lines
     logical:: DoTest
@@ -320,15 +325,15 @@ contains
     do iDirTrace = 2*max(iTraceMode,0)-1, 2*min(iTraceMode,0)+1, 2
 
        ! fix alignment of particle indexing with B field direction
-       call get_alignment()
+       ! and pass mode
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          iIndexEnd_II(Pass_, iParticle) = DoneFromScratch_
+          call get_b_dir(iParticle, DirB_D)
+          iIndexEnd_II(Alignment_, iParticle) = &
+               nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
+       end do
 
        call trace_particles(KindEnd_, particle_line)
-
-       ! check that the allowed number of particles hasn't been exceeded
-       call count_all_particles()
-       if(nParticleAll > nParticlePerLine*nFieldLineMax)&
-            call stop_mpi(&
-            NameThisComp//':'//NameSub//': max number of particles exceeded')
 
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
@@ -348,36 +353,6 @@ contains
     call offset_id(nFieldLine - nLineAllProc + 1, nFieldLine)
     call test_stop(NameSub, DoTest)
   contains
-    !==========================================================================
-    subroutine count_all_particles()
-      ! gather information from all processors on how many new field lines
-      ! have been started
-      use ModMpi
-      integer:: iError
-
-      !------------------------------------------------------------------------
-      if(nProc>1)then
-         call MPI_Allreduce(Particle_I(KindReg_)%nParticle, nParticleAll, 1, &
-              MPI_INTEGER, MPI_SUM, iComm, iError)
-      else
-         nParticleAll = Particle_I(KindReg_)%nParticle
-      end if
-    end subroutine count_all_particles
-    !==========================================================================
-    subroutine get_alignment()
-      ! determine alignment of particle indexing with direction
-      ! of the magnetic field
-      integer:: iParticle
-      real   :: DirB_D(MaxDim)
-
-      !------------------------------------------------------------------------
-      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = DoneFromScratch_
-      do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         call get_b_dir(iParticle, DirB_D)
-         iIndexEnd_II(Alignment_, iParticle) = &
-              nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
-      end do
-    end subroutine get_alignment
     !==========================================================================
     subroutine offset_id(iLineStart,iLineEnd)
       use ModMpi
@@ -741,7 +716,8 @@ contains
        B_D = B_D + &
             State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
        U_D = U_D + &
-            State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+            State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock)/&
+            State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
 
     if(all(B_D==0))then
