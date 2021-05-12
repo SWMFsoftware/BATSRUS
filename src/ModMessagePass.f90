@@ -126,15 +126,18 @@ contains
 
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
+       !$acc parallel loop gang
        do iBlock = 1, nBlock
-          if (Unused_B(iBlock)) CYCLE
+          if (Unused_B(iBlock)) CYCLE          
           if (far_field_BCs_BLK(iBlock) .and. &
                (nOrderProlong==2 .or. UseHighResChangeNow)) then
              call set_cell_boundary&
-                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))             
+#ifndef OPENACC             
              if(UseHighResChangeNow) &
                   call set_edge_corner_ghost&
                   (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+#endif             
           endif
        end do
     end if
@@ -156,7 +159,8 @@ contains
 
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn)
+            DoResChangeOnlyIn=DoResChangeOnlyIn,&
+            UseOpenACCIn=.true.)
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
