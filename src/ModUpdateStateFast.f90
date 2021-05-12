@@ -810,9 +810,9 @@ contains
 
        if(any(.not.true_cell(i,j-2:j,k,iBlock) )) &
             call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
-       
+
        if(any(.not.true_cell(i,j-1:j+1,k,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)       
+            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
   end subroutine get_face_y
   !============================================================================
@@ -856,7 +856,7 @@ contains
             call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
 
        if(any(.not.true_cell(i,j,k-1:k+1,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)       
+            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
 
   end subroutine get_face_z

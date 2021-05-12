@@ -128,16 +128,16 @@ contains
     if(.not.DoResChangeOnly) then
        !$acc parallel loop gang
        do iBlock = 1, nBlock
-          if (Unused_B(iBlock)) CYCLE          
+          if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. &
                (nOrderProlong==2 .or. UseHighResChangeNow)) then
              call set_cell_boundary&
-                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))             
-#ifndef OPENACC             
+                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+#ifndef OPENACC
              if(UseHighResChangeNow) &
                   call set_edge_corner_ghost&
                   (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
-#endif             
+#endif
           endif
        end do
     end if

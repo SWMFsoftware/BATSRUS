@@ -880,8 +880,8 @@ contains
       ! Set B = B - B0 in ghost cells
 
       integer:: i, j, k
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       associate(iMin => CBC%iMin, iMax => CBC%iMax, &
          jMin => CBC%jMin, jMax => CBC%jMax, &
          kMin => CBC%kMin, kMax => CBC%kMax)
