@@ -381,9 +381,7 @@ contains
 #endif
           else
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), CBC,  nVarState, State_VG)
-#ifndef OPENACC
-             if(UseB0)call fix_b0(Bx_,Bz_)
-#endif
+             if(UseB0)call fix_b0(Bx_, Bz_, iBlock, CBC, nVarState, State_VG)
           end if
 #ifndef OPENACC
        case(FixedSemiBC_, InFlowSemiBC_, VarySemiBC_)
@@ -841,7 +839,7 @@ contains
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
          end do; end do; end do
          ! Subtract B0:   B1 = B - B0
-         if(UseB0) call fix_b0(BxImpl_,BzImpl_)
+         if(UseB0) call fix_b0(BxImpl_,BzImpl_,iBlock,CBC,nVarState,State_VG)
       elseif(iTeImpl > 0)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             if(.not.UseIdealEos)then
@@ -871,11 +869,13 @@ contains
 
     end subroutine set_fixed_semi_bc
     !==========================================================================
-    subroutine fix_b0(iVarMin, iVarMax)
-
+    subroutine fix_b0(iVarMin, iVarMax, iBlock, CBC, nVarState, State_VG)
+      !$acc routine vector
       use ModB0, ONLY: B0_DGB
 
-      integer, intent(in) :: iVarMin, iVarMax
+      integer, intent(in) :: iVarMin, iVarMax, iBlock, nVarState
+      type(CellBCType), intent(in) :: CBC
+      real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
       ! Set B = B - B0 in ghost cells
 
@@ -886,10 +886,11 @@ contains
          jMin => CBC%jMin, jMax => CBC%jMax, &
          kMin => CBC%kMin, kMax => CBC%kMax)
 
-      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         State_VG(iVarMin:iVarMax,i,j,k) =  &
-              State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
-      end do; end do; end do
+        !$acc loop vector collapse(3)
+        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+           State_VG(iVarMin:iVarMax,i,j,k) =  &
+                State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+        end do; end do; end do
 
       end associate
 
