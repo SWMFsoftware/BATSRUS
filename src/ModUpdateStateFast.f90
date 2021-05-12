@@ -759,6 +759,15 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
+
+       ! Return to 1st order for the faces that need body cells to
+       ! calculate 2nd order face values.
+       ! This is equivalent to limiter_body in ModFaceValue.f90
+       if(any(.not.true_cell(i-2:i,j,k,iBlock) )) &
+            call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+
+       if(any(.not.true_cell(i-1:i+1,j,k,iBlock) )) &
+            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
 
   end subroutine get_face_x
@@ -798,6 +807,12 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
+
+       if(any(.not.true_cell(i,j-2:j,k,iBlock) )) &
+            call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
+       
+       if(any(.not.true_cell(i,j-1:j+1,k,iBlock) )) &
+            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)       
     end if
   end subroutine get_face_y
   !============================================================================
@@ -836,6 +851,12 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
+
+       if(any(.not.true_cell(i,j,k-2:k,iBlock) )) &
+            call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
+
+       if(any(.not.true_cell(i,j,k-1:k+1,iBlock) )) &
+            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)       
     end if
 
   end subroutine get_face_z
