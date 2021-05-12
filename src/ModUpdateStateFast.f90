@@ -19,15 +19,16 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  use BATL_lib, ONLY: CellVolume_GB, CellFace_DFB, FaceNormal_DDFB
+  use BATL_lib, ONLY: CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
-       GammaMinus1_I, InvGammaMinus1_I
-  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl
+       GammaMinus1_I, InvGammaMinus1_I, FaceState_VI
+  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModB0, ONLY: B0_DXB, B0_DYB, B0_DZB, B0_DGB
   use ModGeometry, ONLY: true_cell,  Body_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_
+  use ModConst, ONLY: cTiny
 
   implicit none
 
@@ -239,12 +240,14 @@ contains
     if(Body_BLK(iBlock)) then
        if (true_cell(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V)
+          call set_face(StateLeft_V, StateRight_V,&
+               0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
        if (true_cell(i,j,k,iBlock) .and. &
             iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V)
+          call set_face(StateRight_V, StateLeft_V,&
+               0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
     endif
 
@@ -277,12 +280,14 @@ contains
     if(Body_BLK(iBlock)) then
        if (true_cell(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V)
+          call set_face(StateLeft_V, StateRight_V,&
+               0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
        if (true_cell(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V)
+          call set_face(StateRight_V, StateLeft_V,&
+               0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
     endif
 
@@ -315,12 +320,14 @@ contains
     if(Body_BLK(iBlock)) then
        if (true_cell(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V)
+          call set_face(StateLeft_V, StateRight_V,&
+               0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
        if (true_cell(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V)
+          call set_face(StateRight_V, StateLeft_V,&
+               0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
     endif
 
@@ -488,17 +495,51 @@ contains
   end subroutine update_state_gpu
   !============================================================================
 
-  subroutine set_face(VarsTrueFace_V, VarsGhostFace_V)
+  subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, FaceCoords_D)
     !$acc routine seq
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)
+    real, intent(in)   :: FaceCoords_D(3)
 
-    ! 'ionospherefloat'
+    real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
-    VarsGhostFace_V        =  VarsTrueFace_V
-    VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
-    VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
-    VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
+
+    if(.true.) then 
+       ! 'ionosphere' type BC
+       
+       VarsGhostFace_V        =  VarsTrueFace_V
+
+       ! Use body densities but limit jump
+       ! Pressure gets set too (! ). It will be overwritten below
+       where(DefaultState_V(1:nVar) > cTiny)
+          VarsGhostFace_V = VarsTrueFace_V + &
+               sign(1.0, FaceState_VI(:,body1_) - VarsTrueFace_V)*   &
+               min( abs(FaceState_VI(:,body1_) - VarsTrueFace_V)     &
+               ,    DensityJumpLimit*VarsTrueFace_V   )
+       end where
+       
+       ! Set pressures, including electron pressure, to float.
+       VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
+
+       ! Change sign for velocities (plasma frozen into dipole field)
+       VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
+
+
+       ! Change B_ghost so that the radial component of Bghost + Btrue = 0
+       ! Brefl = 2*r*(B.r)/r^2, so Bghost = Btrue - Brefl
+       VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - &
+            2*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)& ! Brefl
+            /sum(FaceCoords_D**2)                                     ! Brefl
+    else 
+       ! 'ionospherefloat'
+
+       VarsGhostFace_V        =  VarsTrueFace_V
+       VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
+    endif
 
   end subroutine set_face
   !============================================================================
