@@ -110,7 +110,7 @@ contains
        end if
 
        if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
-       
+
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -505,9 +505,9 @@ contains
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
 
-    if(.true.) then 
+    if(.true.) then
        ! 'ionosphere' type BC
-       
+
        VarsGhostFace_V        =  VarsTrueFace_V
 
        ! Use body densities but limit jump
@@ -518,7 +518,7 @@ contains
                min( abs(FaceState_VI(:,body1_) - VarsTrueFace_V)     &
                ,    DensityJumpLimit*VarsTrueFace_V   )
        end where
-       
+
        ! Set pressures, including electron pressure, to float.
        VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
 
@@ -527,13 +527,12 @@ contains
        VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
 
-
        ! Change B_ghost so that the radial component of Bghost + Btrue = 0
        ! Brefl = 2*r*(B.r)/r^2, so Bghost = Btrue - Brefl
        VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - &
             2*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)& ! Brefl
             /sum(FaceCoords_D**2)                                     ! Brefl
-    else 
+    else
        ! 'ionospherefloat'
 
        VarsGhostFace_V        =  VarsTrueFace_V
