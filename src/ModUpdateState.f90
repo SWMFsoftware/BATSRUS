@@ -1296,6 +1296,8 @@ contains
        end do
     end do
 
+    !$acc update device(IsConserv_CB)
+    
     call timing_stop('nonconservative')
 
     call test_stop(NameSub, DoTest)

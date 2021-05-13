@@ -107,6 +107,7 @@ module ModAdvance
 
   ! Cells selected to be updated with conservative equations
   logical, allocatable :: IsConserv_CB(:,:,:,:)
+  !$acc declare create(IsConserv_CB)
 
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
