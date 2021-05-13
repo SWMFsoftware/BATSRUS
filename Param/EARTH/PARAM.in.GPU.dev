@@ -1,0 +1,158 @@
+Configuration information:
+Number of cells in a block  : nI=8, nJ=8, nK=8
+Number of ghost cell layers : nG=2
+UserModule = Default: DEFAULT EMPTY ROUTINES, ver 1.0
+Equation		= Mhd: MHD
+
+
+#TEST
+CPUUPDATE		StringTest
+
+! Turns off some tricks that have not been implemented for fast updates
+#COMPAREFASTUPDATE
+T
+
+#CONSERVEFLUX
+F			DoConserveFlux
+
+#DIVBSOURCE
+F			UseB0Source
+
+#ROTATION
+F			UseRotation
+
+#BORIS
+F			UseBorisCorrection
+0.02
+
+! Minimum density/pressure has not been implemented for GPU.
+MINIMUMPRESSURE
+1e-5			pMinDim [nPa]
+
+MINIMUMDENSITY
+1e-2			RhoMinDim [amu/cc]
+
+! Switch of TVD and Accurate res change.
+! 1st order prolongation does not work near body for fast updates so far.
+#PROLONGATION
+2			nOrderProlong
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-224.			xMin
+ 32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+#GRIDRESOLUTION
+1./4			Resolution
+initial			StringShape
+
+#GRIDRESOLUTION
+8.0			Resolution
+all			StringShape
+
+#GRIDRESOLUTION
+1.0			Resolution
+box			StringShape
+ -20.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  20.0			xMaxBox
+  16.0			yMaxBox
+  16.0			zMaxBox
+
+#GRIDRESOLUTION
+1./4			Resolution
+shell0			StringShape
+2.5			RadiusInner
+3.5			Radius
+
+#GRIDBLOCKALL
+500			MaxBlock (for the whole simulation)
+
+
+#MAGNETOSPHERE
+T			UseBody
+2.5			rBody
+3.5			rCurrents
+8.0			BodyNDim (/ccm) density for fixed BC for rho_BLK
+2.5e4			BodyTDim (K) temperature for fixed BC for P_BLK
+
+NONCONSERVATIVE
+T
+
+#OUTERBOUNDARY
+float			TypeBc1
+fixed			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeBcBody
+
+#SOLARWIND
+5			SwNDim  [n/cc]
+1.e5			SwTDim  [K]
+-400			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+-5			SwBzDim [nT]
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.60			CflExpl
+
+FIXEDTIMESTEP
+T			UseDtFixed
+0.02			DtFixedDim [sec] (read if UseDtFixed is true)
+
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl_real8		StringPlot
+1			DnSavePlot
+-0.1			DtSavePlot
+-1.			DxSavePlot
+{MHD}			NameVars
+g rbody			NamePars
+y=0 VAR idl_real8		StringPlot
+1			DnSavePlot
+-0.1			DtSavePlot
+-1			DxSavePlot
+{MHD}			NameVars
+g rbody			NamePars
+z=0 VAR idl_real8		StringPlot
+1			DnSavePlot
+-0.1			DtSavePlot
+-1.			DxSavePlot
+{MHD}  			NameVars
+g rbody			NamePars
+
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVELOGFILE
+F			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#STOP
+20			MaxIteration
+-1.			tSimulationMax
+
