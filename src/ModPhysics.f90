@@ -1246,7 +1246,6 @@ contains
   subroutine set_dimensional_factor(nPlotVar, NameVar_V, &
        DimFactor_V, DimFactorBody_V)
     use ModVarIndexes, ONLY: DefaultState_V
-    use ModNumConst, ONLY: cTiny
     use ModUtilities,  ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1351,7 +1350,7 @@ contains
           do jVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
              DimFactor_V(iVar) = UnitUser_V(jVar)
-             if(DefaultState_V(jVar)>cTiny.and.present(DimFactorBody_V))&
+             if(DefaultState_V(jVar) > 0.0 .and. present(DimFactorBody_V))&
                   DimFactorBody_V(iVar) = UnitUser_V(jVar)
              EXIT
           end do

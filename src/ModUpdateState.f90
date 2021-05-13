@@ -707,7 +707,7 @@ contains
              if (num_checks == 1) then
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if(DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) == 0.0) CYCLE
 
                       ! For sake of backward compatibility
                       if(iVar == P_) CYCLE
@@ -765,7 +765,7 @@ contains
                 if(Unused_B(iBlock)) CYCLE
                 do k=1,nK; do j=1,nJ; do i=1,nI
                    do iVar = 1, nVar
-                      if(DefaultState_V(iVar) <= cTiny) CYCLE
+                      if(DefaultState_V(iVar) == 0.0) CYCLE
 
                       if(UseMultiSpecies .and. &
                            iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
@@ -889,7 +889,7 @@ contains
                 percent_chg_p   = 0.1
                 if (num_checks == 1) then
                    do iVar = 1, nVar
-                      if (DefaultState_V(iVar) <= cTiny) CYCLE
+                      if (DefaultState_V(iVar) == 0.0) CYCLE
 
                       ! This is for backwards compatibility
                       if(iVar == P_) CYCLE
@@ -999,7 +999,7 @@ contains
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(1))<cTiny*PercentChangeMax(1))&
+                     PercentChangeMax(1)) < cTiny*PercentChangeMax(1))&
                      write(*,*)'Maximum decrease in density at X Y Z=',&
                      Xyz_DGB(:,i,j,k,iBlock),&
                      ': rho_old = ',StateOld_VGB(Rho_,i,j,k,iBlock),&
@@ -1009,7 +1009,7 @@ contains
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
                      /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(2))<cTiny*PercentChangeMax(2))&
+                     PercentChangeMax(2)) < cTiny*PercentChangeMax(2))&
                      write(*,*)'Maximum increase in density at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
                      'is: rho_old = ',&
@@ -1020,7 +1020,7 @@ contains
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(3))<cTiny*PercentChangeMax(3))&
+                     PercentChangeMax(3)) < cTiny*PercentChangeMax(3))&
                      write(*,*)'Maximum decrease in',NameVar_V(p_), &
                      'at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
@@ -1030,7 +1030,7 @@ contains
                      (State_VGB(p_,i,j,k,iBlock)-&
                      StateOld_VGB(p_,i,j,k,iBlock)) &
                      /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
-                     PercentChangeMax(4))<cTiny*PercentChangeMax(4))&
+                     PercentChangeMax(4)) < cTiny*PercentChangeMax(4))&
                      write(*,*)'Maximum increase in',NameVar_V(p_), &
                      'at the point',&
                      Xyz_DGB(:,i,j,k,iBlock),&
@@ -1053,7 +1053,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do iVar = 1, nVar
           ! Ignore variables that do not have to be positive
-          if(DefaultState_V(iVar) < cTiny) CYCLE
+          if(DefaultState_V(iVar) == 0.0) CYCLE
 
           ! Do not check species densities if check threshold is positive
           ! (i.e. minor species densities are allowed to go negative,

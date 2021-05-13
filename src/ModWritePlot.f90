@@ -1022,7 +1022,6 @@ contains
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          plot_dimensional, Plot_
-    use ModNumConst, ONLY: cTiny
     use ModHallResist, ONLY: UseHallResist, &
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
@@ -1755,7 +1754,7 @@ contains
           do jVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
              PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBlock)
-             if(DefaultState_V(jVar) > cTiny) &
+             if(DefaultState_V(jVar) > 0.0) &
                   plotvar_inBody(iVar) = FaceState_VI(jVar,body1_)
              EXIT
           end do
@@ -1790,7 +1789,6 @@ contains
        UnitElectric_, UnitJ_, UnitPoynting_, UnitCharge_, UnitEnergyDens_, &
        No2Io_V, No2Si_V, UnitUser_V, NameVarLower_V
     use ModVarIndexes, ONLY: DefaultState_V
-    use ModNumConst, ONLY: cTiny
     use ModUtilities,  ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1893,7 +1891,7 @@ contains
           do jVar = 1, nVar
              if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
-             if(DefaultState_V(jVar)>cTiny)&
+             if(DefaultState_V(jVar) > 0.0)&
                   plotvar_inBody(iVar) = plotvar_inBody(iVar)*UnitUser_V(jVar)
              EXIT
           end do

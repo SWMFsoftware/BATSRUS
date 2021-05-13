@@ -656,7 +656,7 @@ contains
 
             ! Use body densities but limit jump
             ! Pressure gets set too (! ). It will be overwritten below
-            where(DefaultState_V(1:nVar) > cTiny)
+            where(DefaultState_V(1:nVar) > 0.0)
                FBC%VarsGhostFace_V = FBC%VarsTrueFace_V + &
                     sign(1.0, FaceState_V - FBC%VarsTrueFace_V)*   &
                     min( abs(FaceState_V - FBC%VarsTrueFace_V)     &
