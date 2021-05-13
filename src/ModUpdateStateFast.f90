@@ -18,17 +18,16 @@ module ModUpdateStateFast
        DtMax_CB => time_BLK, Vdt_
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
+       CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  use BATL_lib, ONLY: CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModB0, ONLY: B0_DXB, B0_DYB, B0_DZB, B0_DGB
-  use ModGeometry, ONLY: true_cell,  Body_BLK
-  use ModBoundaryGeometry, ONLY: iBoundary_GB,  domain_
-  use ModConst, ONLY: cTiny
+  use ModGeometry, ONLY: IsBody_B => Body_BLK
+  use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
   implicit none
 
@@ -73,8 +72,8 @@ contains
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 
-          if(  .not. true_cell(i-1,j,k,iBlock) .and. &
-               .not. true_cell(i,j,k,iBlock)) then
+          if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
+               .not. Used_GB(i,j,k,iBlock)) then
              Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
              CYCLE
           endif
@@ -86,8 +85,8 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 
-             if(  .not. true_cell(i,j-1,k,iBlock) .and. &
-                  .not. true_cell(i,j,k,iBlock)) then
+             if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
+                  .not. Used_GB(i,j,k,iBlock)) then
                 Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              endif
@@ -100,8 +99,8 @@ contains
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 
-             if(  .not. true_cell(i,j,k-1,iBlock) .and. &
-                  .not. true_cell(i,j,k,iBlock)) then
+             if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
+                  .not. Used_GB(i,j,k,iBlock)) then
                 Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              endif
@@ -115,7 +114,7 @@ contains
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not. true_cell(i,j,k,iBlock)) CYCLE
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -239,14 +238,14 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then
-       if (true_cell(i-1,j,k,iBlock) .and. &
+    if(IsBody_B(iBlock)) then
+       if (Used_GB(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
                0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
-       if (true_cell(i,j,k,iBlock) .and. &
+       if (Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
           call set_face(StateRight_V, StateLeft_V,&
                0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
@@ -279,14 +278,14 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then
-       if (true_cell(i,j-1,k,iBlock) .and. &
+    if(IsBody_B(iBlock)) then
+       if (Used_GB(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
                0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
-       if (true_cell(i,j,k,iBlock) .and. &
+       if (Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
           call set_face(StateRight_V, StateLeft_V,&
                0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
@@ -319,14 +318,14 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
-    if(Body_BLK(iBlock)) then
-       if (true_cell(i,j,k-1,iBlock) .and. &
+    if(IsBody_B(iBlock)) then
+       if (Used_GB(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
                0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
        endif
 
-       if (true_cell(i,j,k,iBlock) .and. &
+       if (Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
           call set_face(StateRight_V, StateLeft_V,&
                0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
@@ -513,7 +512,7 @@ contains
 
        ! Use body densities but limit jump
        ! Pressure gets set too (! ). It will be overwritten below
-       where(DefaultState_V(1:nVar) > cTiny)
+       where(DefaultState_V(1:nVar) > 0.0)
           VarsGhostFace_V = VarsTrueFace_V + &
                sign(1.0, FaceState_VI(:,body1_) - VarsTrueFace_V)*   &
                min( abs(FaceState_VI(:,body1_) - VarsTrueFace_V)     &
@@ -806,10 +805,10 @@ contains
        ! Return to 1st order for the faces that need body cells to
        ! calculate 2nd order face values.
        ! This is equivalent to limiter_body in ModFaceValue.f90
-       if(any(.not.true_cell(i-2:i,j,k,iBlock) )) &
+       if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
             call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
 
-       if(any(.not.true_cell(i-1:i+1,j,k,iBlock) )) &
+       if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
             call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
 
@@ -851,10 +850,10 @@ contains
           end if
        end do
 
-       if(any(.not.true_cell(i,j-2:j,k,iBlock) )) &
+       if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
             call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
 
-       if(any(.not.true_cell(i,j-1:j+1,k,iBlock) )) &
+       if(any(.not.Used_GB(i,j-1:j+1,k,iBlock) )) &
             call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
   end subroutine get_face_y
@@ -895,10 +894,10 @@ contains
           end if
        end do
 
-       if(any(.not.true_cell(i,j,k-2:k,iBlock) )) &
+       if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
             call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
 
-       if(any(.not.true_cell(i,j,k-1:k+1,iBlock) )) &
+       if(any(.not.Used_GB(i,j,k-1:k+1,iBlock) )) &
             call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
     end if
 
