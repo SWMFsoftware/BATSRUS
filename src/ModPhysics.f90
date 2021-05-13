@@ -210,6 +210,7 @@ module ModPhysics
   ! State for the boundary conditions
   real, dimension(nVar,SolidBc_:zMaxBc_):: &
        FaceState_VI, FaceStateDim_VI
+  !$acc declare create(FaceState_VI)
   real, dimension(nVar,Coord1MinBc_:Coord3MaxBc_):: &
        CellState_VI, CellStateDim_VI
   !$acc declare create(CellState_VI)
@@ -725,6 +726,7 @@ contains
     !$acc update device(pOutflow)
 
     !$acc update device(CellState_VI)
+    !$acc update device(FaceState_VI)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
