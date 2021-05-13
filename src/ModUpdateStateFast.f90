@@ -110,6 +110,8 @@ contains
           end do; end do; end do
        end if
 
+       if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
+       
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -207,7 +209,7 @@ contains
 
        enddo; enddo; enddo
 
-       if(.not.UseDtFixed) call calc_timestep(iBlock)
+       if(IsTimeAccurate .and. .not.UseDtFixed) call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
