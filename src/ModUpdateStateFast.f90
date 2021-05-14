@@ -48,11 +48,10 @@ contains
     ! optimal for CPU (face value and face flux calculated only once)
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
-
+    logical:: IsBodyBlock, IsConserv
     real:: DtPerDv, DivU, DivB, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
-    logical:: IsBodyBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
@@ -185,8 +184,10 @@ contains
           end if
 
           ! Update state
+          IsConserv = .not.UseNonConservative
+          if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
           if(iStage == 1)then
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -194,7 +195,7 @@ contains
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -203,8 +204,7 @@ contains
                   + DtPerDv*Change_V(1:nVar)
           end if
           ! Convert energy back to pressure
-          if(.not.UseNonConservative) &
-               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+          if(IsConserv) call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           if(DoTestCell)then
@@ -353,13 +353,11 @@ contains
     ! optimal for GPU, but also works with CPU
 
     integer:: i, j, k, iBlock
-
-    logical:: IsConserv
+    logical:: IsBodyBlock, IsConserv
     real:: CellVolume, DtPerDv
     real:: Change_V(nFlux+nDim), Change_VC(nFlux+1,nI,nJ,nK)
     !$acc declare create (Change_V, Change_VC)
 
-    logical:: IsBodyBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
@@ -1162,7 +1160,7 @@ contains
     ! optimal for CPU (face value and face flux calculated only once)
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
-
+    logical:: IsConserv
     real:: DivU, DivB, InvRho, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
@@ -1279,8 +1277,10 @@ contains
           end if
 
           ! Update state
+          IsConserv = .not.UseNonConservative
+          if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
           if(iStage == 1)then
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -1288,7 +1288,7 @@ contains
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -1297,8 +1297,7 @@ contains
                   + DtPerDv*Change_V(1:nVar)
           end if
           ! Convert energy back to pressure
-          if(.not.UseNonConservative) &
-               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+          if(IsConserv) call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -1388,7 +1387,7 @@ contains
     ! optimal for GPU, store primitive variables
 
     integer:: i, j, k, iBlock, iGang
-
+    logical:: IsConserv
     real:: Change_V(nFlux), DtPerDv
     !$acc declare create (Change_V)
 
@@ -1451,8 +1450,10 @@ contains
           end if
 
           ! Update state
+          IsConserv = .not.UseNonConservative
+          if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
           if(iStage == 1)then
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -1460,7 +1461,7 @@ contains
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
-             if(.not.UseNonConservative)then
+             if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:)
@@ -1469,8 +1470,7 @@ contains
                   + DtPerDv*Change_V(1:nVar)
           end if
           ! Convert energy back to pressure
-          if(.not.UseNonConservative) &
-               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+          if(IsConserv) call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           ! DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
