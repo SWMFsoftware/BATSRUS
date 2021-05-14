@@ -51,13 +51,14 @@ contains
     real:: DtPerDv, DivU, DivB, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
+    logical:: IsBodyBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     !$acc parallel
-    !$acc loop gang private(iGang) independent
+    !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -69,43 +70,47 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
+       IsBodyBlock = IsBody_B(iBlock)
+
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+          if(IsBodyBlock) then
+             if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
+                  .not. Used_GB(i,j,k,iBlock)) then
+                Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+                CYCLE
+             end if
+          end if
 
-          if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
-               .not. Used_GB(i,j,k,iBlock)) then
-             Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
-             CYCLE
-          endif
-
-          call get_flux_x(i, j, k, iBlock)
+          call get_flux_x(i, j, k, iBlock, IsBodyBlock)
        end do; end do; end do
 
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-
-             if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
-                  .not. Used_GB(i,j,k,iBlock)) then
-                Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
-                CYCLE
-             endif
-
-             call get_flux_y(i, j, k, iBlock)
+             if(IsBodyBlock) then
+                if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
+                     .not. Used_GB(i,j,k,iBlock)) then
+                   Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+                   CYCLE
+                end if
+             end if
+             call get_flux_y(i, j, k, iBlock, IsBodyBlock)
           end do; end do; end do
        end if
 
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+             if(IsBodyBlock) then
+                if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
+                     .not. Used_GB(i,j,k,iBlock)) then
+                   Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
+                   CYCLE
+                end if
+             end if
 
-             if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
-                  .not. Used_GB(i,j,k,iBlock)) then
-                Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
-                CYCLE
-             endif
-
-             call get_flux_z(i, j, k, iBlock)
+             call get_flux_z(i, j, k, iBlock, IsBodyBlock)
           end do; end do; end do
        end if
 
@@ -114,7 +119,9 @@ contains
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+          if(IsBodyBlock) then
+             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+          end if
 
 #ifndef OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
@@ -217,28 +224,29 @@ contains
 
   end subroutine update_state_cpu
   !============================================================================
-  subroutine get_flux_x(i, j,  k, iBlock)
+  subroutine get_flux_x(i, j,  k, iBlock, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
+    logical, intent(in):: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
 #endif
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
-    if(IsBody_B(iBlock)) then
+    if(IsBodyBlock) then
        if (Used_GB(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -257,28 +265,29 @@ contains
 
   end subroutine get_flux_x
   !============================================================================
-  subroutine get_flux_y(i, j, k, iBlock)
+  subroutine get_flux_y(i, j, k, iBlock, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
+    logical, intent(in):: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
 #endif
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
-    if(IsBody_B(iBlock)) then
+    if(IsBodyBlock) then
        if (Used_GB(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -297,28 +306,29 @@ contains
 
   end subroutine get_flux_y
   !============================================================================
-  subroutine get_flux_z(i, j, k, iBlock)
+  subroutine get_flux_z(i, j, k, iBlock, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
+    logical, intent(in):: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
 #endif
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
-    call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
+    call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
-    if(IsBody_B(iBlock)) then
+    if(IsBodyBlock) then
        if (Used_GB(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -348,17 +358,20 @@ contains
     real:: Change_V(nFlux+nDim), Change_VC(nFlux+1,nI,nJ,nK)
     !$acc declare create (Change_V, Change_VC)
 
+    logical:: IsBodyBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     !$acc parallel
-    !$acc loop gang private(Change_VC) independent
+    !$acc loop gang private(Change_VC, IsBodyBlock) independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
+
+       IsBodyBlock = IsBody_B(iBlock)
 
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -373,17 +386,17 @@ contains
           ! Initialize change in State_VGB
           Change_V = 0.0
 
-          call do_face(1, i, j, k, iBlock, Change_V)
-          call do_face(2, i, j, k, iBlock, Change_V)
+          call do_face(1, i, j, k, iBlock, Change_V, IsBodyBlock)
+          call do_face(2, i, j, k, iBlock, Change_V, IsBodyBlock)
 
           if(nDim > 1)then
-             call do_face(3, i, j, k, iBlock, Change_V)
-             call do_face(4, i, j, k, iBlock, Change_V)
+             call do_face(3, i, j, k, iBlock, Change_V, IsBodyBlock)
+             call do_face(4, i, j, k, iBlock, Change_V, IsBodyBlock)
           end if
 
           if(nDim > 2)then
-             call do_face(5, i, j, k, iBlock, Change_V)
-             call do_face(6, i, j, k, iBlock, Change_V)
+             call do_face(5, i, j, k, iBlock, Change_V, IsBodyBlock)
+             call do_face(6, i, j, k, iBlock, Change_V, IsBodyBlock)
           end if
 
           Change_VC(1:nFlux,i,j,k) = Change_V(1:nFlux)
@@ -544,11 +557,12 @@ contains
   end subroutine set_face
   !============================================================================
 
-  subroutine do_face(iFace, i, j, k, iBlock, Change_V)
+  subroutine do_face(iFace, i, j, k, iBlock, Change_V, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux+nDim)
+    logical, intent(in):: IsBodyBlock
 
     integer:: iDim
     real:: Area, Normal_D(3), InvRho, B0_D(3)
@@ -558,30 +572,30 @@ contains
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
-       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DXB(:,i+1,j,k,iBlock)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
-       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DYB(:,i,j+1,k,iBlock)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
-       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V)
+       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V)
+       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) B0_D = B0_DZB(:,i,j,k+1,iBlock)
     end select
 
@@ -653,16 +667,19 @@ contains
     Rho = State_V(Rho_)
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
 
-    FullB_D = State_V(Bx_:Bz_) + B0_D
-
-    Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
-    B0n = sum(B0_D*Normal_D)
-    FullBn = Bn + B0n
-
-    B0B1= sum(State_V(Bx_:Bz_)*B0_D)
-    pB  = 0.5*sum(State_V(Bx_:Bz_)**2)
+    FullB_D = State_V(Bx_:Bz_)
+    Bn  = sum(FullB_D*Normal_D)
+    pB  = 0.5*sum(FullB_D**2)
+    FullBn = Bn
 
     e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)
+
+    if(UseB0) then
+       B0B1= sum(FullB_D*B0_D) ! Here, FullB_D eq B1
+       B0n = sum(B0_D*Normal_D)
+       FullB_D = FullB_D + B0_D
+       FullBn = FullBn + B0n
+    endif
 
     ! Conservative state for the Rusanov solver
     StateCons_V(1:nVar) = State_V
@@ -671,8 +688,13 @@ contains
 
     ! Physical flux
     Flux_V(Rho_) = Rho*Un
-    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) + Normal_D*State_V(p_) &
-         -Bn*FullB_D - B0n*State_V(Bx_:Bz_) + (pB + B0B1)*Normal_D
+    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) - Bn*FullB_D &
+         + (pB + State_V(p_))*Normal_D
+    if(UseB0) then
+       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
+            - B0n*State_V(Bx_:Bz_) + B0B1*Normal_D
+    endif
+
     if(Hyp_ > 1)then
        Flux_V(Bx_:Bz_) = Un*FullB_D - State_V(Ux_:Uz_)*FullBn &
             + Normal_D*SpeedHyp*State_V(Hyp_)
@@ -765,11 +787,12 @@ contains
 
   end subroutine get_normal
   !============================================================================
-  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    logical, intent(in):: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -801,23 +824,26 @@ contains
           end if
        end do
 
-       ! Return to 1st order for the faces that need body cells to
-       ! calculate 2nd order face values.
-       ! This is equivalent to limiter_body in ModFaceValue.f90
-       if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
-            call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+       if(IsBodyBlock) then
+          ! Return to 1st order for the faces that need body cells to
+          ! calculate 2nd order face values.
+          ! This is equivalent to limiter_body in ModFaceValue.f90
+          if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
+               call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
 
-       if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+          if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
+               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       endif
     end if
 
   end subroutine get_face_x
   !============================================================================
-  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V,  IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    logical, intent(in) :: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -849,19 +875,22 @@ contains
           end if
        end do
 
-       if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
+       if(IsBodyBlock) then
+          if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
+               call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
 
-       if(any(.not.Used_GB(i,j-1:j+1,k,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+          if(any(.not.Used_GB(i,j-1:j+1,k,iBlock) )) &
+               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       endif
     end if
   end subroutine get_face_y
   !============================================================================
-  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V)
+  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
+    logical, intent(in) :: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -893,11 +922,13 @@ contains
           end if
        end do
 
-       if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
+       if(IsBodyBlock) then
+          if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
+               call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
 
-       if(any(.not.Used_GB(i,j,k-1:k+1,iBlock) )) &
-            call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+          if(any(.not.Used_GB(i,j,k-1:k+1,iBlock) )) &
+               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       endif
     end if
 
   end subroutine get_face_z
