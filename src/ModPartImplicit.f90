@@ -1981,8 +1981,8 @@ contains
             Var_VGB(:,:,:,:,iBlockImpl), iMin, iMax, jMin, jMax, kMin, kMax)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          ! The max velocity at each face is calculated later in get_cmax_face(),
-          ! which is calculated block-by-block. If a cell is not an implicit cell
+          ! Max velocity at each face is calculated later in get_cmax_face(),
+          ! which is calculated block-by-block. If a cell is not implicit
           ! and is not a 'ghost' cell of an implicit cell, then set the
           ! density to 1 and all the other variables to 0, so that the maximum
           ! velocities at these faces are 0.
@@ -2211,7 +2211,8 @@ contains
 
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
-       SourceImpl_VC(iP_I,:,:,:) = Source_VCI(Energy_:Energy_+nFluid-1,:,:,:,iGang)
+       SourceImpl_VC(iP_I,:,:,:) = &
+            Source_VCI(Energy_:Energy_+nFluid-1,:,:,:,iGang)
     end if
 
     UseDivbSource = UseDivbSourceOrig
