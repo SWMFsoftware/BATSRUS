@@ -190,7 +190,7 @@ contains
              if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -198,7 +198,7 @@ contains
              if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1283,7 +1283,7 @@ contains
              if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1291,7 +1291,7 @@ contains
              if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1388,7 +1388,9 @@ contains
 
     integer:: i, j, k, iBlock, iGang
     logical:: IsConserv
-    real:: Change_V(nFlux), DtPerDv
+
+    ! nDim extra elements for time step control
+    real:: Change_V(nFlux+nDim), CellVolume, DtPerDv
     !$acc declare create (Change_V)
 
 #ifndef OPENACC
@@ -1437,16 +1439,20 @@ contains
              call do_face_prim(6, i, j, k, iBlock, Change_V)
           end if
 
-          ! Time step divided by cell volume
-          if(IsTimeAccurate)then
-             DtPerDv = iStage*Dt
+          if(.not.IsTimeAccurate)then
+             ! Local time stepping: cell volume cancels out
+             ! Dt/Volume = (Cfl/nStage*Volume/Vdt)/Volume
+             DtPerDv = Cfl*iStage/(nStage*sum(Change_V(nFlux+1:nFlux+nDim)))
           else
-             DtPerDv = iStage*Cfl*DtMax_CB(i,j,k,iBlock)
-          end if
-          if(IsCartesian)then
-             DtPerDv = DtPerDv/(nStage*CellVolume_B(iBlock))
-          else
-             DtPerDv = DtPerDv/(nStage*CellVolume_GB(i,j,k,iBlock))
+             if(IsCartesian)then
+                CellVolume = CellVolume_B(iBlock)
+             else
+                CellVolume = CellVolume_GB(i,j,k,iBlock)
+             end if
+             DtPerDv = Dt/(nStage*CellVolume)
+             ! For next time step
+             if(.not.UseDtFixed .and. iStage==nStage) DtMax_CB(i,j,k,iBlock) &
+                  = CellVolume/sum(Change_V(nFlux+1:nFlux+nDim))
           end if
 
           ! Update state
@@ -1456,7 +1462,7 @@ contains
              if(IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1464,7 +1470,7 @@ contains
              if(IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:)
+                Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1498,8 +1504,9 @@ contains
     !$acc routine seq
 
     integer, intent(in):: iFace, i, j, k, iBlock
-    real, intent(inout):: Change_V(nFlux)
+    real, intent(inout):: Change_V(nFlux+nDim)
 
+    integer:: iDim
     real:: Area, Normal_D(3), InvRho, B0_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
@@ -1538,7 +1545,7 @@ contains
          Flux_V, B0_D)
 
     ! Change due to fluxes through this face
-    Change_V = Change_V + Flux_V(1:nFlux)
+    Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
 
     ! Change due to -(gama-1)*divU source terms
     if(nFluid == 1)then
@@ -1560,6 +1567,12 @@ contains
        Change_V(Energy_) = Change_V(Energy_) &
             + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+    end if
+
+    ! Calculate maximum of Cmax*Area from the faces per dimension
+    if(.not.UseDtFixed)then
+       iDim = (iFace+1)/2
+       Change_V(nFlux+iDim) = max(Change_V(nFlux+iDim), Flux_V(Vdt_))
     end if
 
   end subroutine do_face_prim
