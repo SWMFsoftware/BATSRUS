@@ -9,7 +9,8 @@ module ModUpdateStateFast
   use ModOptimizeParam, ONLY: &
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
-       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0
+       UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
+       UseBody
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
@@ -70,11 +71,11 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
-       IsBodyBlock = IsBody_B(iBlock)
+       if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          if(IsBodyBlock) then
+          if(UseBody .and. IsBodyBlock) then
              if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
                   .not. Used_GB(i,j,k,iBlock)) then
                 Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
@@ -88,7 +89,7 @@ contains
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             if(IsBodyBlock) then
+             if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
                    Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
@@ -102,7 +103,7 @@ contains
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             if(IsBodyBlock) then
+             if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
                    Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
@@ -119,7 +120,7 @@ contains
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(IsBodyBlock) then
+          if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
           end if
 
@@ -246,7 +247,7 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
-    if(IsBodyBlock) then
+    if(UseBody .and. IsBodyBlock) then
        if (Used_GB(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -287,7 +288,7 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
-    if(IsBodyBlock) then
+    if(UseBody .and. IsBodyBlock) then
        if (Used_GB(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -328,7 +329,7 @@ contains
     B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
-    if(IsBodyBlock) then
+    if(UseBody .and. IsBodyBlock) then
        if (Used_GB(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -371,7 +372,7 @@ contains
 
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
-       IsBodyBlock = IsBody_B(iBlock)
+       if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
        !$acc loop vector collapse(3) private(Change_V) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -572,30 +573,36 @@ contains
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
-       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_x(   i, j, k, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_x(   i+1, j, k, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DXB(:,i+1,j,k,iBlock)
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
-       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_y(   i, j, k, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_y(   i, j+1, k, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DYB(:,i,j+1,k,iBlock)
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
-       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_z(   i, j, k, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
-       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+       call get_face_z(   i, j, k+1, iBlock, StateLeft_V, StateRight_V, &
+            IsBodyBlock)
        if(UseB0) B0_D = B0_DZB(:,i,j,k+1,iBlock)
     end select
 
@@ -787,7 +794,8 @@ contains
 
   end subroutine get_normal
   !============================================================================
-  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+  subroutine get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, &
+       IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -824,7 +832,7 @@ contains
           end if
        end do
 
-       if(IsBodyBlock) then
+       if(UseBody .and. IsBodyBlock) then
           ! Return to 1st order for the faces that need body cells to
           ! calculate 2nd order face values.
           ! This is equivalent to limiter_body in ModFaceValue.f90
@@ -838,7 +846,8 @@ contains
 
   end subroutine get_face_x
   !============================================================================
-  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V,  IsBodyBlock)
+  subroutine get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, &
+       IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -875,7 +884,7 @@ contains
           end if
        end do
 
-       if(IsBodyBlock) then
+       if(UseBody .and. IsBodyBlock) then
           if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
                call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
 
@@ -885,7 +894,8 @@ contains
     end if
   end subroutine get_face_y
   !============================================================================
-  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
+  subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, &
+       IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in) :: i, j, k, iBlock
@@ -922,7 +932,7 @@ contains
           end if
        end do
 
-       if(IsBodyBlock) then
+       if(UseBody .and. IsBodyBlock) then
           if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
                call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
 
@@ -933,8 +943,8 @@ contains
 
   end subroutine get_face_z
   !============================================================================
-  subroutine get_numerical_flux(Normal_D, &
-       Area,  StateLeft_V, StateRight_V, Flux_V, B0_D)
+  subroutine get_numerical_flux(Normal_D, Area, &
+       StateLeft_V, StateRight_V, Flux_V, B0_D)
     !$acc routine seq
 
     real, intent(in)   :: Normal_D(3), Area

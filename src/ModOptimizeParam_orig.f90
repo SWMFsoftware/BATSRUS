@@ -25,7 +25,8 @@ module ModOptimizeParam
        nOrder => nOrder, &
        UseDivbSource => UseDivbSource, &
        UseHyperbolicDivB => UseHyperBolicDivB, &
-       UseDtFixed => UseDtFixed
+       UseDtFixed => UseDtFixed, &
+       UseBody => Body1
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use BATL_lib, ONLY: &
