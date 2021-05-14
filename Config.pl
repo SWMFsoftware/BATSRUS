@@ -230,6 +230,7 @@ sub set_optimization{
             IsCartesianGrid     => ".true.",
 	    IsTimeAccurate      => ".true.",
 	    UseB0               => "UseB"  ,
+	    UseBody             => ".true.",
             UseBorisCorrection  => ".false.",
 	    UseDivbSource       => "UseB .and. nDim>1",
 	    UseDtFixed          => ".false.", 
@@ -281,6 +282,12 @@ sub set_optimization{
 			check_var($Set{"LimiterBeta"}, $beta, $first);
 		    }
 		}
+	    }elsif(/^#BODY\b/){
+		my $usebody = <FILE>;
+		check_var($Set{"UseBody"}, $usebody, $first);
+	    }elsif(/^#PLANET\b/){
+		my $planet = <FILE>;
+		check_var($Set{"UseBody"}, "F", $first) if $planet =~ /^NONE/;
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
@@ -413,18 +420,18 @@ sub set_optimization{
 		if($name =~ /^(Is|Use|Do|Done)[A-Z]/){
 		    if($value eq ".true."){
 			print "    if(.not. ${name}Orig) ".
-			    "call CON_stop(NameSub//': $name=F')\n"
+			    "call CON_stop(NameSub// &\n\t ': $name=F')\n"
 		    }elsif($value eq ".false."){
 			print "    if(${name}Orig) ".
-			    "call CON_stop(NameSub//': $name=T')\n"
+			    "call CON_stop(NameSub// &\n\t ': $name=T')\n"
 		    }else{
 			print "    if(${name}Orig .neqv. $value) ".
-			    "call CON_stop(NameSub//': $name=',${name}Orig)\n"
+			    "call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n"
 		    }
 		}elsif($name ne 'iStage'){  # iStage cannot be checked
 		    $value .= ' .and. nOrder > 1' if $name eq 'LimiterBeta';
 		    print "    if(${name}Orig /= $value) ".
-			"call CON_stop(NameSub//': $name=',${name}Orig)\n";
+			"call CON_stop(NameSub// &\n\t ': $name=', ${name}Orig)\n";
 		}
 	    }
 	    print "\n";
