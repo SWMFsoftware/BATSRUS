@@ -244,19 +244,11 @@ contains
     real, intent(inout):: &
          State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-    integer:: i,j,k,iFluid
+    integer:: i, j, k, iFluid
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'energy_to_pressure_cell'
     !--------------------------------------------------------------------------
-    ! Fully non-conservative scheme
-    if(UseNonConservative .and. nConservCrit <= 0 .and. &
-         .not. (UseNeutralFluid .and. DoConserveNeutrals)) RETURN
-
     call test_start(NameSub, DoTest, iBlock)
-
-    if(DoTest)write(*,*)NameSub, &
-         ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
-         UseNonConservative, DoConserveNeutrals, nConservCrit
 
     FLUIDLOOP: do iFluid = 1, nFluid
 
@@ -274,7 +266,7 @@ contains
 
           ! Convert from hydro energy density to pressure
           State_VGB(iP,i,j,k,iBlock) =                             &
-               GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock) &
+               GammaMinus1_I(iFluid)*(State_VGB(iP,i,j,k,iBlock)   &
                - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /State_VGB(iRho,i,j,k,iBlock))
        end do; end do; end do
