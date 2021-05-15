@@ -28,10 +28,7 @@ module ModEnergy
   public:: pressure_to_energy       ! p -> e conditionally for explicit
   public:: pressure_to_energy_block ! p -> e in a block for part implicit
   public:: energy_i                 ! energy of fluid iFluid from State_V
-  public:: calc_energy              ! p -> e in a range of cells/fluids
-  public:: calc_energy_point        ! p -> e in one cell for all fluids
-  public:: calc_energy_cell         ! p -> e in physical cells
-  public:: calc_energy_ghost        ! p -> e in ghost cells
+  public:: get_fluid_energy_block   ! energy of fluid in a grid block
   public:: limit_pressure           ! Enforce minimum pressure and temperature
 
   ! It is possible to add the hyperbolic scalar energy to the total energy
@@ -126,6 +123,33 @@ contains
     end if
 
   end function energy_i
+  !============================================================================
+  subroutine get_fluid_energy_block(iBlock, iFluid, Energy_G)
+
+    integer, intent(in):: iBlock, iFluid
+    real, intent(out):: Energy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    ! calculate the energy of fluid iFluid in physical cells of block iBlock
+
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
+    if(nFluid > 1) call select_fluid(iFluid)
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
+          Energy_G(i,j,k) = 0.0
+       else
+          Energy_G(i,j,k) = &
+               InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)           &
+               + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
+               /State_VGB(Rho_,i,j,k,iBlock)
+       end if
+       ! Add magnetic energy if needed
+       if(IsMhd .and. iFluid == 1) Energy_G(i,j,k) = Energy_G(i,j,k) &
+            + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+    end do; end do; end do
+
+  end subroutine get_fluid_energy_block
   !============================================================================
   subroutine pressure_to_energy_block(State_VG, &
        iMin, iMax, jMin, jMax, kMin, kMax)
@@ -277,171 +301,6 @@ contains
 
   end subroutine energy_to_pressure_cell
   !============================================================================
-  subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
-       iFluidMin, iFluidMax)
-
-    ! Calculate total energy (excluding B0):
-    !
-    !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
-    !
-
-    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-    integer, intent(in) :: iFluidMin, iFluidMax
-    integer:: i,j,k,iFluid
-
-#ifndef OPENACC
-    ! write(*,*) NameSub,' !!! call limit_pressure'
-    character(len=*), parameter:: NameSub = 'calc_energy'
-    !--------------------------------------------------------------------------
-    call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
-         iBlock, iFluidMin, iFluidMax)
-
-    do iFluid = iFluidMin, iFluidMax
-       call select_fluid(iFluid)
-       ! Calculate thermal plus kinetic energy
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
-             Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
-          else
-             Energy_GBI(i,j,k,iBlock,iFluid) = &
-                  InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
-                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
-                  State_VGB(iRho,i,j,k,iBlock))
-          end if
-       end do; end do; end do
-
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE
-
-       ! Add magnetic energy for ion fluid
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          Energy_GBI(i,j,k,iBlock,iFluid) = &
-               Energy_GBI(i,j,k,iBlock,iFluid) + &
-               0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-       end do; end do; end do
-
-       if(Hyp_ > 1 .and. UseHypEnergy)then
-          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-             Energy_GBI(i,j,k,iBlock,iFluid) = &
-                  Energy_GBI(i,j,k,iBlock,iFluid) + &
-                  0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
-          end do; end do; end do
-       end if
-
-    end do
-#endif
-  end subroutine calc_energy
-  !============================================================================
-  subroutine calc_energy_cell(iBlock)
-    integer, intent(in) :: iBlock
-    !--------------------------------------------------------------------------
-    call calc_energy(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
-  end subroutine calc_energy_cell
-  !============================================================================
-
-  subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn, UseOpenACCIn)
-
-    use BATL_lib, ONLY: DiLevelNei_IIIB
-
-    integer, intent(in) :: iBlock
-    logical, optional, intent(in) :: DoResChangeOnlyIn
-
-    ! TOD0: This command is introduced as a temporary solution. It needs
-    ! to be reoved when more code is ported to GPU.
-    logical, optional, intent(in) :: UseOpenACCIn
-
-    integer :: i, j, k, iFluid
-    logical :: DoResChangeOnly, UseOpenACC
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_energy_ghost'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    DoResChangeOnly =.false.
-    if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
-
-    UseOpenACC = .false.
-    if(present(UseOpenACCIn)) UseOpenACC = UseOpenACCIn
-
-    if( DoResChangeOnly ) then
-       if( .not.any(abs(DiLevelNei_IIIB(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
-    end if
-    ! write(*,*) NameSub,' !!! call limit_pressure'
-    call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
-
-    do iFluid = 1, nFluid
-       if(nFluid > 1) call select_fluid(iFluid)
-
-       if(IsMhd .and. iFluid == 1) then
-          ! MHD energy
-
-          if(UseOpenACC) then
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
-                   Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
-                else
-                   Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + 0.5*(&
-                        State_VGB(RhoUx_,i,j,k,iBlock)**2 + &
-                        State_VGB(RhoUy_,i,j,k,iBlock)**2 + &
-                        State_VGB(RhoUz_,i,j,k,iBlock)**2) &
-                        /State_VGB(Rho_,i,j,k,iBlock) + &
-                        0.5*(&
-                        State_VGB(Bx_,i,j,k,iBlock)**2 + &
-                        State_VGB(By_,i,j,k,iBlock)**2 + &
-                        State_VGB(Bz_,i,j,k,iBlock)**2)
-
-                   if(Hyp_ > 1 .and. UseHypEnergy) &
-                        Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        Energy_GBI(i,j,k,iBlock,iFluid) &
-                        + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
-
-                end if
-             end do; end do; end do
-          else
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
-                   Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
-                else
-                   Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
-                        + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
-                        /State_VGB(Rho_,i,j,k,iBlock) + &
-                        0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-
-                   if(Hyp_ > 1 .and. UseHypEnergy) &
-                        Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        Energy_GBI(i,j,k,iBlock,iFluid) &
-                        + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
-
-                end if
-             end do; end do; end do
-          endif
-
-       else
-          ! HD energy
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
-                Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
-             else
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
-                     + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
-                     /State_VGB(iRho,i,j,k,iBlock)
-             end if
-          end do; end do; end do
-       end if
-    end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine calc_energy_ghost
-  !============================================================================
-  subroutine calc_energy_point(i, j, k, iBlock)
-    integer, intent(in) :: i, j, k, iBlock
-    !--------------------------------------------------------------------------
-    call calc_energy(i,i,j,j,k,k,iBlock,1,nFluid)
-  end subroutine calc_energy_point
-  !============================================================================
-
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
     !$acc routine vector
@@ -506,7 +365,6 @@ contains
 #endif
   end subroutine limit_pressure
   !============================================================================
-
 end module ModEnergy
 !==============================================================================
 

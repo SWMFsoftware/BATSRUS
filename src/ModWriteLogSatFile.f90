@@ -29,7 +29,6 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModEnergy,  ONLY: calc_energy_ghost
     use ModAdvance, ONLY: State_VGB, tmp1_BLK
     use ModPhysics, ONLY: Si2Io_V, Si2No_V, UnitT_
     use ModIO
@@ -94,12 +93,6 @@ contains
     end if
 
     DoWritePosition = .false.
-
-    ! Fill up energy variable (do we need all fluids?)
-    do iBlock = 1, nBlock
-       if (Unused_B(iBlock)) CYCLE
-       call calc_energy_ghost(iBlock)
-    end do
 
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
          index(StringTest,'show_pmax')>0 ) ) then
@@ -356,7 +349,7 @@ contains
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio
     use ModVarIndexes
-    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
+    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
@@ -472,6 +465,7 @@ contains
       use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, Time_Simulation
       use ModUtilities, ONLY: lower_case
       use ModCurrent,   ONLY: get_current
+      use ModEnergy,    ONLY: get_fluid_energy_block, energy_i
       use ModWaves,     ONLY: UseWavePressure
       use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
       use ModGeometry,  ONLY: r_BLK
@@ -490,7 +484,6 @@ contains
 
       integer :: jVar
       character(len=lNameLogVar) :: NameLogVarLower
-
       !------------------------------------------------------------------------
       select case(NameLogVar)
       case('volume')
@@ -499,8 +492,11 @@ contains
 
          ! MHD variables averaged over the computational domain
       case('e')
-         LogVar_I(iVarTot) = &
-              integrate_grid(Energy_GBI(:,:,:,:,iFluid))/DomainVolume
+         do iBlock = 1, nBlock
+            if (Unused_B(iBlock)) CYCLE
+            call get_fluid_energy_block(iBlock, iFluid, tmp1_BLK(:,:,:,iBlock))
+         end do
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
       case('pmin')
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = minval_grid(tmp2_BLK)/nProc
@@ -618,7 +614,7 @@ contains
                ! Calculate radial current
                call get_current(i,j,k,iBlock,Current_D)
                tmp1_BLK(i,j,k,iBlock) = &
-                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock)) / r_BLK(i,j,k,iBlock)
+                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock))/r_BLK(i,j,k,iBlock)
             end do; end do; end do
          end do
 
@@ -755,14 +751,14 @@ contains
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('rhouxpnt')
-         if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) &
+              = State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest)
       case('rhouypnt')
-         if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUy,iTest,jTest,kTest,iBlockTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) &
+              = State_VGB(iRhoUy,iTest,jTest,kTest,iBlockTest)
       case('rhouzpnt')
-         if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUz,iTest,jTest,kTest,iBlockTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) &
+              = State_VGB(iRhoUz,iTest,jTest,kTest,iBlockTest)
       case('b1xpnt')
          if(iProc == iProcTest) &
               LogVar_I(iVarTot) = State_VGB(Bx_,iTest,jTest,kTest,iBlockTest)
@@ -814,9 +810,8 @@ contains
               /(1 + ElectronPressureRatio) &
               *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('epnt')
-         if(iProc == iProcTest) &
-              LogVar_I(iVarTot) = &
-              Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
+         if(iProc == iProcTest) LogVar_I(iVarTot) = &
+              energy_i(State_VGB(:,iTest,jTest,kTest,iBlockTest), iFluid)
       case('uxpnt')
          if(iProc == iProcTest) LogVar_I(iVarTot) = &
               State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest) / &

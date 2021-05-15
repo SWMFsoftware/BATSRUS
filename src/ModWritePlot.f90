@@ -34,8 +34,7 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
-    use ModEnergy, ONLY: calc_energy_ghost
-    use ModAdvance, ONLY : State_VGB, Energy_GBI
+    use ModAdvance, ONLY : State_VGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
@@ -127,12 +126,6 @@ contains
     call test_start(NameSub, DoTest)
 
     !$acc update host(State_VGB)
-
-    ! Fill up energy variable
-    do iBlock = 1, nBlock
-       if (Unused_B(iBlock)) CYCLE
-       call calc_energy_ghost(iBlock)
-    end do
 
     ! Initialize stuff
 
@@ -1008,7 +1001,7 @@ contains
     use ModMain
     use ModVarIndexes
     use ModAdvance, ONLY : time_BLK, &
-         State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
+         State_VGB, DivB1_GB, IsConserv_CB, UseNonconservative, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
          UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModLoadBalance, ONLY: iTypeBalance_A
@@ -1035,6 +1028,7 @@ contains
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
     use ModCurrent, ONLY: get_current
+    use ModEnergy, ONLY: get_fluid_energy_block
     use ModElectricField, ONLY: Efield_DGB, DivE_CB, Potential_GB, &
          Epot_DGB, Eind_DGB, &
          get_electric_field_block, get_electric_field, &
@@ -1189,16 +1183,16 @@ contains
           PlotVar(1:nI,1:nJ,1:nK,iVar) = BzFace_BLK(1:nI,1:nJ,2:nK+1,iBlock)
           !
        case('e')
-          PlotVar(:,:,:,iVar) = Energy_GBI(:,:,:,iBlock,iFluid)
-          ! Add (B0+B1)^2 - B1^2 so the energy contains B0
-          if(iFluid == 1 .and. IsMhd.and.UseB0) &
-               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5*(&
-               (State_VGB(Bx_,:,:,:,iBlock)+B0_DGB(x_,:,:,:,iBlock))**2+&
-               (State_VGB(By_,:,:,:,iBlock)+B0_DGB(y_,:,:,:,iBlock))**2+&
-               (State_VGB(Bz_,:,:,:,iBlock)+B0_DGB(z_,:,:,:,iBlock))**2 &
-               -State_VGB(Bx_,:,:,:,iBlock)**2 &
-               -State_VGB(By_,:,:,:,iBlock)**2 &
-               -State_VGB(Bz_,:,:,:,iBlock)**2)
+          call get_fluid_energy_block(iBlock, iFluid, PlotVar(:,:,:,iVar))
+          ! Add 0.5*( (B0+B1)^2 - B1^2 ) so the energy contains B0
+          if(iFluid == 1 .and. IsMhd .and. UseB0)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5*( &
+                     sum(( State_VGB(Bx_:Bz_,i,j,k,iBlock)      &
+                     +     B0_DGB(:,i,j,k,iBlock))**2      ) -  &
+                     sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)    )
+             end do; end do; end do
+          end if
        case('p','pth')
           PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBlock)
           plotvar_inBody(iVar) = BodyP_I(iFluid)
