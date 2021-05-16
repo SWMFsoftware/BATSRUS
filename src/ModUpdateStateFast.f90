@@ -732,7 +732,7 @@ contains
        Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
        B2  = sum(State_V(Bx_:Bz_)**2)
     end if
-    
+
     Sound2= InvRho*State_V(p_)*Gamma
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
@@ -767,7 +767,7 @@ contains
        else
           write(*,*) ' B=', State_V(Bx_:Bz_)
        end if
-          
+
     end if
 #endif
 
