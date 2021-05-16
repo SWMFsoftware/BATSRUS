@@ -127,7 +127,7 @@ contains
   subroutine get_fluid_energy_block(iBlock, iFluid, Energy_G)
 
     integer, intent(in):: iBlock, iFluid
-    real, intent(out):: Energy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(inout):: Energy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! calculate the energy of fluid iFluid in physical cells of block iBlock
 
