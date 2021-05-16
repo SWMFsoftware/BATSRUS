@@ -1347,22 +1347,22 @@ contains
              end do; end do; end do
           end select
 
-       case('jxe','jye','jze','jxw','jyw','jzw', &
-            'jxs','jys','jzs','jxn','jyn','jzn', &
-            'jxb','jyb','jzb','jxt','jyt','jzt')
+       case('jx1','jy1','jz1','jx2','jy2','jz2', &
+            'jx3','jy3','jz3','jx4','jy4','jz4', &
+            'jx5','jy5','jz5','jx6','jy6','jz6')
           Di=0; Dj=0; Dk=0
           select case(String(3:3))
-          case('e')
+          case('1')
              iDir=1
-          case('w')
+          case('2')
              iDir=1; Di=1
-          case('s')
+          case('3')
              iDir=2
-          case('n')
+          case('4')
              iDir=2; Dj=1
-          case('b')
+          case('5')
              iDir=3
-          case('t')
+          case('6')
              iDir=3; Dk=1
           end select
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1854,9 +1854,9 @@ contains
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
        case('jx','jy','jz','jr',&
-            'jxe','jye','jze','jxw','jyw','jzw', &
-            'jxs','jys','jzs','jxn','jyn','jzn', &
-            'jxb','jyb','jzb','jxt','jyt','jzt')
+            'jx1','jy1','jz1','jx2','jy2','jz2', &
+            'jx3','jy3','jz3','jx4','jy4','jz4', &
+            'jx5','jy5','jz5','jx6','jy6','jz6')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitJ_)
        case('ex','ey','ez','er','enumx','enumy','enumz', &
             'expot','eypot','ezpot','exind','eyind','ezind')
@@ -1971,9 +1971,9 @@ contains
        case('gradpex','gradpey','gradpez','gradper')
           NameUnit = 'nPa/m'
        case('jx','jy','jz','jr',&
-            'jxe','jye','jze','jxw','jyw','jzw', &
-            'jxs','jys','jzs','jxn','jyn','jzn', &
-            'jxb','jyb','jzb','jxt','jyt','jzt')
+            'jx1','jy1','jz1','jx2','jy2','jz2', &
+            'jx3','jy3','jz3','jx4','jy4','jz4', &
+            'jx5','jy5','jz5','jx6','jy6','jz6')
           NameUnit = NameIdlUnit_V(UnitJ_)
        case('ex','ey','ez','er','enumx','enumy','enumz', &
             'expot', 'eypot', 'ezpot', 'exind', 'eyind', 'ezind')
