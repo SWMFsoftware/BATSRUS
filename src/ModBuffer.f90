@@ -119,20 +119,22 @@ contains
          WaveFirst_, WaveLast_, Bx_, Bz_
     use ModCoordTransform, ONLY: xyz_to_rlonlat
     integer,intent(in) :: nVar
-    real,   intent(in) :: XyzTarget_D(MaxDim)
+    real,   intent(in) :: XyzTarget_D(MaxDim)   ! Input coordinates
     real,   intent(out):: State_V(nVar)
 
-    real              :: Sph_D(MaxDim)
     real              :: Ewave
+    ! Cartesian coords of mapped point within the source model
     real              :: XyzSource_D(MaxDim)
+    ! Sphhherical coords of mapped point within the source model
+    real              :: Sph_D(MaxDim)
 
     !--------------------------------------------------------------------------
     if(TypeCoordSource /= TypeCoordSystem) then
        ! Convert target coordinates to the coordiante system of the model
 
        if(Time_Simulation > TimeSimulationLast)then
-          SourceTarget_DD = transform_matrix(&
-               Time_Simulation, TypeCoordSystem, TypeCoordSource)
+          SourceTarget_DD = transform_matrix(TimeSim=Time_Simulation,&
+               TypeCoordIn = TypeCoordSystem, TypeCoordOut = TypeCoordSource)
           TimeSimulationLast = Time_Simulation
        end if
        XyzSource_D = matmul(SourceTarget_DD, XyzTarget_D)
@@ -148,10 +150,10 @@ contains
     ! Transform to primitive variables
     State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
-    ! Transform vector variables from SC to IH
+    ! Transform vector variables from source model
     if(TypeCoordSource /= TypeCoordSystem)then
        State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
-            State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D * No2Si_V(UnitX_), &
+            State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
             TypeCoordSource, TypeCoordSystem)*Si2No_V(UnitU_)
        if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
     end if
