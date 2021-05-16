@@ -136,13 +136,13 @@ contains
     if(nFluid > 1) call select_fluid(iFluid)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
+       if(State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
           Energy_G(i,j,k) = 0.0
        else
           Energy_G(i,j,k) = &
-               InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)           &
-               + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
-               /State_VGB(Rho_,i,j,k,iBlock)
+               InvGammaMinus1*State_VGB(iP,i,j,k,iBlock)           &
+               + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               /State_VGB(iRho,i,j,k,iBlock)
        end if
        ! Add magnetic energy if needed
        if(IsMhd .and. iFluid == 1) Energy_G(i,j,k) = Energy_G(i,j,k) &
