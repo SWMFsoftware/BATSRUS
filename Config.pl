@@ -288,6 +288,8 @@ sub set_optimization{
 	    }elsif(/^#PLANET\b/){
 		my $planet = <FILE>;
 		check_var($Set{"UseBody"}, "F", $first) if $planet =~ /^NONE/;
+		check_var($Set{"UseB0"}, "F", $first)
+		    if $planet =~ /^\s*(NONE|VENUS)/i;
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
@@ -319,10 +321,6 @@ sub set_optimization{
 	    }elsif(/^#USEB0\b/){
 		my $useb0 = <FILE>;
 		check_var($Set{"UseB0"}, $useb0, $first);
-	    }elsif(/^#PLANET\b/){
-		my $planet = <FILE>;
-		check_var($Set{"UseB0"}, "F", $first)
-		    if $planet =~ /^\s*(NONE|VENUS)/i;
 	    }elsif(/^#FIXEDTIMESTEP\b/){
 		my $usedtfixed = <FILE>;
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);
