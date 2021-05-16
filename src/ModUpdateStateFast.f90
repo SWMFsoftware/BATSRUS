@@ -244,7 +244,6 @@ contains
 
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
     if(UseBody .and. IsBodyBlock) then
@@ -285,7 +284,6 @@ contains
 
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
     if(UseBody .and. IsBodyBlock) then
@@ -326,7 +324,6 @@ contains
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
     if(UseBody .and. IsBodyBlock) then
@@ -567,7 +564,6 @@ contains
     real:: Area, Normal_D(3), InvRho, B0_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
-    B0_D = 0
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
@@ -665,11 +661,10 @@ contains
     real, intent(out):: Flux_V(nFlux)      ! conservative flux
     real, intent(in) :: B0_D(3)
 
-    real:: Rho, Un, Bn, pB, e
-    real:: B0B1, FullB_D(3), B0n,  FullBn
     ! Convenient variables
+    real:: Un, Bn, pB, e
+    real:: FullB_D(3), B0n,  FullBn
     !--------------------------------------------------------------------------
-    Rho = State_V(Rho_)
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
 
     FullB_D = State_V(Bx_:Bz_)
@@ -677,13 +672,12 @@ contains
     pB  = 0.5*sum(FullB_D**2)
     FullBn = Bn
 
-    e   = InvGammaMinus1*State_V(p_) + 0.5*Rho*sum(State_V(Ux_:Uz_)**2)
+    e = InvGammaMinus1*State_V(p_) + 0.5*State_V(Rho_)*sum(State_V(Ux_:Uz_)**2)
 
     if(UseB0) then
-       B0B1= sum(FullB_D*B0_D) ! Here, FullB_D eq B1
-       B0n = sum(B0_D*Normal_D)
+       B0n     = sum(B0_D*Normal_D)
        FullB_D = FullB_D + B0_D
-       FullBn = FullBn + B0n
+       FullBn  = FullBn + B0n
     endif
 
     ! Conservative state for the Rusanov solver
@@ -692,12 +686,12 @@ contains
     StateCons_V(Energy_) = e + pB ! Add magnetic energy density
 
     ! Physical flux
-    Flux_V(Rho_) = Rho*Un
-    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) - Bn*FullB_D &
+    Flux_V(Rho_) = State_V(Rho_)*Un
+    Flux_V(RhoUx_:RhoUz_) = Flux_V(Rho_)*State_V(Ux_:Uz_) - Bn*FullB_D &
          + (pB + State_V(p_))*Normal_D
     if(UseB0) then
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
-            - B0n*State_V(Bx_:Bz_) + B0B1*Normal_D
+            - B0n*State_V(Bx_:Bz_) + sum(State_V(Bx_:Bz_)*B0_D)*Normal_D
     endif
 
     if(Hyp_ > 1)then
@@ -731,9 +725,14 @@ contains
     real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
     InvRho = 1.0/State_V(Rho_)
-    Bn  = sum((State_V(Bx_:Bz_)+B0_D)*Normal_D)
-    B2  = sum((State_V(Bx_:Bz_)+B0_D)**2)
-
+    if(UseB0)then
+       Bn  = sum((State_V(Bx_:Bz_) + B0_D)*Normal_D)
+       B2  = sum((State_V(Bx_:Bz_) + B0_D)**2)
+    else
+       Bn  = sum(State_V(Bx_:Bz_)*Normal_D)
+       B2  = sum(State_V(Bx_:Bz_)**2)
+    end if
+    
     Sound2= InvRho*State_V(p_)*Gamma
     Fast2 = Sound2 + InvRho*B2
     Discr = sqrt(max(0.0, Fast2**2 - 4*Sound2*InvRho*Bn**2))
@@ -763,8 +762,12 @@ contains
             ' Sound2, Alfven2       =', Sound2, InvRho*B2
        write(*,*) &
             ' FullBn, Alfven2Normal =', Bn, InvRho*Bn**2
-       write(*,*) &
-            ' FullBx, FullBy, FullBz=', State_V(Bx_:Bz_)+B0_D
+       if(UseB0)then
+          write(*,*) ' FullB=', State_V(Bx_:Bz_) + B0_D
+       else
+          write(*,*) ' B=', State_V(Bx_:Bz_)
+       end if
+          
     end if
 #endif
 
@@ -1332,7 +1335,6 @@ contains
 
     call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DXB(:,i,j,k,iBlock)
 
     call get_numerical_flux(Normal_D, Area, &
@@ -1353,7 +1355,6 @@ contains
 
     call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DYB(:,i,j,k,iBlock)
 
     call get_numerical_flux(Normal_D, Area, &
@@ -1374,7 +1375,6 @@ contains
 
     call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    B0_D = 0
     if(UseB0) B0_D = B0_DZB(:,i,j,k,iBlock)
 
     call get_numerical_flux(Normal_D, Area, &
@@ -1510,7 +1510,6 @@ contains
     real:: Area, Normal_D(3), InvRho, B0_D(3)
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
-    B0_D = 0
     select case(iFace)
     case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
