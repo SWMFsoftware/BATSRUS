@@ -111,8 +111,7 @@ module ModAdvance
 
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
-  real, allocatable :: Energy_GBI(:,:,:,:,:)
-  !$acc declare create(State_VGB, Energy_GBI)
+  !$acc declare create(State_VGB)
 
   ! Block cell-centered MHD solution old state
   real, allocatable :: StateOld_VGB(:,:,:,:,:)
@@ -293,7 +292,6 @@ contains
        DivB1_GB = 0.0
     end if
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock,nFluid))
     allocate(StateOld_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(tmp1_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -371,7 +369,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(allocated(State_VGB))       deallocate(State_VGB)
-    if(allocated(Energy_GBI))      deallocate(Energy_GBI)
     if(allocated(StateOld_VGB))    deallocate(StateOld_VGB)
     if(allocated(tmp1_BLK))        deallocate(tmp1_BLK)
     if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)
