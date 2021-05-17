@@ -10104,7 +10104,7 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
 
 Recommended version for IH/OH (the field line and particle numbers depend
 on both pratical needs and available computational resources)
-  
+
 #PARTICLELINE
 T			UseParticles
 16			nFieldLineMax
@@ -10112,10 +10112,10 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-T                       UseBRAlignment
-0.1                     ConBRAngleMax
-T                       UseBUAlignment
-0.85                    ConBUAngleMax
+T			UseBRAlignment
+0.1			CosBRAngleMax
+T			UseBUAlignment
+0.85			CosBUAngleMax
 
 Recommended version for SC 
   
@@ -10126,9 +10126,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-T                       UseBRAlignment
-0.7                     ConBRAngleMax
-F                       UseBUAlignment
+T			UseBRAlignment
+0.7			CosBRAngleMax
+F			UseBUAlignment
 
 
 
