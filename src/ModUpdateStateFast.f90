@@ -1100,10 +1100,15 @@ contains
     if(IsMhd) State_V(p_) = State_V(p_) -  0.5*sum(State_V(Bx_:Bz_)**2)
 
     ! Convert hydro energy density to pressure
-    State_V(iP_I) = GammaMinus1_I*( State_V(iP_I) - 0.5* &
-         ( State_V(iRhoUx_I)**2 &
-         + State_V(iRhoUy_I)**2 &
-         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
+    if(nFluid == 1)then
+       State_V(p_) = GammaMinus1*( State_V(p_) &
+            - 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) )
+    else
+       State_V(iP_I) = GammaMinus1_I*( State_V(iP_I) - 0.5* &
+            ( State_V(iRhoUx_I)**2 &
+            + State_V(iRhoUy_I)**2 &
+            + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
+    end if
 
   end subroutine energy_to_pressure
   !============================================================================
@@ -1114,12 +1119,16 @@ contains
     real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
 
-    ! Calculy hydro energy density
-    State_V(iP_I) = State_V(iP_I)*InvGammaMinus1_I + 0.5* &
-         ( State_V(iRhoUx_I)**2 &
-         + State_V(iRhoUy_I)**2 &
-         + State_V(iRhoUz_I)**2 ) / State_V(iRho_I)
-
+    ! Calculate hydro energy density
+    if(nFluid == 1)then
+       State_V(p_) = State_V(p_)*InvGammaMinus1 &
+            + 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_)
+    else
+       State_V(iP_I) = State_V(iP_I)*InvGammaMinus1_I + 0.5* &
+            ( State_V(iRhoUx_I)**2 &
+            + State_V(iRhoUy_I)**2 &
+            + State_V(iRhoUz_I)**2 ) / State_V(iRho_I)
+    end if
     ! Add magnetic energy to first fluid for MHD
     if(IsMhd) State_V(p_) = State_V(p_) + 0.5*sum(State_V(Bx_:Bz_)**2)
 
