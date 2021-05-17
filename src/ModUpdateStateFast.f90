@@ -184,10 +184,9 @@ contains
           end if
 
           ! Update state
-          IsConserv = .not.UseNonConservative
           if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
           if(iStage == 1)then
-             if(IsConserv)then
+             if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:nFlux)
@@ -195,7 +194,7 @@ contains
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
-             if(IsConserv)then
+             if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:nFlux)
@@ -204,7 +203,8 @@ contains
                   + DtPerDv*Change_V(1:nVar)
           end if
           ! Convert energy back to pressure
-          if(IsConserv) call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
+          if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
+               call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
           if(DoTestCell)then
