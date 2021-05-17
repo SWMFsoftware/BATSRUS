@@ -100,7 +100,7 @@ common constants, mp, kb, cgs, kev_J
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-pro SourceIntLookup
+pro SourceIntLookupDbl3
 
 ; Defining constants to be used in procedure and functions
 common constants, mp, kb, cgs, kev_J
@@ -140,7 +140,7 @@ common constants, mp, kb, cgs, kev_J
      while j lt n do begin
 
  	; Calculating Density Source Term
-        cr=2d/sqrt(double(!pi))*sqrt(k[j])/du[i]
+        cr=2d*mp/sqrt(double(!pi))*sqrt(k[j])/du[i]
 	sr[i,j]=cr*total(integrandr(g,k[j],du[i])*dg)
 
 	; Calculating Momentum Source Term
