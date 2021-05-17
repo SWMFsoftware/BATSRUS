@@ -160,6 +160,7 @@ module ModMain
 
   ! Logicals for bodies
   logical:: Body1    = .false.  !!! -> UseBody1
+  !$acc declare create(Body1)
   logical:: UseBody2 = .false.
 
   ! Block AMR grid parameters
