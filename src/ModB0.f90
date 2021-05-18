@@ -64,9 +64,6 @@ module ModB0
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
   !$acc declare create(B0_DX, B0_DY, B0_DZ)
 
-  real, public, allocatable:: B0_DXB(:,:,:,:,:),  B0_DYB(:,:,:,:,:),  B0_DZB(:,:,:,:,:)
-  !$acc declare create( B0_DXB,  B0_DYB,  B0_DZB )
-
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
@@ -75,9 +72,9 @@ module ModB0
   ! Local variables
 
   ! B0 field at the resolution change interfaces
-  real, allocatable :: B0ResChange_DXSB(:,:,:,:,:)
-  real, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
-  real, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChange_DXSB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
+  real, public, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
   !$acc declare create(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
 contains
@@ -167,13 +164,6 @@ contains
 
     !$omp end parallel
 
-    if( .not.allocated(B0_DXB) ) then
-       allocate( &
-            B0_DXB(MaxDim,nI+1,nJ,nK,MaxBlock), &
-             B0_DYB(MaxDim,nI,nJ+1,nK,MaxBlock), &
-             B0_DZB(MaxDim,nI,nJ,nK+1,MaxBlock))
-    endif
-
     call init_magnetogram_lookup_table(iComm)
 
     if(iTableB0 > 0) then
@@ -221,8 +211,6 @@ contains
     if(allocated(B0_DX)) deallocate(B0_DX,B0_DY,B0_DZ)
     !$omp end parallel
 
-    if(allocated(B0_DXB)) deallocate(B0_DXB,  B0_DYB,  B0_DZB)
-
   end subroutine clean_mod_b0
   !============================================================================
   subroutine set_b0_cell(iBlock)
@@ -258,55 +246,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_cell
-  !============================================================================
-
-  subroutine set_b0_face_all
-
-    ! Calculate the face centered B0 for block iBlock
-
-    use ModParallel, ONLY: NeiLev
-    use BATL_lib,    ONLY: nDim, nBlock
-
-    integer ::iBlock
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_b0_face_all'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    if(.not.UseB0) RETURN
-
-    do iBlock = 1, nBlock
-       ! Average cell centered B0_DGB to the face centered B0_DX,Y,Z arrays
-       B0_DXB(:,:,:,:,iBlock) = 0.5*(B0_DGB(:,0:nI  ,1:nJ,1:nK,iBlock) &
-            +       B0_DGB(:,1:nI+1,1:nJ,1:nK,iBlock))
-
-       if(nDim >= 2) &
-             B0_DYB(:,:,:,:,iBlock) = 0.5*(B0_DGB(:,1:nI,0:nJ  ,1:nK,iBlock) &
-            +            B0_DGB(:,1:nI,1:nJ+1,1:nK,iBlock))
-
-       if(nDim >= 3) &
-             B0_DZB(:,:,:,:,iBlock) = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
-            +         B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
-
-       ! Correct B0 at resolution changes
-       if(NeiLev(1,iBlock) == -1) &
-            B0_DXB(:,1   ,1:nJ,1:nK,iBlock) = B0ResChange_DXSB(:,:,:,1,iBlock)
-       if(NeiLev(2,iBlock) == -1) &
-            B0_DXB(:,nI+1,1:nJ,1:nK,iBlock) = B0ResChange_DXSB(:,:,:,2,iBlock)
-       if(NeiLev(3,iBlock) == -1) &
-             B0_DYB(:,1:nI,1   ,1:nK,iBlock) = B0ResChange_DYSB(:,:,:,3,iBlock)
-       if(NeiLev(4,iBlock) == -1) &
-             B0_DYB(:,1:nI,1+nJ,1:nK,iBlock) = B0ResChange_DYSB(:,:,:,4,iBlock)
-       if(NeiLev(5,iBlock) == -1) &
-             B0_DZB(:,1:nI,1:nJ,1,iBlock   ) = B0ResChange_DZSB(:,:,:,5,iBlock)
-       if(NeiLev(6,iBlock) == -1) &
-             B0_DZB(:,1:nI,1:nJ,1+nK,iBlock) = B0ResChange_DZSB(:,:,:,6,iBlock)
-
-    end do
-
-    !$acc update device(B0_DXB,  B0_DYB,  B0_DZB)
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine set_b0_face_all
   !============================================================================
 
   subroutine set_b0_face(iBlock)
@@ -510,8 +449,6 @@ contains
           end if
        end do
     endif
-
-    call set_b0_face_all
 
     !$acc update device(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
