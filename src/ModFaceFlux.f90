@@ -2863,11 +2863,10 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
-         if(UseMhdMomentumFlux)&
-                                ! Calculate the MHD momentum  flux (may be used to calculate
-                                ! electric field)
-              MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
-         Enormal   = 0.5*(EnLeft + EnRight)
+         ! MHD momentum flux may be used to calculate electric field
+         if(UseMhdMomentumFlux)MhdFlux_V = 0.5*(MhdFluxLeft_V + MhdFluxRight_V)
+         ! For Boris source term
+         Enormal = 0.5*(EnLeft + EnRight)
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
          if(UseMultiIon)&
@@ -2926,9 +2925,8 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         ! MHD momentum flux may be used to calculate electric field
          if(UseMhdMomentumFlux)&
-                                ! Calculate MHD momentum flux (may be used to calculate
-                                ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
@@ -3083,9 +3081,8 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         ! MHD momentum flux may be used to calculate electric field
          if(UseMhdMomentumFlux)&
-                                ! Calculate the MHD momentum flux (may be used to
-                                ! calculate electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V   &
               +           WeightRight*MhdFluxRight_V
          Enormal = WeightRight*EnRight + WeightLeft*EnLeft
@@ -3135,9 +3132,8 @@ contains
 
       ! These quantities should be calculated with the ion fluxes
       if(iFluidMin == 1)then
+         ! MHD momentum flux may be used to calculate electric field
          if(UseMhdMomentumFlux)&
-                                ! Calculate MHD momentum flux (may be used to calculate
-                                ! electric field)
               MhdFlux_V = WeightLeft *MhdFluxLeft_V  &
               +           WeightRight*MhdFluxRight_V
          Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
