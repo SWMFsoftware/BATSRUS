@@ -223,6 +223,7 @@ sub set_optimization{
 	# Read settings from some PARAM.in file
 	# Default settings
 	my %Set = (
+	    ClightFactor        => 1,
 	    nOrder              => 1,
 	    nConservCrit        => 0,
             DoLf                => ".true.",
@@ -293,6 +294,10 @@ sub set_optimization{
 	    }elsif(/^#BORIS\b/){
 		my $boris = <FILE>;
 		check_var($Set{"UseBorisCorrection"}, $boris, $first);
+		if($boris =~ /^T/){
+		    my $borisfactor = <FILE>;
+		    check_var($Set{"ClightFactor"}, $borisfactor, $first);
+		}
 	    }elsif(/^#GRIDGEOMETRY\b/){
 		my $geometry = <FILE>;
 		if($geometry =~ /^cartesian/){
