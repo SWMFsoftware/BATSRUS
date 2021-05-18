@@ -83,7 +83,7 @@ module ModPhysics
   ! speed of light, inverse, square, inverse of square, reduction factor
   real :: Clight, InvClight, C2light, InvClight2
   real :: ClightFactor = 1.0
-  !$acc declare create(InvClight, InvClight2)
+  !$acc declare create(C2light, InvClight, InvClight2)
 
   ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
   real :: cRadiationNo
@@ -722,7 +722,7 @@ contains
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
-    !$acc update device(SpeedHyp, InvClight, InvClight2)
+    !$acc update device(SpeedHyp, C2light, InvClight, InvClight2)
     !$acc update device(pOutflow)
 
     !$acc update device(CellState_VI)

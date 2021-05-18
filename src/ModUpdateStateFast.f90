@@ -10,7 +10,7 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody
+       UseBody, UseBorisCorrection
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
@@ -22,13 +22,15 @@ module ModUpdateStateFast
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
-       GammaMinus1_I, InvGammaMinus1_I, FaceState_VI
+       GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
+       C2light, InvClight2
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModB0, ONLY: B0_DXB, B0_DYB, B0_DZB, B0_DGB
   use ModGeometry, ONLY: IsBody_B => Body_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
+  use ModCoordTransform, ONLY: cross_product
 
   implicit none
 
@@ -191,6 +193,10 @@ contains
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
+             if(UseBorisCorrection) call mhd_to_boris( &
+                  State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+                  IsConserv)
+
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
@@ -199,9 +205,18 @@ contains
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
                 Change_V(iP_I) = Change_V(Energy_:nFlux)
              end if
+             if(UseBorisCorrection) call mhd_to_boris( &
+                  StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+                  IsConserv)
+             
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           end if
+          ! Maybe we should put State_VGB(:,i,j,k) and B0_DGB(:,i,j,k) into
+          ! local private arrays...
+          if(UseBorisCorrection) call boris_to_mhd( &
+               State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
           ! Convert energy back to pressure
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
@@ -1088,6 +1103,84 @@ contains
     Flux_V(Vdt_) = abs(Area)*Cmax
 
   end subroutine get_numerical_flux
+  !==========================================================================
+  subroutine boris_to_mhd(State_V, B0_D, IsConserv)
+    !$acc routine seq
+
+    real, intent(inout):: State_V(nVar)
+    real,    intent(in):: B0_D(3)
+    logical, intent(in):: IsConserv
+
+    ! Replace semi-relativistic momentum with classical momentum in State_V.
+    ! Replace semi-relativistic energy density Energy with classical value.
+    ! for conservative scheme.
+    ! Use B0=B0_D in the total magnetic field if present.
+
+    real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3)
+    !------------------------------------------------------------------------
+    b_D = State_V(Bx_:Bz_)
+    if(UseB0) b_D = b_D + B0_D
+
+    RhoC2       = State_V(Rho_)*C2Light
+    RhoUBoris_D = State_V(RhoUx_:RhoUz_)
+
+    ! Gombosi et al. 2001, eq(16) with vA^2 = B^2/Rho, gA^2=1/(1+vA^2/c^2)
+    !
+    ! RhoU = [RhoUBoris + B*B.RhoUBoris/(Rho c^2)]/(1+B^2/Rho c^2)
+    !      = (RhoUBoris*Rho*c^2 + B*B.RhoUBoris)/(Rho*c^2 + B^2)
+
+    State_V(RhoUx_:RhoUz_) =(RhoC2*RhoUBoris_D + b_D*sum(b_D*RhoUBoris_D)) &
+         /(RhoC2 + sum(b_D**2))
+
+    ! No need to set energy for non-conservative scheme
+    if(UseNonConservative)then
+       if(nConservCrit == 0) RETURN
+       if(.not.IsConserv) RETURN
+    end if
+    ! e = e_boris - (U x B)^2/(2 c^2)   eq 92
+    u_D = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+    State_V(p_) = State_V(p_) &
+         - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
+
+  end subroutine boris_to_mhd
+  !==========================================================================
+  subroutine mhd_to_boris(State_V, B0_D, IsConserv)
+    !$acc routine seq
+
+    ! Replace classical momentum with  semi-relativistic momentum in State_V.
+    ! Replace classical energy density with semi-relativistic value for
+    ! conservative scheme.
+    ! Use B0=B0_D in the total magnetic field if present.
+
+    real, intent(inout):: State_V(nVar)
+    real,    intent(in):: B0_D(3)
+    logical, intent(in):: IsConserv
+
+    real:: Rho, b_D(3), u_D(3)
+    !------------------------------------------------------------------------
+    b_D = State_V(Bx_:Bz_)
+    if(UseB0) b_D = b_D + B0_D
+
+    Rho = State_V(Rho_)
+    u_D = State_V(RhoUx_:RhoUz_)/Rho
+
+    ! Gombosi et al. 2001, eq(12) with vA^2 = B^2/Rho
+    !
+    ! RhoUBoris = RhoU + (RhoU B^2 - B RhoU.B)/(Rho c^2)
+    !           = U*(Rho + B^2/c^2 - B U.B/c^2
+    State_V(RhoUx_:RhoUz_) = u_D*(Rho + sum(b_D**2)*InvClight2) &
+         - b_D*sum(u_D*b_D)*InvClight2
+
+    ! No need to set energy for non-conservative scheme
+    if(UseNonConservative)then
+       if(nConservCrit == 0) RETURN
+       if(.not.IsConserv) RETURN
+    end if
+    ! e_Boris = e + (UxB)^2/(2 c^2)   eq 92
+    State_V(p_) = State_V(p_) &
+         + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
+
+  end subroutine mhd_to_boris
   !============================================================================
   subroutine energy_to_pressure(State_V)
     !$acc routine seq
