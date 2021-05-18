@@ -23,7 +23,7 @@ module ModUpdateStateFast
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
-       C2light, InvClight2
+       C2light, InvClight, InvClight2
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
@@ -713,7 +713,6 @@ contains
 
   end subroutine set_old_state
   !============================================================================
-
   subroutine get_physical_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
     !$acc routine seq
 
@@ -727,6 +726,11 @@ contains
     real:: Un, Bn, pB, e
     real:: FullB_D(3), B0n,  FullBn
     !--------------------------------------------------------------------------
+    ! For sake of simplicity, to be optimized
+    if(UseBorisCorrection)then
+       call get_boris_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
+       RETURN
+    end if
     Un  = sum(State_V(Ux_:Uz_)*Normal_D)
 
     FullB_D = State_V(Bx_:Bz_)
@@ -768,6 +772,124 @@ contains
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
   end subroutine get_physical_flux
+  !==========================================================================
+  subroutine get_boris_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
+    !$acc routine seq
+
+    real, intent(in) :: State_V(nVar)      ! primitive state vector
+    real, intent(in) :: Normal_D(3)        ! face normal
+    real, intent(out):: StateCons_V(nFlux) ! conservative state vector
+    real, intent(out):: Flux_V(nFlux)      ! conservative flux
+    real, intent(in) :: B0_D(3)
+
+    ! Variables for conservative state and flux calculation
+    real :: Rho, p, e
+    real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
+    real :: u_D(3), FullB_D(3), e_D(3), E2Half, Un, En, FullBn, Bn
+    !------------------------------------------------------------------------
+    Rho     = State_V(Rho_)
+    u_D     = State_V(Ux_:Uz_)
+    p       = State_V(p_)
+    FullB_D = State_V(Bx_:Bz_)
+    if(UseB0) FullB_D = FullB_D + B0_D
+    
+    ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
+    ! anisotropic Pe, Peperp contributes
+    !if (UseElectronPressure .and. .not. UseAnisoPe) then
+    !   PeAdd = State_V(Pe_)
+    !else if (UseAnisoPe) then
+    !   ! Peperp = (3*pe - Pepar)/2
+    !   PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
+    !end if
+
+    B2 = sum(State_V(Bx_:Bz_)**2)
+
+    ! Electric field divided by speed of light:
+    ! E= - U x B / c = (B x U)/c
+    e_D = InvClight*cross_product(FullB_D, u_D)
+
+    ! Electric field squared/c^2
+    E2Half  = 0.5*sum(e_D**2)
+
+    ! Calculate energy and total pressure
+    e = InvGammaMinus1*p + 0.5*(Rho*sum(u_D**2) + B2)
+
+    pTotal  = 0.5*B2
+    if(UseB0) pTotal = pTotal + sum(B0_D*State_V(Bx_:Bz_))
+
+    ! if(UseElectronPressure) pTotal = pTotal + PeAdd
+
+    ! if(UseWavePressure)then
+    !    if(UseWavePressureLtd)then
+    !       pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
+    !    else
+    !       pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+    !    end if
+    ! end if
+
+    ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
+    !        = p + bb/2 + (p - ppar)/2
+    ! if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
+
+    pTotal2 = pTotal + E2Half
+
+    ! The full momentum contains the ExB/c^2 term:
+    ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
+    uDotB   = sum(u_D*FullB_D)
+    FullB2  = sum(FullB_D**2)
+    StateCons_V(RhoUx_:RhoUz_)  = &
+         Rho*u_D + (u_D*FullB2 - FullB_D*uDotB)*InvClight2
+
+    ! The full energy contains the electric field energy
+    StateCons_V(Energy_) = e + E2Half
+
+    ! Normal direction
+    Un = sum(u_D*Normal_D)
+    En = sum(e_D*Normal_D)
+
+    ! f_i[rho] = rho*u_i
+    Flux_V(Rho_)   = Rho*Un
+
+    ! f_i[rhou_k] = u_i*u_k*rho - b_k*b_i - B0_k*b_i - B0_i*b_k - E_i*E_k
+    !          +n_i*[p + B0_j*b_j + 0.5*(b_j*b_j + E_j*E_j)]
+    Flux_V(RhoUx_:RhoUz_) = Un*Rho*State_V(Ux_:Uz_) + p*Normal_D &
+         - Bn*FullB_D - En*E_D + pTotal2*Normal_D
+
+    if(UseB0) Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
+         - sum(B0_D*Normal_D)*State_V(Bx_:Bz_)
+
+    pTotal = p + pTotal
+    ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
+    Flux_V(Bx_:Bz_) = Un*FullB_D - u_D*FullBn
+
+    ! f_i[p]=u_i*p
+    Flux_V(p_) = Un*p
+
+    ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
+    Flux_V(Energy_) = &
+         Un*(pTotal + e) - FullBn*sum(u_D*State_V(Bx_:Bz_))
+
+    ! if(UseAnisoPressure)then
+    !    ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+    !    ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
+    !    if (.not. UseAnisoPe) then
+    !       ! In isotropic electron case, no electron contributions
+    !       DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+    !    else
+    !       ! In anisotropic electron case, only (Pepar - Pperp) contributes
+    !       DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
+    !            - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
+    !    end if
+    !    Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + FullB_D*DpPerB
+    !    ! f_i[Ppar] = u_i*Ppar
+    !    Flux_V(Ppar_)  = Un*State_V(Ppar_)
+    !    Flux_V(Energy_) = Flux_V(Energy_) + DpPerB*sum(u_D*FullB_D)
+    ! end if
+
+    ! For electron pressure equation
+    ! HallUn = Un
+
+  end subroutine get_boris_flux
   !============================================================================
   subroutine get_speed_max(State_V, Normal_D, &
        Un, B0_D, Cmax, Cleft, Cright)
