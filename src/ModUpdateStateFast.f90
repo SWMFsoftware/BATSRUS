@@ -14,8 +14,8 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, nFaceValue, UnFirst_, Bn_ => BnL_, &
-       Primitive_VGI, IsConserv_CB, &
+       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, IsConserv_CB, &
+       nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
@@ -23,7 +23,7 @@ module ModUpdateStateFast
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
-       C2light, InvClight, InvClight2
+       C2light, InvClight, InvClight2, ClightFactor
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
@@ -52,7 +52,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsBodyBlock, IsConserv
-    real:: DtPerDv, DivU, DivB, InvRho, Change_V(nFlux)
+    real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
     logical:: DoTest
@@ -159,6 +159,29 @@ contains
              endif
           end if
 
+          if(UseBorisCorrection .and. ClightFactor /= 1.0)then
+             ! Calculate Boris source term
+             DivE = Flux_VXI(En_,i+1,j,k,iGang) - Flux_VXI(En_,i,j,k,iGang)
+             if(nJ > 1) DivE = DivE + &
+                  Flux_VYI(En_,i,j+1,k,iGang) - Flux_VYI(En_,i,j,k,iGang)
+             if(nK > 1) DivE = DivE + &
+                  Flux_VZI(En_,i,j,k+1,iGang) - Flux_VZI(En_,i,j,k,iGang)
+             ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
+             DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+             if(UseB0)then
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     + DivE*cross_product( &
+                     B0_DGB(:,i,j,k,iBlock) &
+                     + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+             else
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     + DivE*cross_product( &
+                     State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+             end if
+          end if
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
              do iFluid = 1, nFluid
@@ -719,7 +742,7 @@ contains
     real, intent(in) :: State_V(nVar)      ! primitive state vector
     real, intent(in) :: Normal_D(3)        ! face normal
     real, intent(out):: StateCons_V(nFlux) ! conservative state vector
-    real, intent(out):: Flux_V(nFlux)      ! conservative flux
+    real, intent(out):: Flux_V(nFlux+1)    ! conservative flux and Enormal
     real, intent(in) :: B0_D(3)
 
     ! Convenient variables
@@ -779,12 +802,12 @@ contains
     real, intent(in) :: State_V(nVar)      ! primitive state vector
     real, intent(in) :: Normal_D(3)        ! face normal
     real, intent(out):: StateCons_V(nFlux) ! conservative state vector
-    real, intent(out):: Flux_V(nFlux)      ! conservative flux
+    real, intent(out):: Flux_V(nFlux+1)    ! conservative flux + Enormal
     real, intent(in) :: B0_D(3)
 
     ! Variables for conservative state and flux calculation
     real :: Rho, p, e
-    real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
+    real :: B2, FullB2, pTotal, pTotal2, uDotB ! , DpPerB
     real :: u_D(3), FullB_D(3), e_D(3), E2Half, Un, En, FullBn, Bn
     !------------------------------------------------------------------------
     Rho     = State_V(Rho_)
@@ -843,10 +866,13 @@ contains
     ! The full energy contains the electric field energy
     StateCons_V(Energy_) = e + E2Half
 
-    ! Normal direction
+    ! Normal component
     Un = sum(u_D*Normal_D)
     En = sum(e_D*Normal_D)
 
+    ! Store it into Flux_V for Boris source term
+    if(ClightFactor /= 1.0) Flux_V(nFlux+1) = En
+    
     ! f_i[rho] = rho*u_i
     Flux_V(Rho_)   = Rho*Un
 
@@ -1144,7 +1170,7 @@ contains
     real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
 
     ! Left and right fluxes
-    real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
+    real :: FluxLeft_V(nFlux+1), FluxRight_V(nFlux+1)
 
     ! Left, right and maximum speeds, normal velocity, jump in Bn
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
@@ -1164,8 +1190,9 @@ contains
             StateRightCons_V, FluxRight_V, B0_D)
 
        ! Lax-Friedrichs flux
-       Flux_V(1:nFlux) = Area*0.5*((FluxLeft_V + FluxRight_V) &
-            +                      Cmax*(StateLeftCons_V - StateRightCons_V))
+       Flux_V(1:nFlux) = &
+            Area*0.5* (FluxLeft_V(1:nFlux) + FluxRight_V(1:nFlux) &
+            +          Cmax*(StateLeftCons_V - StateRightCons_V))
 
        if(nFluid == 1)then
           if(UseNonConservative) Flux_V(UnFirst_) = Area*0.5* &
@@ -1179,9 +1206,12 @@ contains
        end if
 
        ! Store Bnormal
-       if(UseB .and. UseDivbSource) Flux_V(Bn_) = 0.5*Area* &
+       if(UseB .and. UseDivbSource) Flux_V(Bn_) = Area*0.5* &
             sum((StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_))*Normal_D)
 
+       ! Store Enormal
+       if(UseBorisCorrection .and. ClightFactor /= 1.0) &
+            Flux_V(En_) = Area*0.5*(FluxLeft_V(nFlux+1) + FluxRight_V(nFlux+1))
     else
        ! Linde scheme
        if(UseB)then
@@ -1221,7 +1251,7 @@ contains
        AreaInvCdiff = Area/(Cright - Cleft)
        ! HLLE flux
        Flux_V(1:nFlux) = AreaInvCdiff *&
-            ( Cright*FluxLeft_V - Cleft*FluxRight_V  &
+            ( Cright*FluxLeft_V(1:nFlux) - Cleft*FluxRight_V(1:nFlux)  &
             + Cproduct*(StateRightCons_V - StateLeftCons_V) )
 
        if(nFluid == 1)then
@@ -1265,6 +1295,11 @@ contains
           ! Store Bnormal
           if(UseDivbSource) Flux_V(Bn_) = Area*Bn
 
+          ! Store Enormal
+          if(UseBorisCorrection .and. ClightFactor /= 1.0) &
+               Flux_V(En_) = 0.5*Area* &
+               (Cright*FluxLeft_V(nFlux+1) - Cleft*FluxRight_V(nFlux+1))
+          
        end if
     end if
 
