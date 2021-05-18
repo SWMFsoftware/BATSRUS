@@ -232,7 +232,7 @@ contains
              if(UseBorisCorrection) call mhd_to_boris( &
                   StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
                   IsConserv)
-             
+
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           end if
@@ -795,7 +795,7 @@ contains
          + sum(Flux_V(Bx_:Bz_)*State_V(Bx_:Bz_)) ! Poynting flux
 
   end subroutine get_physical_flux
-  !==========================================================================
+  !============================================================================
   subroutine get_boris_flux(State_V, Normal_D, StateCons_V, Flux_V, B0_D)
     !$acc routine seq
 
@@ -809,21 +809,21 @@ contains
     real :: Rho, p, e
     real :: B2, FullB2, pTotal, pTotal2, uDotB ! , DpPerB
     real :: u_D(3), FullB_D(3), e_D(3), E2Half, Un, En, FullBn, Bn
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Rho     = State_V(Rho_)
     u_D     = State_V(Ux_:Uz_)
     p       = State_V(p_)
     FullB_D = State_V(Bx_:Bz_)
     if(UseB0) FullB_D = FullB_D + B0_D
-    
+
     ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
     ! anisotropic Pe, Peperp contributes
-    !if (UseElectronPressure .and. .not. UseAnisoPe) then
+    ! if (UseElectronPressure .and. .not. UseAnisoPe) then
     !   PeAdd = State_V(Pe_)
-    !else if (UseAnisoPe) then
+    ! else if (UseAnisoPe) then
     !   ! Peperp = (3*pe - Pepar)/2
     !   PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
-    !end if
+    ! end if
 
     B2 = sum(State_V(Bx_:Bz_)**2)
 
@@ -872,7 +872,7 @@ contains
 
     ! Store it into Flux_V for Boris source term
     if(ClightFactor /= 1.0) Flux_V(nFlux+1) = En
-    
+
     ! f_i[rho] = rho*u_i
     Flux_V(Rho_)   = Rho*Un
 
@@ -1006,11 +1006,11 @@ contains
     real :: Alfven2, Alfven2Normal, Fast2, Discr, Fast, Slow
     real :: GammaA2, GammaU2
     real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
-    !------------------------------------------------------------------------
     ! No explicit formula for multi-ion fluids
-    !if (nTrueIon > 1) call stop_mpi &
+    ! if (nTrueIon > 1) call stop_mpi &
     !     ('get_boris_speed should not be called with multi-ion fluids')
 
+    !--------------------------------------------------------------------------
     InvRho = 1.0/State_V(Rho_)
     ! iPIon_I = p_ for single ion MHD case. iPIon_I is need to add the
     ! electron pressure(s) for single ion five- and six-moment case.
@@ -1081,7 +1081,7 @@ contains
     !         - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris &
     !         + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
     !         - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
-    ! 
+    !
     ! else
     Discr = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
     ! end if
@@ -1424,7 +1424,7 @@ contains
     Flux_V(Vdt_) = abs(Area)*Cmax
 
   end subroutine get_numerical_flux
-  !==========================================================================
+  !============================================================================
   subroutine boris_to_mhd(State_V, B0_D, IsConserv)
     !$acc routine seq
 
@@ -1438,7 +1438,7 @@ contains
     ! Use B0=B0_D in the total magnetic field if present.
 
     real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3)
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     b_D = State_V(Bx_:Bz_)
     if(UseB0) b_D = b_D + B0_D
 
@@ -1464,7 +1464,7 @@ contains
          - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
 
   end subroutine boris_to_mhd
-  !==========================================================================
+  !============================================================================
   subroutine mhd_to_boris(State_V, B0_D, IsConserv)
     !$acc routine seq
 
@@ -1478,7 +1478,7 @@ contains
     logical, intent(in):: IsConserv
 
     real:: Rho, b_D(3), u_D(3)
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     b_D = State_V(Bx_:Bz_)
     if(UseB0) b_D = b_D + B0_D
 
