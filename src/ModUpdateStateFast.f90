@@ -926,7 +926,7 @@ contains
 
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: Un              ! normal velocity (signed)
-    real, intent(in) :: B0_D(3)
+    real, intent(in) :: B0_D(3)         ! B0 field on the face
     real, intent(out), optional:: Cmax  ! maximum speed (positive)
     real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
     real, intent(out), optional:: Cright! fastest right wave (usually positive)
@@ -934,6 +934,11 @@ contains
     real:: InvRho, Bn, B2
     real:: Sound2, Fast2, Discr, Fast
     !--------------------------------------------------------------------------
+    if(UseBorisCorrection)then
+       call get_boris_speed(State_V, Normal_D, Un, B0_D, Cmax, Cleft, Cright)
+       RETURN
+    end if
+
     InvRho = 1.0/State_V(Rho_)
     if(UseB0)then
        Bn  = sum((State_V(Bx_:Bz_) + B0_D)*Normal_D)
@@ -982,6 +987,118 @@ contains
 #endif
 
   end subroutine get_speed_max
+  !============================================================================
+  subroutine get_boris_speed(State_V, Normal_D, Un, B0_D, Cmax, Cleft, Cright)
+    !$acc routine seq
+
+    ! Using primitive variable State_V and normal direction get
+    ! normal velocity and wave speeds with semi-relativistic Boris correction
+
+    real, intent(in) :: State_V(nVar), Normal_D(3)
+    real, intent(out):: Un              ! normal velocity (signed)
+    real, intent(in) :: B0_D(3)         ! B0 field on the face
+    real, intent(out), optional:: Cmax  ! maximum speed (positive)
+    real, intent(out), optional:: Cleft ! fastest left wave (usually negative)
+    real, intent(out), optional:: Cright! fastest right wave (usually positive)
+
+    real :: InvRho, Sound2, FullB_D(3), FullBn, FullB2
+    real :: p  ! , Ppar, Pperp, BnInvB2, GammaPe
+    real :: Alfven2, Alfven2Normal, Fast2, Discr, Fast, Slow
+    real :: GammaA2, GammaU2
+    real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
+    !------------------------------------------------------------------------
+    ! No explicit formula for multi-ion fluids
+    !if (nTrueIon > 1) call stop_mpi &
+    !     ('get_boris_speed should not be called with multi-ion fluids')
+
+    InvRho = 1.0/State_V(Rho_)
+    ! iPIon_I = p_ for single ion MHD case. iPIon_I is need to add the
+    ! electron pressure(s) for single ion five- and six-moment case.
+    p = State_V(p_) ! sum(State_V(iPIon_I))
+    FullB_D = State_V(Bx_:Bz_)
+    if(UseB0) FullB_D = FullB_D + B0_D
+    FullB2 = sum(FullB_D**2)
+    FullBn = sum(Normal_D*FullB_D)
+
+    ! Calculate sound speed squared
+    ! if(UseAnisoPressure .and. FullB2 > 0 .and. .not. UseAnisoPe)then
+    !   ! iPparIon_I = Ppar_ for single ion MHD case. iPparIon_I is need to
+    !   ! add the electron pressure(s) for single ion six-moment case.
+    !   Ppar  = sum(State_V(iPparIon_I))
+    !   Pperp = (3*p - Ppar)/2.
+    !   BnInvB2 = FullBn**2/FullB2
+    !   Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
+    ! else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe)then
+    !   ! In the anisotropic electron pressure case, Pe is added to the
+    !   ! total pressure while Pepar is added to the total Ppar.
+    !   p     = p + State_V(Pe_)
+    !   Ppar  = Ppar + State_V(Pepar_)
+    !   Pperp = (3*p - Ppar)/2.
+    !   BnInvB2 = FullBn**2/FullB2
+    !   Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
+    ! else
+    Sound2 = InvRho*Gamma*p
+    ! end if
+
+    ! Add contribution of electron pressure for the isotropic Pe case.
+    ! if(UseElectronPressure .and. .not. UseAnisoPe)then
+    !    GammaPe = GammaElectron*State_V(Pe_)
+    !    Sound2  = Sound2 + InvRho*GammaPe
+    ! else
+    !    ! For five- and six-moment, Pe should be 0 because electron pressure
+    !    ! has already been added.
+    !    GammaPe = 0.0
+    ! end if
+
+    ! Wave pressure = (GammaWave - 1)*WaveEnergy
+    ! if(UseWavePressure) Sound2 = Sound2 + InvRho*GammaWave &
+    !      * (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+
+    Alfven2       = InvRho*FullB2
+    Alfven2Normal = InvRho*FullBn**2
+
+    Un = sum(State_V(Ux_:Uz_)*Normal_D)
+
+    ! "Alfven Lorentz" factor
+    GammaA2 = 1.0/(1.0 + Alfven2*InvClight2)
+
+    ! 1-gA^2*Un^2/c^2
+    GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*InvClight2)
+
+    ! Modified speeds
+    Sound2Boris        = Sound2*GammaA2*(1+Alfven2Normal*InvClight2)
+    Alfven2Boris       = Alfven2*GammaA2*GammaU2
+    Alfven2NormalBoris = Alfven2Normal*GammaA2*GammaU2
+
+    ! Approximate slow and fast wave speeds
+    Fast2 = Sound2Boris + Alfven2Boris
+
+    ! if(UseAnisoPressure .and. FullB2 > 0)then
+    !    Discr = sqrt(max(0.0, Fast2**2  &
+    !         + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
+    !         - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
+    !         + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
+    !         - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris &
+    !         + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
+    !         - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
+    ! 
+    ! else
+    Discr = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
+    ! end if
+
+    ! Get fast and slow speeds multiplied with the face area
+    Fast = sqrt( 0.5*(          Fast2 + Discr) )
+    Slow = sqrt( 0.5*( max(0.0, Fast2 - Discr) ) )
+
+    ! In extreme cases "slow" wave can be faster than "fast" wave
+    ! so take the maximum of the two
+
+    UnBoris            = Un*GammaA2
+    if(present(Cmax))   Cmax   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
+    if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
+    if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
+
+  end subroutine get_boris_speed
   !============================================================================
   subroutine get_normal(iDir, i, j, k, iBlock, Normal_D, Area)
     !$acc routine seq
@@ -1299,7 +1416,7 @@ contains
           if(UseBorisCorrection .and. ClightFactor /= 1.0) &
                Flux_V(En_) = 0.5*Area* &
                (Cright*FluxLeft_V(nFlux+1) - Cleft*FluxRight_V(nFlux+1))
-          
+
        end if
     end if
 
