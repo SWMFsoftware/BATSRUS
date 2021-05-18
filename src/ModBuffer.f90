@@ -109,8 +109,8 @@ contains
   end subroutine read_buffer_grid_param
   !============================================================================
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
-    use ModMain,       ONLY: TypeCoordSystem, Time_Simulation, &
-         DoThinCurrentSheet
+    use ModMain,       ONLY: TypeCoordTarget=>TypeCoordSystem,  &
+         Time_Simulation, DoThinCurrentSheet
     use CON_axes,      ONLY: transform_matrix, transform_velocity
     use ModAdvance,    ONLY: UseB
     use ModWaves,      ONLY: UseAlfvenWaves
@@ -129,12 +129,12 @@ contains
     real              :: Sph_D(MaxDim)
 
     !--------------------------------------------------------------------------
-    if(TypeCoordSource /= TypeCoordSystem) then
+    if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
 
        if(Time_Simulation > TimeSimulationLast)then
           SourceTarget_DD = transform_matrix(TimeSim=Time_Simulation,&
-               TypeCoordIn = TypeCoordSystem, TypeCoordOut = TypeCoordSource)
+               TypeCoordIn = TypeCoordTarget, TypeCoordOut = TypeCoordSource)
           TimeSimulationLast = Time_Simulation
        end if
        XyzSource_D = matmul(SourceTarget_DD, XyzTarget_D)
@@ -144,17 +144,17 @@ contains
 
     call xyz_to_rlonlat(XyzSource_D, Sph_D)
 
-    ! Get the target state from the spherical buffer grid
+    ! Get the source state from the spherical buffer grid
     call interpolate_from_global_buffer(Sph_D, nVar, State_V)
 
     ! Transform to primitive variables
     State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
-    ! Transform vector variables from source model
-    if(TypeCoordSource /= TypeCoordSystem)then
-       State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
+    ! Transform vector variables from source coordinate frame to target
+    if(TypeCoordSource /= TypeCoordTarget)then
+       State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,              &
             State_V(Ux_:Uz_)*No2Si_V(UnitU_), XyzSource_D*No2Si_V(UnitX_), &
-            TypeCoordSource, TypeCoordSystem)*Si2No_V(UnitU_)
+            TypeCoordSource, TypeCoordTarget)*Si2No_V(UnitU_)
        if(UseB) State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
     end if
 
