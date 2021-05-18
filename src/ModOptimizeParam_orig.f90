@@ -28,7 +28,8 @@ module ModOptimizeParam
        UseDtFixed => UseDtFixed, &
        UseBody => Body1
   use ModBorisCorrection, ONLY: &
-       UseBorisCorrection => UseBorisCorrection, &
+       UseBorisCorrection => UseBorisCorrection
+  use ModPhysics, ONLY: &
        ClightFactor => ClightFactor
   use BATL_lib, ONLY: &
        IsCartesian => IsCartesian, &
