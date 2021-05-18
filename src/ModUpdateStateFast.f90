@@ -1458,7 +1458,7 @@ contains
              else
                 CellVolume = CellVolume_GB(i,j,k,iBlock)
              end if
-             DtPerDv = Dt/(nStage*CellVolume)
+             DtPerDv = Dt*iStage/(nStage*CellVolume)
              ! For next time step
              if(.not.UseDtFixed .and. iStage==nStage) DtMax_CB(i,j,k,iBlock) &
                   = CellVolume/sum(Change_V(nFlux+1:nFlux+nDim))
