@@ -40,7 +40,7 @@ module ModAdvance
   integer, parameter :: BnL_ = Vdt_ + min(1, B_-U_)
   integer, parameter :: BnR_ = BnL_ + min(1, B_-U_)
 
-  integer, parameter :: nFaceValue = BnL_
+  integer, parameter :: nFaceValue = BnR_
 
   ! For momentum conserving scheme (for hybrid or multi-fluid) Mhd flux of
   ! momentum should be saved, the condition is UseB_ (B_-U_>0) and not
