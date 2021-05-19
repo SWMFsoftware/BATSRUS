@@ -22,7 +22,7 @@ contains
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux
+         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
@@ -96,10 +96,8 @@ contains
              ! and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
              call timing_start('calc_face_bfo')
-#ifndef OPENACC
              call calc_face_value(iBlock, DoResChangeOnly=.true., &
                   DoMonotoneRestrict = .true.)
-#endif
              call timing_stop('calc_face_bfo')
 
              if(body_BLK(iBlock)) &
@@ -131,22 +129,18 @@ contains
 
        endif
 
-       if(index(StringTest,'GPUUPDATE')>0)then
-          call update_state_gpu
-       elseif(index(StringTest,'CPUUPDATE')>0)then
+       select case(iTypeUpdate)
+       case(3)
           call update_state_cpu
-       elseif(index(StringTest,'GPUPRIM')>0)then
+       case(4)
+          call update_state_gpu
+       case(5)
+          call update_state_cpu_prim
+       case(6)
           call update_state_gpu_prim
-       elseif(index(StringTest,'CPUPRIM')>0)then
-          call update_state_cpu_prim
-       else
-#ifdef OPENACC
-          ! GPU compatible code
-          call update_state_cpu_prim
-#else
-          ! Multi-block solution update.
-          ! acc parallel
-          ! acc loop gang
+       case default
+#ifndef OPENACC
+          ! CPU compatible code
           !$omp parallel do
           do iBlock = 1,nBlock
 
@@ -237,9 +231,8 @@ contains
 
           end do ! Multi-block solution update loop.
           !$omp end parallel do
-          ! acc end  parallel
 #endif
-       end if
+       end select
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
 

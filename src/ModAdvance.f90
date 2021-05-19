@@ -24,8 +24,15 @@ module ModAdvance
   public :: init_mod_advance
   public :: clean_mod_advance
 
+  ! Update method
+  character(len=10):: TypeUpdate = 'orig'
+  integer:: iTypeUpdate = 1
+
+  ! This should be changed to false probably
+  logical:: UseDbTrick = .true., UseDbTrickNow = .true.
+
   ! Numerical flux type
-  character (len=10) :: FluxType
+  character(len=10) :: FluxType
 
   ! Total number of fluxes and sources: nVar state variables + nFluid energies
   integer, parameter:: nFlux = nVar + nFluid, nSource = nVar + nFluid

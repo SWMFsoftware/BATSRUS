@@ -131,7 +131,7 @@ contains
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
-         init_mod_boris_correction
+         UseBorisRegion, init_mod_boris_correction
 
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
@@ -143,12 +143,12 @@ contains
 
     use ModOptimizeParam, ONLY: check_optimize_param
 
-    character (len=17) :: NameSub='MH_set_parameters'
+    character(len=17) :: NameSub='MH_set_parameters'
 
     ! Arguments
 
     ! TypeAction determines if we read or check parameters
-    character (len=*), intent(in) :: TypeAction
+    character(len=*), intent(in) :: TypeAction
 
     ! Local variables
     integer :: iFile, i, iFluid
@@ -166,25 +166,25 @@ contains
     logical :: IsMirrorX,  IsMirrorY,  IsMirrorZ
 
     ! The name of the command
-    character (len=lStringLine) :: NameCommand, StringLine
+    character(len=lStringLine) :: NameCommand, StringLine
 
     ! Temporary variables
     logical :: DoEcho=.false.
     integer :: nVarEquationRead = 0
-    character (len=lStringLine) :: NameEquationRead="?"
+    character(len=lStringLine) :: NameEquationRead="?"
     logical :: IsReadNameVarRestart = .false.
     character(len=lStringLine) :: NameVarRestartRead  =''
     character(len=lStringLine) :: NameVarsRestartFrom =''
     character(len=lStringLine) :: NameVarsRestartTo   =''
     integer :: nVarRestartMappingFrom, nVarRestartMappingTo
 
-    character (len=50) :: plot_string,log_string, TypeCoordObs
-    character (len=3)  :: plot_area, plot_var
-    character (len=2)  :: NameCompRead="??"
+    character(len=50) :: plot_string,log_string, TypeCoordObs
+    character(len=3)  :: plot_area, plot_var
+    character(len=2)  :: NameCompRead="??"
     integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)=1
 
-    integer            :: TimingDepth=-1
-    character (len=10) :: TimingStyle='cumu'
+    integer           :: TimingDepth=-1
+    character(len=10) :: TimingStyle='cumu'
 
     ! Variables for checking/reading #STARTTIME command
     real(Real8_)       :: StartTimeCheck   = -1.0_Real8_
@@ -393,7 +393,7 @@ contains
        end if
 
        call init_mod_face_flux
-       if(DoConserveFlux)   call init_mod_cons_flux
+       if(DoConserveFlux) call init_mod_cons_flux
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
@@ -1535,7 +1535,7 @@ contains
           !    call sort_smooth_indicator
           ! endif
 
-          if(UseFDFaceFlux) DoConserveFlux   = .false.
+          if(UseFDFaceFlux) DoConserveFlux = .false.
 
           if(.not.UseHighResChange) then
              nOrderProlong  = 2
@@ -1622,8 +1622,8 @@ contains
           UseTvdResChange = .false.
           UseAccurateResChange = .false.
 
-       case("#COMPAREFASTUPDATE")
-          call read_var('DoCompareFastUpdate', DoCompareFastUpdate)
+       case("#UPDATE")
+          call read_var('TypeUpdate', TypeUpdate, IsLowerCase=.true.)
 
        case("#MESSAGEPASS","#OPTIMIZE")
           call read_var('TypeMessagePass', optimize_message_pass)
@@ -1675,6 +1675,9 @@ contains
        case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0")
           if(.not.is_first_session())CYCLE READPARAM
           call read_b0_param(NameCommand)
+
+       case("#DBTRICK")
+          call read_var('UseDbTrick', UseDbTrick)
 
        case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
             "#CMAXDIFFUSION")
@@ -3613,6 +3616,42 @@ contains
          DoPlotThreads = .false.; DoThreadRestart = .false.
       end if
 
+      select case(TypeUpdate)
+      case('slow')
+         iTypeUpdate = 2
+      case('fast', 'fast1', 'cpuupdate')
+         iTypeUpdate = 3
+      case('fast2', 'gpuupdate')
+         iTypeUpdate = 4
+      case('fast3', 'cpuprim')
+         iTypeUpdate = 5
+      case('fast4', 'gpuprim')
+         iTypeUpdate = 6
+      case default
+#ifdef OPENACC
+         iTypeUpdate = 3 ! Default for GPU
+#else
+         iTypeUpdate = 1 ! Default for CPU
+#endif
+      end select
+
+      if(iTypeUpdate > 1)then
+         ! These methods are not implemented in ModUpdateStateFast (yet)
+         ! If fast (or compatible slow) update is used at all, these are swiched off
+         UseDbTrick           = .false.
+         UseB0Source          = .false.
+         UseTvdResChange      = .false.
+         UseAccurateResChange = .false.
+         UseBorisRegion       = .false.
+         DoLimitMomentum      = .false.
+         DoConserveFlux       = .false.
+      end if
+
+      UseDbTrickNow = UseDbTrick
+      if(.not.IsMhd .or. (UseNonConservative .and. nConservCrit == 0) .or. &
+           (nStage == 1 .and. time_accurate) .or. .not.UseHalfStep) &
+           UseDbTrickNow = .false.
+      
       ! Update parameters on the GPU that are not done in the init_mod_* routines
 
       !$acc update device(MaxBlock)
@@ -4016,7 +4055,7 @@ contains
 
       DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(UseMultiIon)DoLimitMomentum = .false.
+      if(UseMultiIon .or. iTypeUpdate > 1)DoLimitMomentum = .false.
 
       ! Set default scalar parameters for plot files
       do iFile = plot_+1, plot_+nPlotFile

@@ -534,10 +534,7 @@ contains
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
 
-      if((.not.DoCompareFastUpdate) .and. IsMhd .and. &
-           (.not. (UseNonConservative .and. nConservCrit == 0)) .and. &
-           ((nStage==1.and..not.time_accurate) &
-           .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
+      if(UseDbTrickNow .and. .not.(nStage==2 .and. iStage==2)) then
 
          ! A desparate attempt to maintain positivity by adding dB^2/2 to the
          ! energy. This is fine for steady state, and is 2nd order accurate

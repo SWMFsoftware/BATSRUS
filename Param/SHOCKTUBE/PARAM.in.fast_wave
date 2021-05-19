@@ -1,8 +1,8 @@
 #DESCRIPTION
 Param/SHOCKTUBE/PARAM.in.fast_wave: fast wave propagation		StringDescription
 
-#TEST
-GPUUPDATE		StringTest
+#UPDATE
+GPUUPDATE		TypeUpdate
 
 #TIMING
 T			UseTiming
@@ -190,8 +190,8 @@ z=0 mhd idl_ascii		StringPlot
 
 #RUN ##########################################################################
 
-#TEST
-CPUUPDATE		StringTest
+#UPDATE
+CPUUPDATE		TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -199,8 +199,8 @@ CPUUPDATE		StringTest
 
 #RUN ##########################################################################
 
-#TEST
-GPUPRIM			StringTest
+#UPDATE
+GPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -208,8 +208,8 @@ GPUPRIM			StringTest
 
 #RUN ##########################################################################
 
-#TEST
-CPUPRIM			StringTest
+#UPDATE
+CPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -223,8 +223,8 @@ Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#TEST
-GPUUPDATE		StringTest
+#UPDATE
+GPUUPDATE		TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -232,8 +232,8 @@ GPUUPDATE		StringTest
 
 #RUN ##########################################################################
 
-#TEST
-CPUUPDATE		StringTest
+#UPDATE
+CPUUPDATE		TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -241,8 +241,8 @@ CPUUPDATE		StringTest
 
 #RUN ##########################################################################
 
-#TEST
-GPUPRIM			StringTest
+#UPDATE
+GPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -250,8 +250,8 @@ GPUPRIM			StringTest
 
 #RUN ##########################################################################
 
-#TEST
-CPUPRIM			StringTest
+#UPDATE
+CPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -265,8 +265,8 @@ Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#TEST
-GPUUPDATE		StringTest
+#UPDATE
+GPUUPDATE		TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -274,8 +274,8 @@ GPUUPDATE		StringTest
 
 #RUN ##########################################################################
 
-#TEST
-CPUUPDATE		StringTest
+#UPDATE
+CPUUPDATE		TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -283,8 +283,8 @@ CPUUPDATE		StringTest
 
 #RUN ##########################################################################
 
-#TEST
-GPUPRIM			StringTest
+#UPDATE
+GPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration
@@ -292,8 +292,8 @@ GPUPRIM			StringTest
 
 #RUN ##########################################################################
 
-#TEST
-CPUPRIM			StringTest
+#UPDATE
+CPUPRIM			TypeUpdate
 
 #STOP
 -1			MaxIteration

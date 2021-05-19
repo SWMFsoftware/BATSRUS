@@ -86,7 +86,7 @@ contains
     use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-    use ModAdvance,   ONLY: FluxType, UseEfield
+    use ModAdvance,   ONLY: FluxType, UseEfield, iTypeUpdate
     use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax, &
          nTrueCells, count_true_cells
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
@@ -241,6 +241,11 @@ contains
     call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
     call write_prefix; write(iUnitOut,*)'   ---------------------------------'
     call write_prefix; write(iUnitOut,*)
+
+    if(iTypeUpdate > 1)then
+       call write_prefix
+       write(iUnitOut,'(10X,a,i1)') 'iTypeUpdate=', iTypeUpdate
+    end if
 
     call write_prefix
     select case (nOrder)
