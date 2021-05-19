@@ -1848,8 +1848,7 @@ contains
        case('ux','uy','uz','uxrot','uyrot','uzrot','ur','clight')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
        case('divu')
-          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
-               *No2Io_V(UnitU_)/No2Io_V(UnitX_)
+          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)/No2Io_V(UnitT_)
        case('gradpex','gradpey','gradpez','gradper')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
                *No2Io_V(UnitP_)/No2Si_V(UnitX_)
