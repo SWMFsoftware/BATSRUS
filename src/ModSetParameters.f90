@@ -3651,7 +3651,7 @@ contains
       if(.not.IsMhd .or. (UseNonConservative .and. nConservCrit == 0) .or. &
            (nStage == 1 .and. time_accurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
-      
+
       ! Update parameters on the GPU that are not done in the init_mod_* routines
 
       !$acc update device(MaxBlock)
