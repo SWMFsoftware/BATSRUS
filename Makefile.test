@@ -31,6 +31,7 @@ test_help:
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_chromo                (run Chromo - Solar Corona test)"
+	@echo "    test_earth                 (run Cartesian Earth test)"	
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
 	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
@@ -49,7 +50,7 @@ test_help:
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test)"
 	@echo "    test_fast_wave             (run 3D fast wave test)"
-	@echo "    test_bx0		      (run 3D bx0 isosurface plot test)"
+	@echo "    test_bx0		      		  (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
@@ -97,6 +98,7 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
+	-@($(MAKE) test_earth TESTDIR=run_test_earth)	
 	./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
@@ -1675,6 +1677,43 @@ test_cometfluids_restart_check:
 		> test_cometfluids_restart.diff)
 	ls -l test_cometfluids*.diff
 
+### TESTS FOR MODELING EARTH WITH CARTESIAN GRID ###
+
+test_earth:
+	-@($(MAKE) test_earth_start)
+
+test_earth_start:
+	@echo "test_earth_compile..." > test_earth.diff
+	$(MAKE) test_earth_compile
+	@echo "test_earth_rundir..." >> test_earth.diff
+	$(MAKE) test_earth_rundir
+	@echo "test_earth_run..." >> test_earth.diff
+	$(MAKE) test_earth_run
+	@echo "test_earth_check..." >> test_earth.diff
+	$(MAKE) test_earth_check
+
+test_earth_compile:
+	./Config.pl -noopenmp ${OPENACC} -e=Mhd -u=Default -g=10,10,10
+	./Config.pl -opt=Param/EARTH/PARAM.in.GPU.dev
+	${MAKE} BATSRUS
+	make PIDL
+
+test_earth_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/EARTH/PARAM.in.GPU.dev PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_earth_run:
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
+
+test_earth_check:
+	-@(${DIFFNUM} -t -r=1e-6 -a=1e-11 \
+		${TESTDIR}/RESULTS/GM/y*131.out \
+		Param/EARTH/TestOutput/earth_cartesian_ref.out \
+		> test_earth.diff)
+	ls -l test_earth.diff
+	
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
 
 test_earthsph:

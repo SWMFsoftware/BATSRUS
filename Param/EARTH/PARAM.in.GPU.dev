@@ -1,16 +1,12 @@
-Configuration information:
-Number of cells in a block  : nI=8, nJ=8, nK=8
-Number of ghost cell layers : nG=2
-UserModule = Default: DEFAULT EMPTY ROUTINES, ver 1.0
-Equation		= Mhd: MHD
+#DESCRIPTION
+Param/EARTH/PARAM.in.GPU.dev: Earth simulation with Cartesian grid		StringDescription
 
+#UPDATE
+cpuupdate		TypeUpdate
 
-#TEST
-CPUUPDATE		StringTest
-
-! Turns off some tricks that have not been implemented for fast updates
-#COMPAREFASTUPDATE
-T
+! Use 'slow' so that the original updat method matches the fast update methods
+UPDATE
+slow			TypeUpdate
 
 #CONSERVEFLUX
 F			DoConserveFlux
@@ -59,12 +55,12 @@ all			StringShape
 #GRIDRESOLUTION
 1.0			Resolution
 box			StringShape
- -20.0			xMinBox
- -16.0			yMinBox
- -16.0			zMinBox
-  20.0			xMaxBox
-  16.0			yMaxBox
-  16.0			zMaxBox
+ -5.0			xMinBox
+ -20.0			yMinBox
+ -10.0			zMinBox
+  5.0			xMaxBox
+  20.0			yMaxBox
+  10.0			zMaxBox
 
 #GRIDRESOLUTION
 1./4			Resolution
@@ -73,7 +69,7 @@ shell0			StringShape
 3.5			Radius
 
 #GRIDBLOCKALL
-500			MaxBlock (for the whole simulation)
+600			MaxBlock (for the whole simulation)
 
 
 #MAGNETOSPHERE
@@ -123,24 +119,24 @@ T			UseDtFixed
 
 #SAVEPLOT
 3			nPlotFile
-x=0 VAR idl_real8		StringPlot
-1			DnSavePlot
--0.1			DtSavePlot
+x=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+1			DtSavePlot
 -1.			DxSavePlot
 {MHD}			NameVars
-g rbody			NamePars
-y=0 VAR idl_real8		StringPlot
-1			DnSavePlot
--0.1			DtSavePlot
+{default}		NamePars
+y=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+1			DtSavePlot
 -1			DxSavePlot
-{MHD}			NameVars
-g rbody			NamePars
-z=0 VAR idl_real8		StringPlot
-1			DnSavePlot
--0.1			DtSavePlot
+rho p bx ux			NameVars
+{default}		NamePars
+z=0 var idl_ascii		StringPlot
+-1			DnSavePlot
+1			DtSavePlot
 -1.			DxSavePlot
 {MHD}  			NameVars
-g rbody			NamePars
+{default}		NamePars
 
 
 #SAVEINITIAL
@@ -153,6 +149,6 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #STOP
-20			MaxIteration
--1.			tSimulationMax
+-1			MaxIteration
+1.0			tSimulationMax
 
