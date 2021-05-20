@@ -24,7 +24,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor, &
-       calc_corotation_velocity
+       calc_corotation_velocity, UseRhoMin, UsePMin, RhoMin_I, pMin_I
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, UseRotatingBc
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
@@ -241,6 +241,15 @@ contains
           ! local private arrays...
           if(UseBorisCorrection) call boris_to_mhd( &
                State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
+          ! Check minimum density
+          if(UseRhoMin)then
+             do iFluid = 1, nFluid
+                if(RhoMin_I(iFluid) < 0) CYCLE
+                State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+                     State_VGB(iRho_I(iFluid),i,j,k,iBlock))
+             end do
+          end if
 
           ! Convert energy back to pressure
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &

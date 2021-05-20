@@ -169,7 +169,9 @@ module ModPhysics
   real :: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
   real :: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
-
+  logical :: UseRhoMin, UsePMin
+  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+  
   ! Minimum threshold for radial velocity
   real :: SpeedMinDim, SpeedMin, rSpeedMin
   real :: TauSpeedMinDim, TauSpeedMin
@@ -675,6 +677,8 @@ contains
     TMin_I       = TMinDim_I*Io2No_V(UnitTemperature_)
     TeMin        = TeMinDim*Io2No_V(UnitTemperature_)
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
+    UseRhoMin    = any(RhoMin_I > 0.0)
+    UsePMin      = any(pMin_I > 0.0)
 
     ! Minimum value for radial speed
     if(UseSpeedMin)then
@@ -728,6 +732,7 @@ contains
     !$acc update device(CellState_VI)
     !$acc update device(FaceState_VI)
 
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================
