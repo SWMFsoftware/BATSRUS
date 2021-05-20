@@ -2,17 +2,11 @@
 Param/EARTH/PARAM.in.GPU.dev: Earth simulation with Cartesian grid		StringDescription
 
 #UPDATE
-cpuupdate		TypeUpdate
+fast			TypeUpdate
 
 ! Use 'slow' so that the original updat method matches the fast update methods
 UPDATE
 slow			TypeUpdate
-
-#CONSERVEFLUX
-F			DoConserveFlux
-
-#DIVBSOURCE
-F			UseB0Source
 
 #ROTATION
 F			UseRotation
