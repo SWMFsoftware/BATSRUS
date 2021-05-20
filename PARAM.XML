@@ -7282,12 +7282,17 @@ Default is true.
 F			UseDbTrick
   
 This "trick" tries to maintain positivity when the conservative
-MHD energy equation is used by adding the 0.5*dB^2 to the
-energy density either at the half step (2-stage scheme) or in the local
-time stepping scheme. In steady state the correction is zero,
-for 2-stage scheme, the correction is O(dt^2), so consistent.
+MHD energy equation is used by adding $dB^2/2$ to the
+energy density where dB is the change of the magnetic field relative to the
+previous time step. This trick is done either at the half step of
+the time accurate 2-stage scheme or in the (1 or 2-stage) local time
+stepping scheme. In steady state the correction is zero becasuse dB=0.
+For the time-accurate 2-stage scheme, the correction done at the
+half step is $O(dt^2)$ because dB is proportional to the time step,
+so the trick is consistent and still second order accurate.
 
-Default is true if the trick is compatible with other settings.
+Default is true if the trick is compatible with other settings. In particular,
+the trick is switched off for Runge-Kutta schemes.
 </command>
 
 <command name="HYPERBOLICDIVB">
