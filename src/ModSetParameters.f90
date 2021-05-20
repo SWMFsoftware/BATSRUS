@@ -3639,7 +3639,7 @@ contains
          ! These methods are not implemented in ModUpdateStateFast (yet)
          ! If fast (or compatible slow) update is used at all,
          ! the following features are swiched off
-         
+
          UseDbTrick           = .false.
          UseB0Source          = .false.
          UseTvdResChange      = .false.
