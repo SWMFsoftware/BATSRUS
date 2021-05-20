@@ -123,7 +123,7 @@ y=0 var idl_ascii		StringPlot
 -1			DnSavePlot
 1			DtSavePlot
 -1			DxSavePlot
-rho p bx ux			NameVars
+rho p bx ux		NameVars
 {default}		NamePars
 z=0 var idl_ascii		StringPlot
 -1			DnSavePlot
