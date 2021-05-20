@@ -339,7 +339,7 @@ test_fast_wave_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_fast_wave_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe | tee runlog
 	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
 
 test_fast_wave_check:
