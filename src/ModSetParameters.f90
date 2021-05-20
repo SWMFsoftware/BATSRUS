@@ -3510,6 +3510,13 @@ contains
          UseRotatingFrame = .true.
       end if
 
+      ! Get the integer representation of the coordinate system
+      do i = 1, nCoordSystem
+         if(TypeCoordSystem == trim(NameCoordSystem_I(i))) then
+            TypeCoordSystemInt = i
+         endif
+      end do
+      
       ! Update check does not work with Runge-Kutta explicit schemes
       ! because the final update is a linear combination of all stages.
       if(.not.UseHalfStep .and. .not.UseImplicit) UseUpdateCheck = .false.
@@ -3688,6 +3695,9 @@ contains
 
       !$acc update device(Body1)
 
+      !$acc update device(UseRotatingBc)
+
+      !$acc update device(TypeCoordSystemInt)
     end subroutine correct_parameters
     !==========================================================================
 

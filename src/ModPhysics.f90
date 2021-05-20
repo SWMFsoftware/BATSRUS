@@ -1216,7 +1216,8 @@ contains
 
     use CON_axes,          ONLY: get_axes
     use ModCoordTransform, ONLY: cross_product
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain,           ONLY: Time_Simulation, &
+         TypeCoordSystemInt, HGI_, GSE_, GSM_
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: uRot_D(3)
@@ -1227,17 +1228,17 @@ contains
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
     !--------------------------------------------------------------------------
-    select case(TypeCoordSystem)
-    case('HGI')
+    select case(TypeCoordSystemInt)
+    case(HGI_)
        ! In the HGI system the Solar angular velocity vector points towards +Z
        Omega_D = [ 0., 0., OmegaBody ]
-    case('GSE')
+    case(GSE_)
        if(IsUninitialized)then
           call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
           Omega_D = OmegaBody * Omega_D
           IsUninitialized = .false.
        end if
-    case('GSM')
+    case(GSM_)
        ! GSM system, Omega_D may be changing
        call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
        Omega_D = OmegaBody*Omega_D

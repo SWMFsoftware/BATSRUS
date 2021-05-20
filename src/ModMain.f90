@@ -225,9 +225,16 @@ module ModMain
 
   ! Logical for rotating inner boundary
   logical          :: UseRotatingBc = .false.
+  !$acc declare create(UseRotatingBC)
 
   ! Coordinate system
   character(len=3) :: TypeCoordSystem = 'GSM'
+  integer :: TypeCoordSystemInt
+  integer,  parameter:: &
+       GSM_ = 1, GSE_ = 2, HGR_ = 3, HGI_ = 4, HGC_ = 5, nCoordSystem = 5
+  character(len=3), public, parameter :: NameCoordSystem_I(1:nCoordSystem) = &
+       ['GSM', 'GSE', 'HGR', 'HGI', 'HGC']
+  !$acc declare create(TypeCoordSystemInt)
 
   ! Rotating frame or (at least approximately) inertial frame
   logical :: UseRotatingFrame = .false.
