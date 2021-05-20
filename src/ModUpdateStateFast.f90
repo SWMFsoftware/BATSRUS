@@ -215,7 +215,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              if(UseBorisCorrection) call mhd_to_boris( &
                   State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -227,7 +229,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              if(UseBorisCorrection) call mhd_to_boris( &
                   StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
@@ -1708,7 +1712,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1716,7 +1722,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1809,7 +1817,7 @@ contains
 
     ! optimal for GPU, store primitive variables
 
-    integer:: i, j, k, iBlock, iGang
+    integer:: i, j, k, iBlock, iGang, iFluid
     logical:: IsConserv
 
     ! nDim extra elements for time step control
@@ -1884,7 +1892,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
@@ -1892,7 +1902,9 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite old pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_V(iP_I) = Change_V(Energy_:nFlux)
+                do iFluid=1, nFluid
+                   Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
+                end do
              end if
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
