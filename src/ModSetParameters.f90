@@ -3637,7 +3637,9 @@ contains
 
       if(iTypeUpdate > 1)then
          ! These methods are not implemented in ModUpdateStateFast (yet)
-         ! If fast (or compatible slow) update is used at all, these are swiched off
+         ! If fast (or compatible slow) update is used at all,
+         ! the following features are swiched off
+         
          UseDbTrick           = .false.
          UseB0Source          = .false.
          UseTvdResChange      = .false.
@@ -3645,6 +3647,7 @@ contains
          UseBorisRegion       = .false.
          DoLimitMomentum      = .false.
          DoConserveFlux       = .false.
+
       end if
 
       UseDbTrickNow = UseDbTrick
@@ -3652,7 +3655,7 @@ contains
            (nStage == 1 .and. time_accurate) .or. .not.UseHalfStep) &
            UseDbTrickNow = .false.
 
-      ! Update parameters on the GPU that are not done in the init_mod_* routines
+      ! Update parameters on the GPU that are not done by init_mod_* routines
 
       !$acc update device(MaxBlock)
       !$acc update device(nOrder, nStage, nOrderProlong)
@@ -3684,6 +3687,7 @@ contains
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
 
       !$acc update device(Body1)
+
     end subroutine correct_parameters
     !==========================================================================
 

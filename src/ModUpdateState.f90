@@ -534,7 +534,8 @@ contains
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
 
-      if(UseDbTrickNow .and. .not.(nStage==2 .and. iStage==2)) then
+      if(UseDbTrickNow .and. (nStage==2 .and. iStage==1 &
+           .or.               nStage==1 .and. .not.time_accurate)) then
 
          ! A desparate attempt to maintain positivity by adding dB^2/2 to the
          ! energy. This is fine for steady state, and is 2nd order accurate
