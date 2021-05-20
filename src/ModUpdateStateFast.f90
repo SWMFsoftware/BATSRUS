@@ -23,8 +23,9 @@ module ModUpdateStateFast
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
-       C2light, InvClight, InvClight2, ClightFactor
-  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
+       C2light, InvClight, InvClight2, ClightFactor, &
+       calc_corotation_velocity
+  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, UseRotatingBc
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
@@ -596,6 +597,8 @@ contains
     real, intent(out)  :: VarsGhostFace_V(nVar)
     real, intent(in)   :: FaceCoords_D(3)
 
+    real:: uRot_D(3)
+    
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
 
@@ -634,6 +637,18 @@ contains
        VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
     endif
+
+    
+    if (UseRotatingBc) then
+       ! Calculate corotation velocity uRot_D at position FaceCoords
+       call calc_corotation_velocity(FaceCoords_D, uRot_D)
+
+       ! Apply corotation for the following BC:  'reflect','linetied', &
+       ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
+       VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iUz_I)
+    end if
 
   end subroutine set_face
   !============================================================================
