@@ -1526,7 +1526,22 @@ contains
          + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
 
   end subroutine mhd_to_boris
-  !============================================================================
+  !============================================================================  
+  subroutine limit_pressure(State_V)
+    !$acc routine seq
+    real, intent(inout):: State_V(nVar)
+
+    integer:: iFluid
+    !--------------------------------------------------------------------------
+    if(.not. UsePMin) RETURN
+    
+    do iFluid = 1, nFluid
+       if(pMin_I(iFluid) < 0.0) CYCLE
+       State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
+    end do
+    
+  end subroutine limit_pressure
+  !============================================================================ 
   subroutine energy_to_pressure(State_V)
     !$acc routine seq
 
@@ -1548,6 +1563,7 @@ contains
             + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
     end if
 
+    call limit_pressure(State_V)
   end subroutine energy_to_pressure
   !============================================================================
   subroutine pressure_to_energy(State_V)
@@ -1557,6 +1573,8 @@ contains
     real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
 
+    call limit_pressure(State_V)
+    
     ! Calculate hydro energy density
     if(nFluid == 1)then
        State_V(p_) = State_V(p_)*InvGammaMinus1 &
