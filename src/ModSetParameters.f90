@@ -472,8 +472,7 @@ contains
           call timing_report_style(TimingStyle)
        end if
 
-       if(index(StringTest,'PUUPDATE')>0 .or. index(StringTest,'PUPRIM')>0 &
-            .and. iProc == 0) call check_optimize_param
+       if(iTypeUpdate > 1 .and. iProc == 0) call check_optimize_param
 
        IsFirstSession = .false.
 
