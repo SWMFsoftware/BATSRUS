@@ -20,11 +20,11 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor
-  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_
+  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, nStep => n_step
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
@@ -55,6 +55,10 @@ contains
     real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
+#ifndef OPENACC
+    integer:: iVar
+#endif
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
@@ -71,12 +75,32 @@ contains
        iGang = 1
 #endif
 
+#ifndef OPENACC
+       if(DoTest .and. iBlock==iBlockTest)then
+          write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
+               ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
+          if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
+               IsConserv_CB(iTest,jTest,kTest,iBlock)
+          write(*,*)
+          do iVar=1,nVar
+             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          end do
+       end if
+#endif
+
+       
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+#ifndef OPENACC
+          DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
+               .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
+               .and. (iDimTest == 0 .or. iDimTest == 1)
+#endif
           if(UseBody .and. IsBodyBlock) then
              if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
                   .not. Used_GB(i,j,k,iBlock)) then
@@ -91,6 +115,11 @@ contains
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+#ifndef OPENACC
+             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                  .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
+                  .and. (iDimTest == 0 .or. iDimTest == 2)
+#endif
              if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
@@ -105,6 +134,11 @@ contains
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+#ifndef OPENACC
+             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                  .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
+                  .and. (iDimTest == 0 .or. iDimTest == 3)
+#endif
              if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
@@ -250,14 +284,46 @@ contains
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
-          if(DoTestCell)then
-             write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-             write(*,*)'Change_V  =', Change_V
-             write(*,*)'DtPerDv   =', DtPerDv
-          end if
+          !if(DoTestCell)then
+          !write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+          !     write(*,*)'Change_V  =', Change_V
+          !    write(*,*)'DtPerDv   =', DtPerDv
+          !end if
 #endif
 
        enddo; enddo; enddo
+
+#ifndef OPENACC
+       if(DoTest .and. iBlock==iBlockTest)then
+          write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
+          write(*,'(2x,a,2es23.15)') &
+               'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
+               Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+          write(*,'(2x,a,2es23.15)') &
+               'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang) ,&
+               Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+          write(*,'(2x,a,2es23.15)') &
+               'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
+               Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+          !write(*,'(2x,a,es23.15)')'source=',&
+          !     Change_VC(iVarTest,iTest,jTest,kTest)
+          write(*,'(2x,a,es23.15)')'fluxes=', &
+               +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+               -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
+               +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+               -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
+               +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+               -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
+               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+          write(*,*)
+          write(*,*)NameSub,'final for nStep=', nStep
+          do iVar=1,nVar
+             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          end do
+          write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
+       end if
+#endif
 
        if(IsTimeAccurate .and. .not.UseDtFixed) call calc_timestep(iBlock)
 
@@ -1102,6 +1168,20 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
+#ifndef OPENACC
+    if(DoTestCell)then
+       write(*,*) ' InvRho, p      =', InvRho, p
+       write(*,*) ' FullB, FullBn  =', FullB_D, FullBn
+       write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2
+       write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2
+       write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
+            Sound2Boris, Alfven2Boris, Alfven2NormalBoris
+       write(*,*) ' Fast2, Discr   =', Fast2, Discr
+       write(*,*) ' Fast, Slow     =', Fast, Slow
+       write(*,*) ' Un, UnBoris    =', Un, UnBoris
+    end if
+#endif
+
   end subroutine get_boris_speed
   !============================================================================
   subroutine get_normal(iDir, i, j, k, iBlock, Normal_D, Area)
@@ -1620,10 +1700,10 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-
-          ! DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
-          !     j == jTest .and. k == kTest .and. iBlock == iBlockTest
-
+#ifndef OPENACC
+          DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
+               j == jTest .and. k == kTest .and. iBlock == iBlockTest
+#endif
           call get_flux_x_prim(i, j, k, iBlock, Flux_VXI(:,i,j,k,iGang))
 
        end do; end do; end do
@@ -1631,10 +1711,10 @@ contains
        if(nDim > 1)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-
-             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
-             !     .and. (j==jTest .or. j==jTest+1) .and. k==kTest
-
+#ifndef OPENACC
+             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                  .and. (j==jTest .or. j==jTest+1) .and. k==kTest
+#endif
              call get_flux_y_prim(i, j, k, iBlock, Flux_VYI(:,i,j,k,iGang))
 
           end do; end do; end do
@@ -1643,10 +1723,10 @@ contains
        if(nDim > 2)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-
-             ! DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
-             !     .and. j==jTest .and. (k==kTest .or. k==kTest+1)
-
+#ifndef OPENACC
+             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                  .and. j==jTest .and. (k==kTest .or. k==kTest+1)
+#endif
              call get_flux_z_prim(i, j, k, iBlock, Flux_VZI(:,i,j,k,iGang))
 
           end do; end do; end do
