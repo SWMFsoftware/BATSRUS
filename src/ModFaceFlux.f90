@@ -4245,6 +4245,18 @@ contains
          if(present(Cright_I)) Cright_I(1) = max(UnBoris + Fast, Un + Slow)
       end if
 
+      if(DoTestCell)then
+         write(*,*) ' InvRho, p      =', InvRho, p
+         write(*,*) ' FullB, FullBn  =', FullBx, FullBy, FullBz, FullBn
+         write(*,*) ' Sound2,Alfven2 =', Sound2, Alfven2
+         write(*,*) ' GammaA2,GammaU2=', GammaA2, GammaU2
+         write(*,*) ' Sound2Boris,Alfven2Boris,Normal=', &
+              Sound2Boris, Alfven2Boris, Alfven2NormalBoris
+         write(*,*) ' Fast2, Discr   =', Fast2, Discr
+         write(*,*) ' Fast, Slow     =', Fast, Slow
+         write(*,*) ' Un, UnBoris    =', Un, UnBoris
+      end if
+      
     end subroutine get_boris_speed
     !==========================================================================
 
