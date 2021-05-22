@@ -4062,7 +4062,7 @@ contains
          if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
          DoLimitMomentum = .false.
       end if
-      
+
       ! Set default scalar parameters for plot files
       do iFile = plot_+1, plot_+nPlotFile
          l = index(plot_pars(iFile), '{default}')

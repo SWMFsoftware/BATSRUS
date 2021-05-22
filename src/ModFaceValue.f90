@@ -2834,7 +2834,7 @@ contains
                 if(nDim > 1)then
                    call block_inside_regions(iRegionLowOrder_I, iBlock, &
                         size(LowOrderCrit_Y), 'yface', Value_I=LowOrderCrit_Y)
-                   ! Use low order if the face is inside the low order region 
+                   ! Use low order if the face is inside the low order region
                    ! OR satisfies the physical condition.
                    LowOrderCrit_YB(:,:,:,iBlock) = &
                         max(LowOrderCrit_Y,LowOrderCrit_YB(:,:,:,iBlock))
@@ -2892,8 +2892,7 @@ contains
       real:: State_VI(nVar,-3:2)
 
       logical:: DoTest
-      character(len=*), parameter:: &
-           NameSub = 'set_physics_based_low_order_face'
+      character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
       !------------------------------------------------------------------------
       call test_start(NameSub, DoTest)
 

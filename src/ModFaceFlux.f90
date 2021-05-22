@@ -4261,7 +4261,7 @@ contains
          write(*,*) ' Fast, Slow     =', Fast, Slow
          write(*,*) ' Un, UnBoris    =', Un, UnBoris
       end if
-      
+
     end subroutine get_boris_speed
     !==========================================================================
 

@@ -78,7 +78,7 @@ contains
 #else
        iGang = 1
 #endif
-       
+
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
@@ -286,11 +286,11 @@ contains
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
-          !if(DoTestCell)then
-          !write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
+          ! if(DoTestCell)then
+          ! write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
           !     write(*,*)'Change_V  =', Change_V
           !    write(*,*)'DtPerDv   =', DtPerDv
-          !end if
+          ! end if
 #endif
 
        enddo; enddo; enddo
@@ -307,7 +307,7 @@ contains
           write(*,'(2x,a,2es23.15)') &
                'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
                Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-          !write(*,'(2x,a,es23.15)')'source=',&
+          ! write(*,'(2x,a,es23.15)')'source=',&
           !     Change_VC(iVarTest,iTest,jTest,kTest)
           write(*,'(2x,a,es23.15)')'fluxes=', &
                +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
@@ -935,7 +935,7 @@ contains
     if(UseB0) FullB_D = FullB_D + B0_D
     Bn      = sum(State_V(Bx_:Bz_)*Normal_D)
     FullBn  = sum(FullB_D*Normal_D)
-    
+
     ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
     ! anisotropic Pe, Peperp contributes
     ! if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -1446,7 +1446,7 @@ contains
        call get_physical_flux(StateRight_V, Normal_D, &
             StateRightCons_V, FluxRight_V, B0_D)
 
-       ! Lax-Friedrichs flux       
+       ! Lax-Friedrichs flux
        Flux_V(1:nFlux) = &
             Area*0.5* (FluxLeft_V(1:nFlux) + FluxRight_V(1:nFlux) &
             +          Cmax*(StateLeftCons_V - StateRightCons_V))
@@ -1595,7 +1595,7 @@ contains
        end do
     end if
 #endif
-    
+
   end subroutine get_numerical_flux
   !============================================================================
   subroutine boris_to_mhd(State_V, B0_D, IsConserv)
