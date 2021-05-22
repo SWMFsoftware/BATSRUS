@@ -20,7 +20,8 @@ module ModUpdateStateFast
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, &
+       test_start, test_stop
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor
@@ -74,21 +75,6 @@ contains
 #else
        iGang = 1
 #endif
-
-#ifndef OPENACC
-       if(DoTest .and. iBlock==iBlockTest)then
-          write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
-               ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
-          if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
-               IsConserv_CB(iTest,jTest,kTest,iBlock)
-          write(*,*)
-          do iVar=1,nVar
-             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-          end do
-       end if
-#endif
-
        
        if(iStage == 1 .and. nStage == 2) call set_old_state(iBlock)
 
@@ -154,6 +140,19 @@ contains
        if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
 
        ! Update
+#ifndef OPENACC
+       if(DoTest .and. iBlock==iBlockTest)then
+          write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
+               ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
+          if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
+               IsConserv_CB(iTest,jTest,kTest,iBlock)
+          write(*,*)
+          do iVar=1,nVar
+             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+          end do
+       end if
+#endif
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
@@ -389,11 +388,12 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifdef OPENACC
+#ifndef OPENACC
+    integer:: iVar
     !--------------------------------------------------------------------------
-    iGang = iBlock
-#else
     iGang = 1
+#else
+    iGang = iBlock
 #endif
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
@@ -415,6 +415,20 @@ contains
        endif
     endif
 
+#ifndef OPENACC
+    if(DoTestCell)then
+       write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       do iVar = 1, nVar
+          write(*,'(2a,2(1pe13.5))')NameVar_V(iVar),'=',&
+               StateLeft_V(iVar), StateRight_V(iVar)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13)')'B0x:', B0_D(1)
+          write(*,'(a,1pe13.5,a13)')'B0y:', B0_D(2)
+          write(*,'(a,1pe13.5,a13)')'B0z:', B0_D(3)
+       end if
+    end if
+#endif
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VXI(:,i,j,k,iGang), B0_D)
 
@@ -429,11 +443,12 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifdef OPENACC
+#ifndef OPENACC
+    integer:: iVar
     !--------------------------------------------------------------------------
-    iGang = iBlock
-#else
     iGang = 1
+#else
+    iGang = iBlock
 #endif
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
@@ -455,6 +470,20 @@ contains
        endif
     endif
 
+#ifndef OPENACC
+    if(DoTestCell)then
+       write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       do iVar = 1, nVar
+          write(*,'(2a,2(1pe13.5))')NameVar_V(iVar),'=',&
+               StateLeft_V(iVar), StateRight_V(iVar)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13)')'B0x:', B0_D(1)
+          write(*,'(a,1pe13.5,a13)')'B0y:', B0_D(2)
+          write(*,'(a,1pe13.5,a13)')'B0z:', B0_D(3)
+       end if
+    end if
+#endif
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VYI(:,i,j,k,iGang), B0_D)
 
@@ -469,11 +498,12 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifdef OPENACC
+#ifndef OPENACC
+    integer:: iVar
     !--------------------------------------------------------------------------
-    iGang = iBlock
-#else
     iGang = 1
+#else
+    iGang = iBlock
 #endif
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
 
@@ -495,6 +525,20 @@ contains
        endif
     endif
 
+#ifndef OPENACC
+    if(DoTestCell)then
+       write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       do iVar = 1, nVar
+          write(*,'(2a,2(1pe13.5))')NameVar_V(iVar),'=',&
+               StateLeft_V(iVar), StateRight_V(iVar)
+       end do
+       if(UseB0)then
+          write(*,'(a,1pe13.5,a13)')'B0x:', B0_D(1)
+          write(*,'(a,1pe13.5,a13)')'B0y:', B0_D(2)
+          write(*,'(a,1pe13.5,a13)')'B0z:', B0_D(3)
+       end if
+    end if
+#endif
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_VZI(:,i,j,k,iGang), B0_D)
 
@@ -885,7 +929,9 @@ contains
     p       = State_V(p_)
     FullB_D = State_V(Bx_:Bz_)
     if(UseB0) FullB_D = FullB_D + B0_D
-
+    Bn      = sum(State_V(Bx_:Bz_)*Normal_D)
+    FullBn  = sum(FullB_D*Normal_D)
+    
     ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
     ! anisotropic Pe, Peperp contributes
     ! if (UseElectronPressure .and. .not. UseAnisoPe) then
@@ -930,6 +976,8 @@ contains
     ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
     uDotB   = sum(u_D*FullB_D)
     FullB2  = sum(FullB_D**2)
+
+    StateCons_V(1:nVar) = State_V
     StateCons_V(RhoUx_:RhoUz_)  = &
          Rho*u_D + (u_D*FullB2 - FullB_D*uDotB)*InvClight2
 
@@ -1377,6 +1425,10 @@ contains
     real :: Cleft, Cright, Cmax, Un, DiffBn, CleftAverage, CrightAverage
 
     real :: AreaInvCdiff, Cproduct, Bn
+
+#ifndef OPENACC
+    integer:: iVar
+#endif
     !--------------------------------------------------------------------------
     if(DoLf)then
        ! Rusanov scheme
@@ -1390,7 +1442,7 @@ contains
        call get_physical_flux(StateRight_V, Normal_D, &
             StateRightCons_V, FluxRight_V, B0_D)
 
-       ! Lax-Friedrichs flux
+       ! Lax-Friedrichs flux       
        Flux_V(1:nFlux) = &
             Area*0.5* (FluxLeft_V(1:nFlux) + FluxRight_V(1:nFlux) &
             +          Cmax*(StateLeftCons_V - StateRightCons_V))
@@ -1507,6 +1559,38 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
+#ifndef OPENACC
+    if(DoTestCell)then
+       write(*,'(1x,a,3es13.5)')'Hat state for Normal_D=',Normal_D
+       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
+       write(*,*)'Un =',Un
+       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
+       if(UseB)then
+          if(UseB0)then
+             write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
+                  +                 StateRight_V(Bx_:Bz_)) + B0_D
+          else
+             write(*,*)'B  =', 0.5*(StateLeft_V(Bx_:Bz_) &
+                  +                 StateRight_V(Bx_:Bz_))
+          end if
+          write(*,*)'BB =', &
+               sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)))**2)
+       end if
+       write(*,'(a,es13.5)') 'Area=', Area
+       write(*,*)'Eigenvalue_maxabs=', Cmax
+       write(*,*)'CmaxDt           =', Cmax
+       do iVar = 1, nFlux
+          write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
+               NameVar_V(iVar),&
+               Flux_V(iVar), &
+               FluxLeft_V(iVar)*Area, &
+               FluxRight_V(iVar)*Area,&
+               StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+               0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
+       end do
+    end if
+#endif
+    
   end subroutine get_numerical_flux
   !============================================================================
   subroutine boris_to_mhd(State_V, B0_D, IsConserv)
