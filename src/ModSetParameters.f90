@@ -116,7 +116,7 @@ contains
     use ModPIC, ONLY: pic_read_param
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
          ion_electron_init_point_impl
-    use ModFaceBoundary, ONLY: read_face_boundary_param
+    use ModFaceBoundary, ONLY: read_face_boundary_param, B1rCoef
     ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: read_magnetogram_param
@@ -3685,7 +3685,7 @@ contains
       !$acc update device(Gamma_I, GammaMinus1_I, InvGammaMinus1_I)
       !$acc update device(Gamma, GammaMinus1, InvGammaMinus1)
 
-      !$acc update device(Body1)
+      !$acc update device(Body1, B1rCoef)
 
     end subroutine correct_parameters
     !==========================================================================

@@ -27,6 +27,10 @@ module ModFaceBoundary
   public :: set_face_boundary
   public :: read_face_boundary_param
 
+  ! Set B1_radial_ghost = B1rCoef * B1_radial_true at the inner boundary
+  real, public:: B1rCoef = -1.0
+  !$acc declare create( B1rCoef )
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -34,9 +38,6 @@ module ModFaceBoundary
 
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
-
-  ! Set B1_radial_ghost = B1rCoef * B1_radial_true at the inner boundary
-  real:: B1rCoef = -1.0
 
   ! The lower bound of pe/p at inner boundary when the electron
   ! pressure equation is used.
@@ -101,6 +102,7 @@ contains
 
     case("#MAGNETICINNERBOUNDARY")
        call read_var('B1rCoef', B1rCoef)
+
     case default
        call stop_mpi(NameSub//': unknown command = '//NameCommand)
     end select
