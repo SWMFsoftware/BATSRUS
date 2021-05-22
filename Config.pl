@@ -178,7 +178,8 @@ sub check_var{
     return if $oldvalue eq "any"; # already adjustable
 
     $newvalue =~ s/^\s+//;        # remove leading space
-    $newvalue =~ s/\s+.*\n//;     # remove comment
+    $newvalue =~ s/\s+.*//;       # remove comment
+    $newvalue =~ s/\n//;          # remove newline
     $newvalue =~ s/^T$/.true./;   # logical true
     $newvalue =~ s/^F$/.false./;  # logical false
 
