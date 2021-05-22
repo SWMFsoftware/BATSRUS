@@ -556,7 +556,8 @@ contains
          call set_cell_values_x
 
          DoTestCell = DoTest .and. (iFace == iTest .or. iFace == iTest+1) &
-              .and. jFace == jTest .and. kFace == kTest
+              .and. jFace == jTest .and. kFace == kTest &
+              .and. (iDimTest == 0 .or. iDimTest == 1)
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -655,7 +656,8 @@ contains
          call set_cell_values_y
 
          DoTestCell = DoTest .and. iFace == iTest .and. &
-              (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
+              (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest &
+              .and. (iDimTest == 0 .or. iDimTest == 2)
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -755,7 +757,8 @@ contains
          call set_cell_values_z
 
          DoTestCell = DoTest .and. iFace == iTest .and. &
-              jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+              jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1) &
+              .and. (iDimTest == 0 .or. iDimTest == 3)
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
               .not. true_cell(iRight,jRight,kRight,iBlock)) then
@@ -3688,6 +3691,8 @@ contains
     subroutine write_test_info
       integer :: iVar
       !------------------------------------------------------------------------
+      if(iDimFace /= iDimTest .and. iDimTest /= 0) RETURN
+
       write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
