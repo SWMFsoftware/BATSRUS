@@ -64,7 +64,10 @@ contains
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
+    if(DoTest)then
+       write(*,*)'==========================================================='
+       write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
+    end if
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -329,6 +332,7 @@ contains
     end do
     !$acc end parallel
 
+    if(DoTest)write(*,*)'==========================================================='
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine update_state_cpu
@@ -417,7 +421,7 @@ contains
 
 #ifndef OPENACC
     if(DoTestCell)then
-       write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
           write(*,'(2a,2(1pe13.5))')NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar)
@@ -472,7 +476,7 @@ contains
 
 #ifndef OPENACC
     if(DoTestCell)then
-       write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
+       write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
           write(*,'(2a,2(1pe13.5))')NameVar_V(iVar),'=',&
                StateLeft_V(iVar), StateRight_V(iVar)
@@ -1576,6 +1580,7 @@ contains
           write(*,*)'BB =', &
                sum((0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)))**2)
        end if
+       write(*,*)
        write(*,'(a,es13.5)') 'Area=', Area
        write(*,*)'Eigenvalue_maxabs=', Cmax
        write(*,*)'CmaxDt           =', Cmax
