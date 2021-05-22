@@ -11,6 +11,7 @@ module ModUpdateStateFast
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
        UseBody, UseBorisCorrection
+  use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
@@ -707,13 +708,13 @@ contains
 
   end subroutine update_state_gpu
   !============================================================================
-
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, FaceCoords_D)
     !$acc routine seq
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)
     real, intent(in)   :: FaceCoords_D(3)
 
+    real:: Coef
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
 
@@ -730,7 +731,10 @@ contains
                min( abs(FaceState_VI(:,body1_) - VarsTrueFace_V)     &
                ,    DensityJumpLimit*VarsTrueFace_V   )
        end where
-
+       !where(DefaultState_V(1:nVar) > 0.0)
+       !   VarsGhostFace_V = FaceState_VI(:,body1_)
+       !endwhere
+       
        ! Set pressures, including electron pressure, to float.
        VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
 
@@ -739,11 +743,13 @@ contains
        VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
 
-       ! Change B_ghost so that the radial component of Bghost + Btrue = 0
-       ! Brefl = 2*r*(B.r)/r^2, so Bghost = Btrue - Brefl
-       VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - &
-            2*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)& ! Brefl
-            /sum(FaceCoords_D**2)                                     ! Brefl
+       if(B1rCoef /= 1.0)then
+          ! Fully or partially reflect B1r:
+          ! Brefl = (1-B1rCoef)*r*(B.r)/r^2 and Bghost = Btrue - Brefl
+          Coef = (1-B1rCoef)/sum(FaceCoords_D**2)
+          VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - &
+               Coef*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)
+       end if
     else
        ! 'ionospherefloat'
 
