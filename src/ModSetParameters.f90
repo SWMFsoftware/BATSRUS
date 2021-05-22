@@ -4058,8 +4058,11 @@ contains
 
       DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(UseMultiIon .or. iTypeUpdate > 1)DoLimitMomentum = .false.
-
+      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate > 1))then
+         if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
+         DoLimitMomentum = .false.
+      end if
+      
       ! Set default scalar parameters for plot files
       do iFile = plot_+1, plot_+nPlotFile
          l = index(plot_pars(iFile), '{default}')
