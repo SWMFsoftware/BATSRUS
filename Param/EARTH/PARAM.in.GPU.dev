@@ -12,8 +12,8 @@ slow			TypeUpdate
 F			UseRotation
 
 #BORIS
-F			UseBorisCorrection
-0.02
+T			UseBorisCorrection
+0.02			BorisClightFactor
 
 ! Minimum density/pressure has not been implemented for GPU.
 MINIMUMPRESSURE
@@ -99,7 +99,7 @@ ionosphere		TypeBcBody
 
 #SCHEME
 2			nOrder
-Linde			TypeFlux
+Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -113,24 +113,20 @@ T			UseDtFixed
 
 #SAVEPLOT
 3			nPlotFile
-x=0 var idl_ascii		StringPlot
+x=0 MHD idl		StringPlot
 -1			DnSavePlot
 1			DtSavePlot
 -1.			DxSavePlot
-{MHD}			NameVars
-{default}		NamePars
-y=0 var idl_ascii		StringPlot
+y=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
 1			DtSavePlot
 -1			DxSavePlot
 rho p bx ux		NameVars
 {default}		NamePars
-z=0 var idl_ascii		StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 1			DtSavePlot
 -1.			DxSavePlot
-{MHD}  			NameVars
-{default}		NamePars
 
 
 #SAVEINITIAL

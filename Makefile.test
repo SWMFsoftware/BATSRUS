@@ -1709,7 +1709,7 @@ test_earth_run:
 
 test_earth_check:
 	-@(${DIFFNUM} -t -r=1e-6 -a=1e-11 \
-		${TESTDIR}/RESULTS/GM/y*131.out \
+		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000001*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
 		> test_earth.diff)
 	ls -l test_earth.diff
