@@ -8,6 +8,9 @@ fast			TypeUpdate
 UPDATE
 slow			TypeUpdate
 
+#TIMEACCURATE
+F			IsTimeAccurate
+
 #ROTATION
 F			UseRotation
 
@@ -65,7 +68,6 @@ shell0			StringShape
 #GRIDBLOCKALL
 600			MaxBlock (for the whole simulation)
 
-
 #MAGNETOSPHERE
 T			UseBody
 2.5			rBody
@@ -73,8 +75,14 @@ T			UseBody
 8.0			BodyNDim (/ccm) density for fixed BC for rho_BLK
 2.5e4			BodyTDim (K) temperature for fixed BC for P_BLK
 
-NONCONSERVATIVE
-T
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
 
 #OUTERBOUNDARY
 float			TypeBc1
@@ -99,7 +107,7 @@ ionosphere		TypeBcBody
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -107,9 +115,14 @@ mc3			TypeLimiter
 2			nStage
 0.60			CflExpl
 
-FIXEDTIMESTEP
-T			UseDtFixed
-0.02			DtFixedDim [sec] (read if UseDtFixed is true)
+#STOP
+25			MaxIteration
+-1.			tSimulationMax
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
 
 #SAVEPLOT
 3			nPlotFile
@@ -128,17 +141,15 @@ z=0 MHD idl		StringPlot
 1			DtSavePlot
 -1.			DxSavePlot
 
-
 #SAVEINITIAL
 T			DoSaveInitial
 
 #SAVELOGFILE
-F			DoSaveLogfile
+T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
+-1			DnSaveLogfile
+1.0			DtSaveLogfile
 
 #STOP
 -1			MaxIteration
 1.0			tSimulationMax
-
