@@ -14,7 +14,7 @@ module ModBorisCorrection
        LeftState_VZI, RightState_VZI
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
-       x_, y_, z_, &
+       x_, y_, z_, iTest, jTest, kTest, &
        get_region_indexes, block_inside_regions, test_start, test_stop
 
   implicit none
@@ -401,6 +401,16 @@ contains
 
        Source_VCI(RhoUx_:RhoUz_,i,j,k,1) = Source_VCI(RhoUx_:RhoUz_,i,j,k,1) &
             + Coef*DivE*E_D
+
+       if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+          write(*,*) '!!! Enx =', EDotFA_X(i:i+1,j,k)
+          write(*,*) '!!! Eny =', EDotFA_Y(i,j:j+1,k)
+          write(*,*) '!!! Enz =', EDotFA_Z(i,j,k:k+1)
+          write(*,*) '!!! Coef   =', Coef
+          write(*,*) 'divE*Coef  =', Coef*DivE
+          write(*,*) 'divE source=', Coef*DivE*E_D
+          write(*,*) '!!! e_D    =', e_D
+       end if
 
     end do; end do; end do
 
