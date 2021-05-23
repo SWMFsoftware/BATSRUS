@@ -218,6 +218,29 @@ contains
                      State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
              end if
+#ifndef OPENACC
+             if(DoTestCell)then
+                write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
+                write(*,*) '!!! Eny =', Flux_VYI(En_,i,j:j+1,k,iGang)
+                write(*,*) '!!! Enz =', Flux_VZI(En_,i,j,k:k+1,iGang)
+                divE = divE/CellVolume_GB(i,j,k,iBlock) &
+                     *State_VGB(Rho_,i,j,k,iBlock)
+                write(*,*)'!!! Coef   =', (ClightFactor**2 - 1)*InvClight2
+                write(*,*)'divE*Coef  =', divE
+                if(UseB0)then
+                   write(*,*) '!!! e_D=', cross_product( &
+                        B0_DGB(:,i,j,k,iBlock) &
+                        + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+                        /State_VGB(Rho_,i,j,k,iBlock)
+                else
+                   write(*,*) '!!! e_D=', DivE*cross_product( &
+                        State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
+                        /State_VGB(Rho_,i,j,k,iBlock)
+                end if
+             end if
+#endif
           end if
           if(UseNonConservative)then
              ! Add -(g-1)*p*div(u) source term
@@ -287,17 +310,7 @@ contains
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
 #ifndef OPENACC
-          ! if(DoTestCell)then
-          ! write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-          !     write(*,*)'Change_V  =', Change_V
-          !    write(*,*)'DtPerDv   =', DtPerDv
-          ! end if
-#endif
-
-       enddo; enddo; enddo
-
-#ifndef OPENACC
-       if(DoTest .and. iBlock==iBlockTest)then
+       if(DoTestCell)then
           write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
           write(*,'(2x,a,2es23.15)') &
                'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
@@ -308,8 +321,15 @@ contains
           write(*,'(2x,a,2es23.15)') &
                'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
                Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-          ! write(*,'(2x,a,es23.15)')'source=',&
-          !     Change_VC(iVarTest,iTest,jTest,kTest)
+          write(*,'(2x,a,es23.15)')'source=',&
+               Change_V(iVarTest) -  &
+               (Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+               -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
+               +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+               -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
+               +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+               -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
+               /CellVolume_GB(iTest,jTest,kTest,iBlockTest) 
           write(*,'(2x,a,es23.15)')'fluxes=', &
                +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
                -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
@@ -325,8 +345,14 @@ contains
                   State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
           end do
           write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
+          if(UseDivbSource)      write(*,*)'divB =', divB
+          if(UseNonConservative) write(*,*)'divU =', divU
        end if
 #endif
+          
+
+       enddo; enddo; enddo
+
 
        if(IsTimeAccurate .and. .not.UseDtFixed) call calc_timestep(iBlock)
 
@@ -1560,7 +1586,7 @@ contains
 
           ! Store Enormal
           if(UseBorisCorrection .and. ClightFactor /= 1.0) &
-               Flux_V(En_) = 0.5*Area* &
+               Flux_V(En_) = AreaInvCdiff* &
                (Cright*FluxLeft_V(nFlux+1) - Cleft*FluxRight_V(nFlux+1))
 
        end if
