@@ -329,7 +329,7 @@ contains
                -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
                +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
                -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
-               /CellVolume_GB(iTest,jTest,kTest,iBlockTest) 
+               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
           write(*,'(2x,a,es23.15)')'fluxes=', &
                +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
                -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
@@ -349,10 +349,8 @@ contains
           if(UseNonConservative) write(*,*)'divU =', divU
        end if
 #endif
-          
 
        enddo; enddo; enddo
-
 
        if(IsTimeAccurate .and. .not.UseDtFixed) call calc_timestep(iBlock)
 
@@ -742,8 +740,8 @@ contains
 
     real:: Coef
     real, parameter:: DensityJumpLimit=0.1
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     if(.true.) then
        ! 'ionosphere' type BC
 
@@ -757,10 +755,10 @@ contains
                min( abs(FaceState_VI(:,body1_) - VarsTrueFace_V)     &
                ,    DensityJumpLimit*VarsTrueFace_V   )
        end where
-       !where(DefaultState_V(1:nVar) > 0.0)
+       ! where(DefaultState_V(1:nVar) > 0.0)
        !   VarsGhostFace_V = FaceState_VI(:,body1_)
-       !endwhere
-       
+       ! endwhere
+
        ! Set pressures, including electron pressure, to float.
        VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
 
