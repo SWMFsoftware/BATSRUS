@@ -146,7 +146,7 @@ T			DoSaveInitial
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 -1			DnSaveLogfile
 1.0			DtSaveLogfile
 
