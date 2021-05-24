@@ -143,6 +143,7 @@ module ModPhysics
   real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
   real :: gBody=0.0
   real :: RotPeriodSi=0.0, OmegaBody=0.0
+  !$acc declare create(OmegaBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
   real, dimension(IonFirst_:nFluid) :: &
@@ -733,6 +734,7 @@ contains
     !$acc update device(FaceState_VI)
 
     !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+    !$acc update device(OmegaBody)
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================
@@ -1209,7 +1211,8 @@ contains
   !============================================================================
 
   subroutine calc_corotation_velocity(Xyz_D, uRot_D)
-
+    !$acc routine seq
+    
     ! Calculates cartesian corotation velocity uRot_D at
     ! location Xyz_D. The angular velocity depends on the component
     ! and possibly also on simulation time.
@@ -1222,10 +1225,8 @@ contains
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: uRot_D(3)
 
-    real, save:: Omega_D(3)
-    !$omp threadprivate( Omega_D )
-    logical   :: IsUninitialized = .true.
-
+    real :: Omega_D(3)
+    
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
     !--------------------------------------------------------------------------
     select case(TypeCoordSystemInt)
@@ -1233,11 +1234,8 @@ contains
        ! In the HGI system the Solar angular velocity vector points towards +Z
        Omega_D = [ 0., 0., OmegaBody ]
     case(GSE_)
-       if(IsUninitialized)then
-          call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
-          Omega_D = OmegaBody * Omega_D
-          IsUninitialized = .false.
-       end if
+       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
+       Omega_D = OmegaBody * Omega_D
     case(GSM_)
        ! GSM system, Omega_D may be changing
        call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)

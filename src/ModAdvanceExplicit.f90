@@ -281,6 +281,8 @@ contains
           if(UseUpdateCheck .and. iStage==nStage) &
                Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
        endif
+       !$acc update device(Time_Simulation)
+       
        ! If we have particle to move in the electromagnetic field,
        ! test or hybrid ones
        if(UseChargedParticles)then
