@@ -27,7 +27,7 @@ module ModUpdateStateFast
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor, &
        UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
-       update_angular_velocity, Omega_D       
+       update_angular_velocity, Omega_D
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, nStep => n_step, &
        UseRotatingBc
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
@@ -77,7 +77,7 @@ contains
     !$acc serial
     call update_angular_velocity
     !$acc end serial
-    
+
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -757,9 +757,9 @@ contains
     real, intent(in)   :: FaceCoords_D(3)
 
     real:: Coef
-    
+
     real:: uRot_D(3)
-    
+
     real, parameter:: DensityJumpLimit=0.1
 
     !--------------------------------------------------------------------------
@@ -804,7 +804,6 @@ contains
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
     endif
 
-    
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
        uRot_D = cross_product(Omega_D, FaceCoords_D)
@@ -1738,7 +1737,7 @@ contains
          + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
 
   end subroutine mhd_to_boris
-  !============================================================================  
+  !============================================================================
   subroutine limit_pressure(State_V)
     !$acc routine seq
     real, intent(inout):: State_V(nVar)
@@ -1746,14 +1745,14 @@ contains
     integer:: iFluid
     !--------------------------------------------------------------------------
     if(.not. UsePMin) RETURN
-    
+
     do iFluid = 1, nFluid
        if(pMin_I(iFluid) < 0.0) CYCLE
        State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
     end do
-    
+
   end subroutine limit_pressure
-  !============================================================================ 
+  !============================================================================
   subroutine energy_to_pressure(State_V)
     !$acc routine seq
 
@@ -1786,7 +1785,7 @@ contains
     !--------------------------------------------------------------------------
 
     call limit_pressure(State_V)
-    
+
     ! Calculate hydro energy density
     if(nFluid == 1)then
        State_V(p_) = State_V(p_)*InvGammaMinus1 &

@@ -3515,7 +3515,7 @@ contains
             TypeCoordSystemInt = i
          endif
       end do
-      
+
       ! Update check does not work with Runge-Kutta explicit schemes
       ! because the final update is a linear combination of all stages.
       if(.not.UseHalfStep .and. .not.UseImplicit) UseUpdateCheck = .false.

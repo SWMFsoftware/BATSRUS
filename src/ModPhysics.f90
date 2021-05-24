@@ -175,7 +175,7 @@ module ModPhysics
   real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
   logical :: UseRhoMin, UsePMin
   !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
-  
+
   ! Minimum threshold for radial velocity
   real :: SpeedMinDim, SpeedMin, rSpeedMin
   real :: TauSpeedMinDim, TauSpeedMin
@@ -275,7 +275,7 @@ module ModPhysics
 
   ! Use Stellar parameters
   logical :: UseStar = .false.
-  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38  
+  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
 
   ! Number and indexes of vector variables in State_VGB
   integer :: nVectorVar=0
@@ -1212,7 +1212,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_vector_variables
   !============================================================================
-  
+
   subroutine update_angular_velocity
     !$acc routine seq
 
@@ -1242,7 +1242,7 @@ contains
 
   subroutine calc_corotation_velocity(Xyz_D, uRot_D)
     !$acc routine seq
-    
+
     ! Calculates cartesian corotation velocity uRot_D at
     ! location Xyz_D. The angular velocity depends on the component
     ! and possibly also on simulation time.
