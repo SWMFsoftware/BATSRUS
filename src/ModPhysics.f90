@@ -91,6 +91,9 @@ module ModPhysics
   ! the dipole moment for body2
   real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
+  real :: Omega_D(3)
+  !$acc declare create(Omega_D)
+
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
   real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
@@ -272,7 +275,7 @@ module ModPhysics
 
   ! Use Stellar parameters
   logical :: UseStar = .false.
-  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
+  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38  
 
   ! Number and indexes of vector variables in State_VGB
   integer :: nVectorVar=0
@@ -1209,6 +1212,33 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_vector_variables
   !============================================================================
+  
+  subroutine update_angular_velocity
+    !$acc routine seq
+
+    ! Update the angular velocity Omega_D of the body.
+
+    use CON_axes,          ONLY: get_axes
+    use ModMain,           ONLY: Time_Simulation, &
+         TypeCoordSystemInt, HGI_, GSE_, GSM_
+
+    character(len=*), parameter:: NameSub = 'update_angular_velocity'
+    !--------------------------------------------------------------------------
+    select case(TypeCoordSystemInt)
+    case(HGI_)
+       ! In the HGI system the Solar angular velocity vector points towards +Z
+       Omega_D = [ 0., 0., OmegaBody ]
+    case(GSE_)
+       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
+       Omega_D = OmegaBody * Omega_D
+    case(GSM_)
+       ! GSM system, Omega_D may be changing
+       call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
+       Omega_D = OmegaBody*Omega_D
+    end select
+
+  end subroutine update_angular_velocity
+  !============================================================================
 
   subroutine calc_corotation_velocity(Xyz_D, uRot_D)
     !$acc routine seq
@@ -1226,7 +1256,7 @@ contains
     real, intent(out):: uRot_D(3)
 
     real :: Omega_D(3)
-    
+
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
     !--------------------------------------------------------------------------
     select case(TypeCoordSystemInt)

@@ -24,7 +24,8 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor, &
-       calc_corotation_velocity, UseRhoMin, UsePMin, RhoMin_I, pMin_I
+       UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
+       update_angular_velocity, Omega_D
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, UseRotatingBc
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
@@ -61,6 +62,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$acc serial
+    call update_angular_velocity
+    !$acc end serial
+    
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -649,8 +654,8 @@ contains
 
     
     if (UseRotatingBc) then
-       ! Calculate corotation velocity uRot_D at position FaceCoords
-       call calc_corotation_velocity(FaceCoords_D, uRot_D)
+       ! The corotation velocity is u = Omega x R
+       uRot_D = cross_product(Omega_D, FaceCoords_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
