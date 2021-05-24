@@ -91,6 +91,9 @@ module ModPhysics
   ! the dipole moment for body2
   real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
+  real :: Omega_D(3)
+  !$acc declare create(Omega_D)
+
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
   real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
@@ -143,6 +146,7 @@ module ModPhysics
   real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
   real :: gBody=0.0
   real :: RotPeriodSi=0.0, OmegaBody=0.0
+  !$acc declare create(OmegaBody)
 
   ! The dimensional quantities are given for individual ion and neutral fluids
   real, dimension(IonFirst_:nFluid) :: &
@@ -169,7 +173,9 @@ module ModPhysics
   real :: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
   real :: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
   real :: TMinDim_I(nFluid)   = -1.0, TMin_I(nFluid)
-
+  logical :: UseRhoMin, UsePMin
+  !$acc declare create(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+  
   ! Minimum threshold for radial velocity
   real :: SpeedMinDim, SpeedMin, rSpeedMin
   real :: TauSpeedMinDim, TauSpeedMin
@@ -269,7 +275,7 @@ module ModPhysics
 
   ! Use Stellar parameters
   logical :: UseStar = .false.
-  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
+  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38  
 
   ! Number and indexes of vector variables in State_VGB
   integer :: nVectorVar=0
@@ -675,6 +681,8 @@ contains
     TMin_I       = TMinDim_I*Io2No_V(UnitTemperature_)
     TeMin        = TeMinDim*Io2No_V(UnitTemperature_)
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
+    UseRhoMin    = any(RhoMin_I > 0.0)
+    UsePMin      = any(pMin_I > 0.0)
 
     ! Minimum value for radial speed
     if(UseSpeedMin)then
@@ -728,6 +736,8 @@ contains
     !$acc update device(CellState_VI)
     !$acc update device(FaceState_VI)
 
+    !$acc update device(RhoMin_I, pMin_I, UseRhoMin, UsePMin)
+    !$acc update device(OmegaBody)
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================
@@ -1202,37 +1212,61 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_vector_variables
   !============================================================================
+  
+  subroutine update_angular_velocity
+    !$acc routine seq
+
+    ! Update the angular velocity Omega_D of the body.
+
+    use CON_axes,          ONLY: get_axes
+    use ModMain,           ONLY: Time_Simulation, &
+         TypeCoordSystemInt, HGI_, GSE_, GSM_
+
+    character(len=*), parameter:: NameSub = 'update_angular_velocity'
+    !--------------------------------------------------------------------------
+    select case(TypeCoordSystemInt)
+    case(HGI_)
+       ! In the HGI system the Solar angular velocity vector points towards +Z
+       Omega_D = [ 0., 0., OmegaBody ]
+    case(GSE_)
+       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
+       Omega_D = OmegaBody * Omega_D
+    case(GSM_)
+       ! GSM system, Omega_D may be changing
+       call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
+       Omega_D = OmegaBody*Omega_D
+    end select
+
+  end subroutine update_angular_velocity
+  !============================================================================
 
   subroutine calc_corotation_velocity(Xyz_D, uRot_D)
-
+    !$acc routine seq
+    
     ! Calculates cartesian corotation velocity uRot_D at
     ! location Xyz_D. The angular velocity depends on the component
     ! and possibly also on simulation time.
 
     use CON_axes,          ONLY: get_axes
     use ModCoordTransform, ONLY: cross_product
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+    use ModMain,           ONLY: Time_Simulation, &
+         TypeCoordSystemInt, HGI_, GSE_, GSM_
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: uRot_D(3)
 
-    real, save:: Omega_D(3)
-    !$omp threadprivate( Omega_D )
-    logical   :: IsUninitialized = .true.
+    real :: Omega_D(3)
 
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
     !--------------------------------------------------------------------------
-    select case(TypeCoordSystem)
-    case('HGI')
+    select case(TypeCoordSystemInt)
+    case(HGI_)
        ! In the HGI system the Solar angular velocity vector points towards +Z
        Omega_D = [ 0., 0., OmegaBody ]
-    case('GSE')
-       if(IsUninitialized)then
-          call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
-          Omega_D = OmegaBody * Omega_D
-          IsUninitialized = .false.
-       end if
-    case('GSM')
+    case(GSE_)
+       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
+       Omega_D = OmegaBody * Omega_D
+    case(GSM_)
        ! GSM system, Omega_D may be changing
        call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
        Omega_D = OmegaBody*Omega_D

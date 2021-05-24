@@ -26,7 +26,8 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
        C2light, InvClight, InvClight2, ClightFactor, &
-       calc_corotation_velocity
+       UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
+       update_angular_velocity, Omega_D       
   use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, nStep => n_step, &
        UseRotatingBc
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
@@ -67,10 +68,16 @@ contains
     character(len=*), parameter:: NameSub = 'update_state_cpu'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if(DoTest)then
        write(*,*)'==========================================================='
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
     end if
+
+    !$acc serial
+    call update_angular_velocity
+    !$acc end serial
+    
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -306,6 +313,15 @@ contains
           ! local private arrays...
           if(UseBorisCorrection) call boris_to_mhd( &
                State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
+          ! Check minimum density
+          if(UseRhoMin)then
+             do iFluid = 1, nFluid
+                if(RhoMin_I(iFluid) < 0) CYCLE
+                State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+                     State_VGB(iRho_I(iFluid),i,j,k,iBlock))
+             end do
+          end if
 
           ! Convert energy back to pressure
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
@@ -790,8 +806,8 @@ contains
 
     
     if (UseRotatingBc) then
-       ! Calculate corotation velocity uRot_D at position FaceCoords
-       call calc_corotation_velocity(FaceCoords_D, uRot_D)
+       ! The corotation velocity is u = Omega x R
+       uRot_D = cross_product(Omega_D, FaceCoords_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
@@ -1722,7 +1738,22 @@ contains
          + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
 
   end subroutine mhd_to_boris
-  !============================================================================
+  !============================================================================  
+  subroutine limit_pressure(State_V)
+    !$acc routine seq
+    real, intent(inout):: State_V(nVar)
+
+    integer:: iFluid
+    !--------------------------------------------------------------------------
+    if(.not. UsePMin) RETURN
+    
+    do iFluid = 1, nFluid
+       if(pMin_I(iFluid) < 0.0) CYCLE
+       State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
+    end do
+    
+  end subroutine limit_pressure
+  !============================================================================ 
   subroutine energy_to_pressure(State_V)
     !$acc routine seq
 
@@ -1744,6 +1775,7 @@ contains
             + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
     end if
 
+    call limit_pressure(State_V)
   end subroutine energy_to_pressure
   !============================================================================
   subroutine pressure_to_energy(State_V)
@@ -1753,6 +1785,8 @@ contains
     real, intent(inout):: State_V(nVar)
     !--------------------------------------------------------------------------
 
+    call limit_pressure(State_V)
+    
     ! Calculate hydro energy density
     if(nFluid == 1)then
        State_V(p_) = State_V(p_)*InvGammaMinus1 &
