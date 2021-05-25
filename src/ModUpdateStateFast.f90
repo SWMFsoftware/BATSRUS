@@ -57,7 +57,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsBodyBlock, IsConserv
-    real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux)
+    real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux), tmp_D(3)
     !$acc declare create (Change_V)
 
 #ifndef OPENACC
@@ -166,7 +166,7 @@ contains
           end do
        end if
 #endif
-       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
+       !$acc loop vector collapse(3) private(Change_V, DtPerDv, tmp_D) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
@@ -216,16 +216,19 @@ contains
              DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
                   /State_VGB(Rho_,i,j,k,iBlock)
              if(UseB0)then
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*cross_product( &
+                tmp_D = cross_product( &
                      B0_DGB(:,i,j,k,iBlock) &
                      + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-             else
+
                 Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*cross_product( &
+                     + DivE*tmp_D
+             else
+                tmp_D = cross_product( &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     + DivE*tmp_D
              end if
 #ifndef OPENACC
              if(DoTestCell)then
