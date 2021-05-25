@@ -11,18 +11,18 @@ slow			TypeUpdate
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#ROTATION
-F			UseRotation
+#UPDATEB0
+5			DtUpdateB0
 
 #BORIS
 T			UseBorisCorrection
 0.02			BorisClightFactor
 
 ! Minimum density/pressure has not been implemented for GPU.
-MINIMUMPRESSURE
+#MINIMUMPRESSURE
 1e-5			pMinDim [nPa]
 
-MINIMUMDENSITY
+#MINIMUMDENSITY
 1e-2			RhoMinDim [amu/cc]
 
 ! Switch of TVD and Accurate res change.
@@ -81,7 +81,7 @@ T			UseNonConservative
 #CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
- 5.0			xParabolaConserv
+ 6.0			xParabolaConserv
 15.0			yParabolaConserv
 
 #OUTERBOUNDARY
