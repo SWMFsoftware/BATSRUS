@@ -1688,7 +1688,7 @@ test_earth_start:
 	@echo "test_earth_rundir..." >> test_earth.diff
 	$(MAKE) test_earth_rundir
 	@echo "test_earth_run..." >> test_earth.diff
-	$(MAKE) test_earth_run
+	$(MAKE) test_earth_run NP=1
 	@echo "test_earth_check..." >> test_earth.diff
 	$(MAKE) test_earth_check
 
@@ -1704,7 +1704,7 @@ test_earth_rundir: test_rundir
 	-./TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_earth_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_earth_check:
