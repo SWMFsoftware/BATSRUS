@@ -36,7 +36,7 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
-  use ModCoordTransform, ONLY: cross_product
+  ! use ModCoordTransform, ONLY: cross_product
 
   implicit none
 
@@ -57,7 +57,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsBodyBlock, IsConserv
-    real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux), tmp_D(3)
+    real:: DtPerDv, DivU, DivB, DivE, InvRho, Change_V(nFlux)
     !$acc declare create (Change_V)
 
 #ifndef OPENACC
@@ -166,7 +166,7 @@ contains
           end do
        end if
 #endif
-       !$acc loop vector collapse(3) private(Change_V, DtPerDv, tmp_D) independent
+       !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseBody .and. IsBodyBlock) then
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
@@ -216,19 +216,16 @@ contains
              DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
                   /State_VGB(Rho_,i,j,k,iBlock)
              if(UseB0)then
-                tmp_D = cross_product( &
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     + DivE*cross_product( &
                      B0_DGB(:,i,j,k,iBlock) &
                      + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*tmp_D
              else
-                tmp_D = cross_product( &
+                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                     + DivE*cross_product( &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*tmp_D
              end if
 #ifndef OPENACC
              if(DoTestCell)then
@@ -382,6 +379,19 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine update_state_cpu
+  !============================================================================
+
+  function cross_product(a_D, b_D) result(c_D)
+    !$acc routine seq
+    real, intent(in) :: a_D(3), b_D(3)
+    !RETURN VALUE:
+    real             :: c_D(3)
+
+    !--------------------------------------------------------------------------
+    c_D(x_) = a_D(y_)*b_D(z_) - a_D(z_)*b_D(y_)
+    c_D(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
+    c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
+  end function cross_product
   !============================================================================
 
   subroutine get_b0_face(B0_D, i, j, k, iBlock, iDir)
