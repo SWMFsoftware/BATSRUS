@@ -137,6 +137,7 @@ contains
     integer :: i, j, k, Di, Dk
     integer:: iGang
     real:: Vdt
+    real:: dt_min
 
     ! Variables for time step control due to loss terms
     real :: Einternal, Source, Dt_loss, Coef
@@ -276,12 +277,20 @@ contains
 
     ! Compute maximum stable time step for this solution block
     if(true_BLK(iBlock)) then
-       Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
+       dt_min=time_BLK(1,1,1,iBlock)
+       !$acc loop vector independent collapse(3) reduction(min:dt_min)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
+       end do; end do; end do
+       Dt_BLK(iBlock)=dt_min
     else
        ! If the block has no true cells, set Dt_BLK=1.0E20
-       Dt_BLK(iBlock) = min(1e20, &
-            minval(time_BLK(:,:,:,iBlock), &
-            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
+       dt_min = 1e20
+       !$acc loop vector independent collapse(3) reduction(min:dt_min)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if (true_cell(i,j,k,iBlock)) dt_min = min(dt_min, time_BLK(i,j,k,iBlock))
+       end do; end do; end do
+       Dt_BLK(iBlock)=dt_min
 
        if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
             minval(time_BLK(:,:,:,iBlock), &
