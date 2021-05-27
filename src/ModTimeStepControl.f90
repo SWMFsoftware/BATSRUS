@@ -376,8 +376,6 @@ contains
        nTimeLevel = 0
     end if
 
-    !$acc serial
-
     if(UseDtFixed)then
        Dt = DtFixed
     elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
@@ -389,15 +387,37 @@ contains
        if(UsePartImplicit)then
           ! Implicit blocks are not taken into account for partially implicit
           ! run
-          DtMinPE = minval(Dt_BLK(1:nBlock),&
-               MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
-          if(UseMaxTimeStep) DtMax = maxval(Dt_BLK(1:nBlock),&
-               MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
+          DtMinPE = huge(Dt_BLK(1))
+          !$acc parallel loop independent reduction(min:DtMinPE)
+          do iBlock=1,nBlock
+             if (iTypeAdvance_B(iBlock) == ExplBlock_) &
+                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+          end do
+          if(UseMaxTimeStep) then
+             DtMax = -huge(Dt_BLK(1))
+             !$acc parallel loop independent reduction(max:DtMax)
+             do iBlock=1,nBlock
+                if (iTypeAdvance_B(iBlock) == ExplBlock_) &
+                     DtMax = max(DtMax, Dt_BLK(iBlock))
+             end do
+          end if
        else
-          DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
-          if(UseMaxTimeStep) DtMax = min(DtLimit/Cfl, &
-               maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock)))
-       end if
+          DtMinPE = huge(Dt_BLK(1))
+          !$acc parallel loop independent reduction(min:DtMinPE)
+          do iBlock=1,nBlock
+             if (.not.Unused_B(iBlock)) &
+                  DtMinPE = min(DtMinPE, Dt_BLK(iBlock))
+          end do
+
+          if(UseMaxTimeStep) then
+             DtMax = -huge(Dt_BLK(1))
+             !$acc parallel loop independent reduction(max:DtMax)
+             do iBlock=1,nBlock
+                if (.not.Unused_B(iBlock)) DtMax = max(DtMax, Dt_BLK(iBlock))
+             end do
+             DtMax = min(DtMax, DtLimit/Cfl)
+          end if
+       endif
 
 #ifndef OPENACC
        ! Set Dt to minimum time step over all the PE-s
@@ -486,8 +506,6 @@ contains
        end if
     end if
 
-    !$acc end serial
-
     !$acc parallel loop gang
     !$omp parallel do
     do iBlock = 1, nBlock
@@ -528,11 +546,9 @@ contains
          iTimeLevel_A, nNode, MPI_INTEGER, MPI_SUM, iComm, iError)
 #endif
 
-    !$acc serial
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
-    !$acc end serial
-    !$acc update host(Dt)
+    !$acc update device(Dt)
 
     if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
          Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
