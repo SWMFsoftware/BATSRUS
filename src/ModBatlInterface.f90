@@ -89,7 +89,7 @@ contains
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, CellSize_DB, CoordMin_DB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
-         iTree_IA, Block_, Proc_, Unset_
+         iTree_IA, Block_, Proc_, Unset_, nBlock
 
     use ModBoundaryGeometry, ONLY: fix_block_geometry
     use ModGeometry, ONLY: &
@@ -246,15 +246,17 @@ contains
 
     call fix_block_geometry(iBlock)
 
-    !$acc update device(neiLtop, neiLbot)
-    !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
-    !$acc update device(neiLEV)
+    if(iBlock == nBlock) then
+       !$acc update device(neiLtop, neiLbot)
+       !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
+       !$acc update device(neiLEV)
 
-    !$acc update device(neiPE, neiBLK)
-    !$acc update device(neiPtop, neiPbot)
-    !$acc udpate device(neiBtop, neiBbot)
-    !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
-    !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
+       !$acc update device(neiPE, neiBLK)
+       !$acc update device(neiPtop, neiPbot)
+       !$acc udpate device(neiBtop, neiBbot)
+       !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
+       !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
+    endif
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_batsrus_block

@@ -122,7 +122,7 @@ contains
     use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
-         Xyz_DGB, CellSize_DB, x_, y_, z_, &
+         nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
     use ModAdvance, ONLY: time_BLK
 
@@ -236,8 +236,10 @@ contains
             true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
     end if
 
-    !$acc update device(true_cell, body_BLK, iBoundary_GB)
-    !$acc update device(far_field_BCs_BLK)
+    if(iBlock == nBlock) then
+       !$acc update device(true_cell, body_BLK, iBoundary_GB)
+       !$acc update device(far_field_BCs_BLK)
+    end if
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_block_geometry
