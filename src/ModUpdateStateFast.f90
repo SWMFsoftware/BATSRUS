@@ -2375,6 +2375,7 @@ contains
   end subroutine get_face_z_prim
   !============================================================================
   subroutine calc_block_dt(iBlock)
+    !$acc routine vector
 
     ! Compute maximum stable time step for this solution block
 
