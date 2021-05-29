@@ -28,13 +28,13 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, ClightFactor, &
        UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
        update_angular_velocity, Omega_D
-  use ModMain, ONLY: UseB, SpeedHyp, Dt, Cfl, body1_, nStep => n_step, &
-       UseRotatingBc
+  use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
+       body1_, UseRotatingBc, UseB, SpeedHyp
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModGeometry, ONLY: IsBody_B => Body_BLK
+  use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   ! use ModCoordTransform, ONLY: cross_product
 
@@ -370,12 +370,14 @@ contains
 
        enddo; enddo; enddo
 
-       if(IsTimeAccurate .and. .not.UseDtFixed) call calc_timestep(iBlock)
+       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
+            call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
 
-    if(DoTest)write(*,*)'==========================================================='
+    if(DoTest)write(*,*) &
+         '==========================================================='
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine update_state_cpu
@@ -753,9 +755,9 @@ contains
           enddo; enddo; enddo
        end if
 
-       ! Flux_V is a local variable so generic calc_timestep does not work
-       ! call calc_timestep(iBlock)
-
+       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
+            call calc_block_dt(iBlock)
+       
     end do
     !$acc end parallel
 
@@ -1914,6 +1916,8 @@ contains
           end do; end do; end do
        end if
 
+       if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
+
        ! Update
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -2006,7 +2010,8 @@ contains
 #endif
        enddo; enddo; enddo
 
-       if(.not.UseDtFixed) call calc_timestep(iBlock)
+       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
+            call calc_timestep(iBlock)
 
     end do
     !$acc end parallel
@@ -2186,8 +2191,8 @@ contains
 #endif
        enddo; enddo; enddo
 
-       ! Flux_V is a local variable so generic calc_timestep does not work
-       ! call calc_timestep(iBlock)
+       if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
+            call calc_block_dt(iBlock)
 
     end do
     !$acc end parallel
@@ -2369,5 +2374,33 @@ contains
 
   end subroutine get_face_z_prim
   !============================================================================
+  subroutine calc_block_dt(iBlock)
+
+    ! Compute maximum stable time step for this solution block
+
+    integer, intent(in):: iBlock
+
+    real:: DtMin
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
+    if(IsNoBody_B(iBlock)) then
+       DtMin = DtMax_CB(1,1,1,iBlock)
+       !$acc loop vector independent collapse(3) reduction(min:DtMin)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DtMin = min(DtMin, DtMax_CB(i,j,k,iBlock))
+       end do; end do; end do
+       DtMax_B(iBlock) = DtMin
+    else
+       ! If the block has no true cells, set Dt_BLK=1.0E20
+       DtMin = 1e20
+       !$acc loop vector independent collapse(3) reduction(min:DtMin)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if (Used_GB(i,j,k,iBlock)) DtMin = min(DtMin, DtMax_CB(i,j,k,iBlock))
+       end do; end do; end do
+       DtMax_B(iBlock) = DtMin
+    end if
+
+  end subroutine calc_block_dt
+
 end module ModUpdateStateFast
 !==============================================================================
