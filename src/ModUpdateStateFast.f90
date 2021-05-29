@@ -757,7 +757,7 @@ contains
 
        if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
             call calc_block_dt(iBlock)
-       
+
     end do
     !$acc end parallel
 
@@ -2402,6 +2402,7 @@ contains
     end if
 
   end subroutine calc_block_dt
+  !============================================================================
 
 end module ModUpdateStateFast
 !==============================================================================
