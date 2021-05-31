@@ -22,7 +22,7 @@ contains
     use ModBuffer, ONLY: read_buffer_grid_param
     use ModAdvance
     use ModConservative, ONLY: &
-         set_non_conservative, UseNonConservative, nConservCrit 
+         set_non_conservative, UseNonConservative, nConservCrit
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
@@ -1550,7 +1550,7 @@ contains
 
        case("#NONCONSERVATIVE", "#CONSERVATIVECRITERIA")
           call read_conservative_param(NameCommand)
-          
+
        case("#TIMESTEPCONTROL", "#CONTROLTIMESTEP", "#CHECKTIMESTEP", &
             "#CONTROLDECREASE", "#CONTROLINCREASE", &
             "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT")

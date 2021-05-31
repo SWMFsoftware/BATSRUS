@@ -5,7 +5,7 @@ module ModConservative
 
   ! Determine if a cell should be updated with the conservative
   ! energy equation or the non-conservative pressure equation
-  
+
   use BATL_lib, ONLY: &
        iProc, iTest, jTest, kTest, iBlockTest, iProcTest, &
        test_start, test_stop
@@ -13,7 +13,7 @@ module ModConservative
   implicit none
 
   SAVE
-  
+
   private ! except
 
   public:: clean_mod_conservative ! set fully conservative scheme
@@ -30,7 +30,7 @@ module ModConservative
 
   ! True if only geometric based criteria are used
   logical, public :: IsStaticConservCrit = .false.
-  
+
   ! Number and type of criteria
   integer, public :: nConservCrit = 0
   !$acc declare create(nConservCrit)
@@ -38,7 +38,7 @@ module ModConservative
   ! Cells selected to be updated with conservative equations
   logical, allocatable, public :: IsConserv_CB(:,:,:,:)
   !$acc declare create(IsConserv_CB)
-  
+
   ! Local variables
   character(len=10), allocatable :: TypeConservCrit_I(:)
 
@@ -47,7 +47,7 @@ module ModConservative
 
   ! Physics based parameters (to locate shocks)
   real    :: pCoeffConserv, GradPCoeffConserv
-  
+
 contains
   !============================================================================
   subroutine clean_mod_conservative
@@ -61,7 +61,7 @@ contains
 
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
     if(allocated(IsConserv_CB)) deallocate(IsConserv_CB)
-    
+
   end subroutine clean_mod_conservative
   !============================================================================
   subroutine set_non_conservative
@@ -77,11 +77,11 @@ contains
 
     use ModReadParam, ONLY: read_var
     use ModMain, ONLY: UseStrict
-    
+
     character(len=*), intent(in):: NameCommand
 
     integer:: i
-    
+
     character(len=*), parameter:: NameSub = 'read_conservative_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -337,3 +337,4 @@ contains
   end subroutine select_conservative
   !============================================================================
 end module ModConservative
+!==============================================================================

@@ -107,7 +107,7 @@ contains
                 Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              end if
-          
+
              call get_flux_x(i, j, k, iBlock, IsBodyBlock)
           end do; end do; end do
        else
