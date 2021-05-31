@@ -284,7 +284,7 @@ sub set_optimization{
 			check_var($Set{"LimiterBeta"}, $beta, $first);
 		    }
 		}
-	    }elsif(/^#BODY\b/){
+	    }elsif(/^#(BODY|MAGNETOSPHERE)\b/){
 		my $usebody = <FILE>;
 		check_var($Set{"UseBody"}, $usebody, $first);
 	    }elsif(/^#PLANET\b/){
