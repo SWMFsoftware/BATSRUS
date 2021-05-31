@@ -4,7 +4,7 @@
 
 module ModPIC
 
-  use BATL_lib,     ONLY: &
+  use BATL_lib, ONLY: &
        test_start, test_stop, iProc, iComm
   use ModGridInfo,  ONLY: iPicOn_, iPicOff_, &
        get_point_status, &
@@ -46,16 +46,20 @@ module ModPIC
 
   logical, public:: DoRestartPicStatus = .false.
 
-  real, allocatable, public :: DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
-  real, allocatable, public :: FullB_DGB(:,:,:,:,:), FullB_DG(:,:,:,:),&
+  real, allocatable, public :: &
+       DivCurvature_CB(:,:,:,:), Curvature_DGB(:,:,:,:,:)
+  real, allocatable, public :: &
+       FullB_DGB(:,:,:,:,:), FullB_DG(:,:,:,:),&
        UnitBfield_DGB(:,:,:,:,:), &
-       GradUnitBx_DGB(:,:,:,:,:), GradUnitBy_DGB(:,:,:,:,:), &
+       GradUnitBx_DGB(:,:,:,:,:), &
+       GradUnitBy_DGB(:,:,:,:,:), &
        GradUnitBz_DGB(:,:,:,:,:)
 
   ! The viriables for adaptive PIC criterias
   integer, public :: nCriteriaPic=0
   character (len=10), public, allocatable :: NameCriteriaPic_I(:)
-  real, public, allocatable :: CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
+  real, public, allocatable :: &
+       CriteriaMinPic_I(:), CriteriaMaxPic_I(:), &
        CriteriaMinPicDim_I(:), CriteriaMaxPicDim_I(:)
   real, public :: CriteriaB1=0.0, CriteriaB1Dim=0.0
   integer, public:: nPatchExtend_D(3)=0
@@ -263,8 +267,9 @@ contains
 
           do iDim = 1, nDim
              if (XyzMinPic_DI(iDim, iRegion) >= XyzMaxPic_DI(iDim, iRegion)) &
-                  call stop_mpi(NameSub//':MinPic should be smaller than MaxPic!')
-             if(DxyzPic_DI(iDim, iRegion)<0) call stop_mpi(NameSub//&
+                  call stop_mpi(NameSub// &
+                  ':MinPic should be smaller than MaxPic!')
+             if(DxyzPic_DI(iDim, iRegion) < 0) call stop_mpi(NameSub//&
                   ':The PIC cell size should be a positive number!')
           enddo
 
@@ -334,7 +339,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine pic_read_param
   !============================================================================
-
   subroutine pic_init_region
 
     use BATL_lib,     ONLY: nDim, find_grid_block, MaxDim, &
@@ -442,9 +446,9 @@ contains
 
              if(iProc == 0 .and. mod(nCell, nCellPerPatch) /= 0)&
                   call stop_mpi(&
-                  'In all directions, the PIC grid cell number '//&
-                  '(defined by #PICGRID) should be divisible by the patch size,'&
-                  //' which is defined by #PICPATCH.')
+                  'In all directions, the PIC grid cell number ' //  &
+                  '(defined by #PICGRID) should be divisible by ' // &
+                  'the patch size, which is defined by #PICPATCH.')
 
           endif
        end do
@@ -470,7 +474,7 @@ contains
                ceiling(real(product(PatchSize_DI(1:nDim,iRegion))) &
                /storage_size(nSizeStatus))
 
-          ! The number of integers needed to store the patch status information.
+          ! The number of integers needed to store the patch status information
           nSizeStatus = StatusMax_I(iRegion)
        enddo
 
@@ -523,7 +527,7 @@ contains
           write(*,*) NameSub,': IonMassPerChargeSi = ', IonMassPerChargeSi
           write(*,*) NameSub,': xUnitPicSi         = ', xUnitPicSi_I(iRegion)
           write(*,*) NameSub,': uUnitPicSi         = ', uUnitPicSi_I(iRegion)
-          write(*,*) NameSub,': ScalingFactor      = ', ScalingFactor_I(iRegion)
+          write(*,*) NameSub,': ScalingFactor      = ',ScalingFactor_I(iRegion)
           write(*,*) NameSub,': mUnitPicSi         = ', mUnitPicSi_I(iRegion)
        end if
     end do
@@ -569,7 +573,6 @@ contains
 
   end subroutine pic_init_region
   !============================================================================
-
   subroutine write_pic_status_file
 
     use ModUtilities,   ONLY: open_file, close_file
@@ -599,7 +602,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_pic_status_file
   !============================================================================
-
   subroutine read_pic_status_file
 
     use ModUtilities,   ONLY: open_file, close_file
@@ -633,9 +635,9 @@ contains
          ' could not read data from '//trim(NameFile))
 
     call test_stop(NameSub, DoTest)
+
   end subroutine read_pic_status_file
   !============================================================================
-
   subroutine pic_find_node
 
     ! Find blocks that overlap with PIC region(s).
@@ -679,9 +681,9 @@ contains
 
     if(DoTest) write(*,*)'IsPicNode= ', IsPicNode_A(:)
     call test_stop(NameSub, DoTest)
+
   end subroutine pic_find_node
   !============================================================================
-
   subroutine pic_set_cell_status
 
     use BATL_lib, ONLY: &
@@ -829,9 +831,7 @@ contains
                             enddo
                          enddo
                       enddo
-
                    end do; end do; end do ! end looping cells
-
                 end do
              end do
           end do
@@ -845,7 +845,6 @@ contains
 
   end subroutine pic_set_cell_status
   !============================================================================
-
   logical function is_inside_pic_grid(IndexPatch_D, iRegion)
 
     integer, intent(in) :: IndexPatch_D(3)
@@ -861,9 +860,10 @@ contains
 
   end function is_inside_pic_grid
   !============================================================================
-
   subroutine set_status_all(DstValue)
+
     ! The subroutine that set entire Status_I to DstValue
+
     use BATL_lib, ONLY: x_, y_, z_
     integer, intent(in) :: DstValue
 
@@ -888,9 +888,10 @@ contains
 
   end subroutine set_status_all
   !============================================================================
-
   subroutine is_inside_active_pic_region(xyz_D, IsInside)
+
     ! It should be a function instead of a subroutine. --Yuxi
+
     use BATL_lib, ONLY: nDim, x_, y_, z_
 
     real, intent(in) :: Xyz_D(nDim)
@@ -943,10 +944,11 @@ contains
     end do
   end subroutine is_inside_active_pic_region
   !============================================================================
-
   integer function pic_find_region(iBlock,i,j,k)
+
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
+
     use BATL_lib, ONLY: nDim, Xyz_DGB
 
     integer, intent(in) :: iBlock,i,j,k
@@ -971,10 +973,11 @@ contains
     pic_find_region=iStatus
   end function pic_find_region
   !============================================================================
-
   integer function pic_find_region_active(iBlock,i,j,k)
+
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
+
     use BATL_lib, ONLY: nDim, Xyz_DGB
 
     integer, intent(in) :: iBlock,i,j,k
@@ -998,10 +1001,11 @@ contains
 
   end function pic_find_region_active
   !============================================================================
-
   integer function pic_find_region_criteria(iBlock,i,j,k)
+
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
+    
     use BATL_lib, ONLY: nDim, Xyz_DGB
 
     integer, intent(in) :: iBlock,i,j,k
@@ -1022,9 +1026,9 @@ contains
 
   end function pic_find_region_criteria
   !============================================================================
-
   subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
-    ! Transfer Pic coordinates to Mhd coordinates. Origin_D
+
+    ! Transfer PIC coordinates to Mhd coordinates. Origin_D
     ! is the origin of the PIC coordinates.
 
     use BATL_lib, ONLY: nDim
@@ -1073,8 +1077,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine pic_to_mhd_vec
   !============================================================================
-
   subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
+
     ! DoMhd2Pic == true: transfer Mhd coordinates to a coordinates
     !   that is parallel to the PIC coordinates but the origin point is
     !   defined by Origin_D.
@@ -1117,7 +1121,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine mhd_to_pic_vec
   !============================================================================
-
   subroutine coord_to_patch_index(iRegion, CoordPicIn_D, IndexPatchOut_D)
 
     ! This subroutine takes the PIC xyz coordinate and output
@@ -1143,7 +1146,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine coord_to_patch_index
   !============================================================================
-
   subroutine patch_index_to_coord(iRegion, IndexPatchIn_D, NameCoord, &
        CoordOut_D)
 
@@ -1165,8 +1167,9 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTest)write(*,*) NameSub,' is called'
 
-    CoordMhd_D(1:nDim) = IndexPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim, iRegion)*nCellPerPatch) + &
-         XyzMinPic_DI(1:nDim, iRegion)
+    CoordMhd_D(1:nDim) = &
+         IndexPatchIn_D(1:nDim)*(DxyzPic_DI(1:nDim,iRegion)*nCellPerPatch) &
+         + XyzMinPic_DI(1:nDim,iRegion)
 
     if(NameCoord=='Mhd') then
        CoordOut_D = CoordMhd_D
@@ -1181,7 +1184,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine patch_index_to_coord
   !============================================================================
-
   subroutine calc_pic_criteria
 
     ! This subroutine takes the PIC xyz coordinate and output
@@ -1314,7 +1316,8 @@ contains
 
           do k=minK,maxK; do j=minJ,maxJ; do i=minI,maxI
              UnitBfield_DGB(1:nDim,i,j,k,iBlock) = &
-                  FullB_DGB(1:nDim,i,j,k,iBlock) / max(norm2(FullB_DGB(1:nDim,i,j,k,iBlock)),1e-30)
+                  FullB_DGB(1:nDim,i,j,k,iBlock) &
+                  / max(norm2(FullB_DGB(1:nDim,i,j,k,iBlock)),1e-30)
           end do; end do; end do
 
           ! Notice that Gradient B field only have physical cell values
@@ -1329,11 +1332,14 @@ contains
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              ! calculate the b*grad part of curvature
-             Curvature_DGB(x_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock)&
+             Curvature_DGB(x_,i,j,k,iBlock) = &
+                  sum(UnitBfield_DGB(:,i,j,k,iBlock) &
                   *GradUnitBx_DGB(:,i,j,k,iBlock))
-             if(nJ>1) Curvature_DGB(y_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock)&
+             if(nJ>1) Curvature_DGB(y_,i,j,k,iBlock) = &
+                  sum(UnitBfield_DGB(:,i,j,k,iBlock) &
                   *GradUnitBy_DGB(:,i,j,k,iBlock))
-             if(nK>1) Curvature_DGB(z_,i,j,k,iBlock) = sum(UnitBfield_DGB(:,i,j,k,iBlock)&
+             if(nK>1) Curvature_DGB(z_,i,j,k,iBlock) = &
+                  sum(UnitBfield_DGB(:,i,j,k,iBlock)&
                   *GradUnitBz_DGB(:,i,j,k,iBlock))
           end do; end do; end do
 
@@ -1397,7 +1403,8 @@ contains
        do iBlock=1,nBlock
           SatisfyAll = .true.
           do iCriteria=1, nCriteriaPic
-             if(PicCritInfo_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) SatisfyAll = .false.
+             if(PicCritInfo_CBI(i,j,k,iBlock,iCriteria)==iPicOff_) &
+                  SatisfyAll = .false.
           end do
           if(SatisfyAll) IsPicCrit_CB(i,j,k,iBlock) = iPicOn_
        end do
@@ -1421,7 +1428,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_pic_criteria
   !============================================================================
-
   subroutine calc_crit_jb(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJB)
 
     use BATL_lib,         ONLY: CellSize_DB
@@ -1448,8 +1454,8 @@ contains
 
   end subroutine calc_crit_jb
   !============================================================================
-
-  subroutine calc_crit_jbperp(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJBperp)
+  subroutine calc_crit_jbperp( &
+       i, j, k, iBlock, FullB_DG, CriteriaB1, CritJBperp)
 
     use BATL_lib,          ONLY: CellSize_DB
     use ModCurrent,        ONLY: get_current
@@ -1477,7 +1483,6 @@ contains
 
   end subroutine calc_crit_jbperp
   !============================================================================
-
   subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
 
     use ModAdvance, ONLY: Rho_, p_
@@ -1487,15 +1492,9 @@ contains
     real,    intent(in) :: State_VGB(:,:,:,:,:)
 
     real, intent(out) :: CritEntropy
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_crit_entropy'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(DoTest)write(*,*) NameSub,' is called'
-
-    CritEntropy = State_VGB(p_,i,j,k,iBlock)/&
-         (State_VGB(Rho_,i,j,k,iBlock)**Gamma)
+    CritEntropy = State_VGB(p_,i,j,k,iBlock) &
+         * State_VGB(Rho_,i,j,k,iBlock)**(-Gamma)
 
   end subroutine calc_crit_entropy
   !============================================================================
