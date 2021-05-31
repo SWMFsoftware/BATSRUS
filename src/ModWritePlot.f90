@@ -1037,7 +1037,7 @@ contains
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: pic_find_region, pic_find_region_active, &
-         pic_find_region_criteria, IsPicCrit_CB,&
+         pic_find_region_criteria, IsPicCrit_CB, calc_crit_entropy,&
          calc_crit_jb, calc_crit_jbperp, CriteriaB1, DivCurvature_CB
     use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
@@ -1736,7 +1736,11 @@ contains
           else
              PlotVar(:,:,:,iVar) = -777.0
           end if
-
+       case('entropy')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call calc_crit_entropy(i, j, k, iBlock, State_VGB,&
+                  PlotVar(i,j,k,iVar))
+          end do; end do; end do
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &

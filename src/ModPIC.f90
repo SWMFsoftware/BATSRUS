@@ -32,6 +32,7 @@ module ModPIC
   public:: read_pic_status_file
   public:: calc_crit_jb
   public:: calc_crit_jbperp
+  public:: calc_crit_entropy
 
   ! The PIC code that is coupled to MHD
   character(len=50), public:: NameVersionPic = 'none'
@@ -1196,12 +1197,13 @@ contains
     use ModCurrent,      ONLY: get_current
     use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModB0,           ONLY: UseB0, B0_DGB
-    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_
+    use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_, &
+         UnitP_, UnitRho_, Gamma
     use ModCoordTransform, ONLY: cross_product
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
-    real :: CritJB, CritJBperp, CriteriaValue
+    real :: CritJB, CritJBperp, CritEntropy, CriteriaValue
     real, allocatable :: Current_D(:), Ufield_DGB(:,:,:,:,:),&
          DivU_CB(:,:,:,:), CurrentCrossB_D(:)
     real :: current, bNorm
@@ -1248,6 +1250,11 @@ contains
        case('beta')
           CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)
           CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)
+       case('entropy')
+          CriteriaMinPic_I(iCriteria)=CriteriaMinPicDim_I(iCriteria)&
+               *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
+          CriteriaMaxPic_I(iCriteria)=CriteriaMaxPicDim_I(iCriteria)&
+               *Io2No_V(UnitP_)/(Io2No_V(UnitRho_)**Gamma)
        end select
     end do
 
@@ -1371,6 +1378,9 @@ contains
              case('beta')
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
+             case('entropy')
+                call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+                CriteriaValue = CritEntropy
              end select
 
              if (CriteriaValue > CriteriaMinPic_I(iCriteria) .and. &
@@ -1466,6 +1476,28 @@ contains
          *CellSize_DB(1, iBlock)
 
   end subroutine calc_crit_jbperp
+  !============================================================================
+
+  subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+
+    use ModAdvance, ONLY: Rho_, p_
+    use ModPhysics, ONLY: Gamma
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(in) :: State_VGB(:,:,:,:,:)
+
+    real, intent(out) :: CritEntropy
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_crit_entropy'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
+
+    CritEntropy = State_VGB(p_,i,j,k,iBlock)/&
+         (State_VGB(Rho_,i,j,k,iBlock)**Gamma)
+
+  end subroutine calc_crit_entropy
   !============================================================================
 
 end module ModPIC
