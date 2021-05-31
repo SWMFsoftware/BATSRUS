@@ -1000,10 +1000,10 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : time_BLK, &
-         State_VGB, DivB1_GB, IsConserv_CB, UseNonconservative, &
+    use ModAdvance, ONLY : time_BLK, State_VGB, DivB1_GB, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
          UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+    use ModConservative, ONLY: IsConserv_CB, UseNonconservative
     use ModLoadBalance, ONLY: iTypeBalance_A
     use ModB0, ONLY: B0_DGB
     use ModGeometry

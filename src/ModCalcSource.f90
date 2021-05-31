@@ -23,6 +23,7 @@ contains
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
          UseUserSourceExpl, UseUserSourceImpl
     use ModAdvance
+    use ModConservative,  ONLY: UseNonConservative
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
     use ModCoordTransform

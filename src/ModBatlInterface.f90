@@ -100,6 +100,8 @@ contains
          neiBeast, neiBwest, neiBsouth, neiBnorth, neiBbot, neiBtop, &
          neiPeast, neiPwest, neiPsouth, neiPnorth, neiPbot, neiPtop
 
+    use ModConservative, ONLY: IsStaticConservCrit, select_conservative
+
     integer, intent(in):: iBlock
 
     ! Convert from BATL to BATSRUS ordering of subfaces.
@@ -247,6 +249,12 @@ contains
     call fix_block_geometry(iBlock)
 
     if(iBlock == nBlock) then
+       ! Last call of this routine from set_batsrus_grid loop
+       ! (block nBlock is always used)
+
+       ! Set purely geometry based conservative criteria for all blocks
+       if(IsStaticConservCrit) call select_conservative
+
        !$acc update device(neiLtop, neiLbot)
        !$acc update device(neiLeast, neiLwest, neiLnorth, neiLsouth)
        !$acc update device(neiLEV)
@@ -391,7 +399,7 @@ contains
     !
     ! NOTE: it is assumed that iBlock is appropriate for interpolation
     ! that utilizes only 1 layer of ghost cells, i.e. the call
-    !  call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)! BATL_grid
+    ! call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)! BATL_grid
     ! would result in iBlockOut==iBlock
     !
     ! difference from BATL_grid version: if a cell in the stencil is not

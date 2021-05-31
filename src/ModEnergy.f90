@@ -12,8 +12,8 @@ module ModEnergy
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, &
        UseNeutralFluid, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
-  use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
-       UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
+  use ModAdvance,    ONLY: State_VGB, StateOld_VGB, UseElectronPressure
+  use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics,    ONLY: GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
        pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &

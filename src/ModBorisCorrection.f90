@@ -8,10 +8,10 @@ module ModBorisCorrection
   use ModMain,    ONLY: UseB0, UseHalfStep, nStage
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VCI, &
-       UseNonConservative, nConservCrit, IsConserv_CB, &
        LeftState_VXI, RightState_VXI, &
        LeftState_VYI, RightState_VYI, &
        LeftState_VZI, RightState_VZI
+  use ModConservative, ONLY: UseNonConservative, nConservCrit, IsConserv_CB
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
        x_, y_, z_, iTest, jTest, kTest, &

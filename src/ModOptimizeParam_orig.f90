@@ -9,7 +9,7 @@ module ModOptimizeParam
   use ModAdvance, ONLY: UseB
   use BATL_lib,   ONLY: nDim
 
-  use ModAdvance, ONLY: &
+  use ModConservative, ONLY: &
        UseNonConservative => UseNonConservative, &
        nConservCrit => nConservCrit
   use ModB0, ONLY: &

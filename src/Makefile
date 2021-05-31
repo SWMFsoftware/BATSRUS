@@ -36,6 +36,7 @@ OBJECTS = \
 	ModChromosphere.o \
 	ModCleanDivB.o \
 	ModCoarseAxis.o \
+	ModConservative.o \
 	ModConserveFlux.o \
 	ModConstrainDivB.o \
 	ModCoronalHeating.o \

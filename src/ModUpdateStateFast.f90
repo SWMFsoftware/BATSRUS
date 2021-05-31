@@ -15,9 +15,10 @@ module ModUpdateStateFast
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
-       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, IsConserv_CB, &
+       Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_
+  use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
@@ -93,63 +94,91 @@ contains
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
 
-       !$acc loop vector collapse(3) independent
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+       if(UseBody .and. IsBodyBlock)then
+          !$acc loop vector collapse(3) independent
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
 #ifndef OPENACC
-          DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
-               .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
-               .and. (iDimTest == 0 .or. iDimTest == 1)
+             DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
+                  .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
+                  .and. (iDimTest == 0 .or. iDimTest == 1)
 #endif
-          if(UseBody .and. IsBodyBlock) then
              if(  .not. Used_GB(i-1,j,k,iBlock) .and. &
                   .not. Used_GB(i,j,k,iBlock)) then
                 Flux_VXI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                 CYCLE
              end if
-          end if
-
-          call get_flux_x(i, j, k, iBlock, IsBodyBlock)
-       end do; end do; end do
+          
+             call get_flux_x(i, j, k, iBlock, IsBodyBlock)
+          end do; end do; end do
+       else
+          !$acc loop vector collapse(3) independent
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+#ifndef OPENACC
+             DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
+                  .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
+                  .and. (iDimTest == 0 .or. iDimTest == 1)
+#endif
+             call get_flux_x(i, j, k, iBlock)
+          end do; end do; end do
+       end if
 
        if(nDim > 1)then
-          !$acc loop vector collapse(3) independent
-          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+          if(UseBody .and. IsBodyBlock)then
+             !$acc loop vector collapse(3) independent
+             do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
 #ifndef OPENACC
-             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
-                  .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
-                  .and. (iDimTest == 0 .or. iDimTest == 2)
+                DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                     .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
+                     .and. (iDimTest == 0 .or. iDimTest == 2)
 #endif
-             if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j-1,k,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
                    Flux_VYI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                    CYCLE
                 end if
-             end if
-             call get_flux_y(i, j, k, iBlock, IsBodyBlock)
-          end do; end do; end do
+                call get_flux_y(i, j, k, iBlock, IsBodyBlock)
+             end do; end do; end do
+          else
+             !$acc loop vector collapse(3) independent
+             do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+#ifndef OPENACC
+                DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                     .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
+                     .and. (iDimTest == 0 .or. iDimTest == 2)
+#endif
+                call get_flux_y(i, j, k, iBlock)
+             end do; end do; end do
+          end if
        end if
 
        if(nDim > 2)then
-          !$acc loop vector collapse(3) independent
-          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          if(UseBody .and. IsBodyBlock)then
+             !$acc loop vector collapse(3) independent
+             do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
 #ifndef OPENACC
-             DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
-                  .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
-                  .and. (iDimTest == 0 .or. iDimTest == 3)
+                DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                     .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
+                     .and. (iDimTest == 0 .or. iDimTest == 3)
 #endif
-             if(UseBody .and. IsBodyBlock) then
                 if(  .not. Used_GB(i,j,k-1,iBlock) .and. &
                      .not. Used_GB(i,j,k,iBlock)) then
                    Flux_VZI(UnFirst_:Vdt_,i,j,k,iGang) = 0.0
                    CYCLE
                 end if
-             end if
-
-             call get_flux_z(i, j, k, iBlock, IsBodyBlock)
-          end do; end do; end do
+                call get_flux_z(i, j, k, iBlock, IsBodyBlock)
+             end do; end do; end do
+          else
+             !$acc loop vector collapse(3) independent
+             do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+#ifndef OPENACC
+                DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
+                     .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
+                     .and. (iDimTest == 0 .or. iDimTest == 3)
+#endif
+                call get_flux_z(i, j, k, iBlock)
+             end do; end do; end do
+          end if
        end if
-
        if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
 
        ! Update
@@ -440,12 +469,11 @@ contains
 
   end subroutine get_b0_face
   !============================================================================
-
   subroutine get_flux_x(i, j,  k, iBlock, IsBodyBlock)
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    logical, intent(in):: IsBodyBlock
+    logical, intent(in), optional:: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -463,7 +491,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-    if(UseBody .and. IsBodyBlock) then
+    if(UseBody .and. present(IsBodyBlock)) then
        if (Used_GB(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -500,7 +528,7 @@ contains
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    logical, intent(in):: IsBodyBlock
+    logical, intent(in), optional:: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -518,7 +546,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
 
-    if(UseBody .and. IsBodyBlock) then
+    if(UseBody .and. present(IsBodyBlock)) then
        if (Used_GB(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -555,7 +583,7 @@ contains
     !$acc routine seq
 
     integer, intent(in):: i, j, k, iBlock
-    logical, intent(in):: IsBodyBlock
+    logical, intent(in), optional:: IsBodyBlock
 
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
@@ -573,7 +601,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
-    if(UseBody .and. IsBodyBlock) then
+    if(UseBody .and. present(IsBodyBlock)) then
        if (Used_GB(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
           call set_face(StateLeft_V, StateRight_V,&
@@ -1341,7 +1369,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    logical, intent(in):: IsBodyBlock
+    logical, intent(in), optional:: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -1373,7 +1401,7 @@ contains
           end if
        end do
 
-       if(UseBody .and. IsBodyBlock) then
+       if(UseBody .and. present(IsBodyBlock)) then
           ! Return to 1st order for the faces that need body cells to
           ! calculate 2nd order face values.
           ! This is equivalent to limiter_body in ModFaceValue.f90
@@ -1393,7 +1421,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    logical, intent(in) :: IsBodyBlock
+    logical, intent(in), optional :: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -1425,7 +1453,7 @@ contains
           end if
        end do
 
-       if(UseBody .and. IsBodyBlock) then
+       if(UseBody .and. present(IsBodyBlock)) then
           if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
                call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
 
@@ -1441,7 +1469,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: StateLeft_V(nVar), StateRight_V(nVar)
-    logical, intent(in) :: IsBodyBlock
+    logical, intent(in), optional :: IsBodyBlock
 
     integer:: iVar
     !--------------------------------------------------------------------------
@@ -1473,7 +1501,7 @@ contains
           end if
        end do
 
-       if(UseBody .and. IsBodyBlock) then
+       if(UseBody .and. present(IsBodyBlock)) then
           if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
                call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
 

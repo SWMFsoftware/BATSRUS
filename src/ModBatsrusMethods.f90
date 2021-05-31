@@ -450,8 +450,7 @@ contains
     use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
          prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
-    use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
-         UseElectronPressure
+    use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit
     use ModAdvectPoints, ONLY: advect_all_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
@@ -477,10 +476,10 @@ contains
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModLoadBalance, ONLY: load_balance_blocks
+    use ModConservative, ONLY: IsDynamicConservCrit, select_conservative
     use ModBoundaryGeometry, ONLY: fix_geometry
     use ModWriteProgress, ONLY: write_timeaccurate
-    use ModUpdateState, ONLY: select_conservative, update_b0, update_te0, &
-         fix_anisotropy
+    use ModUpdateState, ONLY: update_b0, update_te0, fix_anisotropy
     use ModProjectDivB, ONLY: project_divb
     use ModCleanDivB,   ONLY: clean_divb
     use BATL_lib, ONLY: iProc
@@ -551,8 +550,8 @@ contains
     ! Switch off steady blocks to reduce calculation
     if(UsePartSteady) call part_steady_switch(.true.)
 
-    if(UseNonConservative .and. nConservCrit > 0)&
-         call select_conservative
+    ! Reset conservative criteria based on current solution
+    if(IsDynamicConservCrit) call select_conservative
 
     if(UseImplicit.and.nBlockImplALL>0)then
        call advance_part_impl

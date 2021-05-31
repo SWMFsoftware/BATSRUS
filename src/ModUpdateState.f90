@@ -6,7 +6,8 @@ module ModUpdateState
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
-       iProcTest, iVarTest, iProc, iComm
+       iProcTest, iVarTest, iProc, iComm, Used_GB, CellVolume_GB, Xyz_DGB
+  use ModConservative, ONLY: IsConserv_CB, UseNonConservative, nConservCrit
 
   implicit none
 
@@ -18,7 +19,6 @@ module ModUpdateState
   public:: update_te0           ! update Te0 variable
   public:: update_check         ! check and correct update if necessary
   public:: fix_anisotropy       ! fix pressure anisotropy after update
-  public:: select_conservative  ! select cells to use conservative update
 
 contains
   !============================================================================
@@ -29,7 +29,6 @@ contains
     use ModAdvance
     use ModEnergy,     ONLY: limit_pressure
     use ModMultiFluid, ONLY: nFluid
-    use BATL_lib,      ONLY: CellVolume_GB
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          update_heatflux_collisionless
     use ModUserInterface ! user_update_states
@@ -104,12 +103,10 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
   !============================================================================
-
   subroutine update_state_normal(iBlock)
     use ModMain
     use ModAdvance
     use ModPhysics
-    use ModGeometry, ONLY: true_cell
     use ModSemiImplVar, ONLY: UseStableImplicit
     use ModVarIndexes, ONLY: pe_, p_
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -122,7 +119,6 @@ contains
          update_wave_group_advection
     use ModResistivity, ONLY: UseResistivity, UseResistiveFlux, &
          calc_resistivity_source
-    use BATL_lib, ONLY: CellVolume_GB
     use ModUserInterface
     use ModBuffer,      ONLY: fix_buffer_grid
     use ModIonElectron, ONLY: ion_electron_source_impl, &
@@ -364,7 +360,7 @@ contains
          ! Convert electron pressure to entropy
          ! Se = Pe^(1/GammaE)
          do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
@@ -379,13 +375,13 @@ contains
       ! Ions first
       if(.not.UseNonConservative)then
          do k = 1, nK; do j = 1, nJ; do i =1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
                  Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
          end do; end do; end do
       elseif(nConservCrit > 0)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
                  Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
@@ -394,7 +390,7 @@ contains
       ! Neutrals next
       if(UseNeutralFluid .and. DoConserveNeutrals)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             Source_VCI(iP_I(IonLast_+1:),i,j,k,iGang) = &
                  Source_VCI(Energy_+IonLast_:,i,j,k,iGang)
          end do; end do; end do
@@ -489,7 +485,7 @@ contains
          ! Convert electron entropy back to pressure
          ! Pe = Se^GammaE
          do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
             StateOld_VGB(Pe_,i,j,k,iBlock) = &
                  StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
@@ -542,7 +538,7 @@ contains
          ! for half+full step method. But it cannot be used for RK schemes!
 
          do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(UseNonConservative)then
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
@@ -655,12 +651,10 @@ contains
     use ModAdvance
     use ModB0, ONLY: B0_DGB
     use ModPhysics
-    use ModGeometry, ONLY : true_cell
     use ModNumConst, ONLY: cTiny
     use ModMpi
     use ModMultiFluid, ONLY: IsMhd
     use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
-    use BATL_lib, ONLY: Xyz_DGB
 
     integer, parameter :: max_checks=25
     integer :: i,j,k, iVar, iBlock, num_checks, iError
@@ -992,7 +986,7 @@ contains
           do iBlock = 1,nBlockMax
              if(Unused_B(iBlock))CYCLE
              do k=1,nK; do j=1,nJ; do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                if(.not.Used_GB(i,j,k,iBlock))CYCLE
                 if(abs(100. * abs( min( 0., &
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
@@ -1120,188 +1114,6 @@ contains
 
   end subroutine update_check
   !============================================================================
-
-  subroutine select_conservative
-
-    ! Set the global variable IsConserv_CB
-
-    use ModNumConst
-    use ModMain
-    use ModAdvance
-    use ModB0, ONLY: B0_DGB
-    use ModGeometry
-    use ModPhysics, ONLY: GammaMinus1, InvGammaMinus1
-    use BATL_lib, ONLY: Xyz_DGB
-
-    integer :: iBlock, iCrit, i, j, k
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'select_conservative'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    call timing_start('nonconservative')
-
-    if(DoTest)write(*,*) NameSub,': starting with ',&
-         'UseNonConservative, nConservCrit=',UseNonConservative, nConservCrit
-
-    if(.not.allocated(IsConserv_CB))then
-       allocate(IsConserv_CB(nI,nJ,nK,MaxBlock))
-       if(DoTest)write(*,*) NameSub,': allocated IsConserv_CB'
-    end if
-
-    if(nConservCrit < 1)then
-       ! There are no criteria so use fully non-conservative
-       IsConserv_CB = .false.
-       if(DoTest)write(*,*) NameSub,': set IsConserv_CB = F'
-       RETURN
-    endif
-
-    if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp' &
-         .or. TypeConservCrit_I == 'jumpp') )then
-
-       if(DoTest)write(*,*) NameSub, ': Apply physics based criteria'
-
-       ! These all have to be true to use non-conservative,
-       ! so any of the criteria can switch to conservative
-       IsConserv_CB = .false.
-
-       do iBlock = 1, nBlock
-          if( Unused_B(iBlock) ) CYCLE
-
-          if(UseElectronPressure)then
-             do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                     + State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-
-          do iCrit = 1, nConservCrit
-             select case(TypeConservCrit_I(iCrit))
-             case('p')
-                ! Check if pressure is > pCoeffConserv*energy_density
-                if(UseB0)then
-                   do k=1,nK; do j=1,nJ; do i=1,nI
-                      IsConserv_CB(i,j,k,iBlock) = &
-                           IsConserv_CB(i,j,k,iBlock) .or. &
-                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv *   &
-                           ( InvGammaMinus1*State_VGB(P_,i,j,k,iBlock)    &
-                           + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)&
-                           / State_VGB(Rho_,i,j,k,iBlock)                 &
-                           + 0.5*sum((State_VGB(Bx_:Bz_,i,j,k,iBlock)     &
-                           +          B0_DGB(:,i,j,k,iBlock))**2))
-                   end do;end do;end do
-                else
-                   do k=1,nK; do j=1,nJ; do i=1,nI
-                      IsConserv_CB(i,j,k,iBlock) = &
-                           IsConserv_CB(i,j,k,iBlock) .or. &
-                           State_VGB(P_,i,j,k,iBlock) > pCoeffConserv *   &
-                           ( InvGammaMinus1*State_VGB(P_,i,j,k,iBlock)    &
-                           + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)&
-                           / State_VGB(Rho_,i,j,k,iBlock)                 &
-                           + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
-                   end do;end do;end do
-                end if
-             case('gradp')
-                ! Switch to conservative if gradient of pressure is large
-                do k=1,nK; do j=1,nJ; do i=1,nI
-                   IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) &
-                        .or. &
-                        (abs(State_VGB(P_,i+1,j,k,iBlock) &
-                        -    State_VGB(P_,i-1,j,k,iBlock))  &
-                        +abs(State_VGB(P_,i,j+1,k,iBlock) &
-                        -    State_VGB(P_,i,j-1,k,iBlock))  &
-                        +abs(State_VGB(P_,i,j,k+1,iBlock) &
-                        -    State_VGB(P_,i,j,k-1,iBlock))) &
-                        > GradPCoeffConserv * min(    &
-                        State_VGB(P_,i,j,k,iBlock),   &
-                        State_VGB(P_,i+1,j,k,iBlock), &
-                        State_VGB(P_,i-1,j,k,iBlock), &
-                        State_VGB(P_,i,j+1,k,iBlock), &
-                        State_VGB(P_,i,j-1,k,iBlock), &
-                        State_VGB(P_,i,j,k+1,iBlock), &
-                        State_VGB(P_,i,j,k-1,iBlock))
-                end do; end do; end do
-             case('jumpp')
-                ! Switch to conservative if pressure jump is large
-                do k=1,nK; do j=1,nJ; do i=1,nI
-                   IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) &
-                        .or. &
-                        maxval(State_VGB(P_,i-2:i+2,j,k,iBlock)) &
-                        > GradPCoeffConserv* &
-                        minval(State_VGB(P_,i-2:i+2,j,k,iBlock)) .or. &
-                        nJ > 1 .and. &
-                        maxval(State_VGB(P_,i,j-2:j+2,k,iBlock)) &
-                        > GradPCoeffConserv* &
-                        minval(State_VGB(P_,i:i,j-2:j+2,k,iBlock)) .or. &
-                        nK > 1 .and. &
-                        maxval(State_VGB(P_,i,j,k-2:k+2,iBlock)) &
-                        > GradPCoeffConserv* &
-                        minval(State_VGB(P_,i:i,j,k-2:k+2,iBlock))
-                end do; end do; end do
-             case default
-                CYCLE
-             end select
-
-             if(DoTest .and. iBlock==iBlockTest)&
-                  write(*,*) NameSub, ': TypeCrit, IsConserv=',&
-                  TypeConservCrit_I(iCrit), &
-                  IsConserv_CB(iTest,jTest,kTest,iBlock)
-
-          end do ! iCrit
-
-          if(UseElectronPressure)then
-             do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-
-       end do ! iBlock
-
-    else
-       ! If there are no physics based criteria we start from
-       ! the assumption of conservative everywhere
-       IsConserv_CB = .true.
-
-       if(DoTest .and. iProc==iProcTest)&
-            write(*,*) NameSub, ': default IsConserv is true'
-    endif
-
-    do iBlock=1,nBlock
-       if( Unused_B(iBlock) ) CYCLE
-
-       ! Apply geometry based criteria
-       ! Any of these can switch from conservative to non-conservative
-       do iCrit=1,nConservCrit
-          select case(TypeConservCrit_I(iCrit))
-          case('r')
-             ! Switch to non-conservative inside radius rConserv
-             IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
-                  R_BLK(1:nI,1:nJ,1:nK,iBlock) > rConserv
-          case('parabola')
-             ! Switch to non-conservative behind parabola inside the bow shock
-             IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
-                  Xyz_DGB(x_,1:nI,1:nJ,1:nK,iBlock) > xParabolaConserv - &
-                  ( Xyz_DGB(y_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                  + Xyz_DGB(z_,1:nI,1:nJ,1:nK,iBlock)**2 ) / yParabolaConserv
-          case default
-             CYCLE
-          end select
-          if(DoTest.and.iBlock==iBlockTest)&
-               write(*,*) NameSub, ': TypeCrit, IsConserv=',&
-               TypeConservCrit_I(iCrit), IsConserv_CB(iTest,jTest,kTest,iBlock)
-       end do
-    end do
-
-    !$acc update device(IsConserv_CB)
-
-    call timing_stop('nonconservative')
-
-    call test_stop(NameSub, DoTest)
-  end subroutine select_conservative
-  !============================================================================
-
   subroutine fix_anisotropy
 
     ! Calculate the pressure anisotropy relaxation term for anisotropic MHD.
@@ -1321,7 +1133,6 @@ contains
     use ModAdvance, ONLY: State_VGB, time_BLK
     use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
          IonMassPerCharge, TauGlobal_I
-    use ModGeometry, ONLY: true_cell
     use ModMultiFluid, ONLY: select_fluid, iP, iPpar
     use ModVarIndexes, ONLY: nFluid
 
@@ -1341,7 +1152,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           do iFluid = 1, nFluid
              if(nFluid > 1) call select_fluid(iFluid)
@@ -1449,7 +1260,7 @@ contains
          time_simulation, NameThisComp, time_accurate
     use ModPhysics,       ONLY: ThetaTilt
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
-    use ModGeometry,      ONLY: true_cell, body_BLK
+    use ModGeometry,      ONLY: body_BLK
     use CON_axes,         ONLY: get_axes
     use ModNumConst,      ONLY: cRadToDeg
     use ModIO,            ONLY: iUnitOut, write_prefix
@@ -1502,7 +1313,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        ! Set B1 to 0 inside bodies
        if(Body_BLK(iBlock))then
-          where(.not.true_cell(:,:,:,iBlock))
+          where(.not.Used_GB(:,:,:,iBlock))
              State_VGB(Bx_,:,:,:,iBlock)=0.0
              State_VGB(By_,:,:,:,iBlock)=0.0
              State_VGB(Bz_,:,:,:,iBlock)=0.0
@@ -1534,7 +1345,6 @@ contains
          UseSingleIonVelocity, UseSingleIonTemperature
     use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
-    use ModGeometry,   ONLY: true_cell
 
     integer, intent(in) :: iBlock
 
@@ -1561,7 +1371,7 @@ contains
 
     if(UseSingleIonVelocity) then
        do k=1, nK; do j=1, nJ; do i=1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Calcualate average velocity from total momentum and density
           RhoInv= 1/sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
@@ -1582,7 +1392,7 @@ contains
 
     if(UseSingleIonTemperature) then
        do k=1, nK; do j=1, nJ; do i=1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Number density
           NumDens_I = &

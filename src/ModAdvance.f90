@@ -21,8 +21,8 @@ module ModAdvance
   implicit none
   save
 
-  public :: init_mod_advance
-  public :: clean_mod_advance
+  public:: init_mod_advance
+  public:: clean_mod_advance
 
   ! Update method
   character(len=10):: TypeUpdate = 'orig'
@@ -96,25 +96,6 @@ module ModAdvance
   ! behave like multi-species MHD.
   logical :: UseSingleIonVelocity    = .false.
   logical :: UseSingleIonTemperature = .false.
-
-  ! Conservative/Non-conservative parameters
-  logical :: UseNonConservative = .false.
-  !$acc declare create(UseNonConservative)
-
-  ! Number and type of criteria
-  integer :: nConservCrit = 0
-  !$acc declare create(nConservCrit)
-  character(len=10), allocatable :: TypeConservCrit_I(:)
-
-  ! Geometrical parameters
-  real    :: rConserv=-1.0, xParabolaConserv, yParabolaConserv
-
-  ! Physics based parameters (to locate shocks)
-  real    :: pCoeffConserv, GradPCoeffConserv
-
-  ! Cells selected to be updated with conservative equations
-  logical, allocatable :: IsConserv_CB(:,:,:,:)
-  !$acc declare create(IsConserv_CB)
 
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
@@ -246,7 +227,6 @@ module ModAdvance
 
 contains
   !============================================================================
-
   subroutine init_mod_advance
 
     ! These arrays may need allocation depending on the parameters
@@ -368,7 +348,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_advance
   !============================================================================
-
   subroutine clean_mod_advance
 
     logical:: DoTest
@@ -423,6 +402,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_advance
   !============================================================================
-
 end module ModAdvance
 !==============================================================================

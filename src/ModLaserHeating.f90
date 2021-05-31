@@ -1543,7 +1543,8 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
     use ModMain, ONLY: Time_Simulation, dt, nBlock, Unused_B
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, UseElectronPressure, UseIdealEos
+         UseElectronPressure, UseIdealEos
+    use ModConservative, ONLY: UseNonConservative
     use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
          No2Si_V, UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_

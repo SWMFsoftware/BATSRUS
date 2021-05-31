@@ -14,7 +14,6 @@ module ModSetParameters
 
 contains
   !============================================================================
-
   subroutine set_parameters(TypeAction)
 
     ! Set input parameters for BATS-R-US!
@@ -22,6 +21,8 @@ contains
     use ModMain
     use ModBuffer, ONLY: read_buffer_grid_param
     use ModAdvance
+    use ModConservative, ONLY: &
+         set_non_conservative, UseNonConservative, nConservCrit 
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
     use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
@@ -91,7 +92,6 @@ contains
          uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
          UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
          TNeutralsISW_dim, mProtonMass
-
     use ModMultiIon, ONLY: multi_ion_set_parameters, &
          multi_ion_init_point_impl
     use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
@@ -111,6 +111,7 @@ contains
     use ModNumConst, ONLY: cDegToRad, cTiny, cHalfPi
     use ModConst, ONLY: CarringtonSynodicPeriod, tStartCarringtonRotation
     use ModSort, ONLY: sort_quick
+    use ModConservative, ONLY: read_conservative_param
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
     use ModPIC, ONLY: pic_read_param
@@ -1547,61 +1548,9 @@ contains
             '#LIMITPTOTAL', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
           call read_face_value_param(NameCommand)
 
-       case("#NONCONSERVATIVE")
-          call read_var('UseNonConservative',UseNonConservative)
-          if(.not.UseNonConservative)then
-             nConservCrit = 0
-             if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-          end if
-
-       case("#CONSERVATIVECRITERIA")
-          call read_var('nConservCrit', nConservCrit)
-          if(nConservCrit > 0) then
-             UseNonConservative = .true.
-             if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-             allocate( TypeConservCrit_I(nConservCrit) )
-             do i = 1, nConservCrit
-                call read_var('TypeConservCrit',TypeConservCrit_I(i),&
-                     IsLowerCase=.true.)
-                select case(TypeConservCrit_I(i))
-                   ! Geometry based criteria:
-                case('r','radius')
-                   !    non-conservative scheme is used for r < rConserv
-                   TypeConservCrit_I(i) = 'r'
-                   call read_var('rConserv',rConserv)
-                case('parabola','paraboloid')
-                   !    non-conservative scheme is used for
-                   !    x < xParabolaConserv - (y**2+z**2)/yParabolaConserv
-                   TypeConservCrit_I(i) = 'parabola'
-                   call read_var('xParabolaConserv',xParabolaConserv)
-                   call read_var('yParabolaConserv',yParabolaConserv)
-                   ! Physics based criteria
-                case('p')
-                   ! Balsara/Ryu switch 1
-                   call read_var('pCoeffConserv',pCoeffConserv)
-                case('gradp','jumpp')
-                   ! Balsara/Ryu switch 2
-                   call read_var('GradPCoeffConserv',GradPCoeffConserv)
-                case default
-                   if(UseStrict)then
-                      call stop_mpi(NameSub//&
-                           ' ERROR: unknown TypeConservCrit_I=' &
-                           //TypeConservCrit_I(i))
-                   else
-                      if(iProc==0)write(*,'(a)') NameSub // &
-                           ' WARNING: ignoring unknown TypeConservCrit_I=',&
-                           trim(TypeConservCrit_I(i))//' !!!'
-                   end if
-                end select
-                ! Check if the same criterion has been used before
-                if(any(TypeConservCrit_I(1:i-1)==TypeConservCrit_I(i)))then
-                   if(iProc==0)write(*,'(a)')NameSub // &
-                        ' WARNING: multiple use of criterion ',&
-                        trim(TypeConservCrit_I(i))
-                end if
-             end do
-          end if
-
+       case("#NONCONSERVATIVE", "#CONSERVATIVECRITERIA")
+          call read_conservative_param(NameCommand)
+          
        case("#TIMESTEPCONTROL", "#CONTROLTIMESTEP", "#CHECKTIMESTEP", &
             "#CONTROLDECREASE", "#CONTROLINCREASE", &
             "#CONTROLFACTOR", "#CONTROLVAR", "#CONTROLINIT")
@@ -1692,10 +1641,10 @@ contains
                      call stop_mpi('Correct PARAM.in or change equation!')
              end if
           else
-             call read_var('UseHyperbolicDivB',UseHyperbolicDivB)
+             call read_var('UseHyperbolicDivB', UseHyperbolicDivB)
              if(UseHyperbolicDivB) then
-                call read_var('SpeedHypDim',SpeedHypDim)
-                call read_var('HypDecay'   ,HypDecay)
+                call read_var('SpeedHypDim', SpeedHypDim)
+                call read_var('HypDecay'   , HypDecay)
              end if
           endif
 
@@ -1711,11 +1660,12 @@ contains
 
        case("#IOUNITS")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('TypeIoUnit',TypeIoUnit,IsUpperCase=.true.)
+          call read_var('TypeIoUnit', TypeIoUnit, IsUpperCase=.true.)
 
        case("#NORMALIZATION")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('TypeNormalization',TypeNormalization,IsUpperCase=.true.)
+          call read_var('TypeNormalization', TypeNormalization, &
+               IsUpperCase=.true.)
           select case(TypeNormalization)
           case('NONE')
              No2Si_V = 1.0
@@ -2114,9 +2064,7 @@ contains
 
           ! Isothermal case (for ions?)
           if(any(Gamma_I == 1.0))then
-             UseNonConservative = .true.
-             nConservCrit = 0
-             if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
+             call set_non_conservative
              if(iProc==0) write(*,*) NameSub, &
                   ': for gamma=1 UseNonConservative is set to TRUE'
           endif
@@ -2928,7 +2876,6 @@ contains
       ! Set component dependent defaults
 
       GravityDir=0
-      if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
       select case(NameThisComp)
       case('SC','IH','OH','EE')
