@@ -38,18 +38,23 @@ contains
 
     real   :: SinSlope, CosSlope, Rot_II(2,2)
     real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
-    integer:: i, j, k, iVar, iBoundary, iFluid
+    integer:: i, j, k, iVar, iBoundary, iFluid, iGang
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_initial_condition'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    iGang = 1
+#ifdef OPENACC
+    iGang = iBlock
+#endif
+
     time_BLK(:,:,:,iBlock) = 0.0
 
-    Flux_VXI = 0.0
-    Flux_VYI = 0.0
-    Flux_VZI = 0.0
+    Flux_VXI(:,:,:,:,iGang) = 0.0
+    Flux_VYI(:,:,:,:,iGang) = 0.0
+    Flux_VZI(:,:,:,:,iGang) = 0.0
 
     if(Unused_B(iBlock))then
        do iVar = 1, nVar
