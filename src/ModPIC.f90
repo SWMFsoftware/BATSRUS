@@ -1005,7 +1005,7 @@ contains
 
     ! If a cell is inside the PIC region, return 1;
     ! otherwise, return 0;
-    
+
     use BATL_lib, ONLY: nDim, Xyz_DGB
 
     integer, intent(in) :: iBlock,i,j,k
