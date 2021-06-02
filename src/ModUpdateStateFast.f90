@@ -244,18 +244,14 @@ contains
              ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
              DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
                   /State_VGB(Rho_,i,j,k,iBlock)
-             if(UseB0)then
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  + DivE*cross_product( &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                      + DivE*cross_product( &
-                     B0_DGB(:,i,j,k,iBlock) &
-                     + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                     B0_DGB(:,i,j,k,iBlock), &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-             else
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*cross_product( &
-                     State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-             end if
 #ifndef OPENACC
              if(DoTestCell)then
                 write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
