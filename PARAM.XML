@@ -8014,6 +8014,7 @@ This default is backwards compatible with previous versions of the code.
     <option name="real8"/>
     <option name="real4" default="T"/>
     <option name="ascii"/>
+    <option name="log/sat" />
   </parameter>
   <if expr="$NameCommand =~ /param/">
     <parameter name="NameTableParam" type="string" length="$lLine"/>
@@ -8063,12 +8064,26 @@ If NameCommand contains "param" and the table is not loaded from a file,
 then the NameTableParam variable and the TableParam values of table
 parameters are read from the input file and stored into the table.
 
-The file name and file type ("ascii", "real4" or "real8") of the table
-are read when NameCommand contains "load", "save", or "use". The TypeFile
-is also read for "make", because setting it to "real4" implies the
-use of single precision storage internally as well. This saves a factor
-of two in storage (both disk and memory), which may be very significant
-for large lookup tables. In fact, TypeFile=real4 is the recommended setting.
+The file name and file type ("real4", "real8", "ascii", "log" or "sat")
+of the table are read when NameCommand contains "load", "save",
+or "use". The TypeFile is also read for "make", because setting it to
+"real4" implies the use of single precision storage internally as well.
+This saves a factor of two in storage (both disk and memory),
+which may be very significant for large lookup tables. In fact,
+TypeFile=real4 is the recommended setting.
+
+The "log" or "sat" file type corresponds to a one dimensional lookup table
+where the coordinate is usually time. The time can be given by up to 7
+integer columns (year, month, day, hour, sec, min, msec). The integer time
+description is converted into a double precision time (number of
+seconds since 01/01/1965) which is the standard representation of time
+in the SWMF. These columns are identified by the space separated variable
+names that are just before the "#START" string. Standard variable names
+indicating the date-time information are "year" or "yr", "month" or "mo",
+"day" or "dy", "min" or "mn", "sec" or "sc" and "msec" or "msc" in this
+order. Alternatively the variable name can be "dateN" where N = 2...7
+is the number of integers describing the date and time.
+The actual data follows the line containing the "\#START" string.
 
 The rest of the parameters are read for commands "make", "save" or "use".
 The NameVar string contains the space separated list of the names of
