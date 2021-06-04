@@ -8,7 +8,8 @@ module ModGroundMagPerturb
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, xyz_to_lonlat, cross_product
+  use ModCoordTransform, ONLY: &
+       sph_to_xyz, rot_xyz_sph, xyz_to_lonlat, cross_product
   use ModConst,          ONLY: cDegToRad, cRadToDeg
 
   implicit none
@@ -113,8 +114,8 @@ module ModGroundMagPerturb
 
 contains
   !============================================================================
-
   subroutine read_magperturb_param(NameCommand)
+
     ! Handle params for all magnetometer-related commands.
 
     use ModIO,        ONLY: magfile_, maggridfile_, indexfile_, &
@@ -181,9 +182,9 @@ contains
     end select
 
     call test_stop(NameSub, DoTest)
+
   end subroutine read_magperturb_param
   !============================================================================
-
   subroutine init_mod_magperturb
     ! Set up the grid of magnetometers and the respective files (if single
     ! file format is selected).
@@ -291,7 +292,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_magperturb
   !============================================================================
-
   subroutine init_geoindices
 
     ! Initialize variables, arrays, and output file.
@@ -383,7 +383,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_geoindices
   !============================================================================
-
   subroutine ground_mag_perturb(nMag, Xyz_DI, MagPerturb_DI)
 
     ! This subroutine is used to calculate the 3D ground magnetic perturbations
@@ -451,7 +450,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine ground_mag_perturb
   !============================================================================
-
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
 
@@ -961,7 +959,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_kp
   !============================================================================
-
   subroutine calc_ae
 
     use CON_axes,      ONLY: transform_matrix
@@ -1041,6 +1038,7 @@ contains
   end subroutine calc_ae
   !============================================================================
   subroutine check_mag_input_file
+
     ! Set number of magnetometers listed in the input file:
     ! set nMagnetometer
 
@@ -1096,10 +1094,12 @@ contains
           if(index(StringLine,'#START')>0)then
              READPOINTS: do
                 read(UnitTmp_,*, iostat=iError) NameMag, LatMag, LonMag
-                if(LonMag < 0 .or. LonMag > 0 .or. LatMag < -90 .or. LatMag > 90) &
-                     write(*,*) NameSub, &
-                     ' incorrect coordinates: nMag, NameMag, LonMag, LatMag=', &
-                     nMag, NameMag, LonMag, LatMag
+                if(NameMag /= 'DST' .and. ( &
+                     LonMag < 0 .or. LonMag > 360 .or. &
+                     LatMag < -90 .or. LatMag > 90)) write(*,*) NameSub, &
+                     ' incorrect coordinates: nMag, NameMag, LatMag, LonMag=',&
+                     nMag, NameMag, LatMag, LonMag
+
                 if (iError /= 0) EXIT READFILE
 
                 ! Add new points
@@ -1129,8 +1129,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine check_mag_input_file
   !============================================================================
-
   subroutine read_mag_input_file
+
     ! Read the magnetometer input file which governs the number of virtual
     ! magnetometers to be used and their location and coordinate systems.
     ! Input values read from file are saved in module-level variables.
@@ -1184,7 +1184,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_mag_input_file
   !============================================================================
-
   subroutine open_magnetometer_output_file(NameGroup)
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
@@ -1266,7 +1265,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine open_magnetometer_output_file
   !============================================================================
-
   subroutine write_geoindices
 
     use ModMain,  ONLY: n_step
@@ -1310,7 +1308,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine write_geoindices
   !============================================================================
-
   subroutine write_magnetometers(NameGroup)
     ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
@@ -1568,7 +1565,6 @@ contains
 
     end subroutine write_mag_single
     !==========================================================================
-
     subroutine write_mag_step
 
       ! For TypeMagFileOut == 'step', write one file for every write step.
@@ -1635,7 +1631,6 @@ contains
     !==========================================================================
   end subroutine write_magnetometers
   !============================================================================
-
   subroutine finalize_magnetometer
 
     ! Close the magnetometer output files (flush buffer, release IO unit).
@@ -1657,7 +1652,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine finalize_magnetometer
   !============================================================================
-
   integer function k_index(DeltaB)
 
     ! Convert a deltaB value (max-min over window) to a K-value using given
@@ -1669,7 +1663,6 @@ contains
     real, intent(in) :: DeltaB
 
     integer :: i
-
     !--------------------------------------------------------------------------
     do i = 1, 9
        if( DeltaB - Table50_I(i)*Scalek9/Table50_I(9) < 0) then
@@ -1681,6 +1674,5 @@ contains
 
   end function k_index
   !============================================================================
-
 end module ModGroundMagPerturb
 !==============================================================================
