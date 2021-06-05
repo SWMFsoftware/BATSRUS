@@ -488,17 +488,13 @@ contains
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i-1,j,k,iBlock) .and. &
+       if(Used_GB(i-1,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V,&
-               0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
-       endif
-
-       if (Used_GB(i,j,k,iBlock) .and. &
+          call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
+       elseif(Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V,&
-               0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
-       endif
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
+       end if
     endif
 
 #ifndef OPENACC
@@ -543,16 +539,12 @@ contains
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i,j-1,k,iBlock) .and. &
+       if(Used_GB(i,j-1,k,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V,&
-               0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
-       endif
-
-       if (Used_GB(i,j,k,iBlock) .and. &
+          call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
+       else if(Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V,&
-               0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
        endif
     endif
 
@@ -600,14 +592,10 @@ contains
     if(UseBody .and. present(IsBodyBlock)) then
        if (Used_GB(i,j,k-1,iBlock) .and. &
             iBoundary_GB(i,j,k,iBlock) /= domain_) then
-          call set_face(StateLeft_V, StateRight_V,&
-               0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
-       endif
-
-       if (Used_GB(i,j,k,iBlock) .and. &
+          call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
+       else if (Used_GB(i,j,k,iBlock) .and. &
             iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
-          call set_face(StateRight_V, StateLeft_V,&
-               0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock)))
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
        endif
     endif
 
@@ -789,19 +777,26 @@ contains
 
   end subroutine update_state_gpu
   !============================================================================
-  subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, FaceCoords_D)
+  subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, &
+       i, j, k, iBody, jBody, kBody, iBlock)
     !$acc routine seq
+
+    ! Set boundary conditions on the face between the physical
+    ! cells i,j,k,iBlock and body cell iBody,jBody,kBody,iBlock.
+
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)
-    real, intent(in)   :: FaceCoords_D(3)
+    integer, intent(in):: i, j, k, iBody, jBody, kBody, iBlock
 
     real:: Coef
 
-    real:: uRot_D(3)
+    real:: XyzFace_D(3), uRot_D(3)
 
     real, parameter:: DensityJumpLimit=0.1
-
     !--------------------------------------------------------------------------
+    if(B1rCoef /= 1.0 .or. UseRotatingBc) XyzFace_D &
+         = 0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
+
     if(.true.) then
        ! 'ionosphere' type BC
 
@@ -830,9 +825,9 @@ contains
        if(B1rCoef /= 1.0)then
           ! Fully or partially reflect B1r:
           ! Brefl = (1-B1rCoef)*r*(B.r)/r^2 and Bghost = Btrue - Brefl
-          Coef = (1-B1rCoef)/sum(FaceCoords_D**2)
+          Coef = (1-B1rCoef)/sum(XyzFace_D**2)
           VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - &
-               Coef*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)
+               Coef*XyzFace_D*sum(VarsTrueFace_V(Bx_:Bz_)*XyzFace_D)
        end if
     else
        ! 'ionospherefloat'
@@ -845,7 +840,7 @@ contains
 
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
-       uRot_D = cross_product(Omega_D, FaceCoords_D)
+       uRot_D = cross_product(Omega_D, XyzFace_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
