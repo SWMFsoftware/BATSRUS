@@ -123,7 +123,7 @@ contains
        ! Fill outer ghost cells with floating values
        if(far_field_bcs_blk(iBlock)) &
             call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
-            TypeBcIn = FloatBC_)
+            iTypeBcIn = FloatBC_)
     end do
 
     call test_stop(NameSub, DoTest)
@@ -559,7 +559,7 @@ contains
 
     integer:: iBlock, i, j, k
     real:: rInside
-    integer:: TypeBc
+    integer:: iTypeBc
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'bound_potential'
     !--------------------------------------------------------------------------
@@ -569,10 +569,10 @@ contains
 
     if(IsLinear)then
        ! In the linear stage use float BC that corresponds to E_normal=0
-       TypeBc = FloatBC_
+       iTypeBc = FloatBC_
     else
        ! Apply gradient(potential) = Enormal BC
-       TypeBc = GradPotBC_
+       iTypeBc = GradPotBC_
     end if
 
     ! Fill outer ghost cells
@@ -581,7 +581,7 @@ contains
 
        if(far_field_bcs_blk(iBlock)) &
             call set_cell_boundary(nG, iBlock, 1, Potential_GB(:,:,:,iBlock),&
-            TypeBcIn = TypeBc)
+            iTypeBcIn = iTypeBc)
     end do
 
     if(IsLinear) RETURN

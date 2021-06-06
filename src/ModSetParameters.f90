@@ -2971,7 +2971,7 @@ contains
       use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
       use ModRestartFile, ONLY: NameVarRestart_V
       use ModFieldLineThread, ONLY: DoPlotThreads
-      use ModMain, ONLY: TypeCellBcInt_I
+      use ModMain, ONLY: iTypeCellBc_I
       use ModCellBoundary, ONLY: NameCellBc_I, nTypeBC, UnknownBC_
 
       ! option and module parameters
@@ -3175,10 +3175,10 @@ contains
 
       ! Find the integer of the corresponding boundary type.
       do i=Coord1MinBc_,Coord3MaxBc_
-         TypeCellBcInt_I(i) = UnknownBC_
+         iTypeCellBc_I(i) = UnknownBC_
          do iTypeBC = 1, nTypeBC
             if(TypeCellBc_I(i) == trim(NameCellBc_I(iTypeBC))) then
-               TypeCellBcInt_I(i) = iTypeBC
+               iTypeCellBc_I(i) = iTypeBC
                EXIT
             end if
          end do
@@ -3621,7 +3621,7 @@ contains
       !$acc update device(nOrderProlong)
       !$acc update device(UseHighResChange)
 
-      !$acc update device(TypeCellBc_I, TypeCellBcInt_I)
+      !$acc update device(TypeCellBc_I, iTypeCellBc_I)
 
       !$acc update device(UseOutflowPressure)
 

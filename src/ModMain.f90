@@ -120,8 +120,8 @@ module ModMain
 
   ! Inner and outer boundary conditions
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
-  integer :: TypeCellBcInt_I(Coord1MinBc_:Coord3MaxBc_)
-  !$acc declare create(TypeCellBc_I, TypeCellBcInt_I)
+  integer :: iTypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)
+  !$acc declare create(TypeCellBc_I, iTypeCellBc_I)
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
   type :: CellBCType
