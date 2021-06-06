@@ -944,7 +944,7 @@ contains
 
     ! Change due to Boris source term
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
-       ! Contribution to DivE source term 
+       ! Contribution to DivE source term
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
        if(UseB0)then
@@ -958,7 +958,7 @@ contains
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
        end if
     end if
-    
+
     ! Calculate maximum of Cmax*Area from the faces per dimension
     if(.not.UseDtFixed)then
        iDim = (iFace+1)/2
@@ -1823,9 +1823,9 @@ contains
     real, intent(inout):: State_V(nVar)
 
     integer:: iFluid
-    !--------------------------------------------------------------------------
 
     ! Subtract magnetic energy from the first fluid for MHD
+    !--------------------------------------------------------------------------
     if(IsMhd) State_V(p_) = State_V(p_) -  0.5*sum(State_V(Bx_:Bz_)**2)
 
     ! Convert hydro energy density to pressure
@@ -2034,7 +2034,7 @@ contains
                   B0_DGB(:,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
           end if
-          
+
           ! Time step divided by cell volume
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
@@ -2351,7 +2351,7 @@ contains
 
     ! Change due to Boris source term
     if(UseBorisCorrection .and. ClightFactor /= 1.0)then
-       ! Contribution to DivE source term 
+       ! Contribution to DivE source term
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
        if(UseB0)then
@@ -2365,7 +2365,7 @@ contains
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
        end if
     end if
-    
+
     ! Calculate maximum of Cmax*Area from the faces per dimension
     if(.not.UseDtFixed)then
        iDim = (iFace+1)/2

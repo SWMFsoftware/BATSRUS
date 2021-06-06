@@ -14,7 +14,6 @@ program spectrum
 
   implicit none
 
-  !----------------------------------------------------------------------------
   character(len=200):: NameFileRoot, NameSpectrumOut
   character(len=200):: TypeDataFile, NameUnitInput
 
@@ -62,6 +61,7 @@ program spectrum
   ! StringTest = 'set_batsrus_grid fix_block_geometry'
   ! iBlockTest = 100
 
+  !----------------------------------------------------------------------------
   call init_mpi
   call init_defaults
 
