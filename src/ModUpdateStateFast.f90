@@ -249,9 +249,9 @@ contains
                   State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
              if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     + DivE*cross_product( &
-                     B0_DGB(:,i,j,k,iBlock), &
-                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+                  + DivE*cross_product( &
+                  B0_DGB(:,i,j,k,iBlock), &
+                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 #ifndef OPENACC
              if(DoTestCell)then
                 write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
@@ -342,8 +342,7 @@ contains
           ! Check minimum density
           if(UseRhoMin)then
              do iFluid = 1, nFluid
-                if(RhoMin_I(iFluid) < 0) CYCLE
-                State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+                State_VGB(iRho_I(iFluid),i,j,k,iBlock) = max(RhoMin_I(iFluid),&
                      State_VGB(iRho_I(iFluid),i,j,k,iBlock))
              end do
           end if
@@ -622,7 +621,7 @@ contains
 
     ! optimal for GPU, but also works with CPU
 
-    integer:: i, j, k, iBlock
+    integer:: i, j, k, iBlock, iFluid
     logical:: IsBodyBlock, IsConserv
     real:: CellVolume, DtPerDv
     real:: Change_V(nFlux+nDim), Change_VC(nFlux+1,nI,nJ,nK)
@@ -699,11 +698,23 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(State_VGB(:,i,j,k,iBlock))
-                Change_VC(iP_I,i,j,k) = Change_VC(Energy_:nFlux,i,j,k)
+                ! Array syntax produces slow code on GPU
+                do iFluid=1, nFluid
+                   Change_VC(iP_I(iFluid),i,j,k) = &
+                        Change_VC(Energy_+iFluid-1,i,j,k)
+                end do
              end if
+             ! Convert to Boris variables before update
+             if(UseBorisCorrection) call mhd_to_boris( &
+                  State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
              ! Update
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
+
+             ! Convert back from Boris variables after update
+             if(UseBorisCorrection) call boris_to_mhd( &
+                  State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
 
              ! Convert energy back to pressure
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
@@ -745,7 +756,10 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy
                 call pressure_to_energy(StateOld_VGB(:,i,j,k,iBlock))
-                Change_VC(iP_I,i,j,k) = Change_VC(Energy_:nFlux,i,j,k)
+                do iFluid = 1, nFluid
+                   Change_VC(iP_I(iFluid),i,j,k) = &
+                        Change_VC(Energy_+iFluid-1,i,j,k)
+                end do
              end if
              ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -859,8 +873,8 @@ contains
     real, intent(inout):: Change_V(nFlux+nDim)
     logical, intent(in):: IsBodyBlock
 
-    integer:: iDim
-    real:: Area, Normal_D(3), InvRho, B0_D(3)
+    integer:: iDim, iFluid
+    real:: Area, Normal_D(3), InvRho, B0_D(3), DivE
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
@@ -906,13 +920,14 @@ contains
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
 
     ! Change due to -(gama-1)*divU source terms
-    if(nFluid == 1)then
-       if(UseNonConservative) Change_V(p_) = Change_V(p_) &
+    if(UseNonConservative)then
+       Change_V(p_) = Change_V(p_) &
             + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
-    else
-       if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock) &
-            *Flux_V(UnFirst_:UnFirst_+nFluid-1)
+       do iFluid = 2, nFluid
+          Change_V(iP_I(iFluid)) = Change_V(iP_I(iFluid)) &
+               + GammaMinus1_I(iFluid)*State_VGB(iP_I(iFluid),i,j,k,iBlock) &
+               *Flux_V(UnFirst_+iFluid-1)
+       end do
     end if
 
     ! Change due to 8-wave source terms
@@ -927,6 +942,23 @@ contains
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
+    ! Change due to Boris source term
+    if(UseBorisCorrection .and. ClightFactor /= 1.0)then
+       ! Contribution to DivE source term 
+       DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
+            /State_VGB(Rho_,i,j,k,iBlock)
+       if(UseB0)then
+          B0_D = B0_D + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       else
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+               + DivE*cross_product( &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       end if
+    end if
+    
     ! Calculate maximum of Cmax*Area from the faces per dimension
     if(.not.UseDtFixed)then
        iDim = (iFace+1)/2
@@ -1778,10 +1810,7 @@ contains
 
     integer:: iFluid
     !--------------------------------------------------------------------------
-    if(.not. UsePMin) RETURN
-
     do iFluid = 1, nFluid
-       if(pMin_I(iFluid) < 0.0) CYCLE
        State_V(iP_I(iFluid)) = max(pMin_I(iFluid), State_V(iP_I(iFluid)))
     end do
 
@@ -1792,23 +1821,28 @@ contains
 
     ! Calculate pressure from energy density
     real, intent(inout):: State_V(nVar)
+
+    integer:: iFluid
     !--------------------------------------------------------------------------
 
     ! Subtract magnetic energy from the first fluid for MHD
     if(IsMhd) State_V(p_) = State_V(p_) -  0.5*sum(State_V(Bx_:Bz_)**2)
 
     ! Convert hydro energy density to pressure
-    if(nFluid == 1)then
-       State_V(p_) = GammaMinus1*( State_V(p_) &
-            - 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) )
-    else
-       State_V(iP_I) = GammaMinus1_I*( State_V(iP_I) - 0.5* &
-            ( State_V(iRhoUx_I)**2 &
-            + State_V(iRhoUy_I)**2 &
-            + State_V(iRhoUz_I)**2 ) / State_V(iRho_I) )
-    end if
+    State_V(p_) = GammaMinus1*( State_V(p_) &
+         - 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_) )
 
-    call limit_pressure(State_V)
+    ! Deal with other fluids
+    do iFluid = 2, nFluid
+       State_V(iP_I(iFluid)) = GammaMinus1_I(iFluid)*( State_V(iP_I(iFluid)) &
+            - 0.5* &
+            ( State_V(iRhoUx_I(iFluid))**2 &
+            + State_V(iRhoUy_I(iFluid))**2 &
+            + State_V(iRhoUz_I(iFluid))**2 ) / State_V(iRho_I(iFluid)) )
+    end do
+
+    if(UsePmin) call limit_pressure(State_V)
+
   end subroutine energy_to_pressure
   !============================================================================
   subroutine pressure_to_energy(State_V)
@@ -1816,20 +1850,21 @@ contains
 
     ! Calculate energy density from pressure
     real, intent(inout):: State_V(nVar)
-    !--------------------------------------------------------------------------
 
-    call limit_pressure(State_V)
+    integer:: iFluid
+    !--------------------------------------------------------------------------
+    if(UsePmin) call limit_pressure(State_V)
 
     ! Calculate hydro energy density
-    if(nFluid == 1)then
-       State_V(p_) = State_V(p_)*InvGammaMinus1 &
-            + 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_)
-    else
-       State_V(iP_I) = State_V(iP_I)*InvGammaMinus1_I + 0.5* &
-            ( State_V(iRhoUx_I)**2 &
-            + State_V(iRhoUy_I)**2 &
-            + State_V(iRhoUz_I)**2 ) / State_V(iRho_I)
-    end if
+    State_V(p_) = State_V(p_)*InvGammaMinus1 &
+         + 0.5*sum(State_V(RhoUx_:RhoUz_)**2)/State_V(Rho_)
+    do iFluid = 2, nFluid
+       State_V(iP_I(iFluid)) = State_V(iP_I(iFluid))*InvGammaMinus1_I(iFluid) &
+            + 0.5* &
+            ( State_V(iRhoUx_I(iFluid))**2 &
+            + State_V(iRhoUy_I(iFluid))**2 &
+            + State_V(iRhoUz_I(iFluid))**2 ) / State_V(iRho_I(iFluid))
+    end do
     ! Add magnetic energy to first fluid for MHD
     if(IsMhd) State_V(p_) = State_V(p_) + 0.5*sum(State_V(Bx_:Bz_)**2)
 
@@ -1874,7 +1909,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsConserv
-    real:: DivU, DivB, InvRho, DtPerDv, Change_V(nFlux)
+    real:: DivU, DivB, DivE, InvRho, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
     logical:: DoTest
@@ -1980,6 +2015,26 @@ contains
              end do
           end if
 
+          if(UseBorisCorrection .and. ClightFactor /= 1.0)then
+             ! Calculate Boris source term
+             DivE = Flux_VXI(En_,i+1,j,k,iGang) - Flux_VXI(En_,i,j,k,iGang)
+             if(nJ > 1) DivE = DivE + &
+                  Flux_VYI(En_,i,j+1,k,iGang) - Flux_VYI(En_,i,j,k,iGang)
+             if(nK > 1) DivE = DivE + &
+                  Flux_VZI(En_,i,j,k+1,iGang) - Flux_VZI(En_,i,j,k,iGang)
+             ! Apply coefficients and divide by density for E=(B x RhoU)/Rho
+             DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+             Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  + DivE*cross_product( &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  + DivE*cross_product( &
+                  B0_DGB(:,i,j,k,iBlock), &
+                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+          end if
+          
           ! Time step divided by cell volume
           if(IsTimeAccurate)then
              DtPerDv = iStage*Dt
@@ -2184,6 +2239,9 @@ contains
                    Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
                 end do
              end if
+             ! Convert to Boris variables before update
+             if(UseBorisCorrection) call mhd_to_boris( &
+                  State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
@@ -2194,22 +2252,21 @@ contains
                    Change_V(iP_I(iFluid)) = Change_V(Energy_+iFluid-1)
                 end do
              end if
+             ! Convert to Boris variables before update
+             if(UseBorisCorrection) call mhd_to_boris( &
+                  StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+                  IsConserv)
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           end if
+          ! Convert back from Boris variables after update
+          if(UseBorisCorrection) call boris_to_mhd( &
+               State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+
           ! Convert energy back to pressure
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-#ifndef OPENACC
-          ! DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
-          !     .and. iBlock == iBlockTest
-          ! if(DoTestCell)then
-          !   write(*,*)'State_VGB =', State_VGB(:,i,j,k,iBlock)
-          !   write(*,*)'Change_V  =', Change_V
-          !   write(*,*)'DtPerDv   =', DtPerDv
-          ! end if
-#endif
        enddo; enddo; enddo
 
        if(IsTimeAccurate .and. .not.UseDtFixed .and. iStage==nStage) &
@@ -2229,8 +2286,8 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux+nDim)
 
-    integer:: iDim
-    real:: Area, Normal_D(3), InvRho, B0_D(3)
+    integer:: iDim, iFluid
+    real:: Area, Normal_D(3), InvRho, B0_D(3), DivE
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
@@ -2270,13 +2327,14 @@ contains
     Change_V(1:nFlux) = Change_V(1:nFlux) + Flux_V(1:nFlux)
 
     ! Change due to -(gama-1)*divU source terms
-    if(nFluid == 1)then
-       if(UseNonConservative) Change_V(p_) = Change_V(p_) &
+    if(UseNonConservative)then
+       Change_V(p_) = Change_V(p_) &
             + GammaMinus1*State_VGB(p_,i,j,k,iBlock)*Flux_V(UnFirst_)
-    else
-       if(UseNonConservative) Change_V(iP_I) = Change_V(iP_I) &
-            + GammaMinus1_I*State_VGB(iP_I,i,j,k,iBlock)&
-            *Flux_V(UnFirst_:UnFirst_+nFluid-1)
+       do iFluid = 1, nFluid
+          Change_V(iP_I(iFluid)) = Change_V(iP_I(iFluid)) &
+               + GammaMinus1_I(iFluid)*State_VGB(iP_I(iFluid),i,j,k,iBlock) &
+               *Flux_V(UnFirst_+iFluid-1)
+       end do
     end if
 
     ! Change due to 8-wave source terms
@@ -2291,6 +2349,23 @@ contains
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
+    ! Change due to Boris source term
+    if(UseBorisCorrection .and. ClightFactor /= 1.0)then
+       ! Contribution to DivE source term 
+       DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
+            /State_VGB(Rho_,i,j,k,iBlock)
+       if(UseB0)then
+          B0_D = B0_D + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+            + DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       else
+          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+               + DivE*cross_product( &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock), &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       end if
+    end if
+    
     ! Calculate maximum of Cmax*Area from the faces per dimension
     if(.not.UseDtFixed)then
        iDim = (iFace+1)/2
