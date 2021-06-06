@@ -423,7 +423,7 @@ contains
 
   subroutine get_b0_face(B0_D, i, j, k, iBlock, iDir)
     !$acc routine seq
-    use ModParallel, ONLY: NeiLev
+    use ModParallel, ONLY: DiLevelNei_EB => NeiLev
 
     real, intent(out)   :: B0_D(3)
     integer, intent(in) :: i,j,k,iBlock,iDir
@@ -434,9 +434,9 @@ contains
 
     select case(iDir)
     case(x_)
-       if(i == 1 .and. NeiLev(1,iBlock) == -1) then
+       if(i == 1 .and. DiLevelNei_EB(1,iBlock) == -1) then
           B0_D = B0ResChange_DXSB(:,j,k,1,iBlock)
-       else if (i == nI+1 .and. NeiLev(2, iBlock) == -1) then
+       else if (i == nI+1 .and. DiLevelNei_EB(2, iBlock) == -1) then
           B0_D = B0ResChange_DXSB(:,j,k,2,iBlock)
        else
           B0_D = 0.5*(B0_DGB(:,i-1,j,k,iBlock) &
@@ -444,18 +444,18 @@ contains
        endif
     case(y_)
 
-       if(j == 1 .and. NeiLev(3,iBlock) == -1) then
+       if(j == 1 .and. DiLevelNei_EB(3,iBlock) == -1) then
           B0_D = B0ResChange_DYSB(:,i,k,3,iBlock)
-       else if(j == nJ+1 .and. NeiLev(4,iBlock) == -1) then
+       else if(j == nJ+1 .and. DiLevelNei_EB(4,iBlock) == -1) then
           B0_D = B0ResChange_DYSB(:,i,k,4,iBlock)
        else
           B0_D = 0.5*(B0_DGB(:,i,j-1,k,iBlock) &
                +      B0_DGB(:,i,j  ,k,iBlock))
        endif
     case(z_)
-       if(k == 1 .and. NeiLev(5, iBlock) == -1) then
+       if(k == 1 .and. DiLevelNei_EB(5, iBlock) == -1) then
           B0_D = B0ResChange_DZSB(:,i,j,5, iBlock)
-       else if(k == nK+1 .and. NeiLev(6, iBlock) == -1) then
+       else if(k == nK+1 .and. DiLevelNei_EB(6, iBlock) == -1) then
           B0_D = B0ResChange_DZSB(:,i,j,6, iBlock)
        else
           B0_D = 0.5*(B0_DGB(:,i,j,k-1,iBlock) &
@@ -1898,7 +1898,8 @@ contains
        ! Calculate the primitive variables
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VGI(:,i,j,k,iGang))
+          call get_primitive(State_VGB(:,i,j,k,iBlock), &
+               Primitive_VGI(:,i,j,k,iGang))
        end do; end do; end do
 
        !$acc loop vector collapse(3) independent
@@ -2052,7 +2053,7 @@ contains
 
     call get_face_x_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
+    if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -2072,7 +2073,7 @@ contains
 
     call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
+    if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -2092,7 +2093,7 @@ contains
 
     call get_face_z_prim(i, j, k, iBlock, StateLeft_V, StateRight_V)
 
-    if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
+    if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -2131,7 +2132,8 @@ contains
 
        !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          call get_primitive(State_VGB(:,i,j,k,iBlock), Primitive_VGI(:,i,j,k,iGang))
+          call get_primitive(State_VGB(:,i,j,k,iBlock), &
+               Primitive_VGI(:,i,j,k,iGang))
        end do; end do; end do
 
        !$acc loop vector collapse(3) private(Change_V, DtPerDv) independent
