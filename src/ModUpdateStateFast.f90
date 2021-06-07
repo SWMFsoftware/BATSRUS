@@ -576,7 +576,7 @@ contains
        call update_angular_velocity
        !$acc end serial
     end if
-    
+
     !$acc parallel
     !$acc loop gang private(Change_VC, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -624,7 +624,7 @@ contains
                   = 1.0/sum(Change_V(nFlux+1:nFlux+nDim))
           enddo; enddo; enddo
        end if
-       
+
        ! Update state
        if(iStage == 1)then
           !$acc loop vector collapse(3) private(DtPerDv) independent
@@ -1021,7 +1021,7 @@ contains
        call update_angular_velocity
        !$acc end serial
     end if
-    
+
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -1043,7 +1043,7 @@ contains
        end do; end do; end do
 
        if(UseBody) IsBodyBlock = IsBody_B(iBlock)
-       
+
        if(UseBody .and. IsBodyBlock)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
@@ -1219,7 +1219,7 @@ contains
              if(UseBorisCorrection) call mhd_to_boris( &
                   State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
                   IsConserv)
-             
+
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_V(1:nVar)
           else
@@ -1392,7 +1392,7 @@ contains
        call update_angular_velocity
        !$acc end serial
     end if
-    
+
     !$acc parallel
     !$acc loop gang private(IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -1486,7 +1486,7 @@ contains
           ! Check minimum density
           if(UseRhoMin) State_VGB(iRho_I,i,j,k,iBlock) = &
                max(RhoMin_I, State_VGB(iRho_I,i,j,k,iBlock))
-          
+
           ! Convert energy back to pressure
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
@@ -1510,7 +1510,7 @@ contains
     integer, intent(in):: iFace, i, j, k, iBlock
     real, intent(inout):: Change_V(nFlux+nDim)
     logical, intent(in), optional:: IsBodyBlock
-    
+
     integer:: iDim, iFluid
     real:: Area, Normal_D(3), InvRho, B0_D(3), DivE
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
@@ -1614,8 +1614,8 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iVar, iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
@@ -1641,7 +1641,7 @@ contains
           ! This is equivalent to limiter_body in ModFaceValue.f90
           if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
                StateLeft_V  = Primitive_VGI(:,i-1,j,k,iGang)
-               
+
           if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
                StateRight_V = Primitive_VGI(:,i  ,j,k,iGang)
        endif
@@ -1658,8 +1658,8 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iVar, iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
@@ -1699,8 +1699,8 @@ contains
     logical, intent(in), optional :: IsBodyBlock
 
     integer:: iVar, iGang
-    !--------------------------------------------------------------------------
 #ifdef OPENACC
+    !--------------------------------------------------------------------------
     iGang = iBlock
 #else
     iGang = 1
@@ -1780,7 +1780,7 @@ contains
     !$acc routine seq
 
     ! Convert from momentum to velocity
-    
+
     real, intent(in) :: State_V(nVar)
     real, intent(out):: Primitive_V(nVar)
 
@@ -1799,7 +1799,7 @@ contains
        Primitive_V(iUy_I(iFluid)) = InvRho*State_V(iRhoUy_I(iFluid))
        Primitive_V(iUz_I(iFluid)) = InvRho*State_V(iRhoUz_I(iFluid))
     end do
-    
+
   end subroutine get_primitive
   !============================================================================
   subroutine limiter2(Var1, Var2, Var3, Var4, VarLeft, VarRight)
@@ -1902,7 +1902,7 @@ contains
     !$acc routine seq
 
     ! Return B0 at the face in direction iDir relative to i, j, k cell center
-    
+
     use ModParallel, ONLY: DiLevelNei_EB => NeiLev
 
     real, intent(out)   :: B0_D(3)
@@ -1977,9 +1977,9 @@ contains
     !$acc routine seq
 
     ! Calculate physical flux at a face with normal vector Normal_D
-    ! based on the primitive state State_V and B0 field B0_D. 
+    ! based on the primitive state State_V and B0 field B0_D.
     ! Also return the conservative state vector StateCons_V.
-    
+
     real, intent(in) :: State_V(nVar)      ! primitive state vector
     real, intent(in) :: Normal_D(3)        ! face normal
     real, intent(out):: StateCons_V(nFlux) ! conservative state vector
@@ -2365,7 +2365,7 @@ contains
     ! Calculate numerical flux Flux_V based on the left and right states
     ! and the B0 field along the normal direction Normal_D. The flux
     ! returns the Area that may be negative for certain update schemes.
-    
+
     real, intent(in)   :: Normal_D(3), Area
     real, intent(inout):: StateLeft_V(nVar), StateRight_V(nVar)
     real, intent(out)  :: Flux_V(nFaceValue)
@@ -2701,7 +2701,7 @@ contains
     !$acc routine seq
 
     ! Return c = a x b
-    
+
     real, intent(in) :: a_D(3), b_D(3)
     !RETURN VALUE:
     real             :: c_D(3)

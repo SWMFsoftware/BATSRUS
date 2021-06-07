@@ -748,7 +748,7 @@ contains
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
 
-    case('advpe') 
+    case('advpe')
       ! Calculate div(u*Pe/(gamma-1))
       allocate(PeU_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
