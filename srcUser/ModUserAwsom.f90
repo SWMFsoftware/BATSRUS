@@ -490,15 +490,24 @@ contains
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
          apportion_coronal_heating, get_wave_reflection, &
          WaveDissipation_VC
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitT_
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, UnitT_, &
+         UnitN_, UnitEnergyDens_, CoulombLog, InvGammaMinus1
     use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
+         RhoUx_, RhoUz_, Ehot_
     use ModFaceValue, ONLY: calc_face_value
     use ModB0, ONLY: set_b0_face
     use ModMultiFluid, ONLY: IonFirst_, IonLast_
-    use BATL_lib, ONLY: nDim, MaxDim, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
+    use BATL_lib, ONLY: nDim, nG, MaxDim, FaceNormal_DDFB, CellVolume_GB, &
+         Xyz_DGB
     use ModHeatConduction, ONLY: get_heat_flux
     use ModUtilities, ONLY: norm2
+    use ModConst, ONLY: cBoltzmann, cElectronMass, cProtonMass, cTwoPi, &
+         cElectronCharge, cEps
+    use ModGeometry, ONLY: true_cell
+    use ModCellGradient, ONLY: calc_divergence
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -524,6 +533,11 @@ contains
     real :: HeatCondCoefNormal, HeatFlux
     logical :: IsNewBlockHeatCond
     real :: StateLeft_V(nVar), StateRight_V(nVar)
+
+    real :: cTeTiExchangeRate, cTeTiExchangeRateSi, HeatExchange, Te
+
+    real, allocatable :: PeU_DG(:,:,:,:)
+    real :: GammaTmp, InvGammaM1
 
     logical:: DoTest
 
@@ -700,6 +714,64 @@ contains
 
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
+
+    case('teiexch')
+       ! Coulomb collisional energy exchange between electrons and ions
+       cTeTiExchangeRateSi = &
+            CoulombLog/sqrt(cElectronMass) * &
+            (cElectronCharge**2/cEps)**2 & ! effective ei collision frequency
+            / (3*(cTwoPi*cBoltzmann)**1.50) &
+            * (2*cElectronMass/cProtonMass) ! energy exchange per ei collision
+       cTeTiExchangeRate = cTeTiExchangeRateSi * &
+            (1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
+       ! see ModHeatConduction for more explanations of the coefficients
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if (Ehot_>1 .and. UseHeatFluxCollisionless) then
+             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+             InvGammaM1 = 1./(GammaTmp-1)
+          else
+             InvGammaM1 = InvGammaMinus1
+          end if
+          Te = TeFraction * &
+               State_VGB(Pe_,i,j,k,iBlock) / State_VGB(Rho_,i,j,k,iBlock)
+          ! We apply the energy exchange rate for temperature,
+          ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+          ! For a hydrogen only, for ideal EOS only
+          HeatExchange = cTeTiExchangeRate*State_VGB(Rho_,i,j,k,iBlock)/Te**1.5
+          PlotVar_G(i,j,k) = InvGammaM1 * HeatExchange * &
+               (State_VGB(p_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock)) &
+               * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
+       end do; end do; end do
+
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
+    case('advpe') 
+      ! Calculate div(u*Pe/(gamma-1))
+      allocate(PeU_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+      do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+         if (Ehot_>1 .and. UseHeatFluxCollisionless) then
+            call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+            InvGammaM1 = 1./(GammaTmp-1)
+         else
+            InvGammaM1 = InvGammaMinus1
+         end if
+         PeU_DG(:,i,j,k) = &
+              InvGammaM1 * State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) / &
+              State_VGB(Rho_,i,j,k,iBlock) * State_VGB(Pe_,i,j,k,iBlock)
+      end do; end do; end do
+      call calc_divergence(iBlock, PeU_DG, nG, PlotVar_G, UseBodyCellIn=.true.)
+      deallocate(PeU_DG)
+
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+         PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * &
+             No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
+      end do; end do; end do
+
+      NameIdlUnit = 'J/m^3/s'
+      NameTecUnit = 'J/m^3/s'
 
     case default
        IsFound = .false.
