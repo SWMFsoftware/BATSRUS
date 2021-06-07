@@ -108,7 +108,10 @@ contains
     integer,          optional, intent(in):: iSideIn
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
+
     type(CellBCType) :: CBC
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax, iTypeBC
+    character(len=30):: TypeBc
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
     real:: SymmCoeff_V(nVarState)
@@ -183,11 +186,6 @@ contains
        iSideMin = 1
        iSideMax = 2*nDim
     end if
-
-    associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-         jMin => CBC%jMin, jMax => CBC%jMax, &
-         kMin => CBC%kMin, kMax => CBC%kMax, &
-         TypeBc => CBC%TypeBc, iTypeBc => CBC%TypeBcInt)
 
     ! Loop through all sides
     do iSide = iSideMin, iSideMax
@@ -269,20 +267,25 @@ contains
        case(CoupledBC_)
           ! For SC-IH coupling the extra wave energy variable needs a BC
           if(NameThisComp == 'SC') call set_float_bc(&
-               ScalarFirst_, ScalarLast_, iSide, CBC, nVarState, State_VG)
+               ScalarFirst_, ScalarLast_, iSide, iMin, iMax, &
+               jMin, jMax, kMin, kMax, nVarState, State_VG)
 
        case(PeriodicBC_, PeriodicSemiBC_)
           call stop_mpi('The neighbors are not defined at periodic boundaries')
 #endif
        case(FloatBC_, OutFlowBC_)
-          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
+          call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
+               kMin, kMax, nVarState, State_VG)
 #ifndef OPENACC
           if(UseOutflowPressure .and. iTypeBc == OutFlowBC_) &
-               call set_fixed_bc(p_, p_, [pOutflow], CBC, nVarState, State_VG)
+               call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, jMin, jMax, &
+               kMin, kMax, nVarState, State_VG)
           if(UseHyperbolicDivb) &
-               call set_fixed_bc(Hyp_, Hyp_, [0.0], CBC,  nVarState, State_VG)
+               call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, jMin, jMax, &
+               kMin, kMax,  nVarState, State_VG)
           if(UseEfield)         &
-               call set_fixed_bc(HypE_, HypE_, [0.0], CBC, nVarState, State_VG)
+               call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, jMin, jMax, &
+               kMin, kMax, nVarState, State_VG)
           if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
        case(FloatSemiBC_, OutFlowSemiBC_)
@@ -292,7 +295,8 @@ contains
                 if(IsLinear)then
                    State_VG(iVar,imin:imax,jmin:jmax,kmin:kmax) = 0.0
                 else
-                   call set_float_bc(iVar, iVar, iSide, CBC, nVarState, &
+                   call set_float_bc(iVar, iVar, iSide, iMin, iMax, &
+                        jMin, jMax, kMin, kMax, nVarState, &
                         State_VG)
                 end if
              elseif(iVar == iErImplFirst .or. nVarState == 1)then
@@ -355,7 +359,8 @@ contains
           end if
        case(LinetiedBC_)
           ! Most variables float
-          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
+          call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
+               kMin, kMax, nVarState, State_VG)
 
           if(.not.present(iImplBlock))then
              ! The density and momentum use symmetric/antisymmetric BCs
@@ -368,7 +373,8 @@ contains
 
        case(LinetiedSemiBC_)
           ! For semi-implicit scheme all variables float
-          call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
+          call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
+               kMin, kMax, nVarState, State_VG)
 #endif
        case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
           if(time_accurate &
@@ -381,9 +387,10 @@ contains
              call set_solar_wind_bc_buffer
 #endif
           else
-             call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), CBC, &
-                  nVarState, State_VG)
-             if(UseB0)call fix_b0(Bx_, Bz_, iBlock, CBC, nVarState, State_VG)
+             call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), &
+                  iMin, iMax, jMin, jMax, kMin, kMax, nVarState, State_VG)
+             if(UseB0)call fix_b0(Bx_, Bz_, iBlock, iMin, iMax, &
+                  jMin, jMax, kMin, kMax, nVarState, State_VG)
           end if
 #ifndef OPENACC
        case(FixedSemiBC_, InFlowSemiBC_, VarySemiBC_)
@@ -398,8 +405,8 @@ contains
              end if
           end if
        case(FixedB1BC_)
-          call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), CBC, &
-               nVarState, State_VG)
+          call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), &
+               iMin, iMax, jMin, jMax, kMin, kMax, nVarState, State_VG)
        case(FixedB1SemiBC_)
           State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
        case(ShearBC_, ShearSemiBC_)
@@ -464,8 +471,6 @@ contains
     end if
 #endif
 
-    end associate
-
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
@@ -528,19 +533,16 @@ contains
     end subroutine set_gradpot_bc
     !==========================================================================
 
-    subroutine set_float_bc(iVarMin, iVarMax, iSide, CBC, nVarState, State_VG)
+    subroutine set_float_bc(iVarMin, iVarMax, iSide, iMin, iMax, &
+         jMin, jMax, kMin, kMax, nVarState, State_VG)
       !$acc routine vector
       ! Continuous: ghost = phys1
-      integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState
-      type(CellBCType), intent(in) :: CBC
+      integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState, &
+           iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
       integer:: i, j, k, iVar
 
       !------------------------------------------------------------------------
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       select case(iSide)
       case(1)
          !$acc loop collapse(3) vector
@@ -579,9 +581,6 @@ contains
                  State_VG(iVarMin:iVarMax,i,j,nK)
          end do; end do; end do
       end select
-
-      end associate
-
     end subroutine set_float_bc
     !==========================================================================
 
@@ -596,7 +595,8 @@ contains
       character(len=*), parameter:: NameSub = 'set_shear_bc'
       !------------------------------------------------------------------------
       ! For the corners and boundaries 5 and 6 fill with unsheared data first
-      call set_float_bc(1, nVarState, iSide, CBC, nVarState, State_VG)
+      call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
+           kMin, kMax, nVarState, State_VG)
 
       ! If the shock is not tilted, there is nothing to do
       if(ShockSlope == 0.0) RETURN
@@ -796,27 +796,21 @@ contains
 
     end subroutine set_reflect_bc
     !==========================================================================
-    subroutine set_fixed_bc(iVarMin, iVarMax, State_V, CBC,  nVarState, State_VG)
+    subroutine set_fixed_bc(iVarMin, iVarMax, State_V, iMin, iMax, &
+         jMin, jMax, kMin, kMax, nVarState, State_VG)
       !$acc routine vector
 
       ! ghost = State_V
-
-      integer, intent(in):: iVarMin, iVarMax
+      integer, intent(in):: iVarMin, iVarMax, iMin, iMax, jMin, jMax, kMin, kMax
       real,    intent(in):: State_V(iVarMin:iVarMax)
-      type(CellBCType), intent(in) :: CBC
       integer, intent(in):: nVarState
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
       integer:: i, j, k
       !------------------------------------------------------------------------
-      !$acc loop vector collapse(3)
-        do k = CBC%kMin, CBC%kMax
-           do j = CBC%jMin, CBC%jMax
-              do i = CBC%iMin, CBC%iMax
-                 State_VG(iVarMin:iVarMax,i,j,k) = State_V
-              end do
-           end do
-        end do
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         State_VG(iVarMin:iVarMax,i,j,k) = State_V
+      end do; end do; end do
     end subroutine set_fixed_bc
     !==========================================================================
     subroutine set_fixed_semi_bc
@@ -844,7 +838,8 @@ contains
          end do; end do; end do
          ! Subtract B0:   B1 = B - B0
          if(UseB0) &
-              call fix_b0(BxImpl_, BzImpl_, iBlock, CBC, nVarState, State_VG)
+              call fix_b0(BxImpl_, BzImpl_, iBlock, iMin, iMax, jMin, jMax, &
+              kMin, kMax, nVarState, State_VG)
       elseif(iTeImpl > 0)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             if(.not.UseIdealEos)then
@@ -874,12 +869,13 @@ contains
 
     end subroutine set_fixed_semi_bc
     !==========================================================================
-    subroutine fix_b0(iVarMin, iVarMax, iBlock, CBC, nVarState, State_VG)
+    subroutine fix_b0(iVarMin, iVarMax, iBlock, iMin, iMax, &
+         jMin, jMax, kMin, kMax, nVarState, State_VG)
       !$acc routine vector
       use ModB0, ONLY: B0_DGB
 
-      integer, intent(in) :: iVarMin, iVarMax, iBlock, nVarState
-      type(CellBCType), intent(in) :: CBC
+      integer, intent(in) :: iVarMin, iVarMax, iBlock, nVarState, &
+           iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
       ! Set B = B - B0 in ghost cells
@@ -887,17 +883,11 @@ contains
       integer:: i, j, k
 
       !------------------------------------------------------------------------
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-         jMin => CBC%jMin, jMax => CBC%jMax, &
-         kMin => CBC%kMin, kMax => CBC%kMax)
-
-        !$acc loop vector collapse(3)
-        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-           State_VG(iVarMin:iVarMax,i,j,k) =  &
-                State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
-        end do; end do; end do
-
-      end associate
+      !$acc loop vector collapse(3)
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         State_VG(iVarMin:iVarMax,i,j,k) =  &
+              State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+      end do; end do; end do
 
     end subroutine fix_b0
     !==========================================================================

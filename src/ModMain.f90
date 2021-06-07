@@ -130,7 +130,7 @@ module ModMain
      integer :: iMin, iMax, jMin, jMax, kMin, kMax
      ! Type of boundary for one side
      character(len=30):: TypeBc
-     integer :: TypeBCInt
+     integer :: iTypeBC
   end type CellBCType
 
   type :: FaceBCType
