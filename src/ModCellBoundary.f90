@@ -109,7 +109,9 @@ contains
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
 
+#ifndef OPENACC
     type(CellBCType) :: CBC
+#endif
     integer :: iMin, iMax, jMin, jMax, kMin, kMax, iTypeBC
     character(len=30):: TypeBc
 
@@ -254,6 +256,16 @@ contains
 
        if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
+
+#ifndef OPENACC
+       ! CBC is used to pass information to user_set_cell_boundary.
+       CBC%iMin = iMin
+       CBC%iMax = iMax
+       CBC%jMin = jMin
+       CBC%jMax = jMax
+       CBC%kMin = kMin
+       CBC%kMax = kMax
+#endif
 
        select case(iTypeBc)
 #ifndef OPENACC
@@ -426,11 +438,11 @@ contains
        case(UserSemiBC_)
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-             TypeBc = 'usersemilinear'
+             CBC%TypeBc = 'usersemilinear'
              call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           else
              IsFound = .false.
-             TypeBc = 'usersemi'
+             CBC%TypeBc = 'usersemi'
              call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
              if(.not.IsFound) call stop_mpi(NameSub// &
                   ': usersemi boundary condition is not found in user module')
@@ -445,6 +457,7 @@ contains
                    State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
                 end if
              end if
+             CBC%TypeBc = TypeBc
              call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub// &
@@ -484,11 +497,6 @@ contains
 
       integer:: i, j, k
       !------------------------------------------------------------------------
-
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -527,8 +535,6 @@ contains
                  *Efield_DGB(:,i,j,nK,iBlock))
          end do; end do; end do
       end select
-
-      end associate
 
     end subroutine set_gradpot_bc
     !==========================================================================
@@ -622,10 +628,6 @@ contains
               'ShockSlope < 1 should be the inverse of a round number!')
       end if
 
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       select case(iSide)
       case(1)
          ! Shift by +Di,-Dj
@@ -649,8 +651,6 @@ contains
          end do; end do; end do
       end select
 
-      end associate
-
     end subroutine set_shear_bc
     !==========================================================================
     subroutine set_symm_bc(iVarMin, iVarMax, Coeff_V)
@@ -662,10 +662,6 @@ contains
 
       integer:: i, j, k
       !------------------------------------------------------------------------
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -699,8 +695,6 @@ contains
          end do; end do; end do
       end select
 
-      end associate
-
     end subroutine set_symm_bc
     !==========================================================================
 
@@ -721,10 +715,6 @@ contains
       ! Scalars are symmetric
       SymmCoeff_V = 1.0
       call set_symm_bc(1, nVarState, SymmCoeff_V)
-
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
 
       select case(iSide)
       case(1,2)
@@ -792,8 +782,6 @@ contains
          end do; end do
       end select
 
-      end associate
-
     end subroutine set_reflect_bc
     !==========================================================================
     subroutine set_fixed_bc(iVarMin, iVarMax, State_V, iMin, iMax, &
@@ -828,10 +816,6 @@ contains
       character(len=*), parameter:: NameSub = 'set_fixed_semi_bc'
       !------------------------------------------------------------------------
 
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       if(UseSemiHallResist .or. UseSemiResistivity)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(BxImpl_:BzImpl_,i,j,k) = CellState_VI(Bx_:Bz_,iSide)
@@ -864,8 +848,6 @@ contains
          call stop_mpi(NameSub// &
               ': not working for TypeSemiImplicit='//TypeSemiImplicit)
       end if
-
-      end associate
 
     end subroutine set_fixed_semi_bc
     !==========================================================================
@@ -919,10 +901,6 @@ contains
       character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
       !------------------------------------------------------------------------
       ! call set_oktest(NameSub, DoTest, DoTestMe)
-
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
 
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
@@ -987,8 +965,6 @@ contains
          end if
       end do; end do; end do
 
-      end associate
-
     end subroutine set_solar_wind_bc
     !==========================================================================
 
@@ -1003,10 +979,6 @@ contains
       real    :: y, z
 
       !------------------------------------------------------------------------
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
-
       do k = kMin, kMax
          z = Xyz_DGB(z_,1,1,k,iBlock)
          do j = jMin, jMax
@@ -1019,8 +991,6 @@ contains
             end do
          end do
       end do
-
-      end associate
 
     end subroutine set_solar_wind_bc_buffer
     !==========================================================================
@@ -1044,10 +1014,6 @@ contains
 
       real   :: OpacityRosselandSi_W(nWave), Coef
       !------------------------------------------------------------------------
-
-      associate(iMin => CBC%iMin, iMax => CBC%iMax, &
-           jMin => CBC%jMin, jMax => CBC%jMax, &
-           kMin => CBC%kMin, kMax => CBC%kMax)
 
       select case(iSide)
       case(1, 2)
@@ -1134,8 +1100,6 @@ contains
             end do
          end do; end do
       end select
-
-      end associate
 
     end subroutine set_radiation_outflow_bc
     !==========================================================================
