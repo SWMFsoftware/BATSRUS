@@ -39,6 +39,10 @@ module ModConservative
   logical, allocatable, public :: IsConserv_CB(:,:,:,:)
   !$acc declare create(IsConserv_CB)
 
+  ! Fully conservative and fully non-conservative blocks for optimization
+  logical, allocatable, public :: IsConserv_B(:), IsNonConserv_B(:)
+  !$acc declare create(IsConserv_B, IsNonConserv_B)
+  
   ! Local variables
   character(len=10), allocatable :: TypeConservCrit_I(:)
 
@@ -54,13 +58,15 @@ contains
 
     ! Clean module and reset to fully conservative scheme (default)
     !--------------------------------------------------------------------------
-    UseNonConservative = .false.
+    UseNonConservative   = .false.
     IsDynamicConservCrit = .false.
-    IsStaticConservCrit = .false.
-    nConservCrit = 0
+    IsStaticConservCrit  = .false.
+    nConservCrit         = 0
 
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-    if(allocated(IsConserv_CB)) deallocate(IsConserv_CB)
+    if(allocated(IsConserv_CB))      deallocate(IsConserv_CB)
+    if(allocated(IsConserv_B))       deallocate(IsConserv_B)
+    if(allocated(IsNonConserv_B))    deallocate(IsNonConserv_B)
 
   end subroutine clean_mod_conservative
   !============================================================================
@@ -155,7 +161,7 @@ contains
   !============================================================================
   subroutine select_conservative
 
-    ! Set the global variable IsConserv_CB
+    ! Set the global variables IsConserv_CB, IsConserv_B, IsNonConserv_B
 
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, p_, pe_, RhoUx_, RhoUz_, Bx_, Bz_
@@ -180,25 +186,25 @@ contains
          'UseNonConservative, nConservCrit=',UseNonConservative, nConservCrit
 
     if(.not.allocated(IsConserv_CB))then
-       allocate(IsConserv_CB(nI,nJ,nK,MaxBlock))
+       allocate(IsConserv_CB(nI,nJ,nK,MaxBlock), &
+            IsConserv_B(MaxBlock), IsNonConserv_B(MaxBlock))
        if(DoTest)write(*,*) NameSub,': allocated IsConserv_CB'
     end if
 
     if(nConservCrit < 1)then
        ! There are no criteria so use fully non-conservative
-       IsConserv_CB = .false.
-       if(DoTest)write(*,*) NameSub,': set IsConserv_CB = F'
+       if(DoTest)write(*,*) NameSub,': set_non_conservative'
+       call set_non_conservative
        RETURN
     endif
 
-    if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp' &
-         .or. TypeConservCrit_I == 'jumpp') )then
+    if(IsDynamicConservCrit)then
 
        if(DoTest)write(*,*) NameSub, ': Apply physics based criteria'
 
        ! These all have to be true to use non-conservative,
        ! so any of the criteria can switch to conservative
-       IsConserv_CB = .false.
+       IsConserv_CB(:,:,:,1:nBlock) = .false.
 
        do iBlock = 1, nBlock
           if( Unused_B(iBlock) ) CYCLE
@@ -296,7 +302,7 @@ contains
     else
        ! If there are no physics based criteria we start from
        ! the assumption of conservative everywhere
-       IsConserv_CB = .true.
+       IsConserv_CB(:,:,:,1:nBlock) = .true.
 
        if(DoTest .and. iProc==iProcTest)&
             write(*,*) NameSub, ': default IsConserv is true'
@@ -326,9 +332,13 @@ contains
                write(*,*) NameSub, ': TypeCrit, IsConserv=',&
                TypeConservCrit_I(iCrit), IsConserv_CB(iTest,jTest,kTest,iBlock)
        end do
+
+       IsConserv_B(iBlock)    = all(IsConserv_CB(:,:,:,iBlock))
+       IsNonConserv_B(iBlock) = .not. any(IsConserv_CB(:,:,:,iBlock))
+       
     end do
 
-    !$acc update device(IsConserv_CB)
+    !$acc update device(IsConserv_CB, IsConserv_B, IsNonConserv_B)
 
     call timing_stop('nonconservative')
 
