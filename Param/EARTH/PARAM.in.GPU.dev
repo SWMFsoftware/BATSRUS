@@ -124,6 +124,9 @@ mc3			TypeLimiter
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#SAVERESTART
+F			DoSaveRestart
+
 #SAVEPLOT
 3			nPlotFile
 x=0 MHD idl		StringPlot
