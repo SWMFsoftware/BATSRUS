@@ -18,7 +18,7 @@ module ModUpdateStateFast
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_
-  use ModConservative, ONLY: IsConserv_CB, IsConserv_B, IsNonConserv_B
+  use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
@@ -301,15 +301,7 @@ contains
           end if
 
           ! Update state
-          if(nConservCrit > 0)then
-             if(IsConserv_B(iBlock))then
-                IsConserv = .true.
-             elseif(IsNonConserv_B(iBlock))then
-                IsConserv = .false.
-             else
-                IsConserv = IsConserv_CB(i,j,k,iBlock)
-             end if
-          end if
+          if(nConservCrit > 0) IsConserv = IsConserv_CB(i,j,k,iBlock)
           if(iStage == 1)then
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv)then
                 ! Overwrite pressure and change with energy

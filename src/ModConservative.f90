@@ -39,10 +39,6 @@ module ModConservative
   logical, allocatable, public :: IsConserv_CB(:,:,:,:)
   !$acc declare create(IsConserv_CB)
 
-  ! Fully conservative and fully non-conservative blocks for optimization
-  logical, allocatable, public :: IsConserv_B(:), IsNonConserv_B(:)
-  !$acc declare create(IsConserv_B, IsNonConserv_B)
-  
   ! Local variables
   character(len=10), allocatable :: TypeConservCrit_I(:)
 
@@ -65,8 +61,6 @@ contains
 
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
     if(allocated(IsConserv_CB))      deallocate(IsConserv_CB)
-    if(allocated(IsConserv_B))       deallocate(IsConserv_B)
-    if(allocated(IsNonConserv_B))    deallocate(IsNonConserv_B)
 
   end subroutine clean_mod_conservative
   !============================================================================
@@ -161,7 +155,7 @@ contains
   !============================================================================
   subroutine select_conservative
 
-    ! Set the global variables IsConserv_CB, IsConserv_B, IsNonConserv_B
+    ! Set the global variable IsConserv_CB true for conservative grid cells
 
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, p_, pe_, RhoUx_, RhoUz_, Bx_, Bz_
@@ -186,8 +180,7 @@ contains
          'UseNonConservative, nConservCrit=',UseNonConservative, nConservCrit
 
     if(.not.allocated(IsConserv_CB))then
-       allocate(IsConserv_CB(nI,nJ,nK,MaxBlock), &
-            IsConserv_B(MaxBlock), IsNonConserv_B(MaxBlock))
+       allocate(IsConserv_CB(nI,nJ,nK,MaxBlock))
        if(DoTest)write(*,*) NameSub,': allocated IsConserv_CB'
     end if
 
@@ -332,13 +325,9 @@ contains
                write(*,*) NameSub, ': TypeCrit, IsConserv=',&
                TypeConservCrit_I(iCrit), IsConserv_CB(iTest,jTest,kTest,iBlock)
        end do
-
-       IsConserv_B(iBlock)    = all(IsConserv_CB(:,:,:,iBlock))
-       IsNonConserv_B(iBlock) = .not. any(IsConserv_CB(:,:,:,iBlock))
-       
     end do
 
-    !$acc update device(IsConserv_CB, IsConserv_B, IsNonConserv_B)
+    !$acc update device(IsConserv_CB)
 
     call timing_stop('nonconservative')
 
