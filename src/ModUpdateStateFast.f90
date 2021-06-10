@@ -10,7 +10,7 @@ module ModUpdateStateFast
        DoLf, LimiterBeta, nStage, iStage, nOrder, &
        IsCartesian, IsCartesianGrid, UseNonConservative, nConservCrit, &
        UseDivbSource, UseHyperbolicDivB, IsTimeAccurate, UseDtFixed, UseB0, &
-       UseBody, UseBorisCorrection
+       UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
@@ -28,8 +28,7 @@ module ModUpdateStateFast
   use ModParallel, ONLY: DiLevelNei_EB => NeiLev
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
-       C2light, InvClight, InvClight2, ClightFactor, &
-       UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
+       C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        update_angular_velocity, Omega_D
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp
