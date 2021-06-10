@@ -22,7 +22,8 @@ contains
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
     use ModFaceValue
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux, iTypeUpdate
+         DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux, &
+         iTypeUpdate
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
@@ -41,8 +42,7 @@ contains
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModFieldLineThread, ONLY: &
          UseFieldLineThreads, advance_threads, Enthalpy_
-    use ModUpdateStateFast, ONLY: update_state_gpu, update_state_cpu, &
-         update_state_gpu_prim, update_state_cpu_prim
+    use ModUpdateStateFast, ONLY: update_state_fast
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
@@ -129,16 +129,9 @@ contains
 
        endif
 
-       select case(iTypeUpdate)
-       case(3)
-          call update_state_cpu
-       case(4)
-          call update_state_gpu
-       case(5)
-          call update_state_cpu_prim
-       case(6)
-          call update_state_gpu_prim
-       case default
+       if(iTypeUpdate > 2)then
+          call update_state_fast
+       else
 #ifndef OPENACC
           ! CPU compatible code
           !$omp parallel do
@@ -232,7 +225,7 @@ contains
           end do ! Multi-block solution update loop.
           !$omp end parallel do
 #endif
-       end select
+       end if
 
        if(DoTest)write(*,*)NameSub,' done update blocks'
 

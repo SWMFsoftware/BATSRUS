@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB => time_BLK, Vdt_
+       DtMax_CB => time_BLK, Vdt_, iTypeUpdate
   use ModCellBoundary, ONLY: FloatBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -38,20 +38,44 @@ module ModUpdateStateFast
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
+  use ModUtilities, ONLY: CON_stop
   ! use ModCoordTransform, ONLY: cross_product
 
   implicit none
 
   private ! except
 
-  public:: update_state_cpu      ! save flux, recalculate primitive vars
-  public:: update_state_gpu      ! recalculate flux and primitive vars
-  public:: update_state_cpu_prim ! save flux and primitive vars
-  public:: update_state_gpu_prim ! recalculate flux, save primitive vars
-
+  public:: update_state_fast    ! Fast update 
+  
   logical:: DoTestCell= .false.
 
 contains
+  !============================================================================
+  subroutine update_state_fast
+
+    character(len=*), parameter:: NameSub = 'update_state_fast'
+    !--------------------------------------------------------------------------
+    if(UseRotatingBc)then
+       ! Set angular velocity for the inner boundary
+       !$acc serial
+       call update_angular_velocity
+       !$acc end serial
+    end if
+    
+    select case(iTypeUpdate)
+    case(3)
+       call update_state_cpu      ! save flux, recalculate primitive vars
+    case(4)
+       call update_state_gpu      ! recalculate flux and primitive vars
+    case(5)
+       call update_state_cpu_prim ! save flux and primitive vars
+    case(6)
+       call update_state_gpu_prim ! recalculate flux, save primitive vars
+    case default
+       call CON_stop(NameSub//': invalid iTypeUpdate=', iTypeUpdate)
+    end select
+    
+  end subroutine update_state_fast
   !============================================================================
   subroutine update_state_cpu
 
@@ -74,12 +98,6 @@ contains
     if(DoTest)then
        write(*,*)'==========================================================='
        write(*,*) NameSub, ' started with DoResChangeOnly=F of course'
-    end if
-
-    if(UseRotatingBc)then
-       !$acc serial
-       call update_angular_velocity
-       !$acc end serial
     end if
 
     !$acc parallel
@@ -607,12 +625,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(UseRotatingBc)then
-       !$acc serial
-       call update_angular_velocity
-       !$acc end serial
-    end if
-
     !$acc parallel
     !$acc loop gang private(Change_VC, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -1052,12 +1064,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(UseRotatingBc)then
-       !$acc serial
-       call update_angular_velocity
-       !$acc end serial
-    end if
-
     !$acc parallel
     !$acc loop gang private(iGang, IsBodyBlock) independent
     do iBlock = 1, nBlock
@@ -1422,12 +1428,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 #endif
-
-    if(UseRotatingBc)then
-       !$acc serial
-       call update_angular_velocity
-       !$acc end serial
-    end if
 
     !$acc parallel
     !$acc loop gang private(IsBodyBlock) independent

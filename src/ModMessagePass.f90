@@ -125,7 +125,7 @@ contains
     call timing_start('exch_msgs')
 
     ! Apply boundary conditions
-    if(.not.DoResChangeOnly .and. iTypeUpdate==1) then
+    if(.not.DoResChangeOnly .and. iTypeUpdate>0) then
        call timing_start('cell_bc')
        !$acc parallel loop gang
        do iBlock = 1, nBlock
