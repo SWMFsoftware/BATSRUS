@@ -124,8 +124,8 @@ contains
 
     call timing_start('exch_msgs')
 
-    ! Ensure that energy and pressure are consistent and positive in real cells
-    if(.not.DoResChangeOnly) then
+    ! Apply boundary conditions
+    if(.not.DoResChangeOnly .and. iTypeUpdate==1) then
        call timing_start('cell_bc')
        !$acc parallel loop gang
        do iBlock = 1, nBlock
@@ -236,7 +236,6 @@ contains
           end if
 
           ! Maybe only ghost cells at res changes need this
-          ! write(*,*)NameSub,' !!! call limit_pressure'
           call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
                1, nFluid)
 
@@ -249,10 +248,8 @@ contains
        !$omp end parallel do
 
        if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
-
        call timing_stop('cell_bc')
     end if
-
     call timing_stop('exch_msgs')
     if(DoTest)call timing_show('exch_msgs',1)
 
