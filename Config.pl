@@ -238,6 +238,8 @@ sub set_optimization{
 	    UseDtFixed          => ".false.", 
             UseHyperbolicDivB   => ".false.",
             UseNonConservative  => ".false.",
+	    UsePMin             => ".false.",
+	    UseRhoMin           => ".false.",
             iStage              => 1,
             nStage              => 1,
             nOrder              => 1,
@@ -327,6 +329,10 @@ sub set_optimization{
 	    }elsif(/^#USEB0\b/){
 		my $useb0 = <FILE>;
 		check_var($Set{"UseB0"}, $useb0, $first);
+	    }elsif(/^#MINIMUMPRESSURE\b/){
+		check_var($Set{"UsePMin"}, "T", $first);
+	    }elsif(/^#MINIMUMDENSITY\b/){
+		check_var($Set{"UseRhoMin"}, "T", $first);		
 	    }elsif(/^#FIXEDTIMESTEP\b/){
 		my $usedtfixed = <FILE>;
 		check_var($Set{"UseDtFixed"}, $usedtfixed, $first);

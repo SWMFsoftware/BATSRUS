@@ -30,7 +30,9 @@ module ModOptimizeParam
   use ModBorisCorrection, ONLY: &
        UseBorisCorrection => UseBorisCorrection
   use ModPhysics, ONLY: &
-       ClightFactor => ClightFactor
+       ClightFactor => ClightFactor, &
+       UsePMin => UsePMin, &
+       UseRhoMin => UseRhoMin
   use BATL_lib, ONLY: &
        IsCartesian => IsCartesian, &
        IsCartesianGrid => IsCartesianGrid
