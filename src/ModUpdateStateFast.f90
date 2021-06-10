@@ -37,8 +37,8 @@ module ModUpdateStateFast
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK
-  use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   use ModUtilities, ONLY: CON_stop
+  ! use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   ! use ModCoordTransform, ONLY: cross_product
 
   implicit none
@@ -468,11 +468,9 @@ contains
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i-1,j,k,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-       elseif(Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
+       elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
        end if
     endif
@@ -525,11 +523,9 @@ contains
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i,j-1,k,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-       else if(Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
+       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
        endif
     endif
@@ -582,11 +578,9 @@ contains
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i,j,k-1,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-       else if (Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
+       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
        endif
     endif
@@ -1333,11 +1327,9 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i-1,j,k,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-       elseif(Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i-1,j,k,iBlock) /= domain_) then
+       elseif(Used_GB(i,j,k,iBlock) .and. .not.Used_GB(i-1,j,k,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
        end if
     endif
@@ -1365,11 +1357,9 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i,j-1,k,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-       else if(Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i,j-1,k,iBlock) /= domain_) then
+       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
        endif
     endif
@@ -1397,11 +1387,9 @@ contains
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
 
     if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i,j,k-1,iBlock) .and. &
-            iBoundary_GB(i,j,k,iBlock) /= domain_) then
+       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
           call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-       else if (Used_GB(i,j,k,iBlock) .and. &
-            iBoundary_GB(i,j,k-1,iBlock) /= domain_) then
+       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
           call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
        endif
     endif
