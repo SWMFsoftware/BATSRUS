@@ -45,8 +45,8 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: update_state_fast    ! Fast update 
-  
+  public:: update_state_fast    ! Fast update
+
   logical:: DoTestCell= .false.
 
 contains
@@ -61,7 +61,7 @@ contains
        call update_angular_velocity
        !$acc end serial
     end if
-    
+
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -74,7 +74,7 @@ contains
     case default
        call CON_stop(NameSub//': invalid iTypeUpdate=', iTypeUpdate)
     end select
-    
+
   end subroutine update_state_fast
   !============================================================================
   subroutine update_state_cpu
@@ -383,7 +383,7 @@ contains
           elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
              call set_boundary6(i, j, iBlock)
           end if
-          
+
 #ifndef OPENACC
           if(DoTestCell)then
              write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
@@ -462,7 +462,7 @@ contains
     elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
        call set_boundary2(j,k,iBlock)
     end if
-    
+
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
@@ -517,7 +517,7 @@ contains
     elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
        call set_boundary4(i, k, iBlock)
     end if
-    
+
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
@@ -1852,7 +1852,7 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 1
-    
+
     integer, intent(in):: j, k, iBlock
     integer:: i
     !--------------------------------------------------------------------------
@@ -1873,14 +1873,14 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 2
-    
+
     integer, intent(in):: j, k, iBlock
     integer:: i
     !--------------------------------------------------------------------------
     if(iTypeCellBc_I(2) == FloatBc_)then
        do i = nI+1, MaxI
           State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
-          !if(any(State_VGB(:,i,j,k,iBlock) /= State_VGB(:,nI,j,k,iBlock))) &
+          ! if(any(State_VGB(:,i,j,k,iBlock) /= State_VGB(:,nI,j,k,iBlock))) &
           !     write(*,*)'!!! float2 error at i,j,k,iBlock=', i,j,k,iBlock
        end do
     else
@@ -1888,7 +1888,7 @@ contains
           State_VGB(:,i,j,k,iBlock) = CellState_VI(:,2)
           if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-          
+
           ! State_V = CellState_VI(:,2)
           ! if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_)-B0_DGB(:,i,j,k,iBlock)
           ! if(any(State_VGB(:,i,j,k,iBlock) /= State_V)) then
@@ -1905,7 +1905,7 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 3
-    
+
     integer, intent(in):: i0, k, iBlock
 
     integer:: i1, i2, i, j
@@ -1931,7 +1931,7 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 2
-    
+
     integer, intent(in):: i0, k, iBlock
     integer:: i1, i2, i, j
     !--------------------------------------------------------------------------
@@ -1956,7 +1956,7 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 5
-    
+
     integer, intent(in):: i0, j0, iBlock
     integer:: i1, i2, j1, j2, i, j, k
     !--------------------------------------------------------------------------
@@ -1983,7 +1983,7 @@ contains
     !$acc routine seq
 
     ! Apply boundary condition on side 6
-    
+
     integer, intent(in):: i0, j0, iBlock
     integer:: i1, i2, j1, j2, i, j, k
     !--------------------------------------------------------------------------
