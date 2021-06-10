@@ -18,19 +18,21 @@ module ModUpdateStateFast
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_
+  use ModCellBoundary, ONLY: FloatBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
        CellVolume_GB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB, Used_GB, &
-       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, &
+       iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest, Unset_, &
        test_start, test_stop
+  use ModParallel, ONLY: DiLevelNei_EB => NeiLev
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
-       GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, &
+       GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, ClightFactor, &
        UseRhoMin, UsePMin, RhoMin_I, pMin_I, &
        update_angular_velocity, Omega_D
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
-       body1_, UseRotatingBc, UseB, SpeedHyp
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
@@ -348,45 +350,62 @@ contains
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
+          ! Apply boundary conditions to external ghost cells
+          if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
+             call set_boundary1(j,k,iBlock)
+          elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
+             call set_boundary2(j,k,iBlock)
+          end if
+          if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
+             call set_boundary3(i, k, iBlock)
+          elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
+             call set_boundary4(i, k, iBlock)
+          end if
+          if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
+             call set_boundary5(i, j, iBlock)
+          elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
+             call set_boundary6(i, j, iBlock)
+          end if
+          
 #ifndef OPENACC
-       if(DoTestCell)then
-          write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
-          write(*,'(2x,a,2es23.15)') &
-               'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang) ,&
-               Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
-          write(*,'(2x,a,2es23.15)') &
-               'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang) ,&
-               Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
-          write(*,'(2x,a,2es23.15)') &
-               'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
-               Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
-          write(*,'(2x,a,es23.15)')'source=',&
-               Change_V(iVarTest) -  &
-               (Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
-               -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
-               +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
-               -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
-               +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-               -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
-               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-          write(*,'(2x,a,es23.15)')'fluxes=', &
-               +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
-               -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
-               +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
-               -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
-               +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
-               -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
-               /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
-          write(*,*)
-          write(*,*)NameSub,'final for nStep=', nStep
-          do iVar=1,nVar
-             write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-                  State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
-          end do
-          write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
-          if(UseDivbSource)      write(*,*)'divB =', divB
-          if(UseNonConservative) write(*,*)'divU =', divU
-       end if
+          if(DoTestCell)then
+             write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
+             write(*,'(2x,a,2es23.15)') &
+                  'X fluxes L,R =',Flux_VXI(iVarTest,iTest,jTest,kTest,iGang),&
+                  Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+             write(*,'(2x,a,2es23.15)') &
+                  'Y fluxes L,R =',Flux_VYI(iVarTest,iTest,jTest,kTest,iGang),&
+                  Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+             write(*,'(2x,a,2es23.15)') &
+                  'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang),&
+                  Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+             write(*,'(2x,a,es23.15)')'source=',&
+                  Change_V(iVarTest) -  &
+                  (Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+                  -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
+                  +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+                  -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
+                  +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+                  -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
+                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+             write(*,'(2x,a,es23.15)')'fluxes=', &
+                  +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)    &
+                  -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)   &
+                  +Flux_VYI(iVarTest,iTest,jTest,kTest,iGang)     &
+                  -Flux_VYI(iVarTest,iTest,jTest+1,kTest,iGang)   &
+                  +Flux_VZI(iVarTest,iTest,jTest,kTest,iGang)     &
+                  -Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang) ) &
+                  /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
+             write(*,*)
+             write(*,*)NameSub,'final for nStep=', nStep
+             do iVar=1,nVar
+                write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
+                     State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
+             end do
+             write(*,*) NameSub,' is finished for iProc, iBlock=', 0, iBlock
+             if(UseDivbSource)      write(*,*)'divB =', divB
+             if(UseNonConservative) write(*,*)'divU =', divU
+          end if
 #endif
 
        enddo; enddo; enddo
@@ -421,6 +440,12 @@ contains
 #endif
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
+    if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
+       call set_boundary1(j,k,iBlock)
+    elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
+       call set_boundary2(j,k,iBlock)
+    end if
+    
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
@@ -472,6 +497,12 @@ contains
 #endif
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
+    if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
+       call set_boundary3(i, k, iBlock)
+    elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
+       call set_boundary4(i, k, iBlock)
+    end if
+    
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
@@ -522,6 +553,12 @@ contains
     iGang = iBlock
 #endif
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
+
+    if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
+       call set_boundary5(i, j, iBlock)
+    elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
+       call set_boundary6(i, j, iBlock)
+    end if
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
@@ -1824,6 +1861,164 @@ contains
 
   end subroutine limiter2
   !============================================================================
+  subroutine set_boundary1(j, k, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 1
+    
+    integer, intent(in):: j, k, iBlock
+    integer:: i
+    !--------------------------------------------------------------------------
+    if(iTypeCellBc_I(1) == FloatBc_)then
+       do i = MinI, 0
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,1,j,k,iBlock)
+       end do
+    else
+       do i = MinI, 0
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,1)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+       end do
+    end if
+  end subroutine set_boundary1
+  !============================================================================
+  subroutine set_boundary2(j, k, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 2
+    
+    integer, intent(in):: j, k, iBlock
+    integer:: i
+    !--------------------------------------------------------------------------
+    if(iTypeCellBc_I(2) == FloatBc_)then
+       do i = nI+1, MaxI
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
+          !if(any(State_VGB(:,i,j,k,iBlock) /= State_VGB(:,nI,j,k,iBlock))) &
+          !     write(*,*)'!!! float2 error at i,j,k,iBlock=', i,j,k,iBlock
+       end do
+    else
+       do i = nI+1, MaxI
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,2)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+          
+          ! State_V = CellState_VI(:,2)
+          ! if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_)-B0_DGB(:,i,j,k,iBlock)
+          ! if(any(State_VGB(:,i,j,k,iBlock) /= State_V)) then
+          !    write(*,*)'!!! fixed2 error at i,j,k,iBlock=', i,j,k,iBlock
+          !    write(*,*)'State_VGB=',State_VGB(:,i,j,k,iBlock)
+          !    write(*,*)'State_V  =',State_V
+          !    call stop_mpi('DEBUG')
+          ! end if
+       end do
+    end if
+  end subroutine set_boundary2
+  !============================================================================
+  subroutine set_boundary3(i0, k, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 3
+    
+    integer, intent(in):: i0, k, iBlock
+
+    integer:: i1, i2, i, j
+    !--------------------------------------------------------------------------
+    i1 = i0; i2 = i0
+    if(i0 == 1)  i1 = MinI
+    if(i0 == nI) i2 = MaxI
+
+    if(iTypeCellBc_I(3) == FloatBc_)then
+       do j = MinJ, 0
+          State_VGB(:,i1:i2,j,k,iBlock) = State_VGB(:,i1:i2,1,k,iBlock)
+       end do
+    else
+       do j = MinJ, 0; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,3)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+       end do; end do
+    end if
+  end subroutine set_boundary3
+  !============================================================================
+  subroutine set_boundary4(i0, k, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 2
+    
+    integer, intent(in):: i0, k, iBlock
+    integer:: i1, i2, i, j
+    !--------------------------------------------------------------------------
+    i1 = i0; i2 = i0
+    if(i0 == 1)  i1 = MinI
+    if(i0 == nI) i2 = MaxI
+
+    if(iTypeCellBc_I(4) == FloatBc_)then
+       do j = nJ+1, MaxJ; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,nJ,k,iBlock)
+       end do; end do
+    else
+       do j = nJ+1, MaxJ; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,4)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+       end do; end do
+    end if
+  end subroutine set_boundary4
+  !============================================================================
+  subroutine set_boundary5(i0, j0, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 5
+    
+    integer, intent(in):: i0, j0, iBlock
+    integer:: i1, i2, j1, j2, i, j, k
+    !--------------------------------------------------------------------------
+    i1 = i0; i2 = i0; j1 = j0; j2 = j0
+    if(i0 == 1)  i1 = MinI
+    if(i0 == nI) i2 = MaxI
+    if(j0 == 1)  j1 = MinJ
+    if(j0 == nJ) j2 = MaxJ
+
+    if(iTypeCellBc_I(5) == FloatBc_)then
+       do k = MinK, 0; do j = j1, j2; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,1,iBlock)
+       end do; end do; end do
+    else
+       do k = MinK, 0; do j = j1, j2; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,5)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+       end do; end do; end do
+    end if
+  end subroutine set_boundary5
+  !============================================================================
+  subroutine set_boundary6(i0, j0, iBlock)
+    !$acc routine seq
+
+    ! Apply boundary condition on side 6
+    
+    integer, intent(in):: i0, j0, iBlock
+    integer:: i1, i2, j1, j2, i, j, k
+    !--------------------------------------------------------------------------
+    i1 = i0; i2 = i0; j1 = j0; j2 = j0
+    if(i0 == 1)  i1 = MinI
+    if(i0 == nI) i2 = MaxI
+    if(j0 == 1)  j1 = MinJ
+    if(j0 == nJ) j2 = MaxJ
+
+    if(iTypeCellBc_I(6) == FloatBc_)then
+       do k = nK+1, MaxK; do j = j1, j2; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,nK,iBlock)
+       end do; end do; end do
+    else
+       do k = nK+1, MaxK; do j = j1, j2; do i = i1, i2
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,6)
+          if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+       end do; end do; end do
+    end if
+  end subroutine set_boundary6
+  !============================================================================
   subroutine set_face(VarsTrueFace_V, VarsGhostFace_V, &
        i, j, k, iBody, jBody, kBody, iBlock)
     !$acc routine seq
@@ -1902,8 +2097,6 @@ contains
     !$acc routine seq
 
     ! Return B0 at the face in direction iDir relative to i, j, k cell center
-
-    use ModParallel, ONLY: DiLevelNei_EB => NeiLev
 
     real, intent(out)   :: B0_D(3)
     integer, intent(in) :: i,j,k,iBlock,iDir
