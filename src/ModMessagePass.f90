@@ -37,7 +37,7 @@ contains
          nOrder, nOrderProlong, optimize_message_pass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBCType
     use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance,  ONLY: State_VGB, iTypeUpdate
     use ModGeometry, ONLY: far_field_BCs_BLK
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
@@ -76,7 +76,7 @@ contains
 
     type(CellBCType) :: CBC
 
-    !!! TO BE GENERALIZED
+!!! TO BE GENERALIZED
     logical:: IsPeriodicWedge = .false.
     integer:: iVector, iVar, i, j, k
     real   :: XyzSph_DD(3,3)
@@ -126,6 +126,7 @@ contains
 
     ! Ensure that energy and pressure are consistent and positive in real cells
     if(.not.DoResChangeOnly) then
+       call timing_start('cell_bc')
        !$acc parallel loop gang
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
@@ -140,6 +141,7 @@ contains
 #endif
           endif
        end do
+       call timing_stop('cell_bc')
     end if
 
     if(IsPeriodicWedge)then
@@ -210,48 +212,46 @@ contains
        end do
     end if
 
-    call timing_start('exch_energy')
-    !$acc parallel loop gang
-    !$omp parallel do
-    do iBlock = 1, nBlock
-       if (Unused_B(iBlock)) CYCLE
-       ! The corner ghost cells outside the domain are updated
-       ! from the ghost cells inside the domain, so the outer
-       ! boundary condition have to be reapplied.
-       if(.not.DoResChangeOnly &
-            .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
-          if (far_field_BCs_BLK(iBlock)) then
-             call set_cell_boundary( &
-                  nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+    if(iTypeUpdate == 1)then
+       call timing_start('cell_bc')
+       !$omp parallel do
+       do iBlock = 1, nBlock
+          if (Unused_B(iBlock)) CYCLE
+          ! The corner ghost cells outside the domain are updated
+          ! from the ghost cells inside the domain, so the outer
+          ! boundary condition have to be reapplied.
+          if(.not.DoResChangeOnly &
+               .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
+             if (far_field_BCs_BLK(iBlock)) then
+                call set_cell_boundary( &
+                     nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 
-#ifndef OPENACC
-             ! Fill in boundary cells with hybrid particles
-             if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
-#endif
+                ! Fill in boundary cells with hybrid particles
+                if(UseBoundaryVdf)call set_boundary_vdf(iBlock)
+
+             end if
+
+             if(UseBuffer)call fill_in_from_buffer(iBlock)
+
           end if
-#ifndef OPENACC
-          if(UseBuffer)call fill_in_from_buffer(iBlock)
-#endif
-       end if
 
-       ! Maybe only ghost cells at res changes need this
-       ! write(*,*)NameSub,' !!! call limit_pressure'
-       call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
-            1, nFluid)
-!!! DoResChangeOnlyIn=DoResChangeOnlyIn, UseOpenACCIn=.true.)
+          ! Maybe only ghost cells at res changes need this
+          ! write(*,*)NameSub,' !!! call limit_pressure'
+          call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, &
+               1, nFluid)
 
-#ifndef OPENACC
-       if(UseResistivePlanet) then
-          CBC%TypeBc = 'ResistivePlanet'
-          call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
-       end if
-#endif
+          if(UseResistivePlanet) then
+             CBC%TypeBc = 'ResistivePlanet'
+             call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
+          end if
 
-    end do
-    !$omp end parallel do
+       end do
+       !$omp end parallel do
 
-    if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
-    call timing_stop('exch_energy')
+       if(.not.DoResChangeOnly)UseBoundaryVdf = .false.
+
+       call timing_stop('cell_bc')
+    end if
 
     call timing_stop('exch_msgs')
     if(DoTest)call timing_show('exch_msgs',1)
