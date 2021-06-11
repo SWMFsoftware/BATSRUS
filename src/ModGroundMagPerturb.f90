@@ -61,8 +61,8 @@ module ModGroundMagPerturb
 
   ! Fast algorithms:
   real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
-  logical:: UseSurfaceIntegral = .false.      ! true for fast surface integral
-  logical:: UseFastFacIntegral = .false.      ! true for fast FAC integral
+  logical:: UseSurfaceIntegral = .true.       ! true for fast surface integral
+  logical:: UseFastFacIntegral = .true.       ! true for fast FAC integral
   character(len=3):: TypeCoordFacGrid = 'SMG' ! 'MAG' for fast integral
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
@@ -85,7 +85,7 @@ module ModGroundMagPerturb
   real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
   real               :: XyzKp_DI(3,nKpMag)     ! Locations of Kp stations
   real               :: XyzAe_DI(3,nAeMag)     ! Locations of AE stations
-  character(len=3)   :: TypeCoordIndex = 'SMG' ! SMG or MAG system for stations
+  character(len=3)   :: TypeCoordIndex = 'MAG' ! SMG or MAG system for stations
   integer            :: kIndex_I(nKpMag)       ! Local k-index
 
   ! K-index is evaluated over a rolling time window, typically three hours.
