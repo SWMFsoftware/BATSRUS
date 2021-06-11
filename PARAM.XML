@@ -3635,23 +3635,54 @@ example), the start and end times should be set for all of them.
 <command name="MAGPERTURBINTEGRAL">
   <parameter name="UseSurfaceIntegral" type="logical" default="F"/>
   <parameter name="UseFastFacIntegral" type="logical" default="F"/>
+  <parameter name="TypeCoordIndex" type="string" input="select">
+    <option name="MAG" default="T" />
+    <option name="SMF" />
+  </parameter>
+  <parameter name="TypeCoordIndex" type="string" input="select"
+	     if="not $UseFastFacIntegral">
+    <option name="MAG" default="T" />
+    <option name="SMF" />
+  </parameter>
+
 #MAGPERTURBINTEGRAL
 T			UseSurfaceIntegral
-T			UseFastFacIntegral
+F			UseFastFacIntegral
+MAG			TypeCoordIndex
+MAG			TypeCoordFacGrid (read if UseFastFacIntegral=F)
 
 Control what method is used to do the Biot-Savart integrals to
-calculate the magnetic perturbations. If UseSurfaceIntegral is true,
-the volume integral over the MHD grid is replaced with a surface
-integral using Igor Sokolov's formulas (not yet implemented).
+calculate the magnetic perturbations.
+
+If UseSurfaceIntegral is true, the volume integral over the MHD grid
+is replaced with a surface integral using Igor Sokolov's formulas.
+This surface integral is analytically identical with the 3D volume
+integral outside the sphere plus the contributions from the external
+field outside the MHD grid, but computationally much less expensive.
+See Appendix C.5.1 in Gombosi et al 2021 JSWSC, doi:10.1051/swsc/2021020.
+
 If UseFastFacIntegral is true, the integrals across the gap region
 are precalculated for each magnetometer and each line starting 
 from the lat-lon grid and stored into an array LineContrib_DII.
 At any given time this array can be multiplied with the FAC 
 values calculated at rCurrents to obtain the perturbation at
 a given magnetometer. The storage as well as the calculation
-is parallel.
+is parallel. See Appendix C.5.2 in Gombosi et al 2021 JSWSC,
+doi:10.1051/swsc/2021020.
 
-Default values are false for backward compatibility. Likely to change.
+TypeCoordIndex defines whether the 48 virtual magnetometers used for Kp, Ae
+and other indexes are in the SMG system or the co-rotating MAG system.
+The MAG system allows the use of the fast FAC integration for these
+stations.
+
+TypeCoordFacGrid defines the coordinate system for the spherical grid
+used to integrate the contributions from the FAC in the gap region.
+This has to be in the corotating MAG system if UseFastFacIntegral is true.
+For the slow FAC integral method, the SMG system is allowed too.
+
+Default values are UseSurfaceIntegral=T, UseFastFacIntegral=T,
+TypeCoordIndex='MAG' and TypeCoordFacGrid='MAG', which are the
+optimal settings for best computational speed.
 </command>
 
 <command name="GEOMAGINDICES">
