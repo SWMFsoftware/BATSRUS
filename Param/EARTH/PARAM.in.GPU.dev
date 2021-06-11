@@ -11,8 +11,20 @@ slow			TypeUpdate
 #TIMEACCURATE
 F			IsTimeAccurate
 
+#STARTTIME
+1998			iYear
+5			iMonth
+5			iDay
+0			iHour
+0			iMinute
+0			iSecond
+
+#SOLARWINDFILE
+T			UseSolarWindFile
+Param/EARTH/imf19980504.dat		NameSolarWindFile
+
 #UPDATEB0
-5			DtUpdateB0
+5.0			DtUpdateB0
 
 #BORIS
 T			UseBorisCorrection
@@ -86,7 +98,7 @@ parabola		TypeConservCrit
 
 #OUTERBOUNDARY
 float			TypeBc1
-fixed			TypeBc2
+vary			TypeBc2
 float			TypeBc3
 float			TypeBc4
 float			TypeBc5
@@ -94,16 +106,6 @@ float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcBody
-
-#SOLARWIND
-5			SwNDim  [n/cc]
-1.e5			SwTDim  [K]
--400			SwUxDim [km/s]
-0.0			SwUyDim [km/s]
-0.0			SwUzDim [km/s]
-0.0			SwBxDim [nT]
-0.0			SwByDim [nT]
--5			SwBzDim [nT]
 
 #SCHEME
 2			nOrder
@@ -128,21 +130,17 @@ T			IsTimeAccurate
 F			DoSaveRestart
 
 #SAVEPLOT
-3			nPlotFile
-x=0 MHD idl		StringPlot
+2			nPlotFile
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
-1			DtSavePlot
+1.0			DtSavePlot
 -1.			DxSavePlot
 y=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
-1			DtSavePlot
+1.0			DtSavePlot
 -1			DxSavePlot
 rho p bx ux		NameVars
 {default}		NamePars
-z=0 MHD idl		StringPlot
--1			DnSavePlot
-1			DtSavePlot
--1.			DxSavePlot
 
 #SAVEINITIAL
 T			DoSaveInitial
