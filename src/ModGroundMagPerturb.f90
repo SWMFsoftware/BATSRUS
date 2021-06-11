@@ -63,7 +63,7 @@ module ModGroundMagPerturb
   real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   logical:: UseSurfaceIntegral = .true.       ! true for fast surface integral
   logical:: UseFastFacIntegral = .true.       ! true for fast FAC integral
-  character(len=3):: TypeCoordFacGrid = 'SMG' ! 'MAG' for fast integral
+  character(len=3):: TypeCoordFacGrid = 'MAG' ! 'MAG' for fast integral
 
   logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
   integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
