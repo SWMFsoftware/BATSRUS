@@ -90,6 +90,12 @@ RAW			StringLog
 0.0			SwByDim [nT]
 -10.0			SwBzDim [nT]
 
+#MAGPERTURBINTEGRAL
+F			UseSurfaceIntegral
+F			UseFastFacIntegral
+SMG			TypeCoordIndex
+SMG			TypeCoordFacGrid (read if UseFastFacIntegral=F)
+
 #MAGNETOMETER
 GM/Param/MAGNETOMETER/magin.dat		NameMagInputFile
 single			TypeFileOut
