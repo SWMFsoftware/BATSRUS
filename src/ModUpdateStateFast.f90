@@ -18,7 +18,7 @@ module ModUpdateStateFast
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_, iTypeUpdate
-  use ModCellBoundary, ONLY: FloatBC_
+  use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        nBlock, Unused_B, x_, y_, z_, CellVolume_B, CellFace_DB, &
@@ -31,12 +31,15 @@ module ModUpdateStateFast
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
        update_angular_velocity, Omega_D
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
+       TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
-  use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK
+  use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
+       IsBoundary_B => far_field_BCs_BLK
+  use ModSolarWind, ONLY: get_solar_wind_point
   use ModUtilities, ONLY: CON_stop
   ! use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   ! use ModCoordTransform, ONLY: cross_product
@@ -45,7 +48,8 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: update_state_fast    ! Fast update
+  public:: update_state_fast    ! Fast update 
+  public:: set_boundary_fast    ! set cell based boundary
 
   logical:: DoTestCell= .false.
 
@@ -53,6 +57,8 @@ contains
   !============================================================================
   subroutine update_state_fast
 
+    ! Apply cell boundary conditions and update one stage
+    
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
     if(UseRotatingBc)then
@@ -367,23 +373,6 @@ contains
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-          ! Apply boundary conditions to external ghost cells
-          if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
-             call set_boundary1(j,k,iBlock)
-          elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
-             call set_boundary2(j,k,iBlock)
-          end if
-          if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
-             call set_boundary3(i, k, iBlock)
-          elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
-             call set_boundary4(i, k, iBlock)
-          end if
-          if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
-             call set_boundary5(i, j, iBlock)
-          elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
-             call set_boundary6(i, j, iBlock)
-          end if
-
 #ifndef OPENACC
           if(DoTestCell)then
              write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
@@ -457,12 +446,6 @@ contains
 #endif
     call get_normal(1, i, j, k, iBlock, Normal_D, Area)
 
-    if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
-       call set_boundary1(j,k,iBlock)
-    elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
-       call set_boundary2(j,k,iBlock)
-    end if
-
     call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
@@ -512,12 +495,6 @@ contains
 #endif
     call get_normal(2, i, j, k, iBlock, Normal_D, Area)
 
-    if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
-       call set_boundary3(i, k, iBlock)
-    elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
-       call set_boundary4(i, k, iBlock)
-    end if
-
     call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
@@ -566,12 +543,6 @@ contains
     iGang = iBlock
 #endif
     call get_normal(3, i, j, k, iBlock, Normal_D, Area)
-
-    if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
-       call set_boundary5(i, j, iBlock)
-    elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
-       call set_boundary6(i, j, iBlock)
-    end if
 
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
@@ -1847,6 +1818,50 @@ contains
          min(abs(Slope32), abs(Slope43), cThird*abs(Var3+Var4-2*Var2))
 
   end subroutine limiter2
+  !============================================================================
+  subroutine set_boundary_fast
+
+    ! Set cell boundaries for State_VGB
+    
+    integer:: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+
+    if (iTypeCellBc_I(2) == VaryBC_)then
+       call get_solar_wind_point(TimeSimulation, [x2, 0., 0.], &
+            CellState_VI(:,2))
+       ! Convert velocity to momentum
+       CellState_VI(RhoUx_:RhoUz_,2) = &
+            CellState_VI(RhoUx_:RhoUz_,2)*CellState_VI(Rho_,2)
+       !$acc update device(CellState_VI)
+    endif
+    
+    !$acc parallel loop gang independent
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       if(.not.IsBoundary_B(iBlock)) CYCLE
+
+       !$acc loop vector collapse(3) independent
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Apply boundary conditions to external ghost cells
+          if(i == 1 .and. DiLevelNei_EB(1,iBlock) == Unset_)then
+             call set_boundary1(j,k,iBlock)
+          elseif(i == nI .and. DiLevelNei_EB(2,iBlock) == Unset_)then
+             call set_boundary2(j,k,iBlock)
+          end if
+          if(j == 1 .and. DiLevelNei_EB(3,iBlock) == Unset_)then
+             call set_boundary3(i, k, iBlock)
+          elseif(j == nJ .and. DiLevelNei_EB(4,iBlock) == Unset_)then
+             call set_boundary4(i, k, iBlock)
+          end if
+          if(k == 1 .and. DiLevelNei_EB(5,iBlock) == Unset_)then
+             call set_boundary5(i, j, iBlock)
+          elseif(k == nK .and. DiLevelNei_EB(6,iBlock) == Unset_)then
+             call set_boundary6(i, j, iBlock)
+          end if
+       end do; end do; end do
+    end do
+
+  end subroutine set_boundary_fast
   !============================================================================
   subroutine set_boundary1(j, k, iBlock)
     !$acc routine seq
