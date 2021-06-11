@@ -48,7 +48,7 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: update_state_fast    ! Fast update 
+  public:: update_state_fast    ! Fast update
   public:: set_boundary_fast    ! set cell based boundary
 
   logical:: DoTestCell= .false.
@@ -58,7 +58,7 @@ contains
   subroutine update_state_fast
 
     ! Apply cell boundary conditions and update one stage
-    
+
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
     if(UseRotatingBc)then
@@ -1822,7 +1822,7 @@ contains
   subroutine set_boundary_fast
 
     ! Set cell boundaries for State_VGB
-    
+
     integer:: i, j, k, iBlock
     !--------------------------------------------------------------------------
 
@@ -1834,7 +1834,7 @@ contains
             CellState_VI(RhoUx_:RhoUz_,2)*CellState_VI(Rho_,2)
        !$acc update device(CellState_VI)
     endif
-    
+
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
