@@ -45,6 +45,7 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
     use ModBuffer,   ONLY: fill_in_from_buffer
+    use ModUpdateStateFast, ONLY: set_boundary_fast
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
@@ -125,22 +126,26 @@ contains
     call timing_start('exch_msgs')
 
     ! Apply boundary conditions
-    if(.not.DoResChangeOnly .and. iTypeUpdate>0) then
+    if(.not.DoResChangeOnly)then
        call timing_start('cell_bc')
-       !$acc parallel loop gang
-       do iBlock = 1, nBlock
-          if (Unused_B(iBlock)) CYCLE
-          if (far_field_BCs_BLK(iBlock) .and. &
-               (nOrderProlong==2 .or. UseHighResChangeNow)) then
-             call set_cell_boundary&
-                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+       if(iTypeUpdate > 2) then
+          call set_boundary_fast
+       else
+          !$acc parallel loop gang
+          do iBlock = 1, nBlock
+             if (Unused_B(iBlock)) CYCLE
+             if (far_field_BCs_BLK(iBlock) .and. &
+                  (nOrderProlong==2 .or. UseHighResChangeNow)) then
+                call set_cell_boundary&
+                     (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
 #ifndef OPENACC
-             if(UseHighResChangeNow) &
-                  call set_edge_corner_ghost&
-                  (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+                if(UseHighResChangeNow) &
+                     call set_edge_corner_ghost&
+                     (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
 #endif
-          endif
-       end do
+             endif
+          end do
+       end if
        call timing_stop('cell_bc')
     end if
 
@@ -212,14 +217,15 @@ contains
        end do
     end if
 
-    if(iTypeUpdate == 1)then
+    ! The corner ghost cells outside the domain are updated
+    ! from the ghost cells inside the domain, so the outer
+    ! boundary condition have to be reapplied.
+    ! The "fast" updates do not use corner ghost cells (yet)
+    if(iTypeUpdate < 3)then
        call timing_start('cell_bc')
        !$omp parallel do
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
-          ! The corner ghost cells outside the domain are updated
-          ! from the ghost cells inside the domain, so the outer
-          ! boundary condition have to be reapplied.
           if(.not.DoResChangeOnly &
                .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
              if (far_field_BCs_BLK(iBlock)) then
