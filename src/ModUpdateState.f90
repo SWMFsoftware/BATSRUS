@@ -1259,20 +1259,26 @@ contains
     use ModMain,          ONLY: nBlock, Unused_B,      &
          time_simulation, NameThisComp, time_accurate
     use ModPhysics,       ONLY: ThetaTilt
-    use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
+    use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, iTypeUpdate
+    use ModUpdateStateFast, ONLY: update_b0_fast
     use ModGeometry,      ONLY: body_BLK
     use CON_axes,         ONLY: get_axes
     use ModNumConst,      ONLY: cRadToDeg
     use ModIO,            ONLY: iUnitOut, write_prefix
     use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
-    use ModMessagePass,   ONLY: exchange_messages
+    use ModMessagePass,    ONLY: exchange_messages
 
     integer :: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_b0'
     !--------------------------------------------------------------------------
+    if(iTypeUpdate > 2)then
+       call update_b0_fast
+       RETURN
+    end if
+
     call test_start(NameSub, DoTest)
 
     !$acc update host(State_VGB, B0_DGB)
