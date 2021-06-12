@@ -55,7 +55,7 @@ module ModUpdateStateFast
   logical:: DoTestCell= .false.
 
   real:: Dipole_D(3)
-  !$acc declare(Dipole_D)
+  !$acc declare create(Dipole_D)
 
 contains
   !============================================================================
@@ -2934,10 +2934,11 @@ contains
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     
-    !$acc parallel gang loop
+    !$acc loop gang independent
     do iBlock = 1, nBlock
-       !$acc loop vector collapse(3) independent
        if(Unused_B(iBlock)) CYCLE
+
+       !$acc loop vector collapse(3) independent
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
