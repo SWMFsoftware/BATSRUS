@@ -3637,12 +3637,12 @@ example), the start and end times should be set for all of them.
   <parameter name="UseFastFacIntegral" type="logical" default="F"/>
   <parameter name="TypeCoordIndex" type="string" input="select">
     <option name="MAG" default="T" />
-    <option name="SMF" />
+    <option name="SMG" />
   </parameter>
-  <parameter name="TypeCoordIndex" type="string" input="select"
+  <parameter name="TypeCoordFacGrid" type="string" input="select"
 	     if="not $UseFastFacIntegral">
     <option name="MAG" default="T" />
-    <option name="SMF" />
+    <option name="SMG" />
   </parameter>
 
 #MAGPERTURBINTEGRAL
