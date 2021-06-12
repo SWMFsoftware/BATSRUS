@@ -1281,8 +1281,6 @@ contains
 
     call test_start(NameSub, DoTest)
 
-    !$acc update host(State_VGB, B0_DGB)
-
     ! Update ThetaTilt
     if(NameThisComp=='GM') &
          call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
@@ -1335,7 +1333,6 @@ contains
     end if
     call timing_stop(NameSub)
 
-    !$acc update device(State_VGB, B0_DGB)
     call test_stop(NameSub, DoTest)
   end subroutine update_b0
   !============================================================================
