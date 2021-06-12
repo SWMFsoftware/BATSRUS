@@ -29,10 +29,11 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       update_angular_velocity, Omega_D
+       update_angular_velocity, Omega_D, DipoleStrength => Bdp
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
+       TypeCoordSystem
   use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
        B0ResChange_DZSB
   use ModNumConst, ONLY: cUnit_DD
@@ -40,18 +41,21 @@ module ModUpdateStateFast
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
        IsBoundary_B => far_field_BCs_BLK
   use ModSolarWind, ONLY: get_solar_wind_point
+  use CON_axes, ONLY: get_axes
   use ModUtilities, ONLY: CON_stop
-  ! use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
-  ! use ModCoordTransform, ONLY: cross_product
 
   implicit none
 
   private ! except
 
-  public:: update_state_fast    ! Fast update
-  public:: set_boundary_fast    ! set cell based boundary
+  public:: update_state_fast    ! Fast update of State_VGB
+  public:: update_b0_fast       ! Fast update of B0
+  public:: set_boundary_fast    ! set cell based boundary for State_VGB
 
   logical:: DoTestCell= .false.
+
+  real:: Dipole_D(3)
+  !$acc declare(Dipole_D)
 
 contains
   !============================================================================
@@ -2906,5 +2910,76 @@ contains
     c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
   end function cross_product
   !============================================================================
+  subroutine update_b0_fast
+
+    ! Update B0 due to the rotation of the dipole
+
+    integer:: i, j, k, iBlock
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_b0_fast'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call timing_start(NameSub)
+    
+    if(TypeCoordSystem == 'GSM')then
+       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
+    elseif(TypeCoordSystem == 'GSE')then
+       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
+    else
+       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
+    end if
+    Dipole_D = Dipole_D * DipoleStrength
+    !$acc update device(Dipole_D)
+
+    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    
+    !$acc parallel gang loop
+    do iBlock = 1, nBlock
+       !$acc loop vector collapse(3) independent
+       if(Unused_B(iBlock)) CYCLE
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+          call get_b0_dipole(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
+          if(Used_GB(i,j,k,iBlock))then
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+          else
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+          end if
+       end do; end do; end do
+    end do
+
+    ! messsage pass to fix B1 in the ghost cells ?!
+    ! set B0 at reschange ?!
+
+    call timing_stop(NameSub)
+    call test_stop(NameSub, DoTest)
+
+  end subroutine update_b0_fast
+  !============================================================================
+  subroutine get_b0_dipole(Xyz_D, b_D)
+    !$acc routine seq
+
+    real, intent(in):: Xyz_D(3)
+    real, intent(out):: b_D(3)
+
+    real:: r2, r3Inv, Term1
+    !--------------------------------------------------------------------------
+    r2 = sum(Xyz_D**2)
+    if(r2 < 1E-12) then
+       ! return zero field if very small
+       b_D = 0
+       RETURN
+    end if
+
+    Term1 = sum(Dipole_D*Xyz_D)*3/r2
+    r3Inv = 1/(r2*sqrt(r2))
+    
+    b_D = (Term1*Xyz_D - Dipole_D)*r3Inv
+    
+  end subroutine get_b0_dipole
+
 end module ModUpdateStateFast
 !==============================================================================
