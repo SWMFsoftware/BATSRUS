@@ -2921,7 +2921,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    
+
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
@@ -2933,7 +2933,7 @@ contains
     !$acc update device(Dipole_D)
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
-    
+
     !$acc loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -2977,10 +2977,11 @@ contains
 
     Term1 = sum(Dipole_D*Xyz_D)*3/r2
     r3Inv = 1/(r2*sqrt(r2))
-    
+
     b_D = (Term1*Xyz_D - Dipole_D)*r3Inv
-    
+
   end subroutine get_b0_dipole
+  !============================================================================
 
 end module ModUpdateStateFast
 !==============================================================================
