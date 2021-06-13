@@ -261,7 +261,7 @@ contains
 
        !$acc update device(neiPE, neiBLK)
        !$acc update device(neiPtop, neiPbot)
-       !$acc udpate device(neiBtop, neiBbot)
+       !$acc update device(neiBtop, neiBbot)
        !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
        !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
     endif
