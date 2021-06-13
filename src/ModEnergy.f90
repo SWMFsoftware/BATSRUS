@@ -303,7 +303,7 @@ contains
   !============================================================================
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
-    !$acc routine vector
+
     ! Keep pressure(s) in State_VGB above pMin_I limit
 
     use ModAdvance, ONLY: UseAnisoPressure, UseAnisoPe
@@ -315,7 +315,6 @@ contains
     integer:: i, j, k, iFluid
     real :: NumDens, p, pMin, Ne
 
-#ifndef OPENACC
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------
     do iFluid = iFluidMin, iFluidMax
@@ -362,7 +361,7 @@ contains
           end do; end do; end do
        end if
     end if
-#endif
+
   end subroutine limit_pressure
   !============================================================================
 end module ModEnergy

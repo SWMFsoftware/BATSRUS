@@ -101,7 +101,7 @@ module ModFaceFluxParameters
 contains
   !============================================================================
   subroutine init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-    !$acc routine seq
+
     logical,  intent(inout):: IsFF_I(nFFLogic)
     integer,  intent(inout):: IFF_I(nFFInt)
     real,  intent(inout):: RFF_I(nFFReal)

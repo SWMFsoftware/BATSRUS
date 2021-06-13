@@ -67,7 +67,6 @@ contains
 
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, iTypeBcIn, iSideIn)
-    !$acc routine vector
 
     ! Set ghost cells values in State_VG based on iTypeCellBc_I.
     ! iTypeBcIn can override the boundary condition defined in iTypeCellBc_I
@@ -109,9 +108,8 @@ contains
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
 
-#ifndef OPENACC
     type(CellBCType) :: CBC
-#endif
+
     integer :: iMin, iMax, jMin, jMax, kMin, kMax, iTypeBC
     character(len=30):: TypeBc
 
@@ -131,7 +129,6 @@ contains
        RETURN
     end if
 
-#ifndef OPENACC
     if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
          iBlock, neiLEV(:,iBlock)
 
@@ -179,7 +176,6 @@ contains
           end if
        end do
     end if
-#endif
 
     if(present(iSideIn)) then
        iSideMin = iSideIn
@@ -248,16 +244,13 @@ contains
        else
           iTypeBc = iTypeCellBc_I(iSide)
           if(present(iImplBlock)) iTypeBc = - abs(iTypeBc)
-#ifndef  OPENACC
           TypeBc = TypeCellBc_I(iSide)
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
-#endif
        end if
 
        if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
-#ifndef OPENACC
        ! CBC is used to pass information to user_set_cell_boundary.
        CBC%iMin = iMin
        CBC%iMax = iMax
@@ -265,10 +258,9 @@ contains
        CBC%jMax = jMax
        CBC%kMin = kMin
        CBC%kMax = kMax
-#endif
 
        select case(iTypeBc)
-#ifndef OPENACC
+
        case(GradPotBC_)
           ! set boundary condition for electric potential as
           ! grad(potential) = E
@@ -284,11 +276,10 @@ contains
 
        case(PeriodicBC_, PeriodicSemiBC_)
           call stop_mpi('The neighbors are not defined at periodic boundaries')
-#endif
+
        case(FloatBC_, OutFlowBC_)
           call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
                kMin, kMax, nVarState, State_VG)
-#ifndef OPENACC
           if(UseOutflowPressure .and. iTypeBc == OutFlowBC_) &
                call set_fixed_bc(p_, p_, [pOutflow], iMin, iMax, jMin, jMax, &
                kMin, kMax, nVarState, State_VG)
@@ -387,24 +378,19 @@ contains
           ! For semi-implicit scheme all variables float
           call set_float_bc(1, nVarState, iSide, iMin, iMax, jMin, jMax, &
                kMin, kMax, nVarState, State_VG)
-#endif
+
        case(FixedBC_, InFlowBC_, VaryBC_, IHBufferBC_)
           if(time_accurate &
                .and.(iTypeBc == VaryBC_ .or. iTypeBc == InFlowBC_))then
-#ifndef OPENACC
              call set_solar_wind_bc
-#endif
           else if(iTypeBc == IHBufferBC_ .and. time_loop)then
-#ifndef OPENACC
              call set_solar_wind_bc_buffer
-#endif
           else
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide), &
                   iMin, iMax, jMin, jMax, kMin, kMax, nVarState, State_VG)
              if(UseB0)call fix_b0(Bx_, Bz_, iBlock, iMin, iMax, &
                   jMin, jMax, kMin, kMax, nVarState, State_VG)
           end if
-#ifndef OPENACC
        case(FixedSemiBC_, InFlowSemiBC_, VarySemiBC_)
           if (IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
@@ -462,11 +448,9 @@ contains
           end if
           if(.not. IsFound) call stop_mpi(NameSub// &
                ': unknown TypeBc='//TypeBc)
-#endif
        end select
     end do
 
-#ifndef OPENACC
     if(DoTest)then
        do iVar = 1, nVarState
           if(.not.present(iImplBlock)) then
@@ -482,7 +466,6 @@ contains
           end if
        end do
     end if
-#endif
 
     call test_stop(NameSub, DoTest, iBlock)
   contains
@@ -541,7 +524,7 @@ contains
 
     subroutine set_float_bc(iVarMin, iVarMax, iSide, iMin, iMax, &
          jMin, jMax, kMin, kMax, nVarState, State_VG)
-      !$acc routine vector
+
       ! Continuous: ghost = phys1
       integer, intent(in) :: iVarMin, iVarMax, iSide, nVarState, &
            iMin, iMax, jMin, jMax, kMin, kMax
@@ -551,37 +534,31 @@ contains
       !------------------------------------------------------------------------
       select case(iSide)
       case(1)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,1,j,k)
          end do; end do; end do
       case(2)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,nI,j,k)
          end do; end do; end do
       case(3)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,1,k)
          end do; end do; end do
       case(4)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,nJ,k)
          end do; end do; end do
       case(5)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,1)
          end do; end do; end do
       case(6)
-         !$acc loop collapse(3) vector
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             State_VG(iVarMin:iVarMax,i,j,k) = &
                  State_VG(iVarMin:iVarMax,i,j,nK)
@@ -786,7 +763,6 @@ contains
     !==========================================================================
     subroutine set_fixed_bc(iVarMin, iVarMax, State_V, iMin, iMax, &
          jMin, jMax, kMin, kMax, nVarState, State_VG)
-      !$acc routine vector
 
       ! ghost = State_V
       integer, intent(in):: iVarMin, iVarMax, iMin, iMax, jMin, jMax, kMin, kMax
@@ -853,7 +829,7 @@ contains
     !==========================================================================
     subroutine fix_b0(iVarMin, iVarMax, iBlock, iMin, iMax, &
          jMin, jMax, kMin, kMax, nVarState, State_VG)
-      !$acc routine vector
+
       use ModB0, ONLY: B0_DGB
 
       integer, intent(in) :: iVarMin, iVarMax, iBlock, nVarState, &
@@ -865,7 +841,6 @@ contains
       integer:: i, j, k
 
       !------------------------------------------------------------------------
-      !$acc loop vector collapse(3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          State_VG(iVarMin:iVarMax,i,j,k) =  &
               State_VG(iVarMin:iVarMax,i,j,k) - B0_DGB(:,i,j,k,iBlock)
