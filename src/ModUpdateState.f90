@@ -1259,7 +1259,8 @@ contains
     use ModMain,          ONLY: nBlock, Unused_B,      &
          time_simulation, NameThisComp, time_accurate
     use ModPhysics,       ONLY: ThetaTilt
-    use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, iTypeUpdate
+    use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
+         iTypeUpdate, UpdateFast_
     use ModUpdateStateFast, ONLY: update_b0_fast
     use ModGeometry,      ONLY: body_BLK
     use CON_axes,         ONLY: get_axes
@@ -1274,13 +1275,15 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_b0'
     !--------------------------------------------------------------------------
-    if(iTypeUpdate > 2)then
+    if(iTypeUpdate >= UpdateFast_)then
        call update_b0_fast
+       if (time_accurate) call exchange_messages(DoResChangeOnlyIn=.true.)
        RETURN
-    end if
+    endif
 
     call test_start(NameSub, DoTest)
-
+    call timing_start(NameSub)
+    
     ! Update ThetaTilt
     if(NameThisComp=='GM') &
          call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
@@ -1295,7 +1298,6 @@ contains
                "update_b0 at tSimulation=",Time_Simulation
        end if
     end if
-    call timing_start(NameSub)
 
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1313,7 +1315,7 @@ contains
 
     if (time_accurate) call exchange_messages(DoResChangeOnlyIn=.true.)
 
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        ! Set B1 to 0 inside bodies
        if(Body_BLK(iBlock))then
@@ -1332,8 +1334,8 @@ contains
        call exchange_messages
     end if
     call timing_stop(NameSub)
-
     call test_stop(NameSub, DoTest)
+
   end subroutine update_b0
   !============================================================================
 
