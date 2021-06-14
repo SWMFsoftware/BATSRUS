@@ -24,7 +24,7 @@ T			UseSolarWindFile
 Param/EARTH/imf19980504.dat		NameSolarWindFile
 
 #UPDATEB0
-5.0			DtUpdateB0
+0.5			DtUpdateB0
 
 #BORIS
 T			UseBorisCorrection
