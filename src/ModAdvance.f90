@@ -27,7 +27,8 @@ module ModAdvance
   ! Update method
   character(len=10):: TypeUpdate = 'orig'
   integer:: iTypeUpdate = 1
-
+  integer, parameter:: UpdateOrig_ = 1, UpdateSlow_ = 2, UpdateFast_ = 3
+  
   ! This should be changed to false probably
   logical:: UseDbTrick = .true., UseDbTrickNow = .true.
 
