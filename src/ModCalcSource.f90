@@ -1078,7 +1078,8 @@ contains
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
             if(UseMhdMomentumFlux.and.UseB0) then
-               if(iTypeUpdate > 1) then
+               if(iTypeUpdate == UpdateSlow_) then
+                  ! Simple approach with B0 face arrays
                   SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) = &
                        SourceMhd_VCI(RhoUx_:RhoUz_,i,j,k,iGang) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace1    &

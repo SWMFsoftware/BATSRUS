@@ -37,7 +37,7 @@ contains
          nOrder, nOrderProlong, optimize_message_pass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBCType
     use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB, iTypeUpdate
+    use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
     use ModGeometry, ONLY: far_field_BCs_BLK
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
@@ -128,7 +128,7 @@ contains
     ! Apply boundary conditions
     if(.not.DoResChangeOnly)then
        call timing_start('cell_bc')
-       if(iTypeUpdate > 2) then
+       if(iTypeUpdate >= UpdateFast_) then
           call set_boundary_fast
        else
           do iBlock = 1, nBlock
@@ -218,7 +218,7 @@ contains
     ! from the ghost cells inside the domain, so the outer
     ! boundary condition have to be reapplied.
     ! The "fast" updates do not use corner ghost cells (yet)
-    if(iTypeUpdate < 3)then
+    if(iTypeUpdate == UpdateOrig_)then
        call timing_start('cell_bc')
        !$omp parallel do
        do iBlock = 1, nBlock

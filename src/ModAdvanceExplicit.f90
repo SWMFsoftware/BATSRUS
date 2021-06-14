@@ -23,7 +23,7 @@ contains
     use ModFaceValue
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
          DoInterpolateFlux, UseAdaptiveLowOrder, UseMhdMomentumFlux, &
-         iTypeUpdate
+         iTypeUpdate, UpdateFast_
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
@@ -129,7 +129,7 @@ contains
 
        endif
 
-       if(iTypeUpdate > 2)then
+       if(iTypeUpdate >= UpdateFast_)then
           call update_state_fast
        else
 #ifndef OPENACC

@@ -473,7 +473,8 @@ contains
           call timing_report_style(TimingStyle)
        end if
 
-       if(iTypeUpdate > 1 .and. iProc == 0) call check_optimize_param
+       if(iTypeUpdate >= UpdateFast_ .and. iProc == 0) &
+            call check_optimize_param
 
        IsFirstSession = .false.
 
@@ -3571,24 +3572,24 @@ contains
 
       select case(TypeUpdate)
       case('slow')
-         iTypeUpdate = 2
+         iTypeUpdate = UpdateSlow_
       case('fast', 'fast1', 'cpuupdate')
-         iTypeUpdate = 3
+         iTypeUpdate = UpdateFast_
       case('fast2', 'gpuupdate')
-         iTypeUpdate = 4
+         iTypeUpdate = UpdateFast_+1
       case('fast3', 'cpuprim')
-         iTypeUpdate = 5
+         iTypeUpdate = UpdateFast_+2
       case('fast4', 'gpuprim')
-         iTypeUpdate = 6
+         iTypeUpdate = UpdateFast_+3
       case default
 #ifdef OPENACC
-         iTypeUpdate = 3 ! Default for GPU
+         iTypeUpdate = UpdateFast_ ! Default for GPU
 #else
-         iTypeUpdate = 1 ! Default for CPU
+         iTypeUpdate = UpdateOrig_ ! Default for CPU
 #endif
       end select
 
-      if(iTypeUpdate > 1)then
+      if(iTypeUpdate /= UpdateOrig_)then
          ! These methods are not implemented in ModUpdateStateFast (yet)
          ! If fast (or compatible slow) update is used at all,
          ! the following features are swiched off
@@ -4015,7 +4016,7 @@ contains
 
       DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
-      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate > 1))then
+      if(DoLimitMomentum .and. (UseMultiIon .or. iTypeUpdate/=UpdateOrig_))then
          if(iProc==0) write(*,*) NameSub,': setting DoLimitMomentum=F'
          DoLimitMomentum = .false.
       end if
