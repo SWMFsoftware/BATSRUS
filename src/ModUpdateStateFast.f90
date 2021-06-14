@@ -92,7 +92,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, InvRho, DtPerDv, Change_V(nFlux)
+    real:: DivU, DivB, DivE, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
 #ifndef OPENACC
@@ -244,19 +244,18 @@ contains
                   Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
              if(nK > 1) DivB = DivB + &
                   Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
-             InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
              Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                   - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-             Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-                  - DivB*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             Change_V(Energy_) = Change_V(Energy_) &
-                  - DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-                  *                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  - DivB*B0_DGB(:,i,j,k,iBlock)
 
-             if(UseB0) then
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     - DivB*B0_DGB(:,i,j,k,iBlock)
-             endif
+             ! Divide by density to account for Rho in momentum
+             DivB = DivB/State_VGB(Rho_,i,j,k,iBlock)
+             Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
+                  - DivB*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+             Change_V(Energy_) = Change_V(Energy_) &
+                  - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  *          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
           end if
 
           if(UseBorisCorrection .and. ClightFactor /= 1.0)then
@@ -781,7 +780,7 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iDim, iFluid
-    real:: Area, Normal_D(3), InvRho, B0_D(3), DivE
+    real:: Area, Normal_D(3), B0_D(3), DivBInvRho, DivE
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
@@ -837,21 +836,25 @@ contains
        end do
     end if
 
+    ! Store total B field into B0_D
+    if(UseB .and. UseDivbSource &
+         .or. UseBorisCorrection .and. ClightFactor /= 1.0)then
+       if(UseB0)then
+          B0_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+       else
+          B0_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+    end if
+
     ! Change due to 8-wave source terms
     if(UseB .and. UseDivbSource)then
-       InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
-       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            + Flux_V(Bn_)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       DivBInvRho = Flux_V(Bn_)/State_VGB(Rho_,i,j,k,iBlock)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Flux_V(Bn_)*B0_D
        Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-            + Flux_V(Bn_)*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+            + DivBInvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
        Change_V(Energy_) = Change_V(Energy_) &
-            + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-            *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-
-       if(UseB0) then
-          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-               + Flux_V(Bn_)*B0_DGB(:,i,j,k,iBlock)
-       endif
+            + DivBInvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            *                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
     ! Change due to Boris source term
@@ -859,18 +862,8 @@ contains
        ! Contribution to DivE source term
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
-
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            - DivE*cross_product( &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-
-       if(UseB0)then
-          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-               - DivE*cross_product(B0_DGB(:,i,j,k,iBlock), &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-       endif
-
+            - DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
@@ -1051,7 +1044,7 @@ contains
 
     integer:: i, j, k, iBlock, iGang, iFluid, iP, iUn
     logical:: IsBodyBlock, IsConserv
-    real:: DivU, DivB, DivE, InvRho, DtPerDv, Change_V(nFlux)
+    real:: DivU, DivB, DivE, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
     logical:: DoTest
@@ -1182,18 +1175,18 @@ contains
                   Flux_VYI(Bn_,i,j+1,k,iGang) - Flux_VYI(Bn_,i,j,k,iGang)
              if(nK > 1) DivB = DivB + &
                   Flux_VZI(Bn_,i,j,k+1,iGang) - Flux_VZI(Bn_,i,j,k,iGang)
-             InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
              Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                   - DivB*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
+                  - DivB*B0_DGB(:,i,j,k,iBlock)
+
+             ! Divide by density to account for Rho in momentum
+             DivB = DivB/State_VGB(Rho_,i,j,k,iBlock)
              Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-                  - DivB*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+                  - DivB*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
              Change_V(Energy_) = Change_V(Energy_) &
-                  - DivB*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-                  *               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-             if(UseB0) then
-                Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                     - DivB*B0_DGB(:,i,j,k,iBlock)
-             endif
+                  - DivB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  *          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
           end if
 
           if(UseBorisCorrection .and. ClightFactor /= 1.0)then
@@ -1513,7 +1506,7 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iDim, iFluid
-    real:: Area, Normal_D(3), InvRho, B0_D(3), DivE
+    real:: Area, Normal_D(3), B0_D(3), DivBInvRho, DivE
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
@@ -1575,22 +1568,25 @@ contains
        end do
     end if
 
+    ! Store total B field into B0_D
+    if(UseB .and. UseDivbSource &
+         .or. UseBorisCorrection .and. ClightFactor /= 1.0)then
+       if(UseB0)then
+          B0_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+       else
+          B0_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+    end if
+
     ! Change due to 8-wave source terms
     if(UseB .and. UseDivbSource)then
-       InvRho = 1/State_VGB(Rho_,i,j,k,iBlock)
-       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            + Flux_V(Bn_)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) + Flux_V(Bn_)*B0_D
+       DivBInvRho = Flux_V(Bn_)/State_VGB(Rho_,i,j,k,iBlock)
        Change_V(Bx_:Bz_) = Change_V(Bx_:Bz_) &
-            + Flux_V(Bn_)*InvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+            + DivBInvRho*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
        Change_V(Energy_) = Change_V(Energy_) &
-            + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-            *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-
-       if(UseB0) then
-          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-               + Flux_V(Bn_)*B0_DGB(:,i,j,k,iBlock)
-       endif
-
+            + DivBInvRho*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+            *                State_VGB(Bx_:Bz_,i,j,k,iBlock)       )
     end if
 
     ! Change due to Boris source term
@@ -1598,16 +1594,8 @@ contains
        ! Contribution to DivE source term
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
-
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            - DivE*cross_product( &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-       if(UseB0)then
-          Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-               - DivE*cross_product(B0_DGB(:,i,j,k,iBlock), &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-       end if
+            - DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
