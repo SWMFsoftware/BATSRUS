@@ -451,7 +451,7 @@ contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-      use ModPhysics, ONLY: xBody2, yBody2, zBody2, calc_corotation_velocity
+      use ModPhysics, ONLY: xBody2, yBody2, zBody2, OmegaBody_D
       use ModAdvance, ONLY: UseMultiSpecies
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
@@ -466,6 +466,7 @@ contains
       use ModBoundaryGeometry, ONLY: iBoundary_GB
       use ModNumConst, ONLY: cTwoPi
       use ModIeCoupling, ONLY: get_inner_bc_jouleheating
+      use ModCoordTransform, ONLY: cross_product
       use BATL_lib, ONLY: nDim, IsCartesianGrid, FaceNormal_DDFB, CellFace_DFB
 
       ! indexes of the true and ghost cells on the two sides of the face
@@ -495,7 +496,6 @@ contains
       real:: Normal_D(MaxDim)
 
       character(len=*), parameter:: NameSubSub = 'set_face'
-
       !------------------------------------------------------------------------
       associate( iBoundary => FBC%iBoundary, TypeBc => FBC%TypeBc, &
                  iFace => FBC%iFace, jFace => FBC%jFace, kFace => FBC%kFace, &
@@ -1030,7 +1030,7 @@ contains
       if (UseRotatingBc .and. iBoundary==Body1_) then
 
          ! Calculate corotation velocity uRot_D at position FaceCoords
-         call calc_corotation_velocity(FBC%FaceCoords_D, uRot_D)
+         uRot_D = cross_product(OmegaBody_D, FBC%FaceCoords_D)
 
          select case(TypeBc)
          case('reflect','linetied', &

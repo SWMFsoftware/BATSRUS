@@ -29,7 +29,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       update_angular_velocity, Omega_D, DipoleStrength => Bdp
+       OmegaBody_D, DipoleStrength => Bdp
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
@@ -64,13 +64,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
-    if(UseRotatingBc)then
-       ! Set angular velocity for the inner boundary
-       !$acc serial
-       call update_angular_velocity
-       !$acc end serial
-    end if
-
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -2109,7 +2102,7 @@ contains
 
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
-       uRot_D = cross_product(Omega_D, XyzFace_D)
+       uRot_D = cross_product(OmegaBody_D, XyzFace_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'

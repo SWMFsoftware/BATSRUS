@@ -7,6 +7,7 @@ module ModIeCoupling
   use BATL_lib,      ONLY: test_start, test_stop, iProc, nProc
   use ModAdvance,    ONLY: nSpecies
   use ModMultiFluid, ONLY: nIonFluid
+  use ModCoordTransform, ONLY: xyz_to_dir, sph_to_xyz, cross_product
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -154,13 +155,11 @@ contains
     PhiNorm   = Phi   / dPhiIono
   end subroutine get_ie_grid_index
   !============================================================================
-
   subroutine get_ie_potential(Xyz_D, Potential)
 
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
     use ModInterpolate,    ONLY: bilinear
     use CON_planet_field,  ONLY: map_planet_field
-    use ModCoordTransform, ONLY: xyz_to_dir
 
     ! Interpolate IE potential to Xyz_D location
     ! Assume equipotential dipole field lines
@@ -279,7 +278,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_grad_ie_potential
   !============================================================================
-
   real function logvar_ionosphere(NameLogvar)
 
     ! Calculate cross polar cap potentials for write_logvar
@@ -311,11 +309,9 @@ contains
 
   end function logvar_ionosphere
   !============================================================================
-
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
     use ModMain,           ONLY: TypeCoordSystem, MaxDim
-    use ModCoordTransform, ONLY: xyz_to_dir, cross_product
     use CON_planet_field,  ONLY: map_planet_field
 
     real, intent(in)    :: tSimulation      ! Simulation time
@@ -422,7 +418,6 @@ contains
     use ModMain,    ONLY: Time_Simulation
     use ModPhysics, ONLY: rBody
     use CON_planet_field, ONLY: get_planet_field, map_planet_field
-    use ModCoordTransform, ONLY: sph_to_xyz
 
     integer :: i, j, iHemisphere
     real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
@@ -458,13 +453,11 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine map_jouleheating_to_inner_bc
   !============================================================================
-
   subroutine get_inner_bc_jouleheating(XyzSm_D, JouleHeating)
 
     ! Get the Joule heating at the position XyzSm_D (given in SMG)
     ! at the inner boundary.
 
-    use ModCoordTransform, ONLY: xyz_to_dir
     use ModMain,           ONLY: Time_Simulation
     use CON_planet_field,  ONLY: map_planet_field
 
@@ -509,11 +502,9 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_inner_bc_jouleheating
   !============================================================================
-
   subroutine calc_ie_currents
 
     use CON_planet_field,  ONLY: get_planet_field
-    use ModCoordTransform, ONLY: cross_product, sph_to_xyz
     use ModMain,           ONLY: Time_Simulation
 
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitElectric_, UnitJ_
@@ -601,7 +592,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine calc_ie_currents
   !============================================================================
-
   subroutine calc_ie_mag_perturb(nMag, XyzSm_DI, dBHall_DI, dBPedersen_DI)
 
     ! For nMag points at locations XyzSm_DI (in SMG coordinates)
@@ -610,7 +600,6 @@ contains
     ! using the Biot-Savart integral. The output is given in SMG coordinates.
 
     use ModNumConst, ONLY: cPi
-    use ModCoordTransform, ONLY: cross_product, sph_to_xyz
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_
     use ModMain,    ONLY: Time_Simulation
 
@@ -727,7 +716,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_ie_velocity_param
   !============================================================================
-
   subroutine apply_ie_velocity
 
     use ModMain,    ONLY: nI, nJ, nK, nBlock, time_accurate, time_simulation, &
@@ -735,11 +723,11 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModGeometry, ONLY: r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
-    use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, calc_corotation_velocity
+    use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, OmegaBody_D
     use BATL_lib,   ONLY: Xyz_DGB
 
     real :: Factor, RhoUdotB
-    real, dimension(3) :: Xyz_D, Uiono_D, Urot_D, RhoUiono_D, RhoU_D, b_D
+    real, dimension(3) :: Xyz_D, Uiono_D, RhoUiono_D, RhoU_D, b_D
 
     integer :: i,j,k,iBlock
     logical:: DoTest
@@ -783,10 +771,8 @@ contains
           call calc_inner_bc_velocity(Time_Simulation, Xyz_D, b_D, uIono_D)
 
           ! Add rotational velocity if required
-          if (UseRotatingBc) then
-             call calc_corotation_velocity(Xyz_D, uRot_D)
-             uIono_D = uIono_D + uRot_D
-          end if
+          if (UseRotatingBc) &
+               uIono_D = uIono_D + cross_product(OmegaBody_D, Xyz_D)
 
           ! Convert to momentum
           RhoUIono_D = State_VGB(Rho_,i,j,k,iBlock)*uIono_D
@@ -813,6 +799,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine apply_ie_velocity
   !============================================================================
-
 end module ModIeCoupling
 !==============================================================================

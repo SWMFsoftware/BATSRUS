@@ -14,7 +14,6 @@ module ModAdvanceExplicit
 
 contains
   !============================================================================
-
   subroutine advance_explicit(DoCalcTimestep)
 
     use ModMain
@@ -30,7 +29,8 @@ contains
     use ModGeometry,   ONLY: Body_BLK, true_BLK
     use ModBlockData,  ONLY: set_block_data
     use ModImplicit,   ONLY: UsePartImplicit
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, UseBody2Orbit
+    use ModPhysics,    ONLY: No2Si_V, UnitT_, UseBody2Orbit, OmegaBody_D, &
+         update_angular_velocity
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
          nCorrectedFaceValues, CorrectedFlux_VXB, &
@@ -79,6 +79,11 @@ contains
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
        if(UseResistivity) call set_resistivity
+
+       if(UseRotatingBc)then
+          call update_angular_velocity
+          !$acc update device(OmegaBody_D)
+       end if
 
        if(iStage==1)then
           if(UseArtificialVisco .or. UseAdaptiveLowOrder) &
@@ -292,7 +297,7 @@ contains
           ! of the Moschou, Sokolov et al. 2019 Hybrid paper of ASTRONUM
           ! Then ballistically (with no change in particle velocity)
           ! propagate them for a half time-step
-          ! This step corresponds to Equation 16 of Moschou, Sokolov et al. 2019
+          ! This step corresponds to Equation 16 of Moschou, Sokolov+ 2019
           ! Hybrid paper of ASTRONUM
           if(UseFlic)then
              if(iStage==2)call trace_particles(&
@@ -317,9 +322,9 @@ contains
     if(DoTest)write(*,*)NameSub,' finished'
 
     call test_stop(NameSub, DoTest)
+
   end subroutine advance_explicit
   !============================================================================
-
   subroutine update_secondbody
     use ModMain,     ONLY: time_simulation, nBlock
     use ModConst,    ONLY: cTwoPi
@@ -349,6 +354,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine update_secondbody
   !============================================================================
-
 end module ModAdvanceExplicit
 !==============================================================================

@@ -23,7 +23,6 @@ module ModPhysics
   public :: set_physics_constants
   public :: init_mhd_variables
   public :: init_vector_variables
-  public :: calc_corotation_velocity
   public :: set_dimensional_factor
 
   private :: set_units
@@ -91,8 +90,8 @@ module ModPhysics
   ! the dipole moment for body2
   real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
-  real :: Omega_D(3)
-  !$acc declare create(Omega_D)
+  real :: OmegaBody_D(3)
+  !$acc declare create(OmegaBody_D)
 
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
@@ -741,7 +740,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
   !============================================================================
-
   subroutine set_units
 
     use ModMain
@@ -1003,7 +1001,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_units
   !============================================================================
-
   subroutine set_unit_conversion_array_indices
     use ModVarIndexes
     use ModMultiFluid
@@ -1061,7 +1058,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_unit_conversion_array_indices
   !============================================================================
-
   subroutine init_mhd_variables
 
     ! Set default I/O units and unit names for the state variables
@@ -1188,7 +1184,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_mhd_variables
   !============================================================================
-
   subroutine init_vector_variables
 
     ! Set number and indexes of vector variables
@@ -1212,70 +1207,31 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine init_vector_variables
   !============================================================================
-
   subroutine update_angular_velocity
-    !$acc routine seq
 
-    ! Update the angular velocity Omega_D of the body.
+    ! Update the angular velocity OmegaBody_D
 
     use CON_axes,          ONLY: get_axes
-    use ModMain,           ONLY: Time_Simulation, &
-         TypeCoordSystemInt, HGI_, GSE_, GSM_
+    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+
+    real:: RotAxis_D(3) ! Avoid race condition in OpenMP
 
     character(len=*), parameter:: NameSub = 'update_angular_velocity'
     !--------------------------------------------------------------------------
-    select case(TypeCoordSystemInt)
-    case(HGI_)
+    select case(TypeCoordSystem)
+    case('HGI')
        ! In the HGI system the Solar angular velocity vector points towards +Z
-       Omega_D = [ 0., 0., OmegaBody ]
-    case(GSE_)
-       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
-       Omega_D = OmegaBody * Omega_D
-    case(GSM_)
+       OmegaBody_D = [ 0., 0., OmegaBody ]
+    case('GSE')
+       call get_axes(Time_Simulation, RotAxisGseOut_D=RotAxis_D)
+       OmegaBody_D = OmegaBody * RotAxis_D
+    case('GSM')
        ! GSM system, Omega_D may be changing
-       call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
-       Omega_D = OmegaBody*Omega_D
+       call get_axes(Time_Simulation, RotAxisGsmOut_D=RotAxis_D)
+       OmegaBody_D = OmegaBody * RotAxis_D
     end select
 
   end subroutine update_angular_velocity
-  !============================================================================
-
-  subroutine calc_corotation_velocity(Xyz_D, uRot_D)
-    !$acc routine seq
-
-    ! Calculates cartesian corotation velocity uRot_D at
-    ! location Xyz_D. The angular velocity depends on the component
-    ! and possibly also on simulation time.
-
-    use CON_axes,          ONLY: get_axes
-    use ModCoordTransform, ONLY: cross_product
-    use ModMain,           ONLY: Time_Simulation, &
-         TypeCoordSystemInt, HGI_, GSE_, GSM_
-
-    real, intent(in) :: Xyz_D(3)
-    real, intent(out):: uRot_D(3)
-
-    real :: Omega_D(3)
-
-    character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
-    !--------------------------------------------------------------------------
-    select case(TypeCoordSystemInt)
-    case(HGI_)
-       ! In the HGI system the Solar angular velocity vector points towards +Z
-       Omega_D = [ 0., 0., OmegaBody ]
-    case(GSE_)
-       call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
-       Omega_D = OmegaBody * Omega_D
-    case(GSM_)
-       ! GSM system, Omega_D may be changing
-       call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
-       Omega_D = OmegaBody*Omega_D
-    end select
-
-    ! The corotation velocity is u = Omega x R
-    uRot_D = cross_product(Omega_D, Xyz_D)
-
-  end subroutine calc_corotation_velocity
   !============================================================================
   subroutine set_dimensional_factor(nPlotVar, NameVar_V, &
        DimFactor_V, DimFactorBody_V)
