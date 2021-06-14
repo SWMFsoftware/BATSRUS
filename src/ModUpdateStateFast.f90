@@ -3054,7 +3054,7 @@ contains
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
 
-    !$acc loop gang independent
+    !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -3071,6 +3071,7 @@ contains
           end if
        end do; end do; end do
     end do
+    !$acc update host(B0_DGB)
 
     ! messsage pass to fix B1 in the ghost cells ?!
     ! set B0 at reschange ?!
