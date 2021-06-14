@@ -20,6 +20,9 @@ module ModB0
   use BATL_size, ONLY: MaxDim, nDim, MaxBlock, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nGang
   use ModMain, ONLY: UseB, UseB0, UseConstrainB
+  use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_, State_VGB
+  use ModVarIndexes, ONLY: Bx_, Bz_
+
   use omp_lib
 
   implicit none
@@ -75,7 +78,6 @@ module ModB0
   real, public, allocatable :: B0ResChange_DXSB(:,:,:,:,:)
   real, public, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
   real, public, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
-  !$acc declare create(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
 contains
   !============================================================================
@@ -134,15 +136,17 @@ contains
     !$omp parallel
     !$omp single
     if(.not.allocated(B0_DGB))then
-       allocate( &
-            B0_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-            B0ResChange_DXSB(MaxDim,nJ,nK,1:2,MaxBlock),           &
-            B0ResChange_DYSB(MaxDim,nI,nK,3:4,MaxBlock),           &
-            B0ResChange_DZSB(MaxDim,nI,nJ,5:6,MaxBlock))
-       B0_DGB           = 0.0
-       B0ResChange_DXSB = 0.0
-       B0ResChange_DYSB = 0.0
-       B0ResChange_DZSB = 0.0
+       allocate(B0_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       B0_DGB = 0.0
+       if(iTypeUpdate == UpdateOrig_)then
+          allocate( &
+               B0ResChange_DXSB(MaxDim,nJ,nK,1:2,MaxBlock),    &
+               B0ResChange_DYSB(MaxDim,nI,nK,3:4,MaxBlock),    &
+               B0ResChange_DZSB(MaxDim,nI,nJ,5:6,MaxBlock))
+          B0ResChange_DXSB = 0.0
+          B0ResChange_DYSB = 0.0
+          B0ResChange_DZSB = 0.0
+       end if
     end if
     !$omp end single
 
@@ -288,27 +292,29 @@ contains
             B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
             +         B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
     end if
-    ! Correct B0 at resolution changes
-    if(NeiLev(1,iBlock) == -1) &
-         B0_DX(:,1   ,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,1,iBlock)
-    if(NeiLev(2,iBlock) == -1) &
-         B0_DX(:,nI+1,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,2,iBlock)
-    if(NeiLev(3,iBlock) == -1) &
-         B0_DY(:,1:nI,1   ,1:nK) = B0ResChange_DYSB(:,:,:,3,iBlock)
-    if(NeiLev(4,iBlock) == -1) &
-         B0_DY(:,1:nI,1+nJ,1:nK) = B0ResChange_DYSB(:,:,:,4,iBlock)
-    if(NeiLev(5,iBlock) == -1) &
-         B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChange_DZSB(:,:,:,5,iBlock)
-    if(NeiLev(6,iBlock) == -1) &
-         B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChange_DZSB(:,:,:,6,iBlock)
 
+    if(iTypeUpdate == UpdateOrig_)then
+       ! Correct B0 at resolution changes
+       if(NeiLev(1,iBlock) == -1) &
+            B0_DX(:,1   ,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,1,iBlock)
+       if(NeiLev(2,iBlock) == -1) &
+            B0_DX(:,nI+1,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,2,iBlock)
+       if(NeiLev(3,iBlock) == -1) &
+            B0_DY(:,1:nI,1   ,1:nK) = B0ResChange_DYSB(:,:,:,3,iBlock)
+       if(NeiLev(4,iBlock) == -1) &
+            B0_DY(:,1:nI,1+nJ,1:nK) = B0ResChange_DYSB(:,:,:,4,iBlock)
+       if(NeiLev(5,iBlock) == -1) &
+            B0_DZ(:,1:nI,1:nJ,1   ) = B0ResChange_DZSB(:,:,:,5,iBlock)
+       if(NeiLev(6,iBlock) == -1) &
+            B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChange_DZSB(:,:,:,6,iBlock)
+    end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_face
   !============================================================================
   subroutine set_b0_reschange
 
     ! Set face centered B0 at resolution changes. Use the face area weighted
-    ! average of the fine side B0 for the coarce face. This works for
+    ! average of the fine side B0 for the coarse face. This works for
     ! non-Cartesian grids too, because all the fine and coarse face normal
     ! vectors are parallel with each other (see algorithm in BATL_grid).
 
@@ -321,6 +327,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_reschange'
     !--------------------------------------------------------------------------
+
+    if(iTypeUpdate /= UpdateOrig_) RETURN ! don't do this for fast update
+
     ! There are no resolution changes in 1D
     if(nDim == 1) RETURN
 
@@ -451,8 +460,6 @@ contains
           end if
        end do
     endif
-
-    !$acc update device(B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
     call test_stop(NameSub, DoTest)
   end subroutine set_b0_reschange
@@ -815,9 +822,6 @@ contains
 
     ! add B0 to B1 to obtain Full B0+B1
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModVarIndexes, ONLY: Bx_, Bz_
-
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
@@ -838,8 +842,6 @@ contains
   subroutine subtract_b0(iBlock)
 
     ! subtract B0 from full B0+B1 to obtain B1
-    use ModAdvance,    ONLY: State_VGB
-    use ModVarIndexes, ONLY: Bx_, Bz_
 
     integer, intent(in) :: iBlock
 
