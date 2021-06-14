@@ -7,7 +7,7 @@ T			UseTiming
 -1			nDepthTiming
 cumu			TypeTimingReport
 
-#TIMEACCURATE
+TIMEACCURATE
 F			IsTimeAccurate
 
 #STARTTIME
@@ -111,49 +111,6 @@ ionosphere		TypeBcBody
 Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
-
-#TIMESTEPPING
-1			nStage
-0.60			CflExpl
-
-#UPDATE
-fast			TypeUpdate
-
-#STOP
-20			MaxIteration
--1.			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-fast2			TypeUpdate
-
-#STOP
-40			MaxIteration
--1.			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-fast3			TypeUpdate
-
-#STOP
-60			MaxIteration
--1.			tSimulationMax
-
-#RUN ##########################################################################
-
-#UPDATE
-fast4			TypeUpdate
-
-#STOP
-80			MaxIteration
--1.			tSimulationMax
-
-#RUN ##########################################################################
-
-#TIMEACCURATE
-T			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
