@@ -453,14 +453,6 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-    if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-       elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
-       end if
-    endif
-
 #ifndef OPENACC
     if(DoTestCell)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
@@ -502,14 +494,6 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
 
-    if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
-       endif
-    endif
-
 #ifndef OPENACC
     if(DoTestCell)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
@@ -550,14 +534,6 @@ contains
     call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
-
-    if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
-       endif
-    endif
 
 #ifndef OPENACC
     if(DoTestCell)then
@@ -814,40 +790,16 @@ contains
        call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-          elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
-          end if
-       endif
-
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x(i+1,j,k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i+1, j, k, iBlock, x_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i+1,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i+1, j, k, iBlock)
-          elseif(Used_GB(i+1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i+1, j, k, i, j, k, iBlock)
-          end if
-       endif
-
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-          else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
-          endif
-       endif
 
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
@@ -855,26 +807,10 @@ contains
        call get_face_y(i,j+1,k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j+1, k, iBlock, y_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j+1,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i, j+1, k, iBlock)
-          else if(Used_GB(i,j+1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j+1, k, i, j, k, iBlock)
-          endif
-       endif
-
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-          else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
-          endif
-       endif
 
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
@@ -882,13 +818,6 @@ contains
        call get_face_z(i,j,k+1, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k+1, iBlock, z_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k+1,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i, j, k+1, iBlock)
-          else if (Used_GB(i,j,k+1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k+1, i, j, k, iBlock)
-          endif
-       endif
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
@@ -989,18 +918,22 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          ! Return to 1st order for the faces that need body cells to
-          ! calculate 2nd order face values.
-          ! This is equivalent to limiter_body in ModFaceValue.f90
-          if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
-               call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
-
-          if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
-               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
-       endif
     end if
+    if(UseBody .and. present(IsBodyBlock)) then
+       ! Use first order if stencil intersects the body
+       if(nOrder == 2)then
+          if(.not.all(Used_GB(i-2:i,j,k,iBlock))) &
+               call get_primitive(State_VGB(:,i-1,j,k,iBlock), StateLeft_V)
+          if(.not.all(Used_GB(i-1:i+1,j,k,iBlock))) &
+               call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
+       end if
+       ! Apply face boundary condition
+       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
+       elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
+       endif
+    endif
 
   end subroutine get_face_x
   !============================================================================
@@ -1041,15 +974,21 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
+    end if
+    if(UseBody .and. present(IsBodyBlock)) then
+       if(nOrder == 2)then
+          if(.not.all(Used_GB(i,j-2:j,k,iBlock))) &
                call get_primitive(State_VGB(:,i,j-1,k,iBlock), StateLeft_V)
-
-          if(any(.not.Used_GB(i,j-1:j+1,k,iBlock) )) &
+          if(.not.all(Used_GB(i,j-1:j+1,k,iBlock))) &
                call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
        endif
+       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
+       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
+       end if
     end if
+
   end subroutine get_face_y
   !============================================================================
   subroutine get_face_z(i, j, k, iBlock, StateLeft_V, StateRight_V, &
@@ -1089,14 +1028,19 @@ contains
                   StateLeft_V(iVar), StateRight_V(iVar))
           end if
        end do
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
+    end if
+    if(UseBody .and. present(IsBodyBlock)) then
+       if (nOrder == 2) then
+          if(.not.all(Used_GB(i,j,k-2:k,iBlock))) &
                call get_primitive(State_VGB(:,i,j,k-1,iBlock), StateLeft_V)
-
-          if(any(.not.Used_GB(i,j,k-1:k+1,iBlock) )) &
+          if(.not.all(Used_GB(i,j,k-1:k+1,iBlock))) &
                call get_primitive(State_VGB(:,i,j,k,iBlock),   StateRight_V)
        endif
+       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
+       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
+       end if
     end if
 
   end subroutine get_face_z
@@ -1383,14 +1327,6 @@ contains
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
-    if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-       elseif(Used_GB(i,j,k,iBlock) .and. .not.Used_GB(i-1,j,k,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
-       end if
-    endif
-
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
 
@@ -1413,14 +1349,6 @@ contains
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
 
-    if(UseBody .and. present(IsBodyBlock)) then
-       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
-       endif
-    endif
-
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
 
@@ -1442,14 +1370,6 @@ contains
          IsBodyBlock)
 
     if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, z_)
-
-    if(UseBody .and. present(IsBodyBlock)) then
-       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-          call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
-          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
-       endif
-    endif
 
     call get_numerical_flux(Normal_D, Area, &
          StateLeft_V, StateRight_V, Flux_V, B0_D)
@@ -1603,14 +1523,6 @@ contains
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
-          elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
-          end if
-       endif
-
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
@@ -1618,27 +1530,11 @@ contains
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i+1,j,k,iBlock,x_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i+1,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i+1, j, k, iBlock)
-          elseif(Used_GB(i+1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i+1, j, k, i, j, k, iBlock)
-          end if
-       endif
-
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V, &
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
-          else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
-          endif
-       endif
 
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
@@ -1647,27 +1543,11 @@ contains
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i,j+1,k,iBlock,y_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j+1,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i, j+1, k, iBlock)
-          else if(Used_GB(i,j+1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j+1, k, i, j, k, iBlock)
-          endif
-       endif
-
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V, &
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
-
-       if(UseBody .and. present(IsBodyBlock)) then
-          if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
-          else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
-          endif
-       endif
 
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
@@ -1676,13 +1556,6 @@ contains
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i,j,k+1,iBlock,z_)
 
-       if(UseBody .and. present(IsBodyBlock)) then
-          if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k+1,iBlock)) then
-             call set_face(StateLeft_V, StateRight_V, i, j, k, i, j, k+1, iBlock)
-          else if (Used_GB(i,j,k+1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
-             call set_face(StateRight_V, StateLeft_V, i, j, k+1, i, j, k, iBlock)
-          endif
-       endif
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
@@ -1775,16 +1648,23 @@ contains
                Primitive_VGI(iVar,i+1,j,k,iGang), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
-       if(UseBody .and. present(IsBodyBlock)) then
+    end if
+    if(UseBody .and. present(IsBodyBlock)) then
+       if(nOrder == 2)then
           ! Return to 1st order for the faces that need body cells to
           ! calculate 2nd order face values.
           ! This is equivalent to limiter_body in ModFaceValue.f90
-          if(any(.not.Used_GB(i-2:i,j,k,iBlock) )) &
+          if(.not.all(Used_GB(i-2:i,j,k,iBlock) )) &
                StateLeft_V  = Primitive_VGI(:,i-1,j,k,iGang)
-
-          if(any(.not.Used_GB(i-1:i+1,j,k,iBlock) )) &
+          if(.not.all(Used_GB(i-1:i+1,j,k,iBlock) )) &
                StateRight_V = Primitive_VGI(:,i  ,j,k,iGang)
-       endif
+       end if
+       ! Apply face boundary condition
+       if(Used_GB(i-1,j,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i-1, j, k, i, j, k, iBlock)
+       elseif(Used_GB(i,j,k,iBlock) .and. .not.Used_GB(i-1,j,k,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
+       end if
     end if
 
   end subroutine get_face_x_prim
@@ -1819,12 +1699,18 @@ contains
                Primitive_VGI(iVar,i,j+1,k,iGang), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
-       if(UseBody .and. present(IsBodyBlock)) then
-          if(any(.not.Used_GB(i,j-2:j,k,iBlock) )) &
+    end if
+    if(UseBody .and. present(IsBodyBlock)) then
+       if(nOrder == 2)then
+          if(.not.all(Used_GB(i,j-2:j,k,iBlock) )) &
                StateLeft_V  = Primitive_VGI(:,i,j-1,k,iGang)
-
-          if(any(.not.Used_GB(i,j-1:j+1,k,iBlock) )) &
+          if(.not.all(Used_GB(i,j-1:j+1,k,iBlock) )) &
                StateRight_V = Primitive_VGI(:,i,j  ,k,iGang)
+       end if
+       if(Used_GB(i,j-1,k,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i, j-1, k, i, j, k, iBlock)
+       else if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j-1,k,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
        endif
     end if
 
@@ -1860,12 +1746,18 @@ contains
                Primitive_VGI(iVar,i,j,k+1,iGang), &
                StateLeft_V(iVar), StateRight_V(iVar))
        end do
-       if(UseBody .and. present(IsBodyBlock)) then
+    endif
+    if(UseBody .and. present(IsBodyBlock)) then
+       if(nOrder == 2)then
           if(any(.not.Used_GB(i,j,k-2:k,iBlock) )) &
                StateLeft_V   = Primitive_VGI(:,i,j,k-1,iGang)
-
           if(any(.not.Used_GB(i,j,k-1:k+1,iBlock) )) &
                StateRight_V  = Primitive_VGI(:,i,j,k  ,iGang)
+       endif
+       if (Used_GB(i,j,k-1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
+          call set_face(StateLeft_V, StateRight_V, i, j, k-1, i, j, k, iBlock)
+       else if (Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i,j,k-1,iBlock)) then
+          call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
        endif
     end if
 
