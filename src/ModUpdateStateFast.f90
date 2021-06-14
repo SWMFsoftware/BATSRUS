@@ -34,8 +34,7 @@ module ModUpdateStateFast
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
        TypeCoordSystem
-  use ModB0, ONLY: B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, &
-       B0ResChange_DZSB
+  use ModB0, ONLY: B0_DGB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
@@ -2113,32 +2112,11 @@ contains
 
     select case(iDir)
     case(x_)
-       if(i == 1 .and. DiLevelNei_EB(1,iBlock) == -1) then
-          B0_D = B0ResChange_DXSB(:,j,k,1,iBlock)
-       else if (i == nI+1 .and. DiLevelNei_EB(2, iBlock) == -1) then
-          B0_D = B0ResChange_DXSB(:,j,k,2,iBlock)
-       else
-          B0_D = 0.5*(B0_DGB(:,i-1,j,k,iBlock) &
-               +      B0_DGB(:, i ,j,K,iBlock))
-       endif
+       B0_D = 0.5*(B0_DGB(:,i-1,j,k,iBlock) + B0_DGB(:,i,j,K,iBlock))
     case(y_)
-       if(j == 1 .and. DiLevelNei_EB(3,iBlock) == -1) then
-          B0_D = B0ResChange_DYSB(:,i,k,3,iBlock)
-       else if(j == nJ+1 .and. DiLevelNei_EB(4,iBlock) == -1) then
-          B0_D = B0ResChange_DYSB(:,i,k,4,iBlock)
-       else
-          B0_D = 0.5*(B0_DGB(:,i,j-1,k,iBlock) &
-               +      B0_DGB(:,i,j  ,k,iBlock))
-       endif
+       B0_D = 0.5*(B0_DGB(:,i,j-1,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
     case(z_)
-       if(k == 1 .and. DiLevelNei_EB(5, iBlock) == -1) then
-          B0_D = B0ResChange_DZSB(:,i,j,5, iBlock)
-       else if(k == nK+1 .and. DiLevelNei_EB(6, iBlock) == -1) then
-          B0_D = B0ResChange_DZSB(:,i,j,6, iBlock)
-       else
-          B0_D = 0.5*(B0_DGB(:,i,j,k-1,iBlock) &
-               +      B0_DGB(:,i,j,k  ,iBlock))
-       endif
+       B0_D = 0.5*(B0_DGB(:,i,j,k-1,iBlock) + B0_DGB(:,i,j,k,iBlock))
     end select
 
   end subroutine get_b0_face
