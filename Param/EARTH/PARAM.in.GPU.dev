@@ -1,12 +1,11 @@
 #DESCRIPTION
 Param/EARTH/PARAM.in.GPU.dev: Earth simulation with Cartesian grid		StringDescription
 
-#UPDATE
-fast			TypeUpdate
-
-! Use 'slow' so that the original updat method matches the fast update methods
-UPDATE
-slow			TypeUpdate
+#TIMING
+T			UseTiming
+-1			DnTiming  ! every session
+-1			nDepthTiming
+cumu			TypeTimingReport
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -114,17 +113,51 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #TIMESTEPPING
-2			nStage
+1			nStage
 0.60			CflExpl
 
+#UPDATE
+fast			TypeUpdate
+
 #STOP
-25			MaxIteration
+20			MaxIteration
+-1.			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast2			TypeUpdate
+
+#STOP
+40			MaxIteration
+-1.			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast3			TypeUpdate
+
+#STOP
+60			MaxIteration
+-1.			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast4			TypeUpdate
+
+#STOP
+80			MaxIteration
 -1.			tSimulationMax
 
 #RUN ##########################################################################
 
 #TIMEACCURATE
 T			IsTimeAccurate
+
+#TIMESTEPPING
+2			nStage
+0.60			CflExpl
 
 #SAVERESTART
 F			DoSaveRestart
@@ -133,11 +166,11 @@ F			DoSaveRestart
 2			nPlotFile
 z=0 MHD idl		StringPlot
 -1			DnSavePlot
-1.0			DtSavePlot
+10.0			DtSavePlot
 -1.			DxSavePlot
 y=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
-1.0			DtSavePlot
+10.0			DtSavePlot
 -1			DxSavePlot
 rho p bx ux		NameVars
 {default}		NamePars
@@ -151,6 +184,37 @@ RAW			StringLog
 -1			DnSaveLogfile
 1.0			DtSaveLogfile
 
+#UPDATE
+fast			TypeUpdate
+
 #STOP
 -1			MaxIteration
 1.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast2			TypeUpdate
+
+#STOP
+-1			MaxIteration
+2.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast3			TypeUpdate
+
+#STOP
+-1			MaxIteration
+3.0			tSimulationMax
+
+#RUN ##########################################################################
+
+#UPDATE
+fast4			TypeUpdate
+
+#STOP
+-1			MaxIteration
+4.0			tSimulationMax
+
