@@ -1283,7 +1283,7 @@ contains
 
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    
+
     ! Update ThetaTilt
     if(NameThisComp=='GM') &
          call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)

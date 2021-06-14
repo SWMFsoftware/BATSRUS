@@ -722,7 +722,7 @@ contains
              if(UseBody .and. IsBodyBlock)then
                 if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              end if
-             
+
              if(.not.IsTimeAccurate)then
                 ! Local time stepping: cell volume cancels out
                 ! Dt/Volume = (Cfl/nStage*Volume/Vdt)/Volume
@@ -752,7 +752,7 @@ contains
              ! Convert to Boris variables before update
              if(UseBorisCorrection) call mhd_to_boris( &
                   StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
-             
+
              ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
                   + DtPerDv*Change_VC(1:nVar,i,j,k)
@@ -760,7 +760,7 @@ contains
              ! Convert back from Boris variables after update
              if(UseBorisCorrection) call boris_to_mhd( &
                   State_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
-             
+
              ! Check minimum density
              if(UseRhoMin)then
                 do iFluid = 1, nFluid
@@ -768,8 +768,8 @@ contains
                         max(RhoMin_I(iFluid),&
                         State_VGB(iRho_I(iFluid),i,j,k,iBlock))
                 end do
-             end if             
-             
+             end if
+
              ! Convert energy back to pressure
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                   call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
@@ -809,9 +809,9 @@ contains
     real:: StateLeft_V(nVar), StateRight_V(nVar), Flux_V(nFaceValue)
     !--------------------------------------------------------------------------
     select case(iFace)
-    case(1)             
+    case(1)
        call get_normal(1, i, j, k, iBlock, Normal_D, Area)
-       call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)       
+       call get_face_x(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, x_)
 
        if(UseBody .and. present(IsBodyBlock)) then
@@ -836,7 +836,7 @@ contains
           end if
        endif
 
-    case(3)       
+    case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y(i, j, k, iBlock, StateLeft_V, StateRight_V, IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D, i, j, k, iBlock, y_)
@@ -888,9 +888,9 @@ contains
           else if (Used_GB(i,j,k+1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
              call set_face(StateRight_V, StateLeft_V, i, j, k+1, i, j, k, iBlock)
           endif
-       endif       
+       endif
     end select
-        
+
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
          Flux_V, B0_D)
 
@@ -918,11 +918,11 @@ contains
        Change_V(Energy_) = Change_V(Energy_) &
             + Flux_V(Bn_)*InvRho*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             *                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-       
+
        if(UseB0) then
           Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                + Flux_V(Bn_)*B0_DGB(:,i,j,k,iBlock)
-       endif       
+       endif
     end if
 
     ! Change due to Boris source term
@@ -935,13 +935,13 @@ contains
             - DivE*cross_product( &
             State_VGB(Bx_:Bz_,i,j,k,iBlock), &
             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-       
+
        if(UseB0)then
           Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                - DivE*cross_product(B0_DGB(:,i,j,k,iBlock), &
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
        endif
-       
+
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
@@ -1609,15 +1609,15 @@ contains
           elseif(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i-1,j,k,iBlock)) then
              call set_face(StateRight_V, StateLeft_V, i, j, k, i-1, j, k, iBlock)
           end if
-       endif       
-       
+       endif
+
     case(2)
        call get_normal(1, i+1, j, k, iBlock, Normal_D, Area)
        Area = -Area
        call get_face_x_prim(i+1, j, k, iBlock, StateLeft_V, StateRight_V, &
             IsBodyBlock)
        if(UseB0) call get_b0_face(B0_D,i+1,j,k,iBlock,x_)
-       
+
        if(UseBody .and. present(IsBodyBlock)) then
           if(Used_GB(i,j,k,iBlock) .and. .not. Used_GB(i+1,j,k,iBlock)) then
              call set_face(StateLeft_V, StateRight_V, i, j, k, i+1, j, k, iBlock)
@@ -1625,7 +1625,7 @@ contains
              call set_face(StateRight_V, StateLeft_V, i+1, j, k, i, j, k, iBlock)
           end if
        endif
-       
+
     case(3)
        call get_normal(2, i, j, k, iBlock, Normal_D, Area)
        call get_face_y_prim(i, j, k, iBlock, StateLeft_V, StateRight_V, &
@@ -1639,7 +1639,7 @@ contains
              call set_face(StateRight_V, StateLeft_V, i, j, k, i, j-1, k, iBlock)
           endif
        endif
-       
+
     case(4)
        call get_normal(2, i, j+1, k, iBlock, Normal_D, Area)
        Area = -Area
@@ -1654,7 +1654,7 @@ contains
              call set_face(StateRight_V, StateLeft_V, i, j+1, k, i, j, k, iBlock)
           endif
        endif
-       
+
     case(5)
        call get_normal(3, i, j, k, iBlock, Normal_D, Area)
        call get_face_z_prim(   i, j, k, iBlock, StateLeft_V, StateRight_V, &
@@ -1668,7 +1668,7 @@ contains
              call set_face(StateRight_V, StateLeft_V, i, j, k, i, j, k-1, iBlock)
           endif
        endif
-       
+
     case(6)
        call get_normal(3, i, j, k+1, iBlock, Normal_D, Area)
        Area = -Area
@@ -1682,7 +1682,7 @@ contains
           else if (Used_GB(i,j,k+1,iBlock) .and. .not. Used_GB(i,j,k,iBlock)) then
              call set_face(StateRight_V, StateLeft_V, i, j, k+1, i, j, k, iBlock)
           endif
-       endif       
+       endif
     end select
 
     call get_numerical_flux(Normal_D, Area, StateLeft_V, StateRight_V, &
@@ -1716,8 +1716,8 @@ contains
        if(UseB0) then
           Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                + Flux_V(Bn_)*B0_DGB(:,i,j,k,iBlock)
-       endif       
-       
+       endif
+
     end if
 
     ! Change due to Boris source term
@@ -1725,16 +1725,16 @@ contains
        ! Contribution to DivE source term
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
-       
+
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
             - DivE*cross_product( &
             State_VGB(Bx_:Bz_,i,j,k,iBlock), &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))       
+            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
        if(UseB0)then
           Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
                - DivE*cross_product(B0_DGB(:,i,j,k,iBlock), &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))          
-       end if       
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+       end if
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
@@ -2182,7 +2182,7 @@ contains
     real:: XyzFace_D(3), uRot_D(3)
 
     real, parameter:: DensityJumpLimit=0.1
-    !--------------------------------------------------------------------------    
+    !--------------------------------------------------------------------------
     if(B1rCoef /= 1.0 .or. UseRotatingBc) XyzFace_D &
          = 0.5*(Xyz_DGB(:,i,j,k,iBlock) + Xyz_DGB(:,iBody,jBody,kBody,iBlock))
 
@@ -3071,7 +3071,6 @@ contains
           end if
        end do; end do; end do
     end do
-    !$acc update host(B0_DGB)
 
     ! messsage pass to fix B1 in the ghost cells ?!
     ! set B0 at reschange ?!

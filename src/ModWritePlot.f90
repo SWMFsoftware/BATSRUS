@@ -35,6 +35,7 @@ contains
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
     use ModAdvance, ONLY : State_VGB
+    use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
@@ -125,7 +126,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !$acc update host(State_VGB)
+    !$acc update host(State_VGB, B0_DGB)
 
     ! Initialize stuff
 
