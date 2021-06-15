@@ -483,8 +483,8 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
-         UseAnisoPressure, Source_VCI, LeftState_VXI, RightState_VXI, &
-         LeftState_VYI, RightState_VYI, LeftState_VZI, RightState_VZI
+         UseAnisoPressure, Source_VCI, LeftState_VX, RightState_VX, &
+         LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
@@ -668,16 +668,16 @@ contains
           do kFace = 1, kMax; do jFace = 1, jMax; do iFace = 1, iMax
              select case(iDir)
              case(1)
-                StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
-                StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
+                StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
+                StateRight_V = RightState_VX(:,iFace,jFace,kFace)
                 iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
              case(2)
-                StateLeft_V  = LeftState_VYI(:,iFace,jFace,kFace,iGang)
-                StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
+                StateLeft_V  = LeftState_VY(:,iFace,jFace,kFace)
+                StateRight_V = RightState_VY(:,iFace,jFace,kFace)
                 iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
              case(3)
-                StateLeft_V  = LeftState_VZI(:,iFace,jFace,kFace,iGang)
-                StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+                StateLeft_V  = LeftState_VZ(:,iFace,jFace,kFace)
+                StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
                 iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
              end select
              AreaX = FaceNormal_DDFB(x_,iDir,iFace,jFace,kFace,iBlock)

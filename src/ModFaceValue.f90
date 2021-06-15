@@ -14,12 +14,12 @@ module ModFaceValue
   use ModAdvance, ONLY: nFlux, UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder, &
        State_VGB, Primitive_VGI,  &
-       LeftState_VXI,  &  ! Face Left  X
-       RightState_VXI, &  ! Face Right X
-       LeftState_VYI,  &  ! Face Left  Y
-       RightState_VYI, &  ! Face Right Y
-       LeftState_VZI,  &  ! Face Left  Z
-       RightState_VZI     ! Face Right Z
+       LeftState_VX,  &  ! Face Left  X
+       RightState_VX, &  ! Face Right X
+       LeftState_VY,  &  ! Face Left  Y
+       RightState_VY, &  ! Face Right Y
+       LeftState_VZ,  &  ! Face Left  Z
+       RightState_VZ     ! Face Right Z
 
   use ModBorisCorrection, ONLY: &
        boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
@@ -428,18 +428,18 @@ contains
                   Coarse1_VII  = Primitive_VGI(:, 0,j-2:j+3,k-2:k+3,iGang),&
                   Fine1_VII    = Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)    ,&
                   Fine2_VII    = Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)    ,&
-                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang) ,&
-                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang) ,&
-                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1) ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1) ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
           else
              call tvd_reschange_body(                                        &
                   Coarse2_V    =    Primitive_VGI(:,-1,j,k,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
                   IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
                   IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
                   IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
@@ -456,18 +456,18 @@ contains
                   Coarse1_VII  = Primitive_VGI(:,nI+1,j-2:j+3,k-2:k+3,iGang),&
                   Fine1_VII    = Primitive_VGI(:,nI,j:j+1,k:k+1,iGang)      ,&
                   Fine2_VII    = Primitive_VGI(:,nI-1,j:j+1,k:k+1,iGang)    ,&
-                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                  FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
           else
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,nI+2,j,k,iGang)         ,&
                   Coarse1_V    =    Primitive_VGI(:,nI+1,j,k,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,nI,j:j+1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,nI-1,j:j+1,k:k+1,iGang) ,&
-                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                  FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
                   IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
                   IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
                   IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
@@ -484,18 +484,18 @@ contains
                   Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,0,k-2:k+3,iGang),&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
           else
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,-1,k,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
                   IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
                   IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
                   IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
@@ -512,18 +512,18 @@ contains
                   Coarse1_VII  = Primitive_VGI(:,i-2:i+3,nJ+1,k-2:k+3,iGang),&
                   Fine1_VII    = Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)     ,&
                   Fine2_VII    = Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1))
           else
              call tvd_reschange_body(&
                   Coarse2_V    = Primitive_VGI(:,i,nJ+2,k,iGang)            ,&
                   Coarse1_V    = Primitive_VGI(:,i,nJ+1,k,iGang)            ,&
                   Fine1_VII    = Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)     ,&
                   Fine2_VII    = Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                  FineF_VII        = RightState_VYI(:,i:i+1,nJ,k:k+1,iGang) ,&
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        = RightState_VY(:,i:i+1,nJ,k:k+1) ,&
                   IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
                   IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
                   IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
@@ -540,18 +540,18 @@ contains
                   Coarse1_VII  =    Primitive_VGI(:,i-2:i+3,j-2:j+3,0,iGang),&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))
           else
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,-1,iGang)           ,&
                   Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
                   IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
                   IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
                   IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
@@ -568,18 +568,18 @@ contains
                   Coarse1_VII  = Primitive_VGI(:,i-2:i+3,j-2:j+3,nK+1,iGang),&
                   Fine1_VII    = Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,   &
                   Fine2_VII    = Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),   &
-                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                  FineF_VII    = RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII    = RightState_VZ(:,i:i+1,j:j+1,nK))
           else
              call tvd_reschange_body(&
                   Coarse2_V    =    Primitive_VGI(:,i,j,nK+2,iGang)         ,&
                   Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
                   IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
                   IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
                   IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
@@ -603,18 +603,18 @@ contains
             Coarse1_V       = Primitive_VGI(:, 0,1,1,iGang)     ,&
             Fine1_V         = Primitive_VGI(:, 1,1,1,iGang)     ,&
             Fine2_V         = Primitive_VGI(:, 2,1,1,iGang)     ,&
-            CoarseToFineF_V = LeftState_VXI(:, 1,1,1,iGang)     ,&
-            FineToCoarseF_V =RightState_VXI(:, 1,1,1,iGang)     ,&
-            FineF_V         = LeftState_VXI(:, 2,1,1,iGang))
+            CoarseToFineF_V = LeftState_VX(:, 1,1,1)     ,&
+            FineToCoarseF_V =RightState_VX(:, 1,1,1)     ,&
+            FineF_V         = LeftState_VX(:, 2,1,1))
     case(2)
        call accurate_reschange1d(&
             Coarse2_V       = Primitive_VGI(:,nI+2,1,1,iGang)   ,&
             Coarse1_V       = Primitive_VGI(:,nI+1,1,1,iGang)   ,&
             Fine1_V         = Primitive_VGI(:,nI  ,1,1,iGang)   ,&
             Fine2_V         = Primitive_VGI(:,nI-1,1,1,iGang)   ,&
-            CoarseToFineF_V =RightState_VXI(:,nI+1,1,1,iGang)   ,&
-            FineToCoarseF_V = LeftState_VXI(:,nI+1,1,1,iGang)   ,&
-            FineF_V         =RightState_VXI(:,nI  ,1,1,iGang))
+            CoarseToFineF_V =RightState_VX(:,nI+1,1,1)   ,&
+            FineToCoarseF_V = LeftState_VX(:,nI+1,1,1)   ,&
+            FineF_V         =RightState_VX(:,nI  ,1,1))
     end select
 
   end subroutine get_face_accurate1d
@@ -636,9 +636,9 @@ contains
                Coarse1_VI      = Primitive_VGI(:, 0,j-2:j+3,1,iGang)   ,&
                Fine1_VI        = Primitive_VGI(:, 1,j:j+1,1,iGang)     ,&
                Fine2_VI        = Primitive_VGI(:, 2,j:j+1,1,iGang)     ,&
-               CoarseToFineF_VI= LeftState_VXI(:, 1,j:j+1,1,iGang)     ,&
-               FineToCoarseF_VI=RightState_VXI(:, 1,j:j+1,1,iGang)     ,&
-               FineF_VI        = LeftState_VXI(:, 2,j:j+1,1,iGang))
+               CoarseToFineF_VI= LeftState_VX(:, 1,j:j+1,1)     ,&
+               FineToCoarseF_VI=RightState_VX(:, 1,j:j+1,1)     ,&
+               FineF_VI        = LeftState_VX(:, 2,j:j+1,1))
        end do
     case(2)
        !!! acc loop vector
@@ -648,9 +648,9 @@ contains
                Coarse1_VI      = Primitive_VGI(:,nI+1,j-2:j+3,1,iGang) ,&
                Fine1_VI        = Primitive_VGI(:,nI  ,j:j+1,1,iGang)   ,&
                Fine2_VI        = Primitive_VGI(:,nI-1,j:j+1,1,iGang)   ,&
-               CoarseToFineF_VI=RightState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
-               FineToCoarseF_VI= LeftState_VXI(:,nI+1,j:j+1,1,iGang)   ,&
-               FineF_VI        =RightState_VXI(:,nI  ,j:j+1,1,iGang))
+               CoarseToFineF_VI=RightState_VX(:,nI+1,j:j+1,1)   ,&
+               FineToCoarseF_VI= LeftState_VX(:,nI+1,j:j+1,1)   ,&
+               FineF_VI        =RightState_VX(:,nI  ,j:j+1,1))
        end do
     case(3)
        !!! acc loop vector
@@ -660,9 +660,9 @@ contains
                Coarse1_VI      = Primitive_VGI(:,i-2:i+3,0,1,iGang)    ,&
                Fine1_VI        = Primitive_VGI(:,i:i+1,1,1,iGang)      ,&
                Fine2_VI        = Primitive_VGI(:,i:i+1,2,1,iGang)      ,&
-               CoarseToFineF_VI= LeftState_VYI(:,i:i+1,1,1,iGang)      ,&
-               FineToCoarseF_VI=RightState_VYI(:,i:i+1,1,1,iGang)      ,&
-               FineF_VI        = LeftState_VYI(:,i:i+1,2,1,iGang))
+               CoarseToFineF_VI= LeftState_VY(:,i:i+1,1,1)      ,&
+               FineToCoarseF_VI=RightState_VY(:,i:i+1,1,1)      ,&
+               FineF_VI        = LeftState_VY(:,i:i+1,2,1))
        end do
     case(4)
        !!! acc loop vector
@@ -672,9 +672,9 @@ contains
                Coarse1_VI      = Primitive_VGI(:,i-2:i+3,nJ+1,1,iGang) ,&
                Fine1_VI        = Primitive_VGI(:,i:i+1,nJ,1,iGang)     ,&
                Fine2_VI        = Primitive_VGI(:,i:i+1,nJ-1,1,iGang)   ,&
-               CoarseToFineF_VI=RightState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
-               FineToCoarseF_VI= LeftState_VYI(:,i:i+1,nJ+1,1,iGang)   ,&
-               FineF_VI        =RightState_VYI(:,i:i+1,nJ,1,iGang))
+               CoarseToFineF_VI=RightState_VY(:,i:i+1,nJ+1,1)   ,&
+               FineToCoarseF_VI= LeftState_VY(:,i:i+1,nJ+1,1)   ,&
+               FineF_VI        =RightState_VY(:,i:i+1,nJ,1))
        end do
     end select
   end subroutine get_face_accurate2d
@@ -697,9 +697,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
                   IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
                   IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
                   IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
@@ -710,9 +710,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:, 0,j,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:, 1,j:j+1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:, 2,j:j+1,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VXI(:,1,j:j+1,k:k+1,iGang)   ,&
-                  FineF_VII        = LeftState_VXI(:,2,j:j+1,k:k+1,iGang))
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
           end if
        end do; end do
     case(2)
@@ -724,9 +724,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
                   Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                  FineF_VII        =RightState_VXI(:,nI,j:j+1,k:k+1,iGang)  ,&
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
                   IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
                   IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
                   IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
@@ -737,9 +737,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:, nI+1,j,k,iGang)        ,&
                   Fine1_VII    =    Primitive_VGI(:, nI,j:j+1,k:k+1,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:, nI-1,j:j+1,k:k+1,iGang),&
-                  CoarseToFineF_VII=RightState_VXI(:,nI+1,j:j+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VXI(:,nI+1,j:j+1,k:k+1,iGang) ,&
-                  FineF_VII       =RightState_VXI(:,nI,j:j+1,k:k+1,iGang))
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
           end if
        end do; end do
     case(3)
@@ -751,9 +751,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineF_VII        = LeftState_VYI(:,i:i+1,2,k:k+1,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
                   IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
                   IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
                   IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
@@ -764,9 +764,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i, 0,k,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, 1,k:k+1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, 2,k:k+1,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VYI(:,i:i+1,1,k:k+1,iGang)   ,&
-                  FineF_VII       = LeftState_VYI(:,i:i+1,2,k:k+1,iGang))
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
           end if
        end do; end do
     case(4)
@@ -778,9 +778,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang)  ,&
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)  ,&
                   IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
                   IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
                   IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
@@ -791,9 +791,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,nJ+1,k,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1, nJ,k:k+1,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1, nJ-1,k:k+1,iGang),&
-                  CoarseToFineF_VII=RightState_VYI(:,i:i+1,nJ+1,k:k+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VYI(:,i:i+1,nJ+1,k:k+1,iGang) ,&
-                  FineF_VII        =RightState_VYI(:,i:i+1,nJ,k:k+1,iGang))
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1))
           end if
        end do; end do
     case(5)
@@ -805,9 +805,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang)   ,&
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
                   IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
                   IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
                   IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
@@ -818,9 +818,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,j, 0,iGang)           ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 1,iGang)   ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, 2,iGang)   ,&
-                  CoarseToFineF_VII= LeftState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineToCoarseF_VII=RightState_VZI(:,i:i+1,j:j+1,1,iGang)   ,&
-                  FineF_VII        = LeftState_VZI(:,i:i+1,j:j+1,2,iGang))
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))
           end if
        end do; end do
     case(6)
@@ -832,9 +832,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang)  ,&
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
                   IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
                   IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
                   IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
@@ -845,9 +845,9 @@ contains
                   Coarse1_V    =    Primitive_VGI(:,i,j,nK+1,iGang)         ,&
                   Fine1_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK,iGang)  ,&
                   Fine2_VII    =    Primitive_VGI(:,i:i+1,j:j+1, nK-1,iGang),&
-                  CoarseToFineF_VII=RightState_VZI(:,i:i+1,j:j+1,nK+1,iGang),&
-                  FineToCoarseF_VII=LeftState_VZI(:,i:i+1,j:j+1,nK+1,iGang) ,&
-                  FineF_VII        =RightState_VZI(:,i:i+1,j:j+1,nK,iGang))
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK))
           end if
        end do; end do
     end select
@@ -855,7 +855,7 @@ contains
   !============================================================================
   subroutine calc_face_value(iBlock, DoResChangeOnly, DoMonotoneRestrict)
     ! The subroutine calculates right and left face values (primitive
-    ! variables) LeftState_VXI.. RightState_VZIfor block iBlock from
+    ! variables) LeftState_VX.. RightState_VZfor block iBlock from
     ! the cell centered State_VGB.
     !
     ! If DoResChangeOnly is true, only facevalues next to a coarser
@@ -1254,24 +1254,24 @@ contains
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1) &
             write(*,*)'Left,Right(i-1/2),Left,Right(i+1/2)=', &
-            LeftState_VXI(iVarTest,iTest,jTest,kTest,iGang), &
-            RightState_VXI(iVarTest,iTest,jTest,kTest,iGang), &
-            LeftState_VXI(iVarTest,iTest+1,jTest,kTest,iGang), &
-            RightState_VXI(iVarTest,iTest+1,jTest,kTest,iGang)
+            LeftState_VX(iVarTest,iTest,jTest,kTest), &
+            RightState_VX(iVarTest,iTest,jTest,kTest), &
+            LeftState_VX(iVarTest,iTest+1,jTest,kTest), &
+            RightState_VX(iVarTest,iTest+1,jTest,kTest)
 
        if(nDim > 1 .and. (iDimTest==0 .or. iDimTest==2)) &
             write(*,*)'Left,Right(j-1/2),Left,Right(j+1/2)=', &
-            LeftState_VYI(iVarTest,iTest,jTest,kTest,iGang), &
-            RightState_VYI(iVarTest,iTest,jTest,kTest,iGang), &
-            LeftState_VYI(iVarTest,iTest,jTest+1,kTest,iGang), &
-            RightState_VYI(iVarTest,iTest,jTest+1,kTest,iGang)
+            LeftState_VY(iVarTest,iTest,jTest,kTest), &
+            RightState_VY(iVarTest,iTest,jTest,kTest), &
+            LeftState_VY(iVarTest,iTest,jTest+1,kTest), &
+            RightState_VY(iVarTest,iTest,jTest+1,kTest)
 
        if(nDim > 2 .and. (iDimTest==0 .or. iDimTest==3)) &
             write(*,*)'Left,Right(k-1/2),Left,Right(k+1/2)=', &
-            LeftState_VZI(iVarTest,iTest,jTest,kTest,iGang), &
-            RightState_VZI(iVarTest,iTest,jTest,kTest,iGang), &
-            LeftState_VZI(iVarTest,iTest,jTest,kTest+1,iGang), &
-            RightState_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
+            LeftState_VZ(iVarTest,iTest,jTest,kTest), &
+            RightState_VZ(iVarTest,iTest,jTest,kTest), &
+            LeftState_VZ(iVarTest,iTest,jTest,kTest+1), &
+            RightState_VZ(iVarTest,iTest,jTest,kTest+1)
 
     end if
 
@@ -1324,10 +1324,10 @@ contains
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
 
-         LeftState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(LeftState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
-         RightState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(RightState_VXI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
+         LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
     end subroutine logfacex_to_facex
@@ -1341,10 +1341,10 @@ contains
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
 
-         LeftState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(LeftState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
-         RightState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(RightState_VYI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
+         LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
     end subroutine logfacey_to_facey
@@ -1358,10 +1358,10 @@ contains
       do iVar=1,nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
 
-         LeftState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(LeftState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
-         RightState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang) = &
-              exp(RightState_VZI(iVar,iMin:iMax,jMin:jMax,kMin:kMax,iGang))
+         LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
     end subroutine logfacez_to_facez
@@ -1373,12 +1373,12 @@ contains
 
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         LeftState_VXI(iVarLimitRatio_I,i,j,k,iGang) = &
-              LeftState_VXI(iVarLimitRatio_I,i,j,k,iGang) &
-              *LeftState_VXI(Rho_,i,j,k,iGang)
-         RightState_VXI(iVarLimitRatio_I,i,j,k,iGang) = &
-              RightState_VXI(iVarLimitRatio_I,i,j,k,iGang) &
-              *RightState_VXI(Rho_,i,j,k,iGang)
+         LeftState_VX(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VX(iVarLimitRatio_I,i,j,k) &
+              *LeftState_VX(Rho_,i,j,k)
+         RightState_VX(iVarLimitRatio_I,i,j,k) = &
+              RightState_VX(iVarLimitRatio_I,i,j,k) &
+              *RightState_VX(Rho_,i,j,k)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facex
@@ -1390,12 +1390,12 @@ contains
 
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         LeftState_VYI(iVarLimitRatio_I,i,j,k,iGang) = &
-              LeftState_VYI(iVarLimitRatio_I,i,j,k,iGang) &
-              *LeftState_VYI(Rho_,i,j,k,iGang)
-         RightState_VYI(iVarLimitRatio_I,i,j,k,iGang) = &
-              RightState_VYI(iVarLimitRatio_I,i,j,k,iGang) &
-              *RightState_VYI(Rho_,i,j,k,iGang)
+         LeftState_VY(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VY(iVarLimitRatio_I,i,j,k) &
+              *LeftState_VY(Rho_,i,j,k)
+         RightState_VY(iVarLimitRatio_I,i,j,k) = &
+              RightState_VY(iVarLimitRatio_I,i,j,k) &
+              *RightState_VY(Rho_,i,j,k)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facey
@@ -1407,12 +1407,12 @@ contains
 
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-         LeftState_VZI(iVarLimitRatio_I,i,j,k,iGang) = &
-              LeftState_VZI(iVarLimitRatio_I,i,j,k,iGang) &
-              *LeftState_VZI(Rho_,i,j,k,iGang)
-         RightState_VZI(iVarLimitRatio_I,i,j,k,iGang) = &
-              RightState_VZI(iVarLimitRatio_I,i,j,k,iGang) &
-              *RightState_VZI(Rho_,i,j,k,iGang)
+         LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VZ(iVarLimitRatio_I,i,j,k) &
+              *LeftState_VZ(Rho_,i,j,k)
+         RightState_VZ(iVarLimitRatio_I,i,j,k) = &
+              RightState_VZ(iVarLimitRatio_I,i,j,k) &
+              *RightState_VZ(Rho_,i,j,k)
       end do; end do; end do
 
     end subroutine ratio_to_scalar_facez
@@ -1425,20 +1425,20 @@ contains
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VXI(p_,i,j,k,iGang) = LeftState_VXI(p_,i,j,k,iGang) &
-                 - LeftState_VXI(Pe_,i,j,k,iGang)
-            RightState_VXI(p_,i,j,k,iGang) = RightState_VXI(p_,i,j,k,iGang) &
-                 - RightState_VXI(Pe_,i,j,k,iGang)
+            LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
+                 - LeftState_VX(Pe_,i,j,k)
+            RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
+                 - RightState_VX(Pe_,i,j,k)
          end do; end do; end do
       end if
       if(UseWavePressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VXI(p_,i,j,k,iGang) = LeftState_VXI(p_,i,j,k,iGang) &
+            LeftState_VX(p_,i,j,k) = LeftState_VX(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(LeftState_VXI(WaveFirst_:WaveLast_,i,j,k,iGang))
-            RightState_VXI(p_,i,j,k,iGang) = RightState_VXI(p_,i,j,k,iGang) &
+                 *sum(LeftState_VX(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VX(p_,i,j,k) = RightState_VX(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(RightState_VXI(WaveFirst_:WaveLast_,i,j,k,iGang))
+                 *sum(RightState_VX(WaveFirst_:WaveLast_,i,j,k))
          end do; end do; end do
       end if
 
@@ -1452,20 +1452,20 @@ contains
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VYI(p_,i,j,k,iGang) = LeftState_VYI(p_,i,j,k,iGang) &
-                 - LeftState_VYI(Pe_,i,j,k,iGang)
-            RightState_VYI(p_,i,j,k,iGang) = RightState_VYI(p_,i,j,k,iGang) &
-                 - RightState_VYI(Pe_,i,j,k,iGang)
+            LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
+                 - LeftState_VY(Pe_,i,j,k)
+            RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
+                 - RightState_VY(Pe_,i,j,k)
          end do; end do; end do
       end if
       if(UseWavePressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VYI(p_,i,j,k,iGang) = LeftState_VYI(p_,i,j,k,iGang) &
+            LeftState_VY(p_,i,j,k) = LeftState_VY(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(LeftState_VYI(WaveFirst_:WaveLast_,i,j,k,iGang))
-            RightState_VYI(p_,i,j,k,iGang) = RightState_VYI(p_,i,j,k,iGang) &
+                 *sum(LeftState_VY(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VY(p_,i,j,k) = RightState_VY(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(RightState_VYI(WaveFirst_:WaveLast_,i,j,k,iGang))
+                 *sum(RightState_VY(WaveFirst_:WaveLast_,i,j,k))
          end do; end do; end do
       end if
 
@@ -1479,20 +1479,20 @@ contains
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VZI(p_,i,j,k,iGang) = LeftState_VZI(p_,i,j,k,iGang) &
-                 - LeftState_VZI(Pe_,i,j,k,iGang)
-            RightState_VZI(p_,i,j,k,iGang) = RightState_VZI(p_,i,j,k,iGang) &
-                 - RightState_VZI(Pe_,i,j,k,iGang)
+            LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
+                 - LeftState_VZ(Pe_,i,j,k)
+            RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
+                 - RightState_VZ(Pe_,i,j,k)
          end do; end do; end do
       end if
       if(UseWavePressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VZI(p_,i,j,k,iGang) = LeftState_VZI(p_,i,j,k,iGang) &
+            LeftState_VZ(p_,i,j,k) = LeftState_VZ(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(LeftState_VZI(WaveFirst_:WaveLast_,i,j,k,iGang))
-            RightState_VZI(p_,i,j,k,iGang) = RightState_VZI(p_,i,j,k,iGang) &
+                 *sum(LeftState_VZ(WaveFirst_:WaveLast_,i,j,k))
+            RightState_VZ(p_,i,j,k) = RightState_VZ(p_,i,j,k) &
                  - (GammaWave-1) &
-                 *sum(RightState_VZI(WaveFirst_:WaveLast_,i,j,k,iGang))
+                 *sum(RightState_VZ(WaveFirst_:WaveLast_,i,j,k))
          end do; end do; end do
       end if
 
@@ -1599,7 +1599,7 @@ contains
 
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VXI(:,i,j,k,iGang) &
+            LeftState_VX(:,i,j,k) &
                  = c7over12 *(Primitive_VGI(:,i-1,j,k,iGang)  &
                  +          Primitive_VGI(:,i,j,k,iGang)  )   &
                  - c1over12*(Primitive_VGI(:,i-2,j,k,iGang)   &
@@ -1629,9 +1629,9 @@ contains
                ! Store 1st/2nd order accurate face values
                do i = iMin, iMax
                   ! if(UseLowOrder_I(i))then...
-                  LeftState_VXI(:,i,j,k,iGang) &
+                  LeftState_VX(:,i,j,k) &
                        = Primitive_VI(:,i-1) + dVarLimL_VI(:,i-1)
-                  RightState_VXI(:,i,j,k,iGang) &
+                  RightState_VX(:,i,j,k) &
                        = Primitive_VI(:,i)   - dVarLimR_VI(:,i)
                end do
             endif
@@ -1665,17 +1665,17 @@ contains
                      ! Use 2nd order face values where high order is skipped
                      ! where(UseLowOrder_I(iMin:iMax)...
                      FaceL_I(iMin:iMax) &
-                          = LeftState_VXI(iVar,iMin:iMax,j,k,iGang)
+                          = LeftState_VX(iVar,iMin:iMax,j,k)
                      FaceR_I(iMin:iMax) &
-                          = RightState_VXI(iVar,iMin:iMax,j,k,iGang)
+                          = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
 
                   call limit_var(iMin, iMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
 
                   ! Copy back the results into the 3D arrays
-                  LeftState_VXI(iVar,iMin:iMax,j,k,iGang)  = FaceL_I(iMin:iMax)
-                  RightState_VXI(iVar,iMin:iMax,j,k,iGang) = FaceR_I(iMin:iMax)
+                  LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
+                  RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
                end do
             else
                if(UseCweno)then
@@ -1712,7 +1712,7 @@ contains
 
       end if
 
-      if(TypeLimiter == 'no') RightState_VXI= LeftState_VXI
+      if(TypeLimiter == 'no') RightState_VX= LeftState_VX
 
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
@@ -1736,7 +1736,7 @@ contains
 
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-            LeftState_VYI(:,i,j,k,iGang) &
+            LeftState_VY(:,i,j,k) &
                  = c7over12*(Primitive_VGI(:,i,j-1,k,iGang) &
                  +           Primitive_VGI(:,i,j,k,iGang))  &
                  - c1over12*(Primitive_VGI(:,i,j-2,k,iGang) &
@@ -1762,9 +1762,9 @@ contains
                   dVarLimL_VI = 0; dVarLimR_VI = 0
                endif
                do j = jMin, jMax
-                  LeftState_VYI(:,i,j,k,iGang) &
+                  LeftState_VY(:,i,j,k) &
                        = Primitive_VI(:,j-1) + dVarLimL_VI(:,j-1)
-                  RightState_VYI(:,i,j,k,iGang) &
+                  RightState_VY(:,i,j,k) &
                        = Primitive_VI(:,j)   - dVarLimR_VI(:,j)
                end do
             endif
@@ -1800,17 +1800,17 @@ contains
                   if(UseLowOrder)then
                      ! Use 2nd order face values where high order is skipped
                      FaceL_I(jMin:jMax) = &
-                          LeftState_VYI(iVar,i,jMin:jMax,k,iGang)
+                          LeftState_VY(iVar,i,jMin:jMax,k)
                      FaceR_I(jMin:jMax) = &
-                          RightState_VYI(iVar,i,jMin:jMax,k,iGang)
+                          RightState_VY(iVar,i,jMin:jMax,k)
                   end if
 
                   call limit_var(jMin, jMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
 
                   ! Copy back the results into the 3D arrays
-                  LeftState_VYI(iVar,i,jMin:jMax,k,iGang)  = FaceL_I(jMin:jMax)
-                  RightState_VYI(iVar,i,jMin:jMax,k,iGang) = FaceR_I(jMin:jMax)
+                  LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
+                  RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
                end do
             else
                if(UseCweno)then
@@ -1847,7 +1847,7 @@ contains
          end do; end do
       end if
 
-      if(TypeLimiter == 'no') RightState_VYI= LeftState_VYI
+      if(TypeLimiter == 'no') RightState_VY= LeftState_VY
       if(DoLimitMomentum)call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
@@ -1871,13 +1871,13 @@ contains
 
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-            LeftState_VZI(:,i,j,k,iGang) &
+            LeftState_VZ(:,i,j,k) &
                  = c7over12*(Primitive_VGI(:,i,j,k-1,iGang) &
                  +           Primitive_VGI(:,i,j,k,iGang))  &
                  - c1over12*(Primitive_VGI(:,i,j,k-2,iGang) &
                  +           Primitive_VGI(:,i,j,k+1,iGang))
 
-            RightState_VZI(:,i,j,k,iGang)=LeftState_VZI(:,i,j,k,iGang)
+            RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
          end do; end do; end do
       else
          do j = jMin, jMax; do i = iMin, iMax
@@ -1900,9 +1900,9 @@ contains
                   dVarLimL_VI = 0; dVarLimR_VI = 0
                endif
                do k = kMin, kMax
-                  LeftState_VZI(:,i,j,k,iGang) &
+                  LeftState_VZ(:,i,j,k) &
                        = Primitive_VI(:,k-1) + dVarLimL_VI(:,k-1)
-                  RightState_VZI(:,i,j,k,iGang) &
+                  RightState_VZ(:,i,j,k) &
                        = Primitive_VI(:,k)   - dVarLimR_VI(:,k)
                end do
             end if
@@ -1935,17 +1935,17 @@ contains
                   if(UseLowOrder)then
                      ! Use 2nd order face values where high order is skipped
                      FaceL_I(kMin:kMax) &
-                          = LeftState_VZI(iVar,i,j,kMin:kMax,iGang)
+                          = LeftState_VZ(iVar,i,j,kMin:kMax)
                      FaceR_I(kMin:kMax) &
-                          = RightState_VZI(iVar,i,j,kMin:kMax,iGang)
+                          = RightState_VZ(iVar,i,j,kMin:kMax)
                   end if
 
                   call limit_var(kMin, kMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
 
                   ! Copy back the results into the 3D arrays
-                  LeftState_VZI(iVar,i,j,kMin:kMax,iGang)  = FaceL_I(kMin:kMax)
-                  RightState_VZI(iVar,i,j,kMin:kMax,iGang) = FaceR_I(kMin:kMax)
+                  LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
+                  RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
                end do
             else
                if (UseCweno) then
@@ -1996,8 +1996,8 @@ contains
       iGang = 1
 
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i-1,j,k,iGang)
-         RightState_VXI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
+         LeftState_VX(:,i,j,k)=Primitive_VGI(:,i-1,j,k,iGang)
+         RightState_VX(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
       if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2014,8 +2014,8 @@ contains
       iGang = 1
 
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j-1,k,iGang)
-         RightState_VYI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
+         LeftState_VY(:,i,j,k)=Primitive_VGI(:,i,j-1,k,iGang)
+         RightState_VY(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
       if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2032,8 +2032,8 @@ contains
       iGang = 1
 
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k-1,iGang)
-         RightState_VZI(:,i,j,k,iGang)=Primitive_VGI(:,i,j,k,iGang)
+         LeftState_VZ(:,i,j,k)=Primitive_VGI(:,i,j,k-1,iGang)
+         RightState_VZ(:,i,j,k)=Primitive_VGI(:,i,j,k,iGang)
       end do; end do; end do
 
       if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2090,9 +2090,9 @@ contains
          end if
          do i=iMin,iMax
             i1 = i - 1
-            LeftState_VXI(:,i,j,k,iGang)  &
+            LeftState_VX(:,i,j,k)  &
                  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
-            RightState_VXI(:,i,j,k,iGang) &
+            RightState_VX(:,i,j,k) &
                  = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
          end do
       end do; end do
@@ -2149,9 +2149,9 @@ contains
          end if
          do j=jMin, jMax
             j1 = j - 1
-            LeftState_VYI(:,i,j,k,iGang)  &
+            LeftState_VY(:,i,j,k)  &
                  = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
-            RightState_VYI(:,i,j,k,iGang) &
+            RightState_VY(:,i,j,k) &
                  = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
          end do
       end do; end do
@@ -2208,9 +2208,9 @@ contains
          end if
          do k=kMin,kMax
             k1 = k - 1
-            LeftState_VZI(:,i,j,k,iGang)  &
+            LeftState_VZ(:,i,j,k)  &
                  = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
-            RightState_VZI(:,i,j,k,iGang) &
+            RightState_VZ(:,i,j,k) &
                  = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
          end do
       end do; end do

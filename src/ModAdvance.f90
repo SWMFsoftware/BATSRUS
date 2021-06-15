@@ -152,15 +152,15 @@ module ModAdvance
   ! Face centered variables for the current block
 
   ! Primitive variables (velocity) extrapolated from left and right
-  real, allocatable:: LeftState_VXI(:,:,:,:,:), RightState_VXI(:,:,:,:,:)
-  real, allocatable:: LeftState_VYI(:,:,:,:,:), RightState_VYI(:,:,:,:,:)
-  real, allocatable:: LeftState_VZI(:,:,:,:,:), RightState_VZI(:,:,:,:,:)
-  !$omp threadprivate( LeftState_VXI, RightState_VXI)
-  !$omp threadprivate( LeftState_VYI, RightState_VYI)
-  !$omp threadprivate( LeftState_VZI, RightState_VZI)
-  !$acc declare create(LeftState_VXI, RightState_VXI)
-  !$acc declare create(LeftState_VYI, RightState_VYI)
-  !$acc declare create(LeftState_VZI, RightState_VZI)
+  real, allocatable:: LeftState_VX(:,:,:,:), RightState_VX(:,:,:,:)
+  real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
+  real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
+  !$omp threadprivate( LeftState_VX, RightState_VX)
+  !$omp threadprivate( LeftState_VY, RightState_VY)
+  !$omp threadprivate( LeftState_VZ, RightState_VZ)
+  !$acc declare create(LeftState_VX, RightState_VX)
+  !$acc declare create(LeftState_VY, RightState_VY)
+  !$acc declare create(LeftState_VZ, RightState_VZ)
 
   ! primitive variables
   real, allocatable:: Primitive_VGI(:,:,:,:,:)
@@ -297,30 +297,30 @@ contains
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then
     ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
-    allocate(LeftState_VXI( &
-         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
-    allocate(RightState_VXI( &
-         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2,nGang))
+    allocate(LeftState_VX( &
+         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+    allocate(RightState_VX( &
+         nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
     allocate(Flux_VXI( &
          nFaceValue,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VXI( &
          RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
     Flux_VXI = 0.0; MhdFlux_VXI = 0.0
 
-    allocate(LeftState_VYI( &
-         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
-    allocate(RightState_VYI( &
-         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2,nGang))
+    allocate(LeftState_VY( &
+         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
+    allocate(RightState_VY( &
+         nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(Flux_VYI( &
          nFaceValue,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     allocate(MhdFlux_VYI( &
          RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
     Flux_VYI = 0.0; MhdFlux_VYI = 0.0
 
-    allocate(LeftState_VZI( &
-         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
-    allocate(RightState_VZI( &
-         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1,nGang))
+    allocate(LeftState_VZ( &
+         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
+    allocate(RightState_VZ( &
+         nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(Flux_VZI( &
          nFaceValue,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     allocate(MhdFlux_VZI( &
@@ -375,9 +375,9 @@ contains
     if(allocated(LowOrderCrit_ZB)) deallocate(LowOrderCrit_ZB)
     if(allocated(Vel_IDGB))        deallocate(Vel_IDGB)
     !$omp parallel
-    if(allocated(LeftState_VXI))    deallocate(LeftState_VXI, RightState_VXI)
-    if(allocated(LeftState_VYI))    deallocate(LeftState_VYI, RightState_VYI)
-    if(allocated(LeftState_VZI))    deallocate(LeftState_VZI, RightState_VZI)
+    if(allocated(LeftState_VX))    deallocate(LeftState_VX, RightState_VX)
+    if(allocated(LeftState_VY))    deallocate(LeftState_VY, RightState_VY)
+    if(allocated(LeftState_VZ))    deallocate(LeftState_VZ, RightState_VZ)
     if(allocated(Flux_VXI))         deallocate(Flux_VXI)
     if(allocated(Flux_VYI))         deallocate(Flux_VYI)
     if(allocated(Flux_VZI))         deallocate(Flux_VZI)

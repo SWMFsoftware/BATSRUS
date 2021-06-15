@@ -17,8 +17,8 @@ module ModFaceFlux
        UseHighFDGeometry, correct_face_value
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! in: face/cell centered B0
   use ModAdvance, ONLY: &
-       LeftState_VXI, LeftState_VYI, LeftState_VZI,  &! in: left  face state
-       RightState_VXI, RightState_VYI, RightState_VZI, &! in: right face state
+       LeftState_VX, LeftState_VY, LeftState_VZ,  &! in: left  face state
+       RightState_VX, RightState_VY, RightState_VZ, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                   &! out: flux*Area
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! out: B x Area for J
        MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! out: MHD momentum flux
@@ -266,10 +266,10 @@ contains
 
        do iVar=1,nVar
           write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-               LeftState_VXI(iVar,iTest,jTest,kTest,iGang),&
-               RightState_VXI(iVar,iTest,jTest,kTest,iGang),&
-               LeftState_VXI(iVar,iTest+1,jTest,kTest,iGang),&
-               RightState_VXI(iVar,iTest+1,jTest,kTest,iGang)
+               LeftState_VX(iVar,iTest,jTest,kTest),&
+               RightState_VX(iVar,iTest,jTest,kTest),&
+               LeftState_VX(iVar,iTest+1,jTest,kTest),&
+               RightState_VX(iVar,iTest+1,jTest,kTest)
        end do
        if(UseB0)then
           write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -290,10 +290,10 @@ contains
 
        do iVar=1,nVar
           write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-               LeftState_VYI(iVar,iTest,jTest,kTest,iGang),&
-               RightState_VYI(iVar,iTest,  jTest,kTest,iGang),&
-               LeftState_VYI(iVar,iTest,jTest+1,kTest,iGang),&
-               RightState_VYI(iVar,iTest,jTest+1,kTest,iGang)
+               LeftState_VY(iVar,iTest,jTest,kTest),&
+               RightState_VY(iVar,iTest,  jTest,kTest),&
+               LeftState_VY(iVar,iTest,jTest+1,kTest),&
+               RightState_VY(iVar,iTest,jTest+1,kTest)
        end do
        if(UseB0)then
           write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -313,10 +313,10 @@ contains
             'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar=1,nVar
           write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
-               LeftState_VZI(iVar,iTest,jTest,kTest,iGang),&
-               RightState_VZI(iVar,iTest,  jTest,kTest,iGang),&
-               LeftState_VZI(iVar,iTest,jTest,kTest+1,iGang),&
-               RightState_VZI(iVar,iTest,jTest,kTest+1,iGang)
+               LeftState_VZ(iVar,iTest,jTest,kTest),&
+               RightState_VZ(iVar,iTest,  jTest,kTest),&
+               LeftState_VZ(iVar,iTest,jTest,kTest+1),&
+               RightState_VZ(iVar,iTest,jTest,kTest+1)
        end do
        if(UseB0)then
           write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
@@ -572,24 +572,24 @@ contains
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+            DeltaBnR = sum((RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                 RightState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+            RightState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
+                 RightState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+            DeltaBnL = sum((LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
                  Normal_D)
-            LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                 LeftState_VXI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+            LeftState_VX(Bx_:Bz_,iFace,jFace,kFace) =&
+                 LeftState_VX(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VXI(:,iFace,jFace,kFace,iGang)
-         StateRight_V = RightState_VXI(:,iFace,jFace,kFace,iGang)
+         StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
+         StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
 
@@ -672,24 +672,24 @@ contains
          end if
 
          if(UseRS7.and..not.IsBoundary)then
-            DeltaBnR = sum((RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+            DeltaBnR = sum((RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))* &
                  Normal_D)
-            RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                 RightState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+            RightState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
+                 RightState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  DeltaBnR* Normal_D
-            DeltaBnL = sum((LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+            DeltaBnL = sum((LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))* &
                  Normal_D)
-            LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                 LeftState_VYI(Bx_:Bz_,iFace,jFace,kFace,iGang) - &
+            LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) = &
+                 LeftState_VY(Bx_:Bz_,iFace,jFace,kFace) - &
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VYI( :,iFace,jFace,kFace,iGang)
-         StateRight_V = RightState_VYI(:,iFace,jFace,kFace,iGang)
+         StateLeft_V  = LeftState_VY( :,iFace,jFace,kFace)
+         StateRight_V = RightState_VY(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
 
@@ -773,23 +773,23 @@ contains
          end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR = sum( Normal_D &
-                 * (RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+                 * (RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
                  - State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace)) )
-            RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) = &
-                 RightState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+            RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) = &
+                 RightState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
                  - DeltaBnR* Normal_D
             DeltaBnL = sum( Normal_D &
-                 * (LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) &
+                 * (LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) &
                  -  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace)) )
-            LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang) =&
-                 LeftState_VZI(Bx_:Bz_,iFace,jFace,kFace,iGang)-&
+            LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace) =&
+                 LeftState_VZ(Bx_:Bz_,iFace,jFace,kFace)-&
                  DeltaBnL* Normal_D
          else
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VZI( :,iFace,jFace,kFace,iGang)
-         StateRight_V = RightState_VZI(:,iFace,jFace,kFace,iGang)
+         StateLeft_V  = LeftState_VZ( :,iFace,jFace,kFace)
+         StateRight_V = RightState_VZ(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
 
