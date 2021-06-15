@@ -379,7 +379,7 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VCI, Erad_, nWave
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nWave
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
@@ -427,10 +427,10 @@ contains
             - RelaxCoef2_CB(i,j,k,iBlock)*State_VGB(Erad_,i,j,k,iBlock)
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VCI(Erad_,i,j,k,iGang) = Source_VCI(Erad_,i,j,k,iGang) + AbsorptionEmission
+       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
 
        ! dE/dt = - AbsorptionEmission
-       Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) - AbsorptionEmission
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
 
     end do; end do; end do
 

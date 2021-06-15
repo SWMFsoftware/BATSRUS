@@ -7,7 +7,7 @@ module ModBorisCorrection
   use ModCoordTransform, ONLY: cross_product
   use ModMain,    ONLY: UseB0, UseHalfStep, nStage
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
-  use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VCI, &
+  use ModAdvance, ONLY: State_VGB, StateOld_VGB, Source_VC, &
        LeftState_VX, RightState_VX, &
        LeftState_VY, RightState_VY, &
        LeftState_VZ, RightState_VZ
@@ -399,7 +399,7 @@ contains
        if(nDim > 2) DivE = DivE + EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)
        DivE = DivE/CellVolume_GB(i,j,k,iBlock)
 
-       Source_VCI(RhoUx_:RhoUz_,i,j,k,1) = Source_VCI(RhoUx_:RhoUz_,i,j,k,1) &
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             + Coef*DivE*E_D
 
        if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then

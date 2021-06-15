@@ -483,7 +483,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
-         UseAnisoPressure, Source_VCI, LeftState_VX, RightState_VX, &
+         UseAnisoPressure, Source_VC, LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
@@ -581,17 +581,17 @@ contains
        NameTecUnit = 'J/m^3/s'
 
     case('refl')
-       Source_VCI(WaveFirst_:WaveLast_,:,:,:,iGang) = 0.0
+       Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
        call set_b0_face(iBlock)
        call calc_face_value(iBlock, DoResChangeOnly = .false., &
             DoMonotoneRestrict = .false.)
        IsNewBlockAlfven = .true.
        call get_wave_reflection(iBlock, IsNewBlockAlfven)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = Source_VCI(WaveLast_,i,j,k,iGang) &
+          PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
                /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
                *     State_VGB(WaveLast_,i,j,k,iBlock))/No2Si_V(UnitT_)
-          Source_VCI(WaveFirst_:WaveLast_,i,j,k,iGang) = 0.0
+          Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
        end do; end do; end do
        NameIdlUnit = '1/s'
        NameTecUnit = '1/s'

@@ -121,10 +121,10 @@ module ModAdvance
   real, public, allocatable:: Efield_DGB(:,:,:,:,:)
 
   ! Local cell-centered source terms and divB.
-  real, allocatable :: Source_VCI(:,:,:,:,:)
-  real, allocatable :: SourceMhd_VCI(:,:,:,:,:)
-  !$omp threadprivate( Source_VCI, SourceMhd_VCI )
-  !$acc declare create( Source_VCI, SourceMhd_VCI )
+  real, allocatable :: Source_VC(:,:,:,:)
+  real, allocatable :: SourceMhd_VC(:,:,:,:)
+  !$omp threadprivate( Source_VC, SourceMhd_VC )
+  !$acc declare create( Source_VC, SourceMhd_VC )
 
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -336,9 +336,9 @@ contains
 
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
 
-    allocate(Source_VCI(nSource,nI,nJ,nK,nGang))
-    Source_VCI = 0.0
-    allocate(SourceMhd_VCI(RhoUx_:RhoUz_,nI,nJ,nK,nGang))
+    allocate(Source_VC(nSource,nI,nJ,nK))
+    Source_VC = 0.0
+    allocate(SourceMhd_VC(RhoUx_:RhoUz_,nI,nJ,nK))
     !$omp end parallel
 
     if(iProc==0)then
@@ -391,8 +391,8 @@ contains
     if(allocated(MhdFlux_VY))      deallocate(MhdFlux_VY)
     if(allocated(MhdFlux_VZ))      deallocate(MhdFlux_VZ)
     if(allocated(Primitive_VGI))    deallocate(Primitive_VGI)
-    if(allocated(Source_VCI))       deallocate(Source_VCI)
-    if(allocated(SourceMhd_VCI))    deallocate(SourceMhd_VCI)
+    if(allocated(Source_VC))       deallocate(Source_VC)
+    if(allocated(SourceMhd_VC))    deallocate(SourceMhd_VC)
     !$omp end parallel
 
     if(iProc==0)then

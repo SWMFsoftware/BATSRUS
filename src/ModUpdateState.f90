@@ -64,7 +64,7 @@ contains
             'Z fluxes L,R =',Flux_VZI(iVarTest,iTest,jTest,kTest,iGang) ,&
             Flux_VZI(iVarTest,iTest,jTest,kTest+1,iGang)
        write(*,'(2x,a,es23.15)')'source=',&
-            Source_VCI(iVarTest,iTest,jTest,kTest,iGang)
+            Source_VC(iVarTest,iTest,jTest,kTest)
        write(*,'(2x,a,es23.15)')'fluxes=', &
             +(Flux_VXI(iVarTest,iTest,jTest,kTest,iGang)  &
             -Flux_VXI(iVarTest,iTest+1,jTest,kTest,iGang)                         &
@@ -179,15 +179,15 @@ contains
     ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
     if(UseElectronPressure .and. UseElectronEntropy)then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang)*InvGammaElectron &
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)*InvGammaElectron &
                * State_VGB(Pe_,i,j,k,iBlock)**InvGammaElectronMinus1
        end do; end do; end do
     end if
 
     do k = 1,nK; do j = 1,nJ; do i = 1,nI; do iVar = 1, nVar+nFluid
        DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
-       Source_VCI(iVar,i,j,k,iGang) = &
-            DtLocal* (Source_VCI(iVar,i,j,k,iGang) + &
+       Source_VC(iVar,i,j,k) = &
+            DtLocal* (Source_VC(iVar,i,j,k) + &
             ( Flux_VXI(iVar,i,j,k,iGang)  - Flux_VXI(iVar,i+1,j,k,iGang)  &
             + Flux_VYI(iVar,i,j,k,iGang)  - Flux_VYI(iVar,i,j+1,k,iGang)  &
             + Flux_VZI(iVar,i,j,k,iGang)  - Flux_VZI(iVar,i,j,k+1,iGang)  ) &
@@ -376,23 +376,23 @@ contains
       if(.not.UseNonConservative)then
          do k = 1, nK; do j = 1, nJ; do i =1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
-                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
+            Source_VC(iP_I(1:IonLast_),i,j,k) = &
+                 Source_VC(Energy_:Energy_+IonLast_-1,i,j,k)
          end do; end do; end do
       elseif(nConservCrit > 0)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
             if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
-            Source_VCI(iP_I(1:IonLast_),i,j,k,iGang) = &
-                 Source_VCI(Energy_:Energy_+IonLast_-1,i,j,k,iGang)
+            Source_VC(iP_I(1:IonLast_),i,j,k) = &
+                 Source_VC(Energy_:Energy_+IonLast_-1,i,j,k)
          end do; end do; end do
       end if
       ! Neutrals next
       if(UseNeutralFluid .and. DoConserveNeutrals)then
          do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-            Source_VCI(iP_I(IonLast_+1:),i,j,k,iGang) = &
-                 Source_VCI(Energy_+IonLast_:,i,j,k,iGang)
+            Source_VC(iP_I(IonLast_+1:),i,j,k) = &
+                 Source_VC(Energy_+IonLast_:,i,j,k)
          end do; end do; end do
       end if
 
@@ -401,13 +401,13 @@ contains
          ! Update state variables starting from level n (=old) state
          do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
             State_VGB(iVar,i,j,k,iBlock) = &
-                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VCI(iVar,i,j,k,iGang)
+                 StateOld_VGB(iVar,i,j,k,iBlock) + Source_VC(iVar,i,j,k)
          end do; end do; end do; end do
       else
          ! Update state variables starting from previous stage (RK schemes)
          do k=1,nK; do j=1,nJ; do i=1,nI
             State_VGB(:,i,j,k,iBlock) = &
-                 State_VGB(:,i,j,k,iBlock) + Source_VCI(1:nVar,i,j,k,iGang)
+                 State_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
          end do; end do; end do
       end if
 
@@ -543,7 +543,7 @@ contains
                if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
             end if
             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                 + 0.5*sum(Source_VCI(Bx_:Bz_,i,j,k,iGang)**2)
+                 + 0.5*sum(Source_VC(Bx_:Bz_,i,j,k)**2)
          end do; end do; end do
 
          if(DoTest)write(*,'(2x,2a,15es20.12)') &

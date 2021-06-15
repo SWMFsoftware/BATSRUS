@@ -118,13 +118,13 @@ module ModUserInterface
      subroutine user_calc_sources_expl(iBlock)
 
        integer, intent(in) :: iBlock
-       ! Change Source_VCI here
+       ! Change Source_VC here
      end subroutine user_calc_sources_expl
 
      subroutine user_calc_sources_impl(iBlock)
 
        integer, intent(in) :: iBlock
-       ! Change Source_VCI here
+       ! Change Source_VC here
      end subroutine user_calc_sources_impl
 
      subroutine user_init_point_implicit

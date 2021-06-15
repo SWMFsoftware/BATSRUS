@@ -214,7 +214,7 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VCI,&
+    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VC,&
          State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
@@ -290,7 +290,7 @@ contains
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock))CYCLE
-          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VCI(:,i,j,k,iGang) +  &
+          Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VC(:,i,j,k) +  &
                ( MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k)     &
                + MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k)     &
                + MhdFlux_VZ(:,i,j,k)  - MhdFlux_VZ(:,i,j,k+1)  )  &

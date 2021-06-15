@@ -2182,7 +2182,7 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance, ONLY : Source_VCI  ! To communicate to calc_source
+    use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
     use ModCalcSource, ONLY: calc_source
 
     integer, intent(in) :: iBlock
@@ -2207,12 +2207,12 @@ contains
 
     call calc_source(iBlock)
 
-    SourceImpl_VC = Source_VCI(1:nVar,:,:,:,iGang)
+    SourceImpl_VC = Source_VC(1:nVar,:,:,:)
 
     if(UseImplicitEnergy)then
        ! Overwrite pressure source terms with energy source term
        SourceImpl_VC(iP_I,:,:,:) = &
-            Source_VCI(Energy_:Energy_+nFluid-1,:,:,:,iGang)
+            Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
     end if
 
     UseDivbSource = UseDivbSourceOrig

@@ -1365,7 +1365,7 @@ contains
 
     use ModMain, ONLY: UseUserUpdateStates
     use ModUpdateState, ONLY: update_state_normal
-    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VCI
+    use ModAdvance,    ONLY: nVar, Flux_VXI, Flux_VYI, Flux_VZI, Source_VC
     use ModVarIndexes
 
     integer,intent(in)::iBlock
@@ -1392,7 +1392,7 @@ contains
           Flux_VXI(iVar,:,:,:,iGang)  = 0.0
           Flux_VYI(iVar,:,:,:,iGang)  = 0.0
           Flux_VZI(iVar,:,:,:,iGang)  = 0.0
-          Source_VCI(iVar,:,:,:,iGang) = 0.0
+          Source_VC(iVar,:,:,:) = 0.0
        end if
     end do
 

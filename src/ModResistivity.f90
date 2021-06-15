@@ -386,7 +386,7 @@ contains
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, By_, Bz_, Energy_
-    use ModAdvance,    ONLY: Source_VCI, &
+    use ModAdvance,    ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use omp_lib
 
@@ -418,17 +418,17 @@ contains
           write(*,*) NameSub, ': initial JouleHeating    =', &
                JouleHeating
           write(*,*) NameSub, ': initial P source        =', &
-               Source_VCI(P_,i,j,k,iGang)
+               Source_VC(P_,i,j,k)
           if (UseElectronPressure) &
                write(*,*) NameSub, ': initial Pe source       =', &
-               Source_VCI(Pe_,i,j,k,iGang)
+               Source_VC(Pe_,i,j,k)
           if (UseAnisoPressure) &
                write(*,*) NameSub, ': initial Ppar Source     =',&
-               Source_VCI(Ppar_,i,j,k,iGang)
+               Source_VC(Ppar_,i,j,k)
           write(*,*) NameSub, ': initial energy source   =', &
-               Source_VCI(Energy_,i,j,k,iGang)
+               Source_VC(Energy_,i,j,k)
           write(*,*) NameSub, ': initial By source       =', &
-               Source_VCI(By_,i,j,k,iGang)
+               Source_VC(By_,i,j,k)
        end if
 
        if(UseAnisoPe) call stop_mpi(NameSub// &
@@ -441,20 +441,20 @@ contains
        end if
 
        if(UseElectronPressure)then
-          Source_VCI(Pe_,i,j,k,iGang) = Source_VCI(Pe_,i,j,k,iGang) + JouleHeating
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
           ! Remove Joule heating from ion energy equation
           if(UseResistiveFlux) &
-               Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
+               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                - InvGammaElectronMinus1*JouleHeating
        else
-          Source_VCI(P_,i,j,k,iGang) = Source_VCI(P_,i,j,k,iGang) + JouleHeating
+          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
 
           ! the same amount of Joule heating applies on Ppar
           if(UseAnisoPressure) &
-               Source_VCI(Ppar_,i,j,k,iGang)  = Source_VCI(Ppar_,i,j,k,iGang) + JouleHeating
+               Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) + JouleHeating
 
           if(.not.UseResistiveFlux) &
-               Source_VCI(Energy_,i,j,k,iGang) = Source_VCI(Energy_,i,j,k,iGang) &
+               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                + InvGammaElectronMinus1*JouleHeating
        end if
 
@@ -464,7 +464,7 @@ contains
           if(.not.UseJouleHeating) call get_current(i,j,k,iBlock,Current_D)
 
           ! Source[Bphi] = -eta*Jz / radius
-          Source_VCI(Bz_,i,j,k,iGang) = Source_VCI(Bz_,i,j,k,iGang) &
+          Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                - Eta_GB(i,j,k,iBlock)*Current_D(x_)/Xyz_DGB(2,i,j,k,iBlock)
        end if
 
@@ -472,17 +472,17 @@ contains
           write(*,*) NameSub, ': corrected JouleHeating  =', &
                JouleHeating
           write(*,*) NameSub, ': corrected P source      =', &
-               Source_VCI(P_,i,j,k,iGang)
+               Source_VC(P_,i,j,k)
           if(UseElectronPressure) &
                write(*,*) NameSub, ': corrected Pe source     =', &
-               Source_VCI(Pe_,i,j,k,iGang)
+               Source_VC(Pe_,i,j,k)
           if(UseAnisoPressure) &
                write(*,*) NameSub, ': corrected Ppar source     =', &
-               Source_VCI(Ppar_,i,j,k,iGang)
+               Source_VC(Ppar_,i,j,k)
           write(*,*) NameSub, ': corrected energy source =', &
-               Source_VCI(Energy_,i,j,k,iGang)
+               Source_VC(Energy_,i,j,k)
           write(*,*) NameSub, ': initial By source       =', &
-               Source_VCI(By_,i,j,k,iGang)
+               Source_VC(By_,i,j,k)
        end if
     end do; end do; end do
 

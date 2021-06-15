@@ -267,7 +267,7 @@ contains
 
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate
-    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VCI, Time_Blk, &
+    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
     use ModGeometry, ONLY: True_Blk, True_Cell
@@ -321,7 +321,7 @@ contains
     ! Calculate unperturbed source for right hand side
     ! and possibly also set analytic Jacobean matrix elements.
     ! Multi-ion may set its elements while the user uses numerical Jacobean.
-    Source_VCI = 0.0
+    Source_VC = 0.0
     DsDu_VVC  = 0.0
 
     call calc_point_impl_source(iBlock)
@@ -333,7 +333,7 @@ contains
        IsPointImplPerturbed = .true.
 
        ! Save unperturbed source
-       Source0_VC = Source_VCI(1:nVar,:,:,:,iGang)
+       Source0_VC = Source_VC(1:nVar,:,:,:)
 
        ! Perturb all point implicit variables one by one
        do iIVar = 1,nVarPointImplNum
@@ -365,30 +365,30 @@ contains
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C + Epsilon_C
 
           ! Calculate perturbed source
-          Source_VCI = 0.0
+          Source_VC = 0.0
           call calc_point_impl_source(iBlock)
 
           if(IsAsymmetric)then
              ! Calculate dS/dU matrix elements
              do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
-                     (Source_VCI(jVar,:,:,:,iGang) - Source0_VC(jVar,:,:,:))/Epsilon_C
+                     (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon_C
              end do
           else
              ! Store perturbed source corresponding to +Epsilon_C perturbation
-             Source1_VC = Source_VCI(1:nVar,:,:,:,iGang)
+             Source1_VC = Source_VC(1:nVar,:,:,:)
 
              ! Perturb the state in opposite direction
              State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C - Epsilon_C
 
              ! Calculate perturbed source
-             Source_VCI = 0.0
+             Source_VC = 0.0
              call calc_point_impl_source(iBlock)
 
              ! Calculate dS/dU matrix elements with symmetric differencing
              do iJVar=1,nVarPointImplNum; jVar=iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
-                     0.5*(Source1_VC(jVar,:,:,:) - Source_VCI(jVar,:,:,:,iGang)) &
+                     0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
              end do
           end if
@@ -398,7 +398,7 @@ contains
        end do
 
        ! Restore unperturbed source
-       Source_VCI(1:nVar,:,:,:,iGang) = Source0_VC
+       Source_VC(1:nVar,:,:,:) = Source0_VC
 
        IsPointImplPerturbed = .false.
 
@@ -429,7 +429,7 @@ contains
           iVar = iVarPointImpl_I(iIVar)
           Rhs_I(iIVar) = StateExpl_VC(iVar,i,j,k) &
                - StateOld_VGB(iVar,i,j,k,iBlock) &
-               + DtCell * Source_VCI(iVar,i,j,k,iGang)
+               + DtCell * Source_VC(iVar,i,j,k)
        end do
 
        ! The matrix to be solved for is A = (I - beta*Dt*dS/dU)
@@ -449,13 +449,13 @@ contains
        if (DoTestCell) then
           write(*,*) NameSub,' DtCell  =', DtCell
           write(*,*) NameSub,&
-               ' StateExpl_VC, StateOld_VGB, Source_VCI, initial Rhs_I      ='
+               ' StateExpl_VC, StateOld_VGB, Source_VC, initial Rhs_I      ='
           do iIVar = 1, nVarPointImpl
              iVar = iVarPointImpl_I(iIVar)
              write(*,'(a,100es15.6)') NameVar_V(iVar),                    &
              StateExpl_VC(iVar,iTest,jTest,kTest),                        &
                   StateOld_VGB(iVar,iTest,jTest,kTest,iBlockTest),           &
-                  Source_VCI(iVar,iTest,jTest,kTest,iGang),                      &
+                  Source_VC(iVar,iTest,jTest,kTest),                      &
                   Rhs_I(iIvar)
           end do
           write(*,*) NameSub,' initial Matrix_II  ='

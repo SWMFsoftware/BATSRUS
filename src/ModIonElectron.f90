@@ -7,7 +7,7 @@ module ModIonElectron
 
   use ModVarIndexes
   use ModMain, ONLY:  UseUserSourceImpl
-  use ModAdvance, ONLY: State_VGB, Source_VCI
+  use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
@@ -85,7 +85,7 @@ contains
   !============================================================================
   subroutine ion_electron_source_impl(iBlock)
 
-    ! Add electron, ion and electric field source terms to Source_VCI
+    ! Add electron, ion and electric field source terms to Source_VC
     ! Calculate dS/dU Jacobian
 
     use ModPointImplicit, ONLY: UsePointImplicit, UseUserPointImplicit_B, &
@@ -134,23 +134,23 @@ contains
 
        if (DoTestCell) then
           write(*,'(1x,2a,es20.12)') NameSub,' initial Source(testvar) =', &
-               Source_VCI(iVarTest,i,j,k,iGang)
+               Source_VC(iVarTest,i,j,k)
        end if
 
        ! d(rhou)/dt += q/m*(rho*E + rhou x B)
-       Source_VCI(iRhoUxIon_I,i,j,k,iGang) = Source_VCI(iRhoUxIon_I,i,j,k,iGang) &
+       Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) &
             + ChargePerMass_I *               &
             ( State_V(iRhoIon_I)*State_V(Ex_) &
             + State_V(iRhoUyIon_I)*b_D(z_)    &
             - State_V(iRhoUzIon_I)*b_D(y_) )
 
-       Source_VCI(iRhoUyIon_I,i,j,k,iGang) = Source_VCI(iRhoUyIon_I,i,j,k,iGang) &
+       Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) &
             + ChargePerMass_I *               &
             ( State_V(iRhoIon_I)*State_V(Ey_) &
             + State_V(iRhoUzIon_I)*b_D(x_)    &
             - State_V(iRhoUxIon_I)*b_D(z_) )
 
-       Source_VCI(iRhoUzIon_I,i,j,k,iGang) = Source_VCI(iRhoUzIon_I,i,j,k,iGang) &
+       Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) &
             + ChargePerMass_I *               &
             ( State_V(iRhoIon_I)*State_V(Ez_) &
             + State_V(iRhoUxIon_I)*b_D(y_)    &
@@ -169,11 +169,11 @@ contains
        end if
 
        ! dE/dt += -c^2*J = -c^2*sum(q/m*rho*u)
-       Source_VCI(Ex_,i,j,k,iGang) = &
+       Source_VC(Ex_,i,j,k) = &
             -C2light*sum(ChargePerMass_I * State_V(iRhoUxIon_I))
-       Source_VCI(Ey_,i,j,k,iGang) = &
+       Source_VC(Ey_,i,j,k) = &
             -C2light*sum(ChargePerMass_I * State_V(iRhoUyIon_I))
-       Source_VCI(Ez_,i,j,k,iGang) = &
+       Source_VC(Ez_,i,j,k) = &
             -C2light*sum(ChargePerMass_I * State_V(iRhoUzIon_I))
 
        ! Set corresponding matrix elements
@@ -216,10 +216,10 @@ contains
           write(*,'(1x,2a,10es20.12)') &
                NameSub, ' ChargePerMass_I, net charge =',&
                ChargePerMass_I, sum(ChargePerMass_I*State_V(iRhoIon_I))
-          write(*,*) NameSub, ' Source_VCI='
+          write(*,*) NameSub, ' Source_VC='
           do iVar = 1, nVar
              write(*,'(2x,a,100es20.12)') &
-                  NameVar_V(iVar), Source_VCI(iVar,iTest,jTest,kTest,iGang)
+                  NameVar_V(iVar), Source_VC(iVar,iTest,jTest,kTest)
           end do
        end if
 

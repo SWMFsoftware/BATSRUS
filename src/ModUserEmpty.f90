@@ -246,7 +246,7 @@ contains
     !--------------------------------------------------------------------------
 
     UseUserSourceExpl = .false. ! if not implemented
-    ! Source_VCI(...,iBlock,iGang) = ...
+    ! Source_VC(...,iBlock) = ...
     
   end subroutine user_calc_sources_expl
   !============================================================================
@@ -258,7 +258,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources_impl'
     !--------------------------------------------------------------------------
     UseUserSourceImpl = .false. ! if not implemented
-    ! Source_VCI(...,iBlock,iGang) = ... 
+    ! Source_VC(...,iBlock) = ... 
     
   end subroutine user_calc_sources_impl
   !============================================================================

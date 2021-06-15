@@ -747,7 +747,7 @@ contains
   subroutine get_wave_reflection(iBlock, IsNewBlock)
 
     use BATL_size, ONLY: nDim, nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Source_VCI
+    use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
@@ -840,9 +840,9 @@ contains
           ReflectionRate = 0.0
        end if
 
-       Source_VCI(WaveFirst_,i,j,k,iGang) = Source_VCI(WaveFirst_,i,j,k,iGang) &
+       Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
             - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
-       Source_VCI(WaveLast_,i,j,k,iGang) = Source_VCI(WaveLast_,i,j,k,iGang) &
+       Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
             + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
 
        ! Calculate sin(theta), where theta is the angle between Zplus
