@@ -759,8 +759,7 @@ contains
     integer, intent(in) :: iBlock
     logical, optional, intent(inout):: IsNewBlock
 
-    integer :: i, j, k
-    integer :: iGang
+    integer :: i, j, k    
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3), GradLogRho_D(nDim)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
@@ -771,7 +770,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_wave_reflection'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
     if(present(IsNewBlock)) then
@@ -937,11 +936,9 @@ contains
       use ModVarIndexes, ONLY: Bx_, Bz_
       use ModMultiFluid, ONLY: iRho_I, IonFirst_
 
-      integer :: i, j, k
-      integer:: iGang
+      integer :: i, j, k      
       real :: Rho, FullB_D(3)
-      !------------------------------------------------------------------------
-      iGang = 1
+      !------------------------------------------------------------------------      
       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
          FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
               + RightState_VX(Bx_:Bz_,i,j,k))
@@ -998,11 +995,9 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CurlU_D(MaxDim)
 
-    real :: DxInvHalf, DyInvHalf, DzInvHalf
-    integer:: iGang
+    real :: DxInvHalf, DyInvHalf, DzInvHalf    
     character(len=*), parameter:: NameSub = 'get_curl_u'
-    !--------------------------------------------------------------------------
-    iGang = 1
+    !--------------------------------------------------------------------------    
     if(IsCartesianGrid)then
        DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
        DyInvHalf = 0.5/CellSize_DB(y_,iBlock)

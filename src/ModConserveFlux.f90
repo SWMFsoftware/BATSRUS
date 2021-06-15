@@ -451,14 +451,13 @@ contains
     integer, intent(in):: iFaceIn, iFaceOut, iBlock
 
     integer:: j, k
-    integer:: iGang
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_bn_face_i'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     do k=1,nK; do j=1,nJ
        if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
 
@@ -491,14 +490,13 @@ contains
     integer, intent(in):: jFaceIn, jFaceOut, iBlock
 
     integer:: i, k
-    integer:: iGang
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_bn_face_j'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     do k=1,nK; do i=1,nI
        if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
 
@@ -532,14 +530,13 @@ contains
     integer, intent(in):: kFaceIn, kFaceOut, iBlock
 
     integer:: i,j
-    integer:: iGang
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_bn_face_k'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+
     do j=1,nJ; do i=1,nI
        if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
 

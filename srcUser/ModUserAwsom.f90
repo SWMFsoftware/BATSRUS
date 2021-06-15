@@ -520,7 +520,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k, iGang
+    integer :: i, j, k
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
@@ -544,8 +544,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    IsFound = .true.
-    iGang = 1
+    IsFound = .true.    
 
     select case(NameVar)
     case('te')

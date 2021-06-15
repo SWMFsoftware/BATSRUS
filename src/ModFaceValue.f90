@@ -3097,17 +3097,12 @@ contains
 
     integer :: iRho, iRhoUx, iRhoUy, iRhoUz
     integer :: iFluid, iFace, jFace, kFace
-    integer :: iMin, iMax, jMin, jMax, kMin, kMax
-    integer:: iGang
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax    
     real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     character(len=*), parameter:: NameSub = 'calc_face_div_u'
     !--------------------------------------------------------------------------
     call timing_start(NameSub)
-    iGang = 1
-#ifdef OPENACC
-    iGang = iBlock
-#endif
 
     iMin = 1 - nG;       iMax = nI + nG
     jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_

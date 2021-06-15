@@ -95,7 +95,6 @@ contains
 
     real:: State_V(nVar), b_D(3)
     integer:: i, j, k, iVar
-    integer:: iGang
     integer:: iIon, iRhoUx, iRhoUy, iRhoUz
     real:: ChargePerMass
 
@@ -105,7 +104,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    iGang = 1
     DoTestCell = .false.
 
     ! Add user defined point implicit source terms here

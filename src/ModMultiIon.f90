@@ -195,9 +195,7 @@ contains
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
 
-    integer :: i, j, k, iIonFluid
-
-    integer :: iGang
+    integer :: i, j, k, iIonFluid    
 
     logical :: DoTestCell
 
@@ -205,7 +203,7 @@ contains
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     if(DoTest)then
        write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
             Source_VC(iVarTest,iTest,jTest,kTest)
@@ -321,8 +319,6 @@ contains
     real :: AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
-    integer :: iGang
-
     ! Artificial friction
     real :: InvuCutOff2, InvTauCutOff
 
@@ -338,7 +334,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    iGang = 1
     DoTestCell = .false.
 
     ! Add user defined point implicit source terms here

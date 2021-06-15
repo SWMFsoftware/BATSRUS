@@ -339,7 +339,6 @@ contains
       real:: Coeff1, Coeff2
       integer:: iFluid, iRho
       integer:: i, j, k, iVar
-      integer, parameter:: iGang=1
       !------------------------------------------------------------------------
       ! Convert pressure to energy for the conservative scheme
       call pressure_to_energy(iBlock, StateOld_VGB)

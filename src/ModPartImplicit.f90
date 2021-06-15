@@ -2189,14 +2189,11 @@ contains
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     real, intent(out)   :: SourceImpl_VC(nVar,nI,nJ,nK)
 
-    integer:: iGang
     logical :: UseDivbSourceOrig
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_impl_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    iGang = 1
 
     call timing_start(NameSub)
 

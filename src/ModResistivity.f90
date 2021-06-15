@@ -395,9 +395,7 @@ contains
     ! Variables needed for Joule heating
     real :: Current_D(3), JouleHeating
 
-    integer :: i, j, k
-
-    integer :: iGang
+    integer :: i, j, k    
 
     logical :: DoTestCell
 
@@ -405,7 +403,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_resistivity_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     JouleHeating = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI

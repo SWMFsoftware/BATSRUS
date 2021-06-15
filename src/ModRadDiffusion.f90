@@ -390,7 +390,6 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    integer :: iGang
     real :: TeSi, Te
     real :: AbsorptionEmission, OpacityPlanckSi_W(nWave)
     real :: OpacityEmissionSi_W(nWave)
@@ -399,7 +398,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+    
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE

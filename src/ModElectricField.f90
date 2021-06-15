@@ -226,7 +226,6 @@ contains
 
     integer, intent(in):: iBlock
     integer:: i, j, k
-    integer:: iGang
     real :: State_V(nVar), vInv
     real :: ChargeDens_I(nIonFluid)
     real, dimension(MaxDim) :: Force_D, FullB_D, Current_D
@@ -237,7 +236,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_efield_in_comoving_frame'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    iGang = 1
+
     Efield_DGB(:,:,:,:,iBlock) = 0.0
 
     if(UseJCrossBForce)then

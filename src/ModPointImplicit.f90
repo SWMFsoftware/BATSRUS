@@ -283,7 +283,6 @@ contains
     end interface
 
     integer :: i, j, k, iVar, jVar, iIVar, iJVar, iFluid
-    integer :: iGang
     real :: DtCell, BetaStage, Norm_C(nI,nJ,nK), Epsilon_C(nI,nJ,nK)
     real :: StateExpl_VC(nVar,nI,nJ,nK)
     real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
@@ -297,7 +296,6 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     call timing_start(NameSub)
 
-    iGang = 1
     ! The beta parameter is always one in the first stage
     if(iStage == 1 .or. .not. time_accurate)then
        BetaStage = 1.0

@@ -255,10 +255,8 @@ contains
   !============================================================================
   subroutine print_face_values
     integer :: iVar
-    integer:: iGang
     character(len=*), parameter:: NameSub = 'print_face_values'
     !--------------------------------------------------------------------------
-    iGang = 1
 
     if(iDimTest==x_ .or. iDimTest==0)then
        write(*,*)&
