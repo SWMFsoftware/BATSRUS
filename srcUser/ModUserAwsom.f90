@@ -544,7 +544,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    IsFound = .true.    
+    IsFound = .true.
 
     select case(NameVar)
     case('te')

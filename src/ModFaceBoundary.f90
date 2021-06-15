@@ -154,10 +154,10 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
-    subroutine write_face_state(String)      
+    subroutine write_face_state(String)
       character(len=*), intent(in):: String
 
-      !------------------------------------------------------------------------      
+      !------------------------------------------------------------------------
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
            LeftState_VX(iVarTest,  iTest, jTest, kTest),  &
@@ -207,7 +207,7 @@ contains
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
 
-    integer :: i,j,k    
+    integer :: i,j,k
 
     ! Variables used for polar wind boundary condition
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta

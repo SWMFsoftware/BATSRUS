@@ -195,7 +195,7 @@ contains
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
 
-    integer :: i, j, k, iIonFluid    
+    integer :: i, j, k, iIonFluid
 
     logical :: DoTestCell
 
@@ -203,7 +203,7 @@ contains
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     if(DoTest)then
        write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
             Source_VC(iVarTest,iTest,jTest,kTest)

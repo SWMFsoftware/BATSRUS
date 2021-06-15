@@ -398,7 +398,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE

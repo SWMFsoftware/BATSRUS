@@ -3097,7 +3097,7 @@ contains
 
     integer :: iRho, iRhoUx, iRhoUy, iRhoUz
     integer :: iFluid, iFace, jFace, kFace
-    integer :: iMin, iMax, jMin, jMax, kMin, kMax    
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax
     real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     character(len=*), parameter:: NameSub = 'calc_face_div_u'

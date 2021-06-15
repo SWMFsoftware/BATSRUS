@@ -255,9 +255,9 @@ contains
   !============================================================================
   subroutine print_face_values
     integer :: iVar
+
     character(len=*), parameter:: NameSub = 'print_face_values'
     !--------------------------------------------------------------------------
-
     if(iDimTest==x_ .or. iDimTest==0)then
        write(*,*)&
             'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'

@@ -1025,14 +1025,14 @@ contains
     subroutine calc_divb_source(iBlock)
       integer, intent(in):: iBlock
 
-      integer::  i, j, k      
+      integer::  i, j, k
 
       ! Variables needed for div B source terms
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
 
       real:: BCorrect0, BCorrect1
-      !------------------------------------------------------------------------      
+      !------------------------------------------------------------------------
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
@@ -1339,12 +1339,12 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer:: i, j, k    
+    integer:: i, j, k
     real   :: DivB, InvDx, InvDy, InvDz
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)    
+    call test_start(NameSub, DoTest, iBlock)
 
     InvDx            = 1/CellSize_DB(x_,iBlock)
     if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)

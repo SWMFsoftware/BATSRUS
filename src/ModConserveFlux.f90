@@ -457,7 +457,7 @@ contains
     character(len=*), parameter:: NameSub = 'apply_bn_face_i'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     do k=1,nK; do j=1,nJ
        if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
 
@@ -496,7 +496,7 @@ contains
     character(len=*), parameter:: NameSub = 'apply_bn_face_j'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    
+
     do k=1,nK; do i=1,nI
        if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
 
