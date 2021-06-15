@@ -15,7 +15,7 @@ module ModConserveFlux
        Flux_VXI, Flux_VYI, Flux_VZI, UnFirst_, UnLast_,  Vdt_, BnL_, BnR_, &
        LeftState_VX, LeftState_VY, LeftState_VZ, &
        RightState_VX, RightState_VY, RightState_VZ, &
-       UseMhdMomentumFlux, MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI
+       UseMhdMomentumFlux, MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ
 
   use ModGeometry,  ONLY: true_cell
   use ModParallel, ONLY : &
@@ -171,7 +171,7 @@ contains
       if(UseMhdMomentumFlux)then
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(MhdRhoUx_:MhdRhoUz_,j,k,lFaceTo,iBlock) = &
-                 MhdFlux_VXI(:,lFaceFrom,j,k,iGang)
+                 MhdFlux_VX(:,lFaceFrom,j,k)
          end do; end do
       end if
 
@@ -222,7 +222,7 @@ contains
       if(UseMhdMomentumFlux)then
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(MhdRhoUx_:MhdRhoUz_,i,k,lFaceTo,iBlock) = &
-                 MhdFlux_VYI(:,i,lFaceFrom,k,iGang)
+                 MhdFlux_VY(:,i,lFaceFrom,k)
          end do; end do
       end if
     end subroutine save_corrected_flux_y
@@ -259,7 +259,7 @@ contains
       if(UseMhdMomentumFlux)then
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(MhdRhoUx_:MhdRhoUz_,i,j,lFaceTo,iBlock) = &
-                 MhdFlux_VZI(:,i,j,lFaceFrom,iGang)
+                 MhdFlux_VZ(:,i,j,lFaceFrom)
          end do; end do
       end if
     end subroutine save_corrected_flux_z
@@ -362,7 +362,7 @@ contains
               CorrectedFlux_VXB(1:Vdt_,j,k,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux) &
-         !     MhdFlux_VXI(:,lFaceTo,j,k,iGang)  = CorrectedFlux_VXB(&
+         !     MhdFlux_VX(:,lFaceTo,j,k)  = CorrectedFlux_VXB(&
          !     MhdRhoUx_:MhdRhoUz_,j,k,lFaceFrom,iBlock)
          if(.not.(UseB .and. IsCartesianGrid))CYCLE
 
@@ -399,7 +399,7 @@ contains
               CorrectedFlux_VYB(1:Vdt_,i,k,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux)&
-         !     MhdFlux_VYI(:,i,lFaceTo,k,iGang)  = CorrectedFlux_VYB(&
+         !     MhdFlux_VY(:,i,lFaceTo,k)  = CorrectedFlux_VYB(&
          !     MhdRhoUx_:MhdRhoUz_,i,k,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VY(By_,i,lFaceTo,k) = &
@@ -426,7 +426,7 @@ contains
               CorrectedFlux_VZB(1:Vdt_,i,j,lFaceFrom,iBlock)
 
          ! if(UseMhdMomentumFlux)&
-         !     MhdFlux_VZI(:,i,j,lFaceTo,iGang)  = CorrectedFlux_VZB(&
+         !     MhdFlux_VZ(:,i,j,lFaceTo)  = CorrectedFlux_VZB(&
          !     MhdRhoUx_:MhdRhoUz_,i,j,lFaceFrom,iBlock)
          if(IsCartesianGrid .and. UseB)then
             LeftState_VZ(Bz_,i,j,lFaceTo) = &

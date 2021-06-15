@@ -21,7 +21,7 @@ module ModFaceFlux
        RightState_VX, RightState_VY, RightState_VZ, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                   &! out: flux*Area
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! out: B x Area for J
-       MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! out: MHD momentum flux
+       MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ,         &! out: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        nFlux,   &                        ! number of fluxes: nVar+nFluid
        nFaceValue, &                     ! number of all face values
@@ -594,7 +594,7 @@ contains
          call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
 
          if(UseMhdMomentumFlux) &
-              MhdFlux_VXI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
+              MhdFlux_VX(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
@@ -694,7 +694,7 @@ contains
          call get_numerical_flux(Flux_VYI(:,iFace,jFace,kFace,iGang))
 
          if(UseMhdMomentumFlux) &
-              MhdFlux_VYI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
+              MhdFlux_VY(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
@@ -794,7 +794,7 @@ contains
          call get_numerical_flux(Flux_VZI(:,iFace,jFace,kFace,iGang))
 
          if(UseMhdMomentumFlux) &
-              MhdFlux_VZI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
+              MhdFlux_VZ(:,iFace,jFace,kFace) = MhdFlux_V
 
          if(UseArtificialVisco) then
             FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)

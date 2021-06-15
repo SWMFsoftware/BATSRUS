@@ -214,7 +214,7 @@ contains
   end subroutine get_electric_field_block
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
-    use ModAdvance, ONLY: MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI, SourceMhd_VCI,&
+    use ModAdvance, ONLY: MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ, SourceMhd_VCI,&
          State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
@@ -278,11 +278,11 @@ contains
           if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
                Force_D
           Force_D = Force_D + vInv*&
-               (MhdFlux_VXI(:,i,j,k,iGang)  - MhdFlux_VXI(:,i+1,j,k,iGang) )
+               (MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k) )
           if(nDim > 1) Force_D = Force_D + vInv*&
-               (MhdFlux_VYI(:,i,j,k,iGang)  - MhdFlux_VYI(:,i,j+1,k,iGang) )
+               (MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k) )
           if(nDim > 2) Force_D = Force_D + vInv*&
-               (MhdFlux_VZI(:,i,j,k,iGang)  - MhdFlux_VZI(:,i,j,k+1,iGang)  )
+               (MhdFlux_VZ(:,i,j,k)  - MhdFlux_VZ(:,i,j,k+1)  )
           if(DoTestCell)write(*,'(2a,15es16.8)') &
                NameSub,': after grad Pwave, Force_D =', Force_D
           Efield_DGB(:,i,j,k,iBlock) = InvElectronDens*Force_D
@@ -291,9 +291,9 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not. true_cell(i,j,k,iBlock))CYCLE
           Efield_DGB(:,i,j,k,iBlock) = SourceMhd_VCI(:,i,j,k,iGang) +  &
-               ( MhdFlux_VXI(:,i,j,k,iGang)  - MhdFlux_VXI(:,i+1,j,k,iGang)     &
-               + MhdFlux_VYI(:,i,j,k,iGang)  - MhdFlux_VYI(:,i,j+1,k,iGang)     &
-               + MhdFlux_VZI(:,i,j,k,iGang)  - MhdFlux_VZI(:,i,j,k+1,iGang)  )  &
+               ( MhdFlux_VX(:,i,j,k)  - MhdFlux_VX(:,i+1,j,k)     &
+               + MhdFlux_VY(:,i,j,k)  - MhdFlux_VY(:,i,j+1,k)     &
+               + MhdFlux_VZ(:,i,j,k)  - MhdFlux_VZ(:,i,j,k+1)  )  &
                /CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end if

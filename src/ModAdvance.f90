@@ -206,9 +206,9 @@ module ModAdvance
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
 
   real, allocatable:: MhdSource_VCI(:,:,:,:),  &
-       MhdFlux_VXI(:,:,:,:,:) , MhdFlux_VYI(:,:,:,:,:) , MhdFlux_VZI(:,:,:,:,:)
-  !$omp threadprivate( MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI )
-  !$acc declare create(MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI)
+       MhdFlux_VX(:,:,:,:) , MhdFlux_VY(:,:,:,:) , MhdFlux_VZ(:,:,:,:)
+  !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
+  !$acc declare create(MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ)
 
   ! Merge cells around the polar axis in spherical geometry
   logical :: DoFixAxis = .false.
@@ -303,9 +303,9 @@ contains
          nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
     allocate(Flux_VXI( &
          nFaceValue,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(MhdFlux_VXI( &
-         RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    Flux_VXI = 0.0; MhdFlux_VXI = 0.0
+    allocate(MhdFlux_VX( &
+         RhoUx_:RhoUz_,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    Flux_VXI = 0.0; MhdFlux_VX = 0.0
 
     allocate(LeftState_VY( &
          nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
@@ -313,9 +313,9 @@ contains
          nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
     allocate(Flux_VYI( &
          nFaceValue,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    allocate(MhdFlux_VYI( &
-         RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-    Flux_VYI = 0.0; MhdFlux_VYI = 0.0
+    allocate(MhdFlux_VY( &
+         RhoUx_:RhoUz_,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    Flux_VYI = 0.0; MhdFlux_VY = 0.0
 
     allocate(LeftState_VZ( &
          nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
@@ -323,9 +323,9 @@ contains
          nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
     allocate(Flux_VZI( &
          nFaceValue,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    allocate(MhdFlux_VZI( &
-         RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-    Flux_VZI = 0.0; MhdFlux_VZI = 0.0
+    allocate(MhdFlux_VZ( &
+         RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    Flux_VZI = 0.0; MhdFlux_VZ = 0.0
 
     allocate(FaceDivU_IX( &
          nFluid,nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
@@ -387,9 +387,9 @@ contains
     if(allocated(FaceDivU_IX))     deallocate(FaceDivU_IX)
     if(allocated(FaceDivU_IY))     deallocate(FaceDivU_IY)
     if(allocated(FaceDivU_IZ))     deallocate(FaceDivU_IZ)
-    if(allocated(MhdFlux_VXI))      deallocate(MhdFlux_VXI)
-    if(allocated(MhdFlux_VYI))      deallocate(MhdFlux_VYI)
-    if(allocated(MhdFlux_VZI))      deallocate(MhdFlux_VZI)
+    if(allocated(MhdFlux_VX))      deallocate(MhdFlux_VX)
+    if(allocated(MhdFlux_VY))      deallocate(MhdFlux_VY)
+    if(allocated(MhdFlux_VZ))      deallocate(MhdFlux_VZ)
     if(allocated(Primitive_VGI))    deallocate(Primitive_VGI)
     if(allocated(Source_VCI))       deallocate(Source_VCI)
     if(allocated(SourceMhd_VCI))    deallocate(SourceMhd_VCI)
