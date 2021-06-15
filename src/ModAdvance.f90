@@ -205,8 +205,8 @@ module ModAdvance
   ! if UseEfield, in which case the electric field is part of the state vector.
   logical, parameter:: UseMhdMomentumFlux = UseB .and. .not.UseEfield
 
-  real, allocatable:: MhdSource_VCI(:,:,:,:),  &
-       MhdFlux_VX(:,:,:,:) , MhdFlux_VY(:,:,:,:) , MhdFlux_VZ(:,:,:,:)
+  real, allocatable:: MhdFlux_VX(:,:,:,:), MhdFlux_VY(:,:,:,:), &
+       MhdFlux_VZ(:,:,:,:)
   !$omp threadprivate( MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ )
   !$acc declare create(MhdFlux_VX, MhdFlux_VY, MhdFlux_VZ)
 
