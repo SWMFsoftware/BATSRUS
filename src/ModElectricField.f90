@@ -215,7 +215,7 @@ contains
   !============================================================================
   subroutine get_efield_in_comoving_frame(iBlock)
     use ModAdvance, ONLY: MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI, SourceMhd_VCI,&
-         State_VGB, bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI
+         State_VGB, bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModMain,    ONLY: MaxDim, UseB0
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModCoordTransform, ONLY: cross_product
@@ -256,11 +256,11 @@ contains
           InvElectronDens = 1.0/sum(ChargeDens_I)
 
           ! Calculate Lorentz force = J x B
-          Current_D = (bCrossArea_DXI(:,i+1,j,k,iGang) - bCrossArea_DXI(:,i,j,k,iGang))
+          Current_D = (bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k))
           if(nJ>1) Current_D = Current_D + &
-               (bCrossArea_DYI(:,i,j+1,k,iGang) - bCrossArea_DYI(:,i,j,k,iGang))
+               (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
           if(nK>1) Current_D = Current_D + &
-               (bCrossArea_DZI(:,i,j,k+1,iGang) - bCrossArea_DZI(:,i,j,k,iGang))
+               (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
           Current_D = Current_D*vInv
 
           if(DoTestCell) then

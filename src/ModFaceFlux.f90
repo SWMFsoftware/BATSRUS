@@ -20,7 +20,7 @@ module ModFaceFlux
        LeftState_VXI, LeftState_VYI, LeftState_VZI,  &! in: left  face state
        RightState_VXI, RightState_VYI, RightState_VZI, &! in: right face state
        Flux_VXI, Flux_VYI, Flux_VZI,                   &! out: flux*Area
-       bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI,&! out: B x Area for J
+       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,&! out: B x Area for J
        MhdFlux_VXI, MhdFlux_VYI, MhdFlux_VZI,         &! out: MHD momentum flux
        UseMhdMomentumFlux, UseIdealEos, UseElectronPressure, &
        nFlux,   &                        ! number of fluxes: nVar+nFluid
@@ -613,7 +613,7 @@ contains
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DXI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
+              bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlock)) then
@@ -712,7 +712,7 @@ contains
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DYI(:,iFace,jFace,kFace,iGang) = bCrossArea_D
+              bCrossArea_DY(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
       ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
@@ -812,7 +812,7 @@ contains
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
-              bCrossArea_DZI(:,iFace,jFace,kFace,iGang)= bCrossArea_D
+              bCrossArea_DZ(:,iFace,jFace,kFace)= bCrossArea_D
       end do; end do; end do
 
       if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlock)) then

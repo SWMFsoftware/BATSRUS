@@ -191,9 +191,9 @@ module ModAdvance
   !$omp threadprivate( FluxCenter_VGD )
 
   ! Magnetic field cross area vector for J x B source term in multi-ion MHD
-  real, allocatable, dimension(:,:,:,:,:):: &
-       bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI(:,:,:,:,:)
-  !$omp threadprivate( bCrossArea_DXI, bCrossArea_DYI, bCrossArea_DZI )
+  real, allocatable, dimension(:,:,:,:):: &
+       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+  !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
 
   ! Mhd part of the momentum flux. May be subtracted for calculating
   ! electric field
@@ -261,14 +261,14 @@ contains
 
     !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
-         .and. .not. allocated(bCrossArea_DXI))then
-       allocate(bCrossArea_DXI( &
-            MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-       allocate(bCrossArea_DYI( &
-            MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nGang))
-       allocate(bCrossArea_DZI( &
-            MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
-       bCrossArea_DXI = 0.0; bCrossArea_DYI = 0.0; bCrossArea_DZI = 0.0
+         .and. .not. allocated(bCrossArea_DX))then
+       allocate(bCrossArea_DX( &
+            MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(bCrossArea_DY( &
+            MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+       allocate(bCrossArea_DZ( &
+            MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+       bCrossArea_DX = 0.0; bCrossArea_DY = 0.0; bCrossArea_DZ = 0.0
     end if
     !$omp end parallel
 
@@ -381,9 +381,9 @@ contains
     if(allocated(Flux_VXI))         deallocate(Flux_VXI)
     if(allocated(Flux_VYI))         deallocate(Flux_VYI)
     if(allocated(Flux_VZI))         deallocate(Flux_VZI)
-    if(allocated(bCrossArea_DXI))   deallocate(bCrossArea_DXI)
-    if(allocated(bCrossArea_DYI))   deallocate(bCrossArea_DYI)
-    if(allocated(bCrossArea_DZI))   deallocate(bCrossArea_DZI)
+    if(allocated(bCrossArea_DX))   deallocate(bCrossArea_DX)
+    if(allocated(bCrossArea_DY))   deallocate(bCrossArea_DY)
+    if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)
     if(allocated(FaceDivU_IXI))     deallocate(FaceDivU_IXI)
     if(allocated(FaceDivU_IYI))     deallocate(FaceDivU_IYI)
     if(allocated(FaceDivU_IZI))     deallocate(FaceDivU_IZI)
