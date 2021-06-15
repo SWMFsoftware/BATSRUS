@@ -168,9 +168,9 @@ module ModAdvance
   !$acc declare create(Primitive_VGI )
 
   ! Face centered div(U)*dl
-  real, allocatable, dimension(:,:,:,:,:):: &
-       FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI
-  !$omp threadprivate( FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI )
+  real, allocatable, dimension(:,:,:,:):: &
+       FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ
+  !$omp threadprivate( FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ )
 
   ! Fluxes are for all state variables including energies,
   ! for source terrms (div U, div B), and for time step calculatino Vmax*dt.
@@ -327,12 +327,12 @@ contains
          RhoUx_:RhoUz_,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nGang))
     Flux_VZI = 0.0; MhdFlux_VZI = 0.0
 
-    allocate(FaceDivU_IXI( &
-         nFluid,nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace,nGang))
-    allocate(FaceDivU_IYI( &
-         nFluid,iMinFace:iMaxFace,nJFace,kMinFace:kMaxFace,nGang))
-    allocate(FaceDivU_IZI( &
-         nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace,nGang))
+    allocate(FaceDivU_IX( &
+         nFluid,nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(FaceDivU_IY( &
+         nFluid,iMinFace:iMaxFace,nJFace,kMinFace:kMaxFace))
+    allocate(FaceDivU_IZ( &
+         nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nKFace))
 
     allocate(Primitive_VGI(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nGang))
 
@@ -384,9 +384,9 @@ contains
     if(allocated(bCrossArea_DX))   deallocate(bCrossArea_DX)
     if(allocated(bCrossArea_DY))   deallocate(bCrossArea_DY)
     if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)
-    if(allocated(FaceDivU_IXI))     deallocate(FaceDivU_IXI)
-    if(allocated(FaceDivU_IYI))     deallocate(FaceDivU_IYI)
-    if(allocated(FaceDivU_IZI))     deallocate(FaceDivU_IZI)
+    if(allocated(FaceDivU_IX))     deallocate(FaceDivU_IX)
+    if(allocated(FaceDivU_IY))     deallocate(FaceDivU_IY)
+    if(allocated(FaceDivU_IZ))     deallocate(FaceDivU_IZ)
     if(allocated(MhdFlux_VXI))      deallocate(MhdFlux_VXI)
     if(allocated(MhdFlux_VYI))      deallocate(MhdFlux_VYI)
     if(allocated(MhdFlux_VZI))      deallocate(MhdFlux_VZI)

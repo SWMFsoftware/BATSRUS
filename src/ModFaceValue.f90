@@ -3088,7 +3088,7 @@ contains
     ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper
     ! for more details.
 
-    use ModAdvance, ONLY: FaceDivU_IXI, FaceDivU_IYI, FaceDivU_IZI, &
+    use ModAdvance, ONLY: FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
          Vel_IDGB
     use BATL_size,   ONLY: nDim, jDim_, kDim_
     use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
@@ -3121,24 +3121,24 @@ contains
 
        Vel_DG = Vel_IDGB(iFluid,:,:,:,:,iBlock)
 
-       ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IXI/Y/Z = div(U)*dl
+       ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IX/Y/Z = div(U)*dl
        ! See eq(35) of P. McCorquodale and P. Colella (2010)
        do kFace=kMinFace,kMaxFace
           do jFace=jMinFace,jMaxFace
              do iFace=1,nIFace
-                FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
+                FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
                      (Vel_DG(x_,iFace,jFace,kFace) - &
                      Vel_DG(x_,iFace-1,jFace,kFace))
 
-                if(nDim>1) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
-                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
+                if(nDim>1) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
+                     FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
                      (Vel_DG(y_,iFace,jFace+1,kFace) - &
                      Vel_DG(y_,iFace,jFace-1,kFace) + &
                      Vel_DG(y_,iFace-1,jFace+1,kFace) - &
                      Vel_DG(y_,iFace-1,jFace-1,kFace))/4
 
-                if(nDim>2) FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang) = &
-                     FaceDivU_IXI(iFluid,iFace,jFace,kFace,iGang)+ &
+                if(nDim>2) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
+                     FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
                      (Vel_DG(z_,iFace,jFace,kFace+1) - &
                      Vel_DG(z_,iFace,jFace,kFace-1) + &
                      Vel_DG(z_,iFace-1,jFace,kFace+1) - &
@@ -3152,7 +3152,7 @@ contains
           do kFace=kMinFace,kMaxFace
              do jFace=1,nJFace
                 do iFace=iMinFace,iMaxFace
-                   FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
+                   FaceDivU_IY(iFluid,iFace,jFace,kFace) = &
                         (Vel_DG(y_,iFace,jFace,kFace) - &
                         Vel_DG(y_,iFace,jFace-1,kFace)) + &
                         (Vel_DG(x_,iFace+1,jFace,kFace) - &
@@ -3160,8 +3160,8 @@ contains
                         Vel_DG(x_,iFace+1,jFace-1,kFace) - &
                         Vel_DG(x_,iFace-1,jFace-1,kFace))/4
 
-                   if(nDim>2) FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) = &
-                        FaceDivU_IYI(iFluid,iFace,jFace,kFace,iGang) + &
+                   if(nDim>2) FaceDivU_IY(iFluid,iFace,jFace,kFace) = &
+                        FaceDivU_IY(iFluid,iFace,jFace,kFace) + &
                         (Vel_DG(z_,iFace,jFace,kFace+1) - &
                         Vel_DG(z_,iFace,jFace,kFace-1) + &
                         Vel_DG(z_,iFace,jFace-1,kFace+1) - &
@@ -3175,7 +3175,7 @@ contains
           do kFace=1,nKFace
              do jFace=jMinFace,jMaxFace
                 do iFace=iMinFace,iMaxFace
-                   FaceDivU_IZI(iFluid,iFace,jFace,kFace,iGang) = &
+                   FaceDivU_IZ(iFluid,iFace,jFace,kFace) = &
                         (Vel_DG(z_,iFace,jFace,kFace) - &
                         Vel_DG(z_,iFace,jFace,kFace-1)) + &
                         (Vel_DG(x_,iFace+1,jFace,kFace) - &

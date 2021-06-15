@@ -535,7 +535,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IXI
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IX
 
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax, iBlock
       integer:: iFlux
@@ -597,7 +597,7 @@ contains
               MhdFlux_VXI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
-            FaceDivU_I = FaceDivU_IXI(:,iFace,jFace,kFace,iGang)
+            FaceDivU_I = FaceDivU_IX(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VXI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
@@ -635,7 +635,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax,iBlock)
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IYI
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IY
 
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax,iBlock
       integer:: iFlux
@@ -697,7 +697,7 @@ contains
               MhdFlux_VYI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
-            FaceDivU_I = FaceDivU_IYI(:,iFace,jFace,kFace,iGang)
+            FaceDivU_I = FaceDivU_IY(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VYI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
@@ -736,7 +736,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax,iBlock)
-      use ModAdvance, ONLY: State_VGB, FaceDivU_IZI
+      use ModAdvance, ONLY: State_VGB, FaceDivU_IZ
 
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax,iBlock
       integer:: iFlux
@@ -797,7 +797,7 @@ contains
               MhdFlux_VZI(:,iFace,jFace,kFace,iGang) = MhdFlux_V
 
          if(UseArtificialVisco) then
-            FaceDivU_I = FaceDivU_IZI(:,iFace,jFace,kFace,iGang)
+            FaceDivU_I = FaceDivU_IZ(:,iFace,jFace,kFace)
             call add_artificial_viscosity(Flux_VZI(:,iFace,jFace,kFace,iGang),&
                  IFF_I, RFF_I)
          endif
