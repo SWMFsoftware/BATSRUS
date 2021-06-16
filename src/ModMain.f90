@@ -124,15 +124,6 @@ module ModMain
   !$acc declare create(TypeCellBc_I, iTypeCellBc_I)
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
-  type :: CellBCType
-     ! Index range for the ghost cell region
-     ! for ModUser::user_set_cell_boundary
-     integer :: iMin, iMax, jMin, jMax, kMin, kMax
-     ! Type of boundary for one side
-     character(len=30):: TypeBc
-     integer :: iTypeBC
-  end type CellBCType
-
   type :: FaceBCType
      ! True if only boundaries at resolution changes are updated
      logical :: DoResChangeOnly

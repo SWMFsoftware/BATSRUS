@@ -62,6 +62,8 @@ module ModCellBoundary
        'userfixvalue    ', &
        'usernoinflow    ']
 
+  integer, public :: iMin, iMax, jMin, jMax, kMin, kMax
+  !$omp threadprivate(iMin, iMax, jMin, jMax, kMin, kMax) 
 contains
   !============================================================================
 
@@ -76,7 +78,7 @@ contains
     use ModAdvance, ONLY: UseEfield
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, time_accurate, time_loop, CellBCType, &
+         UseHyperbolicDivb, time_accurate, time_loop, &
          TypeCellBc_I, iTypeCellBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
@@ -108,9 +110,7 @@ contains
 
     integer:: iVar, iFluid, iSide, iSideMin, iSideMax
 
-    type(CellBCType) :: CBC
-
-    integer :: iMin, iMax, jMin, jMax, kMin, kMax, iTypeBC
+    integer :: iTypeBC
     character(len=30):: TypeBc
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
@@ -250,14 +250,6 @@ contains
 
        if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
-
-       ! CBC is used to pass information to user_set_cell_boundary.
-       CBC%iMin = iMin
-       CBC%iMax = iMax
-       CBC%jMin = jMin
-       CBC%jMax = jMax
-       CBC%kMin = kMin
-       CBC%kMax = kMax
 
        select case(iTypeBc)
 
@@ -424,12 +416,12 @@ contains
        case(UserSemiBC_)
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-             CBC%TypeBc = 'usersemilinear'
-             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+             TypeBc = 'usersemilinear'
+             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
           else
              IsFound = .false.
-             CBC%TypeBc = 'usersemi'
-             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+             TypeBc = 'usersemi'
+             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
              if(.not.IsFound) call stop_mpi(NameSub// &
                   ': usersemi boundary condition is not found in user module')
           end if
@@ -442,9 +434,8 @@ contains
                    TypeBc = trim(TypeBc)//'linear'
                    State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
                 end if
-             end if
-             CBC%TypeBc = TypeBc
-             call user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+             end if             
+             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub// &
                ': unknown TypeBc='//TypeBc)

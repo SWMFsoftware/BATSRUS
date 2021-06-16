@@ -49,14 +49,11 @@ contains
   end subroutine user_set_face_boundary
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
-
-    use ModMain, ONLY: CellBCType
-
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)    
     ! Apply user defined ghost cell boundary condition
     
     integer,          intent(in)  :: iBlock, iSide
-    type(CellBCType), intent(in)  :: CBC
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'

@@ -782,7 +782,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
-  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
@@ -801,7 +801,7 @@ contains
     use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
          Si2No_V, rBody, GBody, UnitU_, InvGammaMinus1
     use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
-         time_accurate, CellBCType
+         time_accurate
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
@@ -809,7 +809,7 @@ contains
     use ModIO,         ONLY : restart
 
     integer,          intent(in)  :: iBlock, iSide
-    type(CellBCType), intent(in)  :: CBC
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
@@ -864,7 +864,7 @@ contains
 
     if(UseAwsom)then
 
-       select case(CBC%TypeBc)
+       select case(TypeBc)
        case('usersemi','user_semi')
           IsFound = .true.
           StateSemi_VGB(iTeImpl,0,:,:,iBlock) = Tchromo
@@ -1025,7 +1025,7 @@ contains
        ! f(t) = 0                                    if      t < t1
        !      = 1                                    if t2 < t
        !      = 0.5 * ( 1- cos(Pi * (t-t1)/(t2-t1))) if t1 < t < t2
-       if(CBC%TypeBc == 'usersurfacerot')then
+       if(TypeBc == 'usersurfacerot')then
 
           ! Check if time accurate is set.
           if(time_accurate)then
@@ -1220,10 +1220,10 @@ contains
        ! and ghost cell, we need to know the magnetic field and temperature
        ! in the ghost cell. To calculate the fux, we also need to set the
        ! ghost cell temperature within the implicit solver.
-       if(CBC%TypeBc == 'usersemi')then
+       if(TypeBc == 'usersemi')then
           StateSemi_VGB(iTeImpl,0,:,:,iBlock) = tChromo
           RETURN
-       elseif(CBC%TypeBc == 'usersemilinear')then
+       elseif(TypeBc == 'usersemilinear')then
           RETURN
        end if
 

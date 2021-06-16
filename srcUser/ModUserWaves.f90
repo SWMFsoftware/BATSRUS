@@ -1075,7 +1075,7 @@ contains
   end subroutine user_set_face_boundary
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModImplicit, ONLY: StateSemi_VGB
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
@@ -1085,7 +1085,7 @@ contains
          ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
-    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem, CellBCType
+    use ModMain,     ONLY: Time_Simulation, TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
@@ -1093,7 +1093,7 @@ contains
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
-    type(CellBCType), intent(in) :: CBC
+    character(len=*), intent(in)  :: TypeBc
     logical, intent(out) :: IsFound
 
     integer :: i,j,k,iVar
@@ -1170,7 +1170,7 @@ contains
     end if
 
     if(DoResistivityGaussian)then
-       select case(CBC%TypeBc)
+       select case(TypeBc)
        case('usersemi')
           select case(iSide)
           case(2)

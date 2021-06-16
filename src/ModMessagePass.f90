@@ -35,7 +35,7 @@ contains
          time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
-         UseHighResChange, UseBufferGrid, UseResistivePlanet, CellBCType
+         UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
     use ModGeometry, ONLY: far_field_BCs_BLK
@@ -74,8 +74,8 @@ contains
     logical :: UseHighResChangeNow
 
     logical :: IsFound
-
-    type(CellBCType) :: CBC
+    
+    character(len=30):: TypeBc
 
 !!! TO BE GENERALIZED
     logical:: IsPeriodicWedge = .false.
@@ -243,8 +243,8 @@ contains
                1, nFluid)
 
           if(UseResistivePlanet) then
-             CBC%TypeBc = 'ResistivePlanet'
-             call user_set_cell_boundary(iBlock,-1,CBC,IsFound)
+             TypeBc = 'ResistivePlanet'
+             call user_set_cell_boundary(iBlock,-1,TypeBc,IsFound)
           end if
 
        end do

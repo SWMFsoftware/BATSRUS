@@ -31,17 +31,16 @@ subroutine user_set_face_boundary(FBC)
 end subroutine user_set_face_boundary
 
 !=====================================================================
-subroutine user_set_cell_boundary(iBlock, iSide, CBC, IsFound)
+subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-  use ModUser, ONLY: user_sub => user_set_cell_boundary
-  use ModMain, ONLY: CellBCType
+  use ModUser, ONLY: user_sub => user_set_cell_boundary  
   implicit none
 
   integer,          intent(in)  :: iBlock, iSide
-  type(CellBCType),     intent(in)  :: CBC
+  character(len=*), intent(in)  :: TypeBc
   logical,          intent(out) :: IsFound
   !-------------------------------------------------------------------
-  call user_sub(iBlock, iSide, CBC, IsFound)
+  call user_sub(iBlock, iSide, TypeBc, IsFound)
 
 end subroutine user_set_cell_boundary
 
