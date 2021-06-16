@@ -74,7 +74,7 @@ contains
     logical :: UseHighResChangeNow
 
     logical :: IsFound
-    
+
     character(len=30):: TypeBc
 
 !!! TO BE GENERALIZED

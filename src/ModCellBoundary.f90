@@ -63,7 +63,7 @@ module ModCellBoundary
        'usernoinflow    ']
 
   integer, public :: iMin, iMax, jMin, jMax, kMin, kMax
-  !$omp threadprivate(iMin, iMax, jMin, jMax, kMin, kMax) 
+  !$omp threadprivate(iMin, iMax, jMin, jMax, kMin, kMax)
 contains
   !============================================================================
 
@@ -434,7 +434,7 @@ contains
                    TypeBc = trim(TypeBc)//'linear'
                    State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
                 end if
-             end if             
+             end if
              call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
           end if
           if(.not. IsFound) call stop_mpi(NameSub// &
