@@ -3552,14 +3552,13 @@ contains
       if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
 
-
       ! Set coordinate system string to lower case for rotated HGR and HGI/HGC
       if(dLongitudeHgr /= 0 .and. TypeCoordSystem == 'HGR') &
            TypeCoordSystem = 'hgr'
 
       if(dLongitudeHgi /= 0 .and. TypeCoordSystem == 'HGI') &
            TypeCoordSystem = 'hgi'
-      
+
       if(dLongitudeHgi /= 0 .and. TypeCoordSystem == 'HGC') &
            TypeCoordSystem = 'hgc'
 
