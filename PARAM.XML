@@ -1869,8 +1869,8 @@ domain. Providing the symmetry directions with this command allows
 the proper calculation of line-of-sight plots.
 </command>
 
-<command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
-  <parameter name="TypeCoordSystem" type="string" input="select">
+<command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T" >
+  <parameter name="TypeCoordSystem" type="string" input="select" case="upper">
     <option name="GSM" default="$NameComp eq 'GM'"/>
     <option name="GSE"                            />
     <option name="HGR" default="$NameComp eq 'SC'"/>

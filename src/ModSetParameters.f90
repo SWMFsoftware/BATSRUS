@@ -791,6 +791,10 @@ contains
              if (index(log_string,'HGI') > 0) TypeCoordPlot_I(logfile_) = 'HGI'
              if (index(log_string,'HGC') > 0) TypeCoordPlot_I(logfile_) = 'HGC'
 
+             if (index(log_string,'hgr') > 0) TypeCoordPlot_I(logfile_) = 'hgr'
+             if (index(log_string,'hgi') > 0) TypeCoordPlot_I(logfile_) = 'hgi'
+             if (index(log_string,'hgc') > 0) TypeCoordPlot_I(logfile_) = 'hgc'
+
              ! If any flux variables are used - input a list of radii
              ! at which to calculate the flux
              if (index(log_vars,'flx')>0) &
@@ -2316,7 +2320,7 @@ contains
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
        case("#COORDSYSTEM","#COORDINATESYSTEM")
-          if(TypeCoordSystem /= 'HGC')then
+          if(TypeCoordSystem /= 'HGC' .and. TypeCoordSystem /= 'hgc')then
              ! HGC is the only type of coordinate system
              ! which can be switched to different coordinate
              ! system in the course of run
@@ -2332,14 +2336,14 @@ contains
                   ' ERROR: cannot handle coordinate system '//TypeCoordSystem)
           case('IH','OH')
              select case(TypeCoordSystem)
-             case('HGI')
+             case('HGI', 'hgi')
                 ! If rotating frame was on in the previous session then
                 ! we need to transform from HGR/HGC to HGI system.
                 ! Note: This only works if the two coordinate systems
                 ! are aligned at the initial time (i.e. HGR = HGC).
                 if(UseRotatingFrame) iSignRotationIC = +1
                 UseRotatingFrame = .false.
-             case('HGC','HGR')
+             case('HGC', 'HGR', 'hgc', 'hgr')
                 UseRotatingFrame = .true.
              case default
                 call stop_mpi(NameSub// &
@@ -2348,15 +2352,10 @@ contains
              end select
           case('SC')
              select case(TypeCoordSystem)
-             case('HGR','HGC')
+             case('HGR', 'HGC', 'hgr', 'hgc')
                 UseRotatingFrame = .true.
-                if(iProc==0)then
-                   write(*,*)NameSub//' setting .UseRotatingFrame = T'
-                end if
-             case('HGI')
-                if(iProc==0) write(*,*) NameSub,&
-                     ' WARNING: inertial SC is less accurate'
-                UseRotatingFrame = .false.
+                if(iProc==0) &
+                     write(*,*)NameSub//' setting .UseRotatingFrame = T'
              case default
                 call stop_mpi(NameSub// &
                      ' ERROR: cannot handle coordinate system '&
@@ -2364,9 +2363,9 @@ contains
              end select
           case('EE')
              select case(TypeCoordSystem)
-             case('HGR','HGC')
+             case('HGR', 'HGC', 'hgr', 'hgc')
                 UseRotatingFrame = .true.
-             case('HGI','GSM')
+             case('HGI', 'hgi', 'GSM')
                 UseRotatingFrame = .false.
              case default
                 call stop_mpi(NameSub// &
@@ -3423,25 +3422,13 @@ contains
 
          if(nStage > 2)then
             if(iProc == 0)then
-               write(*,'(a)') NameSub//&
-                    ' WARNING: Subcycling works with 1 and 2 stage schemes only!'
+               write(*,'(a)') NameSub//' WARNING: ' &
+                    //'Subcycling works with 1 and 2 stage schemes only!'
                if(UseStrict)call stop_mpi('Correct PARAM.in!')
                write(*,*) NameSub//' setting nStage=2'
             end if
             nStage = 2
          end if
-      end if
-
-      if(NameThisComp == 'SC' .and. TypeCoordSystem == 'HGI')then
-         if(iProc == 0)then
-            write(*,'(a)') NameSub//&
-                 ' WARNING: SC only works with rotating frame!'
-            if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*) NameSub//' setting TypeCoordSystem = HGC'
-         end if
-         TypeCoordSystem  = 'HGC'
-         iSignRotationIC = 0
-         UseRotatingFrame = .true.
       end if
 
       if(TypeCoordSystem == 'HGI' .and. NameThisComp /= 'OH' &
@@ -3564,6 +3551,17 @@ contains
            call stop_mpi(NameSub//' missing stereo B traj file.')
       if (.not.all(TypeSatPos_I /= 'earth') .and. all(NameSat_I /= 'earth')) &
            call stop_mpi(NameSub//' missing earth traj file.')
+
+
+      ! Set coordinate system string to lower case for rotated HGR and HGI/HGC
+      if(dLongitudeHgr /= 0 .and. TypeCoordSystem == 'HGR') &
+           TypeCoordSystem = 'hgr'
+
+      if(dLongitudeHgi /= 0 .and. TypeCoordSystem == 'HGI') &
+           TypeCoordSystem = 'hgi'
+      
+      if(dLongitudeHgi /= 0 .and. TypeCoordSystem == 'HGC') &
+           TypeCoordSystem = 'hgc'
 
       ! Disable thread-related logicals, if UseFieldLineThreads=.false.
       if(.not.UseFieldLineThreads)then

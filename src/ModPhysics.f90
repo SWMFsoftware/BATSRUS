@@ -1219,7 +1219,7 @@ contains
     character(len=*), parameter:: NameSub = 'update_angular_velocity'
     !--------------------------------------------------------------------------
     select case(TypeCoordSystem)
-    case('HGI')
+    case('HGI', 'hgi')
        ! In the HGI system the Solar angular velocity vector points towards +Z
        OmegaBody_D = [ 0., 0., OmegaBody ]
     case('GSE')

@@ -75,7 +75,7 @@ contains
     use ModAdvance, ONLY : State_VGB
     use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
     use ModMpi
-    use CON_axes, ONLY : transform_matrix, rot_matrix_z, dLongitudeHgi
+    use CON_axes, ONLY : transform_matrix
     use ModCoordTransform, ONLY : rot_matrix_z, cross_product
     use ModUtilities, ONLY: lower_case, split_string, join_string, &
          open_file, close_file
@@ -197,8 +197,6 @@ contains
     else
        ! Convert to HGI
        FromObs_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
-       if(dLongitudeHgi /= 0)&
-            FromObs_DD = matmul(FromObs_DD, rot_matrix_z(-dLongitudeHgi))
     end if
 
     iSat = 0

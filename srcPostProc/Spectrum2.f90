@@ -1,7 +1,9 @@
 ! This as a testing and stand alone Spectrum main program.
 program spectrum
-  use BATL_size, ONLY: nDim, MaxBlock, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use BATL_lib, ONLY: test_start, test_stop, iProc, nProc, iComm, init_mpi, clean_mpi
+  use BATL_size, ONLY: &
+       nDim, MaxBlock, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iProc, nProc, iComm, init_mpi, clean_mpi
   use BATL_test, ONLY: StringTest, iBlockTest
   use ModReadParam
   use ModNodes, ONLY: clean_mod_nodes
@@ -313,7 +315,8 @@ contains
         case('HGI')
         case('SAT')
         case default
-          call stop_mpi('Observer coordinate system '//trim(TypeObsCoord)//' not supported.')
+           call stop_mpi('Observer coordinate system '//trim(TypeObsCoord)// &
+                ' not supported.')
         end select
         call read_var('DoObsRotate', DoObsRotate)
         if (DoObsRotate) then

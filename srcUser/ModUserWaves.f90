@@ -886,14 +886,16 @@ contains
           Pressure = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
           Density = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
 
-          if (TypeCoordSystem =='HGC') then
+          if (TypeCoordSystem =='HGC' .or. TypeCoordSystem =='hgc') then
              RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock) &
-                  - State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*Xyz_DGB(y_,i,j,k,iBlock)
+                  - State_VGB(Rho_,i,j,k,iBlock) &
+                  *OmegaSun*Xyz_DGB(y_,i,j,k,iBlock)
 
              RhoU_D(2) = State_VGB(RhoUy_,i,j,k,iBlock) &
-                  + State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*Xyz_DGB(x_,i,j,k,iBlock)
+                  + State_VGB(Rho_,i,j,k,iBlock) &
+                  *OmegaSun*Xyz_DGB(x_,i,j,k,iBlock)
 
-          elseif (TypeCoordSystem == 'HGI') then
+          elseif (TypeCoordSystem == 'HGI' .or. TypeCoordSystem == 'hgi') then
              RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock)
              RhoU_D(2) = State_VGB(RhoUy_,i,j,k,iBlock)
           end if

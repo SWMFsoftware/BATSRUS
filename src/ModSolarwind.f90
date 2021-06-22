@@ -324,8 +324,8 @@ contains
              ! GSE -> HGI
              Transform_DD = HgiGse_DD
           else
-             Transform_DD = &
-                  transform_matrix(Time_Simulation, TypeCoordSystem, NameInputCoord)
+             Transform_DD = transform_matrix( &
+                  Time_Simulation, TypeCoordSystem, NameInputCoord)
           end if
 
           do iVectorVar = 1, nVectorVar

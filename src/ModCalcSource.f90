@@ -749,7 +749,7 @@ contains
        if(UseRotatingFrame)then
           ! Add centrifugal and Coriolis forces
           select case(TypeCoordSystem)
-          case('HGC','HGR','GEO')
+          case('HGC','HGR','hgc','hgr','GEO')
              ! This is a special case since Omega is parallel with the Z axis
              Omega2 = OmegaBody**2
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
