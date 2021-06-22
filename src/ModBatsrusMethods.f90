@@ -625,6 +625,8 @@ contains
 
     call advect_all_points
 
+    call user_action('timestep done')
+    
     if(UseParticles) call advect_particle_line
 
     ! Re-calculate the active PIC regions
