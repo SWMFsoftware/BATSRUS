@@ -203,7 +203,7 @@ contains
     call timing_start(NameSub)
 
     !$acc update host(State_VGB, B0_DGB, dt_BLK)
-    
+
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
@@ -363,7 +363,7 @@ contains
     end if
 
     !$acc update device(dt_BLK)
-    
+
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
   !============================================================================
