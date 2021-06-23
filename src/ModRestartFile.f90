@@ -190,7 +190,7 @@ contains
 
   subroutine write_restart_files
 
-    use ModB0,       ONLY: UseB0, add_b0, subtract_b0
+    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
     use ModGeometry, ONLY: true_cell
     use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
@@ -202,6 +202,8 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
+    !$acc update host(State_VGB, B0_DGB)
+    
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
