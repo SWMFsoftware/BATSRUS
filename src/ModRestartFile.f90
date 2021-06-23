@@ -202,7 +202,7 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    !$acc update host(State_VGB, B0_DGB)
+    !$acc update host(State_VGB, B0_DGB, dt_BLK)
     
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -362,6 +362,8 @@ contains
        write(*,*)NameSub,' finished'
     end if
 
+    !$acc update device(dt_BLK)
+    
     call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
   !============================================================================
