@@ -91,7 +91,8 @@ contains
              call read_var('RhoPerCpcp', RhoPerCpcp_I(iDensity))
           end do
        end if
-
+       !$acc update device(UseCpcpBc)
+       
     case("#YOUNGBOUNDARY")
        call read_var('UseYoungBc', UseYoungBc)
        if(UseYoungBc) then

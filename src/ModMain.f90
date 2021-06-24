@@ -77,6 +77,7 @@ module ModMain
   ! Dimensions of the buffer grid between SC and IH
 
   logical :: UseIe = .false.
+  !$acc declare create(UseIe)
   logical :: UsePw = .false.
 
   logical :: UseIm = .false.

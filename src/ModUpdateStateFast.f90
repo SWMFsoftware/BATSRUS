@@ -13,7 +13,7 @@ module ModUpdateStateFast
        UseBody, UseBorisCorrection, ClightFactor, UseRhoMin, UsePMin
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I
+  use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
@@ -33,7 +33,7 @@ module ModUpdateStateFast
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
-       TypeCoordSystem
+       TypeCoordSystem, useIe
   use ModB0, ONLY: B0_DGB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
@@ -42,6 +42,7 @@ module ModUpdateStateFast
   use ModSolarWind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: get_axes
   use ModUtilities, ONLY: CON_stop
+  use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I  
 
   implicit none
 
@@ -64,6 +65,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+    if( UseCpcpBc .and. UseIe)then
+       !$acc update device(RhoCpcp_I)
+    endif
+    
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -1844,7 +1849,7 @@ contains
     integer:: i, j, k, iBlock
     !--------------------------------------------------------------------------
 
-    if (iTypeCellBc_I(2) == VaryBC_)then
+    if (IsTimeAccurate .and. iTypeCellBc_I(2) == VaryBC_)then
        call get_solar_wind_point(TimeSimulation, [x2, 0., 0.], &
             CellState_VI(:,2))
        ! Convert velocity to momentum
@@ -2074,7 +2079,11 @@ contains
        end where
        ! where(DefaultState_V(1:nVar) > 0.0)
        !   VarsGhostFace_V = FaceState_VI(:,body1_)
-       ! endwhere
+       ! endwheree
+
+       if( UseCpcpBc .and. UseIe)then
+          VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I(1:nIonFluid)
+       end if
 
        ! Set pressures, including electron pressure, to float.
        VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)

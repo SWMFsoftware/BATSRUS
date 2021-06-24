@@ -361,6 +361,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
+    !$acc update device(UseIe)
   end subroutine GM_init_session
   !============================================================================
 

@@ -58,6 +58,7 @@ module ModIeCoupling
   logical, public:: UseCpcpBc = .false.
   real,    public:: Rho0Cpcp_I(nIonDensity)=18.0, RhoPerCpcp_I(nIonDensity)=0.2
   real,    public:: RhoCpcp_I(nIonDensity) = -1000.0
+  !$acc declare create(UseCpcpBc, RhoCpcp_I)
 
   ! Local variables
   real:: dThetaIono, dPhiIono
