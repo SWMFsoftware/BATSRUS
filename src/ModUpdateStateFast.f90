@@ -42,7 +42,7 @@ module ModUpdateStateFast
   use ModSolarWind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: get_axes
   use ModUtilities, ONLY: CON_stop
-  use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I  
+  use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
 
   implicit none
 
@@ -68,7 +68,7 @@ contains
     if( UseCpcpBc .and. UseIe)then
        !$acc update device(RhoCpcp_I)
     endif
-    
+
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -2114,7 +2114,7 @@ contains
     if (UseIe) then
        BFace_D = VarsTrueFace_V(Bx_:Bz_) + &
             0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
-       
+
        ! Get the E x B / B^2 velocity
        call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, BFace_D, u_D)
 

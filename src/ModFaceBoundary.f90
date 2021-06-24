@@ -92,7 +92,7 @@ contains
           end do
        end if
        !$acc update device(UseCpcpBc)
-       
+
     case("#YOUNGBOUNDARY")
        call read_var('UseYoungBc', UseYoungBc)
        if(UseYoungBc) then
