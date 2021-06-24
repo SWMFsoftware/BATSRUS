@@ -2051,13 +2051,15 @@ contains
     ! Set boundary conditions on the face between the physical
     ! cells i,j,k,iBlock and body cell iBody,jBody,kBody,iBlock.
 
+    use ModIeCoupling, ONLY: calc_inner_bc_velocity
+
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)
     integer, intent(in):: i, j, k, iBody, jBody, kBody, iBlock
 
     real:: Coef
 
-    real:: XyzFace_D(3), uRot_D(3)
+    real:: XyzFace_D(3), u_D(3), BFace_D(3)
 
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
@@ -2109,15 +2111,31 @@ contains
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
     endif
 
+    if (UseIe) then
+       BFace_D = VarsTrueFace_V(Bx_:Bz_) + &
+            0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
+       
+       ! Get the E x B / B^2 velocity
+       call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, BFace_D, u_D)
+
+       ! Subtract the radial component of the velocity (no outflow/inflow)
+       u_D = u_D &
+            - XyzFace_D * sum(XyzFace_D*u_D) / sum(XyzFace_D**2)
+
+       VarsGhostFace_V(iUx_I) = 2*u_D(x_) + VarsGhostFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = 2*u_D(y_) + VarsGhostFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = 2*u_D(z_) + VarsGhostFace_V(iUz_I)
+    end if
+
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
-       uRot_D = cross_product(OmegaBody_D, XyzFace_D)
+       u_D = cross_product(OmegaBody_D, XyzFace_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
-       VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iUx_I)
-       VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iUy_I)
-       VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iUz_I)
+       VarsGhostFace_V(iUx_I) = 2*u_D(x_) + VarsGhostFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = 2*u_D(y_) + VarsGhostFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = 2*u_D(z_) + VarsGhostFace_V(iUz_I)
     end if
 
   end subroutine set_face
