@@ -617,7 +617,6 @@ contains
     character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call timing_start(NameSub)
 
     if(DoTest)write(*,*) NameSub,' starting with XyzSm(iMag=1)=', &
          XyzSm_DI(:,1)*No2Si_V(UnitX_)
@@ -628,6 +627,8 @@ contains
 
     ! Check if IE has provided the necessary information
     if(.not.allocated(SigmaHall_II)) RETURN
+
+    call timing_start(NameSub)
 
     ! Calculate the height integrated Hall and Pedersen current densities
     call calc_ie_currents
