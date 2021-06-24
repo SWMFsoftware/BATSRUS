@@ -3599,6 +3599,7 @@ contains
          DoLimitMomentum      = .false.
          DoConserveFlux       = .false.
 
+         nOrderProlong = 2
       end if
 
       UseDbTrickNow = UseDbTrick
