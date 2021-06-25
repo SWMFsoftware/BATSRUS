@@ -445,7 +445,7 @@ contains
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
       use ModPhysics, ONLY: xBody2, yBody2, zBody2, OmegaBody_D
-      use ModAdvance, ONLY: UseMultiSpecies, iTypeUpdate, UpdateOrig_
+      use ModAdvance, ONLY: UseMultiSpecies
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
            UseOutflowPressure, pOutflow
@@ -997,7 +997,7 @@ contains
          call stop_mpi(NameSub//': incorrect TypeFaceBc_I='//TypeBc)
       end select
 
-      if (UseIe .and. iBoundary == Body1_ .and. iTypeUpdate == UpdateOrig_)then
+      if (UseIe .and. iBoundary == Body1_)then
          ! Get the E x B / B^2 velocity
          call calc_inner_bc_velocity(TimeBc, FBC%FaceCoords_D, &
               FBC%VarsTrueFace_V(Bx_:Bz_) + FBC%B0Face_D, uIono_D)

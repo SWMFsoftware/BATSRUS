@@ -2105,26 +2105,26 @@ contains
        VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
     endif
 
-    !if (UseIe) then
-    ! Apply drift velocity. For Earth this is not doing much, 
-    ! and the current implementation uses a lot of calls and variables,
-    ! so porting to the GPU is complicated. We could precalculate the
-    ! drift velocities on a spherical lon-lat grid and interpolate. 
-    !
-    !   BFace_D = VarsTrueFace_V(Bx_:Bz_) + &
-    !        0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
-    !
-    !   ! Get the E x B / B^2 velocity
-    !   call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, BFace_D, u_D)
-    !
-    !   ! Subtract the radial component of the velocity (no outflow/inflow)
-    !   u_D = u_D &
-    !        - XyzFace_D * sum(XyzFace_D*u_D) / sum(XyzFace_D**2)
-    !
-    !   VarsGhostFace_V(iUx_I) = 2*u_D(x_) + VarsGhostFace_V(iUx_I)
-    !   VarsGhostFace_V(iUy_I) = 2*u_D(y_) + VarsGhostFace_V(iUy_I)
-    !   VarsGhostFace_V(iUz_I) = 2*u_D(z_) + VarsGhostFace_V(iUz_I)
-    !end if
+    if (UseIe) then
+       ! Apply drift velocity. For Earth this is not doing much, 
+       ! and the current implementation uses a lot of calls and variables,
+       ! so porting to the GPU is complicated. We could precalculate the
+       ! drift velocities on a spherical lon-lat grid and interpolate. 
+    
+       BFace_D = VarsTrueFace_V(Bx_:Bz_) + &
+            0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
+    
+       ! Get the E x B / B^2 velocity
+       call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, BFace_D, u_D)
+    
+       ! Subtract the radial component of the velocity (no outflow/inflow)
+       u_D = u_D &
+            - XyzFace_D * sum(XyzFace_D*u_D) / sum(XyzFace_D**2)
+    
+       VarsGhostFace_V(iUx_I) = 2*u_D(x_) + VarsGhostFace_V(iUx_I)
+       VarsGhostFace_V(iUy_I) = 2*u_D(y_) + VarsGhostFace_V(iUy_I)
+       VarsGhostFace_V(iUz_I) = 2*u_D(z_) + VarsGhostFace_V(iUz_I)
+    end if
 
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
