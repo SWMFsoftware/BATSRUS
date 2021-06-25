@@ -65,10 +65,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
-    if( UseCpcpBc .and. UseIe)then
-       !$acc update device(RhoCpcp_I)
-    endif
-
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -2051,8 +2047,6 @@ contains
     ! Set boundary conditions on the face between the physical
     ! cells i,j,k,iBlock and body cell iBody,jBody,kBody,iBlock.
 
-!    use ModIeCoupling, ONLY: calc_inner_bc_velocity
-
     real, intent(in)   :: VarsTrueFace_V(nVar)
     real, intent(out)  :: VarsGhostFace_V(nVar)
     integer, intent(in):: i, j, k, iBody, jBody, kBody, iBlock
@@ -3007,6 +3001,158 @@ contains
 
   end subroutine get_b0_dipole
   !============================================================================
+  subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
+       iHemisphere, DdirDxyz_DD)
+    !$acc routine seq
+    
+    ! This subroutine is a simplified version of
+    ! CON_planet_field.f90:map_planet_field11
+    
+    use CON_axes, ONLY: SmgGsm_DD
+
+    real,              intent(in) :: XyzIn_D(3)   ! spatial position
+    real,              intent(in) :: rMapIn       ! radial distance to map to
+    real,              intent(out):: XyzMap_D(3)      ! mapped position
+    integer,           intent(out):: iHemisphere      ! which hemisphere
+    real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
+
+    real             :: Xyz_D(3)        ! Normalized and rotated position
+
+    ! Temporary variables for the analytic mapping
+    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
+    real    :: Convert_DD(3,3)
+
+    character(len=*), parameter:: NameSub = 'map_planet_field'
+    !--------------------------------------------------------------------------
+
+    Xyz_D = XyzIn_D
+    rMap  = rMapIn
+
+    ! Assumed GSM is used.
+    Convert_DD = SmgGsm_DD
+
+    Xyz_D = matmul(Convert_DD, Xyz_D)
+
+    ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
+    iHemisphere = sign(1.0,Xyz_D(3))
+
+    ! Normalized radial distance
+    r = sqrt(sum(Xyz_D**2))
+
+    ! Calculate powers of the radii
+    rMap2 = rMap**2
+    rMap3 = rMap2*rMap
+    r3    = r**3
+
+    ! This is the ratio of input and mapped X and Y components
+    XyRatio = sqrt(rMap3/r3)
+
+    ! Calculate the X and Y components of the mapped position
+    XyzMap_D(1:2) = XyRatio*Xyz_D(1:2)
+
+    ! The squared distance of the mapped position from the magnetic axis
+    XyMap2 = XyzMap_D(1)**2 + XyzMap_D(2)**2
+
+    ! Check if there is a mapping at all
+    if(rMap2 < XyMap2)then
+       ! The point does not map to the given radius
+       iHemisphere = 0
+
+       ! Put mapped point to the magnetic equator
+       XyzMap_D(1:2) = (rMap/sqrt(Xyz_D(1)**2 + Xyz_D(2)**2))*Xyz_D(1:2)
+       XyzMap_D(3) = 0
+    else
+       ! Calculate the Z component of the mapped position
+       ! Select the same hemisphere as for the input position
+       XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
+    end if
+
+    XyMap = sqrt(XyMap2)
+
+    DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
+         ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
+         ( XyzMap_D(3) * XyMap / XyRatio )
+
+    ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
+    DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
+
+    ! dPhi/dx = -y/(x^2+y^2)
+    ! dPhi/dy =  x/(x^2+y^2)
+    Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
+    DdirDxyz_DD(2,1) = - Xyz_D(2) / Xy2
+    DdirDxyz_DD(2,2) =   Xyz_D(1) / Xy2
+
+    ! dPhi/dz = 0.0
+    DdirDxyz_DD(2,3) = 0.0
+
+    ! Transform into the system of the input coordinates
+    ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
+    DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+
+  end subroutine map_planet_field
+  !============================================================================
+
+  subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
+    !$acc routine seq
+    
+    use ModIeCoupling, ONLY: dIonoPotential_DII, rIonosphere, &
+         dThetaIono, dPhiIono
+    use ModCoordTransform, ONLY: xyz_to_dir
+
+    real, intent(in)    :: tSimulation      ! Simulation time
+    real, intent(in)    :: Xyz_D(3)    ! Position vector
+    real, intent(in)    :: b_D(3)      ! Magnetic field
+
+    real, intent(out)   :: u_D(3)      ! Velocity vector
+
+    real :: XyzIono_D(3)    ! Mapped point on the ionosphere
+    real :: Theta, Phi           ! Mapped point colatitude, longitude
+    real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
+    real :: Dist1, Dist2         ! Distance from ionosphere grid point
+
+    real :: dPotential_D(2)      ! Gradient of potential at the mapped position
+    real :: DdirDxyz_DD(2,3)     ! Jacobian matrix between Theta, Phi and Xyz_D
+    real :: eField_D(3)     ! Electric field
+    real :: B2                   ! Magnetic field squared
+
+    integer :: iTheta, iPhi, iHemisphere
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
+    !--------------------------------------------------------------------------
+    ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
+    ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
+    call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
+         iHemisphere, DdirDxyz_DD)
+
+    ! Calculate angular coordinates
+    call xyz_to_dir(XyzIono_D, Theta, Phi)
+
+    ThetaNorm = Theta / dThetaIono
+    PhiNorm   = Phi   / dPhiIono
+
+
+    iTheta    = floor(ThetaNorm) + 1
+    iPhi      = floor(PhiNorm)   + 1
+
+    Dist1     = ThetaNorm - (iTheta - 1)
+    Dist2     = PhiNorm   - (iPhi   - 1)
+
+    dPotential_D = &
+         (1 - Dist1)*( (1-Dist2) * dIonoPotential_DII(:, iTheta  , iPhi  )  &
+         +             Dist2     * dIonoPotential_DII(:, iTheta  , iPhi+1)) &
+         + Dist1    *( (1-Dist2) * dIonoPotential_DII(:, iTheta+1, iPhi  )  &
+         +             Dist2     * dIonoPotential_DII(:, iTheta+1, iPhi+1))
+
+    ! E = -grad(Potential) = - dPotential/d(Theta,Phi) * d(Theta,Phi)/d(x,y,z)
+    eField_D = - matmul( dPotential_D, DdirDxyz_DD)
+
+    ! Magnetic field
+    B2  = sum(b_D**2)
+
+    ! U = (E x B) / B^2
+    u_D = cross_product(eField_D, b_D) / B2
+  end subroutine calc_inner_bc_velocity
 
 end module ModUpdateStateFast
 !==============================================================================

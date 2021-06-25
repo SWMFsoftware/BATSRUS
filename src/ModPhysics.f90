@@ -1211,7 +1211,7 @@ contains
 
     ! Update the angular velocity OmegaBody_D
 
-    use CON_axes,          ONLY: get_axes
+    use CON_axes,          ONLY: get_axes, SmgGsm_DD
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
 
     real:: RotAxis_D(3) ! Avoid race condition in OpenMP
@@ -1230,7 +1230,7 @@ contains
        call get_axes(Time_Simulation, RotAxisGsmOut_D=RotAxis_D)
        OmegaBody_D = OmegaBody * RotAxis_D
     end select
-
+    !$acc update device(SmgGsm_DD)
   end subroutine update_angular_velocity
   !============================================================================
   subroutine set_dimensional_factor(nPlotVar, NameVar_V, &

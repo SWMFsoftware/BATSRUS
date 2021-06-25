@@ -33,12 +33,14 @@ module ModIeCoupling
   ! Ionosphere grid description
   integer, public              :: nThetaIono = -1, nPhiIono = -1
   real,    public              :: rIonosphere
+  !$acc declare create(rIonosphere)
   real,    public, allocatable :: ThetaIono_I(:), PhiIono_I(:)
 
   ! Ionosphere potential and its gradient
   real, allocatable, public :: IonoPotential_II(:,:)
   real, allocatable, public :: dIonoPotential_DII(:,:,:)
-
+  !$acc declare create(dIonoPotential_DII)
+  
   ! Joule heating
   real, public, allocatable :: IonoJouleHeating_II(:,:)
 
@@ -61,7 +63,8 @@ module ModIeCoupling
   !$acc declare create(UseCpcpBc, RhoCpcp_I)
 
   ! Local variables
-  real:: dThetaIono, dPhiIono
+  real, public:: dThetaIono, dPhiIono
+  !$acc declare create(dThetaIono, dPhiIono)
   real, allocatable:: SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
 
   ! Velocity nudging
@@ -119,6 +122,7 @@ contains
     if(DoTest)write(*,*) NameSub,': nThetaIono, nPhiIono=', &
          nThetaIono, nPhiIono
 
+    !$acc update device(rIonosphere, dThetaIono, dPhiIono)
     call test_stop(NameSub, DoTest)
   end subroutine init_ie_grid
   !============================================================================
@@ -219,6 +223,7 @@ contains
        RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
             * 0.5*(CpcpNorth + CpcpSouth) &
             * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
+       !$acc update device(RhoCpcp_I)
     end if
 
   end subroutine calc_ie_cpcp
@@ -276,6 +281,7 @@ contains
     ! Calculate cross polar cap potentials and related boundary conditions
     call calc_ie_cpcp
 
+    !$acc update device(dIonoPotential_DII)
     call test_stop(NameSub, DoTest)
   end subroutine calc_grad_ie_potential
   !============================================================================
