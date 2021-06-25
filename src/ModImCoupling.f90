@@ -316,6 +316,7 @@ contains
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTrace, ONLY: trace_field_grid
+    use ModB0, ONLY: B0_DGB
 
     real :: Factor
 
@@ -335,7 +336,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
-
+    
+    !$acc update host(State_VGB, B0_DGB)
+    
     ! Are we coupled at all?
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
@@ -513,6 +516,7 @@ contains
 
     if(allocated(iDens_I)) deallocate(iDens_I)
 
+    !$acc update device(State_VGB, B0_DGB)
     call test_stop(NameSub, DoTest)
   end subroutine apply_im_pressure
   !============================================================================

@@ -523,6 +523,8 @@ contains
 
     if(DoTest)write(*,*) NameSub,' starting'
 
+    !$acc update host(State_VGB,B0_DGB)
+    
     ! Initialize constants
     DoTraceRay     = .true.
     DoMapRay       = .false.
@@ -3870,7 +3872,7 @@ contains
 
     use ModMain
     use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
-    use ModB0,       ONLY: get_b0
+    use ModB0,       ONLY: get_b0, B0_DGB
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -3938,6 +3940,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(oktime)call timing_reset('ray_pass',2)
+
+    !$acc update host(State_VGB,B0_DGB)
 
     DoTestRay = .false.
 
