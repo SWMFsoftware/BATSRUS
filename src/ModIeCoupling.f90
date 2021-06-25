@@ -40,7 +40,7 @@ module ModIeCoupling
   real, allocatable, public :: IonoPotential_II(:,:)
   real, allocatable, public :: dIonoPotential_DII(:,:,:)
   !$acc declare create(dIonoPotential_DII)
-  
+
   ! Joule heating
   real, public, allocatable :: IonoJouleHeating_II(:,:)
 

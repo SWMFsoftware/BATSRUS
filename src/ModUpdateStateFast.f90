@@ -2110,14 +2110,14 @@ contains
        ! Apply E x B / B^2 drift velocity
        b_D = VarsTrueFace_V(Bx_:Bz_) + &
             0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
-    
+
        ! Get the E x B / B^2 velocity
        call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, b_D, u_D)
-    
+
        ! Subtract the radial component of the velocity (no outflow/inflow)
        u_D = u_D &
             - XyzFace_D * sum(XyzFace_D*u_D) / sum(XyzFace_D**2)
-    
+
        VarsGhostFace_V(iUx_I) = 2*u_D(x_) + VarsGhostFace_V(iUx_I)
        VarsGhostFace_V(iUy_I) = 2*u_D(y_) + VarsGhostFace_V(iUy_I)
        VarsGhostFace_V(iUz_I) = 2*u_D(z_) + VarsGhostFace_V(iUz_I)
@@ -3001,10 +3001,10 @@ contains
   subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
        iHemisphere, DdirDxyz_DD)
     !$acc routine seq
-    
+
     ! This subroutine is a simplified version of
     ! CON_planet_field.f90:map_planet_field11
-    
+
     use CON_axes, ONLY: SmgGsm_DD
 
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
@@ -3021,7 +3021,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'map_planet_field'
     !--------------------------------------------------------------------------
-
     Xyz_D = XyzIn_D
     rMap  = rMapIn
 
@@ -3091,7 +3090,7 @@ contains
 
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
     !$acc routine seq
-    
+
     use ModIeCoupling, ONLY: dIonoPotential_DII, rIonosphere, &
          dThetaIono, dPhiIono
     use ModCoordTransform, ONLY: xyz_to_dir
@@ -3128,7 +3127,6 @@ contains
     ThetaNorm = Theta / dThetaIono
     PhiNorm   = Phi   / dPhiIono
 
-
     iTheta    = floor(ThetaNorm) + 1
     iPhi      = floor(PhiNorm)   + 1
 
@@ -3150,6 +3148,7 @@ contains
     ! U = (E x B) / B^2
     u_D = cross_product(eField_D, b_D) / B2
   end subroutine calc_inner_bc_velocity
+  !============================================================================
 
 end module ModUpdateStateFast
 !==============================================================================

@@ -102,7 +102,7 @@ contains
     if(DoTest)write(*,*)NameSub,': starting'
 
     !$acc update host(State_VGB, B0_DGB)
-    
+
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
          Grid_C(IE_) % Coord2_I, &

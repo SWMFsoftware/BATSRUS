@@ -336,9 +336,9 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
-    
+
     !$acc update host(State_VGB, B0_DGB)
-    
+
     ! Are we coupled at all?
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
