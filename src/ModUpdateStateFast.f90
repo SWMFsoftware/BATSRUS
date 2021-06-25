@@ -720,7 +720,8 @@ contains
 
              ! Convert to Boris variables before update
              if(UseBorisCorrection) call mhd_to_boris( &
-                  StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), IsConserv)
+                  StateOld_VGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock), &
+                  IsConserv)
 
              ! Update state
              State_VGB(:,i,j,k,iBlock) = StateOld_VGB(:,i,j,k,iBlock) &
@@ -2053,7 +2054,7 @@ contains
 
     real:: Coef
 
-    real:: XyzFace_D(3), u_D(3), BFace_D(3)
+    real:: XyzFace_D(3), u_D(3), b_D(3)
 
     real, parameter:: DensityJumpLimit=0.1
     !--------------------------------------------------------------------------
@@ -2106,16 +2107,12 @@ contains
     endif
 
     if (UseIe) then
-       ! Apply drift velocity. For Earth this is not doing much, 
-       ! and the current implementation uses a lot of calls and variables,
-       ! so porting to the GPU is complicated. We could precalculate the
-       ! drift velocities on a spherical lon-lat grid and interpolate. 
-    
-       BFace_D = VarsTrueFace_V(Bx_:Bz_) + &
+       ! Apply E x B / B^2 drift velocity
+       b_D = VarsTrueFace_V(Bx_:Bz_) + &
             0.5*(B0_DGB(:,i,j,k,iBlock) + B0_DGB(:,iBody,jBody,kBody,iBlock))
     
        ! Get the E x B / B^2 velocity
-       call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, BFace_D, u_D)
+       call calc_inner_bc_velocity(TimeSimulation, XyzFace_D, b_D, u_D)
     
        ! Subtract the radial component of the velocity (no outflow/inflow)
        u_D = u_D &
