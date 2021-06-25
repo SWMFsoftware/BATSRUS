@@ -320,11 +320,6 @@ contains
        ! Initialize axes (coordinate transformation matrices)
        call init_axes(StartTime)
 
-       if(DoReadSatelliteFiles)then
-          call read_satellite_input_files
-          DoReadSatelliteFiles = .false.
-       end if
-
        if(NameThisComp == 'GM') then
           ! Set and obtain GM specific parameters from CON_planet and CON_axes
           call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
@@ -405,6 +400,12 @@ contains
 
        ! set physics uses dimensional solar wind data
        if (DoReadSolarwindFile) call read_solar_wind_file
+
+       ! Read satellite file
+       if(DoReadSatelliteFiles)then
+          call read_satellite_input_files
+          DoReadSatelliteFiles = .false.
+       end if
 
        call set_physics_constants
 
