@@ -4345,7 +4345,6 @@ contains
       end if
     end subroutine print_test
     !==========================================================================
-
     function follow_fast(surface_point,x_0,y_0,z_0) result(qface)
 
       ! Follow ray starting at initial position x_0,y_0,z_0 in direction iray
@@ -4383,9 +4382,7 @@ contains
 
       ! Counter for entering follow_fast_iono
       integer :: n_iono
-
       !------------------------------------------------------------------------
-
       if(DoTestRay)&
            write(*,*)'follow_fast: me,iBlock,surface_point,x_0,y_0,z_0,iray=',&
            iProc,iBlock,surface_point,x_0,y_0,z_0,iray
@@ -4594,23 +4591,22 @@ contains
 
       end do
 
-      if(DoTestRay)write(*,*)'Finished follow_fast at me,iBlock,nsegment,qface,x,xx=',&
+      if(DoTestRay)write(*,*) &
+           'Finished follow_fast at me,iBlock,nsegment,qface,x,xx=',&
            iProc,iBlock,nsegment,qface,x,&
            Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(x - 1.)
 
     end function follow_fast
     !==========================================================================
-
-    subroutine interpolate_bb(qx,qb)
+    subroutine interpolate_bb(qx, qb)
 
       ! Obtain normalized bb field at normalized location qx and put it into qb
 
       real, intent(in) :: qx(3)
       real, intent(out):: qb(3)
+      !------------------------------------------------------------------------
 
       ! Determine cell indices corresponding to location qx
-
-      !------------------------------------------------------------------------
       i1=floor(qx(1)); i2=i1+1
       j1=floor(qx(2)); j2=j1+1
       k1=floor(qx(3)); k2=k1+1
@@ -4632,14 +4628,12 @@ contains
 
     end subroutine interpolate_bb
     !==========================================================================
-
     real function interpolate_bb1(qbb)
+
+      ! Trilinear interpolation of qbb scalar
 
       real, intent(in):: qbb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
       !------------------------------------------------------------------------
-
-      ! Bilinear interpolation in 3D
-
       interpolate_bb1=&
            dx1*(   dy1*(   dz1*qbb(i2,j2,k2,iBlock)+&
            dz2*qbb(i2,j2,k1,iBlock))+&
@@ -4653,13 +4647,13 @@ contains
     end function interpolate_bb1
     !==========================================================================
     function interpolate_bb_v(nVar,qbb)
+
+      ! Trilinear interpolation of qbb vector
+
       integer, intent(in):: nVar
       real,    intent(in):: qbb(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
       real:: interpolate_bb_v(nVar)
       !------------------------------------------------------------------------
-
-      ! Bilinear interpolation in 3D
-
       interpolate_bb_v=&
            dx1*(   dy1*(   dz1*qbb(:,i2,j2,k2,iBlock)+&
            dz2*qbb(:,i2,j2,k1,iBlock))+&
@@ -4672,7 +4666,6 @@ contains
 
     end function interpolate_bb_v
     !==========================================================================
-
     subroutine interpolate_bb_node(qx,qb)
 
       ! Obtain normalized bb field at normalized location qx and put it into qb
@@ -4681,11 +4674,9 @@ contains
       real, intent(in) :: qx(3)
       real, intent(out):: qb(3)
       real :: qbD
-
       !------------------------------------------------------------------------
 
       ! Determine cell indices corresponding to location qx
-
       i1 = floor(qx(1)+0.5); i2 = i1 + 1
       j1 = floor(qx(2)+0.5); j2 = j1 + 1
       k1 = floor(qx(3)+0.5); k2 = k1 + 1
@@ -4696,7 +4687,6 @@ contains
       endif
 
       ! Get B0 values for location
-
       xx = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(qx - 1.)
 
       if(UseB0)then
@@ -4706,21 +4696,18 @@ contains
       end if
 
       ! Make sure that the interpolation uses inside indexes only
-
       i1 = max(1,i1)   ; j1 = max(1,j1);    k1 = max(1,k1)
       i2 = min(nI+1,i2); j2 = min(nJ+1,j2); k2 = min(nK+1,k2)
 
       ! Distances relative to the nodes
-
       dx1 = qx(1)+0.5-i1; dx2 = 1.-dx1
       dy1 = qx(2)+0.5-j1; dy2 = 1.-dy1
       dz1 = qx(3)+0.5-k1; dz2 = 1.-dz1
 
       ! Add in node interpolated B1 values and take aspect ratios into account
-
-      qb(1) = (qb(1)+interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBlock)
-      qb(2) = (qb(2)+interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBlock)
-      qb(3) = (qb(3)+interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBlock)
+      qb(1) = (qb(1) + interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBlock)
+      qb(2) = (qb(2) + interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBlock)
+      qb(3) = (qb(3) + interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBlock)
 
       ! Normalize
       qbD = norm2(qb)
@@ -4733,14 +4720,12 @@ contains
 
     end subroutine interpolate_bb_node
     !==========================================================================
-
     real function interpolate_bb1_node(qbb)
+
+      ! Trilinear interpolation 
 
       real, intent(in):: qbb(1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
       !------------------------------------------------------------------------
-
-      ! Bilinear interpolation in 3D
-
       interpolate_bb1_node=&
            dx1*(   dy1*(   dz1*qbb(i2,j2,k2,iBlock)+&
            dz2*qbb(i2,j2,k1,iBlock))+&
@@ -4753,7 +4738,6 @@ contains
 
     end function interpolate_bb1_node
     !==========================================================================
-
     logical function follow_fast_iono()
 
       ! Follow ray inside ionosphere starting from xx which is given in
@@ -4769,7 +4753,6 @@ contains
 
       integer :: iHemisphere
       real    :: x_D(3)
-
       !------------------------------------------------------------------------
       call map_planet_field(Time_Simulation, xx, TypeCoordSystem//' NORM', &
            rIonosphere, x_D, iHemisphere)
@@ -4789,16 +4772,12 @@ contains
 
     end function follow_fast_iono
     !==========================================================================
-
     subroutine evaluate_bb(qx,qb)
 
       ! Obtain normalized bb field at true location qx and put it into qb
 
       real, intent(in) :: qx(3)
       real, intent(out):: qb(3)
-
-      ! Get B0
-
       !------------------------------------------------------------------------
       call get_b0(qx, qb)
 
