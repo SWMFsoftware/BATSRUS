@@ -4604,9 +4604,9 @@ contains
 
       real, intent(in) :: qx(3)
       real, intent(out):: qb(3)
-      !------------------------------------------------------------------------
 
       ! Determine cell indices corresponding to location qx
+      !------------------------------------------------------------------------
       i1=floor(qx(1)); i2=i1+1
       j1=floor(qx(2)); j2=j1+1
       k1=floor(qx(3)); k2=k1+1
@@ -4722,7 +4722,7 @@ contains
     !==========================================================================
     real function interpolate_bb1_node(qbb)
 
-      ! Trilinear interpolation 
+      ! Trilinear interpolation
 
       real, intent(in):: qbb(1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
       !------------------------------------------------------------------------
