@@ -38,14 +38,13 @@ module ModImCoupling
   ! indexes of passed variables
   integer, public, allocatable :: iVarCouple_V(:)
 
-  ! Local variables --------------------------------------------
+  ! Local variables
 
   ! The size of the IM grid
   integer :: iSize, jSize
 
 contains
   !============================================================================
-
   subroutine im_pressure_init(iSizeIn,jSizeIn)
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     integer :: iSizeIn, jSizeIn
@@ -74,8 +73,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine im_pressure_init
   !============================================================================
-
-  subroutine get_im_pressure(iBlock, nDensity,pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_IC)
+  subroutine get_im_pressure(iBlock, nDensity,pIm_IC, RhoIm_IC, TauCoeffIm_C, &
+       PparIm_IC)
 
     use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion, &
          dLatSmoothIm, UseB0
@@ -152,7 +151,8 @@ contains
              Lat = ray(1,1,i,j,k,iBlock)
           endif
 
-          ! write(*,*) i,j,k,iBlock,Xyz_DGB(1:3,i,j,k,iBlock),Lat,ray(1,2,i,j,k,iBlock),LatMaxIm
+          ! write(*,*) i,j,k,iBlock,Xyz_DGB(1:3,i,j,k,iBlock),
+          !    Lat,ray(1,2,i,j,k,iBlock),LatMaxIm
           ! Do not modify pressure along field lines outside the IM grid
           if(Lat > LatMaxIm .or. Lat < LatMinIm) CYCLE
 
@@ -305,7 +305,6 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_im_pressure
   !============================================================================
-
   subroutine apply_im_pressure
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
@@ -337,10 +336,11 @@ contains
     call test_start(NameSub, DoTest)
     if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
 
-    !$acc update host(State_VGB, B0_DGB)
-
     ! Are we coupled at all?
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
+
+    call timing_start(NameSub)
+    !$acc update host(State_VGB)
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 
@@ -516,10 +516,11 @@ contains
 
     if(allocated(iDens_I)) deallocate(iDens_I)
 
-    !$acc update device(State_VGB, B0_DGB)
+    !$acc update device(State_VGB)
+    call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
+
   end subroutine apply_im_pressure
   !============================================================================
-
 end module ModImCoupling
 !==============================================================================
