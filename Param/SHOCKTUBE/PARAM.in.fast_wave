@@ -22,10 +22,6 @@ NONE			TypeNormalization
 #CONSERVEFLUX
 F			DoConserveFlux
 
-! Switch of TVD and Accurate res change
-#PROLONGATION
-1			nOrderProlong
-
 #GRID
 5			nRootBlock1
 5			nRootBlock2
