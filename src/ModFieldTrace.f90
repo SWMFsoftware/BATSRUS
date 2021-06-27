@@ -3973,14 +3973,14 @@ contains
        ! Store rayface into ray so we can see if there is any change
        ray(:,:,:,:,:,1:nBlockMax) = rayface(:,:,:,:,:,1:nBlockMax)
 
-       !!acc parallel loop gang independent
+       !! acc parallel loop gang independent
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
           ! Flag cells inside the ionosphere if necessary
           check_inside=Rmin_BLK(iBlock)<rTrace
 
-          !!acc loop vector collapse(3) independent
+          !! acc loop vector collapse(3) independent
           do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
              ! Exclude inside points
              if(ix>1 .and. ix<=nI .and. iy>1 .and. iy<=nJ &
@@ -4081,11 +4081,11 @@ contains
           call timing_show('ray_trace',1)
        end if
 
-       !!acc serial
+       !! acc serial
        ! Check if we are done by checking for significant changes in rayface
        done_me = all(abs(ray(:,:,:,:,:,1:nBlock) - &
             rayface(:,:,:,:,:,1:nBlock)) < dray_min)
-       !!acc end serial
+       !! acc end serial
 
        if(nProc > 1)then
           call MPI_allreduce(done_me,done,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
@@ -4144,7 +4144,7 @@ contains
 #endif
 
     ! Assign face ray values to cell centers
-    !!acc parallel loop gang independent private(check_inside)
+    !! acc parallel loop gang independent private(check_inside)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
@@ -4161,7 +4161,7 @@ contains
              end if
           end if
 #endif
-          !!acc loop vector collapse(3) independent
+          !! acc loop vector collapse(3) independent
           do iz=1,nK; do iy=1,nJ; do ix=1,nI
 
              ! Short cuts for inner and false cells
@@ -4208,10 +4208,10 @@ contains
     if(DoTest)write(*,*)'ray_trace starting conversion to lat/lon'
 
     ! Convert x, y, z to latitude and longitude, and status
-    !!acc parallel loop gang independent
+    !! acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       !!acc loop vector collapse(3) independent
+       !! acc loop vector collapse(3) independent
        do k=1,nK; do j=1,nJ; do i=1,nI
           call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
        end do; end do; end do
@@ -4301,10 +4301,10 @@ contains
               '   rayface=',rayface(:,:,ix,iy,iz,iBlock)
       end if
     end subroutine print_test
-#endif
     !==========================================================================
+#endif
     function follow_fast(surface_point,x_0,y_0,z_0) result(qface)
-      !!acc routine seq
+      !! acc routine seq
 
       ! Follow ray starting at initial position x_0,y_0,z_0 in direction iray
       ! until we hit the wall of the control volume or the ionosphere.
@@ -4558,8 +4558,8 @@ contains
     end function follow_fast
     !==========================================================================
     subroutine interpolate_bb_node(qx,qb)
-      !!acc routine seq
-      
+      !! acc routine seq
+
       ! Obtain normalized bb field at normalized location qx and put it into qb
       ! Interpolate B1 from nodes, take B0 from analytic expression
 
@@ -4608,7 +4608,7 @@ contains
            +                 dz2*b_DNB(:,i1,j1,k1,iBlock)))
 
       qb = qb/CellSize_DB(:,iBlock)
-      
+
       ! Normalize
       qbD = norm2(qb)
 
@@ -4621,7 +4621,7 @@ contains
     end subroutine interpolate_bb_node
     !==========================================================================
     logical function follow_fast_iono()
-      !!acc routine seq
+      !! acc routine seq
 
       ! Follow ray inside ionosphere starting from xx which is given in
       ! real coordinates and use analytic mapping.
@@ -4656,7 +4656,7 @@ contains
     end function follow_fast_iono
     !==========================================================================
     subroutine assign_ray(surface_point,qray)
-      !!acc routine seq
+      !! acc routine seq
 
       ! Assign value to qray(3) based on ray intersection
       ! given by the global variables iface and position x(3)
@@ -4789,8 +4789,8 @@ contains
   end subroutine ray_trace_fast
   !============================================================================
   subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
-    !!acc routine seq
-    
+    !! acc routine seq
+
     ! Collect weights for qrayface values that differ less than dray_max
     ! and interpolate the values corresponding to the largest weight
     ! The result is returned in qray.
@@ -4962,7 +4962,7 @@ contains
   end subroutine ray_pass_new
   !============================================================================
   subroutine prolong_ray_after_pass(iface,iBlock)
-    !!acc routine vector
+    !! acc routine vector
 
     ! For faces that are shared with a coarser neighbor, interpolate
     ! for all points which are not coinciding and where the ray is going out.
@@ -5181,7 +5181,7 @@ contains
 
     if(DoTest)write(*,*)'ray_pass starting prolongation'
 
-    !!acc parallel loop gang independent
+    !! acc parallel loop gang independent
     do iBlock=1,nBlockMax
        if(Unused_B(iBlock))CYCLE
 
@@ -5691,8 +5691,8 @@ contains
     end subroutine buf2subrayface
     !==========================================================================
     subroutine prolong_ray
-      !!acc routine vector
-      
+      !! acc routine vector
+
       ! For faces that are shared with a coarser neighbor, interpolate
       ! for all points which are not coinciding and where the ray is going out.
       !
