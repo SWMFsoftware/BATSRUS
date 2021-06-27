@@ -145,9 +145,7 @@ module ModFieldTrace
   ! radius and radius squared of ionosphere
 
   ! Node interpolated magnetic field components without B0
-  real, allocatable :: bb_x(:,:,:,:)
-  real, allocatable :: bb_y(:,:,:,:)
-  real, allocatable :: bb_z(:,:,:,:)
+  real, allocatable :: b_DNB(:,:,:,:,:)
 
   ! Total magnetic field with second order ghost cells
   real, allocatable :: Bxyz_DGB(:,:,:,:,:)
@@ -444,9 +442,7 @@ contains
     allocate(rayface(3,2,nI+1,nJ+1,nK+1,MaxBlock))
     allocate(rayend_ind(3,2,nI+1,nJ+1,nK+1,MaxBlock))
     allocate(rayend_pos(4,2,nI+1,nJ+1,nK+1,MaxBlock))
-    allocate(bb_x(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
-    allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
-    allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(b_DNB(3,nI+1,nJ+1,nK+1,MaxBlock))
     allocate(Bxyz_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(RayIntegral_V(1:nLocalIntegral))
@@ -477,9 +473,7 @@ contains
     deallocate(rayface)
     deallocate(rayend_ind)
     deallocate(rayend_pos)
-    deallocate(bb_x)
-    deallocate(bb_y)
-    deallocate(bb_z)
+    deallocate(b_DNB)
     deallocate(Bxyz_DGB)
     deallocate(Extra_VGB)
     deallocate(RayIntegral_V)
@@ -3896,7 +3890,7 @@ contains
     integer :: ix,iy,iz
 
     ! Current block and direction indices
-    integer :: iBlock, iRay
+    integer :: iBlock, iRay, iDim
 
     ! Testing and timing
     logical, parameter :: oktime = .false.
@@ -3948,22 +3942,15 @@ contains
     do iBlock=1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1;
-          bb_x(i,j,k,iBlock)=sum(Bxyz_DGB(x_,i-1:i,j-1:j,k-1:k,iBlock))*0.125
-          bb_y(i,j,k,iBlock)=sum(Bxyz_DGB(y_,i-1:i,j-1:j,k-1:k,iBlock))*0.125
-          bb_z(i,j,k,iBlock)=sum(Bxyz_DGB(z_,i-1:i,j-1:j,k-1:k,iBlock))*0.125
-
-          ! if(abs(bb_x(i,j,k,iBlock))<cTiny)bb_x(i,j,k,iBlock)=cTiny
-          ! if(abs(bb_y(i,j,k,iBlock))<cTiny)bb_y(i,j,k,iBlock)=cTiny
-          ! if(abs(bb_z(i,j,k,iBlock))<cTiny)bb_z(i,j,k,iBlock)=cTiny
-       end do; end do; end do
+       do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1; do iDim = 1, 3
+          b_DNB(iDim,i,j,k,iBlock) = &
+               sum(Bxyz_DGB(iDim,i-1:i,j-1:j,k-1:k,iBlock))*0.125
+       end do; end do; end do; end do
 
     end do ! iBlock
 
     ! Average node values between shared faces
-    call message_pass_node(1,bb_x)
-    call message_pass_node(1,bb_y)
-    call message_pass_node(1,bb_z)
+    call message_pass_node(3,b_DNB)
 
     if(DoTest)write(*,*)'rayface normalized B'
     if(oktime.and.iProc==0)then
@@ -4610,10 +4597,18 @@ contains
       dz1 = qx(3)+0.5-k1; dz2 = 1.-dz1
 
       ! Add in node interpolated B1 values and take aspect ratios into account
-      qb(1) = (qb(1) + interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBlock)
-      qb(2) = (qb(2) + interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBlock)
-      qb(3) = (qb(3) + interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBlock)
+      qb = qb &
+           + dx1*(   dy1*(   dz1*b_DNB(:,i2,j2,k2,iBlock)   &
+           +                 dz2*b_DNB(:,i2,j2,k1,iBlock))  &
+           +         dy2*(   dz1*b_DNB(:,i2,j1,k2,iBlock)   &
+           +                 dz2*b_DNB(:,i2,j1,k1,iBlock))) &
+           + dx2*(   dy1*(   dz1*b_DNB(:,i1,j2,k2,iBlock)   &
+           +                 dz2*b_DNB(:,i1,j2,k1,iBlock))  &
+           + dy2*(           dz1*b_DNB(:,i1,j1,k2,iBlock)   &
+           +                 dz2*b_DNB(:,i1,j1,k1,iBlock)))
 
+      qb = qb/CellSize_DB(:,iBlock)
+      
       ! Normalize
       qbD = norm2(qb)
 
@@ -4624,25 +4619,6 @@ contains
       end if
 
     end subroutine interpolate_bb_node
-    !==========================================================================
-    real function interpolate_bb1_node(qbb)
-      !!acc routine seq
-
-      ! Trilinear interpolation
-
-      real, intent(in):: qbb(1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
-      !------------------------------------------------------------------------
-      interpolate_bb1_node=&
-           dx1*(   dy1*(   dz1*qbb(i2,j2,k2,iBlock)+&
-           dz2*qbb(i2,j2,k1,iBlock))+&
-           dy2*(   dz1*qbb(i2,j1,k2,iBlock)+&
-           dz2*qbb(i2,j1,k1,iBlock)))+&
-           dx2*(   dy1*(   dz1*qbb(i1,j2,k2,iBlock)+&
-           dz2*qbb(i1,j2,k1,iBlock))+&
-           dy2*(   dz1*qbb(i1,j1,k2,iBlock)+&
-           dz2*qbb(i1,j1,k1,iBlock)))
-
-    end function interpolate_bb1_node
     !==========================================================================
     logical function follow_fast_iono()
       !!acc routine seq
