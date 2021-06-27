@@ -4317,7 +4317,7 @@ contains
 #endif
     !==========================================================================
     function follow_fast(surface_point,x_0,y_0,z_0) result(qface)
-      !$acc routine seq
+      !!acc routine seq
 
       ! Follow ray starting at initial position x_0,y_0,z_0 in direction iray
       ! until we hit the wall of the control volume or the ionosphere.
@@ -4571,7 +4571,7 @@ contains
     end function follow_fast
     !==========================================================================
     subroutine interpolate_bb_node(qx,qb)
-      !$acc routine seq
+      !!acc routine seq
       
       ! Obtain normalized bb field at normalized location qx and put it into qb
       ! Interpolate B1 from nodes, take B0 from analytic expression
@@ -4626,7 +4626,7 @@ contains
     end subroutine interpolate_bb_node
     !==========================================================================
     real function interpolate_bb1_node(qbb)
-      !$acc routine seq
+      !!acc routine seq
 
       ! Trilinear interpolation
 
@@ -4645,7 +4645,7 @@ contains
     end function interpolate_bb1_node
     !==========================================================================
     logical function follow_fast_iono()
-      !$acc routine seq
+      !!acc routine seq
 
       ! Follow ray inside ionosphere starting from xx which is given in
       ! real coordinates and use analytic mapping.
@@ -4680,7 +4680,7 @@ contains
     end function follow_fast_iono
     !==========================================================================
     subroutine assign_ray(surface_point,qray)
-      !$acc routine seq
+      !!acc routine seq
 
       ! Assign value to qray(3) based on ray intersection
       ! given by the global variables iface and position x(3)
@@ -4813,7 +4813,7 @@ contains
   end subroutine ray_trace_fast
   !============================================================================
   subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
-    !$acc routine seq
+    !!acc routine seq
     
     ! Collect weights for qrayface values that differ less than dray_max
     ! and interpolate the values corresponding to the largest weight
@@ -4986,7 +4986,7 @@ contains
   end subroutine ray_pass_new
   !============================================================================
   subroutine prolong_ray_after_pass(iface,iBlock)
-    !$acc routine vector
+    !!acc routine vector
 
     ! For faces that are shared with a coarser neighbor, interpolate
     ! for all points which are not coinciding and where the ray is going out.
@@ -5715,7 +5715,7 @@ contains
     end subroutine buf2subrayface
     !==========================================================================
     subroutine prolong_ray
-      !$acc routine vector
+      !!acc routine vector
       
       ! For faces that are shared with a coarser neighbor, interpolate
       ! for all points which are not coinciding and where the ray is going out.
