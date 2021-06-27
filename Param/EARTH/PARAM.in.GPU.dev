@@ -119,9 +119,21 @@ mc3			TypeLimiter
 #SAVERESTART
 F			DoSaveRestart
 
+#MAGNETOMETERGRID
+ascii			TypeFileMagGrid
+GEO			TypeCoordMagGrid
+36			nLonMagGrid
+18			nLatMagGrid
+0.			LonMinMagGrid
+360.			LonMaxMagGrid
+-85.			LatMinMagGrid
+85.			LatMaxMagGrid
+-1			DnSaveMagGrid
+1 min			DtSaveMagGrid
+
 #SAVEPLOT
 2			nPlotFile
-z=0 MHD idl		StringPlot
+z=0 RAY idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.			DxSavePlot
