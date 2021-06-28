@@ -1,6 +1,6 @@
 Copyright (C) 2002 Regents of the University of Michigan,
 portions used with permission.
-For more information, see the [website](http://csem.engin.umich.edu/tools/swmf).
+For more information, see http://csem.engin.umich.edu/tools/swmf
 
 This document outlines how to install the stand-alone BATSRUS code
 on your system and how to create and access the documentation.  
@@ -15,7 +15,7 @@ user manual please follow the instructions below.
 
 Get the source code from GitLab or GitHub.
 
-The minimim requirement is the `BATSRUS` repository. 
+The minimum requirement is the `BATSRUS` repository. 
 
 You may also need the open-source `SWMF_data` repository that contains
 large data files for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data`
@@ -28,7 +28,7 @@ git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
 ```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
-are in the CRASH_data repository.
+are in the `CRASH_data` repository that is available to registered users.
 If needed, it has to be placed into the home directory.
 
 # Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
@@ -46,9 +46,9 @@ will be cloned from GitHub during the installation.
 # Getting the full BATSRUS from UM GitLab (requires access)
 
 Read the
-[instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
-about registering, passwordless access, mail notifications,
-and using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
+[GitLab instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
+about registering, passwordless access, mail notifications, and
+using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
 
 ## Clone the BATSRUS distribution
 ```
@@ -56,7 +56,7 @@ cd {where_you_want_to_have_batsrus}
 gitlabclone BATSRUS
 ```
 
-## Clone the `CRASH_data` repository into the home directory if needed
+## Clone the CRASH_data repository into the home directory if needed
 ```
 cd
 gitlabclone CRASH_data
@@ -65,8 +65,8 @@ gitlabclone CRASH_data
 # Install BATSRUS
 
 Many machines used by UofM are already recognized by the 
-`share/Scripts/Config.pl` script which is called by all other 
-`Config.pl` scripts in the SWMF.
+`share/Scripts/Config.pl` script, which is called by all other `Config.pl`
+scripts in the SWMF.
 For these platform/compiler combinations installation is very simple:
 ```
 ./Config.pl -install
@@ -90,20 +90,21 @@ For machines with no MPI library, use
 ```
 This will only allow serial execution, of course.
 
-The ifort compiler (and possibly others too) use the stack for temporary arrays,
-so the stack size should be large. For csh/tcsh add the following to `.cshrc`:
+The ifort compiler (and possibly others too) use the stack for temporary
+arrays, so the stack size should be large. For csh/tcsh add the following
+to `.cshrc`:
 ```
 unlimit stacksize
 ```
-For bash/ksh/zsh add the following to `.bashrc` or equivalent
-initialization file:
+For bash/ksh/zsh add the following to `.bashrc` or equivalent initialization
+file:
 ```
 ulimit -s unlimited
 ```
 
 # Create the manuals
 
-Please note that creating the PDF manuals requires that LaTex
+Please note that creating the PDF manuals requires that LaTeX
 (available through the command line) is installed on your system.
 
 To create the PDF manuals for BATSRUS and CRASH type
@@ -112,7 +113,7 @@ make PDF
 cd util/CRASH/doc/Tex; make PDF # for GitLab version only
 ```
 in the BATSRUS directory. The manuals will be in the `Doc/` and
-`util/CRASH/doc/`` directories, and can be accessed by opening
+`util/CRASH/doc/` directories, and can be accessed by opening
 `Doc/index.html` and `util/CRASH/doc/index.html`. Note that
 the CRASH application is only usable in the full GitLab version.
 
@@ -153,7 +154,7 @@ make -j test
 in the main directory. The `-j` flag allows parallel compilation.
 This requires a machine where `mpiexec` is available.
 The tests run with 2 MPI processors and 2 threads by default. 
-Successful passing of the test is indicated by empty *.diff files.
+Successful passing of the test is indicated by empty `*.diff` files.
 
 To run the tests on more (up to 8) cores use
 ```
