@@ -620,6 +620,8 @@ contains
        end select
     end if
 
+    !AG:DEBUG:
+    write (*,*) 'DEBUG: iGroup=',iGroup,'UseFastFacIntegral_I(iGroup)=',UseFastFacIntegral_I(iGroup)
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
        iLineProc = 0
@@ -682,6 +684,8 @@ contains
        ! CHECK
        ! Volume = 0.; Surface = 0.
 
+       !AG:DEBUG:
+       write (*,*) 'DEBUG: slow_int: UseSurfaceIntegral=',UseSurfaceIntegral, ' nTheta=',nTheta, 'nPhi=',nPhi, 'nMag=',nMag, 'nR=',nR
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -717,6 +721,7 @@ contains
              FacRcurrents = Fac_II(iTheta,iPhi)
 
              if(UseSurfaceIntegral)then
+                !call timing_start('ground_slow_int_use_surface')
 
                 ! B(x0) = int_|x|=R
                 !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
@@ -749,9 +754,12 @@ contains
                         InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
 
                 end do
+                !call timing_stop('ground_slow_int_use_surface')
 
              end if
 
+             !AG:DEBUG:outer loop (gang)
+             !-- $acc parallel loop gang
              do k = 1, nR
 
                 ! Second order integration in radial direction
@@ -778,6 +786,11 @@ contains
                 ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
                 !     Volume = Volume + abs(dVol*Br_II(iTheta,iPhi)
 
+                !call timing_start('ground_slow_int_inside_radial')
+                !AG:DEBUG:the most time-consuming loop (overall)
+                !AG:DEBUG:the inner (worker-vector loop)
+                !--$acc parallel loop
+                !default(none)
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
@@ -785,8 +798,9 @@ contains
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
-                   Pert_D = dVol*cross_product(b_D, Xyz_D-XyzMid_D) &
-                        /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
+                   Xyz_D = Xyz_D-XyzMid_D
+                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
+                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
@@ -809,6 +823,7 @@ contains
                    ! end if
 
                 end do ! iMag
+                !call timing_stop('ground_slow_int_inside_radial')
              end do ! kr
           end do ! iPhi
        end do ! iTheta
