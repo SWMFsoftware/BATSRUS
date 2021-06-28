@@ -11,28 +11,31 @@ To learn more about the BATSRUS, including how to compile and run the code,
 please consult the user manual.  To install the BATSRUS and create the 
 user manual please follow the instructions below. 
 
-
 # Obtain BATSRUS
 
-Get the source code from Git or from the tar balls.
+Get the source code from GitLab or GitHub.
 
-The minimim requirement is the BATSRUS repository. 
+The minimim requirement is the `BATSRUS` repository. 
 
-You may also need the SWMF_data repository that contains large data files
-for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data` subdirectories.
-The other subdirectories can be removed to save disk space.
-The `SWMF_data` can be put into the home directory or into the BATSRUS directory.
+You may also need the open-source `SWMF_data` repository that contains
+large data files for BATSRUS in the `GM/BATSRUS/data/` and `SC/BATSRUS/data`
+subdirectories. The other subdirectories can be removed to save disk space.
+The `SWMF_data` should be put into the home directory:
+
+```
+cd
+git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 are in the CRASH_data repository.
 If needed, it has to be placed into the home directory.
 
-Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
-----------------------------------------------------------------
+# Getting the open-source MSTEM-QUDA/BATSRUS from GitHub
 
 Clone BATSRUS from GitHub
 
-```bash
+```
 cd {where_you_want_to_have_mstem-quda}
 git clone https://github.com/MSTEM-QUDA/BATSRUS
 ```
@@ -40,50 +43,23 @@ git clone https://github.com/MSTEM-QUDA/BATSRUS
 The rest of the repositories (share, util, srcBATL ...)
 will be cloned from GitHub during the installation.
 
-Getting the full BATSRUS from UM GitLab (requires access)
----------------------------------------------------------------
+# Getting the full BATSRUS from UM GitLab (requires access)
+
 Read the
 [instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
 about registering, passwordless access, mail notifications,
-and using the "gitlabclone" script.
+and using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
 
-## Check out the BATSRUS distribution
+## Clone the BATSRUS distribution
 ```
 cd {where_you_want_to_have_batsrus}
 gitlabclone BATSRUS
 ```
 
-## Check out the SWMF_data distribution into the home directory if needed
-```
-cd
-gitlabclone SWMF_data
-cd SWMF_data; rm -rf IM PT PW RB SP UA    if not needed
-```
-
-## Check out the CRASH_data distribution into the home directory if needed
+## Clone the `CRASH_data` repository into the home directory if needed
 ```
 cd
 gitlabclone CRASH_data
-```
-
-## Opening tar balls
-```
-cd {where_you_want_to_have_batsrus}
-tar -xzf {path_to_file}/BATSRUS_v{version_number}.tgz
-```
-
-If needed, open the `SWMF_data` tar ball (this contains the BATSRUS data as well)
-into the home directory
-```
-cd
-tar -xzf {path_to_file}/SWMF_data.tgz
-cd SWMF_data; rm -rf IM PT PW RB SP UA    if not needed
-```
-
-If needed, open the CRASH_data tar ball into the home directory
-```
-cd
-tar -xzf {path_to_file}/CRASH_data.tgz
 ```
 
 # Install BATSRUS
@@ -119,7 +95,8 @@ so the stack size should be large. For csh/tcsh add the following to `.cshrc`:
 ```
 unlimit stacksize
 ```
-For bash/ksh add the following to `.bashrc` or equivalent initialization file:
+For bash/ksh/zsh add the following to `.bashrc` or equivalent
+initialization file:
 ```
 ulimit -s unlimited
 ```
@@ -146,12 +123,12 @@ constructing the input parameter file and it is used to generate the
 
 ## Cleaning the documentation
 ```
-cd doc/Tex
+cd Doc/Tex
 make clean
 ```
 To remove all the created documentation type
 ```
-cd doc/Tex
+cd Doc/Tex
 make cleanpdf
 ```
 
