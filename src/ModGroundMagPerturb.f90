@@ -785,8 +785,9 @@ contains
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
-                   Pert_D = dVol*cross_product(b_D, Xyz_D-XyzMid_D) &
-                        /(4*cPi*(sqrt(sum((XyzMid_D-Xyz_D)**2)))**3)
+                   Xyz_D = Xyz_D-XyzMid_D
+                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
+                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
