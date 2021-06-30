@@ -398,7 +398,7 @@ contains
     use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
     use ModBuffer,   ONLY: write_buffer_restart_header
-    
+
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
