@@ -353,12 +353,15 @@ contains
     end subroutine check_step
     !==========================================================================
     subroutine advance_ray
+
+      use ModUserInterface ! user_material_properties
       use ModCoordTransform, ONLY: cross_product
-      use ModUser, ONLY: user_material_properties
       use ModWaves,      ONLY: nWave, WaveFirst_, WaveLast_, FrequencySi_W
+
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the
       ! equation for the particle gyration
+
       real  ::  Omega_D(MaxDim)
       ! Slope at the stage of predictor
       real  ::  Slope1_D(MaxDim)
