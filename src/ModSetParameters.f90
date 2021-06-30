@@ -133,8 +133,6 @@ contains
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisRegion, init_mod_boris_correction
-
-    use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
@@ -230,7 +228,6 @@ contains
     real(Real8_):: CarringtonRotationNumber
     character(len=500):: StringHeader
     real:: Param_I(4)
-
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
@@ -244,6 +241,7 @@ contains
     if(IsUninitialized)then
        call set_namevar
        call set_defaults
+       call set_user_version
        IsUninitialized=.false.
     end if
 

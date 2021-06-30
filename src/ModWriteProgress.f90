@@ -24,7 +24,6 @@ contains
     use BATL_lib, ONLY: iProc, nProc, nThread
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix
-    use ModUser, ONLY: NameUserModule, VersionUserModule, NameUserFile
     use ModVarIndexes, ONLY: NameEquation, NameEquationFile
 
     integer, intent(in) :: inopt
@@ -58,9 +57,9 @@ contains
        call write_prefix; write(iUnitOut,'(a)') &
             ' EQUATION FILE: '//NameEquationFile
        call write_prefix; write(iUnitOut,'(a,f5.2)') &
-            ' USER MODULE:   '//NameUserModule, VersionUserModule
-       call write_prefix; write(iUnitOut,'(a,f5.2)') &
-            ' USER FILE:     '//NameUserFile
+            ' USER MODULE:   '//trim(NameUserModule), VersionUserModule
+       call write_prefix; write(iUnitOut,'(a)') &
+            ' USER FILE:     '//trim(NameUserFile)
        write(iUnitOut,*)
     case (1)
        call write_prefix; write(iUnitOut,*)

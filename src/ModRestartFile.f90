@@ -372,7 +372,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
          Body1, UseBody2, Time_Accurate, iStartTime_I, IsStandAlone,       &
-         UseBufferGrid
+         UseBufferGrid, NameUserModule, VersionUserModule
     use ModPhysics,    ONLY: &
          sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
          sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
@@ -391,7 +391,6 @@ contains
 
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
-    use ModUser,     ONLY: NameUserModule, VersionUserModule
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam, ONLY: i_line_command
     use ModUtilities, ONLY: cTab, write_string_tabs_name
@@ -399,7 +398,7 @@ contains
     use ModMain,     ONLY: UseFieldLineThreads
     use BATL_lib,    ONLY: nRoot_D
     use ModBuffer,   ONLY: write_buffer_restart_header
-
+    
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
@@ -419,7 +418,7 @@ contains
     write(UnitTmp_,'(f5.2,a)')CodeVersion, cTab//cTab//cTab//'CodeVersion'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#USERMODULE'
-    call write_string_tabs_name(NameUserModule, 'NameUserModule')
+    call write_string_tabs_name(trim(NameUserModule), 'NameUserModule')
     write(UnitTmp_,'(f5.2,a)') &
          VersionUserModule, cTab//cTab//cTab//'VersionUserModule'
     write(UnitTmp_,*)
