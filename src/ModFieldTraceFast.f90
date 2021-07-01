@@ -135,8 +135,8 @@ contains
   subroutine trace_grid_fast
 
     use ModMain
-    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
-    use ModB0,       ONLY: get_b0
+    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, sync_state
+    use ModB0,       ONLY: get_b0, sync_b0
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -202,7 +202,8 @@ contains
     call test_start(NameSub, DoTest)
     if(DoTime)call timing_reset('ray_pass',2)
 
-    !$acc update host(State_VGB, B0_DGB)
+    call sync_state
+    call sync_b0
 
     DoTestRay = .false.
 
