@@ -14,7 +14,7 @@ module ModUpdateStateFast
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
-  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
+  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, iStateGPU, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_, iTypeUpdate
@@ -78,6 +78,7 @@ contains
        call CON_stop(NameSub//': invalid iTypeUpdate=', iTypeUpdate)
     end select
 
+    iStateGPU = iStateGPU + 1
   end subroutine update_state_fast
   !============================================================================
   subroutine update_state_cpu

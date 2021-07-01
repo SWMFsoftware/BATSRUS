@@ -34,7 +34,7 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
-    use ModAdvance, ONLY : State_VGB
+    use ModAdvance, ONLY : State_VGB, sync_state
     use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
@@ -126,7 +126,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    !$acc update host(State_VGB, B0_DGB)
+    call sync_state
+    !$acc update host(B0_DGB)
 
     ! Initialize stuff
 

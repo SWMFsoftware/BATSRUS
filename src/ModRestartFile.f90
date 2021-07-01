@@ -14,7 +14,7 @@ module ModRestartFile
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
-  use ModAdvance,    ONLY: State_VGB
+  use ModAdvance,    ONLY: State_VGB, sync_state
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface
   use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
@@ -202,7 +202,8 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    !$acc update host(State_VGB, B0_DGB, dt_BLK)
+    call sync_state
+    !$acc update host(B0_DGB, dt_BLK)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock

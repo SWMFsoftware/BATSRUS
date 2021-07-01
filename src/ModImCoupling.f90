@@ -309,7 +309,8 @@ contains
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
          time_accurate, Dt, DoCoupleImPressure, DoCoupleImDensity, RhoMinDimIm
-    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies,nSpecies
+    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies,nSpecies, &
+         iStateCPU, sync_state
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
@@ -340,7 +341,8 @@ contains
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
     call timing_start(NameSub)
-    !$acc update host(State_VGB)
+
+    call sync_state
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 
@@ -516,7 +518,9 @@ contains
 
     if(allocated(iDens_I)) deallocate(iDens_I)
 
-    !$acc update device(State_VGB)
+    iStateCPU = iStateCPU + 1
+    call sync_state
+
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
 

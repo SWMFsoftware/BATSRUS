@@ -490,8 +490,6 @@ contains
 
     if(DoTest)write(*,*) NameSub,' starting'
 
-    !$acc update host(State_VGB,B0_DGB)
-
     ! Initialize constants
     DoTraceRay     = .true.
     DoMapRay       = .false.

@@ -349,7 +349,7 @@ contains
     use ModPhysics, ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio
     use ModVarIndexes
-    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB
+    use ModAdvance,  ONLY: tmp1_BLK, tmp2_BLK, State_VGB, DivB1_GB, sync_state
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
@@ -387,6 +387,8 @@ contains
     character(len=*), parameter:: NameSub = 'set_logvar'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    call sync_state
 
     if(DoTest.and.n_step==1)then
        write(*,*)'nLogVar,nLogR,nLogTot:',nLogVar,nLogR,nLogTot

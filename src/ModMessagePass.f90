@@ -37,7 +37,8 @@ contains
          nOrder, nOrderProlong, optimize_message_pass, &
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_
+    use ModAdvance,  ONLY: State_VGB, iTypeUpdate, UpdateOrig_, UpdateFast_, &
+         iStateGPU
     use ModGeometry, ONLY: far_field_BCs_BLK
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue, ONLY: UseAccurateResChange
@@ -165,6 +166,7 @@ contains
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
+       iStateGPU = iStateGPU + 1
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
@@ -177,6 +179,7 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V, &
             UseOpenACCIn=.true.)
+       iStateGPU = iStateGPU + 1
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange

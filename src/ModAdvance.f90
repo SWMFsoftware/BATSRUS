@@ -23,6 +23,7 @@ module ModAdvance
 
   public:: init_mod_advance
   public:: clean_mod_advance
+  public:: sync_state
 
   ! Update method
   character(len=10):: TypeUpdate = 'orig'
@@ -101,6 +102,7 @@ module ModAdvance
   ! Block cell-centered MHD solution
   real, allocatable, target :: State_VGB(:,:,:,:,:)
   !$acc declare create(State_VGB)
+  integer:: iStateGPU = 0, iStateCPU = 0
 
   ! Block cell-centered MHD solution old state
   real, allocatable :: StateOld_VGB(:,:,:,:,:)
@@ -402,6 +404,27 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_advance
+  !============================================================================
+  subroutine sync_state
+#ifdef OPENACC
+    !--------------------------------------------------------------------------
+    call timing_start('sync_state')
+
+    if(iStateCPU < iStateGPU) then
+       !$acc update host(State_VGB)
+       iStateCPU = iStateGPU
+       if(iProc==0) write(*,*) 'Copy State_VGB from GPU to CPU.'
+    endif
+
+    if(iStateCPU > iStateGPU) then
+       !$acc update device(State_VGB)
+       iStateGPU = iStateCPU
+       if(iProc==0) write(*,*) 'Copy State_VGB from CPU to GPU.'
+    endif
+
+    call timing_stop('sync_state')
+#endif
+  end subroutine sync_state
   !============================================================================
 end module ModAdvance
 !==============================================================================

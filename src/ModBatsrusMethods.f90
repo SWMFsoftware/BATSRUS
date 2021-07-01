@@ -165,7 +165,7 @@ contains
       use ModRestartFile,         ONLY: read_restart_files
       use ModMessagePass,         ONLY: exchange_messages
       use ModMain,                ONLY: UseB0, iSignRotationIC
-      use ModAdvance,             ONLY: State_VGB
+      use ModAdvance,             ONLY: State_VGB, sync_state, iStateCPU
       use ModBuffer,              ONLY: DoRestartBuffer
       use ModB0,                  ONLY: set_b0_reschange
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
@@ -307,7 +307,10 @@ contains
          end if
       end if
 
-      !$acc update device(State_VGB)
+      ! Copy the initial condition to GPU
+      iStateCPU = iStateCPU + 1
+      call sync_state
+
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
          ! within the region covered by this grid
