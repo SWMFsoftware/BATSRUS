@@ -925,8 +925,9 @@ contains
       use ModWritePlotLos,      ONLY: write_plot_los
       use ModWritePlotRadiowave, ONLY: write_plot_radiowave
       use ModWriteTecplot,      ONLY: assign_node_numbers
-      use ModFieldTrace,        ONLY: trace_field_grid, &
+      use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
+      use ModFieldTraceFast,    ONLY: trace_field_grid
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
 

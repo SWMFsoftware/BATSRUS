@@ -314,7 +314,7 @@ contains
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModFieldTrace, ONLY: trace_field_grid
+    use ModFieldTraceFast, ONLY: trace_field_grid
     use ModB0, ONLY: B0_DGB
 
     real :: Factor
