@@ -412,12 +412,14 @@ contains
 
     if(iStateCPU < iStateGPU) then
        !$acc update host(State_VGB)
+       iStateGPU = mod(iStateGPU, 10000)
        iStateCPU = iStateGPU
        if(iProc==0) write(*,*) 'Copy State_VGB from GPU to CPU.'
     endif
 
     if(iStateCPU > iStateGPU) then
        !$acc update device(State_VGB)
+       iStateCPU = mod(iStateCPU, 10000)
        iStateGPU = iStateCPU
        if(iProc==0) write(*,*) 'Copy State_VGB from CPU to GPU.'
     endif

@@ -167,7 +167,7 @@ contains
       use ModMain,                ONLY: UseB0, iSignRotationIC
       use ModAdvance,             ONLY: State_VGB, sync_state, iStateCPU
       use ModBuffer,              ONLY: DoRestartBuffer
-      use ModB0,                  ONLY: set_b0_reschange
+      use ModB0,                  ONLY: set_b0_reschange, sync_b0
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
@@ -310,6 +310,8 @@ contains
       ! Copy the initial condition to GPU
       iStateCPU = iStateCPU + 1
       call sync_state
+
+      call sync_b0
 
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells

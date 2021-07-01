@@ -34,7 +34,7 @@ module ModUpdateStateFast
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
        TypeCoordSystem, useIe
-  use ModB0, ONLY: B0_DGB
+  use ModB0, ONLY: B0_DGB, iB0GPU
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
@@ -2968,6 +2968,8 @@ contains
           end if
        end do; end do; end do
     end do
+
+    iB0GPU = iB0GPU + 1
 
     ! messsage pass to fix B1 in the ghost cells ?!
     ! set B0 at reschange ?!

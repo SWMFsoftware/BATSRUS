@@ -190,7 +190,7 @@ contains
 
   subroutine write_restart_files
 
-    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
+    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB, sync_b0
     use ModGeometry, ONLY: true_cell
     use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
@@ -203,7 +203,8 @@ contains
     call timing_start(NameSub)
 
     call sync_state
-    !$acc update host(B0_DGB, dt_BLK)
+    call sync_b0
+    !$acc update host(dt_BLK)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock

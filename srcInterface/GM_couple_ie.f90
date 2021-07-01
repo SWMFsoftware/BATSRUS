@@ -83,7 +83,7 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
     use ModAdvance, ONLY: State_VGB, sync_state
-    use ModB0, ONLY: B0_DGB
+    use ModB0, ONLY: B0_DGB, sync_b0
     use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize, nVar
@@ -102,7 +102,7 @@ contains
     if(DoTest)write(*,*)NameSub,': starting'
 
     call sync_state
-    !$acc update host(B0_DGB)
+    call sync_b0
 
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
