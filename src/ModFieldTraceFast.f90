@@ -44,6 +44,7 @@ contains
   !============================================================================
   subroutine init_mod_trace_fast
 
+    !--------------------------------------------------------------------------
     if(.not.allocated(Trace_DINB)) &
          allocate(Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
     if(.not.allocated(IjkTrace_DINB)) &
@@ -63,13 +64,14 @@ contains
   !============================================================================
   subroutine clean_mod_trace_fast
 
+    !--------------------------------------------------------------------------
     if(allocated(Trace_DINB))    deallocate(Trace_DINB)
     if(allocated(IjkTrace_DINB)) deallocate(IjkTrace_DINB)
     if(allocated(WeightTrace_DINB))    deallocate(WeightTrace_DINB)
     if(allocated(b_DNB))         deallocate(b_DNB)
     if(allocated(b_DGB))         deallocate(b_DGB)
     if(allocated(ray))           deallocate(ray)
-    
+
   end subroutine clean_mod_trace_fast
   !============================================================================
   subroutine trace_field_grid
@@ -95,7 +97,7 @@ contains
     call test_start(NameSub, DoTest)
 
     call init_mod_trace_fast
-    
+
     if(DoTest)then
        write(*,*)'GM ray_trace: nStepLast,n_step         =',nStepLast,n_step
        write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
@@ -1928,11 +1930,11 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
-      !------------------------------------------------------------------------
 
       ! Take maximum of Trace_DINB and buf (more positive values are more real)
       ! for the full face
 
+      !------------------------------------------------------------------------
       Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock) &
            = max(Buffer_DIN, &
            Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock))

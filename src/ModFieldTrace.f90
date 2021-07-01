@@ -36,7 +36,7 @@ module ModFieldTrace
   ! Public for ModFieldTraceFast only
   public:: trace_grid_accurate        ! trace field from 3D MHD grid cells
   public:: xyz_to_latlonstatus        ! convert to lat, lon, status
-  
+
   ! extracting variables (in SI units?) along the field trace
   logical, public:: DoExtractState   = .false.
   logical, public:: DoExtractUnitSi  = .false.
@@ -122,9 +122,9 @@ module ModFieldTrace
 
   ! Total magnetic field with second order ghost cells
   real, public, allocatable :: b_DGB(:,:,:,:,:)
-  
+
   ! Local variables --------------------------------
-  
+
   ! Possible tasks
   logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
@@ -403,7 +403,7 @@ contains
        allocate(ray(3,2,nI+1,nJ+1,nK+1,MaxBlock))
        ray = 0.0
     end if
-    
+
     if(allocated(RayIntegral_V)) RETURN
 
     ! Determine number of flow variable integrals
