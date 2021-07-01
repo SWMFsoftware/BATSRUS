@@ -185,7 +185,7 @@ contains
     integer :: i, j, k
 
     ! Indices corresponding to the starting point of the ray
-    integer :: iX,iY,iZ
+    integer :: iX, iY, iZ
 
     ! Current block and direction indices
     integer :: iBlock, iRay, iDim
@@ -193,6 +193,7 @@ contains
     ! Testing and timing
     logical, parameter :: DoTime = .false.
     integer :: Ijk_D(3)
+    real:: GenIni_D(3)
 
     integer :: iError, iError1 = -1
 
@@ -299,7 +300,8 @@ contains
              if(nIterTrace==0)then
                 do iRay=1,2
                    ! Follow ray in direction iRay
-                   iFace = follow_fast(.true.,iX-0.5,iY-0.5,iZ-0.5)
+                   GenIni_D = [iX-0.5, iY-0.5, iZ-0.5]
+                   iFace = follow_fast(.true.,GenIni_D)
 
                    ! Assign value to Trace_DINB
                    call assign_ray(.true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock))
@@ -356,7 +358,7 @@ contains
                            WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock),4,&
                            TraceTmp_D)
 
-                      Trace_DINB(:,iRay,iX,iY,iZ,iBlock)=TraceTmp_D
+                      Trace_DINB(:,iRay,iX,iY,iZ,iBlock) = TraceTmp_D
 
                    end if
                 end do
@@ -466,7 +468,8 @@ contains
              if(DoTestRay)write(*,*)'calling follow_fast'
 
              ! Follow ray in direction iRay
-             iFace = follow_fast(.false., real(iX), real(iY), real(iZ))
+             GenIni_D = [real(iX), real(iY), real(iZ)]
+             iFace = follow_fast(.false., GenIni_D)
 
              if(DoTestRay)write(*,*)'calling assign_ray'
 
@@ -581,10 +584,10 @@ contains
     end subroutine ray_debugger
     !==========================================================================
 #endif
-    function follow_fast(IsSurfacePoint,x_0,y_0,z_0) result(iFaceOut)
+    function follow_fast(IsSurfacePoint, GenIn_D) result(iFaceOut)
       !! acc routine seq
 
-      ! Follow ray starting at initial position x_0,y_0,z_0 in direction iRay
+      ! Follow ray starting at initial position GenIn_D in direction iRay
       ! until we hit the wall of the control volume or the ionosphere.
       ! Return 1,2,3,4,5,6 if the ray hit the block faces
       ! Return ray_iono_   if the ray hit the ionosphere
@@ -595,7 +598,7 @@ contains
       ! Arguments
 
       logical, intent(in):: IsSurfacePoint
-      real, intent(in)   :: x_0,y_0,z_0
+      real, intent(in)   :: GenIn_D(3)
 
       ! Result
 
@@ -611,7 +614,7 @@ contains
       ! DxOpt is the required accuracy, DxRel=dx/DxOpt
       real :: DxRel, DxOpt
 
-      ! Ray length, max, step size, limits, next step size for backup to surface
+      ! Line length, max, step size, limits, next step size, back to surface
       real :: l, sMax, Ds, DsMax, DsMin, DsNext, DsTiny, DsBack
 
       ! counter for ray integration
@@ -621,8 +624,8 @@ contains
       integer :: nIono
       !------------------------------------------------------------------------
       if(DoTestRay)&
-           write(*,*)'follow_fast: me,iBlock,IsSurfacePoint,x_0,y_0,z_0,iRay=',&
-           iProc,iBlock,IsSurfacePoint,x_0,y_0,z_0,iRay
+           write(*,*)'follow_fast: me,iBlock,IsSurfacePoint,GenIn_D,iRay=',&
+           iProc, iBlock, IsSurfacePoint, GenIn_D, iRay
 
       ! Step size limits
       DsMax=1.0
@@ -642,9 +645,7 @@ contains
       nIono=0
 
       ! Initial position
-      x(1)=x_0
-      x(2)=y_0
-      x(3)=z_0
+      x = GenIn_D
 
       ! Integration loop
       do
@@ -775,12 +776,12 @@ contains
 
          x=xIni_D+bMid_D*Ds
 
-         nSegment=nSegment+1
-         l=l+abs(Ds)
+         nSegment = nSegment+1
+         l = l + abs(Ds)
 
          if(DoTestRay.and.okdebug)&
               write(*,*)'me,iBlock,nSegment,l,x=', &
-              iProc,iBlock,nSegment,l,x
+              iProc, iBlock, nSegment, l, x
 
          ! Check if the ray hit the wall of the control volume
          if(any(x<GenMin_D) .or. any(x>GenMax_D))then
@@ -788,8 +789,9 @@ contains
             ! Hit the wall, backup so that x is almost exactly on the wall
             ! just a little bit outside. Only if nSegment is more than 1!
             if(nSegment > 1)then
-               DsBack = Ds*maxval(max(GenMin_D-x,x-GenMax_D)/(abs(x-xIni_D)+DsTiny))
-               x=x-DsBack*bMid_D
+               DsBack = Ds*maxval(max(GenMin_D-x,x-GenMax_D) &
+                    /(abs(x-xIni_D)+DsTiny))
+               x = x-DsBack*bMid_D
             end if
 
             ! Find out which wall the ray hit
@@ -835,15 +837,15 @@ contains
 
     end function follow_fast
     !==========================================================================
-    subroutine interpolate_bb_node(Gen_D,b_D)
+    subroutine interpolate_bb_node(Gen_D, b_D)
       !! acc routine seq
 
-      ! Obtain normalized bb field at normalized location Gen_D and put it into b_D
+      ! Interpolate normalized field b_D at normalized location Gen_D
       ! Interpolate B1 from nodes, take B0 from analytic expression
 
       real, intent(in) :: Gen_D(3)
       real, intent(out):: b_D(3)
-      real :: qbD
+      real :: b
       !------------------------------------------------------------------------
 
       ! Determine cell indices corresponding to location Gen_D
@@ -851,8 +853,9 @@ contains
       j1 = floor(Gen_D(2)+0.5); j2 = j1 + 1
       k1 = floor(Gen_D(3)+0.5); k2 = k1 + 1
 
-      if(i1<0.or.i2>nI+2.or.j1<0.or.j2>nJ+2.or.k1<0.or.k2>nK+2)then
-         write(*,*)'interpolate_bb_node: iProc, iBlock, Gen_D=',iProc,iBlock, Gen_D
+      if(i1<0 .or. i2>nI+2 .or. j1<0 .or. j2>nJ+2 .or. k1<0 .or. k2>nK+2)then
+         write(*,*)'interpolate_bb_node: iProc, iBlock, Gen_D=', &
+              iProc, iBlock, Gen_D
          call stop_mpi('ERROR in interpolate_bb_node: location out of bounds')
       endif
 
@@ -888,10 +891,10 @@ contains
       b_D = b_D/CellSize_DB(:,iBlock)
 
       ! Normalize
-      qbD = norm2(b_D)
+      b = norm2(b_D)
 
-      if(qbD > SmallB)then
-         b_D = b_D/qbD
+      if(b > SmallB)then
+         b_D = b_D/b
       else
          b_D = 0.
       end if
@@ -948,7 +951,6 @@ contains
       ! Called with a segment of Trace_DINB array and it is used here to get Trace_D
       real, intent(inout) :: Trace_D(3)
 
-      ! Temporary variable
       real :: TraceTmp_D(3)
 
       ! Local variables
@@ -1026,37 +1028,39 @@ contains
       end select
 
       ! Calculate bilinear interpolation weights
-      d2=1.-d1; e2=1.-e1
-      Weight_I(1)=d2*e2
-      Weight_I(2)=d1*e2
-      Weight_I(3)=d2*e1
-      Weight_I(4)=d1*e1
+      d2 = 1 - d1; e2 = 1 - e1
+      Weight_I(1) = d2*e2
+      Weight_I(2) = d1*e2
+      Weight_I(3) = d2*e1
+      Weight_I(4) = d1*e1
 
       if(DoTestRay)write(*,*)'Weight_I=',Weight_I
 
       ! Exclude the starting point if its among the 4 interpolated cells
       if(IsSurfacePoint)then
-         if((iX==i1.or.iX==i2).and.(iY==j1.or.iY==j2).and.(iZ==k1.or.iZ==k2))then
+         if((iX==i1.or.iX==i2) .and. (iY==j1.or.iY==j2) .and. &
+              (iZ==k1.or.iZ==k2))then
             select case(iFace)
             case(1,2)
-               Weight_I(iY-j1+2*(iZ-k1)+1)=0.
+               Weight_I(iY-j1+2*(iZ-k1)+1) = 0.
             case(3,4)
-               Weight_I(iX-i1+2*(iZ-k1)+1)=0.
+               Weight_I(iX-i1+2*(iZ-k1)+1) = 0.
             case(5,6)
-               Weight_I(iX-i1+2*(iY-j1)+1)=0.
+               Weight_I(iX-i1+2*(iY-j1)+1) = 0.
             end select
             ! Normalize weights
-            Weight_I=Weight_I/sum(Weight_I)
-            if(DoTestRay)write(*,*)'Excluded point: me,iBlock,iX,iY,iZ,Weight_I=',&
-                 iProc,iBlock,iX,iY,iZ,Weight_I
+            Weight_I = Weight_I/sum(Weight_I)
+            if(DoTestRay)write(*,*) &
+                 'Excluded point: me,iBlock,iX,iY,iZ,Weight_I=',&
+                 iProc, iBlock, iX, iY, iZ, Weight_I
          end if
       end if
 
-      if(DoTestRay)&
-           write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=',i1,j1,k1,i2,j2,k2,d1,e1
+      if(DoTestRay) write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=', &
+           i1, j1, k1, i2, j2, k2, d1, e1
 
       call rayface_interpolate(Trace_DINB(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
-           Weight_I,4,TraceTmp_D)
+           Weight_I, 4, TraceTmp_D)
 
       Trace_D = TraceTmp_D
 
@@ -1082,13 +1086,14 @@ contains
     ! Local variables
 
     ! Cumulated weights corresponding to various kinds of qrayface values
-    real :: WeightTmp_I(4), WeightSum_I(4), TraceFirst_DI(3,4), TraceSum_DI(3,4)
+    real :: WeightTmp_I(4), WeightSum_I(4)
+    real :: TraceFirst_DI(3,4), TraceSum_DI(3,4)
 
     ! Difference between qrayface values, maximum for interpolation
     real :: dTrace, dTraceMax, ValueMax
 
     ! Number and indices of (cummulated) qrayface values, max location
-    integer :: n, i, j, Ijk_D(1)
+    integer :: n, i, j
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'rayface_interpolate'
@@ -1182,8 +1187,7 @@ contains
        end if
     else
        ! Take the values corresponding to the largest cummulated Weight_I
-       Ijk_D=maxloc(WeightSum_I(1:n))
-       i=Ijk_D(1)
+       i = maxloc(WeightSum_I(1:n),DIM=1)
        if(TraceFirst_DI(1,i)>CLOSEDRAY)then
           ! take average
           Trace_D=TraceSum_DI(:,i)/WeightSum_I(i)
