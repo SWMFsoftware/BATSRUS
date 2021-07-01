@@ -5,11 +5,11 @@
 module ModFieldTrace
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, xTest, yTest, zTest, &
-       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, nProc, &
-       IsNeighbor_P, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       test_start, test_stop, &
+       iTest, jTest, kTest, iBlockTest, iProcTest, iProc, iComm, &
+       IsNeighbor_P, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        MaxBlock, x_, y_, z_, IsCartesianGrid
-  use ModMain, ONLY: iNewDecomposition, TypeCoordSystem
+  use ModMain, ONLY: TypeCoordSystem
   use ModPhysics, ONLY: rBody
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
@@ -634,9 +634,8 @@ contains
     use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
     use ModKind
-    use BATL_lib, ONLY: find_grid_block, iNodeNei_IIIB, iTree_IA, Proc_, nProc, &
-         CellSize_DB, CoordMin_DB, Unused_B
-    use BATL_size, ONLY: MaxBlock, nBlock
+    use BATL_lib, ONLY: find_grid_block, &
+         CellSize_DB, CoordMin_DB
 
     use ModMpi
 
@@ -677,7 +676,6 @@ contains
 
     real(Real8_) :: CpuTimeNow
 
-    integer :: i, j, k, iBlock, iNode
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'follow_ray'
@@ -1027,7 +1025,6 @@ contains
     ! Return ray_body_    if the ray goes into or is inside a body
     ! Return ray_open_    if the ray goes outside the computational box
 
-    use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: nI, nJ, nK
     use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
          rMin_BLK, x1,x2,y1,y2,z1,z2
@@ -1089,7 +1086,7 @@ contains
     integer :: nIono
 
     ! Control volume limits in local coordinates
-    real, dimension(3) :: GenMin_D, GenMax_D
+    real:: GenMin_D(3), GenMax_D(3)
 
     ! Cell indices corresponding to current or final Ijk position
     integer :: i1,j1,k1,i2,j2,k2
