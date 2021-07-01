@@ -162,12 +162,11 @@ contains
     integer :: iFace
 
     ! Control volume limits in local coordinates
-    real, dimension(3), parameter :: &
-         GenMin_D = [   0.5,   0.5,   0.5],&
-         GenMax_D = [nI+0.5,nJ+0.5,nK+0.5]
+    real, parameter :: GenMin_D(3) = [   0.5,   0.5,     0.5]
+    real, parameter :: GenMax_D(3) = [nI+0.5, nJ+0.5, nK+0.5]
 
     ! Current position of ray in normalized and physical coordinates
-    real, dimension(3) :: Gen_D, Xyz_D
+    real :: Gen_D(3), Xyz_D(3)
 
     ! Radial distance and square of it: r2=sum(Xyz_D**2)
     real :: r2
@@ -616,7 +615,7 @@ contains
       ! Local variables
 
       ! Initial and mid point coordinates and bb field
-      real, dimension(3) :: GenIni_D, GenMid_D, bIni_D, bMid_D, XyzIni_D
+      real :: GenIni_D(3), GenMid_D(3), bIni_D(3), bMid_D(3), XyzIni_D(3)
       real :: r, rIni
 
       ! dx is the difference between 1st and 2nd order RK to estimate accuracy
@@ -624,12 +623,12 @@ contains
       real :: DxRel, DxOpt
 
       ! Line length, max, step size, limits, next step size, back to surface
-      real :: l, sMax, Ds, DsMax, DsMin, DsNext, DsTiny, DsBack
+      real :: s, sMax, Ds, DsMax, DsMin, DsNext, DsTiny, DsBack
 
       ! counter for ray integration
       integer :: nSegment
 
-      ! Counter for entering follow_fast_iono
+      ! Counter for entering do_follow_iono
       integer :: nIono
       !------------------------------------------------------------------------
       if(DoTestRay)&
@@ -648,10 +647,10 @@ contains
       DxOpt=0.01
 
       ! Length and maximum length of ray within control volume
-      l=0
-      sMax=10*maxval(GenMax_D-GenMin_D)
-      nSegment=0
-      nIono=0
+      s = 0
+      sMax = 10*maxval(GenMax_D - GenMin_D)
+      nSegment = 0
+      nIono = 0
 
       ! Initial position
       Gen_D = GenIn_D
@@ -697,7 +696,7 @@ contains
 
                ! Try mapping down to rIonosphere if we haven't tried yet
                if(nIono<1)then
-                  if(follow_fast_iono())then
+                  if(do_follow_iono())then
                      Gen_D=Xyz_D
                      iFaceOut=ray_iono_
                      EXIT
@@ -728,7 +727,7 @@ contains
                if(DoTestRay)then
                   write(*,*)'me,iBlock,GenMid_D=', iProc, iBlock, GenMid_D
                   write(*,*)'ray points outwards: me,iBlock,Ds,Xyz_D=', &
-                       iProc,iBlock,Ds,&
+                       iProc, iBlock, Ds,&
                        Xyz_DGB(:,1,1,1,iBlock) &
                        + CellSize_DB(:,iBlock)*(GenMid_D - 1)
                end if
@@ -787,11 +786,11 @@ contains
          Gen_D = GenIni_D + bMid_D*Ds
 
          nSegment = nSegment+1
-         l = l + abs(Ds)
+         s = s + abs(Ds)
 
          if(DoTestRay.and.okdebug)&
-              write(*,*)'me,iBlock,nSegment,l,Gen_D=', &
-              iProc, iBlock, nSegment, l, Gen_D
+              write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
+              iProc, iBlock, nSegment, s, Gen_D
 
          ! Check if the ray hit the wall of the control volume
          if(any(Gen_D < GenMin_D) .or. any(Gen_D > GenMax_D))then
@@ -814,7 +813,8 @@ contains
             else
                write(*,*)'Error in follow_fast for me,iBlock,iX,iY,iZ=',&
                     iProc,iBlock,iX,iY,iZ
-               write(*,*)'nSegment,Gen_D,Ds,DsBack=',nSegment,Gen_D,Ds,DsBack
+               write(*,*)'nSegment,Gen_D,Ds,DsBack=', &
+                    nSegment, Gen_D, Ds, DsBack
                call stop_mpi('GM_follow_fast: Hit wall but which one?')
             end if
 
@@ -826,7 +826,7 @@ contains
          end if
 
          ! Check if we have integrated for too long
-         if(l>sMax)then
+         if(s>sMax)then
             ! Seems to be a closed loop within a block
             if(DoTestRay)then
                write(*,*)'CLOSED LOOP at me,iBlock,iX,iY,iZ,Gen_D,Xyz_D=',&
@@ -911,7 +911,7 @@ contains
 
     end subroutine interpolate_bb_node
     !==========================================================================
-    logical function follow_fast_iono()
+    logical function do_follow_iono()
       !! acc routine seq
 
       ! Follow ray inside ionosphere starting from Xyz_D which is given in
@@ -934,17 +934,17 @@ contains
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
          write(*,*)'iBlock, iRay=',iBlock,iRay
-         call stop_mpi('ERROR in follow_fast_iono')
+         call stop_mpi('ERROR in do_follow_iono')
       end if
 
       if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iRay) < 0.0)then
          Xyz_D = x_D
-         follow_fast_iono = .true.
+         do_follow_iono = .true.
       else
-         follow_fast_iono = .false.
+         do_follow_iono = .false.
       end if
 
-    end function follow_fast_iono
+    end function do_follow_iono
     !==========================================================================
     subroutine assign_ray(IsSurfacePoint,Trace_D)
       !! acc routine seq
@@ -1414,10 +1414,10 @@ contains
     integer ::  nSubFace, iSubFace
 
     ! Array ranges for outgoing, incoming, restricted and subfaces
-    integer :: iMinO,iMaxO,jMinO,jMaxO,kMinO,kMaxO
+    integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
     integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
-    integer :: iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR
-    integer :: iMinS,iMaxS,jMinS,jMaxS,kMinS,kMaxS
+    integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
+    integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
 
     ! Block index
     integer :: iBlock
@@ -1435,13 +1435,13 @@ contains
 
     ! Receive Buffer_IIBI to hold 4 incoming RESTRICTED Trace_DINB values
     ! for all blocks and for both sides
-    real, dimension(MaxSizeR,4,MaxBlock,2) :: Buffer_IIBI
+    real :: Buffer_IIBI(MaxSizeR,4,MaxBlock,2)
 
     ! Actual size of messages: full, restricted/sparse and actual face
     integer :: iSize, iSizeR, iSize1
 
     ! Equal and restricted values to be sent are stored in these buffers
-    real, dimension(:,:,:,:,:), allocatable :: eq_buf, re_buf
+    real, allocatable :: BufEqual_DIC(:,:,:,:,:), BufRestrict_DIC(:,:,:,:,:)
 
     integer :: iError
 
@@ -1566,13 +1566,13 @@ contains
          if(okdebug.and.DoTest)write(*,*)&
               'setranges_ray for send Done: me, iFace=',iProc, iFace
 
-         if(DoEqual)&
-              allocate(eq_buf(3,2,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO))
-         if(DoRestrict.or.DoProlong)&
-              allocate(re_buf(3,2,iMinR:iMaxR,jMinR:jMaxR,kMinR:kMaxR))
+         if(DoEqual) allocate(BufEqual_DIC( &
+              3,2,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO))
+         if(DoRestrict.or.DoProlong) allocate( &
+              BufRestrict_DIC(3,2,iMinR:iMaxR,jMinR:jMaxR,kMinR:kMaxR))
 
          if(okdebug.and.DoTest)write(*,*)'allocation Done, me,iFace=',&
-              iProc,iFace
+              iProc, iFace
 
          do iBlock=1,nBlockMax
             if(Unused_B(iBlock))CYCLE
@@ -1600,8 +1600,10 @@ contains
 
                   Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,jBlock)=&
                        max(&
-                       Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,jBlock),&
-                       Trace_DINB(:,:,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO,iBlock))
+                       Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG, &
+                       jBlock),&
+                       Trace_DINB(:,:,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO, &
+                       iBlock))
 
                   ! Debug
                   ! write(*,*)'after: Trace_DINB(_g,jBlock)=',&
@@ -1613,18 +1615,20 @@ contains
                   if(DoTest.and.okdebug)write(*,*)&
                        'Remote equal send, me,iTag,jProc=',iProc,iTag,jProc
 
-                  eq_buf=&
-                       Trace_DINB(:,:,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO,iBlock)
+                  BufEqual_DIC=&
+                       Trace_DINB(:,:,iMinO:iMaxO,jMinO:jMaxO,kMinO:kMaxO, &
+                       iBlock)
 
-                  call MPI_Rsend(eq_buf,&
+                  call MPI_Rsend(BufEqual_DIC,&
                        iSize,MPI_REAL,jProc,iTag,iComm,iError)
                end if
             case(1)
                if(.not.DoRestrict)CYCLE
 
                ! Restrict Trace_DINB in _o range into _r
-               re_buf=&
-                    Trace_DINB(:,:,iMinO:iMaxO:2,jMinO:jMaxO:2,kMinO:kMaxO:2,iBlock)
+               BufRestrict_DIC=&
+                    Trace_DINB(:,:,iMinO:iMaxO:2,jMinO:jMaxO:2,kMinO:kMaxO:2, &
+                    iBlock)
 
                jProc=neiPE(1,iFace,iBlock)
                jBlock=neiBLK(1,iFace,iBlock)
@@ -1655,19 +1659,20 @@ contains
                   call setsubrange_ray(.false.)
                   if(okdebug.and.DoTest)write(*,*)&
                        'local restricted copy: me,iFace,iBlock,_s=',&
-                       iProc,iFace,iBlock,&
-                       iMinS,iMaxS,jMinS,jMaxS,kMinS,kMaxS
+                       iProc, iFace, iBlock,&
+                       iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
 
                   Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,jBlock)=&
-                       max(re_buf,&
-                       Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,jBlock))
+                       max(BufRestrict_DIC,&
+                       Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS, &
+                       jBlock))
                else
                   ! Remote send
                   iTag = 100*jBlock+10*iFace+iSubFace
                   if(DoTest.and.okdebug)write(*,*)&
                        'Remote restricted send, me,iFace,iTag=',&
                        iProc,iFace,iTag
-                  call MPI_Rsend(re_buf,iSizeR,&
+                  call MPI_Rsend(BufRestrict_DIC,iSizeR,&
                        MPI_REAL,jProc,iTag,iComm,iError)
                end if
             case(-1)
@@ -1683,9 +1688,9 @@ contains
                      ! Local copy of appropriate subface
 
                      if(okdebug.and.DoTest)write(*,*)&
-                          'local prolonged copy: me,iSubFace,iFace,iBlock,_s=',&
+                          'local prolonged copy: me,iSubFace,iFace,iBlock,S=',&
                           iProc,iSubFace,iFace,iBlock,&
-                          iMinS,iMaxS,jMinS,jMaxS,kMinS,kMaxS
+                          iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
 
                      Trace_DINB(:,:,iMinG:iMaxG:2,&
                           jMinG:jMaxG:2,&
@@ -1693,18 +1698,20 @@ contains
                           Trace_DINB(:,:,iMinG:iMaxG:2,&
                           jMinG:jMaxG:2,&
                           kMinG:kMaxG:2,jBlock),&
-                          Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
+                          Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS, &
+                          iBlock))
                   else
                      ! Remote send
-                     re_buf=&
-                          Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock)
+                     BufRestrict_DIC = &
+                          Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS, &
+                          iBlock)
 
                      iTag = 100*jBlock + 10*iFace + 1
                      if(DoTest.and.okdebug)write(*,*)&
                           'Remote prolong send, me,iFace,iTag=',&
                           iProc,iFace,iTag
 
-                     call MPI_Rsend(re_buf,iSizeR,&
+                     call MPI_Rsend(BufRestrict_DIC,iSizeR,&
                           MPI_REAL,jProc,iTag,iComm,iError)
                   end if
                end do ! iSubFace
@@ -1719,8 +1726,8 @@ contains
             end select ! DiLevel
          end do ! iBlock
 
-         if(DoEqual)deallocate(eq_buf)
-         if(DoRestrict.or.DoProlong)deallocate(re_buf)
+         if(DoEqual)deallocate(BufEqual_DIC)
+         if(DoRestrict.or.DoProlong)deallocate(BufRestrict_DIC)
 
          if(DoTest)write(*,*)'messages sent, me, iFace=',iProc,iFace
       end do ! iFace
@@ -1916,40 +1923,40 @@ contains
 
     end subroutine setsubrange_ray
     !==========================================================================
-    subroutine buf2rayface(&
-         buf,iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
 
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      real, dimension(3,2,iMin:iMax,jMin:jMax,kMin:kMax),intent(inout) :: buf
+      integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
+      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
 
       ! Take maximum of Trace_DINB and buf (more positive values are more real)
       ! for the full face
 
       Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock) &
-           = max(buf,&
+           = max(Buffer_DIN, &
            Trace_DINB(:,:,iMinG:iMaxG,jMinG:jMaxG,kMinG:kMaxG,iBlock))
 
     end subroutine buf2rayface
     !==========================================================================
-    subroutine buf2sparserayface(buf,iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine buf2sparserayface( &
+         Buffer_DIN, iMin, iMax, jMin, jMax, kMin, kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      real, dimension(3,2,iMin:iMax,jMin:jMax,kMin:kMax),intent(inout) :: buf
+      real, intent(inout):: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
 
       ! Take maximum of Trace_DINB and buf (more positive values are more real)
       ! for a factor of 2 coarser grid
       !------------------------------------------------------------------------
       Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock) = &
-           max(buf,&
+           max(Buffer_DIN,&
            Trace_DINB(:,:,iMinG:iMaxG:2,jMinG:jMaxG:2,kMinG:kMaxG:2,iBlock))
 
     end subroutine buf2sparserayface
     !==========================================================================
-    subroutine buf2subrayface(buf,iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine buf2subrayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      real, dimension(3,2,iMin:iMax,jMin:jMax,kMin:kMax),intent(inout) :: buf
+      real, intent(inout) :: Buffer_DIN(3,2,iMin:iMax,jMin:jMax,kMin:kMax)
 
       ! Set subface range to write into
       !------------------------------------------------------------------------
@@ -1959,7 +1966,7 @@ contains
       ! for the appropriate subface
 
       Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock) = &
-           max(buf,&
+           max(Buffer_DIN, &
            Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
 
     end subroutine buf2subrayface
@@ -1997,15 +2004,16 @@ contains
       integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
 
       ! Interpolation weights
-      real, dimension(4), parameter:: Weight4_I=0.25
-      real, dimension(2), parameter:: Weight2_I=0.5
+      real, parameter:: Weight4_I(4) = 0.25
+      real, parameter:: Weight2_I(2) = 0.5
 
       character(len=*), parameter:: NameSub = 'prolong_ray'
       !------------------------------------------------------------------------
       if(DoTest)write(*,*) NameSub,': me, iBlock, iFace=',iProc, iBlock, iFace
 
       ! Extract Trace_DIII and IjkTrace_DII for the appropriate face
-      ! NOTE: IjkTrace_DII assignment split to two lines to avoid reshaping compiler bug!
+      ! NOTE: IjkTrace_DII assignment split to two lines to avoid
+      ! reshaping compiler bug!
       select case(iFace)
       case(1)
          nFaceJ=nJ+1; nFaceK=nK+1
