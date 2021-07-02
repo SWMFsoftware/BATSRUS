@@ -452,8 +452,7 @@ contains
     use ModKind
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-    use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
-         prepare_amr, do_amr
+    use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit
@@ -493,9 +492,6 @@ contains
          pic_set_cell_status
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
-
-    ! Local variables
-    real :: AmrTime = 0
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
@@ -637,7 +633,10 @@ contains
     ! Re-calculate the active PIC regions
     if(AdaptPic % DoThis) then
        if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate)) then
-          if(iProc==0) print*, "Re-calculating PIC region at simulation time ", Time_Simulation
+          if(iProc==0 .and. lVerbose > 0)then
+             call write_prefix; write(iUnitOut,*) NameSub, &
+                  " adapt PIC region at simulation time=", Time_Simulation
+          end if
           call calc_pic_criteria
           call pic_set_cell_status
        end if
@@ -656,15 +655,12 @@ contains
 
     if(UseProjection) call project_divb
 
-    ! AmrTime is the time to do AMR.
-    if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
-    if(DoAmr .and. ((DnAmr > 0 .and. mod(n_step, DnAmr) == 0) .or. &
-         (DtAmr > 0 .and. time_simulation > AmrTime)))then
-       if(DtAmr > 0) AmrTime = DtAmr + AmrTime
+    ! Adapt grid
+    if(is_time_to(AdaptGrid, n_step, Time_Simulation, time_accurate)) then
        call timing_start(NameThisComp//'_amr')
-       if(iProc==0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr > 0))then
+       if(iProc==0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) &
-               '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
+               '----------------- AMR START at nStep=', n_step
           if(time_accurate) call write_timeaccurate
        end if
 
@@ -681,11 +677,11 @@ contains
 
        ! Output timing after AMR.
        call timing_stop(NameThisComp//'_amr')
-       if(iProc == 0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr >0))then
+       if(iProc == 0 .and. lVerbose > 0)then
           call timing_show(NameThisComp//'_amr',1)
           call timing_show('load_balance',1)
           call write_prefix; write(iUnitOut,*) &
-               '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
+               '----------------- AMR FINISHED'
        end if
 
        if(UseProjection) call project_divb

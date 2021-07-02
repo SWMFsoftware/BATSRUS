@@ -7,7 +7,8 @@ module ModAMR
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose
   use ModCellGradient, ONLY: calc_gradient
-
+  use ModFreq
+  
   implicit none
   SAVE
 
@@ -26,12 +27,13 @@ module ModAMR
   ! Setting minimum and maximum AMR levels
   logical, public :: DoSetAmrLimits = .false.
 
-  ! Refinement parameters.
+  ! Refinement parameters
   integer, public:: nRefineLevelIC = 0
-  logical, public:: DoAmr = .false.
-  integer, public:: DnAmr = -1
-  real,    public:: DtAmr = -1.0
   logical, public :: DoAutoRefine = .false.
+
+  ! Adaptation frequency
+  type(FreqType), public :: &
+       AdaptGrid = FreqType(.false.,100000,huge(1.0),-1,-1.0)
 
   ! Local variables ----------------------
 
@@ -87,19 +89,23 @@ contains
     call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#AMR")
-       call read_var('DnRefine',DnAmr)
-       DoAmr = DnAmr > 0
-       DtAmr = -1.0
-       if (DoAmr)then
+       call read_var('DnRefine', AdaptGrid % Dn)
+       AdaptGrid % DoThis = AdaptGrid % Dn > 0
+       AdaptGrid % Dt = -1.0
+       if (AdaptGrid % DoThis)then
+          AdaptGrid % nNext = AdaptGrid % Dn
+          AdaptGrid % tNext = AdaptGrid % Dt
           call read_var('DoAutoRefine', DoAutoRefine)
           if (DoAutoRefine) call read_amr_criteria("#AMR")
        end if
 
     case("#DOAMR")
-       call read_var('DoAmr',DoAmr)
-       if(DoAmr) then
-          call read_var('DnAmr', DnAmr)
-          call read_var('DtAmr', DtAmr)
+       call read_var('DoAmr', AdaptGrid % DoThis)
+       if(AdaptGrid % DoThis) then
+          call read_var('DnAmr', AdaptGrid % Dn)
+          call read_var('DtAmr', AdaptGrid % Dt)
+          AdaptGrid % nNext = AdaptGrid % Dn
+          AdaptGrid % tNext = AdaptGrid % Dt
           call read_var('IsStrictAmr', DoStrictAmr)
        end if
 
@@ -149,7 +155,7 @@ contains
             ' ERROR: nAmrCriteria must be positiv.')
 
     case("#AMRPROFILE")
-       call read_var('DoAmrPofile',DoProfileAmr)
+       call read_var('DoAmrPofile', DoProfileAmr)
 
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -320,14 +326,14 @@ contains
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of true cells  = ', nTrueCells
        call write_prefix; write(iUnitOut,*) &
-            '  AMR:   Min and max AMR levels      = ', nLevelMin, nLevelMax
+            '|  AMR:  Min and max AMR levels      = ', nLevelMin, nLevelMax
        if(IsLogRadius .or. IsGenRadius)then
           call write_prefix; write(iUnitOut,*) &
-               '  AMR:   Min and max cell size in Phi= ', &
+               '|  AMR:  Min and max cell size in Phi= ', &
                CellSizeMin, CellSizeMax
        else
           call write_prefix; write(iUnitOut,*) &
-               '  AMR:   Min and max cell size in x/r= ', &
+               '|  AMR:  Min and max cell size in x/r= ', &
                CellSizeMin, CellSizeMax
        endif
        call write_prefix; write(iUnitOut,*) '|'
