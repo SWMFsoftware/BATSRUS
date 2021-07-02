@@ -8,7 +8,7 @@ module ModAMR
        test_start, test_stop, lVerbose
   use ModCellGradient, ONLY: calc_gradient
   use ModFreq
-  
+
   implicit none
   SAVE
 

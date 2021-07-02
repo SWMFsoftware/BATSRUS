@@ -227,7 +227,7 @@ contains
     real(Real8_):: CarringtonRotationNumber
     character(len=500):: StringHeader
     real:: Param_I(4)
-    
+
     character(len=17) :: NameSub='MH_set_parameters'
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp

@@ -676,7 +676,6 @@ contains
 
     real(Real8_) :: CpuTimeNow
 
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
