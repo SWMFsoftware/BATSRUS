@@ -125,6 +125,8 @@ contains
 
     call timing_start('exch_msgs')
 
+    call sync_cpu_gpu('update State_VGB on GPU', NameSub)
+
     ! Apply boundary conditions
     if(.not.DoResChangeOnly)then
        call timing_start('cell_bc')
@@ -162,15 +164,16 @@ contains
     end if
 
     if (UseOrder2 .or. nOrderProlong > 1) then
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
-       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
@@ -178,7 +181,6 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V, &
             UseOpenACCIn=.true.)
-       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
