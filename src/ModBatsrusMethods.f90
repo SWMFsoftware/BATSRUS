@@ -6,9 +6,9 @@ module ModBatsrusMethods
 
   ! This module contains the top level methods for BATSRUS
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
-
+  use BATL_lib, ONLY: test_start, test_stop, lVerbose
+  use ModUpdateStateFast, ONLY: sync_cpu_gpu
+  
   implicit none
 
   private ! except
@@ -156,7 +156,6 @@ contains
       if(DoSetAmrLimits) call set_amr_limits
     end subroutine grid_setup
     !==========================================================================
-
     subroutine set_initial_conditions
 
       use ModSetInitialCondition, ONLY: set_initial_condition, &
@@ -165,9 +164,9 @@ contains
       use ModRestartFile,         ONLY: read_restart_files
       use ModMessagePass,         ONLY: exchange_messages
       use ModMain,                ONLY: UseB0, iSignRotationIC
-      use ModAdvance,             ONLY: State_VGB, sync_state, iStateCPU
+      use ModAdvance,             ONLY: State_VGB
       use ModBuffer,              ONLY: DoRestartBuffer
-      use ModB0,                  ONLY: set_b0_reschange, sync_b0
+      use ModB0,                  ONLY: set_b0_reschange
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
@@ -185,7 +184,6 @@ contains
 
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
-
       !------------------------------------------------------------------------
       if(.not.restart .and. nRefineLevelIC > 0)then
          call timing_start('amr_ics')
@@ -307,12 +305,6 @@ contains
          end if
       end if
 
-      ! Copy the initial condition to GPU
-      iStateCPU = iStateCPU + 1
-      call sync_state
-
-      call sync_b0
-
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
          ! within the region covered by this grid
@@ -322,6 +314,8 @@ contains
          call exchange_messages
       end if
 
+      call sync_cpu_gpu('change State_VGB B0_DGB on CPU')
+      
     end subroutine set_initial_conditions
     !==========================================================================
 
@@ -442,9 +436,9 @@ contains
     call init_amr_criteria
 
     call test_stop(NameSub, DoTest)
+
   end subroutine BATS_init_session
   !============================================================================
-
   subroutine BATS_advance(TimeSimulationLimit)
 
     ! Advance solution with one time step
@@ -697,9 +691,9 @@ contains
 
     call timing_stop('advance')
     call test_stop(NameSub, DoTest)
+
   end subroutine BATS_advance
   !============================================================================
-
   subroutine BATS_init_constrain_b
     use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
@@ -775,7 +769,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine BATS_init_constrain_b
   !============================================================================
-
   subroutine BATS_save_files(TypeSaveIn)
 
     use ModMain
@@ -857,7 +850,6 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       logical :: SaveThreads4Plot
-
       !------------------------------------------------------------------------
       SaveThreads4Plot = DoPlotThreads
       do iFile = 1, nFile
@@ -908,7 +900,6 @@ contains
 
     end subroutine save_files
     !==========================================================================
-
     subroutine save_file
 
       use ModRestartFile, ONLY: write_restart_files
@@ -942,10 +933,11 @@ contains
       ! is saved here before and it is restored after the loop.
 
       real :: tSimulationBackup = 0.0
-
       !------------------------------------------------------------------------
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
 
+      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
+      
       if(ifile==restart_) then
          ! Case for restart file
          if(.not.save_restart_file)RETURN

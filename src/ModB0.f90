@@ -42,7 +42,6 @@ module ModB0
   public:: get_b0           ! get B0 at an arbitrary point
   public:: add_b0           ! add B0 to B1 for given block
   public:: subtract_b0      ! subtract B0 from B0+B1 for given block
-  public:: sync_b0          ! Sync B0 between CPU and GPU
 
   ! If B0 varies with time it should be update at some frequency
   logical, public:: DoUpdateB0  = UseB
@@ -62,7 +61,6 @@ module ModB0
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
   !$acc declare create(B0_DGB)
-  integer, public:: iB0CPU = 0, iB0GPU = 0
 
   ! Face-centered B0 field arrays for one block
   real, public, allocatable:: B0_DX(:,:,:,:), B0_DY(:,:,:,:), B0_DZ(:,:,:,:)
@@ -223,8 +221,8 @@ contains
 
     ! Calculate the cell centered B0 for block iBlock
     use ModConst, ONLY: cTiny
-    use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B
-    use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+    use ModMain,  ONLY: UseFieldLineThreads, DoThreads_B
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
          CoordMin_D, CoordMin_DB, nBlock
 
     integer, intent(in) :: iBlock
@@ -248,12 +246,10 @@ contains
     if(DoTest)write(*,*)'B0*Cell_BLK=',&
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
-    iB0CPU = iB0CPU + 1
-
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_b0_cell
   !============================================================================
-
   subroutine set_b0_face(iBlock)
 
     ! Calculate the face centered B0 for block iBlock
@@ -858,30 +854,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine subtract_b0
-  !============================================================================
-  subroutine sync_b0
-#ifdef OPENACC
-    use BATL_lib, ONLY: iProc
-    !--------------------------------------------------------------------------
-    call timing_start('sync_b0')
-
-    if(iB0CPU < iB0GPU) then
-       !$acc update host(B0_DGB)
-       iB0GPU = mod(iB0GPU, 10000)
-       iB0CPU = iB0GPU
-       if(iProc==0) write(*,*) 'Copy B0_DGB from GPU to CPU.'
-    endif
-
-    if(iB0CPU > iB0GPU) then
-       !$acc update device(B0_DGB)
-       iB0CPU = mod(iB0CPU, 10000)
-       iB0GPU = iB0CPU
-       if(iProc==0) write(*,*) 'Copy B0_DGB from CPU to GPU.'
-    endif
-
-    call timing_stop('sync_b0')
-#endif
-  end subroutine sync_B0
   !============================================================================
 end module ModB0
 !==============================================================================

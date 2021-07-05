@@ -3,13 +3,23 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
 
+  ! Provide an interface to the Block Adaptive Tree Library (BATL)
+  ! by extending its capabilities with BATSRUS specific extra actions
+  
   use BATL_lib, ONLY: test_start, test_stop
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
+
   implicit none
 
+  private ! except
+
+  public:: set_batsrus_grid  ! set some grid related BATSRUS variables: 
+  public:: set_batsrus_state ! set some BATSRUS specific variables: B0...
+  public:: interpolate_grid_amr_gc   ! continuous interpolation with body
+  
 contains
   !============================================================================
   subroutine set_batsrus_grid
@@ -36,6 +46,7 @@ contains
     character(len=*), parameter:: NameSub = 'set_batsrus_grid'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     ! Tell if the grid and/or the tree has changed
     if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
     if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
@@ -81,6 +92,7 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine set_batsrus_grid
   !============================================================================
   subroutine set_batsrus_block(iBlock)
@@ -267,6 +279,7 @@ contains
     endif
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_batsrus_block
   !============================================================================
   subroutine set_batsrus_state
@@ -303,6 +316,7 @@ contains
     if(UseB0)call set_b0_reschange
     if(UseFieldLineThreads)call set_threads(NameSub)
     call test_stop(NameSub, DoTest)
+
   end subroutine set_batsrus_state
   !============================================================================
   subroutine calc_other_vars(iBlock)
@@ -386,9 +400,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine calc_other_vars
   !============================================================================
-
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
        nCell, iCell_II, Weight_I, IsBody)
 
@@ -455,6 +469,5 @@ contains
 
   end subroutine interpolate_grid_amr_gc
   !============================================================================
-
 end module ModBatlInterface
 !==============================================================================

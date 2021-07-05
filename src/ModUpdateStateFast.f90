@@ -14,7 +14,7 @@ module ModUpdateStateFast
   use ModFaceBoundary, ONLY: B1rCoef
   use ModVarIndexes
   use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I, iP_I, iRhoIon_I, nIonFluid
-  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, iStateGPU, &
+  use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
        DtMax_CB => time_BLK, Vdt_, iTypeUpdate
@@ -34,7 +34,7 @@ module ModUpdateStateFast
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
        TypeCoordSystem, useIe
-  use ModB0, ONLY: B0_DGB, iB0GPU
+  use ModB0, ONLY: B0_DGB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
@@ -48,10 +48,11 @@ module ModUpdateStateFast
 
   private ! except
 
+  public:: sync_cpu_gpu         ! Synchronize variables between CPU and GPU
   public:: update_state_fast    ! Fast update of State_VGB
   public:: update_b0_fast       ! Fast update of B0
   public:: set_boundary_fast    ! set cell based boundary for State_VGB
-
+  
   logical:: DoTestCell= .false.
 
   real:: Dipole_D(3)
@@ -59,12 +60,79 @@ module ModUpdateStateFast
 
 contains
   !============================================================================
+  subroutine sync_cpu_gpu(String)
+
+    character(len=*), intent(in):: String
+
+    ! Ensure that some variables are in sync between CPU and GPU.
+    ! Only perform the !$acc update if the status index of a variable
+    ! is larger on the source than the targer device.
+
+    ! By default update the variables listed in String from the CPU to the GPU.
+    ! If string contains "CPU", then update from GPU to CPU
+    ! If string contains "change", then increment the status index of the
+    ! variable(s) on the GPU or CPU.
+    ! Examples:
+    ! call sync_cpu_gpu("State_VGB, B0_DGB")
+    ! call sync_cpu_gpu("State_VGB, B0_DGB on CPU")
+    ! call sync_cpu_gpu("change B0_DGB")
+    ! call sync_cpu_gpu("change State_VGB on CPU")
+
+    integer:: iStateCpu=0, iStateGpu=0, iB0Cpu = 0, iB0Gpu = 0
+    logical:: DoChange, IsCpu
+    !--------------------------------------------------------------------------
+    DoChange = index(String, 'change') > 0
+    IsCpu    = index(String, 'CPU') > 0
+
+    if(index(String, 'State_VGB') > 0)then
+       if(DoChange)then
+          if(IsCpu)then
+             iStateCpu = iStateCpu + 1
+          else
+             iStateGpu = iStateGpu + 1
+          endif
+       else
+          if(IsCpu .and. iStateGpu > iStateCpu)then
+             !$acc update host (State_VGB)
+             iStateGpu = modulo(iStateGpu, 10000)
+             iStateCpu = iStateGpu
+          elseif(.not.IsCpu .and. iStateCpu > iStateGpu)then
+             !$acc update device(State_VGB)
+             iStateCpu = modulo(iStateCpu, 10000)
+             iStateGpu = iStateCpu
+          endif
+       endif
+    endif
+    if(index(String,'B0_DGB') > 0) then
+       if(DoChange)then
+          if(IsCpu)then
+             iB0Cpu = iB0Cpu + 1
+          else
+             iB0Gpu = iB0Gpu + 1
+          endif
+       else
+          if(IsCpu .and. iB0Gpu > iB0Cpu)then
+             !$acc update host (B0_DGB)
+             iB0Gpu = modulo(iB0Gpu, 10000)
+             iB0Cpu = iB0Gpu
+          elseif(.not.IsCpu .and. iB0Cpu > iB0Gpu)then
+             !$acc update device(B0_DGB)
+             iB0Cpu = modulo(iB0Cpu, 10000)
+             iB0Gpu = iB0Cpu
+          endif
+       endif
+    endif
+  end subroutine sync_cpu_gpu
+  !============================================================================
   subroutine update_state_fast
 
     ! Apply cell boundary conditions and update one stage
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+    call sync_cpu_gpu('update State_VGB and B0_DGB on GPU')
+    call sync_cpu_gpu('change State_VGB on GPU')
+
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -78,7 +146,6 @@ contains
        call CON_stop(NameSub//': invalid iTypeUpdate=', iTypeUpdate)
     end select
 
-    iStateGPU = iStateGPU + 1
   end subroutine update_state_fast
   !============================================================================
   subroutine update_state_cpu
@@ -2939,6 +3006,10 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
+    call sync_cpu_gpu('update B0_DGB, State_VGB on GPU')
+    call sync_cpu_gpu('change B0_DGB on GPU')
+
+    
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
@@ -2969,7 +3040,6 @@ contains
        end do; end do; end do
     end do
 
-    iB0GPU = iB0GPU + 1
 
     ! messsage pass to fix B1 in the ghost cells ?!
     ! set B0 at reschange ?!

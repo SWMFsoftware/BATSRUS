@@ -14,7 +14,7 @@ module ModRestartFile
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
-  use ModAdvance,    ONLY: State_VGB, sync_state
+  use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface
   use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
@@ -190,11 +190,12 @@ contains
 
   subroutine write_restart_files
 
-    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB, sync_b0
+    use ModB0,       ONLY: UseB0, add_b0, subtract_b0, B0_DGB
     use ModGeometry, ONLY: true_cell
     use ModMain,     ONLY: UseFieldLineThreads, UseBufferGrid
     use ModFieldLineThread, ONLY: save_thread_restart
     use ModBuffer,   ONLY: save_buffer_restart
+    
     integer :: iBlock
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_restart_files'
@@ -202,8 +203,6 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    call sync_state
-    call sync_b0
     !$acc update host(dt_BLK)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then

@@ -34,8 +34,8 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
-    use ModAdvance, ONLY : State_VGB, sync_state
-    use ModB0, ONLY: B0_DGB, sync_b0
+    use ModAdvance, ONLY : State_VGB
+    use ModB0, ONLY: B0_DGB
     use ModVarIndexes, ONLY: SignB_
     use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
     use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
@@ -43,7 +43,7 @@ contains
     use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
          write_tecplot_head, write_tecplot_data, write_tecplot_connect, &
          write_tecplot_node_data, set_tecplot_var_string
-
+    
     use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
          message_pass_node, message_pass_cell, average_grid_node, &
          find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, &
@@ -125,9 +125,6 @@ contains
     character(len=*), parameter:: NameSub = 'write_plot'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
-    call sync_state
-    call sync_b0
 
     ! Initialize stuff
 

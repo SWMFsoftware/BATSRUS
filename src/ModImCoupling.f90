@@ -310,13 +310,14 @@ contains
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
          time_accurate, Dt, DoCoupleImPressure, DoCoupleImDensity, RhoMinDimIm
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies, &
-         nSpecies, iStateCPU, sync_state
+         nSpecies
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid
     use ModB0, ONLY: B0_DGB
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
 
@@ -342,7 +343,8 @@ contains
 
     call timing_start(NameSub)
 
-    call sync_state
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
+    call sync_cpu_gpu('change State_VGB on CPU')
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 
@@ -517,9 +519,6 @@ contains
     end do
 
     if(allocated(iDens_I)) deallocate(iDens_I)
-
-    iStateCPU = iStateCPU + 1
-    call sync_state
 
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)

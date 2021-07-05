@@ -87,6 +87,7 @@ contains
 
     use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
     use CON_axes,    ONLY: transform_matrix
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     ! remember last call and the last grid number
     integer :: nStepLast=-1, iLastGrid=-1, iLastDecomposition=-1
@@ -95,6 +96,8 @@ contains
     character(len=*), parameter:: NameSub = 'trace_field_grid'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
 
     call init_mod_trace_fast
 
@@ -137,8 +140,8 @@ contains
   subroutine trace_grid_fast
 
     use ModMain
-    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, sync_state
-    use ModB0,       ONLY: get_b0, sync_b0
+    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
+    use ModB0,       ONLY: get_b0
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -203,9 +206,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(DoTime)call timing_reset('ray_pass',2)
-
-    call sync_state
-    call sync_b0
 
     DoTestRay = .false.
 
