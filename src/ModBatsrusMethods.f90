@@ -305,6 +305,9 @@ contains
          end if
       end if
 
+      call sync_cpu_gpu('change State_VGB B0_DGB on CPU', NameSub)
+      call sync_cpu_gpu('update State_VGB B0_DGB on GPU', NameSub)
+
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
          ! within the region covered by this grid
@@ -314,7 +317,6 @@ contains
          call exchange_messages
       end if
 
-      call sync_cpu_gpu('change State_VGB B0_DGB on CPU')
       
     end subroutine set_initial_conditions
     !==========================================================================
@@ -936,8 +938,8 @@ contains
       !------------------------------------------------------------------------
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
 
-      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
-      
+      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+
       if(ifile==restart_) then
          ! Case for restart file
          if(.not.save_restart_file)RETURN

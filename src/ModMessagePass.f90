@@ -165,7 +165,7 @@ contains
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
-       call sync_cpu_gpu('change State_VGB on GPU')
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
@@ -178,7 +178,7 @@ contains
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V, &
             UseOpenACCIn=.true.)
-       call sync_cpu_gpu('change State_VGB on GPU')
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange

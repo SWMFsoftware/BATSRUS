@@ -97,7 +97,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
 
     call init_mod_trace_fast
 

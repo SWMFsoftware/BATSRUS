@@ -343,8 +343,8 @@ contains
 
     call timing_start(NameSub)
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
-    call sync_cpu_gpu('change State_VGB on CPU')
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+    call sync_cpu_gpu('change State_VGB on CPU', NameSub)
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 

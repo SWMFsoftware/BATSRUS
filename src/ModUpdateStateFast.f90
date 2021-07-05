@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB => time_BLK, Vdt_, iTypeUpdate
+       DtMax_CB => time_BLK, Vdt_, iTypeUpdate, UpdateOrig_
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -60,68 +60,96 @@ module ModUpdateStateFast
 
 contains
   !============================================================================
-  subroutine sync_cpu_gpu(String)
+  subroutine sync_cpu_gpu(String, NameCaller)
 
     character(len=*), intent(in):: String
+    character(len=*), optional, intent(in):: NameCaller
 
     ! Ensure that some variables are in sync between CPU and GPU.
     ! Only perform the !$acc update if the status index of a variable
-    ! is larger on the source than the targer device.
+    ! is larger on the source than the targer device (DiVAR is 1 or -1).
 
     ! By default update the variables listed in String from the CPU to the GPU.
     ! If string contains "CPU", then update from GPU to CPU
-    ! If string contains "change", then increment the status index of the
-    ! variable(s) on the GPU or CPU.
+    ! If string contains "change", then set DiVAR=-1 for GPU or DiVar=1 for CPU.
+    !
     ! Examples:
-    ! call sync_cpu_gpu("State_VGB, B0_DGB")
+    ! call sync_cpu_gpu("State_VGB, B0_DGB", NameSub)
     ! call sync_cpu_gpu("State_VGB, B0_DGB on CPU")
     ! call sync_cpu_gpu("change B0_DGB")
     ! call sync_cpu_gpu("change State_VGB on CPU")
-
-    integer:: iStateCpu=0, iStateGpu=0, iB0Cpu = 0, iB0Gpu = 0
+    !
+    ! The optional NameCaller string is used for testing purposes
+    
+    integer:: DiState=0, DiB0 = 0
     logical:: DoChange, IsCpu
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'sync_cpu_gpu'
     !--------------------------------------------------------------------------
+    if(iTypeUpdate == UpdateOrig_) RETURN
+
+    call test_start(NameSub, DoTest)
+
+    if(DoTest)then
+       write(*,*) NameSub,': String=', String
+       if(present(NameCaller)) write(*,*) NameSub,' called by ',NameCaller
+    end if
+
     DoChange = index(String, 'change') > 0
     IsCpu    = index(String, 'CPU') > 0
 
     if(index(String, 'State_VGB') > 0)then
        if(DoChange)then
           if(IsCpu)then
-             iStateCpu = iStateCpu + 1
+             DiState = 1
           else
-             iStateGpu = iStateGpu + 1
+             DiState = -1
           endif
        else
-          if(IsCpu .and. iStateGpu > iStateCpu)then
+          if(IsCpu .and. DiState < 0)then
+             if(DoTest)write(*,*) NameSub,': acc update State to CPU'
+             call timing_start("sync_state")
              !$acc update host (State_VGB)
-             iStateGpu = modulo(iStateGpu, 10000)
-             iStateCpu = iStateGpu
-          elseif(.not.IsCpu .and. iStateCpu > iStateGpu)then
+             call timing_stop("sync_state")
+             DiState = 0
+          elseif(.not.IsCpu .and. DiState > 0)then
+             call timing_start("sync_state")
+             if(DoTest)write(*,*) NameSub,': acc update State to GPU'
              !$acc update device(State_VGB)
-             iStateCpu = modulo(iStateCpu, 10000)
-             iStateGpu = iStateCpu
+             call timing_stop("sync_state")
+             DiState = 0
           endif
        endif
     endif
-    if(index(String,'B0_DGB') > 0) then
+    if(UseB0 .and. index(String,'B0_DGB') > 0) then
        if(DoChange)then
           if(IsCpu)then
-             iB0Cpu = iB0Cpu + 1
+             DiB0 = 1
           else
-             iB0Gpu = iB0Gpu + 1
+             DiB0 = -1
           endif
        else
-          if(IsCpu .and. iB0Gpu > iB0Cpu)then
+          if(IsCpu .and. DiB0 < 0)then
+             if(DoTest)write(*,*) NameSub,': acc update B0 to CPU'
+             call timing_start("sync_b0")
              !$acc update host (B0_DGB)
-             iB0Gpu = modulo(iB0Gpu, 10000)
-             iB0Cpu = iB0Gpu
-          elseif(.not.IsCpu .and. iB0Cpu > iB0Gpu)then
+             call timing_stop("sync_b0")
+             DiB0 = 0
+          elseif(.not.IsCpu .and. DiB0 > 0)then
+             if(DoTest)write(*,*) NameSub,': acc update B0 to GPU'
+             call timing_start("sync_b0")
              !$acc update device(B0_DGB)
-             iB0Cpu = modulo(iB0Cpu, 10000)
-             iB0Gpu = iB0Cpu
+             call timing_stop("sync_b0")
+             DiB0 = 0
           endif
        endif
     endif
+
+    if(DoTest)write(*,*) NameSub,': DiState, DiB0', DiState, DiB0
+
+    call test_stop(NameSub, DoTest)
+
   end subroutine sync_cpu_gpu
   !============================================================================
   subroutine update_state_fast
@@ -130,8 +158,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
-    call sync_cpu_gpu('update State_VGB and B0_DGB on GPU')
-    call sync_cpu_gpu('change State_VGB on GPU')
+    call sync_cpu_gpu('update State_VGB and B0_DGB on GPU', NameSub)
+    call sync_cpu_gpu('change State_VGB on GPU', NameSub)
 
     select case(iTypeUpdate)
     case(3)
@@ -3006,9 +3034,8 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    call sync_cpu_gpu('update B0_DGB, State_VGB on GPU')
-    call sync_cpu_gpu('change B0_DGB on GPU')
-
+    call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
+    call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
     
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
@@ -3186,7 +3213,6 @@ contains
 
     integer :: iTheta, iPhi, iHemisphere
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
