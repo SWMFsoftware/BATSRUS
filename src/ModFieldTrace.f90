@@ -55,6 +55,7 @@ module ModFieldTrace
 
   real, public, allocatable :: ray(:,:,:,:,:,:)
   real, public, allocatable :: Trace_DINB(:,:,:,:,:,:)
+  !$acc declare create(ray, Trace_DINB)
 
   ! Integrals added up for all the local ray segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
@@ -65,11 +66,14 @@ module ModFieldTrace
 
   ! map rays to the SM equatorial plane
   logical, public :: DoMapEquatorRay= .false.
+  !$acc declare create(DoMapEquatorRay)
 
   real, public :: rIonosphere = 0.
+  !$acc declare create(rIonosphere)
 
   ! Radius where the tracing stops
   real, public :: rTrace = 0.
+  !$acc declare create(rTrace)
 
   ! Named indexes
   integer, public, parameter :: &
@@ -82,6 +86,7 @@ module ModFieldTrace
 
   ! Various values indicating the end state of a ray
   real, public :: CLOSEDRAY, OPENRAY, BODYRAY, LOOPRAY, NORAY, OUTRAY
+  !$acc declare create(CLOSEDRAY, OPENRAY, BODYRAY, LOOPRAY, NORAY, OUTRAY)
 
   ! Select between fast less accurate and slower but more accurate algorithms
   logical, public:: UseAccurateTrace    = .false.
@@ -95,16 +100,21 @@ module ModFieldTrace
   ! Conversion matrix between SM and GM coordinates
   ! (to be safe initialized to unit matrix)
   real, public :: GmSm_DD(3,3) = i_DD
+  !$acc declare create(GmSm_DD)
 
   ! Square of radii to save computation
   real, public :: rTrace2 = 0.0
   real, public :: rIonosphere2 = 0.0
+  !$acc declare create(rTrace2, rIonosphere2)
 
   ! Inner radius to end tracing (either rTrace or rIonosphere)
   real, public :: rInner = 0.0, rInner2 = 0.0
+  !$acc declare create(rInner, rInner2)
 
   ! The vector field to trace: B/U/J
   character, public :: NameVectorField = 'B'
+  logical, public:: IsBVectorField = .true.
+  !$acc declare create(IsBVectorField)
 
   ! The minimum number of time steps between two ray traces on the same grid
   integer, public :: DnRaytrace = 1
@@ -123,7 +133,8 @@ module ModFieldTrace
 
   ! Total magnetic field with second order ghost cells
   real, public, allocatable :: b_DGB(:,:,:,:,:)
-
+  !$acc declare create(b_DGB)
+  
   ! Local variables --------------------------------
 
   ! Possible tasks
@@ -216,7 +227,7 @@ contains
   end subroutine read_field_trace_param
   !============================================================================
   subroutine xyz_to_latlon(Pos_D)
-
+    !$acc routine seq
     use ModNumConst, ONLY: cTiny, cRadToDeg
 
     ! Convert xyz coordinates to latitude and longitude (in degrees)
@@ -259,7 +270,7 @@ contains
   end subroutine xyz_to_latlon
   !============================================================================
   subroutine xyz_to_rphi(Pos_DI)
-
+    !$acc routine seq
     use ModNumConst, ONLY: cRadToDeg
 
     ! Convert X,Y coordinates into radial distance in the XY plane
@@ -306,7 +317,7 @@ contains
   end subroutine xyz_to_rphi
   !============================================================================
   subroutine xyz_to_latlonstatus(Ray_DI)
-
+    !$acc routine seq
     real, intent(inout) :: Ray_DI(3,2)
 
     integer :: iRay
@@ -443,6 +454,9 @@ contains
 
     UseSmg = TypeCoordSystem == 'GSM' .or. TypeCoordSystem == 'GSE'
 
+    !$acc update device(CLOSEDRAY, OPENRAY, BODYRAY, LOOPRAY, NORAY, OUTRAY)
+    !$acc update device(rIonosphere, rIonosphere2, DoMapEquatorRay)
+    !$acc update device(rInner, rInner2, rTrace, rTrace2)
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_field_trace
   !============================================================================
@@ -489,7 +503,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(DoTest)write(*,*) NameSub,' starting'
+    write(*,*) NameSub,' starting'
 
     ! Initialize constants
     DoTraceRay     = .true.

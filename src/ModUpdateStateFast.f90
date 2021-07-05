@@ -51,7 +51,11 @@ module ModUpdateStateFast
   public:: sync_cpu_gpu         ! Synchronize variables between CPU and GPU
   public:: update_state_fast    ! Fast update of State_VGB
   public:: update_b0_fast       ! Fast update of B0
+  public:: update_planet_dipole ! Update the planet dipole strength
+  public:: get_b0_dipole        ! Get the dipole field 
   public:: set_boundary_fast    ! set cell based boundary for State_VGB
+
+  public:: map_planet_field
 
   logical:: DoTestCell= .false.
 
@@ -3047,8 +3051,10 @@ contains
     Dipole_D = Dipole_D * DipoleStrength
     !$acc update device(Dipole_D)
 
-    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    ! if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
 
+    call update_planet_dipole
+    
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -3075,6 +3081,27 @@ contains
 
   end subroutine update_b0_fast
   !============================================================================
+  subroutine update_planet_dipole
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_b0_fast'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(TypeCoordSystem == 'GSM')then
+       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
+    elseif(TypeCoordSystem == 'GSE')then
+       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
+    else
+       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
+    end if
+    Dipole_D = Dipole_D * DipoleStrength
+    !$acc update device(Dipole_D)
+
+    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    
+    call test_stop(NameSub, DoTest)
+  end subroutine update_planet_dipole
+  !============================================================================
   subroutine get_b0_dipole(Xyz_D, b_D)
     !$acc routine seq
 
@@ -3098,7 +3125,7 @@ contains
   end subroutine get_b0_dipole
   !============================================================================
   subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
-       iHemisphere, DdirDxyz_DD)
+       iHemisphere, DoNotConvertBack, DdirDxyz_DD)
     !$acc routine seq
 
     ! This subroutine is a simplified version of
@@ -3110,6 +3137,7 @@ contains
     real,              intent(in) :: rMapIn       ! radial distance to map to
     real,              intent(out):: XyzMap_D(3)      ! mapped position
     integer,           intent(out):: iHemisphere      ! which hemisphere
+    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
 
     real             :: Xyz_D(3)        ! Normalized and rotated position
@@ -3164,25 +3192,30 @@ contains
 
     XyMap = sqrt(XyMap2)
 
-    DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
-         ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
-         ( XyzMap_D(3) * XyMap / XyRatio )
+    if(.not.present(DoNotConvertBack)) &
+         XyzMap_D = matmul(XyzMap_D, Convert_DD)
 
-    ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
-    DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
+    if(present(DdirDxyz_DD)) then     
+       DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
+            ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
+            ( XyzMap_D(3) * XyMap / XyRatio )
 
-    ! dPhi/dx = -y/(x^2+y^2)
-    ! dPhi/dy =  x/(x^2+y^2)
-    Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
-    DdirDxyz_DD(2,1) = - Xyz_D(2) / Xy2
-    DdirDxyz_DD(2,2) =   Xyz_D(1) / Xy2
+       ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
+       DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
 
-    ! dPhi/dz = 0.0
-    DdirDxyz_DD(2,3) = 0.0
+       ! dPhi/dx = -y/(x^2+y^2)
+       ! dPhi/dy =  x/(x^2+y^2)
+       Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
+       DdirDxyz_DD(2,1) = - Xyz_D(2) / Xy2
+       DdirDxyz_DD(2,2) =   Xyz_D(1) / Xy2
 
-    ! Transform into the system of the input coordinates
-    ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
-    DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+       ! dPhi/dz = 0.0
+       DdirDxyz_DD(2,3) = 0.0
+
+       ! Transform into the system of the input coordinates
+       ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
+       DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+    end if
 
   end subroutine map_planet_field
   !============================================================================
@@ -3217,7 +3250,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
-         iHemisphere, DdirDxyz_DD)
+         iHemisphere, .true., DdirDxyz_DD)
 
     ! Calculate angular coordinates
     call xyz_to_dir(XyzIono_D, Theta, Phi)
