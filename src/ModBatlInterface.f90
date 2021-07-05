@@ -5,7 +5,7 @@ module ModBatlInterface
 
   ! Provide an interface to the Block Adaptive Tree Library (BATL)
   ! by extending its capabilities with BATSRUS specific extra actions
-  
+
   use BATL_lib, ONLY: test_start, test_stop
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
@@ -16,10 +16,10 @@ module ModBatlInterface
 
   private ! except
 
-  public:: set_batsrus_grid  ! set some grid related BATSRUS variables: 
+  public:: set_batsrus_grid  ! set some grid related BATSRUS variables:
   public:: set_batsrus_state ! set some BATSRUS specific variables: B0...
   public:: interpolate_grid_amr_gc   ! continuous interpolation with body
-  
+
 contains
   !============================================================================
   subroutine set_batsrus_grid

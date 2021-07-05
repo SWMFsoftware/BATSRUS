@@ -52,7 +52,7 @@ module ModUpdateStateFast
   public:: update_state_fast    ! Fast update of State_VGB
   public:: update_b0_fast       ! Fast update of B0
   public:: set_boundary_fast    ! set cell based boundary for State_VGB
-  
+
   logical:: DoTestCell= .false.
 
   real:: Dipole_D(3)
@@ -66,7 +66,7 @@ contains
     character(len=*), optional, intent(in):: NameCaller
 
     ! Ensure that some variables are in sync between CPU and GPU.
-    ! Only perform the !$acc update if the status index of a variable
+    ! Only perform the !$ acc update if the status index of a variable
     ! is larger on the source than the targer device (DiVAR is 1 or -1).
 
     ! By default update the variables listed in String from the CPU to the GPU.
@@ -80,7 +80,7 @@ contains
     ! call sync_cpu_gpu("change State_VGB on CPU")
     !
     ! The optional NameCaller string is used for testing purposes
-    
+
     integer:: DiState=0, DiB0 = 0
     logical:: DoChange, IsCpu
 
@@ -3036,7 +3036,7 @@ contains
 
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
-    
+
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
@@ -3066,7 +3066,6 @@ contains
           end if
        end do; end do; end do
     end do
-
 
     ! messsage pass to fix B1 in the ghost cells ?!
     ! set B0 at reschange ?!
@@ -3213,10 +3212,10 @@ contains
 
     integer :: iTheta, iPhi, iHemisphere
 
-    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
-    !--------------------------------------------------------------------------
     ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
+    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
+    !--------------------------------------------------------------------------
     call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
          iHemisphere, DdirDxyz_DD)
 

@@ -8,7 +8,7 @@ module ModBatsrusMethods
 
   use BATL_lib, ONLY: test_start, test_stop, lVerbose
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
-  
+
   implicit none
 
   private ! except
@@ -317,7 +317,6 @@ contains
          call exchange_messages
       end if
 
-      
     end subroutine set_initial_conditions
     !==========================================================================
 

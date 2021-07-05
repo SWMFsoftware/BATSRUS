@@ -18,7 +18,7 @@ module ModFieldTrace
   use ModKind, ONLY: Real8_
   use ModIO,   ONLY: iUnitOut, write_prefix
   use ModUpdateStateFast, ONLY: sync_cpu_gpu
-  
+
   implicit none
   save
 
@@ -2003,7 +2003,7 @@ contains
     call timing_start(NameSub)
 
     call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
-    
+
     DoTestRay = .false.
 
     ! Initialize some basic variables
