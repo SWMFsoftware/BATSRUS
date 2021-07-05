@@ -82,8 +82,9 @@ contains
     use ModNumConst, ONLY: cRadToDeg
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
-    use ModAdvance, ONLY: State_VGB, sync_state
-    use ModB0, ONLY: B0_DGB, sync_b0
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize, nVar
@@ -101,8 +102,7 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
-    call sync_state
-    call sync_b0
+    call sync_gpu_cpu('update State_VGB, B0_DGB on CPU')
 
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
