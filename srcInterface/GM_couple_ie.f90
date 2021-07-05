@@ -102,7 +102,7 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
-    call sync_gpu_cpu('update State_VGB, B0_DGB on CPU')
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU')
 
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
