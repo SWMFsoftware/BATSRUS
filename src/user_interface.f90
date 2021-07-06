@@ -6,6 +6,18 @@
 ! to avoid circular dependencies
 
 !=====================================================================
+subroutine set_user_version
+
+  use ModUser, ONLY: VersionModule => VersionUserModule, &
+       NameModule => NameUserModule, NameFile => NameUserFile
+  use ModMain, ONLY: VersionUserModule, NameUserModule, NameUserFile
+  !-------------------------------------------------------------------
+  VersionUserModule = VersionModule
+  NameUserModule    = NameModule
+  NameUserFile      = NameFile
+
+end subroutine set_user_version
+!=====================================================================
 subroutine user_set_boundary_cells(iBlock)
 
   use ModUser, ONLY: user_sub => user_set_boundary_cells
@@ -16,7 +28,6 @@ subroutine user_set_boundary_cells(iBlock)
   call user_sub(iBlock)
 
 end subroutine user_set_boundary_cells
-
 !=====================================================================
 subroutine user_set_face_boundary(FBC)
 
@@ -29,7 +40,6 @@ subroutine user_set_face_boundary(FBC)
   call user_sub(FBC)
 
 end subroutine user_set_face_boundary
-
 !=====================================================================
 subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
@@ -43,7 +53,6 @@ subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
   call user_sub(iBlock, iSide, TypeBc, IsFound)
 
 end subroutine user_set_cell_boundary
-
 !=====================================================================
 subroutine user_initial_perturbation
 
@@ -53,7 +62,6 @@ subroutine user_initial_perturbation
   call user_sub
 
 end subroutine user_initial_perturbation
-
 !=====================================================================
 subroutine user_set_ics(iBlock)
 
@@ -65,7 +73,6 @@ subroutine user_set_ics(iBlock)
   call user_sub(iBlock)
 
 end subroutine user_set_ics
-
 !=====================================================================
 subroutine user_init_session
 
@@ -75,7 +82,6 @@ subroutine user_init_session
   call user_sub
 
 end subroutine user_init_session
-
 !=====================================================================
 subroutine user_action(NameAction)
 
@@ -109,7 +115,6 @@ subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
      IsInside, IsInside_I, Value_I)
 
 end subroutine user_specify_region
-
 !=====================================================================
 subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
@@ -124,7 +129,6 @@ subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
   call user_sub(iBlock, UserCriteria, TypeCriteria, IsFound)
 
 end subroutine user_amr_criteria
-
 !=====================================================================
 subroutine user_read_inputs
 
@@ -134,7 +138,6 @@ subroutine user_read_inputs
   call user_sub
 
 end subroutine user_read_inputs
-
 !=====================================================================
 subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
@@ -148,9 +151,7 @@ subroutine user_get_log_var(VarValue, TypeVar, Radius)
   call user_sub(VarValue, TypeVar, Radius)
 
 end subroutine user_get_log_var
-
 !====================================================================
-
 subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
      PlotVar_G, PlotVarBody, UsePlotVarBody, &
      NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -177,9 +178,7 @@ subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
 end subroutine user_set_plot_var
-
 !====================================================================
-
 subroutine user_calc_sources_expl(iBlock)
 
   use ModUser, ONLY: user_sub => user_calc_sources_expl
@@ -190,9 +189,7 @@ subroutine user_calc_sources_expl(iBlock)
   call user_sub(iBlock)
 
 end subroutine user_calc_sources_expl
-
 !====================================================================
-
 subroutine user_calc_sources_impl(iBlock)
 
   use ModUser, ONLY: user_sub => user_calc_sources_impl
@@ -203,9 +200,7 @@ subroutine user_calc_sources_impl(iBlock)
   call user_sub(iBlock)
 
 end subroutine user_calc_sources_impl
-
 !=====================================================================
-
 subroutine user_init_point_implicit
 
   use ModUser, ONLY: user_sub => user_init_point_implicit
@@ -214,9 +209,7 @@ subroutine user_init_point_implicit
   call user_sub
 
 end subroutine user_init_point_implicit
-
 !=====================================================================
-
 subroutine user_get_b0(x, y, z, B0_D)
 
   use ModUser, ONLY: user_sub => user_get_b0
@@ -228,7 +221,6 @@ subroutine user_get_b0(x, y, z, B0_D)
   call user_sub(x, y, z, B0_D)
 
 end subroutine user_get_b0
-
 !=====================================================================
 subroutine user_update_states(iBlock)
 
@@ -240,7 +232,6 @@ subroutine user_update_states(iBlock)
   call user_sub(iBlock)
 
 end subroutine user_update_states
-
 !=====================================================================
 subroutine user_normalization
 
@@ -250,7 +241,6 @@ subroutine user_normalization
   call user_sub
 
 end subroutine user_normalization
-
 !=====================================================================
 subroutine user_io_units
 
@@ -260,7 +250,6 @@ subroutine user_io_units
   call user_sub
 
 end subroutine user_io_units
-
 !=====================================================================
 subroutine user_set_resistivity(iBlock, Eta_G)
 

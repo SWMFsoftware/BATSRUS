@@ -45,7 +45,7 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph
     use ModParticleMover, ONLY:  UseBoundaryVdf, set_boundary_vdf
     use ModBuffer,   ONLY: fill_in_from_buffer
-    use ModUpdateStateFast, ONLY: set_boundary_fast
+    use ModUpdateStateFast, ONLY: set_boundary_fast, sync_cpu_gpu
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
@@ -125,6 +125,8 @@ contains
 
     call timing_start('exch_msgs')
 
+    call sync_cpu_gpu('update State_VGB on GPU', NameSub)
+
     ! Apply boundary conditions
     if(.not.DoResChangeOnly)then
        call timing_start('cell_bc')
@@ -162,6 +164,7 @@ contains
     end if
 
     if (UseOrder2 .or. nOrderProlong > 1) then
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseOpenACCIn=.true.)
@@ -170,6 +173,7 @@ contains
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
+       call sync_cpu_gpu('change State_VGB on GPU', NameSub)
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&

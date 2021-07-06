@@ -20,6 +20,10 @@ module ModMain
   real, parameter :: CodeVersion = 9.9
   real            :: CodeVersionRead = -1.0
 
+  ! Version of User module
+  real:: VersionUserModule = -1.0
+  character(len=200):: NameUserFile = '???', NameUserModule = '???'
+
   ! Standalone and component information
   ! In stand alone mode this variable is set to true
   logical             :: IsStandAlone = .false.

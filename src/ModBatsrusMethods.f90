@@ -6,8 +6,8 @@ module ModBatsrusMethods
 
   ! This module contains the top level methods for BATSRUS
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
+  use BATL_lib, ONLY: test_start, test_stop, lVerbose
+  use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
   implicit none
 
@@ -156,7 +156,6 @@ contains
       if(DoSetAmrLimits) call set_amr_limits
     end subroutine grid_setup
     !==========================================================================
-
     subroutine set_initial_conditions
 
       use ModSetInitialCondition, ONLY: set_initial_condition, &
@@ -185,7 +184,6 @@ contains
 
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
-
       !------------------------------------------------------------------------
       if(.not.restart .and. nRefineLevelIC > 0)then
          call timing_start('amr_ics')
@@ -307,7 +305,9 @@ contains
          end if
       end if
 
-      !$acc update device(State_VGB)
+      call sync_cpu_gpu('change State_VGB B0_DGB on CPU', NameSub)
+      call sync_cpu_gpu('update State_VGB B0_DGB on GPU', NameSub)
+
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
          ! within the region covered by this grid
@@ -437,9 +437,9 @@ contains
     call init_amr_criteria
 
     call test_stop(NameSub, DoTest)
+
   end subroutine BATS_init_session
   !============================================================================
-
   subroutine BATS_advance(TimeSimulationLimit)
 
     ! Advance solution with one time step
@@ -447,8 +447,7 @@ contains
     use ModKind
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-    use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
-         prepare_amr, do_amr
+    use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
     use ModAdvanceExplicit, ONLY: advance_explicit
@@ -488,9 +487,6 @@ contains
          pic_set_cell_status
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
-
-    ! Local variables
-    real :: AmrTime = 0
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
@@ -632,7 +628,10 @@ contains
     ! Re-calculate the active PIC regions
     if(AdaptPic % DoThis) then
        if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate)) then
-          if(iProc==0) print*, "Re-calculating PIC region at simulation time ", Time_Simulation
+          if(iProc==0 .and. lVerbose > 0)then
+             call write_prefix; write(iUnitOut,*) NameSub, &
+                  " adapt PIC region at simulation time=", Time_Simulation
+          end if
           call calc_pic_criteria
           call pic_set_cell_status
        end if
@@ -651,15 +650,12 @@ contains
 
     if(UseProjection) call project_divb
 
-    ! AmrTime is the time to do AMR.
-    if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
-    if(DoAmr .and. ((DnAmr > 0 .and. mod(n_step, DnAmr) == 0) .or. &
-         (DtAmr > 0 .and. time_simulation > AmrTime)))then
-       if(DtAmr > 0) AmrTime = DtAmr + AmrTime
+    ! Adapt grid
+    if(is_time_to(AdaptGrid, n_step, Time_Simulation, time_accurate)) then
        call timing_start(NameThisComp//'_amr')
-       if(iProc==0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr > 0))then
+       if(iProc==0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*) &
-               '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
+               '----------------- AMR START at nStep=', n_step
           if(time_accurate) call write_timeaccurate
        end if
 
@@ -676,11 +672,11 @@ contains
 
        ! Output timing after AMR.
        call timing_stop(NameThisComp//'_amr')
-       if(iProc == 0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr >0))then
+       if(iProc == 0 .and. lVerbose > 0)then
           call timing_show(NameThisComp//'_amr',1)
           call timing_show('load_balance',1)
           call write_prefix; write(iUnitOut,*) &
-               '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
+               '----------------- AMR FINISHED'
        end if
 
        if(UseProjection) call project_divb
@@ -696,9 +692,9 @@ contains
 
     call timing_stop('advance')
     call test_stop(NameSub, DoTest)
+
   end subroutine BATS_advance
   !============================================================================
-
   subroutine BATS_init_constrain_b
     use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
@@ -774,7 +770,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine BATS_init_constrain_b
   !============================================================================
-
   subroutine BATS_save_files(TypeSaveIn)
 
     use ModMain
@@ -856,7 +851,6 @@ contains
     subroutine save_files
       use ModFieldLineThread, ONLY: save_threads_for_plot, DoPlotThreads
       logical :: SaveThreads4Plot
-
       !------------------------------------------------------------------------
       SaveThreads4Plot = DoPlotThreads
       do iFile = 1, nFile
@@ -907,7 +901,6 @@ contains
 
     end subroutine save_files
     !==========================================================================
-
     subroutine save_file
 
       use ModRestartFile, ONLY: write_restart_files
@@ -925,8 +918,9 @@ contains
       use ModWritePlotLos,      ONLY: write_plot_los
       use ModWritePlotRadiowave, ONLY: write_plot_radiowave
       use ModWriteTecplot,      ONLY: assign_node_numbers
-      use ModFieldTrace,        ONLY: trace_field_grid, &
+      use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
+      use ModFieldTraceFast,    ONLY: trace_field_grid
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
 
@@ -940,9 +934,10 @@ contains
       ! is saved here before and it is restored after the loop.
 
       real :: tSimulationBackup = 0.0
-
       !------------------------------------------------------------------------
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
+
+      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
 
       if(ifile==restart_) then
          ! Case for restart file

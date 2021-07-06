@@ -221,8 +221,8 @@ contains
 
     ! Calculate the cell centered B0 for block iBlock
     use ModConst, ONLY: cTiny
-    use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B
-    use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+    use ModMain,  ONLY: UseFieldLineThreads, DoThreads_B
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
          CoordMin_D, CoordMin_DB, nBlock
 
     integer, intent(in) :: iBlock
@@ -246,14 +246,10 @@ contains
     if(DoTest)write(*,*)'B0*Cell_BLK=',&
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
-    if(iBlock == nBlock) then
-       !$acc update device(B0_DGB)
-    endif
-
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_b0_cell
   !============================================================================
-
   subroutine set_b0_face(iBlock)
 
     ! Calculate the face centered B0 for block iBlock
@@ -859,6 +855,5 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine subtract_b0
   !============================================================================
-
 end module ModB0
 !==============================================================================

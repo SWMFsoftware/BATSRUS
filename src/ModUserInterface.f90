@@ -16,6 +16,10 @@ module ModUserInterface
 
   interface
 
+     subroutine set_user_version
+
+     end subroutine set_user_version
+
      subroutine user_set_boundary_cells(iBlock)
 
        integer,intent(in)::iBlock

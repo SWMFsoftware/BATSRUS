@@ -1708,10 +1708,14 @@ test_earth_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -m RESULTS
 
 test_earth_check:
+	-@(${DIFFNUM} -t -r=1e-5 -a=1e-13 \
+		${TESTDIR}/RESULTS/GM/log*.log \
+		Param/EARTH/TestOutput/earth_cartesian_ref.log \
+		> test_earth.diff)
 	-@(${DIFFNUM} -t -r=1e-8 -a=1e-13 \
 		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000004*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
-		> test_earth.diff)
+		>> test_earth.diff)
 	ls -l test_earth.diff
 	
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###

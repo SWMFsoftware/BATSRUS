@@ -131,6 +131,9 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
+#SAVEINITIAL
+T			DoSaveInitial
+
 #SAVEPLOT
 2			nPlotFile
 z=0 RAY idl		StringPlot
@@ -144,14 +147,12 @@ y=0 VAR idl_ascii		StringPlot
 rho p bx ux		NameVars
 {default}		NamePars
 
-#SAVEINITIAL
-T			DoSaveInitial
-
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLog
+VAR			StringLog
 -1			DnSaveLogfile
-1.0			DtSaveLogfile
+4.0			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status		NameLogVars
 
 #UPDATE
 fast			TypeUpdate

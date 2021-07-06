@@ -17,7 +17,7 @@ module ModUpdateStateFast
   use ModAdvance, ONLY: nFlux, State_VGB, StateOld_VGB, &
        Flux_VXI, Flux_VYI, Flux_VZI, Primitive_VGI, &
        nFaceValue, UnFirst_, Bn_ => BnL_, En_ => BnR_, &
-       DtMax_CB => time_BLK, Vdt_, iTypeUpdate
+       DtMax_CB => time_BLK, Vdt_, iTypeUpdate, UpdateOrig_
   use ModCellBoundary, ONLY: FloatBC_, VaryBC_
   use ModConservative, ONLY: IsConserv_CB
   use BATL_lib, ONLY: nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -48,6 +48,7 @@ module ModUpdateStateFast
 
   private ! except
 
+  public:: sync_cpu_gpu         ! Synchronize variables between CPU and GPU
   public:: update_state_fast    ! Fast update of State_VGB
   public:: update_b0_fast       ! Fast update of B0
   public:: set_boundary_fast    ! set cell based boundary for State_VGB
@@ -59,12 +60,107 @@ module ModUpdateStateFast
 
 contains
   !============================================================================
+  subroutine sync_cpu_gpu(String, NameCaller)
+
+    character(len=*), intent(in):: String
+    character(len=*), optional, intent(in):: NameCaller
+
+    ! Ensure that some variables are in sync between CPU and GPU.
+    ! Only perform the !$ acc update if the status index of a variable
+    ! is larger on the source than the targer device (DiVAR is 1 or -1).
+
+    ! By default update the variables listed in String from the CPU to the GPU.
+    ! If string contains "CPU", then update from GPU to CPU
+    ! If string contains "change", then set DiVAR=-1 for GPU or DiVar=1 for CPU.
+    !
+    ! Examples:
+    ! call sync_cpu_gpu("State_VGB, B0_DGB", NameSub)
+    ! call sync_cpu_gpu("State_VGB, B0_DGB on CPU")
+    ! call sync_cpu_gpu("change B0_DGB")
+    ! call sync_cpu_gpu("change State_VGB on CPU")
+    !
+    ! The optional NameCaller string is used for testing purposes
+
+    integer:: DiState=0, DiB0 = 0
+    logical:: DoChange, IsCpu
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'sync_cpu_gpu'
+    !--------------------------------------------------------------------------
+    if(iTypeUpdate == UpdateOrig_) RETURN
+
+    call test_start(NameSub, DoTest)
+
+    if(DoTest)then
+       write(*,*) NameSub,': String=', String
+       if(present(NameCaller)) write(*,*) NameSub,' called by ',NameCaller
+    end if
+
+    DoChange = index(String, 'change') > 0
+    IsCpu    = index(String, 'CPU') > 0
+
+    if(index(String, 'State_VGB') > 0)then
+       if(DoChange)then
+          if(IsCpu)then
+             DiState = 1
+          else
+             DiState = -1
+          endif
+       else
+          if(IsCpu .and. DiState < 0)then
+             if(DoTest)write(*,*) NameSub,': acc update State to CPU'
+             call timing_start("sync_state")
+             !$acc update host (State_VGB)
+             call timing_stop("sync_state")
+             DiState = 0
+          elseif(.not.IsCpu .and. DiState > 0)then
+             call timing_start("sync_state")
+             if(DoTest)write(*,*) NameSub,': acc update State to GPU'
+             !$acc update device(State_VGB)
+             call timing_stop("sync_state")
+             DiState = 0
+          endif
+       endif
+    endif
+    if(UseB0 .and. index(String,'B0_DGB') > 0) then
+       if(DoChange)then
+          if(IsCpu)then
+             DiB0 = 1
+          else
+             DiB0 = -1
+          endif
+       else
+          if(IsCpu .and. DiB0 < 0)then
+             if(DoTest)write(*,*) NameSub,': acc update B0 to CPU'
+             call timing_start("sync_b0")
+             !$acc update host (B0_DGB)
+             call timing_stop("sync_b0")
+             DiB0 = 0
+          elseif(.not.IsCpu .and. DiB0 > 0)then
+             if(DoTest)write(*,*) NameSub,': acc update B0 to GPU'
+             call timing_start("sync_b0")
+             !$acc update device(B0_DGB)
+             call timing_stop("sync_b0")
+             DiB0 = 0
+          endif
+       endif
+    endif
+
+    if(DoTest)write(*,*) NameSub,': DiState, DiB0', DiState, DiB0
+
+    call test_stop(NameSub, DoTest)
+
+  end subroutine sync_cpu_gpu
+  !============================================================================
   subroutine update_state_fast
 
     ! Apply cell boundary conditions and update one stage
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
+    call sync_cpu_gpu('update State_VGB and B0_DGB on GPU', NameSub)
+    call sync_cpu_gpu('change State_VGB on GPU', NameSub)
+
     select case(iTypeUpdate)
     case(3)
        call update_state_cpu      ! save flux, recalculate primitive vars
@@ -2938,6 +3034,9 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
+    call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
+    call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
+
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
@@ -3113,11 +3212,10 @@ contains
 
     integer :: iTheta, iPhi, iHemisphere
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
-    !--------------------------------------------------------------------------
     ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
+    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
+    !--------------------------------------------------------------------------
     call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
          iHemisphere, DdirDxyz_DD)
 

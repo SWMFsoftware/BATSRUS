@@ -337,9 +337,9 @@ contains
     end if
 
     call test_stop(NameSub, DoTest)
+
   end subroutine write_logfile
   !============================================================================
-
   subroutine set_logvar( &
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 

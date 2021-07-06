@@ -125,6 +125,7 @@ contains
          nBlock, Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
     use ModAdvance, ONLY: time_BLK
+    use ModUserInterface ! user_set_boundary_cells
 
     integer, intent(in) :: iBlock
     logical, intent(in), optional :: DoSolveSolidIn

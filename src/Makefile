@@ -51,6 +51,7 @@ OBJECTS = \
 	ModFaceValue.o \
 	ModFieldLineThread.o \
 	ModFieldTrace.o \
+	ModFieldTraceFast.o \
 	ModFixAxisCells.o \
 	ModGeometry.o \
 	ModGroundMagPerturb.o \

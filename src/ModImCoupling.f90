@@ -309,13 +309,15 @@ contains
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
          time_accurate, Dt, DoCoupleImPressure, DoCoupleImDensity, RhoMinDimIm
-    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies,nSpecies
+    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies, &
+         nSpecies
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModFieldTrace, ONLY: trace_field_grid
+    use ModFieldTraceFast, ONLY: trace_field_grid
     use ModB0, ONLY: B0_DGB
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
 
@@ -340,7 +342,9 @@ contains
     if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
     call timing_start(NameSub)
-    !$acc update host(State_VGB)
+
+    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+    call sync_cpu_gpu('change State_VGB on CPU', NameSub)
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 
@@ -516,7 +520,6 @@ contains
 
     if(allocated(iDens_I)) deallocate(iDens_I)
 
-    !$acc update device(State_VGB)
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
 

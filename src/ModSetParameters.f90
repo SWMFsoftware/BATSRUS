@@ -44,9 +44,9 @@ contains
          BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, &
          iProc, nProc, iComm
-    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,&
-         DoAmr
-    use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&
+    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits, &
+         AdaptGrid
+    use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param, &
          DoMapEquatorRay
     use ModIO
     use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
@@ -114,7 +114,7 @@ contains
     use ModConservative, ONLY: read_conservative_param
 
     use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
-    use ModPIC, ONLY: pic_read_param
+    use ModPIC, ONLY: pic_read_param, AdaptPic
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I, &
          ion_electron_init_point_impl
     use ModFaceBoundary, ONLY: read_face_boundary_param, B1rCoef
@@ -133,18 +133,15 @@ contains
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisRegion, init_mod_boris_correction
-
-    use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
+    use ModFreq, ONLY: adjust_freq
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
 
     use ModOptimizeParam, ONLY: check_optimize_param
-
-    character(len=17) :: NameSub='MH_set_parameters'
 
     ! Arguments
 
@@ -225,12 +222,13 @@ contains
 
     character(len=30) :: NamePrimitiveNT_V(nVar)
 
-    ! variables for LookUpTable
+    ! variables for B0 lookup table
     integer:: nParam, iTableB0 = -1
     real(Real8_):: CarringtonRotationNumber
     character(len=500):: StringHeader
     real:: Param_I(4)
 
+    character(len=17) :: NameSub='MH_set_parameters'
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
@@ -244,6 +242,7 @@ contains
     if(IsUninitialized)then
        call set_namevar
        call set_defaults
+       call set_user_version
        IsUninitialized=.false.
     end if
 
@@ -310,6 +309,13 @@ contains
                   '#ENDTIME command can be used in the last session only')
           end if
        end if
+
+       ! Adjust frequencies
+       call adjust_freq(AdaptGrid, &
+            n_step+1, time_simulation+1e-6, time_accurate)
+       call adjust_freq(AdaptPic, &
+            n_step+1, time_simulation+1e-6, time_accurate)
+
        ! Planet NONE in GM means that we do not use a body
        if (NameThisComp=='GM' .and. NamePlanet == 'NONE' &
             .and. IsFirstSession)then
@@ -3209,12 +3215,12 @@ contains
          UseAccurateResChange = .false.
       end if
       if (UseConstrainB) optimize_message_pass = 'all'
-      if (UseConstrainB .and. DoAmr)then
+      if (UseConstrainB .and. AdaptGrid % DoThis)then
          if(iProc==0)write(*,'(a)')NameSub//&
               ' WARNING: cannot use AMR with constrained transport'
          if(UseStrict)call stop_mpi('Correct PARAM.in!')
          if(iProc==0)write(*,*)NameSub//' setting DoAmr=F'
-         DoAmr = .false.
+         AdaptGrid % DoThis = .false.
       end if
 
       if (UseHallResist .or. UseResistivity .or. UseViscosity) &
@@ -3492,7 +3498,7 @@ contains
          end if
       end if
 
-      UseHighOrderAMR = UseHighOrderAMR .and. DoAmr
+      UseHighOrderAMR = UseHighOrderAMR .and. AdaptGrid % DoThis
       IsFirstCheck = .false.
 
       if (.not. allocated(iVarUseCmax_I) .and. UseEfield) then
