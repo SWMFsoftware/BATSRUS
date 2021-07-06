@@ -686,6 +686,7 @@ contains
 
        !AG:DEBUG:
        write (*,*) 'DEBUG: slow_int: UseSurfaceIntegral=',UseSurfaceIntegral, ' nTheta=',nTheta, 'nPhi=',nPhi, 'nMag=',nMag, 'nR=',nR
+       !$acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -789,18 +790,20 @@ contains
                 !call timing_start('ground_slow_int_inside_radial')
                 !AG:DEBUG:the most time-consuming loop (overall)
                 !AG:DEBUG:the inner (worker-vector loop)
-                !--$acc parallel loop
-                !default(none)
+                !$acc parallel private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
+                !$acc loop 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
-                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+                   !AG: Creates variable z_a_2(:)?
+                   !if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
                    Xyz_D = Xyz_D-XyzMid_D
-                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
-                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+                   !AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
+                   !Pert_D = dVol*cross_product(b_D, Xyz_D) &
+                   !     /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
@@ -823,10 +826,12 @@ contains
                    ! end if
 
                 end do ! iMag
+                !$acc end parallel
                 !call timing_stop('ground_slow_int_inside_radial')
              end do ! kr
           end do ! iPhi
        end do ! iTheta
+       !$acc end data
        call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
