@@ -551,10 +551,62 @@ contains
   end subroutine map_planet_field
   !============================================================================
   
+  subroutine get_planet_field(TimeSim, XyzIn_D, b_D)
+    ! This is a simplified version of CON_planet_field.f90:get_planet_field11(...)
+    ! that assumes certain values of the arguments and globals, namely:
+    ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`
+    ! FIXME:AG: rewrite the original version to not use character variables, use parameters!
+    use CON_axes,          ONLY: set_axes
+    use CON_planet,        ONLY: MagCenter_D, DipoleStrength
+    integer, parameter :: x_=1, y_=2, z_=3
+
+    real,              intent(in) :: TimeSim      ! simulation time
+    real,              intent(in) :: XyzIn_D(3)   ! spatial position
+    real,              intent(out):: b_D(3)       ! magnetic field
+
+    ! This is the fundamental subroutine that provides the magnetic
+    ! field at a given position at a given simulation time.
+    ! If called repeatedly, the subroutine remembers the last simulation time
+    ! argument, so it does not recalculate the position of the magnetic axis.
+    ! The position may be normalized with the radius of the planet.
+    ! The coordinate system and normalization information
+    ! for the position is given by the string TypeCoord.
+    real :: Xyz_D(3)     ! Normalized (and rotated) position
+    real :: Dipole_D(3)  ! Dipole moment
+    real :: r, r2, rInv, r2Inv, r3Inv, Term1
+
+    Xyz_D = XyzIn_D
+
+    ! Calculate magnetic field
+
+    Xyz_D = Xyz_D - MagCenter_D
+
+    ! radial distance squared
+    r2 = sum(Xyz_D**2)
+    if(r2 < 1E-12) then
+       ! return zero field if very small
+       b_D = 0
+       RETURN
+    end if
+
+    ! Update axes
+    call set_axes(TimeSim)
+
+    ! Various powers of radial distance
+    r2Inv = 1/r2
+    r     = sqrt(r2)
+    rInv  = 1/r
+    r3Inv = rInv*r2Inv
+
+    ! Dipole is aligned with the Z axis
+    Term1      = DipoleStrength*Xyz_D(3)*3*r2Inv
+    b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
+    b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
+  end subroutine get_planet_field
+  
   !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
-
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
     ! pertubation of the magnetic field (returned as MagPerturbFac_DI) due
     ! to "gap region" field-aligned currents.  These are the FACs taken
@@ -579,6 +631,7 @@ contains
     !AG:DEBUG:removed
     !use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     !AG:DEBUG:^^^removed^^^
+    use CON_planet,        ONLY: TypeBField
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use CON_axes,          ONLY: transform_matrix
@@ -790,7 +843,7 @@ contains
 
        !AG:DEBUG:
        write (*,*) 'DEBUG: slow_int: UseSurfaceIntegral=',UseSurfaceIntegral, ' nTheta=',nTheta, 'nPhi=',nPhi, 'nMag=',nMag, 'nR=',nR
-#ifdef(OPENACC)
+#if defined(OPENACC)
        if (TypeBField .ne. 'DIPOLE') then
           !FIXME: this should be checked earlier
           write (*,*) 'Unimplemented field other than DIPOLE'
@@ -798,7 +851,7 @@ contains
        end if
 #endif
        !-- $acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
-       !$acc parallel
+       !-- $acc parallel
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -881,12 +934,8 @@ contains
                 ! get next position along the field line
                 call map_planet_field(XyzRcurrents_D, r, XyzMid_D, iHemisphere)
 
-
-                !!!==== *** STOPPED HERE *** ====!!!
-                
                 ! get the B field at this position
-                call get_planet_field(&
-                     Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
+                call get_planet_field(Time_Simulation, XyzMid_D, b_D)
                 b_D = b_D*Si2No_V(UnitB_)
 
                 ! The volume element is proportional to 1/Br. The sign
@@ -944,7 +993,7 @@ contains
              end do ! kr
           end do ! iPhi
        end do ! iTheta
-       !$acc end parallel
+       !-- $acc end parallel
        !-- $acc end data
        call timing_stop('ground_slow_int')
     end if
