@@ -452,6 +452,7 @@ contains
   !============================================================================
   subroutine map_planet_field(XyzIn_D, &
        rMapIn, XyzMap_D, iHemisphere)
+    !$acc routine seq
     ! This is (another) simplified version of CON_planet_field.f90:map_planet_field11(...)
     ! that assumes certain values of the arguments and globals, namely:
     ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`; optional args are absent;
@@ -552,6 +553,7 @@ contains
   !============================================================================
   
   subroutine get_planet_field(TimeSim, XyzIn_D, b_D)
+    !$acc routine seq
     ! This is a simplified version of CON_planet_field.f90:get_planet_field11(...)
     ! that assumes certain values of the arguments and globals, namely:
     ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`
@@ -631,7 +633,7 @@ contains
     !AG:DEBUG:removed
     !use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     !AG:DEBUG:^^^removed^^^
-    use CON_planet,        ONLY: TypeBField
+    use CON_planet,        ONLY: TypeBField, MagCenter_D, DipoleStrength
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use CON_axes,          ONLY: transform_matrix
@@ -851,7 +853,12 @@ contains
        end if
 #endif
        !-- $acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
-       !-- $acc parallel
+       !$acc update device(MagCenter_D, DipoleStrength)
+       !$acc    parallel  default(none) & 
+       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D) &
+       !$acc &  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
+       !$acc &  copyout(InvDist2_DII) &
+       !$acc &  copy(MagPerturbFac_DI,LineContrib_DII,MagPerturbMhd_DI)
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -870,6 +877,7 @@ contains
 
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
+#if !defined(OPENACC)
              if (Fac_II(iTheta,iPhi) == 0.0 &
                   .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
@@ -877,9 +885,16 @@ contains
 
              ! do parallel computation among the processors
              if(mod(iLine, nProc) /= iProc)CYCLE
+#endif             
 
              ! Count local line index
-             if(UseFastFacIntegral) iLineProc = iLineProc + 1
+             if(UseFastFacIntegral) then
+#if !defined(OPENACC)                
+                iLineProc = iLineProc + 1
+#else
+                iLineProc = (iPhi-1)+nPhi*(iTheta-1)+1
+#endif
+             end if
 
              call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
@@ -904,7 +919,7 @@ contains
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
                    ! This should be done in advance !!!
-                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+!FIX                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
@@ -912,8 +927,8 @@ contains
                    ! dA*(x-x0)/(4pi*|x-x0|^3)
                    InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
 
-                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+!FIX                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+!FIX                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
 
                    ! Store it for fast calculation
                    if(UseFastFacIntegral) &
@@ -925,7 +940,7 @@ contains
              end if
 
              !AG:DEBUG:outer loop (gang)
-             !-- $acc parallel loop gang
+             !-- $acc loop private(XyzMid_D,b_D)
              do k = 1, nR
 
                 ! Second order integration in radial direction
@@ -954,19 +969,19 @@ contains
                 !AG:DEBUG:the most time-consuming loop (overall)
                 !AG:DEBUG:the inner (worker-vector loop)
                 !-- private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
-                !-- $acc loop 
+                !$acc loop private(Xyz_D,Pert_D)
                 do iMag = 1, nMag
-                   Xyz_D = Xyz_DI(:,iMag)
+                   Xyz_D = Xyz_DI(:,iMag) - XyzMid_D
 
                    !AG: Creates variable z_a_2(:)?
-                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+!FIX                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
-                   Xyz_D = Xyz_D-XyzMid_D
+
                    !AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
-                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
-                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+!FIX                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
+!FIX                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
@@ -993,7 +1008,7 @@ contains
              end do ! kr
           end do ! iPhi
        end do ! iTheta
-       !-- $acc end parallel
+       !$acc end parallel
        !-- $acc end data
        call timing_stop('ground_slow_int')
     end if
