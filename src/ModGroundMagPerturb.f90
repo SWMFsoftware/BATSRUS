@@ -450,6 +450,108 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine ground_mag_perturb
   !============================================================================
+  subroutine map_planet_field(XyzIn_D, &
+       rMapIn, XyzMap_D, iHemisphere)
+    ! This is (another) simplified version of CON_planet_field.f90:map_planet_field11(...)
+    ! that assumes certain values of the arguments and globals, namely:
+    ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`; optional args are absent;
+    ! FIXME:AG: merge all the simplified versions of map_planet_field(...)
+    ! FIXME:AG: rewrite the original version to not use character variables, use parameters!
+    real,              intent(in) :: XyzIn_D(3)   ! spatial position
+    real,              intent(in) :: rMapIn       ! radial distance to map to
+    real,              intent(out):: XyzMap_D(3)      ! mapped position
+    integer,           intent(out):: iHemisphere      ! which hemisphere
+
+    ! Map the planet field from the input position to the mapping radius.
+    !
+    ! The routine also returns which hemisphere the point maps to:
+    ! +1 for north and -1 for south.
+    ! If the point does not map to the defined radius at all, 0 is returned,
+    ! and the output position is set to a radial projection of the input
+    ! position to the magnetic equator.
+    !
+    !PARAMETERS:
+
+    ! If the  normalized input or mapping radius is less than this value
+    ! an error occurs
+    real, parameter :: rNormLimit = 0.9
+
+    ! If difference between the normalized input and mapping radii
+    ! is less than DrNormLimit a trivial mapping is done
+    real, parameter :: DrNormLimit = 0.0001
+
+    real             :: Xyz_D(3)        ! Normalized and rotated position
+
+    ! Temporary variables for the analytic mapping
+    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
+    logical :: DoConvert
+    real    :: Convert_DD(3,3)
+
+    Xyz_D = XyzIn_D
+    rMap  = rMapIn
+
+    ! Check if the mapping radius is outside of the planet
+    if ( rMap < rNormLimit ) then
+       stop ! SWMF_ERROR mapping radius is less than planet radius
+    end if
+
+    ! Convert input position into MAG or SMG system
+    DoConvert=.false.
+
+    ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
+    iHemisphere = sign(1.0,Xyz_D(3))
+
+    ! Normalized radial distance
+    r = sqrt(sum(Xyz_D**2))
+
+    ! Check if the point is outside the planet
+    if ( r < rNormLimit ) then
+       stop ! SWMF_ERROR radial distance is less than planet radius
+    end if
+
+    ! Check if the mapping radius differs from the radius of input position
+    if( abs(r-rMap) < DrNormLimit) then
+       ! Trivial mapping
+       XyzMap_D = XyzIn_D
+       ! The hemisphere has been established already
+       RETURN
+    end if
+
+    ! Solution of the vector potential equation
+    ! The vector potential is proportional to (x^2+y^2)/r^3
+    ! so sqrt(xMap^2+yMap^2)/sqrt(x^2+y^2) = sqrt(rMap^3/r^3)
+
+    ! Calculate powers of the radii
+    rMap2 = rMap**2
+    rMap3 = rMap2*rMap
+    r3    = r**3
+
+    ! This is the ratio of input and mapped X and Y components
+    XyRatio = sqrt(rMap3/r3)
+
+    ! Calculate the X and Y components of the mapped position
+    XyzMap_D(1:2) = XyRatio*Xyz_D(1:2)
+
+    ! The squared distance of the mapped position from the magnetic axis
+    XyMap2 = XyzMap_D(1)**2 + XyzMap_D(2)**2
+
+    ! Check if there is a mapping at all
+    if(rMap2 < XyMap2)then
+       ! The point does not map to the given radius
+       iHemisphere = 0
+       
+       ! Put mapped point to the magnetic equator
+       XyzMap_D(1:2) = (rMap/sqrt(Xyz_D(1)**2 + Xyz_D(2)**2))*Xyz_D(1:2)
+       XyzMap_D(3) = 0
+    else
+       ! Calculate the Z component of the mapped position
+       ! Select the same hemisphere as for the input position
+       XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
+    end if
+  end subroutine map_planet_field
+  !============================================================================
+  
+  !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
 
@@ -474,7 +576,9 @@ contains
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
     use ModMain,           ONLY: Time_Simulation, n_Step
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    !AG:DEBUG:removed
+    !use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    !AG:DEBUG:^^^removed^^^
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use CON_axes,          ONLY: transform_matrix
@@ -686,7 +790,15 @@ contains
 
        !AG:DEBUG:
        write (*,*) 'DEBUG: slow_int: UseSurfaceIntegral=',UseSurfaceIntegral, ' nTheta=',nTheta, 'nPhi=',nPhi, 'nMag=',nMag, 'nR=',nR
-       !$acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
+#ifdef(OPENACC)
+       if (TypeBField .ne. 'DIPOLE') then
+          !FIXME: this should be checked earlier
+          write (*,*) 'Unimplemented field other than DIPOLE'
+          stop
+       end if
+#endif
+       !-- $acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
+       !$acc parallel
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -767,9 +879,11 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
-                call map_planet_field(Time_Simulation, XyzRcurrents_D, &
-                     TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
+                call map_planet_field(XyzRcurrents_D, r, XyzMid_D, iHemisphere)
 
+
+                !!!==== *** STOPPED HERE *** ====!!!
+                
                 ! get the B field at this position
                 call get_planet_field(&
                      Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
@@ -790,20 +904,20 @@ contains
                 !call timing_start('ground_slow_int_inside_radial')
                 !AG:DEBUG:the most time-consuming loop (overall)
                 !AG:DEBUG:the inner (worker-vector loop)
-                !$acc parallel private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
-                !$acc loop 
+                !-- private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
+                !-- $acc loop 
                 do iMag = 1, nMag
                    Xyz_D = Xyz_DI(:,iMag)
 
                    !AG: Creates variable z_a_2(:)?
-                   !if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
 
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
                    Xyz_D = Xyz_D-XyzMid_D
                    !AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
-                   !Pert_D = dVol*cross_product(b_D, Xyz_D) &
-                   !     /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
+                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
@@ -826,12 +940,12 @@ contains
                    ! end if
 
                 end do ! iMag
-                !$acc end parallel
                 !call timing_stop('ground_slow_int_inside_radial')
              end do ! kr
           end do ! iPhi
        end do ! iTheta
-       !$acc end data
+       !$acc end parallel
+       !-- $acc end data
        call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
