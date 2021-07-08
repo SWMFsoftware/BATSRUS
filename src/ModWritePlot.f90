@@ -5,6 +5,7 @@ module ModWritePlot
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iProc, nProc, iComm
+  use ModNumConst, ONLY: cRadToDeg
 
   implicit none
 
@@ -31,7 +32,6 @@ contains
     use ModIO
     use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, init_hdf5_plot
     use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
-    use ModNumConst, ONLY: cRadToDeg
     use ModMpi
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
     use ModAdvance, ONLY : State_VGB
@@ -823,7 +823,6 @@ contains
          cLight, rBody, ThetaTilt, &
          No2Io_V, No2Si_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
     use ModFieldTrace, ONLY: rTrace
-    use ModNumConst, ONLY: cRadToDeg
     use ModResistivity, ONLY: Eta0Si
     use ModIO
     use ModMain, ONLY: dt
@@ -1614,11 +1613,11 @@ contains
                PlotVar(:,:,:,iVar) = iTimeLevel_A(iNode_B(iBlock))
        case('dvol')
           PlotVar(:,:,:,iVar) = CellVolume_GB(:,:,:,iBlock)
-       case('dx')
+       case('dx','dr')
           PlotVar(:,:,:,iVar) = CellSize_DB(x_,iBlock)
-       case('dy')
+       case('dy','dphi','dlon')
           PlotVar(:,:,:,iVar) = CellSize_DB(y_,iBlock)
-       case('dz')
+       case('dz','dlat')
           PlotVar(:,:,:,iVar) = CellSize_DB(z_,iBlock)
        case('dt')
           PlotVar(1:nI,1:nJ,1:nK,iVar) = time_BLK(1:nI,1:nJ,1:nK,iBlock)
@@ -1879,8 +1878,10 @@ contains
           ! GRID INFORMATION
        case('dt','dtblk')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
-       case('x','y','z','r','dx','dy','dz','req1','req2')
+       case('x','y','z','r','dx','dr','dy','dz','req1','req2')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
+       case('dphi','dlon','dlat')
+          PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*cRadToDeg
 
           ! DEFAULT CASE
        case default
@@ -1997,8 +1998,10 @@ contains
           NameUnit = '1'
        case('dt', 'dtblk')
           NameUnit = NameIdlUnit_V(UnitT_)
-       case('x','y','z','r','dx','dy','dz','req1','req2')
+       case('x','y','z','r','dx','dr','dy','dz','req1','req2')
           NameUnit = NameIdlUnit_V(UnitX_)
+       case('dphi','dlon','dlat')
+          NameUnit = NameIdlUnit_V(UnitAngle_)
        case('dvol')
           NameUnit = trim(NameIdlUnit_V(UnitX_))//'3'
        case('eta','visco')
