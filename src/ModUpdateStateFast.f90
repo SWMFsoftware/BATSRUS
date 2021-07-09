@@ -40,7 +40,7 @@ module ModUpdateStateFast
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
        IsBoundary_B => far_field_BCs_BLK
   use ModSolarWind, ONLY: get_solar_wind_point
-  use CON_axes, ONLY: get_axes
+  use CON_axes, ONLY: get_axes, SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
 
@@ -3095,8 +3095,8 @@ contains
        call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
     end if
     Dipole_D = Dipole_D * DipoleStrength
-    !$acc update device(Dipole_D)
-
+    !$acc update device(Dipole_D, SmgGsm_DD)
+    
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     
     call test_stop(NameSub, DoTest)
@@ -3130,8 +3130,6 @@ contains
 
     ! This subroutine is a simplified version of
     ! CON_planet_field.f90:map_planet_field11
-
-    use CON_axes, ONLY: SmgGsm_DD
 
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
     real,              intent(in) :: rMapIn       ! radial distance to map to
