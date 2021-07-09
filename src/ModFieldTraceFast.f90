@@ -109,7 +109,9 @@ contains
 
     call init_mod_trace_fast
 
+#ifdef OPENACC    
     call update_planet_dipole
+#endif    
     
     if(DoTest)then
        write(*,*)'GM ray_trace: nStepLast,n_step         =',nStepLast,n_step
@@ -715,8 +717,12 @@ contains
       ! Get B0 values for location
       Xyz_D = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
-      if(UseB0)then         
+      if(UseB0)then
+#ifdef OPENACC         
          call get_b0_dipole(Xyz_D, b_D)
+#else
+         call get_b0(Xyz_D, b_D)
+#endif         
       else
          b_D = 0.00
       end if
@@ -765,7 +771,8 @@ contains
       ! steps were Done
 
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
-      use ModUpdateStateFast, ONLY: map_planet_field      
+      use ModUpdateStateFast, ONLY: map_planet_field_fast
+      use CON_planet_field, ONLY: map_planet_field
       
       real, intent(inout):: Xyz_D(3)
       integer, intent(in):: iRay     
@@ -773,7 +780,12 @@ contains
       integer :: iHemisphere
       real    :: x_D(3)
       !------------------------------------------------------------------------
-      call map_planet_field(Xyz_D, rIonosphere, x_D, iHemisphere)
+#ifdef OPENACC      
+      call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere)
+#else
+      call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
+           rIonosphere, x_D, iHemisphere)
+#endif      
 
 #ifndef OPENACC      
       if(iHemisphere==0)then

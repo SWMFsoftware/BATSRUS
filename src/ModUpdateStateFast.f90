@@ -55,7 +55,7 @@ module ModUpdateStateFast
   public:: get_b0_dipole        ! Get the dipole field 
   public:: set_boundary_fast    ! set cell based boundary for State_VGB
 
-  public:: map_planet_field
+  public:: map_planet_field_fast
 
   logical:: DoTestCell= .false.
 
@@ -3124,7 +3124,7 @@ contains
 
   end subroutine get_b0_dipole
   !============================================================================
-  subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
+  subroutine map_planet_field_fast(XyzIn_D, rMapIn, XyzMap_D, &
        iHemisphere, DoNotConvertBack, DdirDxyz_DD)
     !$acc routine seq
 
@@ -3146,7 +3146,7 @@ contains
     real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
     real    :: Convert_DD(3,3)
 
-    character(len=*), parameter:: NameSub = 'map_planet_field'
+    character(len=*), parameter:: NameSub = 'map_planet_field_fast'
     !--------------------------------------------------------------------------
     Xyz_D = XyzIn_D
     rMap  = rMapIn
@@ -3217,7 +3217,7 @@ contains
        DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
     end if
 
-  end subroutine map_planet_field
+  end subroutine map_planet_field_fast
   !============================================================================
 
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
@@ -3249,7 +3249,7 @@ contains
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
-    call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
+    call map_planet_field_fast(Xyz_D, rIonosphere, XyzIono_D, &
          iHemisphere, .true., DdirDxyz_DD)
 
     ! Calculate angular coordinates
