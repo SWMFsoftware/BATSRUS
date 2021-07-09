@@ -3117,13 +3117,11 @@ contains
 
     ! Temporary variables for the analytic mapping
     real :: rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
-    real :: Convert_DD(3,3)
 
     character(len=*), parameter:: NameSub = 'map_planet_field'
     !--------------------------------------------------------------------------
     if(present(UseGsm)) then
-       Convert_DD = SmgGsm_DD
-       Xyz_D = matmul(Convert_DD, XyzIn_D)
+       Xyz_D = matmul( SmgGsm_DD, XyzIn_D)
     else
        Xyz_D = XyzIn_D
     end if
@@ -3182,12 +3180,10 @@ contains
     ! dPhi/dz = 0.0
     DdirDxyz_DD(2,3) = 0.0
 
-    if(present(UseGsm))then
-        ! Transform into the system of the input coordinates
-       ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
-       DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
-    end if
-       
+    ! Transform into the system of the input coordinates
+    ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
+    if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
+
   end subroutine map_planet_field
   !============================================================================
 
