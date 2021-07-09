@@ -54,7 +54,7 @@ module ModUpdateStateFast
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
   public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: map_planet_field_fast ! map dipole field
-  
+
   logical:: DoTestCell= .false.
 
   real:: Dipole_D(3)
@@ -3114,8 +3114,8 @@ contains
     real,              intent(out):: XyzMap_D(3)      ! mapped position
     integer,           intent(out):: iHemisphere      ! which hemisphere
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
-    logical, optional, intent(in) :: UseGsm           ! Use GSM coords
-    
+    logical, optional, intent(in) :: UseGsm           ! use GSM coords
+
     real             :: Xyz_D(3)        ! Normalized and rotated position
 
     ! Temporary variables for the analytic mapping

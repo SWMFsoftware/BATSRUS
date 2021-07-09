@@ -35,7 +35,7 @@ module ModFaceBoundary
   real,    public:: RatioOH    = 0.25
   logical, public:: UseYoungBc = .false.
   real,    public:: F107Young  = 150.0
-  
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:

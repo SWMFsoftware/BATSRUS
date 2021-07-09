@@ -30,7 +30,6 @@ module ModGroundMagPerturb
 
   real,    public:: Kp=0.0   ! Resulting indices
 
-
   ! Public geomagnetic indices variables
   logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
   logical, public           :: IsFirstCalc=.true., IsSecondCalc=.true.
@@ -472,7 +471,7 @@ contains
 
     use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
-    use ModUpdateStateFast,ONLY: map_planet_field_fast
+    use ModUpdateStateFast, ONLY: map_planet_field_fast
     use ModAdvance,        ONLY: iTypeUpdate, UpdateOrig_
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
