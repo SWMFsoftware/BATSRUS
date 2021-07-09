@@ -27,9 +27,11 @@ module ModFieldTraceFast
 
   ! Stored face and cell indices of the 2 rays starting from a face of a block
   integer, allocatable :: IjkTrace_DINB(:,:,:,:,:,:)
-
+  !$acc declare create(IjkTrace_DINB)
+  
   ! Stored weights for the 2 rays starting from a face of a block
   real, allocatable :: WeightTrace_DINB(:,:,:,:,:,:)
+  !$acc declare create(WeightTrace_DINB)
 
   ! Node interpolated magnetic field components without B0
   real, allocatable :: b_DNB(:,:,:,:,:)
@@ -164,6 +166,7 @@ contains
     integer :: nIterTrace
     logical :: Done
     real    :: dTraceMin
+    !$acc declare create(nIterTrace)
 
     real :: TraceTmp_D(3)
 
@@ -290,6 +293,7 @@ contains
     ! Average node values between shared faces
     call message_pass_node(3,b_DNB)
 
+    !$acc update device(b_DNB)
     
 #ifndef OPENACC
     if(DoTest)write(*,*)'Trace_DINB normalized B'
@@ -304,9 +308,9 @@ contains
     ! Iterate
     dTraceMin = rIonosphere*1e-6
     UsePreferredInterpolation = .false.
-    !$acc update device(UsePreferredInterpolation)
     nIterTrace = 0
-
+    !$acc update device(UsePreferredInterpolation, nIterTrace)
+    
     call timing_stop('trace_grid_fast1')
     
     call timing_start("ray_iter")
@@ -319,15 +323,18 @@ contains
        ! Store Trace_DINB into ray so we can see if there is any change
        ray(:,:,:,:,:,1:nBlockMax) = Trace_DINB(:,:,:,:,:,1:nBlockMax)
 
+       !$acc update device(Trace_DINB, IjkTrace_DINB, ray)
+       
        call timing_start("ray_iter1")
-       !! acc parallel loop gang independent
+       !$acc parallel loop gang private(DoCheckInside)       
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
 
           ! Flag cells inside the ionosphere if necessary
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
 
-          !! acc loop vector collapse(3) independent
+          !$acc loop vector collapse(3) independent &
+          !$acc private(iRay, iFace, Gen_D, GenIni_D,Weight_I, TraceTmp_D, i1,j1,k1,i2,j2,k2)          
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Exclude inside points
              if(iX>1 .and. iX<=nI .and. iY>1 .and. iY<=nJ &
@@ -341,9 +348,11 @@ contains
              if(neiLEV(3,iBlock)==NOBLK .and. iY==   1) CYCLE
              if(neiLEV(4,iBlock)==NOBLK .and. iY==nJ+1) CYCLE
 
+#ifndef OPENACC             
              if(DoTestRay)write(*,*)'TESTING RAY: me,iBlock,iX,iY,iZ,Xyz_D',&
                   iProc,iBlock,iX,iY,iZ,&
                   Xyz_DGB(:,iX,iY,iZ,iBlock)-0.5*CellSize_DB(:,iBlock)
+#endif             
 
              if(nIterTrace==0)then
                 do iRay = 1, 2
@@ -418,12 +427,15 @@ contains
 
        ! Exchange Trace_DINB information
 
+       !$acc update host(Trace_DINB, IjkTrace_DINB, WeightTrace_DINB)
+       
        call timing_start('ray_pass')
        call ray_pass
        call timing_stop('ray_pass')
 
        nIterTrace = nIterTrace + 1
-
+       !$acc update device(nIterTrace)
+       
        if(DoTime .and. iProc == 0 .and. nIterTrace == 1)then
           write(*,'(a)',ADVANCE='NO') 'first iteration:'
           call timing_show('ray_trace',1)
