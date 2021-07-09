@@ -354,7 +354,7 @@ contains
                    ! Assign value to Trace_DINB
                    call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
                         i1, j1, k1, i2, j2, k2, &
-                        .true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I)
+                        .true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I, .true.)
 
                    ! Memorize ray integration results
                    IjkTrace_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
@@ -403,7 +403,7 @@ contains
                       end select
 
                       call rayface_interpolate(&
-                           Trace_DINB(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
+                           ray(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
                            WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock),4,&
                            TraceTmp_D)
 
@@ -1077,7 +1077,7 @@ contains
     end function follow_fast
     !==========================================================================
     subroutine assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
-         i1, j1, k1, i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I)
+         i1, j1, k1, i2, j2, k2, IsSurfacePoint, Trace_D, Gen_D, Weight_I, UseRay)
       !$acc routine seq
 
       ! Assign value to Trace_D(3) based on ray intersection
@@ -1095,8 +1095,11 @@ contains
       ! to get Trace_D
       real, intent(inout)    :: Trace_D(3), Gen_D(3)
       real, intent(inout)    :: Weight_I(4)
+      logical, optional, intent(in):: UseRay
       
       real :: TraceTmp_D(3)
+      real :: Trace_DI(3,4)
+      integer :: iCount, ii, jj, kk
 
       ! Distances between Gen_D and the 4 grid points used for interpolation
       real :: d1, e1, d2, e2
@@ -1222,8 +1225,18 @@ contains
            i1, j1, k1, i2, j2, k2, d1, e1
 #endif      
 
-      call rayface_interpolate(Trace_DINB(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
-           Weight_I, 4, TraceTmp_D)
+      iCount = 1
+      do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
+         if(present(UseRay)) then
+            if(UseRay) &
+                 Trace_DI(:,iCount) = ray(:,iRay,ii,jj,kk,iBlock)
+         else
+            Trace_DI(:,iCount) = Trace_DINB(:,iRay,ii,jj,kk,iBlock)
+         endif
+         iCount = iCount + 1
+      end do; end do; end do
+      
+      call rayface_interpolate(Trace_DI, Weight_I, 4, TraceTmp_D)
 
       Trace_D = TraceTmp_D
 
