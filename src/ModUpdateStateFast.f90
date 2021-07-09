@@ -48,11 +48,13 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: sync_cpu_gpu         ! Synchronize variables between CPU and GPU
-  public:: update_state_fast    ! Fast update of State_VGB
-  public:: update_b0_fast       ! Fast update of B0
-  public:: set_boundary_fast    ! set cell based boundary for State_VGB
-
+  public:: sync_cpu_gpu          ! Synchronize variables between CPU and GPU
+  public:: update_state_fast     ! Fast update of State_VGB
+  public:: update_b0_fast        ! Fast update of B0
+  public:: set_boundary_fast     ! set cell based boundary for State_VGB
+  public:: get_b0_dipole_fast    ! get B0 field for a dipole
+  public:: map_planet_field_fast ! map dipole field
+  
   logical:: DoTestCell= .false.
 
   real:: Dipole_D(3)
@@ -3057,7 +3059,8 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-          call get_b0_dipole(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
+          call get_b0_dipole_fast(Xyz_DGB(:,i,j,k,iBlock), &
+               B0_DGB(:,i,j,k,iBlock))
           if(Used_GB(i,j,k,iBlock))then
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
@@ -3075,7 +3078,7 @@ contains
 
   end subroutine update_b0_fast
   !============================================================================
-  subroutine get_b0_dipole(Xyz_D, b_D)
+  subroutine get_b0_dipole_fast(Xyz_D, b_D)
     !$acc routine seq
 
     real, intent(in):: Xyz_D(3)
@@ -3095,10 +3098,10 @@ contains
 
     b_D = (Term1*Xyz_D - Dipole_D)*r3Inv
 
-  end subroutine get_b0_dipole
+  end subroutine get_b0_dipole_fast
   !============================================================================
-  subroutine map_planet_field(XyzIn_D, rMap, XyzMap_D, &
-       iHemisphere, DdirDxyz_DD, UseGsm)
+  subroutine map_planet_field_fast(XyzIn_D, rMap, XyzMap_D, iHemisphere, &
+       DdirDxyz_DD, UseGsm)
     !$acc routine seq
 
     ! This subroutine is a simplified version of
@@ -3118,7 +3121,7 @@ contains
     ! Temporary variables for the analytic mapping
     real :: rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
 
-    character(len=*), parameter:: NameSub = 'map_planet_field'
+    character(len=*), parameter:: NameSub = 'map_planet_field_fast'
     !--------------------------------------------------------------------------
     if(present(UseGsm)) then
        Xyz_D = matmul( SmgGsm_DD, XyzIn_D)
@@ -3184,7 +3187,7 @@ contains
     ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
     if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
 
-  end subroutine map_planet_field
+  end subroutine map_planet_field_fast
   !============================================================================
 
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
@@ -3216,7 +3219,7 @@ contains
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
-    call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
+    call map_planet_field_fast(Xyz_D, rIonosphere, XyzIono_D, &
          iHemisphere, DdirDxyz_DD, UseGsm=.true.)
 
     ! Calculate angular coordinates

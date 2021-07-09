@@ -474,7 +474,7 @@ contains
       use ModCoordTransform, ONLY: cross_product
       use CON_axes,     ONLY: transform_matrix
       use ModUserInterface ! user_get_log_var
-      use ModGroundMagPerturb, ONLY: ratioOH
+      use ModFaceBoundary, ONLY: ratioOH
 
       ! Local variables
       real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value

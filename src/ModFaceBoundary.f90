@@ -31,6 +31,11 @@ module ModFaceBoundary
   real, public:: B1rCoef = -1.0
   !$acc declare create( B1rCoef )
 
+  ! Young boundary associated variables
+  real,    public:: RatioOH    = 0.25
+  logical, public:: UseYoungBc = .false.
+  real,    public:: F107Young  = 150.0
+  
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -51,7 +56,6 @@ contains
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
-    use ModGroundMagPerturb, ONLY: UseYoungBc, F107Young
 
     character(len=*), intent(in):: NameCommand
 
@@ -202,7 +206,6 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB, iProc
-    use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
 
     type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &

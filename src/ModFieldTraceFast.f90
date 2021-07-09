@@ -140,8 +140,9 @@ contains
   subroutine trace_grid_fast
 
     use ModMain
-    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
+    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateOrig_
     use ModB0,       ONLY: get_b0
+    use ModUpdateStateFast, ONLY: get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -876,7 +877,11 @@ contains
       Xyz_D = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
       if(UseB0)then
-         call get_b0(Xyz_D, b_D)
+         if(iTypeUpdate == UpdateOrig_)then
+            call get_b0(Xyz_D, b_D)
+         else
+            call get_b0_dipole_fast(Xyz_D, b_D)
+         end if
       else
          b_D = 0.00
       end if
@@ -926,13 +931,19 @@ contains
 
       use ModMain,     ONLY: Time_Simulation
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
+      use ModUpdateStateFast, ONLY: map_planet_field_fast
       use CON_planet_field, ONLY: map_planet_field
 
       integer :: iHemisphere
       real    :: x_D(3)
       !------------------------------------------------------------------------
-      call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
-           rIonosphere, x_D, iHemisphere)
+      if(iTypeUpdate == UpdateOrig_)then
+         call map_planet_field(Time_Simulation, Xyz_D, &
+              TypeCoordSystem//' NORM', rIonosphere, x_D, iHemisphere)
+      else
+         call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, &
+              UseGsm=.true.)
+      end if
 
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
