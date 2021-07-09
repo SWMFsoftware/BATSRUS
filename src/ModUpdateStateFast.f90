@@ -3097,8 +3097,8 @@ contains
 
   end subroutine get_b0_dipole
   !============================================================================
-  subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
-       iHemisphere, DdirDxyz_DD)
+  subroutine map_planet_field(XyzIn_D, rMap, XyzMap_D, &
+       iHemisphere, DdirDxyz_DD, UseGsm)
     !$acc routine seq
 
     ! This subroutine is a simplified version of
@@ -3107,26 +3107,26 @@ contains
     use CON_axes, ONLY: SmgGsm_DD
 
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(in) :: rMapIn       ! radial distance to map to
+    real,              intent(in) :: rMap       ! radial distance to map to
     real,              intent(out):: XyzMap_D(3)      ! mapped position
     integer,           intent(out):: iHemisphere      ! which hemisphere
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
-
+    logical, optional, intent(in) :: UseGsm           ! Use GSM coords
+    
     real             :: Xyz_D(3)        ! Normalized and rotated position
 
     ! Temporary variables for the analytic mapping
-    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
-    real    :: Convert_DD(3,3)
+    real :: rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
+    real :: Convert_DD(3,3)
 
     character(len=*), parameter:: NameSub = 'map_planet_field'
     !--------------------------------------------------------------------------
-    Xyz_D = XyzIn_D
-    rMap  = rMapIn
-
-    ! Assumed GSM is used.
-    Convert_DD = SmgGsm_DD
-
-    Xyz_D = matmul(Convert_DD, Xyz_D)
+    if(present(UseGsm)) then
+       Convert_DD = SmgGsm_DD
+       Xyz_D = matmul(Convert_DD, XyzIn_D)
+    else
+       Xyz_D = XyzIn_D
+    end if
 
     ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
     iHemisphere = sign(1.0,Xyz_D(3))
@@ -3162,6 +3162,8 @@ contains
        XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
     end if
 
+    if(.not.present(DdirDxyz_DD)) RETURN
+
     XyMap = sqrt(XyMap2)
 
     DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
@@ -3180,10 +3182,12 @@ contains
     ! dPhi/dz = 0.0
     DdirDxyz_DD(2,3) = 0.0
 
-    ! Transform into the system of the input coordinates
-    ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
-    DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
-
+    if(present(UseGsm))then
+        ! Transform into the system of the input coordinates
+       ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
+       DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+    end if
+       
   end subroutine map_planet_field
   !============================================================================
 
@@ -3217,7 +3221,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
-         iHemisphere, DdirDxyz_DD)
+         iHemisphere, DdirDxyz_DD, UseGsm=.true.)
 
     ! Calculate angular coordinates
     call xyz_to_dir(XyzIono_D, Theta, Phi)
