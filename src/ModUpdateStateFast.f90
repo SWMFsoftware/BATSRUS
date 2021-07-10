@@ -52,6 +52,7 @@ module ModUpdateStateFast
   public:: update_state_fast     ! Fast update of State_VGB
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
+  public:: set_dipole_fast       ! set dipole vector Dipole_D
   public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: map_planet_field_fast ! map dipole field
 
@@ -73,7 +74,7 @@ contains
 
     ! By default update the variables listed in String from the CPU to the GPU.
     ! If string contains "CPU", then update from GPU to CPU
-    ! If string contains "change", then set DiVAR=-1 for GPU or DiVar=1 for CPU.
+    ! If string contains "change", then set DiVar=-1 for GPU or DiVar=1 for CPU
     !
     ! Examples:
     ! call sync_cpu_gpu("State_VGB, B0_DGB", NameSub)
@@ -3024,6 +3025,28 @@ contains
     c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
   end function cross_product
   !============================================================================
+  subroutine set_dipole_fast
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_dipole_fast'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    
+    if(TypeCoordSystem == 'GSM')then
+       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
+    elseif(TypeCoordSystem == 'GSE')then
+       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
+    else
+       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
+    end if
+    Dipole_D = Dipole_D * DipoleStrength
+    !$acc update device(Dipole_D)
+
+    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    call test_stop(NameSub, DoTest)
+
+  end subroutine set_dipole_fast
+  !============================================================================
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
@@ -3038,18 +3061,7 @@ contains
 
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
-
-    if(TypeCoordSystem == 'GSM')then
-       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
-    elseif(TypeCoordSystem == 'GSE')then
-       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
-    else
-       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
-    end if
-    Dipole_D = Dipole_D * DipoleStrength
-    !$acc update device(Dipole_D)
-
-    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    call set_dipole_fast
 
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock

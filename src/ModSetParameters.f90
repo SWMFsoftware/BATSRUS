@@ -137,6 +137,7 @@ contains
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use ModFreq, ONLY: adjust_freq
+    use ModUpdateStateFast, ONLY: set_dipole_fast
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
@@ -414,6 +415,9 @@ contains
        end if
 
        call set_physics_constants
+
+       ! For now. Probably Dipole_D should be in ModPhysics !!!
+       call set_dipole_fast
 
        call user_action("initialize module")
 
