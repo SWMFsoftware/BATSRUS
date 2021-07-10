@@ -3031,7 +3031,7 @@ contains
     character(len=*), parameter:: NameSub = 'set_dipole_fast'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    
+
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
