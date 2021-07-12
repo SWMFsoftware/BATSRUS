@@ -95,7 +95,7 @@ module ModPhysics
 
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
-  real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
+  real :: Bdp=0.0, DipoleStrengthSi=0.0        ! the dipole moment of B0
   real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
   real :: Oop(3,3,3)=0.0                       ! the octupole moment of B0
 
