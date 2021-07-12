@@ -326,29 +326,110 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY: time_simulation, nBlock
+    use ModMain,     ONLY: time_simulation, nBlock, Unused_B, body2_
     use ModConst,    ONLY: cTwoPi
-    use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
+    use ModPhysics,  ONLY: xBody2, yBody2, zBody2, rBody2, DistanceBody2, &
+         OrbitPeriod, PhaseBody2
     use ModMessagePass,      ONLY: exchange_messages
-    use ModBoundaryGeometry, ONLY: fix_block_geometry
+    use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_, &
+         fix_boundary_ghost_cells
+    use ModGeometry,   ONLY: Xyz_DGB, R2_BLK, body_BLK, true_cell, True_BLK, &
+         Rmin2_BLK
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    use ModAdvance,    ONLY: State_VGB, nVar
+    use BATL_lib, ONLY: nI, nJ, nK
 
+    integer :: i,j,k
+    integer :: iCounter, iNei, jNei, kNei
     integer :: iBlock
-
-    logical:: DoTest
+    logical :: DoTest
+    real    :: StateCounter_V(nVar)
+    logical, allocatable:: IsBody2Old_GB(:,:,:,:)
     character(len=*), parameter:: NameSub = 'update_secondbody'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+    if(.not.allocated(IsBody2Old_GB))&
+         allocate(IsBody2Old_GB(MinK:MaxK, MinJ:MaxJ, MinI:MaxI, MaxBlock))
 
-    ! Update second body coordinates
+    ! Checking which cells are currently body cells  (before update)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       ! Flag old body2 cells
+       IsBody2Old_GB(:,:,:,iBlock)= (iBoundary_GB(:,:,:,iBlock)==body2_)
+    enddo
+
+    ! Update second body coordinates for a circular orbit with orbital period
+    ! OrbitPeriod (specified in days in the PARAM.in file) and initial phase
+    ! PhaseBody2=atan(ybody/xbody) at the initial position
     xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
     yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod + PhaseBody2)
 
+    ! Updating the grid structure for the new second body position
     do iBlock = 1, nBlock
-       ! This might not work together with solid
-       call fix_block_geometry(iBlock)
-    end do
+       if(Unused_B(iBlock))CYCLE
+       ! Update R2_BLK array (the distance from the second body center)
+       ! with new second body location
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          R2_BLK(i,j,k,iBlock) = norm2( Xyz_DGB(:,i,j,k,iBlock) - &
+               [xBody2, yBody2, zBody2])
+       end do; end do; end do
+       Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
+       ! Reset true cells. "True" are old true cells or old body2 cells
+       where(IsBody2Old_GB(:,:,:,iBlock)) &
+            iBoundary_GB(:,:,:,iBlock)=domain_
 
-    ! call set_body_flag ! OLDAMR
+       ! Set iBoundary_GB for body2
+       where( R2_BLK(:,:,:,iBlock) < rbody2) &
+            iBoundary_GB(:,:,:,iBlock) = body2_
+
+       true_cell(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
+
+       ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
+       true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
+    enddo
+
+    call fix_boundary_ghost_cells
+
+    do iBlock=1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       ! Loop over physicall cells (the ghost cells will be fixed with
+       ! exchange_messages)
+       do k = 1,nK ; do j = 1,nJ ; do i = 1,nI
+          ! Check if the cell flagged as the second body cell
+          ! (hence, filled in with some garbage) becomes a physical cell
+          if(true_cell(i,j,k,iBlock).and.IsBody2Old_GB(i,j,k, iBlock)) then
+             ! New true cell, which was inside the second body before.
+             ! Needs to be filled in from good cells
+             ! Nullify counters
+             iCounter = 0
+             StateCounter_V = 0.0
+             ! Check if there are good neighboring cells with good state
+             ! Loop through neighboring cells,
+             do kNei = -1,1
+                do jNei = -1,1
+                   NEI: do iNei = -1,1
+                      ! Skip cells which were inside second body
+                      if(IsBody2Old_GB(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
+                      ! Skip other non-true cells
+                      if( .not.true_cell(i+iNei,j+jNei,k+kNei,iBlock)) CYCLE NEI
+                      ! Collect good state to the counter
+                      StateCounter_V = StateCounter_V + &
+                           State_VGB(:,i+iNei,j+jNei,k+kNei,iBlock)
+                      iCounter = iCounter + 1
+                   end do NEI
+                end do
+             end do
+
+             ! Recover the state from the counter:
+             if(iCounter==0) call stop_mpi(&
+                  'No good neighbors for the cell near the second body')
+             ! Average the state vector over good neighboring cells
+             State_VGB(:,i,j,k,iBlock) =  StateCounter_V/iCounter
+          end if
+       enddo; enddo; enddo
+    enddo
+    ! Update ghostcells which is needed if the new physical cells are
+    ! near the block boundary
     call exchange_messages
 
     call test_stop(NameSub, DoTest)
