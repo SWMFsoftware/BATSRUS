@@ -43,7 +43,6 @@ module ModFieldTraceFast
 contains
   !============================================================================
   subroutine init_mod_trace_fast
-
     !--------------------------------------------------------------------------
     if(.not.allocated(Trace_DINB)) &
          allocate(Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
@@ -63,7 +62,6 @@ contains
   end subroutine init_mod_trace_fast
   !============================================================================
   subroutine clean_mod_trace_fast
-
     !--------------------------------------------------------------------------
     if(allocated(Trace_DINB))    deallocate(Trace_DINB)
     if(allocated(IjkTrace_DINB)) deallocate(IjkTrace_DINB)
@@ -87,7 +85,7 @@ contains
 
     use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
     use CON_axes,    ONLY: transform_matrix
-    use ModUpdateStateFast, ONLY: sync_cpu_gpu
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu, set_dipole_fast
 
     ! remember last call and the last grid number
     integer :: nStepLast=-1, iLastGrid=-1, iLastDecomposition=-1
@@ -121,6 +119,8 @@ contains
 
     call init_mod_field_trace
 
+    call set_dipole_fast
+
     ! Transformation matrix between the SM(G) and GM coordinates
     if(UseSmg) &
          GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
@@ -140,7 +140,7 @@ contains
   subroutine trace_grid_fast
 
     use ModMain
-    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateOrig_
+    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateSlow_
     use ModB0,       ONLY: get_b0
     use ModUpdateStateFast, ONLY: get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
@@ -877,7 +877,7 @@ contains
       Xyz_D = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
       if(UseB0)then
-         if(iTypeUpdate == UpdateOrig_)then
+         if(iTypeUpdate <= UpdateSlow_)then
             call get_b0(Xyz_D, b_D)
          else
             call get_b0_dipole_fast(Xyz_D, b_D)
@@ -937,13 +937,13 @@ contains
       integer :: iHemisphere
       real    :: x_D(3)
       !------------------------------------------------------------------------
-      if(iTypeUpdate == UpdateOrig_)then
+!      if(iTypeUpdate <= UpdateSlow_)then
          call map_planet_field(Time_Simulation, Xyz_D, &
               TypeCoordSystem//' NORM', rIonosphere, x_D, iHemisphere)
-      else
-         call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, &
-              UseGsm=.true.)
-      end if
+!      else
+!         call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, &
+!              UseGsm=.true.)
+!      end if
 
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
