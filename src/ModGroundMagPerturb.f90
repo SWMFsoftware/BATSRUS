@@ -472,7 +472,7 @@ contains
     use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModUpdateStateFast, ONLY: map_planet_field_fast
-    use ModAdvance,        ONLY: iTypeUpdate, UpdateOrig_
+    use ModAdvance,        ONLY: iTypeUpdate, UpdateSlow_
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use CON_axes,          ONLY: transform_matrix
@@ -756,7 +756,7 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
-                if(iTypeUpdate == UpdateOrig_)then
+                if(iTypeUpdate <= UpdateSlow_)then
                    call map_planet_field(Time_Simulation, XyzRcurrents_D, &
                         TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
                 else
