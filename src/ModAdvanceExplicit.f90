@@ -342,9 +342,9 @@ contains
     integer :: i,j,k
     integer :: iCounter, iNei, jNei, kNei
     integer :: iBlock
-    logical :: DoTest
     real    :: StateCounter_V(nVar)
     logical, allocatable:: IsBody2Old_GB(:,:,:,:)
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_secondbody'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)

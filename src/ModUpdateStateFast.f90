@@ -3033,7 +3033,7 @@ contains
     call test_start(NameSub, DoTest)
 
     if(DipoleStrength == 0.0) RETURN
-    
+
     if(TypeCoordSystem == 'GSM')then
        call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
     elseif(TypeCoordSystem == 'GSE')then
