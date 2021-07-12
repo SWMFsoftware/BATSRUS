@@ -982,14 +982,15 @@ contains
 
       case('Body2Orbit')
          FBC%VarsGhostFace_V = FaceState_V
-         FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
+         ! FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
 
          ! Setting velocity BCs to be the second body orbital velocity:
-         FBC%VarsGhostFace_V(Ux_) = &
-              -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
-         FBC%VarsGhostFace_V(Uy_) = &
-              (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
-         FBC%VarsGhostFace_V(Uz_) =  0.0
+         ! Ux = -( \omega_SI y_SI)-> NoDim
+         FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
+              - (cTwoPi/OrbitPeriod)*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+         ! Uy = ( \omega_SI x_SI)-> NoDim
+         FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
+              + (cTwoPi/OrbitPeriod)*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
 
       case default
          write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
