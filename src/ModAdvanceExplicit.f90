@@ -11,7 +11,7 @@ module ModAdvanceExplicit
   private ! except
 
   public:: advance_explicit ! advance state variables with explicit method
-
+  public:: update_secondbody
 contains
   !============================================================================
   subroutine advance_explicit(DoCalcTimestep)
@@ -67,7 +67,7 @@ contains
     ! OPTIMIZE: Is there a better place to update true_BLK? --Yuxi
     !$acc update device(true_BLK)
 
-    if(UseBody2Orbit) call update_secondbody
+    ! if(UseBody2Orbit) call update_secondbody
 
     STAGELOOP: do iStage = 1, nStage
        !$acc update device(iStage)
