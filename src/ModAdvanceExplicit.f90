@@ -29,7 +29,7 @@ contains
     use ModGeometry,   ONLY: Body_BLK, true_BLK
     use ModBlockData,  ONLY: set_block_data
     use ModImplicit,   ONLY: UsePartImplicit
-    use ModPhysics,    ONLY: No2Si_V, UnitT_, UseBody2Orbit, OmegaBody_D, &
+    use ModPhysics,    ONLY: No2Si_V, UnitT_, OmegaBody_D, &
          update_angular_velocity
     use ModCalcSource, ONLY: calc_source
     use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &

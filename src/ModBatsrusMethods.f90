@@ -448,9 +448,9 @@ contains
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
-    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
+    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
-    use ModAdvanceExplicit, ONLY: advance_explicit
+    use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
     use ModAdvectPoints, ONLY: advect_all_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
          part_steady_select, part_steady_switch
@@ -646,6 +646,10 @@ contains
        if(int(Time_Simulation/DtUpdateB0) >  &
             int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
             call update_b0
+    end if
+    if(UseBody2Orbit) then
+       call update_secondbody
+       call update_b0
     end if
 
     if(UseProjection) call project_divb
