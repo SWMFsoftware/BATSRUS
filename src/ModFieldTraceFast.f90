@@ -316,7 +316,7 @@ contains
        if(nIterTrace>=MaxIterTrace)EXIT    
        
        call timing_start("ray_iter1")
-       !$acc parallel loop gang private(DoCheckInside)       
+       !$acc parallel loop gang
        do iBlock = 1, nBlockMax
 
           !$acc loop vector collapse(3)
@@ -331,7 +331,7 @@ contains
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
 
           !$acc loop vector collapse(3) independent &
-          !$acc private(iRay, iFace, Gen_D, GenIni_D,Weight_I, TraceTmp_D, i1,j1,k1,i2,j2,k2)          
+          !$acc private(Gen_D, GenIni_D,Weight_I, TraceTmp_D)          
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Exclude inside points
              if(iX>1 .and. iX<=nI .and. iY>1 .and. iY<=nJ &
@@ -427,6 +427,8 @@ contains
        call timing_start('ray_pass')
        call ray_pass
        call timing_stop('ray_pass')
+
+       !$acc update host(Trace_DINB, ray)
        
        nIterTrace = nIterTrace + 1
        !$acc update device(nIterTrace)
@@ -436,11 +438,11 @@ contains
           call timing_show('ray_trace',1)
        end if
 
-       !! acc serial
        ! Check if we are Done by checking for significant changes in Trace_DINB
+       !!acc serial
        Done = all(abs(ray(:,:,:,:,:,1:nBlock) - &
             Trace_DINB(:,:,:,:,:,1:nBlock)) < dTraceMin)
-       !! acc end serial
+       !!acc end serial
 
        if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Done, 1, MPI_LOGICAL, &
             MPI_LAND, iComm, iError)
@@ -497,12 +499,10 @@ contains
     if(DoTest)write(*,*)NameSub,' starting cell center assignments'
 #endif
 
-    call timing_start('trace_grid_fast2')
-
-    !$acc update device(ray, Trace_DINB)
+    call timing_start('trace_grid_fast2')    
     
     ! Assign face ray values to cell centers
-    !$acc parallel loop gang private(DoCheckInside, iRay)
+    !$acc parallel loop gang
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
@@ -519,25 +519,30 @@ contains
              end if
           end if
 #endif
-          !$acc loop vector collapse(3) private(GenIni_D, Gen_D, Weight_I, iFace)
-          !! acc loop vector collapse(3) independent
+          !$acc loop vector collapse(3) private(GenIni_D, Gen_D, Weight_I)
           do iZ=1,nK; do iY=1,nJ; do iX=1,nI
 
              ! Short cuts for inner and false cells
              if(R_BLK(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.true_cell(iX,iY,iZ,iBlock))then
                 ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
+#ifndef OPENACC                
                 if(DoTestRay)write(*,*)'BODYRAY'
+#endif                
                 CYCLE
              end if
 
+#ifndef OPENACC                             
              if(DoTestRay)write(*,*)'calling follow_fast'
+#endif             
 
              ! Follow ray in direction iRay
              GenIni_D = [real(iX), real(iY), real(iZ)]
              iFace = follow_fast(.false., Gen_D, GenIni_D, DoCheckInside, iRay, iBlock)
 
+#ifndef OPENACC             
              if(DoTestRay)write(*,*)'calling assign_ray'
+#endif             
 
              ! Assign value to ray
              call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
@@ -547,8 +552,6 @@ contains
           end do; end do; end do ! iX, iY, iZ
        end do ! iRay
     end do ! iBlock
-
-    !$acc update host(ray, Trace_DINB)
     
     call timing_stop('trace_grid_fast2')
 
@@ -574,9 +577,6 @@ contains
     if(DoTest)write(*,*)NameSub,' starting conversion to lat/lon'
 
     call timing_start('trace_grid_fast3')
-
-
-    !$acc update device(ray)
     
     ! Convert end position to co-latitude, longitude, and status
     !$acc parallel loop gang
@@ -1625,9 +1625,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ray_pass_old'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    
-    !!$acc update host(Trace_DINB)
+    call test_start(NameSub, DoTest)   
     
     do iDir = 1, 3
        ! Send messages for both faces
@@ -1635,10 +1633,8 @@ contains
     end do ! iDir
 
     if(DoTest)write(*,*)'ray_pass starting prolongation'
-
-    !!$acc update device(Trace_DINB)
     
-    !$acc parallel loop gang private(iFace)
+    !$acc parallel loop gang
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock))CYCLE
 
@@ -1646,8 +1642,6 @@ contains
           if(neiLEV(iFace,iBlock)==1)call prolong_ray(iFace, iBlock)
        end do
     end do
-
-    !$acc update host(Trace_DINB, ray)
     
     call test_stop(NameSub, DoTest)
   contains
@@ -1886,7 +1880,7 @@ contains
                if(jProc==iProc)then
                   ! Local copy
 
-                  !$acc loop vector collapse(3) private(iS, jS, kS)
+                  !$acc loop vector collapse(3)
                   do kR = kMinG, kMaxG; do jR = jMinG, jMaxG; do iR = iMinG,iMaxG
                      iS = iR - iMinG + iMinO
                      jS = jR - jMinG + jMinO
@@ -1936,7 +1930,7 @@ contains
                        iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
 
-                  !$acc loop vector collapse(3) private(iS, jS, kS)
+                  !$acc loop vector collapse(3)
                   do kR = kMinS, kMaxS; do jR = jMinS, jMaxS; do iR = iMinS,iMaxS                     
                      iS = 2*(iR - iMinS) + iMinO
                      jS = 2*(jR - jMinS) + jMinO
@@ -1971,7 +1965,7 @@ contains
                   if(jProc==iProc)then
                      ! Local copy of appropriate subface
 
-                     !$acc loop vector collapse(3) private(iS, jS, kS)
+                     !$acc loop vector collapse(3)
                      do kR=kMinG,kMaxG,2; do jR=jMinG,jMaxG,2; do iR=iMinG,iMaxG,2
                         iS = 0.5*(iR - iMinG) + iMinS
                         jS = 0.5*(jR - jMinG) + jMinS
