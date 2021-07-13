@@ -1257,7 +1257,7 @@ contains
 
     use ModMain,          ONLY: nBlock, Unused_B,      &
          time_simulation, NameThisComp, time_accurate
-    use ModPhysics,       ONLY: ThetaTilt
+    use ModPhysics,       ONLY: ThetaTilt, UseBody2Orbit
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
          iTypeUpdate, UpdateFast_
     use ModUpdateStateFast, ONLY: update_b0_fast
@@ -1328,7 +1328,7 @@ contains
 
     ! Recalculate B0 face values at resolution changes
     call set_b0_reschange
-    if(UseFieldLineThreads)then
+    if(UseFieldLineThreads.and..not.UseBody2Orbit)then
        call set_threads(NameSub)
        call exchange_messages
     end if
