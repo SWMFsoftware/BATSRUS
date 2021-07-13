@@ -1256,7 +1256,7 @@ contains
   subroutine update_b0
 
     use ModMain,          ONLY: nBlock, Unused_B,      &
-         time_simulation, NameThisComp, time_accurate
+         time_simulation, NameThisComp, time_accurate, DoThreads_B
     use ModPhysics,       ONLY: ThetaTilt, UseBody2Orbit
     use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
          iTypeUpdate, UpdateFast_
@@ -1328,9 +1328,14 @@ contains
 
     ! Recalculate B0 face values at resolution changes
     call set_b0_reschange
-    if(UseFieldLineThreads.and..not.UseBody2Orbit)then
-       call set_threads(NameSub)
-       call exchange_messages
+    if(UseFieldLineThreads)then
+       if(UseBody2Orbit)then
+          ! Nullify DoThread array, set in set_b0
+          DoThreads_B = .false.
+       else
+          call set_threads(NameSub)
+          call exchange_messages
+       end if
     end if
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
