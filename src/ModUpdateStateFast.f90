@@ -29,7 +29,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, DipoleStrength => Bdp
+       OmegaBody_D, DipoleStrength => Bdp, CosThetaTilt, SinThetaTilt
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
@@ -3039,7 +3039,7 @@ contains
     elseif(TypeCoordSystem == 'GSE')then
        call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
     else
-       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
+       Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
     end if
     Dipole_D = Dipole_D * DipoleStrength
     !$acc update device(Dipole_D)
