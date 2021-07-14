@@ -1806,12 +1806,12 @@ contains
     !==========================================================================
     subroutine ray_pass_faces(&
          iDir, iFaceMin, iFaceMax, DoEqual, DoRestrict, DoProlong)
-      
+
       use ModMain, ONLY : nBlockMax, okdebug, Unused_B
       use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
       use ModParallel, ONLY : NOBLK, neiLEV, neiBLK, neiPE
       use ModMpi
-      
+
       integer, intent(in):: iDir, iFaceMin,iFaceMax
       logical, intent(in):: DoEqual,DoRestrict,DoProlong
 
@@ -1857,7 +1857,7 @@ contains
       ! BATL related
       integer:: iNode, iDim, iSideFace
 
-      integer:: iS, jS, kS, iR, jR, kR
+      integer:: iS, jS, kS, iR, jR, kR, iRay, iDim
       !------------------------------------------------------------------------
 #ifdef OPENACC
       do iFace=iFaceMin,iFaceMax
@@ -1936,14 +1936,13 @@ contains
                      jS = 2*(jR - jMinS) + jMinO
                      kS = 2*(kR - kMinS) + kMinO
 
-                     !!!!!!!!!!!!!!!!!!!  Warning !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                     ! The following assignment causes race condition!!
-                     ! More than 1 block (iBlock) may assign values
-                     ! to the (iR,jR,kR,jBlock) node.
-                     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                     Trace_DINB(:,:,iR,jR,kR,jBlock) = max(&
-                          Trace_DINB(:,:,iS,jS,kS,iBlock),&
-                          Trace_DINB(:,:,iR,jR,kR,jBlock))
+                     do iRay = 1, 2; do iDim = 1, 3
+                        !$acc atomic update                        
+                        Trace_DINB(iDim,iRay,iR,jR,kR,jBlock) = max(&
+                             Trace_DINB(iDim,iRay,iS,jS,kS,iBlock),&
+                             Trace_DINB(iDim,iRay,iR,jR,kR,jBlock))
+                        !$acc end atomic
+                     end do; end do
                   end do; end do; end do
 
                else
