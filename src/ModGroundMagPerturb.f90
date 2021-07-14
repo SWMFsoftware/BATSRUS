@@ -927,13 +927,19 @@ contains
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
                 Br   = Br_II(iTheta,iPhi)
-                Bt_D = Bt_DII(:,iTheta,iPhi)
+                !debug replaced:
+                Bt_D = Bt_DII(:,iTheta,iPhi) !FIX:implicit loop
+                !Bt_D(1) = Bt_DII(1,iTheta,iPhi)
+                !Bt_D(2) = Bt_DII(2,iTheta,iPhi)
+                !Bt_D(3) = Bt_DII(3,iTheta,iPhi)
+                !debug ^^end^^
 
                 ! CHECK
                 ! Surface = Surface + dSurface
                 ! if(iTheta==nTheta .and. iPhi==nPhi) &
                 !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
+                !$acc loop gang worker vector private(Xyz_D,InvDist2_D,tmpvec3)
                 do iMag = 1, nMag
                    if(DoConvertCoord) then
                       ! This should be done in advance !!!
@@ -965,8 +971,6 @@ contains
 
              end if
 
-             !AG:DEBUG:outer loop (gang)
-             !-- $acc loop private(XyzMid_D,b_D)
              do k = 1, nR
 
                 ! Second order integration in radial direction
@@ -981,14 +985,22 @@ contains
                 !replaced: call get_planet_field(&
                 !replaced:      Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
                 call get_planet_field(Time_Simulation, XyzMid_D, b_D)
-                b_D = b_D*Si2No_V(UnitB_)
+                !debug replaced:
+                b_D = b_D*Si2No_V(UnitB_) !FIX:implicit loop
+                !b_D(1) = b_D(1)*Si2No_V(UnitB_)
+                !b_D(2) = b_D(2)*Si2No_V(UnitB_)
+                !b_D(3) = b_D(3)*Si2No_V(UnitB_)
+                !debug ^^^end^^^
 
                 ! The volume element is proportional to 1/Br. The sign
 		! should be preserved (not yet!!!),
                 ! because the sign is also there in the radial
 		! component of the field aligned current: Br/B*FAC.
 		! In the end j_D = b_D/Br*[(Br/B)*(j.B)]_rcurr
-                InvBr = r/abs(sum(b_D*XyzMid_D))
+                !debug replaced:
+                InvBr = r/abs(sum(b_D*XyzMid_D)) !FIX:implicit loop, reduction
+                !InvBr = r/abs(b_D(1)*XyzMid_D(1)+b_D(2)*XyzMid_D(2)+b_D(3)*XyzMid_D(3))
+                !debug ^^^end^^^
                 dVol  = dVolCoeff*InvBr
 
                 !! Check correctness of integration. Needs Br at rCurrents.
@@ -998,8 +1010,8 @@ contains
                 !call timing_start('ground_slow_int_inside_radial')
                 !AG:DEBUG:the most time-consuming loop (overall)
                 !AG:DEBUG:the inner (worker-vector loop)
-                !-- private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
-                !$acc loop private(Xyz_D,Pert_D)
+                !-- private(Xyz_D,Pert_D)
+                !$acc loop gang worker vector private(Xyz_D,tmpvec3,Pert_D)
                 do iMag = 1, nMag
                    !!AG: Creates variable z_a_2(:)?
                    !replaced:    if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
