@@ -1845,7 +1845,7 @@ contains
       ! BATL related
       integer:: iNode, iDim, iSideFace
 
-      integer:: iS, jS, kS, iR, jR, kR, iRay, iDim
+      integer:: iS, jS, kS, iR, jR, kR, iRay
       !------------------------------------------------------------------------
 #ifdef OPENACC
       do iFace=iFaceMin,iFaceMax
