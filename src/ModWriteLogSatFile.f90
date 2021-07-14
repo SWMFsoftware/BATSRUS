@@ -85,9 +85,9 @@ contains
     integer                     :: iParcel, iUnitParcel_I(MaxParcel)=-1
     logical                     :: IsParcelFileName_e
     character(len=2)            :: ParcelFile
-    
+
     logical                     :: DoTest
-    character(len=*), parameter :: NameSub = 'write_logfile'
+    character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -264,7 +264,7 @@ contains
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.
           end if
-      
+
        elseif (iSatIn < 0) then
           iParcel = -iSatIn
           iUnit = iUnitParcel_I(iParcel)
@@ -394,7 +394,7 @@ contains
     use ModFieldTrace, ONLY: ray
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
-    use ModIO, ONLY: write_myname, lNameLogVar,Parcel_DI 
+    use ModIO, ONLY: write_myname, lNameLogVar,Parcel_DI
     use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
@@ -404,7 +404,6 @@ contains
     use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
     use ModInterpolate,  ONLY: interpolate_vector
     use ModMPI
-
 
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)

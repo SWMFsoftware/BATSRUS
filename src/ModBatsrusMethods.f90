@@ -488,7 +488,7 @@ contains
          pic_set_cell_status
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_advance'
     !--------------------------------------------------------------------------
@@ -625,7 +625,7 @@ contains
     if(UseParcel) call advect_points(nParcel, Parcel_DI)
 
     call user_action('timestep done')
-    
+
     if(UseParticles) call advect_particle_line
 
     ! Re-calculate the active PIC regions
@@ -958,7 +958,7 @@ contains
          call timing_start('save_logfile')
          call write_logfile(0,ifile)
          call timing_stop('save_logfile')
-         
+
       elseif(ifile>plot_ .and. ifile<=plot_+nplotfile) then
          ! Case for plot files
          IsFound=.false.

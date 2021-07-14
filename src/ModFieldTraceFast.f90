@@ -28,7 +28,7 @@ module ModFieldTraceFast
   ! Stored face and cell indices of the 2 rays starting from a face of a block
   integer, allocatable :: IjkTrace_DINB(:,:,:,:,:,:)
   !$acc declare create(IjkTrace_DINB)
-  
+
   ! Stored weights for the 2 rays starting from a face of a block
   real, allocatable :: WeightTrace_DINB(:,:,:,:,:,:)
   !$acc declare create(WeightTrace_DINB)
@@ -44,10 +44,10 @@ module ModFieldTraceFast
   ! Control volume limits in local coordinates
   real, parameter :: GenMin_D(3) = [   0.5,   0.5,     0.5]
   real, parameter :: GenMax_D(3) = [nI+0.5, nJ+0.5, nK+0.5]
-  
+
   ! Testing
   logical :: DoTestRay = .false.
-  
+
 contains
   !============================================================================
   subroutine init_mod_trace_fast
@@ -106,7 +106,7 @@ contains
     call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
 
     call init_mod_trace_fast
-    
+
     if(DoTest)then
        write(*,*)'GM ray_trace: nStepLast,n_step         =',nStepLast,n_step
        write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
@@ -209,43 +209,42 @@ contains
     character(len=*), parameter:: NameSub = 'trace_grid_fast'
     !--------------------------------------------------------------------------
     call timing_start(NameSub)
-    
+
     call test_start(NameSub, DoTest)
 
     call timing_start('trace_grid_fast1')
-    
+
     write(*,*) NameSub,' starting'
 
     if(DoTime)call timing_reset('ray_pass',2)
 
     IsBVectorField = NameVectorField == 'B'
     !$acc update device(IsBVectorField)
-    
+
     DoTestRay = .false.
 
     !$acc parallel loop gang
     do iBlock = 1, nBlock
        !$acc loop vector collapse(3)
-       do k = MinK, MaxK ; do j = MinJ, MaxJ; do i = MinI, MaxI          
+       do k = MinK, MaxK ; do j = MinJ, MaxJ; do i = MinI, MaxI
           b_DGB(:,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
     end do
 
-    
     ! Fill in ghost cells
     call message_pass_cell(3, b_DGB, UseOpenACCIn=.true.)
 
     !$acc parallel loop gang
     do iBlock = 1, nBlockMax
-       
+
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
           Trace_DINB(:,:,:,:,:,iBlock) = NORAY-1.
           CYCLE
-       else          
-          ! Initial values !!! Maybe LOOPRAY would be better??          
+       else
+          ! Initial values !!! Maybe LOOPRAY would be better??
           Trace_DINB(:,:,:,:,:,iBlock) = NORAY
-          ray(:,:,:,:,:,iBlock) = NORAY          
+          ray(:,:,:,:,:,iBlock) = NORAY
        endif
        ! Inner points of Trace_DINB should never be used, assign them to OPEN
        ! so that checking for blocks with fully open rays becomes easy
@@ -261,10 +260,9 @@ contains
 
     end do
 
-
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoTest)write(*,*)NameSub,' initialized ray and Trace_DINB arrays'
-#endif    
+#endif
 
     ! Interpolate the B1 field to the nodes
     !$acc parallel loop gang present(b_DNB)
@@ -278,14 +276,14 @@ contains
                   sum(b_DGB(iDim,i-1:i,j-1:j,k-1:k,iBlock))*0.125
           end do
        end do; end do; end do
-       
+
     end do ! iBlock
 
-    !$acc update host(b_DNB)        
+    !$acc update host(b_DNB)
     ! Average node values between shared faces
     call message_pass_node(3,b_DNB)
     !$acc update device(b_DNB)
-    
+
 #ifndef OPENACC
     if(DoTest)write(*,*)'Trace_DINB normalized B'
     if(DoTime.and.iProc==0)then
@@ -294,23 +292,23 @@ contains
     end if
 
     if(DoTest)write(*,*)NameSub,' starting iterations to obtain Trace_DINB'
-#endif    
+#endif
 
     ! Iterate
     dTraceMin = rIonosphere*1e-6
     UsePreferredInterpolation = .false.
     nIterTrace = 0
     !$acc update device(UsePreferredInterpolation, nIterTrace)
-    
+
     call timing_stop('trace_grid_fast1')
-    
+
     call timing_start("ray_iter")
     do
 
        if(DoTest)write(*,*)'nIterTrace=',nIterTrace
 
-       if(nIterTrace>=MaxIterTrace)EXIT    
-       
+       if(nIterTrace>=MaxIterTrace)EXIT
+
        call timing_start("ray_iter1")
        !$acc parallel loop gang
        do iBlock = 1, nBlockMax
@@ -319,15 +317,15 @@ contains
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Store Trace_DINB into ray so we can see if there is any change
              ray(:,:,iX,iY,iZ,iBlock) = Trace_DINB(:,:,iX,iY,iZ,iBlock)
-          end do; end do; end do 
-          
+          end do; end do; end do
+
           if(Unused_B(iBlock) .or. iBlock > nBlock)CYCLE
 
           ! Flag cells inside the ionosphere if necessary
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
 
           !$acc loop vector collapse(3) independent &
-          !$acc private(Gen_D, GenIni_D,Weight_I, TraceTmp_D)          
+          !$acc private(Gen_D, GenIni_D,Weight_I, TraceTmp_D)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Exclude inside points
              if(iX>1 .and. iX<=nI .and. iY>1 .and. iY<=nJ &
@@ -341,11 +339,11 @@ contains
              if(neiLEV(3,iBlock)==NOBLK .and. iY==   1) CYCLE
              if(neiLEV(4,iBlock)==NOBLK .and. iY==nJ+1) CYCLE
 
-#ifndef OPENACC             
+#ifndef OPENACC
              if(DoTestRay)write(*,*)'TESTING RAY: me,iBlock,iX,iY,iZ,Xyz_D',&
                   iProc,iBlock,iX,iY,iZ,&
                   Xyz_DGB(:,iX,iY,iZ,iBlock)-0.5*CellSize_DB(:,iBlock)
-#endif             
+#endif
 
              if(nIterTrace==0)then
                 do iRay = 1, 2
@@ -419,26 +417,26 @@ contains
        call timing_stop("ray_iter1")
 
        ! Exchange Trace_DINB information
-       
+
        call timing_start('ray_pass')
        call ray_pass
        call timing_stop('ray_pass')
 
        !$acc update host(Trace_DINB, ray)
-       
+
        nIterTrace = nIterTrace + 1
        !$acc update device(nIterTrace)
-       
+
        if(DoTime .and. iProc == 0 .and. nIterTrace == 1)then
           write(*,'(a)',ADVANCE='NO') 'first iteration:'
           call timing_show('ray_trace',1)
        end if
 
        ! Check if we are Done by checking for significant changes in Trace_DINB
-       !!acc serial
+       !! acc serial
        Done = all(abs(ray(:,:,:,:,:,1:nBlock) - &
             Trace_DINB(:,:,:,:,:,1:nBlock)) < dTraceMin)
-       !!acc end serial
+       !! acc end serial
 
        if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Done, 1, MPI_LOGICAL, &
             MPI_LAND, iComm, iError)
@@ -495,8 +493,8 @@ contains
     if(DoTest)write(*,*)NameSub,' starting cell center assignments'
 #endif
 
-    call timing_start('trace_grid_fast2')    
-    
+    call timing_start('trace_grid_fast2')
+
     ! Assign face ray values to cell centers
     !$acc parallel loop gang
     do iBlock = 1, nBlock
@@ -522,23 +520,23 @@ contains
              if(R_BLK(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.true_cell(iX,iY,iZ,iBlock))then
                 ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
-#ifndef OPENACC                
+#ifndef OPENACC
                 if(DoTestRay)write(*,*)'BODYRAY'
-#endif                
+#endif
                 CYCLE
              end if
 
-#ifndef OPENACC                             
+#ifndef OPENACC
              if(DoTestRay)write(*,*)'calling follow_fast'
-#endif             
+#endif
 
              ! Follow ray in direction iRay
              GenIni_D = [real(iX), real(iY), real(iZ)]
              iFace = follow_fast(.false., Gen_D, GenIni_D, DoCheckInside, iRay, iBlock)
 
-#ifndef OPENACC             
+#ifndef OPENACC
              if(DoTestRay)write(*,*)'calling assign_ray'
-#endif             
+#endif
 
              ! Assign value to ray
              call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
@@ -548,7 +546,7 @@ contains
           end do; end do; end do ! iX, iY, iZ
        end do ! iRay
     end do ! iBlock
-    
+
     call timing_stop('trace_grid_fast2')
 
     if(DoTest)write(*,*)NameSub,' finished with ray=',&
@@ -573,7 +571,7 @@ contains
     if(DoTest)write(*,*)NameSub,' starting conversion to lat/lon'
 
     call timing_start('trace_grid_fast3')
-    
+
     ! Convert end position to co-latitude, longitude, and status
     !$acc parallel loop gang
     do iBlock = 1, nBlock
@@ -585,7 +583,7 @@ contains
     end do
 
     !$acc update host(ray)
-    
+
     call timing_stop('trace_grid_fast3')
 
     if(DoTime.and.iProc==0)then
@@ -667,10 +665,10 @@ contains
             end do
          end do
       end do
-      
+
     end subroutine ray_debugger
-#endif    
     !==========================================================================
+#endif
     subroutine interpolate_bb_node(Gen_D, b_D, iBlock)
       !$acc routine seq
 
@@ -681,9 +679,9 @@ contains
       real, intent(out):: b_D(3)
       integer, intent(in):: iBlock
       real :: b
-      
+
       integer :: i1,j1,k1,i2,j2,k2
-      
+
       ! Distance between Gen_D and i1,j1,k1, and i2,j2,k2
       real :: Dx1, Dy1, Dz1, Dx2, Dy2, Dz2
 
@@ -695,23 +693,23 @@ contains
       j1 = floor(Gen_D(2)+0.5); j2 = j1 + 1
       k1 = floor(Gen_D(3)+0.5); k2 = k1 + 1
 
-#ifndef OPENACC      
+#ifndef OPENACC
       if(i1<0 .or. i2>nI+2 .or. j1<0 .or. j2>nJ+2 .or. k1<0 .or. k2>nK+2)then
          write(*,*)'interpolate_bb_node: iProc, iBlock, Gen_D=', &
               iProc, iBlock, Gen_D
          call stop_mpi('ERROR in interpolate_bb_node: location out of bounds')
       endif
-#endif      
+#endif
 
       ! Get B0 values for location
       Xyz_D = Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
 
       if(UseB0)then
-#ifdef OPENACC         
+#ifdef OPENACC
          call get_b0_dipole_fast(Xyz_D, b_D)
 #else
          call get_b0(Xyz_D, b_D)
-#endif         
+#endif
       else
          b_D = 0.00
       end if
@@ -762,27 +760,27 @@ contains
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
       use ModUpdateStateFast, ONLY: map_planet_field_fast
       use CON_planet_field, ONLY: map_planet_field
-      
+
       real, intent(inout):: Xyz_D(3)
-      integer, intent(in):: iRay     
-      
+      integer, intent(in):: iRay
+
       integer :: iHemisphere
       real    :: x_D(3)
       !------------------------------------------------------------------------
-#ifdef OPENACC      
+#ifdef OPENACC
       call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, UseGsm=.true.)
 #else
       call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
            rIonosphere, x_D, iHemisphere)
-#endif      
+#endif
 
-#ifndef OPENACC      
+#ifndef OPENACC
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
          write(*,*)'iBlock, iRay=',iBlock,iRay
          call stop_mpi('ERROR in do_follow_iono')
       end if
-#endif      
+#endif
 
       if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iRay) < 0.0)then
          Xyz_D = x_D
@@ -792,8 +790,8 @@ contains
       end if
 
     end function do_follow_iono
-
     !==========================================================================
+
     function follow_fast(IsSurfacePoint, Gen_D, GenIn_D, DoCheckInside, &
          iRay, iBlock) result(iFaceOut)
       !$acc routine seq
@@ -826,9 +824,9 @@ contains
 
       ! Radial distance and square of it: r2=sum(Xyz_D**2)
       real :: r2
-      
+
       real :: Xyz_D(3)
-      
+
       ! dx is the difference between 1st and 2nd order RK to estimate accuracy
       ! DxOpt is the required accuracy, DxRel=dx/DxOpt
       real :: DxRel, DxOpt
@@ -839,17 +837,16 @@ contains
       ! counter for ray integration
       integer :: nSegment
 
-
       integer:: iOuter, iInner
-      
+
       ! Counter for entering do_follow_iono
       integer :: nIono
       !------------------------------------------------------------------------
-#ifndef OPENACC      
+#ifndef OPENACC
       if(DoTestRay)&
            write(*,*)'follow_fast: me,iBlock,IsSurfacePoint,GenIn_D,iRay=',&
            iProc, iBlock, IsSurfacePoint, GenIn_D, iRay
-#endif      
+#endif
 
       ! Step size limits
       DsMax=1.0
@@ -871,10 +868,9 @@ contains
       ! Initial position
       Gen_D = GenIn_D
 
-      
       ! Integration loop
       do iOuter = 1, 9999999
-         
+
          ! Check if we are inside the ionosphere
          if(DoCheckInside)then
             ! Convert Gen_D to real coordinates Xyz_D
@@ -889,17 +885,17 @@ contains
                if(DoTestRay)write(*,*)&
                     'Inside rTrace at me,iBlock,nSegment,Gen_D,Xyz_D=',&
                     iProc,iBlock,nSegment,Gen_D,Xyz_D
-#endif                              
-               
+#endif
+
                if((.not. IsBVectorField) .or. r2 <= rInner2)then
-                  
+
                   if(nSegment==0)then
                      iFaceOut = ray_body_
 #ifndef OPENACC
                      if(DoTestRay)write(*,*)&
                           'Initial point inside rInner at me,iBlock,Xyz_D=',&
                           iProc,iBlock,Xyz_D
-#endif                     
+#endif
                   else
                      r = sqrt(r2)
                      XyzIni_D = Xyz_DGB(:,1,1,1,iBlock) + &
@@ -942,10 +938,10 @@ contains
 
          ! Check if the ray is pointing outwards
          if(nSegment==0.and.IsSurfacePoint)then
-#ifndef OPENACC            
+#ifndef OPENACC
             if(DoTestRay)write(*,*)'me,iBlock,GenIni_D,bIni_D=', &
                  iProc, iBlock, GenIni_D, bIni_D
-#endif            
+#endif
 
             if(any(GenMid_D < GenMin_D) .or. any(GenMid_D > GenMax_D))then
                iFaceOut = ray_out_
@@ -957,12 +953,11 @@ contains
                        Xyz_DGB(:,1,1,1,iBlock) &
                        + CellSize_DB(:,iBlock)*(GenMid_D - 1)
                end if
-#endif               
+#endif
                RETURN
             end if
          end if
-         
-         
+
          do iInner = 1, 9999999
             ! Full step
             call interpolate_bb_node(GenMid_D, bMid_D, iBlock)
@@ -971,11 +966,11 @@ contains
             ! and take ratio relative to DxOpt
             DxRel=abs(Ds)*maxval(abs(bMid_D-bIni_D))/DxOpt
 
-#ifndef OPENACC            
+#ifndef OPENACC
             if(DoTestRay.and.okdebug)&
                  write(*,*)'me,iBlock,GenMid_D,bMid_D,DxRel=', &
                  iProc, iBlock, GenMid_D, bMid_D, DxRel
-#endif            
+#endif
 
             ! Make sure that Ds does not change more than a factor of 2 or 0.5
             DxRel=max(0.5,min(2.,DxRel))
@@ -997,18 +992,18 @@ contains
                if(DoTestRay.and.okdebug)&
                     write(*,*)'new decreased Ds: me,iBlock,Ds=', &
                     iProc,iBlock,Ds
-#endif               
+#endif
             else
                ! Too accurate, increase Ds if possible
                if(abs(Ds)<DsMax-DsTiny)then
 
                   DsNext = sign(min(DsMax,abs(Ds)/sqrt(DxRel)),Ds)
 
-#ifndef OPENACC                  
+#ifndef OPENACC
                   if(DoTestRay.and.okdebug)&
                        write(*,*)'new increased DsNext: me,iBlock,DsNext=', &
                        iProc,iBlock,DsNext
-#endif                  
+#endif
 
                end if
 
@@ -1021,11 +1016,11 @@ contains
          nSegment = nSegment+1
          s = s + abs(Ds)
 
-#ifndef OPENACC         
+#ifndef OPENACC
          if(DoTestRay.and.okdebug)&
               write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
               iProc, iBlock, nSegment, s, Gen_D
-#endif         
+#endif
 
          ! Check if the ray hit the wall of the control volume
          if(any(Gen_D < GenMin_D) .or. any(Gen_D > GenMax_D))then
@@ -1046,13 +1041,13 @@ contains
             elseif(Gen_D(2)>=GenMax_D(2))then; iFaceOut=4
             elseif(Gen_D(3)>=GenMax_D(3))then; iFaceOut=6
             else
-#ifndef OPENACC               
+#ifndef OPENACC
                write(*,*)'Error in follow_fast for me,iBlock,iX,iY,iZ=',&
                     iProc,iBlock,iX,iY,iZ
                write(*,*)'nSegment,Gen_D,Ds,DsBack=', &
                     nSegment, Gen_D, Ds, DsBack
                call stop_mpi('GM_follow_fast: Hit wall but which one?')
-#endif               
+#endif
             end if
 
             ! Make sure that Gen_D is not outside the control volume
@@ -1065,27 +1060,26 @@ contains
          ! Check if we have integrated for too long
          if(s>sMax)then
             ! Seems to be a closed loop within a block
-#ifndef OPENACC            
+#ifndef OPENACC
             if(DoTestRay)then
                write(*,*)'CLOSED LOOP at me,iBlock,iX,iY,iZ,Gen_D,Xyz_D=',&
                     iProc,iBlock,iX,iY,iZ,Gen_D,&
                     Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
             end if
-#endif            
+#endif
 
             iFaceOut=ray_loop_
             EXIT
          end if
-         
+
       end do
 
-
-#ifndef OPENACC      
+#ifndef OPENACC
       if(DoTestRay)write(*,*) &
            'Finished follow_fast at me,iBlock,nSegment,iFaceOut,Gen_D,Xyz_D=',&
            iProc,iBlock,nSegment,iFaceOut,Gen_D,&
            Xyz_DGB(:,1,1,1,iBlock) + CellSize_DB(:,iBlock)*(Gen_D - 1)
-#endif      
+#endif
 
     end function follow_fast
     !==========================================================================
@@ -1109,7 +1103,7 @@ contains
       real, intent(inout)    :: Trace_D(3), Gen_D(3)
       real, intent(inout)    :: Weight_I(4)
       logical, optional, intent(in):: UseRay
-      
+
       real :: TraceTmp_D(3)
       real :: Trace_DI(3,4)
       integer :: iCount, ii, jj, kk
@@ -1119,41 +1113,41 @@ contains
 
       character(len=*), parameter:: NameSub = 'assign_ray'
       !------------------------------------------------------------------------
-#ifndef OPENACC      
+#ifndef OPENACC
       if(DoTestRay)write(*,*)&
            NameSub,' starting with IsSurfacePoint, iRay, iFace=',&
            IsSurfacePoint,iRay,iFace
-#endif      
+#endif
 
       select case(iFace)
       case(ray_out_)
          ! The ray points outward
          Trace_D = OUTRAY
-#ifndef OPENACC         
+#ifndef OPENACC
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=OUTRAY'
-#endif         
+#endif
          RETURN
       case(ray_loop_)
          ! The ray did not hit the wall of the block
          Trace_D = LOOPRAY
-#ifndef OPENACC         
+#ifndef OPENACC
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=LOOPRAY'
-#endif         
+#endif
          RETURN
       case(ray_body_)
          ! The ray hit a body
          Trace_D = BODYRAY
-#ifndef OPENACC                  
+#ifndef OPENACC
          if(DoTestRay)write(*,*)NameSub,' finished with Trace_D=BODYRAY'
-#endif         
+#endif
          RETURN
       case(ray_iono_)
          ! The ray hit the ionosphere
          Trace_D = Gen_D
-#ifndef OPENACC                  
+#ifndef OPENACC
          if(DoTestRay)write(*,*)&
               NameSub,' finished with Trace_D on ionosphere, Trace_D=',Trace_D
-#endif         
+#endif
          RETURN
       case(1, 2)
          if(iFace == 1)then
@@ -1193,11 +1187,11 @@ contains
          e1 = Gen_D(2) - j1 + 0.5
 
       case default
-#ifndef OPENACC                  
+#ifndef OPENACC
          write(*,*)'Impossible value for iFace=',iFace,' at iX,iY,iZ,iBlock=',&
               iX,iY,iZ,iBlock
          call stop_mpi('assign_ray')
-#endif         
+#endif
       end select
 
       ! Calculate bilinear interpolation weights
@@ -1207,9 +1201,9 @@ contains
       Weight_I(3) = d2*e1
       Weight_I(4) = d1*e1
 
-#ifndef OPENACC               
+#ifndef OPENACC
       if(DoTestRay)write(*,*)'Weight_I=',Weight_I
-#endif      
+#endif
 
       ! Exclude the starting point if its among the 4 interpolated cells
       if(IsSurfacePoint)then
@@ -1225,18 +1219,18 @@ contains
             end select
             ! Normalize weights
             Weight_I = Weight_I/sum(Weight_I)
-#ifndef OPENACC                     
+#ifndef OPENACC
             if(DoTestRay)write(*,*) &
                  'Excluded point: me,iBlock,iX,iY,iZ,Weight_I=',&
                  iProc, iBlock, iX, iY, iZ, Weight_I
-#endif            
+#endif
          end if
       end if
 
-#ifndef OPENACC               
+#ifndef OPENACC
       if(DoTestRay) write(*,*)'i1,j1,k1,i2,j2,k2,d1,e1=', &
            i1, j1, k1, i2, j2, k2, d1, e1
-#endif      
+#endif
 
       iCount = 1
       do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
@@ -1248,14 +1242,14 @@ contains
          endif
          iCount = iCount + 1
       end do; end do; end do
-      
+
       call rayface_interpolate(Trace_DI, Weight_I, 4, TraceTmp_D)
 
       Trace_D = TraceTmp_D
 
-#ifndef OPENACC               
+#ifndef OPENACC
       if(DoTestRay)write(*,*)NameSub,' finished Trace_D=',Trace_D
-#endif      
+#endif
 
     end subroutine assign_ray
     !==========================================================================
@@ -1314,7 +1308,7 @@ contains
        endwhere
     end if
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoTestRay)then
        write(*,*) NameSub
        write(*,*)'Trace_DI(1,:)=',Trace_DI(1,:)
@@ -1323,24 +1317,24 @@ contains
        write(*,*)'Weight_I       =',Weight_I
        write(*,*)'WeightTmp_I      =',WeightTmp_I
     end if
-#endif    
+#endif
 
     ! Short cuts
     if(all(Trace_DI(1,:)==OPENRAY))then
        ! all surrounding rays are open
        Trace_D=OPENRAY
-#ifndef OPENACC       
+#ifndef OPENACC
        if(DoTestRay)write(*,*) NameSub,' finished with fully OPENRAY'
-#endif       
+#endif
        RETURN
     end if
 
     if(all(Trace_DI(1,:)==NORAY))then
        ! all surrounding rays are unknown
        Trace_D=NORAY
-#ifndef OPENACC       
+#ifndef OPENACC
        if(DoTestRay)write(*,*) NameSub,' finished with fully NORAY'
-#endif       
+#endif
        RETURN
     end if
 
@@ -1374,9 +1368,9 @@ contains
           ! Try next type
           i = i + 1
 
-#ifndef OPENACC          
+#ifndef OPENACC
           if(i>nValue)call stop_mpi(NameSub//': Impossible value for i')
-#endif          
+#endif
        end do ! i
     end do ! j
 
@@ -1399,7 +1393,7 @@ contains
              iWeightMax = i
           end if
        end do
-       
+
        if(TraceFirst_DI(1,iWeightMax) > CLOSEDRAY)then
           ! take average
           Trace_D = TraceSum_DI(:,iWeightMax)/WeightSum_I(iWeightMax)
@@ -1409,12 +1403,12 @@ contains
        end if
     end if
 
-#ifndef OPENACC    
+#ifndef OPENACC
     if(DoTestRay)then
        write(*,*) NameSub,': WeightSum_I=',WeightSum_I(1:n)
        write(*,*) NameSub,' finished with Trace_D=',Trace_D
     end if
-#endif    
+#endif
 
     ! call test_stop(NameSub, DoTest)
   end subroutine rayface_interpolate
@@ -1601,7 +1595,7 @@ contains
 
     use ModMain, ONLY : nBlockMax, Unused_B
     use ModParallel, ONLY : neiLEV
-    
+
     ! Local variables
 
     ! iDir=1,2,3 correspond to east-west, south-north, bot-top.
@@ -1609,27 +1603,26 @@ contains
 
     integer :: iFace, iBlock
 
-#ifndef OPENACC      
+#ifndef OPENACC
       ! Array ranges for outgoing, incoming, restricted and subfaces
       integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
       integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
       integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
       integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
-#endif      
+#endif
 
-    
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ray_pass_old'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)   
-    
+    call test_start(NameSub, DoTest)
+
     do iDir = 1, 3
        ! Send messages for both faces
        call ray_pass_faces(iDir,2*iDir-1,2*iDir,.true.,.true.,.true.)
     end do ! iDir
 
     if(DoTest)write(*,*)'ray_pass starting prolongation'
-    
+
     !$acc parallel loop gang
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock))CYCLE
@@ -1638,7 +1631,7 @@ contains
           if(neiLEV(iFace,iBlock)==1)call prolong_ray(iFace, iBlock)
        end do
     end do
-    
+
     call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
@@ -1647,13 +1640,13 @@ contains
          iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
          iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
       !$acc routine seq
-      
+
       integer, intent(in):: iFace, iDir
       integer, intent(out):: jFace, iSide, iSize, iSizeR
       integer, intent(out) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
       integer, intent(out) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
       integer, intent(out) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
-      
+
       ! Set ranges orthogonal to iDir based on the value of iDir
       !------------------------------------------------------------------------
       if(iDir /= 1)then
@@ -1721,14 +1714,14 @@ contains
          iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
          iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
       !$acc routine seq
-      
+
       logical, intent(in) :: DoSend
       integer, intent(in) :: iFace, iSubFace
       integer, intent(in) :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
       integer, intent(in) :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
       integer, intent(in) :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
       integer, intent(out) :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
-      
+
       ! Select appropriate quarter of ghost cell layer
       !------------------------------------------------------------------------
       select case(iFace)
@@ -1817,13 +1810,13 @@ contains
       ! number of subfaces (1 or 4), subface (1..nSubFace) and child (1..8) index
       integer ::  nSubFace, iSubFace
 
-#ifdef OPENACC      
+#ifdef OPENACC
       ! Array ranges for outgoing, incoming, restricted and subfaces
       integer :: iMinO, iMaxO, jMinO, jMaxO, kMinO, kMaxO
       integer :: iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG
       integer :: iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR
       integer :: iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
-#endif      
+#endif
 
       ! Descriptors for neighbor
       integer :: jProc, jBlock, DiLevel
@@ -1844,11 +1837,10 @@ contains
       ! Equal and restricted values to be sent are stored in these buffers
       real, allocatable :: BufEqual_DIC(:,:,:,:,:), BufRestrict_DIC(:,:,:,:,:)
 
-#endif    
+#endif
 
       ! Actual size of messages: full, restricted/sparse and actual face
       integer :: iSize, iSizeR, iSize1
-
 
       ! BATL related
       integer:: iNode, iDim, iSideFace
@@ -1859,7 +1851,7 @@ contains
       do iFace=iFaceMin,iFaceMax
          !$acc parallel loop gang
          do iBlock=1,nBlockMax
-            if(Unused_B(iBlock))CYCLE            
+            if(Unused_B(iBlock))CYCLE
             DiLevel = neiLEV(iFace,iBlock)
 
             call setranges_ray(iFace, iDir, jFace, iSide, iSize, iSizeR, &
@@ -1885,11 +1877,11 @@ contains
                      Trace_DINB(:,:,iR,jR,kR,jBlock)=max(&
                           Trace_DINB(:,:,iR,jR,kR,jBlock),&
                           Trace_DINB(:,:,iS,jS,kS,iBlock))
-                  end do; end do; end do 
+                  end do; end do; end do
                else
                   ! To be implemented
                end if
-            case(1)                              
+            case(1)
                if(.not.DoRestrict)CYCLE
 
                jProc=neiPE(1,iFace,iBlock)
@@ -1927,13 +1919,13 @@ contains
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
 
                   !$acc loop vector collapse(3)
-                  do kR = kMinS, kMaxS; do jR = jMinS, jMaxS; do iR = iMinS,iMaxS                     
+                  do kR = kMinS, kMaxS; do jR = jMinS, jMaxS; do iR = iMinS,iMaxS
                      iS = 2*(iR - iMinS) + iMinO
                      jS = 2*(jR - jMinS) + jMinO
                      kS = 2*(kR - kMinS) + kMinO
 
                      do iRay = 1, 2; do iDim = 1, 3
-                        !$acc atomic update                        
+                        !$acc atomic update
                         Trace_DINB(iDim,iRay,iR,jR,kR,jBlock) = max(&
                              Trace_DINB(iDim,iRay,iS,jS,kS,iBlock),&
                              Trace_DINB(iDim,iRay,iR,jR,kR,jBlock))
@@ -2231,7 +2223,7 @@ contains
                           jMinG:jMaxG:2,&
                           kMinG:kMaxG:2,jBlock),&
                           Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS, &
-                          iBlock))                     
+                          iBlock))
                   else
                      ! Remote send
                      BufRestrict_DIC = &
@@ -2317,11 +2309,11 @@ contains
 
       if(DoTest)write(*,*)'ray_pass_faces finished: me, iFaceMin, iFaceMax=',&
            iProc, iFaceMin, iFaceMax
-#endif      
+#endif
 
     end subroutine ray_pass_faces
     !==========================================================================
-#ifndef OPENACC    
+#ifndef OPENACC
     subroutine buf2rayface(Buffer_DIN,iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
@@ -2372,8 +2364,8 @@ contains
            Trace_DINB(:,:,iMinS:iMaxS,jMinS:jMaxS,kMinS:kMaxS,iBlock))
 
     end subroutine buf2subrayface
-#endif    
     !==========================================================================
+#endif
     subroutine prolong_ray(iFace,iBlock)
       !$acc routine vector
 
@@ -2401,29 +2393,28 @@ contains
       ! (1,1)           (5,1)
 
       integer, intent(in)::iFace, iBlock
-      
+
       integer :: iRay
       integer :: i, j, k, nFaceJ, nFaceK
 
       integer, parameter   :: nFaceMax=max(nI+1,nJ+1,nK+1)
-      
+
       real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
       integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
 
-      
       ! Interpolation weights
       real :: Weight4_I(4) != 0.25
       real :: Weight2_I(2) != 0.5
 
       real :: Trace_DI(3,2), Trace4_DI(3,4)
       real :: tmp(3)
-      
+
+#ifndef OPENACC
       character(len=*), parameter:: NameSub = 'prolong_ray'
       !------------------------------------------------------------------------
-#ifndef OPENACC      
       if(DoTest)write(*,*) NameSub,': me, iBlock, iFace=',iProc, iBlock, iFace
-#endif      
-      
+#endif
+
       ! Extract Trace_DIII and IjkTrace_DII for the appropriate face
       ! NOTE: IjkTrace_DII assignment split to two lines to avoid
       ! reshaping compiler bug!
@@ -2454,7 +2445,7 @@ contains
          end do; end do
       case(4)
          nFaceJ=nI+1; nFaceK=nK+1
-         !$acc loop vector collapse(2)         
+         !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do k = 1, nFaceK
             Trace_DIII( :,:,i,k)=Trace_DINB(   :,:,i,nJ+1,k,iBlock)
             IjkTrace_DII(1,i,k)=IjkTrace_DINB(1,1,i,nJ+1,k,iBlock)
@@ -2468,7 +2459,7 @@ contains
             IjkTrace_DII(1,i,j)=IjkTrace_DINB(1,1,i,j,1,iBlock)
             IjkTrace_DII(2,i,j)=IjkTrace_DINB(1,2,i,j,1,iBlock)
          end do; end do
-      case(6)         
+      case(6)
          nFaceJ=nI+1; nFaceK=nJ+1
          !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do j = 1, nFaceK
@@ -2477,18 +2468,17 @@ contains
             IjkTrace_DII(2,i,j)=IjkTrace_DINB(1,2,i,j,nK+1,iBlock)
          end do; end do
       case default
-#ifndef OPENACC         
+#ifndef OPENACC
          call stop_mpi(NameSub//': Impossible value for iFace')
-#endif         
+#endif
       end select
 
-      
       !$acc loop vector collapse(2) private(Trace_DI, Weight2_I, Weight4_I)
       do iRay=1,2
          do k=1,nfaceK
             Weight2_I = 0.5
             Weight4_I = 0.25
-            
+
             if(mod(k,2)==1)then
                do j=2,nfaceJ,2
                   ! Case b: even j and odd k
@@ -2508,64 +2498,64 @@ contains
                   if(IjkTrace_DII(iRay,j,k)/=ray_out_)CYCLE
 
                   Trace_DI(:,1) = Trace_DIII(:,iRay,j,k-1)
-                  Trace_DI(:,2) = Trace_DIII(:,iRay,j,k+1)                  
+                  Trace_DI(:,2) = Trace_DIII(:,iRay,j,k+1)
                   call rayface_interpolate(Trace_DI, Weight2_I, 2,&
-                       Trace_DIII(:,iRay,j,k))                  
+                       Trace_DIII(:,iRay,j,k))
                end do
                do j=2,nJ,2
                   ! Case c: even j and even k
 
                   if(IjkTrace_DII(iRay,j,k)/=ray_out_)CYCLE
-                  
+
                   Trace4_DI(:,1) = Trace_DIII(:,iRay,j-1,k-1)
                   Trace4_DI(:,2) = Trace_DIII(:,iRay,j+1,k-1)
                   Trace4_DI(:,3) = Trace_DIII(:,iRay,j-1,k+1)
-                  Trace4_DI(:,4) = Trace_DIII(:,iRay,j+1,k+1)                  
+                  Trace4_DI(:,4) = Trace_DIII(:,iRay,j+1,k+1)
                   call rayface_interpolate(Trace4_DI, Weight4_I, 4,&
                        Trace_DIII(:,iRay,j,k))
-                  
+
                end do ! j
             end if ! mod(k,2)
          end do ! k
       end do ! iRay
-      
+
       ! Put back result into Trace_DINB
       select case(iFace)
       case(1)
          !$acc loop vector collapse(2)
          do k = 1, nFaceK; do j = 1, nFaceJ
             Trace_DINB(:,:,1,j,k,iBlock) = Trace_DIII(:,:,j,k)
-         end do; end do 
+         end do; end do
       case(2)
          !$acc loop vector collapse(2)
          do k = 1, nFaceK; do j = 1, nFaceJ
             Trace_DINB(:,:,nI+1,j,k,iBlock) = Trace_DIII(:,:,j,k)
-         end do; end do             
+         end do; end do
       case(3)
-         !$acc loop vector collapse(2)         
+         !$acc loop vector collapse(2)
          do k = 1, nFaceK; do i = 1, nFaceJ
             Trace_DINB(:,:,i,1,k,iBlock) = Trace_DIII(:,:,i,k)
          end do; end do
       case(4)
          !$acc loop vector collapse(2)
-         do k = 1, nFaceK; do i = 1, nFaceJ         
+         do k = 1, nFaceK; do i = 1, nFaceJ
             Trace_DINB(:,:,i,nJ+1,k,iBlock) = Trace_DIII(:,:,i,k)
-         end do; end do 
+         end do; end do
       case(5)
          !$acc loop vector collapse(2)
          do j = 1, nFaceK; do i = 1, nFaceJ
             Trace_DINB(:,:,i,j,1,iBlock) = Trace_DIII(:,:,i,j)
          end do; end do
       case(6)
-         !$acc loop vector collapse(2)         
+         !$acc loop vector collapse(2)
          do j = 1, nFaceK; do i = 1, nFaceJ
             Trace_DINB(:,:,i,j,nK+1,iBlock) = Trace_DIII(:,:,i,j)
-         end do; end do            
+         end do; end do
       end select
-      
+
     end subroutine prolong_ray
-    
     !==========================================================================
+
   end subroutine ray_pass_old
   !============================================================================
 end module ModFieldTraceFast

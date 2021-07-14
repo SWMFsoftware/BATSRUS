@@ -3064,7 +3064,7 @@ contains
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
     call set_dipole_fast
-    
+
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -3127,7 +3127,7 @@ contains
     integer,           intent(out):: iHemisphere      ! which hemisphere
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
     logical, optional, intent(in) :: UseGsm           ! use GSM coords
-    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG    
+    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG
 
     real             :: Xyz_D(3)        ! Normalized and rotated position
 
@@ -3182,14 +3182,14 @@ contains
     if(.not.present(DdirDxyz_DD)) RETURN
 
     XyMap = sqrt(XyMap2)
-    
+
     DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
          ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
          ( XyzMap_D(3) * XyMap / XyRatio )
 
     ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
     DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
-    
+
     ! dPhi/dx = -y/(x^2+y^2)
     ! dPhi/dy =  x/(x^2+y^2)
     Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
@@ -3198,7 +3198,7 @@ contains
 
     ! dPhi/dz = 0.0
     DdirDxyz_DD(2,3) = 0.0
-    
+
     ! Transform into the system of the input coordinates
     ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
     if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)

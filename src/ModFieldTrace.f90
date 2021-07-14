@@ -134,7 +134,7 @@ module ModFieldTrace
   ! Total magnetic field with second order ghost cells
   real, public, allocatable :: b_DGB(:,:,:,:,:)
   !$acc declare create(b_DGB)
-  
+
   ! Local variables --------------------------------
 
   ! Possible tasks
