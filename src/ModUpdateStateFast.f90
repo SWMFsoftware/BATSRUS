@@ -3115,7 +3115,7 @@ contains
   end subroutine get_b0_dipole_fast
   !============================================================================
   subroutine map_planet_field_fast(XyzIn_D, rMap, XyzMap_D, iHemisphere, &
-       DdirDxyz_DD, UseGsm)
+       DdirDxyz_DD, UseGsm, DoNotConvertBack)
     !$acc routine seq
 
     ! This subroutine is a simplified version of
@@ -3127,6 +3127,7 @@ contains
     integer,           intent(out):: iHemisphere      ! which hemisphere
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
     logical, optional, intent(in) :: UseGsm           ! use GSM coords
+    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG    
 
     real             :: Xyz_D(3)        ! Normalized and rotated position
 
@@ -3175,10 +3176,13 @@ contains
        XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
     end if
 
+    if(.not.present(DoNotConvertBack)) &
+         XyzMap_D = matmul(XyzMap_D, SmgGsm_DD )
+
     if(.not.present(DdirDxyz_DD)) RETURN
 
     XyMap = sqrt(XyMap2)
-
+    
     DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
          ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
          ( XyzMap_D(3) * XyMap / XyRatio )
@@ -3232,7 +3236,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     call map_planet_field_fast(Xyz_D, rIonosphere, XyzIono_D, &
-         iHemisphere, DdirDxyz_DD, UseGsm=.true.)
+         iHemisphere, DdirDxyz_DD, UseGsm=.true., DoNotConvertBack=.true.)
 
     ! Calculate angular coordinates
     call xyz_to_dir(XyzIono_D, Theta, Phi)
