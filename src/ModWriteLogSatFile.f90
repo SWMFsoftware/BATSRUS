@@ -51,7 +51,7 @@ contains
     real, optional, intent(in) :: TimeSatHeaderIn
 
     ! Logfile variables
-    integer, parameter :: MaxLogVar=40
+    integer, parameter :: MaxLogVar=200
     integer, parameter :: MaxLogR = 10
     real :: LogVar_I(MaxLogVar)
     character (len=lNameLogVar) :: NameLogVar_I(MaxLogVar)
@@ -81,8 +81,13 @@ contains
     ! Header for the sat file in time accurate
     real:: TimeSatHeader
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_logfile'
+    ! Parcel variables
+    integer                     :: iParcel, iUnitParcel_I(MaxParcel)=-1
+    logical                     :: IsParcelFileName_e
+    character(len=2)            :: ParcelFile
+    
+    logical                     :: DoTest
+    character(len=*), parameter :: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -95,7 +100,7 @@ contains
     DoWritePosition = .false.
 
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
-         index(StringTest,'show_pmax')>0 ) ) then
+        index(StringTest,'show_pmax')>0 ) ) then
 
        tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock) &
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
@@ -139,6 +144,10 @@ contains
             NameLogVar_I, nLogVar, UseArraySyntaxIn=.true.)
        StringTime = TimeSat_I(iSat)
        DoWritePosition = .true.
+    elseif (iSatIn<0) then
+       DoWritePosition = .true.
+       call split_string(StringParcelVar, MaxLogVar, NameLogVar_I, nLogVar, &
+            UseArraySyntaxIn=.true.)
     end if
 
     ! check to make sure that the total number of Logfile variables is smaller
@@ -172,6 +181,8 @@ contains
           Xyz_D = XyzTestCell_D
        elseif (iSatIn >= 1) then
           Xyz_D = XyzSat_DI(:,iSat)
+       elseif (iSatIn<0) then
+          Xyz_D = Parcel_DI(:,-iSatIn)
        end if
     end if
 
@@ -253,9 +264,36 @@ contains
              write(iUnit,'(a)')trim(NameAll)
              IsFirstWriteSat_I(iSat)=.false.
           end if
-       end if
-    endif
+      
+       elseif (iSatIn < 0) then
+          iParcel = -iSatIn
+          iUnit = iUnitParcel_I(iParcel)
+          if(iUnit < 0)then
+             iUnitParcel_I(iParcel) = io_unit_new()
+             iUnit = iUnitParcel_I(iParcel)
+             filename = trim(NamePlotDir) // 'pcl'
+             if(IsParcelFileName_e)then
+                ! Event date added to log file name
+                call get_date_time(iTime_I)
+                write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
+                write(ParcelFile, '(i2.2)') iParcel
+                filename = trim(filename)//'_'//ParcelFile//'_'  // '_e' //trim(eventDateTime)
+             else
+                if(n_step < 1000000)then
+                   write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
+                else
+                   write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
+                end if
+             end if
 
+             filename = trim(filename) // '.pcl'
+
+             call open_file(iUnit, FILE=filename)
+             write(iUnit,'(a)')'Lagrangian parcel path'
+             write(iUnit,'(a)') trim(NameAll)
+          endif
+       endif
+    endif
     call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
 
     ! this write statement seems to be necessary for
@@ -356,12 +394,17 @@ contains
     use ModFieldTrace, ONLY: ray
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
-    use ModIO, ONLY: write_myname, lNameLogVar
+    use ModIO, ONLY: write_myname, lNameLogVar,Parcel_DI 
     use ModMultiFluid, ONLY: UseMultiIon, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
     use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, &
-         integrate_grid, maxval_grid, minval_grid
+         integrate_grid, maxval_grid, minval_grid, MinIJK_D, &
+         MaxIJK_D, nDim, xyz_to_coord
+    use BATL_tree,       ONLY: find_tree_cell, iTree_IA, Block_, Proc_
+    use BATL_geometry,   ONLY: CoordMin_D, DomainSize_D
+    use ModInterpolate,  ONLY: interpolate_vector
     use ModMPI
+
 
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
@@ -382,6 +425,11 @@ contains
     ! and the currents (nVar+1:nVar+3) at the position of the satellite
     ! B0Sat_D contains B0 at the satellite
     real :: StateSat_V(0:nVar+3), B0Sat_D(3)
+
+    ! Parcel part
+    integer :: iParcel, iParcelBlock, iParcelProc, iParcelNode
+    integer :: iParcelCell_D(3)
+    real    :: Coord_D(3),ParcelCellDistance_D(3)
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_logvar'
@@ -428,7 +476,7 @@ contains
           end select
        enddo
 
-    else
+    elseif(iSat==0)then
        ! The logfile may need the integral of conservative variables
        ! Also extract the pressure into a variable for pmin and pmax
        do iVar = 1, nLogVar
@@ -439,6 +487,43 @@ contains
              EXIT
           end select
        end do
+    elseif(iSat<0)then
+       iParcel = -iSat
+       call xyz_to_coord(Parcel_DI(1:3,iParcel),Coord_D)
+
+       ! Get State variables from that location
+       ! Point coordinates are given in generalized coordinates normalized to
+       ! the domain size: CoordIn_D = (CoordOrig_D - CoordMin_D)/DomainSize_D
+       call find_tree_cell((Coord_D-CoordMin_D)/DomainSize_D,&
+            iParcelNode, iParcelCell_D, ParcelCellDistance_D)
+
+       iParcelBlock  = iTree_IA(Block_,iParcelNode)
+       iParcelProc   = iTree_IA(Proc_,iParcelNode)
+
+       StateSat_V = 0
+       if(iProc == iParcelProc)then
+          StateSat_V(1:nVar) = &
+               interpolate_vector(State_VGB(:,:,:,:,iParcelBlock),nVar,nDim,&
+               MinIJK_D,MaxIJK_D,ParcelCellDistance_D+iParcelCell_D)
+       end if
+
+       if(nProc > 1)call MPI_reduce_real_array(StateSat_V(1:), nVar, MPI_SUM, &
+            0, iComm, iError)
+
+       if(iProc == 0)then
+          if(UseB0)then
+             call get_b0(Parcel_DI(1:3,iParcel), B0Sat_D)
+          else
+             B0Sat_D = 0.0
+          end if
+
+          if (UseRotatingFrame) then
+             StateSat_V(rhoUx_)=StateSat_V(rhoUx_) &
+                  - StateSat_V(rho_)*OmegaBody*Parcel_DI(y_,iParcel)
+             StateSat_V(rhoUy_)=StateSat_V(rhoUy_) &
+                  + StateSat_V(rho_)*OmegaBody*Parcel_DI(x_,iParcel)
+          end if
+       end if
     end if
 
     iVarTot = 0
@@ -450,7 +535,7 @@ contains
        ! If we are a satellite and not a logfile (iSat>=1) then we should
        ! do only satellite variables so append a 'sat' to the end of the
        ! variables
-       if (iSat >= 1) then
+       if (abs(iSat) >= 1) then
           call set_sat_var
        else
           call set_log_var
@@ -1214,7 +1299,6 @@ contains
        case('jx','jy','jz','jxpnt','jypnt','jzpnt',&
             'jin','jout','jinmax','joutmax')
           LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitJ_)
-
        case('n')
           LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitN_)
        case('t','temp','tpnt','temppnt')
