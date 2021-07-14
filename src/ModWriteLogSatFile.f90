@@ -86,7 +86,7 @@ contains
     logical                     :: IsParcelFileName_e
     character(len=2)            :: ParcelFile
 
-    logical                     :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
