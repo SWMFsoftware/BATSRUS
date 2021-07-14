@@ -3724,6 +3724,8 @@ contains
       !$acc update device(UseRotatingBc)
 
       !$acc update device(TypeCoordSystemInt)
+
+      !$acc update device(DipoleStrengthSi)
     end subroutine correct_parameters
     !==========================================================================
 

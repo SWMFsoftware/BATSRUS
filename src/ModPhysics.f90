@@ -98,6 +98,7 @@ module ModPhysics
   real :: Bdp=0.0, DipoleStrengthSi=0.0        ! the dipole moment of B0
   real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
   real :: Oop(3,3,3)=0.0                       ! the octupole moment of B0
+  !$acc declare create(DipoleStrengthSi)
 
   real :: THETAtilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!

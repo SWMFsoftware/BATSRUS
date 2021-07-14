@@ -276,6 +276,8 @@ contains
        !$acc update device(neiBtop, neiBbot)
        !$acc update device(neiPeast, neiPwest, neiPnorth, neiPsouth)
        !$acc update device(neiBeast, neiBwest, neiBnorth, neiBsouth)
+
+       !$acc update device(Rmin_BLK, R_BLK)
     endif
 
     call test_stop(NameSub, DoTest, iBlock)

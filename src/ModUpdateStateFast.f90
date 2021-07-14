@@ -40,7 +40,7 @@ module ModUpdateStateFast
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
        IsBoundary_B => far_field_BCs_BLK
   use ModSolarWind, ONLY: get_solar_wind_point
-  use CON_axes, ONLY: get_axes
+  use CON_axes, ONLY: get_axes, SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
 
@@ -3042,7 +3042,7 @@ contains
        Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
     end if
     Dipole_D = Dipole_D * DipoleStrength
-    !$acc update device(Dipole_D)
+    !$acc update device(Dipole_D, SmgGsm_DD)
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     call test_stop(NameSub, DoTest)
@@ -3064,7 +3064,7 @@ contains
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
     call set_dipole_fast
-
+    
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -3120,8 +3120,6 @@ contains
 
     ! This subroutine is a simplified version of
     ! CON_planet_field.f90:map_planet_field11
-
-    use CON_axes, ONLY: SmgGsm_DD
 
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
     real,              intent(in) :: rMap       ! radial distance to map to
@@ -3187,7 +3185,7 @@ contains
 
     ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
     DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
-
+    
     ! dPhi/dx = -y/(x^2+y^2)
     ! dPhi/dy =  x/(x^2+y^2)
     Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
@@ -3196,7 +3194,7 @@ contains
 
     ! dPhi/dz = 0.0
     DdirDxyz_DD(2,3) = 0.0
-
+    
     ! Transform into the system of the input coordinates
     ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
     if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
