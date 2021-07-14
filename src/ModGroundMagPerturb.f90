@@ -607,6 +607,24 @@ contains
   end subroutine get_planet_field
   
   !============================================================================
+  pure function m3xv3(mtx, vec) result(outvec)
+    ! naive matrix-vector multiplication for 3x3 matrix
+    !$acc routine seq
+    implicit none
+    real, intent(in) :: mtx(3,3), vec(3)
+    real :: outvec(3)
+    integer i,j
+
+    outvec(:)=0
+    do j=1,3
+       do i=1,3
+          outvec(i) = outvec(i) + mtx(i,j)*vec(j)
+       end do
+    end do
+  end function m3xv3
+
+
+  !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
@@ -655,7 +673,7 @@ contains
     real              :: dR, r, Theta, Phi
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
-    real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D
+    real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D, tmpvec3
     real, allocatable, save:: Fac_II(:,:)
 
     ! Variables for surface integral
@@ -852,10 +870,10 @@ contains
           stop
        end if
 #endif
-       !-- $acc data copyin(SmToFacGrid_DD,Xyz_DI), copy(LineContrib_DII,MagPerturbFac_DI)
        !$acc update device(MagCenter_D, DipoleStrength)
-       !$acc    parallel  default(none) & 
-       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D) &
+       !$acc    parallel &
+       !$acc &  default(none) & 
+       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,Xyz_D,Pert_D,tmpvec3) &
        !$acc &  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
        !$acc &  copyout(InvDist2_DII) &
        !$acc &  copy(MagPerturbFac_DI,LineContrib_DII,MagPerturbMhd_DI)
@@ -917,9 +935,14 @@ contains
                 !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
                 do iMag = 1, nMag
-                   Xyz_D = Xyz_DI(:,iMag)
-                   ! This should be done in advance !!!
-!FIX                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+                   if(DoConvertCoord) then
+                      ! This should be done in advance !!!
+                      !replaced: Xyz_D = matmul(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                      Xyz_D = m3xv3(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                   else
+                      Xyz_D = Xyz_DI(:,iMag)
+                   end if
+                      
 
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
@@ -927,8 +950,11 @@ contains
                    ! dA*(x-x0)/(4pi*|x-x0|^3)
                    InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
 
-!FIX                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-!FIX                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+                   !replaced:                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+                   !replaced:                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+                   tmpvec3 = cross_product(Bt_D, InvDist2_D)
+                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
+                        + Br*InvDist2_D + tmpvec3
 
                    ! Store it for fast calculation
                    if(UseFastFacIntegral) &
@@ -947,9 +973,13 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
+                !replaced: call map_planet_field(Time_Simulation, XyzRcurrents_D, &
+                !replaced:      TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
                 call map_planet_field(XyzRcurrents_D, r, XyzMid_D, iHemisphere)
 
                 ! get the B field at this position
+                !replaced: call get_planet_field(&
+                !replaced:      Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
                 call get_planet_field(Time_Simulation, XyzMid_D, b_D)
                 b_D = b_D*Si2No_V(UnitB_)
 
@@ -971,17 +1001,22 @@ contains
                 !-- private(Xyz_D,Pert_D) copyin(b_D, XyzMid_D)
                 !$acc loop private(Xyz_D,Pert_D)
                 do iMag = 1, nMag
-                   Xyz_D = Xyz_DI(:,iMag) - XyzMid_D
-
-                   !AG: Creates variable z_a_2(:)?
-!FIX                   if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
-
+                   !!AG: Creates variable z_a_2(:)?
+                   !replaced:    if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
+                   if (DoConvertCoord) then
+                      Xyz_D = m3xv3(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                   else
+                      Xyz_D = Xyz_DI(:,iMag)
+                   end if
+                   
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
-
-                   !AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
-!FIX                   Pert_D = dVol*cross_product(b_D, Xyz_D) &
-!FIX                        /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+                   Xyz_D = Xyz_D-XyzMid_D
+                   !!AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
+                   !replaced: Pert_D = dVol*cross_product(b_D, Xyz_D) &
+                   !replaced:     /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+                   tmpvec3 = cross_product(b_D, Xyz_D)
+                   Pert_D = dVol*tmpvec3 / (4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
