@@ -446,163 +446,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine ground_mag_perturb
   !============================================================================
-  subroutine map_planet_field(XyzIn_D, &
-       rMapIn, XyzMap_D, iHemisphere)
-    !$acc routine seq
-    ! This is (another) simplified version of CON_planet_field.f90:map_planet_field11(...)
-    ! that assumes certain values of the arguments and globals, namely:
-    ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`; optional args are absent;
-    ! FIXME:AG: merge all the simplified versions of map_planet_field(...)
-    ! FIXME:AG: rewrite the original version to not use character variables, use parameters!
-    real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(in) :: rMapIn       ! radial distance to map to
-    real,              intent(out):: XyzMap_D(3)      ! mapped position
-    integer,           intent(out):: iHemisphere      ! which hemisphere
-
-    ! Map the planet field from the input position to the mapping radius.
-    !
-    ! The routine also returns which hemisphere the point maps to:
-    ! +1 for north and -1 for south.
-    ! If the point does not map to the defined radius at all, 0 is returned,
-    ! and the output position is set to a radial projection of the input
-    ! position to the magnetic equator.
-    !
-    !PARAMETERS:
-
-    ! If the  normalized input or mapping radius is less than this value
-    ! an error occurs
-    real, parameter :: rNormLimit = 0.9
-
-    ! If difference between the normalized input and mapping radii
-    ! is less than DrNormLimit a trivial mapping is done
-    real, parameter :: DrNormLimit = 0.0001
-
-    real             :: Xyz_D(3)        ! Normalized and rotated position
-
-    ! Temporary variables for the analytic mapping
-    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
-    logical :: DoConvert
-    real    :: Convert_DD(3,3)
-
-    Xyz_D = XyzIn_D
-    rMap  = rMapIn
-
-    ! Check if the mapping radius is outside of the planet
-    if ( rMap < rNormLimit ) then
-       stop ! SWMF_ERROR mapping radius is less than planet radius
-    end if
-
-    ! Convert input position into MAG or SMG system
-    DoConvert=.false.
-
-    ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
-    iHemisphere = sign(1.0,Xyz_D(3))
-
-    ! Normalized radial distance
-    r = sqrt(sum(Xyz_D**2))
-
-    ! Check if the point is outside the planet
-    if ( r < rNormLimit ) then
-       stop ! SWMF_ERROR radial distance is less than planet radius
-    end if
-
-    ! Check if the mapping radius differs from the radius of input position
-    if( abs(r-rMap) < DrNormLimit) then
-       ! Trivial mapping
-       XyzMap_D = XyzIn_D
-       ! The hemisphere has been established already
-       RETURN
-    end if
-
-    ! Solution of the vector potential equation
-    ! The vector potential is proportional to (x^2+y^2)/r^3
-    ! so sqrt(xMap^2+yMap^2)/sqrt(x^2+y^2) = sqrt(rMap^3/r^3)
-
-    ! Calculate powers of the radii
-    rMap2 = rMap**2
-    rMap3 = rMap2*rMap
-    r3    = r**3
-
-    ! This is the ratio of input and mapped X and Y components
-    XyRatio = sqrt(rMap3/r3)
-
-    ! Calculate the X and Y components of the mapped position
-    XyzMap_D(1:2) = XyRatio*Xyz_D(1:2)
-
-    ! The squared distance of the mapped position from the magnetic axis
-    XyMap2 = XyzMap_D(1)**2 + XyzMap_D(2)**2
-
-    ! Check if there is a mapping at all
-    if(rMap2 < XyMap2)then
-       ! The point does not map to the given radius
-       iHemisphere = 0
-       
-       ! Put mapped point to the magnetic equator
-       XyzMap_D(1:2) = (rMap/sqrt(Xyz_D(1)**2 + Xyz_D(2)**2))*Xyz_D(1:2)
-       XyzMap_D(3) = 0
-    else
-       ! Calculate the Z component of the mapped position
-       ! Select the same hemisphere as for the input position
-       XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
-    end if
-  end subroutine map_planet_field
-  !============================================================================
-  
-  subroutine get_planet_field(TimeSim, XyzIn_D, b_D)
-    !$acc routine seq
-    ! This is a simplified version of CON_planet_field.f90:get_planet_field11(...)
-    ! that assumes certain values of the arguments and globals, namely:
-    ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`
-    ! FIXME:AG: rewrite the original version to not use character variables, use parameters!
-    use CON_axes,          ONLY: set_axes
-    use CON_planet,        ONLY: MagCenter_D, DipoleStrength
-    integer, parameter :: x_=1, y_=2, z_=3
-
-    real,              intent(in) :: TimeSim      ! simulation time
-    real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(out):: b_D(3)       ! magnetic field
-
-    ! This is the fundamental subroutine that provides the magnetic
-    ! field at a given position at a given simulation time.
-    ! If called repeatedly, the subroutine remembers the last simulation time
-    ! argument, so it does not recalculate the position of the magnetic axis.
-    ! The position may be normalized with the radius of the planet.
-    ! The coordinate system and normalization information
-    ! for the position is given by the string TypeCoord.
-    real :: Xyz_D(3)     ! Normalized (and rotated) position
-    real :: Dipole_D(3)  ! Dipole moment
-    real :: r, r2, rInv, r2Inv, r3Inv, Term1
-
-    Xyz_D = XyzIn_D
-
-    ! Calculate magnetic field
-
-    Xyz_D = Xyz_D - MagCenter_D
-
-    ! radial distance squared
-    r2 = sum(Xyz_D**2)
-    if(r2 < 1E-12) then
-       ! return zero field if very small
-       b_D = 0
-       RETURN
-    end if
-
-    ! Update axes
-    call set_axes(TimeSim)
-
-    ! Various powers of radial distance
-    r2Inv = 1/r2
-    r     = sqrt(r2)
-    rInv  = 1/r
-    r3Inv = rInv*r2Inv
-
-    ! Dipole is aligned with the Z axis
-    Term1      = DipoleStrength*Xyz_D(3)*3*r2Inv
-    b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
-    b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
-  end subroutine get_planet_field
-  
-  !============================================================================
   pure function m3xv3(mtx, vec) result(outvec)
     ! naive matrix-vector multiplication for 3x3 matrix, to avoid temporaries at the call site
     !$acc routine seq
@@ -863,7 +706,7 @@ contains
           stop
        end if
 #endif
-       !$acc update device(MagCenter_D, DipoleStrength)
+       !$acc update device(MagCenter_D, DipoleStrength) ! FIXME: move it close to where they are updated on CPU
        !$acc    parallel &
        !$acc &  default(none) &
        !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,Xyz_D,Pert_D,cprod) &
@@ -896,11 +739,11 @@ contains
 
              ! do parallel computation among the processors
              if(mod(iLine, nProc) /= iProc)CYCLE
-#endif             
+#endif
 
              ! Count local line index
              if(UseFastFacIntegral) then
-#if !defined(OPENACC)                
+#if !defined(OPENACC)
                 iLineProc = iLineProc + 1
 #else
                 iLineProc = (iPhi-1)+nPhi*(iTheta-1)+1
@@ -934,7 +777,7 @@ contains
                    else
                       Xyz_D = Xyz_DI(:,iMag)
                    end if
-                      
+
 
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
@@ -960,10 +803,10 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
-#if defined(OPENACC)                
+#if defined(OPENACC)
                 call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
                      iHemisphere)
-#else                
+#else
                 if(iTypeUpdate <= UpdateSlow_)then
                    call map_planet_field(Time_Simulation, XyzRcurrents_D, &
                         TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
@@ -974,7 +817,12 @@ contains
 #endif
 
                 ! get the B field at this position
-                call get_planet_field(Time_Simulation, XyzMid_D, b_D)
+#if defined(OPENACC)
+                call get_planet_field_fast(Time_Simulation, XyzMid_D, b_D)
+#else
+                call get_planet_field(&
+                     Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
+#endif
                 b_D = b_D*Si2No_V(UnitB_)
 
                 ! The volume element is proportional to 1/Br. The sign
@@ -996,7 +844,7 @@ contains
                    else
                       Xyz_D = Xyz_DI(:,iMag)
                    end if
-                   
+
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
                    Xyz_D = Xyz_D-XyzMid_D
