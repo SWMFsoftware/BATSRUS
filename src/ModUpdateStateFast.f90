@@ -29,7 +29,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, DipoleStrength => Bdp
+       OmegaBody_D, DipoleStrength => Bdp, CosThetaTilt, SinThetaTilt
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
@@ -40,7 +40,7 @@ module ModUpdateStateFast
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
        IsBoundary_B => far_field_BCs_BLK
   use ModSolarWind, ONLY: get_solar_wind_point
-  use CON_axes, ONLY: get_axes
+  use CON_axes, ONLY: get_axes, SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
 
@@ -48,10 +48,13 @@ module ModUpdateStateFast
 
   private ! except
 
-  public:: sync_cpu_gpu         ! Synchronize variables between CPU and GPU
-  public:: update_state_fast    ! Fast update of State_VGB
-  public:: update_b0_fast       ! Fast update of B0
-  public:: set_boundary_fast    ! set cell based boundary for State_VGB
+  public:: sync_cpu_gpu          ! Synchronize variables between CPU and GPU
+  public:: update_state_fast     ! Fast update of State_VGB
+  public:: update_b0_fast        ! Fast update of B0
+  public:: set_boundary_fast     ! set cell based boundary for State_VGB
+  public:: set_dipole_fast       ! set dipole vector Dipole_D
+  public:: get_b0_dipole_fast    ! get B0 field for a dipole
+  public:: map_planet_field_fast ! map dipole field
 
   logical:: DoTestCell= .false.
 
@@ -71,7 +74,7 @@ contains
 
     ! By default update the variables listed in String from the CPU to the GPU.
     ! If string contains "CPU", then update from GPU to CPU
-    ! If string contains "change", then set DiVAR=-1 for GPU or DiVar=1 for CPU.
+    ! If string contains "change", then set DiVar=-1 for GPU or DiVar=1 for CPU
     !
     ! Examples:
     ! call sync_cpu_gpu("State_VGB, B0_DGB", NameSub)
@@ -3022,6 +3025,30 @@ contains
     c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
   end function cross_product
   !============================================================================
+  subroutine set_dipole_fast
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_dipole_fast'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(DipoleStrength == 0.0) RETURN
+
+    if(TypeCoordSystem == 'GSM')then
+       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
+    elseif(TypeCoordSystem == 'GSE')then
+       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
+    else
+       Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
+    end if
+    Dipole_D = Dipole_D * DipoleStrength
+    !$acc update device(Dipole_D, SmgGsm_DD)
+
+    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    call test_stop(NameSub, DoTest)
+
+  end subroutine set_dipole_fast
+  !============================================================================
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
@@ -3036,18 +3063,7 @@ contains
 
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
-
-    if(TypeCoordSystem == 'GSM')then
-       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
-    elseif(TypeCoordSystem == 'GSE')then
-       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
-    else
-       call CON_stop(NameSub//': unknown coord system='//TypeCoordSystem)
-    end if
-    Dipole_D = Dipole_D * DipoleStrength
-    !$acc update device(Dipole_D)
-
-    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    call set_dipole_fast
 
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock
@@ -3057,7 +3073,8 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-          call get_b0_dipole(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
+          call get_b0_dipole_fast(Xyz_DGB(:,i,j,k,iBlock), &
+               B0_DGB(:,i,j,k,iBlock))
           if(Used_GB(i,j,k,iBlock))then
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
@@ -3075,7 +3092,7 @@ contains
 
   end subroutine update_b0_fast
   !============================================================================
-  subroutine get_b0_dipole(Xyz_D, b_D)
+  subroutine get_b0_dipole_fast(Xyz_D, b_D)
     !$acc routine seq
 
     real, intent(in):: Xyz_D(3)
@@ -3095,38 +3112,35 @@ contains
 
     b_D = (Term1*Xyz_D - Dipole_D)*r3Inv
 
-  end subroutine get_b0_dipole
+  end subroutine get_b0_dipole_fast
   !============================================================================
-  subroutine map_planet_field(XyzIn_D, rMapIn, XyzMap_D, &
-       iHemisphere, DdirDxyz_DD)
+  subroutine map_planet_field_fast(XyzIn_D, rMap, XyzMap_D, iHemisphere, &
+       DdirDxyz_DD, UseGsm, DoNotConvertBack)
     !$acc routine seq
 
     ! This subroutine is a simplified version of
     ! CON_planet_field.f90:map_planet_field11
 
-    use CON_axes, ONLY: SmgGsm_DD
-
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(in) :: rMapIn       ! radial distance to map to
+    real,              intent(in) :: rMap       ! radial distance to map to
     real,              intent(out):: XyzMap_D(3)      ! mapped position
     integer,           intent(out):: iHemisphere      ! which hemisphere
     real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
+    logical, optional, intent(in) :: UseGsm           ! use GSM coords
+    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG
 
     real             :: Xyz_D(3)        ! Normalized and rotated position
 
     ! Temporary variables for the analytic mapping
-    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
-    real    :: Convert_DD(3,3)
+    real :: rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
 
-    character(len=*), parameter:: NameSub = 'map_planet_field'
+    character(len=*), parameter:: NameSub = 'map_planet_field_fast'
     !--------------------------------------------------------------------------
-    Xyz_D = XyzIn_D
-    rMap  = rMapIn
-
-    ! Assumed GSM is used.
-    Convert_DD = SmgGsm_DD
-
-    Xyz_D = matmul(Convert_DD, Xyz_D)
+    if(present(UseGsm)) then
+       Xyz_D = matmul( SmgGsm_DD, XyzIn_D)
+    else
+       Xyz_D = XyzIn_D
+    end if
 
     ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
     iHemisphere = sign(1.0,Xyz_D(3))
@@ -3162,6 +3176,11 @@ contains
        XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
     end if
 
+    if(.not.present(DoNotConvertBack) .and. present(UseGsm)) &
+         XyzMap_D = matmul(XyzMap_D, SmgGsm_DD )
+
+    if(.not.present(DdirDxyz_DD)) RETURN
+
     XyMap = sqrt(XyMap2)
 
     DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
@@ -3182,9 +3201,9 @@ contains
 
     ! Transform into the system of the input coordinates
     ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
-    DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+    if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
 
-  end subroutine map_planet_field
+  end subroutine map_planet_field_fast
   !============================================================================
 
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
@@ -3216,8 +3235,8 @@ contains
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
-    call map_planet_field(Xyz_D, rIonosphere, XyzIono_D, &
-         iHemisphere, DdirDxyz_DD)
+    call map_planet_field_fast(Xyz_D, rIonosphere, XyzIono_D, &
+         iHemisphere, DdirDxyz_DD, UseGsm=.true., DoNotConvertBack=.true.)
 
     ! Calculate angular coordinates
     call xyz_to_dir(XyzIono_D, Theta, Phi)

@@ -1423,6 +1423,8 @@ subsonic outflow. Default is UseOutflowPressure=.false.
       <option name="ionosphere"	    		/>
       <option name="ionospherefloat"		/>
       <option name="linetied"			/>
+      <option name="buffergrid"			/>
+      <option name="user"			/>
     </parameter>
   </if>
   <rule

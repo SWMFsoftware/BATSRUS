@@ -446,12 +446,13 @@ contains
 
     use ModKind
     use ModMain
-    use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
+    use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr, UseParcel, &
+         Parcel_DI, nParcel
     use ModAmr, ONLY: AdaptGrid, DoAutoRefine, prepare_amr, do_amr
-    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V
+    use ModPhysics, ONLY : No2Si_V, UnitT_, IO2Si_V, UseBody2Orbit
     use ModAdvance, ONLY: UseAnisoPressure, UseElectronPressure
-    use ModAdvanceExplicit, ONLY: advance_explicit
-    use ModAdvectPoints, ONLY: advect_all_points
+    use ModAdvanceExplicit, ONLY: advance_explicit, update_secondbody
+    use ModAdvectPoints, ONLY: advect_all_points, advect_points
     use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
          part_steady_select, part_steady_switch
     use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
@@ -621,6 +622,8 @@ contains
 
     call advect_all_points
 
+    if(UseParcel) call advect_points(nParcel, Parcel_DI)
+
     call user_action('timestep done')
 
     if(UseParticles) call advect_particle_line
@@ -646,6 +649,10 @@ contains
        if(int(Time_Simulation/DtUpdateB0) >  &
             int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
             call update_b0
+    end if
+    if(UseBody2Orbit) then
+       call update_secondbody
+       call update_b0
     end if
 
     if(UseProjection) call project_divb
@@ -924,7 +931,7 @@ contains
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
 
-      integer :: iSat, iPointSat
+      integer :: iSat, iPointSat, iParcel
 
       ! Backup location for the Time_Simulation variable.
       ! Time_Simulation is used in steady-state runs as a loop parameter
@@ -1042,6 +1049,11 @@ contains
             call write_plot(iFile)
             call timing_stop('save_plot')
          end if
+
+      elseif(iFile > Parcel_ .and. iFile <= Parcel_ + nParcel) then
+         iParcel = iFile - Parcel_
+         call write_logfile(-iParcel,iFile)
+
       elseif(iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
 
          ! Case for satellite files

@@ -31,6 +31,11 @@ module ModFaceBoundary
   real, public:: B1rCoef = -1.0
   !$acc declare create( B1rCoef )
 
+  ! Young boundary associated variables
+  real,    public:: RatioOH    = 0.25
+  logical, public:: UseYoungBc = .false.
+  real,    public:: F107Young  = 150.0
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -51,7 +56,6 @@ contains
     use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
-    use ModGroundMagPerturb, ONLY: UseYoungBc, F107Young
 
     character(len=*), intent(in):: NameCommand
 
@@ -202,7 +206,6 @@ contains
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB, iProc
-    use ModGroundMagPerturb, ONLY: Kp, ratioOH, UseYoungBc
 
     type(FaceBCType), intent(inout):: FBC
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
@@ -979,14 +982,15 @@ contains
 
       case('Body2Orbit')
          FBC%VarsGhostFace_V = FaceState_V
-         FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
+         ! FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
 
          ! Setting velocity BCs to be the second body orbital velocity:
-         FBC%VarsGhostFace_V(Ux_) = &
-              -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
-         FBC%VarsGhostFace_V(Uy_) = &
-              (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
-         FBC%VarsGhostFace_V(Uz_) =  0.0
+         ! Ux = -( \omega_SI y_SI)-> NoDim
+         FBC%VarsGhostFace_V(Ux_) = FaceState_V(Ux_) &
+              - (cTwoPi/OrbitPeriod)*(yBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
+         ! Uy = ( \omega_SI x_SI)-> NoDim
+         FBC%VarsGhostFace_V(Uy_) = FaceState_V(Uy_) &
+              + (cTwoPi/OrbitPeriod)*(xBody2*No2Si_V(UnitX_))*Si2No_V(UnitU_)
 
       case default
          write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &

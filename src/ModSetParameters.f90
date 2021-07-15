@@ -137,6 +137,7 @@ contains
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use ModFreq, ONLY: adjust_freq
+    use ModUpdateStateFast, ONLY: set_dipole_fast
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
@@ -180,6 +181,9 @@ contains
     character(len=3)  :: plot_area, plot_var
     character(len=2)  :: NameCompRead="??"
     integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)=1
+
+    character(len=50) :: StringParcel
+    integer           :: iParcel
 
     integer           :: TimingDepth=-1
     character(len=10) :: TimingStyle='cumu'
@@ -414,6 +418,9 @@ contains
        end if
 
        call set_physics_constants
+
+       ! For now. Probably Dipole_D should be in ModPhysics !!!
+       call set_dipole_fast
 
        call user_action("initialize module")
 
@@ -736,6 +743,73 @@ contains
 
        case("#CHARGEDPARTICLES")
           call read_charged_particle_param(NameCommand)
+
+       case("#PARCEL")
+          call read_var('UseParcel', UseParcel)
+          if(UseParcel)then
+             call read_var('UseParcelTable', UseParcelTable)
+             if(.not. UseParcelTable)then
+                call read_var('nParcel', nParcel)
+                nfile = max(nFile, parcel_+nParcel)
+                do iParcel = 1, nParcel
+                   call read_var('Parcel_DI(1,iParcel)',Parcel_DI(1,iParcel))
+                   call read_var('Parcel_DI(2,iParcel)',Parcel_DI(2,iParcel))
+                   call read_var('Parcel_DI(3,iParcel)',Parcel_DI(3,iParcel))
+                end do
+             end if
+             call read_var('StringParcel', StringParcel)
+             call read_var('DnParcel',dn_output(parcel_+1))
+             dn_output(parcel_+1:parcel_+nParcel)=dn_output(parcel_+1)
+             if(dn_output(parcel_+1) > 0)then
+                call read_var('nStartParcel',nStartParcel)
+                call read_var('nEndParcel',nEndParcel)
+                if(nEndParcel < nStartParcel)then
+                   write(*,*) ' StartTimeParcel =', StartTimeParcel
+                   write(*,*) ' EndTimeParcel   =', EndTimeParcel
+                   call stop_mpi(NameSub//' correct #PARCEL: '// &
+                        'nEndParcel<nStartParcel')
+                end if
+             end if
+             call read_var('DtParcel',dt_output(parcel_+1))
+             dt_output(parcel_+1:parcel_+nParcel)=dt_output(parcel_+1)
+             if(dt_output(parcel_+1) > 0)then
+                call read_var('StartTimeParcel',StartTimeParcel)
+                call read_var('EndTimeParcel',EndTimeParcel)
+             end if
+             if (EndTimeParcel < StartTimeParcel .or. &
+                  (EndTimeParcel-StartTimeParcel)/dt_output(parcel_+1) >&
+                  1e6) then
+                write(*,*) ' StartTimeParcel =', StartTimeParcel
+                write(*,*) ' EndTimeParcel   =', EndTimeParcel
+                call stop_mpi(NameSub//' correct #PARCEL: '// &
+                     'EndTimeParcel<StartTimeParcel or too small DtParcel')
+             endif
+
+             if(index(StringParcel,'VAR')>0 .or. &
+                  index(StringParcel,'var')>0 )then
+                plot_var='var'
+                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                     index(StringParcel,'VAR')>0
+                call read_var('NameParcelVars',StringParcelVar)
+             elseif(index(StringParcel,'MHD')>0 .or. &
+                  index(StringParcel,'mhd')>0)then
+                plot_var='mhd'
+                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                     index(StringParcel,'MHD')>0
+                StringParcelVar=NamePrimitiveVarPlot//' jx jy jz'
+             elseif(index(StringParcel,'FUL')>0 .or. &
+                  index(StringParcel,'ful')>0)then
+                plot_var='ful'
+                plot_dimensional(parcel_+1:parcel_+nParcel) = &
+                     index(StringParcel,'FUL')>0
+                StringParcelVar=&
+                     NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
+             else
+                call stop_mpi(&
+                     'Variable definition (mhd,ful,var) missing' &
+                     //' from StringParcel='//StringParcel)
+             endif
+          endif
 
        case("#SAVELOGFILE")
           call read_var('DoSaveLogfile',save_logfile)
@@ -3650,6 +3724,8 @@ contains
       !$acc update device(UseRotatingBc)
 
       !$acc update device(TypeCoordSystemInt)
+
+      !$acc update device(DipoleStrengthSi)
     end subroutine correct_parameters
     !==========================================================================
 

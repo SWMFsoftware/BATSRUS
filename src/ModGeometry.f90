@@ -67,6 +67,7 @@ module ModGeometry
 
   ! Smallest value of r_BLK and r2_BLK within a block
   real, allocatable :: Rmin_BLK(:)
+  !$acc declare create(Rmin_BLK)
   real, allocatable :: Rmin2_BLK(:)
 
   ! ADDED FOR general r grid in spherical geometry!

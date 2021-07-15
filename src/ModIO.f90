@@ -17,7 +17,8 @@ module ModIO
   !     MaxFile > MaxPlotFile + MaxSatelliteFile + extras
   ! is required. MaxSatelliteFile is defined in ModSatelliteFile.f90
   integer, parameter :: MaxPlotFile=25
-  integer, parameter :: MaxFile = 350
+  integer, parameter :: MaxParcel=100
+  integer, parameter :: MaxFile = 450
   integer, parameter :: nPlotvarLosMax=20
   integer, parameter :: nPlotRfrFreqMax=20
   integer, parameter :: nPlotvarMax = max(30,nVar+10) ! Max number of plot vars
@@ -27,7 +28,7 @@ module ModIO
   ! Named indexes for output files
   integer, parameter :: &
        restart_=1, logfile_=2, magfile_=3, indexfile_=4, maggridfile_=5, &
-       plot_=5, satellite_ = plot_+MaxPlotFile
+       plot_=5, parcel_=plot_+MaxPlotfile, satellite_ = parcel_+MaxParcel
 
   ! I/O
   integer             :: iUnitOut = STDOUT_
@@ -86,6 +87,13 @@ module ModIO
   character :: NameLine_I(MaxPlotFile)                 ! Name of vector field
   real      :: XyzStartLine_DII(3,MaxLine,MaxPlotFile) ! Starting positions
   logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
+
+  ! Variable for Lagrangian parcel
+  real       :: Parcel_DI(3,MaxParcel)= 0
+  real       :: StartTimeParcel = -1, EndTimeParcel = -1
+  integer    :: nParcel = 0, nStartParcel = -1, nEndParcel = -1
+  logical    :: UseParcel = .false., UseParcelTable = .false.
+  character(len=500) :: StringParcelVar
 
   ! Actual number of output files and plot files
   ! note that nfile is not the number of output files but rather the

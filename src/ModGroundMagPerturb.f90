@@ -10,6 +10,7 @@ module ModGroundMagPerturb
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: &
        sph_to_xyz, rot_xyz_sph, xyz_to_lonlat, cross_product
+  use ModFaceBoundary,   ONLY: RatioOH, UseYoungBc, F107Young
   use ModConst,          ONLY: cDegToRad, cRadToDeg
 
   implicit none
@@ -28,11 +29,6 @@ module ModGroundMagPerturb
   integer, public:: nMagTotal = 0
 
   real,    public:: Kp=0.0   ! Resulting indices
-
-  ! Young boundary associated variables
-  logical, public:: UseYoungBc = .false.
-  real,    public:: ratioOH    = 0.25
-  real,    public:: F107Young  = 150.0
 
   ! Public geomagnetic indices variables
   logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
@@ -650,6 +646,9 @@ contains
 
     use ModMain,           ONLY: Time_Simulation, n_Step
     use CON_planet,        ONLY: TypeBField, MagCenter_D, DipoleStrength
+    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    use ModUpdateStateFast, ONLY: map_planet_field_fast, get_planet_field_fast
+    use ModAdvance,        ONLY: iTypeUpdate, UpdateSlow_
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use CON_axes,          ONLY: transform_matrix
@@ -961,7 +960,18 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
-                call map_planet_field(XyzRcurrents_D, r, XyzMid_D, iHemisphere)
+#if defined(OPENACC)                
+                call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
+                     iHemisphere)
+#else                
+                if(iTypeUpdate <= UpdateSlow_)then
+                   call map_planet_field(Time_Simulation, XyzRcurrents_D, &
+                        TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
+                else
+                   call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
+                        iHemisphere)
+                end if
+#endif
 
                 ! get the B field at this position
                 call get_planet_field(Time_Simulation, XyzMid_D, b_D)
