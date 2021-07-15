@@ -3176,7 +3176,7 @@ contains
        XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
     end if
 
-    if(.not.present(DoNotConvertBack)) &
+    if(.not.present(DoNotConvertBack) .and. present(UseGsm)) &
          XyzMap_D = matmul(XyzMap_D, SmgGsm_DD )
 
     if(.not.present(DdirDxyz_DD)) RETURN
