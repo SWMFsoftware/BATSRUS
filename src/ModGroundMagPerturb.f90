@@ -461,9 +461,8 @@ contains
        end do
     end do
   end function m3xv3
+!==============================================================================
 
-
-  !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
 
@@ -544,9 +543,9 @@ contains
 
     ! real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start('ground_db_fac')
 
@@ -700,8 +699,8 @@ contains
        ! Volume = 0.; Surface = 0.
 
 #if defined(OPENACC)
-       if (TypeBField .ne. 'DIPOLE') then
-          !FIXME: this should be checked earlier
+       if (TypeBField /= 'DIPOLE') then
+          ! FIXME: this should be checked earlier
           write (*,*) 'Unimplemented field other than DIPOLE'
           stop
        end if
@@ -731,7 +730,7 @@ contains
 
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
-#if !defined(OPENACC)
+#if ! defined(OPENACC)
              if (Fac_II(iTheta,iPhi) == 0.0 &
                   .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
@@ -743,7 +742,7 @@ contains
 
              ! Count local line index
              if(UseFastFacIntegral) then
-#if !defined(OPENACC)
+#if ! defined(OPENACC)
                 iLineProc = iLineProc + 1
 #else
                 iLineProc = (iPhi-1)+nPhi*(iTheta-1)+1
@@ -777,7 +776,6 @@ contains
                    else
                       Xyz_D = Xyz_DI(:,iMag)
                    end if
-
 
                    ! x-x0
                    Xyz_D = XyzRcurrents_D - Xyz_D
@@ -895,7 +893,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine ground_mag_perturb_fac
-  !============================================================================
+!==============================================================================
   subroutine calc_kp
 
     use CON_axes,      ONLY: transform_matrix
@@ -911,9 +909,9 @@ contains
 
     real :: dB_I(2)
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_kp'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'calc_kp'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
@@ -1022,7 +1020,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_kp
-  !============================================================================
+!==============================================================================
   subroutine calc_ae
 
     use CON_axes,      ONLY: transform_matrix
@@ -1036,9 +1034,9 @@ contains
     real, dimension(3,nAeMag):: &
          dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, Xyz_DI
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_ae'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'calc_ae'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
@@ -1100,7 +1098,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_ae
-  !============================================================================
+!==============================================================================
   subroutine check_mag_input_file
 
     ! Set number of magnetometers listed in the input file:
@@ -1120,9 +1118,9 @@ contains
 
     integer          :: nMag
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'check_mag_input_file'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'check_mag_input_file'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Read file on the root processor
@@ -1192,7 +1190,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine check_mag_input_file
-  !============================================================================
+!==============================================================================
   subroutine read_mag_input_file
 
     ! Read the magnetometer input file which governs the number of virtual
@@ -1211,9 +1209,9 @@ contains
     character (len=100):: StringLine
     integer            :: iMag
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'read_mag_input_file'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'read_mag_input_file'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Read file on the root processor
@@ -1247,7 +1245,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine read_mag_input_file
-  !============================================================================
+!==============================================================================
   subroutine open_magnetometer_output_file(NameGroup)
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
@@ -1263,9 +1261,9 @@ contains
     integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
 
     ! Open the output file
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'open_magnetometer_output_file'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'open_magnetometer_output_file'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Magnetometer grid file or regular file?
@@ -1328,7 +1326,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine open_magnetometer_output_file
-  !============================================================================
+!==============================================================================
   subroutine write_geoindices
 
     use ModMain,  ONLY: n_step
@@ -1337,9 +1335,9 @@ contains
 
     integer :: iTime_I(7)
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_geoindices'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'write_geoindices'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Calculate indices on all nodes.
@@ -1371,7 +1369,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine write_geoindices
-  !============================================================================
+!==============================================================================
   subroutine write_magnetometers(NameGroup)
     ! Write ground magnetometer field perturbations to file. Values, IO units,
     ! and other information is gathered from module level variables.
@@ -1398,9 +1396,9 @@ contains
          MagGmXyz_DI, MagSmXyz_DI, &
          dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_magnetometers'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'write_magnetometers'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Configure output to cover specific magnetometer group:
@@ -1540,7 +1538,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   contains
-    !==========================================================================
+  !============================================================================
     subroutine write_mag_grid
 
       use ModPlotFile, ONLY: save_plot_file
@@ -1555,7 +1553,7 @@ contains
       real:: LonLat_D(2)
 
       character(len=100):: NameFile
-      !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
       if(allocated(MagOut_VII))then
          if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)
       end if
@@ -1600,12 +1598,12 @@ contains
            VarIn_VII=MagOut_VII)
 
     end subroutine write_mag_grid
-    !==========================================================================
+  !============================================================================
     subroutine write_mag_single
       ! For TypeMagFileOut == 'single', write a single record to the file.
 
       integer :: iTime_I(7), iMag
-      !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
       ! Get current time.
       call get_date_time(iTime_I)
 
@@ -1628,7 +1626,7 @@ contains
       call flush_unit(iUnitOut)
 
     end subroutine write_mag_single
-    !==========================================================================
+  !============================================================================
     subroutine write_mag_step
 
       ! For TypeMagFileOut == 'step', write one file for every write step.
@@ -1641,7 +1639,7 @@ contains
 
       character(len=13) :: StringPrefix
       character(len=100):: NameFile
-      !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
       call get_date_time(iTime_I)
 
       if(NameGroup == 'stat') then
@@ -1692,17 +1690,17 @@ contains
       call close_file
 
     end subroutine write_mag_step
-    !==========================================================================
-  end subroutine write_magnetometers
   !============================================================================
+  end subroutine write_magnetometers
+!==============================================================================
   subroutine finalize_magnetometer
 
     ! Close the magnetometer output files (flush buffer, release IO unit).
     ! Deallocate arrays.
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'finalize_magnetometer'
-    !--------------------------------------------------------------------------
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'finalize_magnetometer'
+  !----------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iProc==0 .and. DoSaveMags .and. TypeMagFileOut /= 'step') &
          close(iUnitMag)
@@ -1715,7 +1713,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine finalize_magnetometer
-  !============================================================================
+!==============================================================================
   integer function k_index(DeltaB)
 
     ! Convert a deltaB value (max-min over window) to a K-value using given
@@ -1727,7 +1725,7 @@ contains
     real, intent(in) :: DeltaB
 
     integer :: i
-    !--------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
     do i = 1, 9
        if( DeltaB - Table50_I(i)*Scalek9/Table50_I(9) < 0) then
           k_index = i - 1
@@ -1737,6 +1735,6 @@ contains
     k_index = 9
 
   end function k_index
-  !============================================================================
+!==============================================================================
 end module ModGroundMagPerturb
 !==============================================================================

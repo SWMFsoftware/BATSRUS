@@ -848,13 +848,13 @@ contains
       ! counter for ray integration
       integer :: nSegment
       integer, parameter:: MaxSegment = 10*(nI+nJ+nK)
-      
+
       integer:: iOuter, iInner
 
       ! Counter for entering do_follow_iono
       integer :: nIono
-      !------------------------------------------------------------------------
 #ifndef OPENACC
+      !------------------------------------------------------------------------
       if(DoTestRay)&
            write(*,*)'follow_fast: me,iBlock,IsSurfacePoint,GenIn_D,iRay=',&
            iProc, iBlock, IsSurfacePoint, GenIn_D, iRay
@@ -2422,7 +2422,7 @@ contains
       ! Q: why not parameter arrays / scalars ???
       ! A: If Weight4_I/Weight2_I are defined as 'parameter', nvfortran+openacc
       !    will produce compilation error.
-      ! Interpolation weights 
+      ! Interpolation weights
       real :: Weight4_I(4) != 0.25
       real :: Weight2_I(2) != 0.5
 

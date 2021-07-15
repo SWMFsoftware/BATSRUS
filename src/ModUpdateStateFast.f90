@@ -3228,6 +3228,7 @@ contains
     real :: Dipole_D(3)  ! Dipole moment
     real :: r, r2, rInv, r2Inv, r3Inv, Term1
 
+    !--------------------------------------------------------------------------
     Xyz_D = XyzIn_D
 
     ! Calculate magnetic field
