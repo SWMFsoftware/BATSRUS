@@ -608,7 +608,7 @@ contains
   
   !============================================================================
   pure function m3xv3(mtx, vec) result(outvec)
-    ! naive matrix-vector multiplication for 3x3 matrix
+    ! naive matrix-vector multiplication for 3x3 matrix, to avoid temporaries at the call site
     !$acc routine seq
     implicit none
     real, intent(in) :: mtx(3,3), vec(3)
@@ -627,6 +627,7 @@ contains
   !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
+
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
     ! pertubation of the magnetic field (returned as MagPerturbFac_DI) due
     ! to "gap region" field-aligned currents.  These are the FACs taken
@@ -648,9 +649,6 @@ contains
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
     use ModMain,           ONLY: Time_Simulation, n_Step
-    !AG:DEBUG:removed
-    !use CON_planet_field,  ONLY: get_planet_field, map_planet_field
-    !AG:DEBUG:^^^removed^^^
     use CON_planet,        ONLY: TypeBField, MagCenter_D, DipoleStrength
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
@@ -673,7 +671,7 @@ contains
     real              :: dR, r, Theta, Phi
     real              :: dTheta, dPhi, SinTheta, dSurface, dVol, dVolCoeff
     real              :: InvBr, FacRcurrents
-    real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D, tmpvec3
+    real, dimension(3):: Xyz_D, b_D, XyzRcurrents_D, XyzMid_D, Pert_D, cprod
     real, allocatable, save:: Fac_II(:,:)
 
     ! Variables for surface integral
@@ -797,8 +795,6 @@ contains
        end select
     end if
 
-    !AG:DEBUG:
-    write (*,*) 'DEBUG: iGroup=',iGroup,'UseFastFacIntegral_I(iGroup)=',UseFastFacIntegral_I(iGroup)
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
        iLineProc = 0
@@ -861,8 +857,6 @@ contains
        ! CHECK
        ! Volume = 0.; Surface = 0.
 
-       !AG:DEBUG:
-       write (*,*) 'DEBUG: slow_int: UseSurfaceIntegral=',UseSurfaceIntegral, ' nTheta=',nTheta, 'nPhi=',nPhi, 'nMag=',nMag, 'nR=',nR
 #if defined(OPENACC)
        if (TypeBField .ne. 'DIPOLE') then
           !FIXME: this should be checked earlier
@@ -872,8 +866,8 @@ contains
 #endif
        !$acc update device(MagCenter_D, DipoleStrength)
        !$acc    parallel &
-       !$acc &  default(none) & 
-       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,Xyz_D,Pert_D,tmpvec3) &
+       !$acc &  default(none) &
+       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,Xyz_D,Pert_D,cprod) &
        !$acc &  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
        !$acc &  copyout(InvDist2_DII) &
        !$acc &  copy(MagPerturbFac_DI,LineContrib_DII,MagPerturbMhd_DI)
@@ -920,30 +914,23 @@ contains
              FacRcurrents = Fac_II(iTheta,iPhi)
 
              if(UseSurfaceIntegral)then
-                !call timing_start('ground_slow_int_use_surface')
 
                 ! B(x0) = int_|x|=R
                 !   [n.B(x) (x-x0) + n x B(x) x (x-x0)] / (4pi*|x-x0|^3)
                 ! where x0 = Xyz_DI, x = XyzRcurrents_D, |r|=rCurrents
 
                 Br   = Br_II(iTheta,iPhi)
-                !debug replaced:
-                Bt_D = Bt_DII(:,iTheta,iPhi) !FIX:implicit loop
-                !Bt_D(1) = Bt_DII(1,iTheta,iPhi)
-                !Bt_D(2) = Bt_DII(2,iTheta,iPhi)
-                !Bt_D(3) = Bt_DII(3,iTheta,iPhi)
-                !debug ^^end^^
+                Bt_D = Bt_DII(:,iTheta,iPhi)
 
                 ! CHECK
                 ! Surface = Surface + dSurface
                 ! if(iTheta==nTheta .and. iPhi==nPhi) &
                 !   write(*,*)'!!! Surface=', Surface, 4*cPi*rCurrents**2
 
-                !$acc loop gang worker vector private(Xyz_D,InvDist2_D,tmpvec3)
+                !$acc loop gang worker vector private(Xyz_D,InvDist2_D,cprod)
                 do iMag = 1, nMag
                    if(DoConvertCoord) then
-                      ! This should be done in advance !!!
-                      !replaced: Xyz_D = matmul(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                      ! ? This could be done in advance
                       Xyz_D = m3xv3(SmToFacGrid_DD, Xyz_DI(:,iMag))
                    else
                       Xyz_D = Xyz_DI(:,iMag)
@@ -956,18 +943,15 @@ contains
                    ! dA*(x-x0)/(4pi*|x-x0|^3)
                    InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
 
-                   !replaced:                   MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                   !replaced:                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
-                   tmpvec3 = cross_product(Bt_D, InvDist2_D)
+                   cprod = cross_product(Bt_D, InvDist2_D) ! explicit temporary to avoid an implicit one
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + Br*InvDist2_D + tmpvec3
+                        + Br*InvDist2_D + cprod
 
                    ! Store it for fast calculation
                    if(UseFastFacIntegral) &
                         InvDist2_DII(:,iMag+iMag0,iLineProc) = InvDist2_D
 
                 end do
-                !call timing_stop('ground_slow_int_use_surface')
 
              end if
 
@@ -977,44 +961,26 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position along the field line
-                !replaced: call map_planet_field(Time_Simulation, XyzRcurrents_D, &
-                !replaced:      TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
                 call map_planet_field(XyzRcurrents_D, r, XyzMid_D, iHemisphere)
 
                 ! get the B field at this position
-                !replaced: call get_planet_field(&
-                !replaced:      Time_Simulation, XyzMid_D, TypeCoordFacGrid//' NORM', b_D)
                 call get_planet_field(Time_Simulation, XyzMid_D, b_D)
-                !debug replaced:
-                b_D = b_D*Si2No_V(UnitB_) !FIX:implicit loop
-                !b_D(1) = b_D(1)*Si2No_V(UnitB_)
-                !b_D(2) = b_D(2)*Si2No_V(UnitB_)
-                !b_D(3) = b_D(3)*Si2No_V(UnitB_)
-                !debug ^^^end^^^
+                b_D = b_D*Si2No_V(UnitB_)
 
                 ! The volume element is proportional to 1/Br. The sign
 		! should be preserved (not yet!!!),
                 ! because the sign is also there in the radial
 		! component of the field aligned current: Br/B*FAC.
 		! In the end j_D = b_D/Br*[(Br/B)*(j.B)]_rcurr
-                !debug replaced:
-                InvBr = r/abs(sum(b_D*XyzMid_D)) !FIX:implicit loop, reduction
-                !InvBr = r/abs(b_D(1)*XyzMid_D(1)+b_D(2)*XyzMid_D(2)+b_D(3)*XyzMid_D(3))
-                !debug ^^^end^^^
+                InvBr = r/abs(sum(b_D*XyzMid_D))
                 dVol  = dVolCoeff*InvBr
 
                 !! Check correctness of integration. Needs Br at rCurrents.
                 ! if(abs(XyzMid_D(3)) > rCurrents - Height) &
                 !     Volume = Volume + abs(dVol*Br_II(iTheta,iPhi)
 
-                !call timing_start('ground_slow_int_inside_radial')
-                !AG:DEBUG:the most time-consuming loop (overall)
-                !AG:DEBUG:the inner (worker-vector loop)
-                !-- private(Xyz_D,Pert_D)
-                !$acc loop gang worker vector private(Xyz_D,tmpvec3,Pert_D)
+                !$acc loop gang worker vector private(Xyz_D,cprod,Pert_D)
                 do iMag = 1, nMag
-                   !!AG: Creates variable z_a_2(:)?
-                   !replaced:    if(DoConvertCoord) Xyz_D = matmul(SmToFacGrid_DD, Xyz_D)
                    if (DoConvertCoord) then
                       Xyz_D = m3xv3(SmToFacGrid_DD, Xyz_DI(:,iMag))
                    else
@@ -1024,11 +990,8 @@ contains
                    ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                    ! where the field aligned J is proportional to B
                    Xyz_D = Xyz_D-XyzMid_D
-                   !!AG: Creates c_d136(:) and implicit reduction(+:xyz_d$r140)?
-                   !replaced: Pert_D = dVol*cross_product(b_D, Xyz_D) &
-                   !replaced:     /(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
-                   tmpvec3 = cross_product(b_D, Xyz_D)
-                   Pert_D = dVol*tmpvec3 / (4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
+                   cprod = cross_product(b_D, Xyz_D) ! explicit temporary to avoid an implicit one
+                   Pert_D = dVol*cprod / (4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &
                         FacRcurrents*Pert_D
@@ -1051,12 +1014,10 @@ contains
                    ! end if
 
                 end do ! iMag
-                !call timing_stop('ground_slow_int_inside_radial')
              end do ! kr
           end do ! iPhi
        end do ! iTheta
        !$acc end parallel
-       !-- $acc end data
        call timing_stop('ground_slow_int')
     end if
     !! Volume of the two spherical caps above Height (should be filled
