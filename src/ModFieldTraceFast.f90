@@ -876,8 +876,12 @@ contains
       ! Initial position
       Gen_D = GenIn_D
 
+      ! It seems the implementation assumes the default of iFaceOut is 0.
+      iFaceOut = 0
+
+      ! FIXME: test_swpc_pc fails with upper limit MaxSegment
       ! Integration loop
-      do iOuter = 1, MaxSegment
+      do iOuter = 1, 9999999 ! MaxSegment
 
          ! Check if we are inside the ionosphere
          if(DoCheckInside)then
