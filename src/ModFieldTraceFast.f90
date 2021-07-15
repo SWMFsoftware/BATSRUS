@@ -235,7 +235,7 @@ contains
     call message_pass_cell(3, b_DGB, UseOpenACCIn=.true.)
 
     !$acc parallel loop gang
-    do iBlock = 1, nBlockMax
+    do iBlock = 1, nBlockMax !!! why not nBlock
 
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
@@ -311,7 +311,7 @@ contains
 
        call timing_start("ray_iter1")
        !$acc parallel loop gang
-       do iBlock = 1, nBlockMax
+       do iBlock = 1, nBlockMax !!! why not nBlock ???
 
           !$acc loop vector collapse(3)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
@@ -319,7 +319,7 @@ contains
              ray(:,:,iX,iY,iZ,iBlock) = Trace_DINB(:,:,iX,iY,iZ,iBlock)
           end do; end do; end do
 
-          if(Unused_B(iBlock) .or. iBlock > nBlock)CYCLE
+          if(Unused_B(iBlock) .or. iBlock > nBlock)CYCLE !!! change
 
           ! Flag cells inside the ionosphere if necessary
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
@@ -402,6 +402,7 @@ contains
                          j1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
                       end select
 
+!!! We should not pass an array segment
                       call rayface_interpolate(&
                            ray(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
                            WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock),4,&
@@ -422,6 +423,7 @@ contains
        call ray_pass
        call timing_stop('ray_pass')
 
+       ! Why is this needed ???
        !$acc update host(Trace_DINB, ray)
 
        nIterTrace = nIterTrace + 1
@@ -432,6 +434,7 @@ contains
           call timing_show('ray_trace',1)
        end if
 
+!!! This should be either a loop with an exit or a loop with a reduce
        ! Check if we are Done by checking for significant changes in Trace_DINB
        !! acc serial
        Done = all(abs(ray(:,:,:,:,:,1:nBlock) - &
@@ -516,7 +519,7 @@ contains
           !$acc loop vector collapse(3) private(GenIni_D, Gen_D, Weight_I)
           do iZ=1,nK; do iY=1,nJ; do iX=1,nI
 
-             ! Short cuts for inner and false cells
+             ! Shortcuts for inner and false cells
              if(R_BLK(iX,iY,iZ,iBlock) < rInner .or. &
                   .not.true_cell(iX,iY,iZ,iBlock))then
                 ray(:,iRay,iX,iY,iZ,iBlock)=BODYRAY
@@ -582,6 +585,7 @@ contains
        end do; end do; end do
     end do
 
+!!! If ray tracing is done more often than plotting, this is not optimal.
     !$acc update host(ray)
 
     call timing_stop('trace_grid_fast3')
@@ -767,14 +771,17 @@ contains
       integer :: iHemisphere
       real    :: x_D(3)
       !------------------------------------------------------------------------
-#ifdef OPENACC
-      call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, UseGsm=.true.)
-#else
-      call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
-           rIonosphere, x_D, iHemisphere)
-#endif
-
 #ifndef OPENACC
+      if(iTypeUpdate <= UpdateSlow_)then
+         call map_planet_field(Time_Simulation, Xyz_D, &
+              TypeCoordSystem//' NORM', rIonosphere, x_D, iHemisphere)
+      else
+#endif
+         call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, &
+              UseGsm=.true.)
+#ifndef OPENACC
+      end if
+
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for Xyz_D=',Xyz_D
          write(*,*)'iBlock, iRay=',iBlock,iRay
@@ -836,7 +843,8 @@ contains
 
       ! counter for ray integration
       integer :: nSegment
-
+      integer, parameter:: MaxSegment = 10*(nI+nJ+nK)
+      
       integer:: iOuter, iInner
 
       ! Counter for entering do_follow_iono
@@ -869,7 +877,7 @@ contains
       Gen_D = GenIn_D
 
       ! Integration loop
-      do iOuter = 1, 9999999
+      do iOuter = 1, MaxSegment
 
          ! Check if we are inside the ionosphere
          if(DoCheckInside)then
@@ -958,13 +966,13 @@ contains
             end if
          end if
 
-         do iInner = 1, 9999999
+         do iInner = 1, 10
             ! Full step
             call interpolate_bb_node(GenMid_D, bMid_D, iBlock)
 
             ! Calculate the difference between 1st and 2nd order integration
             ! and take ratio relative to DxOpt
-            DxRel=abs(Ds)*maxval(abs(bMid_D-bIni_D))/DxOpt
+            DxRel = abs(Ds)*maxval(abs(bMid_D - bIni_D))/DxOpt
 
 #ifndef OPENACC
             if(DoTestRay.and.okdebug)&
@@ -973,9 +981,9 @@ contains
 #endif
 
             ! Make sure that Ds does not change more than a factor of 2 or 0.5
-            DxRel=max(0.5,min(2.,DxRel))
+            DxRel = max(0.5, min(2., DxRel))
 
-            if(DxRel>1.)then
+            if(DxRel > 1.)then
                ! Not accurate enough, decrease Ds if possible
 
                if(abs(Ds)<=DsMin+DsTiny)then
@@ -995,14 +1003,14 @@ contains
 #endif
             else
                ! Too accurate, increase Ds if possible
-               if(abs(Ds)<DsMax-DsTiny)then
+               if(abs(Ds) < DsMax - DsTiny)then
 
-                  DsNext = sign(min(DsMax,abs(Ds)/sqrt(DxRel)),Ds)
+                  DsNext = sign(min(DsMax, abs(Ds)/sqrt(DxRel)), Ds)
 
 #ifndef OPENACC
                   if(DoTestRay.and.okdebug)&
                        write(*,*)'new increased DsNext: me,iBlock,DsNext=', &
-                       iProc,iBlock,DsNext
+                       iProc, iBlock, DsNext
 #endif
 
                end if
@@ -2402,7 +2410,7 @@ contains
       real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
       integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
 
-      ! Interpolation weights
+      ! Interpolation weights !!! why not parameter arrays / scalars ???
       real :: Weight4_I(4) != 0.25
       real :: Weight2_I(2) != 0.5
 
