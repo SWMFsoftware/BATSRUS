@@ -403,6 +403,8 @@ contains
                       end select
 
 !!! We should not pass an array segment
+                      ! ray instead of Trace_DINB is used for the first argument
+                      ! to avoid GPU race condition.
                       call rayface_interpolate(&
                            ray(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
                            WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock),4,&
@@ -423,7 +425,9 @@ contains
        call ray_pass
        call timing_stop('ray_pass')
 
-       ! Why is this needed ???
+       ! Q:Why is this needed ???
+       ! A:The following 'Done' part is still on CPU, and it should be
+       !   Ported to GPU in the near future.
        !$acc update host(Trace_DINB, ray)
 
        nIterTrace = nIterTrace + 1
@@ -876,8 +880,12 @@ contains
       ! Initial position
       Gen_D = GenIn_D
 
+      ! It seems the implementation assumes the default of iFaceOut is 0.
+      iFaceOut = 0
+
+      ! FIXME: test_swpc_pc fails with upper limit MaxSegment
       ! Integration loop
-      do iOuter = 1, MaxSegment
+      do iOuter = 1, 9999999 ! MaxSegment
 
          ! Check if we are inside the ionosphere
          if(DoCheckInside)then
@@ -1243,6 +1251,7 @@ contains
       iCount = 1
       do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
          if(present(UseRay)) then
+            ! Use ray instead of Trace_DINB to avoid GPU race condition
             if(UseRay) &
                  Trace_DI(:,iCount) = ray(:,iRay,ii,jj,kk,iBlock)
          else
@@ -2410,7 +2419,10 @@ contains
       real    :: Trace_DIII(3,2,nFaceMax,nFaceMax)
       integer :: IjkTrace_DII(2,nFaceMax,nFaceMax)
 
-      ! Interpolation weights !!! why not parameter arrays / scalars ???
+      ! Q: why not parameter arrays / scalars ???
+      ! A: If Weight4_I/Weight2_I are defined as 'parameter', nvfortran+openacc
+      !    will produce compilation error.
+      ! Interpolation weights 
       real :: Weight4_I(4) != 0.25
       real :: Weight2_I(2) != 0.5
 
