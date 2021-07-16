@@ -27,6 +27,7 @@ contains
 
     use ModMain
     use ModAdvance
+    use ModChGL, ONLY: UseChGL, update_chgl
     use ModEnergy,     ONLY: limit_pressure
     use ModMultiFluid, ONLY: nFluid
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -92,7 +93,7 @@ contains
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
-
+    if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock)
     if(DoTest)then
        write(*,*)NameSub,' final for n_step =', n_step
        do iVar=1,nVar
