@@ -3102,7 +3102,7 @@ contains
     ! Proved magnetic field b_D in normalized unit at location Xyz_D
     ! By default the coordinate system of BATSRUS is used
     ! If IsAligned is present, then MAG/SMG coordinate system is assumed
-    
+
     real:: r2, r3Inv, Term1
     !--------------------------------------------------------------------------
     r2 = sum(Xyz_D**2)
