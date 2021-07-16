@@ -698,13 +698,13 @@ contains
        ! CHECK
        ! Volume = 0.; Surface = 0.
 
-       !$acc update device(MagCenter_D, DipoleStrength) ! FIXME: move it close to where they are updated on CPU
-       !$acc    parallel &
-       !$acc &  default(none) &
-       !$acc &  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,Xyz_D,Pert_D) &
-       !$acc &  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
-       !$acc &  copyout(InvDist2_DII) &
-       !$acc &  copy(MagPerturbFac_DI,LineContrib_DII,MagPerturbMhd_DI)
+       !$acc parallel &
+       !$acc  default(none) &
+       !$acc  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,&
+       !$acc  Pert_D) &
+       !$acc  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
+       !$acc  copyout(InvDist2_DII) &
+       !$acc  copy(MagPerturbFac_DI, LineContrib_DII, MagPerturbMhd_DI)
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
