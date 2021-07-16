@@ -1716,6 +1716,10 @@ test_earth_check:
 		${TESTDIR}/RESULTS/GM/y=0_var_2_t00000004*.out \
 		Param/EARTH/TestOutput/earth_cartesian_ref.out \
 		>> test_earth.diff)
+	-@(${DIFFNUM} -t -r=2e-4 -a=1e-4 \
+		${TESTDIR}/RESULTS/GM/mag_grid_n00000097.out \
+		Param/EARTH/TestOutput/earth_cartesian_mag_grid.out.gz \
+		>> test_earth.diff)
 	ls -l test_earth.diff
 	
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
