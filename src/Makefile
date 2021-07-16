@@ -33,6 +33,7 @@ OBJECTS = \
 	ModCellBoundary.o \
 	ModCellGradient.o \
 	ModCharacteristic.o \
+	ModChGL.o \
 	ModChromosphere.o \
 	ModCleanDivB.o \
 	ModCoarseAxis.o \
