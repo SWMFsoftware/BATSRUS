@@ -487,14 +487,13 @@ contains
     !
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
-    use ModMain,           ONLY: Time_Simulation, n_Step
-    use CON_planet,        ONLY: TypeBField, MagCenter_D, DipoleStrength
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
-    use ModUpdateStateFast, ONLY: map_planet_field_fast, get_planet_field_fast
-    use ModAdvance,        ONLY: iTypeUpdate, UpdateSlow_
-    use ModNumConst,       ONLY: cPi, cTwoPi
-    use ModCurrent,        ONLY: calc_field_aligned_current
-    use CON_axes,          ONLY: transform_matrix
+    use ModMain,            ONLY: Time_Simulation, n_Step
+    use CON_planet_field,   ONLY: get_planet_field, map_planet_field
+    use ModUpdateStateFast, ONLY: get_b0_dipole_fast, map_planet_field_fast
+    use ModAdvance,         ONLY: iTypeUpdate, UpdateSlow_
+    use ModNumConst,        ONLY: cPi, cTwoPi
+    use ModCurrent,         ONLY: calc_field_aligned_current
+    use CON_axes,           ONLY: transform_matrix
     use ModMpi
 
     ! use ModPlotFile, ONLY: save_plot_file
@@ -802,18 +801,15 @@ contains
                         TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
                    call get_planet_field(Time_Simulation, XyzMid_D, &
                         TypeCoordFacGrid//' NORM', b_D)
+                   b_D = b_D*Si2No_V(UnitB_)
                 else
 #endif
                    call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
                         iHemisphere)
-!!! why pass time simulation? 
-                   call get_planet_field_fast(Time_Simulation, XyzMid_D, b_D)
+                   call get_b0_dipole_fast(XyzMid_D, b_D, IsAligned=.true.)
 #ifndef OPENACC
                 end if
 #endif
-!!! Fast method could return the normalized units
-                b_D = b_D*Si2No_V(UnitB_)
-
                 ! The volume element is proportional to 1/Br. The sign
 		! should be preserved (not yet!!!),
                 ! because the sign is also there in the radial

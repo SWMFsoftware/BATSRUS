@@ -55,7 +55,6 @@ module ModUpdateStateFast
   public:: set_dipole_fast       ! set dipole vector Dipole_D
   public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: map_planet_field_fast ! map dipole field
-  public:: get_planet_field_fast ! get dipole field at a given position
 
   logical:: DoTestCell= .false.
 
@@ -3093,12 +3092,17 @@ contains
 
   end subroutine update_b0_fast
   !============================================================================
-  subroutine get_b0_dipole_fast(Xyz_D, b_D)
+  subroutine get_b0_dipole_fast(Xyz_D, b_D, IsAligned)
     !$acc routine seq
 
     real, intent(in):: Xyz_D(3)
     real, intent(out):: b_D(3)
+    logical, optional, intent(in):: IsAligned
 
+    ! Proved magnetic field b_D in normalized unit at location Xyz_D
+    ! By default the coordinate system of BATSRUS is used
+    ! If IsAligned is present, then MAG/SMG coordinate system is assumed
+    
     real:: r2, r3Inv, Term1
     !--------------------------------------------------------------------------
     r2 = sum(Xyz_D**2)
@@ -3108,10 +3112,16 @@ contains
        RETURN
     end if
 
-    Term1 = sum(Dipole_D*Xyz_D)*3/r2
     r3Inv = 1/(r2*sqrt(r2))
 
-    b_D = (Term1*Xyz_D - Dipole_D)*r3Inv
+    if(present(IsAligned))then
+       Term1      = DipoleStrength*Xyz_D(3)*3/r2
+       b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
+       b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
+    else
+       Term1 = sum(Dipole_D*Xyz_D)*3/r2
+       b_D   = (Term1*Xyz_D - Dipole_D)*r3Inv
+    end if
 
   end subroutine get_b0_dipole_fast
   !============================================================================
@@ -3205,58 +3215,6 @@ contains
     if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
 
   end subroutine map_planet_field_fast
-  !============================================================================
-  subroutine get_planet_field_fast(TimeSim, XyzIn_D, b_D)
-    !$acc routine seq
-    ! This is a simplified version of CON_planet_field.f90:get_planet_field11(...)
-    ! that assumes certain values of the arguments and globals, namely:
-    ! `TypeCoord=='MAGNORM'`; `TypeBField=='DIPOLE'`
-    use CON_planet, ONLY: MagCenter_D, DipoleStrength
-
-    real,              intent(in) :: TimeSim      ! simulation time
-    real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(out):: b_D(3)       ! magnetic field
-
-    ! This is the fundamental subroutine that provides the magnetic
-    ! field at a given position at a given simulation time.
-    ! If called repeatedly, the subroutine remembers the last simulation time
-    ! argument, so it does not recalculate the position of the magnetic axis.
-    ! The position may be normalized with the radius of the planet.
-    ! The coordinate system and normalization information
-    ! for the position is given by the string TypeCoord.
-    real :: Xyz_D(3)     ! Normalized (and rotated) position
-    real :: Dipole_D(3)  ! Dipole moment
-    real :: r, r2, rInv, r2Inv, r3Inv, Term1
-
-    !--------------------------------------------------------------------------
-    Xyz_D = XyzIn_D
-
-    ! Calculate magnetic field
-
-    Xyz_D = Xyz_D - MagCenter_D
-
-    ! radial distance squared
-    r2 = sum(Xyz_D**2)
-    if(r2 < 1E-12) then
-       ! return zero field if very small
-       b_D = 0
-       RETURN
-    end if
-
-    ! Update axes
-    call set_axes(TimeSim)
-
-    ! Various powers of radial distance
-    r2Inv = 1/r2
-    r     = sqrt(r2)
-    rInv  = 1/r
-    r3Inv = rInv*r2Inv
-
-    ! Dipole is aligned with the Z axis
-    Term1      = DipoleStrength*Xyz_D(3)*3*r2Inv
-    b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
-    b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
-  end subroutine get_planet_field_fast
   !============================================================================
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
     !$acc routine seq
