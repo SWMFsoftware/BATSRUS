@@ -10,7 +10,7 @@ module ModFieldTraceFast
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProc, iComm, nProc, &
        nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       MaxBlock, IsCartesianGrid
+       nBlock, MaxBlock, Unused_B, IsCartesianGrid
   use ModMain, ONLY: TypeCoordSystem
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
@@ -154,10 +154,9 @@ contains
     use ModUpdateStateFast, ONLY: get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
+         message_pass_cell, message_pass_node
     use ModMpi
-
-    use BATL_lib, ONLY: message_pass_cell, message_pass_node
 
     ! Iteration parameters
     integer, parameter :: MaxIterTrace = 150
@@ -235,7 +234,7 @@ contains
     call message_pass_cell(3, b_DGB, UseOpenACCIn=.true.)
 
     !$acc parallel loop gang
-    do iBlock = 1, nBlockMax !!! why not nBlock
+    do iBlock = 1, nBlock
 
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
@@ -311,7 +310,7 @@ contains
 
        call timing_start("ray_iter1")
        !$acc parallel loop gang
-       do iBlock = 1, nBlockMax !!! why not nBlock ???
+       do iBlock = 1, nBlock
 
           !$acc loop vector collapse(3)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
@@ -319,7 +318,7 @@ contains
              ray(:,:,iX,iY,iZ,iBlock) = Trace_DINB(:,:,iX,iY,iZ,iBlock)
           end do; end do; end do
 
-          if(Unused_B(iBlock) .or. iBlock > nBlock)CYCLE !!! change
+          if(Unused_B(iBlock)) CYCLE
 
           ! Flag cells inside the ionosphere if necessary
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
@@ -1440,7 +1439,6 @@ contains
   !============================================================================
   subroutine ray_pass_new
 
-    use ModMain, ONLY : nBlock,Unused_B
     use ModParallel, ONLY : neiLEV
     use BATL_lib, ONLY: message_pass_node
 
@@ -1458,7 +1456,7 @@ contains
     call test_start(NameSub, DoTest)
     call message_pass_node(6, Trace_DINB, 'max')
 
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        do iFace = 1, 6
           if(neiLEV(iFace,iBlock)==1)call prolong_ray_after_pass(iFace,iBlock)
@@ -1610,8 +1608,8 @@ contains
     !           R restricted (to be sent to a coarser block)
     !           S subface    (one quarter of a face)
 
-    use ModMain, ONLY : nBlockMax, Unused_B
-    use ModParallel, ONLY : neiLEV
+    use ModMain, ONLY: Unused_B
+    use ModParallel, ONLY: neiLEV
 
     ! Local variables
 
@@ -1641,7 +1639,7 @@ contains
     if(DoTest)write(*,*)'ray_pass starting prolongation'
 
     !$acc parallel loop gang
-    do iBlock = 1, nBlockMax
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
        do iFace = 1, 6
@@ -1813,7 +1811,7 @@ contains
     subroutine ray_pass_faces(&
          iDir, iFaceMin, iFaceMax, DoEqual, DoRestrict, DoProlong)
 
-      use ModMain, ONLY : nBlockMax, okdebug, Unused_B
+      use ModMain, ONLY : okdebug, Unused_B
       use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
       use ModParallel, ONLY : NOBLK, neiLEV, neiBLK, neiPE
       use ModMpi
@@ -1867,7 +1865,7 @@ contains
 #ifdef OPENACC
       do iFace=iFaceMin,iFaceMax
          !$acc parallel loop gang
-         do iBlock=1,nBlockMax
+         do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             DiLevel = neiLEV(iFace,iBlock)
 
@@ -2018,7 +2016,7 @@ contains
             write(*,*)'_r=',iMinR,iMaxR,jMinR,jMaxR,kMinR,kMaxR
          end if
 
-         do iBlock = 1,nBlockMax
+         do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
 
             ! Set index ranges for the face
@@ -2101,7 +2099,7 @@ contains
          if(okdebug.and.DoTest)write(*,*)'allocation Done, me,iFace=',&
               iProc, iFace
 
-         do iBlock=1,nBlockMax
+         do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             DiLevel = neiLEV(iFace,iBlock)
 
@@ -2293,7 +2291,7 @@ contains
          if(okdebug.and.DoTest)write(*,*)&
               'setranges_ray for buf2ray Done: me, iFace=',iProc, iFace
 
-         do iBlock = 1,nBlockMax
+         do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             select case(neiLEV(jFace,iBlock))
             case(0)
