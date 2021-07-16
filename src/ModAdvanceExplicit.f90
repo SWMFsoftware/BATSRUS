@@ -326,7 +326,7 @@ contains
   end subroutine advance_explicit
   !============================================================================
   subroutine update_secondbody
-    use ModMain,     ONLY: time_simulation, nBlock, Unused_B, body2_
+    use ModMain,     ONLY: time_simulation, nBlock, Unused_B, body2_, iNewGrid
     use ModConst,    ONLY: cTwoPi
     use ModPhysics,  ONLY: xBody2, yBody2, zBody2, rBody2, DistanceBody2, &
          OrbitPeriod, PhaseBody2
@@ -387,7 +387,7 @@ contains
        ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
        true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
     enddo
-
+    iNewGrid = mod(iNewGrid + 1, 10000)
     call fix_boundary_ghost_cells
 
     do iBlock=1, nBlock
