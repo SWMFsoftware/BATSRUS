@@ -87,7 +87,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
@@ -217,7 +216,8 @@ contains
                            + WeightXyz * Current_D
                    end if
 
-                   ! if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
+                   ! if(DoTest)write(*,*) &
+                   !     'Contribution iProc,i,j,k,WeightXyz=',&
                    !     iProc,i,j,k,WeightXyz
                 end if
              end do
@@ -226,7 +226,6 @@ contains
     end do BLOCK
 
     ! call test_stop(NameSub, DoTest)
-    call test_stop(NameSub, DoTest)
   end subroutine get_point_data
   !============================================================================
 
