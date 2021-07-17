@@ -32,15 +32,14 @@ module ModUpdateStateFast
        OmegaBody_D, DipoleStrength => Bdp, Dipole_D, set_dipole
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
-       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
-       TypeCoordSystem, useIe
+       iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
   use ModB0, ONLY: B0_DGB
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
        IsBoundary_B => far_field_BCs_BLK
   use ModSolarWind, ONLY: get_solar_wind_point
-  use CON_axes, ONLY: get_axes, set_axes, SmgGsm_DD
+  use CON_axes, ONLY: SmgGsm_DD
   use ModUtilities, ONLY: CON_stop
   use ModIeCoupling, ONLY: UseCpcpBc, RhoCpcp_I
 

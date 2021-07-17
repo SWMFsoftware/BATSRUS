@@ -18,7 +18,7 @@ module ModB0
   ! This module provides data and methods for B0.
 
   use BATL_size, ONLY: MaxDim, nDim, MaxBlock, nI, nJ, nK, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nGang
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain, ONLY: UseB, UseB0, UseConstrainB
   use ModAdvance, ONLY: iTypeUpdate, UpdateOrig_, State_VGB
   use ModVarIndexes, ONLY: Bx_, Bz_
@@ -223,7 +223,7 @@ contains
     use ModConst, ONLY: cTiny
     use ModMain,  ONLY: UseFieldLineThreads, DoThreads_B
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
-         CoordMin_D, CoordMin_DB, nBlock
+         CoordMin_D, CoordMin_DB
 
     integer, intent(in) :: iBlock
 
@@ -662,12 +662,10 @@ contains
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
 
-    integer :: i, j, k, l
-    real :: x, y, r2, rInv, r2Inv, r3Inv, r5Inv, r7Inv
-    real :: XyzTilt_D(3), b_D(3), Bx, By
+    real :: x, y, r2, rInv, r2Inv, r3Inv
+    real :: Bx, By
     real :: Dp
 
-    logical :: DoQuadrupole, DoOctupole
 
     ! Determine radial distance and powers of it
 

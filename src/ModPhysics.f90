@@ -262,7 +262,7 @@ contains
   subroutine set_dipole
 
     use ModMain,  ONLY: Time_Simulation
-    use CON_axes, ONLY: get_axes, SmgGsm_DD
+    use CON_axes, ONLY: get_axes
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_dipole'
@@ -1216,7 +1216,7 @@ contains
 
     ! Update the angular velocity OmegaBody_D
 
-    use CON_axes,          ONLY: get_axes, SmgGsm_DD
+    use CON_axes,          ONLY: get_axes
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
 
     real:: RotAxis_D(3) ! Avoid race condition in OpenMP
@@ -1243,7 +1243,6 @@ contains
     use ModVarIndexes, ONLY: DefaultState_V
     use ModUtilities,  ONLY: lower_case
     use ModMultiFluid, ONLY: extract_fluid_name
-    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: nPlotVar
     character (LEN=10), intent(in) :: NameVar_V(nPlotVar)
