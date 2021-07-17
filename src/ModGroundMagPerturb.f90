@@ -705,7 +705,7 @@ contains
        !$acc  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,&
        !$acc  Pert_D) &
        !$acc  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
-       !$acc  copyout(InvDist2_DII) &
+       !$acc  copy(InvDist2_DII) &
        !$acc  copy(MagPerturbFac_DI, LineContrib_DII, MagPerturbMhd_DI)
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
