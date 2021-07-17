@@ -666,7 +666,6 @@ contains
     real :: Bx, By
     real :: Dp
 
-
     ! Determine radial distance and powers of it
 
     character(len=*), parameter:: NameSub = 'get_b0_dipole'
@@ -705,7 +704,7 @@ contains
        Dp   = 3*sum(Dipole_D*Xyz_D)*r2Inv
        B0_D = (Dp*Xyz_D - Dipole_D)*r3Inv
     end if
-    
+
   end subroutine get_b0_dipole
   !============================================================================
   subroutine add_b0_body2(XyzIn_D, B0_D)
