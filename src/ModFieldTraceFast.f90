@@ -92,8 +92,9 @@ contains
     ! Details of the algorithm are to be published later
 
     use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, time_simulation
+    use ModPhysics,  ONLY: set_dipole
     use CON_axes,    ONLY: transform_matrix
-    use ModUpdateStateFast, ONLY: sync_cpu_gpu, set_dipole_fast
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     ! remember last call and the last grid number
     integer :: nStepLast=-1, iLastGrid=-1, iLastDecomposition=-1
@@ -127,7 +128,7 @@ contains
 
     call init_mod_field_trace
 
-    call set_dipole_fast
+    call set_dipole
 
     ! Transformation matrix between the SM(G) and GM coordinates
     if(UseSmg) &

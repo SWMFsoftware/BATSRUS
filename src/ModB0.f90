@@ -641,8 +641,8 @@ contains
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
     else
-       ! quadrupole and octupole field are zero no matter what (see set_physics
-       call get_b0_multipole(Xyz_D, B0_D)
+       ! dipole field
+       call get_b0_dipole(Xyz_D, B0_D)
     end if
     if(UseBody2)call add_b0_body2(Xyz_D, B0_D)
 
@@ -650,17 +650,14 @@ contains
 
   end subroutine get_b0
   !============================================================================
+  subroutine get_b0_dipole(Xyz_D, B0_D)
 
-  subroutine get_b0_multipole(Xyz_D, B0_D)
-
-    ! Calculate the multipole based B0_D field at location Xyz_D.
+    ! Calculate the B0_D dipole field at location Xyz_D.
 
     ! Note that ThetaTilt is positive when the north magnetic pole
     ! points AWAY from the sun.
 
-    use ModNumConst, ONLY: cTiny
-    use ModPhysics, ONLY: Bdp, CosThetaTilt, SinThetaTilt, &
-         rBody, Qqp, Oop
+    use ModPhysics, ONLY: Bdp, Dipole_D, CosThetaTilt, SinThetaTilt, rBody
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
@@ -668,24 +665,21 @@ contains
     integer :: i, j, k, l
     real :: x, y, r2, rInv, r2Inv, r3Inv, r5Inv, r7Inv
     real :: XyzTilt_D(3), b_D(3), Bx, By
-    real :: Dp, Tmp1, Tmp2, Dipole_D(3)
+    real :: Dp
 
     logical :: DoQuadrupole, DoOctupole
 
     ! Determine radial distance and powers of it
 
-    character(len=*), parameter:: NameSub = 'get_b0_multipole'
+    character(len=*), parameter:: NameSub = 'get_b0_dipole'
     !--------------------------------------------------------------------------
     r2 = sum(Xyz_D(1:nDim)**2)
 
     ! Avoid calculating B0 inside a critical radius = 1.E-6*Rbody
-    if(r2 <= (cTiny*rBody)**2)then
+    if(r2 <= 1e-12*rBody)then
        B0_D = 0.0
-       RETURN
-    end if
+    elseif(nDim == 2) then
 
-    if(nDim == 2) then
-       !
        ! 2D magnetic dipole is implemented from F.R. Cardoso et.al.'s paper
        ! "2D MHD simulation of the magnetic dipole tilt and IMF influence
        ! on the magnetosphere"
@@ -704,81 +698,18 @@ contains
        B0_D(1) =  CosThetaTilt*Bx + SinThetaTilt*By
        B0_D(2) = -SinThetaTilt*Bx + CosThetaTilt*By
        B0_D(3) = 0.0
-       RETURN
+    else
+       rInv  = 1.0/sqrt(r2)
+       r2Inv = rInv**2
+       r3Inv = rInv*r2Inv
+
+       ! Compute dipole moment of the intrinsic magnetic field B0.
+       Dp   = 3*sum(Dipole_D*Xyz_D)*r2Inv
+       B0_D = (Dp*Xyz_D - Dipole_D)*r3Inv
     end if
-
-    rInv  = 1.0/sqrt(r2)
-    r2Inv = rInv**2
-    r3Inv = rInv*r2Inv
-
-    ! Compute dipole moment of the intrinsic magnetic field B0.
-
-    Dipole_D = [ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp ]
-
-    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
-
-    B0_D = (Dp*Xyz_D - Dipole_D)*r3Inv
-
-    DoQuadrupole=any(abs(Qqp)>cTiny)
-    DoOctupole  =any(abs(Oop)>cTiny)
-
-    if(DoQuadrupole .or. DoOctupole)then
-       ! Compute the xx's in the tilted reference frame aligned with
-       ! the magnetic field.
-       XyzTilt_D(1) = CosThetaTilt*Xyz_D(1) + SinThetaTilt*Xyz_D(3)
-       XyzTilt_D(2) = Xyz_D(2)
-       XyzTilt_D(3)= -SinThetaTilt*Xyz_D(1) + CosThetaTilt*Xyz_D(3)
-
-       r5Inv = r3Inv*r2Inv
-       r7Inv = r5Inv*r2Inv
-    end if
-
-    if(DoQuadrupole)then
-       ! Compute quadrupole moment of the intrinsic
-       ! magnetic field B0.
-       do k=1,3
-          Tmp1 = 0.0
-          Tmp2 = 0.0
-          do i=1,3
-             Tmp1 = Tmp1 + Qqp(k,i)*XyzTilt_D(i)
-             do j=1,3
-                Tmp2 = Tmp2 + Qqp(i,j)*XyzTilt_D(i)*XyzTilt_D(j)*XyzTilt_D(k)
-             end do
-          end do
-          b_D(k) = 2.5*Tmp2*r7Inv - Tmp1*r5Inv
-       end do
-
-       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3)
-       B0_D(2) = B0_D(2) + b_D(2)
-       B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
-    end if
-
-    if(DoOctupole)then
-       ! Compute octupole moment of the intrinsic
-       ! magnetic field B0.
-       do k = 1, 3
-          Tmp1 = 0.0
-          Tmp2 = 0.0
-          do i = 1, 3
-             do j = 1, 3
-                Tmp1 = Tmp1 + Oop(i,j,k)*XyzTilt_D(i)*XyzTilt_D(j)
-                do l = 1, 3
-                   Tmp2 = Tmp2 + Oop(i,j,l) &
-                        *XyzTilt_D(i)*XyzTilt_D(j)*XyzTilt_D(l)*XyzTilt_D(k)
-                end do
-             end do
-          end do
-          b_D(k) = 7.0*Tmp2*r7Inv - 3.0*Tmp1*r5Inv
-       end do
-
-       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3)
-       B0_D(2) = B0_D(2) + b_D(2)
-       B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
-    end if
-
-  end subroutine get_b0_multipole
+    
+  end subroutine get_b0_dipole
   !============================================================================
-
   subroutine add_b0_body2(XyzIn_D, B0_D)
 
     ! If there is a second body that has a magnetic field the contribution

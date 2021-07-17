@@ -10,7 +10,7 @@ module ModPhysics
   use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &
        cProtonMass, cElectronCharge, cGyroElectron, cLightSpeed, &
        cRadiation, cGravitation, cAU, cBoltzmann, cMu, cRadToDeg
-  use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
+  use ModMain, ONLY: TypeCoordSystem, body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   use ModAdvance, ONLY: UseMultiSpecies, nSpecies
@@ -24,6 +24,7 @@ module ModPhysics
   public :: init_mhd_variables
   public :: init_vector_variables
   public :: set_dimensional_factor
+  public :: set_dipole
 
   private :: set_units
   private :: set_unit_conversion_array_indices
@@ -93,39 +94,14 @@ module ModPhysics
   real :: OmegaBody_D(3)
   !$acc declare create(OmegaBody_D)
 
-  ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
-  real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0 ! the monopole B0
-  real :: Bdp=0.0, DipoleStrengthSi=0.0        ! the dipole moment of B0
-  real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
-  real :: Oop(3,3,3)=0.0                       ! the octupole moment of B0
-  !$acc declare create(Bdp, DipoleStrengthSi)
+  ! Monopole and dipole magnetic field
+  real :: MonopoleStrength=0.0, MonopoleStrengthSi=0.0
+  real :: Bdp=0.0, DipoleStrengthSi=0.0
+  real :: Dipole_D(3)
+  !$acc declare create(Bdp, DipoleStrengthSi, Dipole_D)
 
-  real :: THETAtilt=0.0, &                ! tilt angle of magnetic axis
+  real :: ThetaTilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
-
-  ! The following are some notes on how to pick the Q's.  I have used the
-  ! cartesian version of the quadrupole magnetic potential because it was
-  ! the easiest to differentiate in our coordinate system.  The two ways
-  ! to write the potential are as follows (in SI - see Jackson pp.136-8):
-  !
-  !    spherical:       phi = (1/5)*mu * sum(m=-2..2) qlm * Ylm/r^3
-  !    cartesian:       phi = 1/(8*pi)*mu * sum(i,j=1..3) Qqpij * xi*xj/r^5
-  !
-  !  the coefficients are related to each other as follows (note that I am
-  !  using the relations in Jackson.  He uses Gaussian units.  I would guess
-  !  that these relations are the same for both systems but I have not checked
-  !  them.  They are most usefull in getting the theta and phi dependance that
-  !  you want and are not really used to do any type of converting):
-  !
-  !               q22 = (1/12)*sqrt(15/2/pi)*(Qqp11-i*Qqp12 - Qqp22)
-  !               q21 = -(1/3)*sqrt(15/8/pi)*(Qqp13-i*Qqp23)
-  !               q20 = (1/2)*sqrt(5/4/pi)*Qqp33
-  !
-  !  Note that Qqp is TRACELESS.  Also note that it is symmetric.  The q's have
-  !  the following property:
-  !
-  !                  ql(-m) = (-1)^m  *  complex_conjugate(qlm)
-  !
 
   ! Far field solar wind solution variables.
   real :: SW_T_dim=0.0, &
@@ -282,6 +258,33 @@ module ModPhysics
   integer, allocatable:: iVectorVar_I(:) ! Index of first components
 
 contains
+  !============================================================================
+  subroutine set_dipole
+
+    use ModMain,  ONLY: Time_Simulation
+    use CON_axes, ONLY: get_axes, SmgGsm_DD
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_dipole'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(Bdp == 0.0) RETURN
+
+    if(TypeCoordSystem == 'GSM')then
+       call get_axes(Time_Simulation, MagAxisGsmOut_D=Dipole_D)
+    elseif(TypeCoordSystem == 'GSE')then
+       call get_axes(Time_Simulation, MagAxisGseOut_D=Dipole_D)
+    else
+       Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
+    end if
+    Dipole_D = Dipole_D * Bdp
+    !$acc update device(Dipole_D, SmgGsm_DD)
+
+    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
+    call test_stop(NameSub, DoTest)
+
+  end subroutine set_dipole
   !============================================================================
   subroutine set_physics_constants
 
@@ -722,9 +725,8 @@ contains
     CosThetaTilt = cos(ThetaTilt)
     SinThetaTilt = sin(ThetaTilt)
 
-    ! by default quadrupole and octupole terms are zero
-    Qqp(1:3,1:3) = 0.0
-    Oop(1:3,1:3,1:3) = 0.0
+    ! Initialize Dipole_D vector
+    call set_dipole
 
     ! Hyperbolic cleaning uses SpeedHyp velocity
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &

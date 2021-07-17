@@ -29,7 +29,7 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, DipoleStrength => Bdp, CosThetaTilt, SinThetaTilt
+       OmegaBody_D, DipoleStrength => Bdp, Dipole_D, set_dipole
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, &
@@ -52,14 +52,10 @@ module ModUpdateStateFast
   public:: update_state_fast     ! Fast update of State_VGB
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
-  public:: set_dipole_fast       ! set dipole vector Dipole_D
   public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: map_planet_field_fast ! map dipole field
 
   logical:: DoTestCell= .false.
-
-  real:: Dipole_D(3)
-  !$acc declare create(Dipole_D)
 
 contains
   !============================================================================
@@ -3025,30 +3021,6 @@ contains
     c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
   end function cross_product
   !============================================================================
-  subroutine set_dipole_fast
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_dipole_fast'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    if(DipoleStrength == 0.0) RETURN
-
-    if(TypeCoordSystem == 'GSM')then
-       call get_axes(TimeSimulation, MagAxisGsmOut_D=Dipole_D)
-    elseif(TypeCoordSystem == 'GSE')then
-       call get_axes(TimeSimulation, MagAxisGseOut_D=Dipole_D)
-    else
-       Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
-    end if
-    Dipole_D = Dipole_D * DipoleStrength
-    !$acc update device(Dipole_D, SmgGsm_DD)
-
-    if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
-    call test_stop(NameSub, DoTest)
-
-  end subroutine set_dipole_fast
-  !============================================================================
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
@@ -3063,7 +3035,7 @@ contains
 
     call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
     call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
-    call set_dipole_fast
+    call set_dipole
 
     !$acc parallel loop gang independent
     do iBlock = 1, nBlock

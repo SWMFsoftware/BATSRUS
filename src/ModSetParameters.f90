@@ -137,7 +137,6 @@ contains
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use ModFreq, ONLY: adjust_freq
-    use ModUpdateStateFast, ONLY: set_dipole_fast
     use BATL_lib, ONLY: Dim2_, Dim3_, &
          create_grid, set_high_geometry, get_region_indexes, &
          rRound0, rRound1, StringTest
@@ -418,9 +417,6 @@ contains
        end if
 
        call set_physics_constants
-
-       ! For now. Probably Dipole_D should be in ModPhysics !!!
-       call set_dipole_fast
 
        call user_action("initialize module")
 
@@ -2497,9 +2493,9 @@ contains
        case("#TIMESIMULATION")
           if(.not.is_first_session())CYCLE READPARAM
           if(IsStandAlone)then
-             call read_var('tSimulation',time_simulation)
+             call read_var('tSimulation', time_simulation)
           else
-             call read_var('tSimulation',tSimulationCheck)
+             call read_var('tSimulation', tSimulationCheck)
           end if
 
        case("#HELIOUPDATEB0")
