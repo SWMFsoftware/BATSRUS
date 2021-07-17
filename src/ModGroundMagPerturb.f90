@@ -165,7 +165,7 @@ contains
        call read_var('DtSaveMagGrid',   dt_output(maggridfile_))
 
     case('#GEOMAGINDICES')
-       DoWriteIndices = .true. ! Activiate geoindices output file.
+       DoWriteIndices = .true. ! Activate geoindices output file.
        DoCalcKp = .true.       ! Kp calculated (no others available.)
        DoCalcAe = .true.       ! Ae calculated (always on with Kp).
        call read_var('nKpWindow', nKpMins)
@@ -545,7 +545,7 @@ contains
 
     ! real:: Surface, Volume, Height=1.0 !!! to test surface/volume integration
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb_fac'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -899,7 +899,7 @@ contains
 
     real :: dB_I(2)
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_kp'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1024,7 +1024,7 @@ contains
     real, dimension(3,nAeMag):: &
          dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, Xyz_DI
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ae'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1108,7 +1108,7 @@ contains
 
     integer          :: nMag
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'check_mag_input_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1199,7 +1199,7 @@ contains
     character (len=100):: StringLine
     integer            :: iMag
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_mag_input_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1251,7 +1251,7 @@ contains
     integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
 
     ! Open the output file
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'open_magnetometer_output_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1325,7 +1325,7 @@ contains
 
     integer :: iTime_I(7)
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_geoindices'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1386,7 +1386,7 @@ contains
          MagGmXyz_DI, MagSmXyz_DI, &
          dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_magnetometers'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -1688,7 +1688,7 @@ contains
     ! Close the magnetometer output files (flush buffer, release IO unit).
     ! Deallocate arrays.
 
-  logical:: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'finalize_magnetometer'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
