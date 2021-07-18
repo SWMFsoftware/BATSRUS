@@ -279,7 +279,7 @@ contains
        Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
     end if
     Dipole_D = Dipole_D * Bdp
-    !$acc update device(Dipole_D, SmgGsm_DD)
+    !$acc update device(Dipole_D)
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     call test_stop(NameSub, DoTest)
@@ -1235,7 +1235,7 @@ contains
        call get_axes(Time_Simulation, RotAxisGsmOut_D=RotAxis_D)
        OmegaBody_D = OmegaBody * RotAxis_D
     end select
-    !$acc update device(SmgGsm_DD)
+
   end subroutine update_angular_velocity
   !============================================================================
   subroutine set_dimensional_factor(nPlotVar, NameVar_V, &
