@@ -327,8 +327,10 @@ contains
     real :: TauCoeffIm_C(nI,nJ,nK)
     real :: PparIm_IC(nFluid,nI,nJ,nK)
 
+    real :: InvRho, Rho
+
     integer :: iLastPIm = -1, iLastGrid = -1
-    integer :: iIonSecond, nIons
+    ! integer :: iIonSecond, nIons
     integer :: i, j, k, iBlock, iFluid, nDensity, iDensity
     integer, allocatable:: iDens_I(:)
 
@@ -346,7 +348,7 @@ contains
     call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
     call sync_cpu_gpu('change State_VGB on CPU', NameSub)
 
-    iIonSecond = min(IonFirst_+1, IonLast_)
+    ! iIonSecond = min(IonFirst_+1, IonLast_)
 
     ! Set density floor in normalized units
     if(DoCoupleImDensity) RhoMinIm = Io2No_V(UnitRho_)*RhoMinDimIm
@@ -384,12 +386,12 @@ contains
 
     end if
 
-!    if (DoMultiFluidIMCoupling)then
-!       ! Number of fluids: 1 for multispecies, 2 for multiion, 3 for MHD-ions
-!       nIons = iIonSecond
-!    else
-!       nIons = 1
-!    end if
+    !    if (DoMultiFluidIMCoupling)then
+    !       ! Number of fluids: 1 for multispecies, 2 for multiion, 3 for MHD-ions
+    !       nIons = iIonSecond
+    !    else
+    !       nIons = 1
+    !    end if
 
     ! Set array of density indexes:
     ! nSpecies for multispecies, nFluid for multifluid
@@ -420,45 +422,56 @@ contains
        ! Put velocity into momentum temporarily when density is changed
        if(DoCoupleImDensity)then
           do iFluid = 1, nFluid
-             where(RhoIm_IC(iFluid,:,:,:) > 0.0)
-                State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)/ &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-                State_VGB(iRhoUy_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUy_I(iFluid),1:nI,1:nJ,1:nK,iBlock)/ &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-                State_VGB(iRhoUz_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUz_I(iFluid),1:nI,1:nJ,1:nK,iBlock)/ &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-             end where
+             do k=1,nK; do j=1,nJ; do i=1,nI
+                if(RhoIm_IC(iFluid,i,j,k) > 0.0) then
+                   InvRho = 1./State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+                   State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
+                        InvRho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                     
+                   State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)= &
+                        InvRho*State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)                
+                   State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)= &
+                        InvRho*State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)                
+                end if
+
+             end do; end do; end do
           end do
        end if
 
        if(time_accurate)then
           if(DoCoupleImPressure)then
-             APPLY_P: do iFluid = 1, nFluid! nIons
-                if (.not. IsImP_I(iFluid)) CYCLE APPLY_P
-                where(pIm_IC(iFluid,:,:,:) > 0.0) &
-                     State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = &
-                     State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock)   &
-                     + Factor * TauCoeffIm_C &
-                     * (pIm_IC(iFluid,:,:,:) - &
-                     State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
-                if(UseAnisoPressure)then
-                   where(PparIm_IC(iFluid,:,:,:) > 0.0) &
-                        State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) = &
-                        State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock)   &
-                        + Factor * TauCoeffIm_C &
-                        * (PparIm_IC(iFluid,:,:,:) - &
-                        State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock))
-                end if
-             end do APPLY_P
+             ! APPLY_P: 
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do iFluid = 1, nFluid! nIons
+                   if (.not. IsImP_I(iFluid)) CYCLE
+                   if(pIm_IC(iFluid,i,j,k) > 0.0) &
+                        State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
+                        State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
+                        + Factor * TauCoeffIm_C(i,j,k) &
+                        * (pIm_IC(iFluid,i,j,k) - &
+                        State_VGB(iP_I(iFluid),i,j,k,iBlock))
+                end do
+             end do; end do; end do
+
+             if(UseAnisoPressure)then
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                   do iFluid = 1, nFluid! nIons
+                      if (.not. IsImP_I(iFluid)) CYCLE
+                      if(PparIm_IC(iFluid,i,j,k) > 0.0) &
+                           State_VGB(Ppar_,i,j,k,iBlock) = &
+                           State_VGB(Ppar_,i,j,k,iBlock)   &
+                           + Factor * TauCoeffIm_C(i,j,k) &
+                           * (PparIm_IC(iFluid,i,j,k) - &
+                           State_VGB(Ppar_,i,j,k,iBlock))
+                   end do
+                end do; end do; end do                   
+             end if
           end if
           if(DoCoupleImDensity)then
              ! Negative first fluid density signals cells not covered by IM
-             APPLY_DENS: do iDensity = 1,nDensity
-                if (.not. IsImRho_I(iDensity)) CYCLE APPLY_DENS
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             ! APPLY_DENS: 
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do iDensity = 1,nDensity
+                   if (.not. IsImRho_I(iDensity)) CYCLE
                    if(RhoIm_IC(iDensity,i,j,k) <= 0.0 ) CYCLE
                    ! Here iDens_I can index multiple species or fluids
                    State_VGB(iDens_I(iDensity),i,j,k,iBlock) = max( RhoMinIm, &
@@ -466,54 +479,66 @@ contains
                         + Factor * TauCoeffIm_C(i,j,k) &
                         * (RhoIm_IC(iDensity,i,j,k) &
                         - State_VGB(iDens_I(iDensity),i,j,k,iBlock)))
-                end do; end do; end do
-             end do APPLY_DENS
+                end do
+             end do; end do; end do
           end if
        else
           if(DoCoupleImPressure)then
-             APPLY_P2: do iFluid = 1, nFluid! nIons
-                if (.not. IsImP_I(iFluid)) CYCLE APPLY_P2
-                where(pIm_IC(iFluid,:,:,:) > 0.0) &
-                     State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                     (TauCoupleIM &
-                     *State_VGB(iP_I(iFluid),1:nI,1:nJ,1:nK,iBlock)+&
-                     pIm_IC(iFluid,:,:,:))
-                if(UseAnisoPressure)then
-                   where(PparIm_IC(iFluid,:,:,:) > 0.0) &
-                        State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                        (TauCoupleIM*State_VGB(Ppar_,1:nI,1:nJ,1:nK,iBlock) + &
-                        PparIm_IC(iFluid,:,:,:))
-                end if
-             end do APPLY_P2
+             !APPLY_P2
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do iFluid = 1, nFluid! nIons
+                   if (.not. IsImP_I(iFluid)) CYCLE
+                   if(pIm_IC(iFluid,i,j,k) > 0.0) &
+                        State_VGB(iP_I(iFluid),i,j,k,iBlock) = Factor* &
+                        (TauCoupleIM &
+                        *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
+                        pIm_IC(iFluid,i,j,k))
+                end do
+             end do; end do; end do
+
+             if(UseAnisoPressure)then
+                do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                   do iFluid = 1, nFluid! nIons
+                      if (.not. IsImP_I(iFluid)) CYCLE
+                      if(PparIm_IC(iFluid,i,j,k) > 0.0) &
+                           State_VGB(Ppar_,i,j,k,iBlock) = Factor* &
+                           (TauCoupleIM*State_VGB(Ppar_,i,j,k,iBlock) + &
+                           PparIm_IC(iFluid,i,j,k))
+                   end do
+                end do; end do; end do
+             end if
           end if
           if(DoCoupleImDensity)then
-             APPLY_DENS2: do iDensity = 1,nDensity
-                if (.not. IsImRho_I(iDensity)) CYCLE APPLY_DENS2
-                do k = 1, nK; do j = 1, nJ; do i = 1,nI
-                   if(RhoIm_IC(1,i,j,k) <= 0.0) CYCLE
-                   State_VGB(iDens_I,i,j,k,iBlock) = &
+
+             do k = 1, nK; do j = 1, nJ; do i = 1,nI ! APPLY_DENS2             
+                do iDensity = 1,nDensity
+                   if (.not. IsImRho_I(iDensity)) CYCLE
+                   if(RhoIm_IC(iDensity,i,j,k) <= 0.0) CYCLE
+
+                   State_VGB(iDens_I(iDensity),i,j,k,iBlock) = &
                         max(RhoMinIm, Factor*( &
-                        TauCoupleIM*State_VGB(iDens_I,i,j,k,iBlock)&
-                        + RhoIm_IC(1:nDensity,i,j,k)))
-                end do; end do; end do
-             end do APPLY_DENS2
+                        TauCoupleIM*State_VGB(iDens_I(iDensity),i,j,k,iBlock)&
+                        + RhoIm_IC(iDensity,i,j,k)))
+                end do
+             end do; end do; end do
+
           end if
        end if
        ! Convert back to momentum
        if(DoCoupleImDensity)then
-          do iFluid = 1, nFluid! nIons
-             where(RhoIm_IC(iFluid,:,:,:) > 0.0)
-                State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUx_I(iFluid),1:nI,1:nJ,1:nK,iBlock)* &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-                State_VGB(iRhoUy_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUy_I(iFluid),1:nI,1:nJ,1:nK,iBlock)* &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-                State_VGB(iRhoUz_I(iFluid),1:nI,1:nJ,1:nK,iBlock)= &
-                     State_VGB(iRhoUz_I(iFluid),1:nI,1:nJ,1:nK,iBlock)* &
-                     State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)
-             end where
-          end do
+          do k = 1, nK; do j = 1, nJ; do i = 1,nI          
+             do iFluid = 1, nFluid! nIons
+                Rho = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+                if(RhoIm_IC(iFluid,i,j,k) > 0.0) then 
+                   State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
+                        Rho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                        
+                   State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)= &
+                        Rho*State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)
+                   State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)= &
+                        Rho*State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)
+                end if
+             end do
+          end do; end do; end do
        end if
 
     end do
