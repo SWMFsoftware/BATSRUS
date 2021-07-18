@@ -321,7 +321,7 @@ contains
 
     real :: Factor
 
-    real,allocatable :: RhoIm_IC(:,:,:,:)
+    real,allocatable :: RhoIm_ICB(:,:,:,:,:)
     real :: RhoMinIm
     real :: pIm_IC(nFluid,nI,nJ,nK)
     real :: TauCoeffIm_C(nI,nJ,nK)
@@ -410,12 +410,12 @@ contains
        iDens_I = iRho_I(1:nFluid)!(1:nIons)
     end if
 
-    if (.not.allocated(RhoIm_IC)) allocate(RhoIm_IC(nDensity,nI,nJ,nK))
+    if (.not.allocated(RhoIm_ICB)) allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-       call get_im_pressure(iBlock, nDensity, pIm_IC, RhoIm_IC, TauCoeffIm_C, &
+       call get_im_pressure(iBlock, nDensity, pIm_IC, RhoIm_ICB, TauCoeffIm_C, &
             PparIm_IC)
        if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do
 
@@ -423,7 +423,7 @@ contains
        if(DoCoupleImDensity)then
           do iFluid = 1, nFluid
              do k=1,nK; do j=1,nJ; do i=1,nI
-                if(RhoIm_IC(iFluid,i,j,k) > 0.0) then
+                if(RhoIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
                    InvRho = 1./State_VGB(iRho_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
                         InvRho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                     
@@ -472,12 +472,12 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iDensity = 1,nDensity
                    if (.not. IsImRho_I(iDensity)) CYCLE
-                   if(RhoIm_IC(iDensity,i,j,k) <= 0.0 ) CYCLE
+                   if(RhoIm_ICB(iDensity,i,j,k,iBlock) <= 0.0 ) CYCLE
                    ! Here iDens_I can index multiple species or fluids
                    State_VGB(iDens_I(iDensity),i,j,k,iBlock) = max( RhoMinIm, &
                         State_VGB(iDens_I(iDensity),i,j,k,iBlock) &
                         + Factor * TauCoeffIm_C(i,j,k) &
-                        * (RhoIm_IC(iDensity,i,j,k) &
+                        * (RhoIm_ICB(iDensity,i,j,k,iBlock) &
                         - State_VGB(iDens_I(iDensity),i,j,k,iBlock)))
                 end do
              end do; end do; end do
@@ -513,12 +513,12 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1,nI ! APPLY_DENS2             
                 do iDensity = 1,nDensity
                    if (.not. IsImRho_I(iDensity)) CYCLE
-                   if(RhoIm_IC(iDensity,i,j,k) <= 0.0) CYCLE
+                   if(RhoIm_ICB(iDensity,i,j,k,iBlock) <= 0.0) CYCLE
 
                    State_VGB(iDens_I(iDensity),i,j,k,iBlock) = &
                         max(RhoMinIm, Factor*( &
                         TauCoupleIM*State_VGB(iDens_I(iDensity),i,j,k,iBlock)&
-                        + RhoIm_IC(iDensity,i,j,k)))
+                        + RhoIm_ICB(iDensity,i,j,k,iBlock)))
                 end do
              end do; end do; end do
 
@@ -529,7 +529,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1,nI          
              do iFluid = 1, nFluid! nIons
                 Rho = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
-                if(RhoIm_IC(iFluid,i,j,k) > 0.0) then 
+                if(RhoIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then 
                    State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
                         Rho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                        
                    State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)= &
@@ -543,6 +543,7 @@ contains
 
     end do
 
+    if(allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)    
     if(allocated(iDens_I)) deallocate(iDens_I)
 
     call timing_stop(NameSub)
