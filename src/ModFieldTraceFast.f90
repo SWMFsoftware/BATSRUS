@@ -445,8 +445,8 @@ contains
           !$acc parallel loop vector collapse(3) reduction(.and.:Done_I)
           do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
              Done_I(1) = Done_I(1) .and. &
-                  all(all(abs(ray(:,:,i,j,k,iBlock) &
-                  -           Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
+                  all(abs(ray(:,:,i,j,k,iBlock) &
+                  -       Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
              Done_I(2) =  Done_I(2) .and. &
                   Trace_DINB(1,1,i,j,k,iBlock) > LOOPRAY .and. &
                   Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
