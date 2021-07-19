@@ -84,9 +84,9 @@ contains
     ! Parcel variables
     integer                     :: iParcel, iUnitParcel_I(MaxParcel)=-1
     character(len=2)            :: ParcelFile
-    
-    logical                     :: DoTest
-    character(len=*), parameter :: NameSub = 'write_logfile'
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 

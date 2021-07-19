@@ -782,7 +782,7 @@ contains
                 call stop_mpi(NameSub//' correct #PARCEL: '// &
                      'Dt or Dn must be positive')
              endif
-             
+
              if(index(StringParcel,'VAR')>0 .or. &
                   index(StringParcel,'var')>0 )then
                 plot_var='var'
