@@ -87,18 +87,22 @@ module ModMain
   logical :: UseIm = .false.
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
-  logical :: DoFixPolarRegion   = .false.
+  logical :: DoFixPolarRegion   = .false.  
   logical :: DoImSatTrace       = .false.
   logical :: DoRbSatTrace       = .false.
   real    :: rFixPolarRegion    = 5.0
   real    :: dLatSmoothIm       = -1.0
   real    :: TauCoupleIm        = 20.0
   real    :: RhoMinDimIm        = -1.0
+  !$acc declare create(DoCoupleImPressure, DoCoupleImDensity)
+  !$acc declare create(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
+  !$acc declare create(TauCoupleIm)
 
   logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = &
        IonLast_ > IonFirst_ .or. SpeciesLast_ > SpeciesFirst_
   logical :: DoAnisoPressureIMCoupling = .false.
+  !$acc declare create(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
 
   ! Single space separated NameVar string containing all the variable
   ! names of NameVar_V (except for the fluid energies)

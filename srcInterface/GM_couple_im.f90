@@ -797,6 +797,11 @@ contains
        IsImPpar_I(1) = .true.
     end if
 
+    !$acc update device(IM_lat, IM_lon)
+    !$acc update device(ImP_CV, ImRho_CV, ImPpar_CV)
+    !$acc update device(IM_bmin)
+    !$acc update device(IsImRho_I, IsImP_I, IsImPpar_I)
+    
 !    if(DoTest)call write_IMvars_tec  ! TecPlot output
 !    if(DoTest)call write_IMvars_idl  ! IDL     output
 
@@ -1609,7 +1614,6 @@ contains
     ! Assume GM -> IM direction in CON_couple_gm_im.f90
     allocate(iVarCouple_V(nVarCouple))
     iVarCouple_V = iVarSource_VCC(1:nVarCouple,iGm,iIm)
-
   end subroutine set_buffer_indexes
   !============================================================================
 
