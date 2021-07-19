@@ -756,6 +756,8 @@ contains
              call read_var('StringParcel', StringParcel)
              call read_var('DnParcel',dn_output(parcel_+1))
              dn_output(parcel_+1:parcel_+nParcel)=dn_output(parcel_+1)
+             call read_var('DtParcel',dt_output(parcel_+1))
+             dt_output(parcel_+1:parcel_+nParcel)=dt_output(parcel_+1)
              if(dn_output(parcel_+1) > 0)then
                 call read_var('nStartParcel',nStartParcel)
                 call read_var('nEndParcel',nEndParcel)
@@ -765,22 +767,22 @@ contains
                    call stop_mpi(NameSub//' correct #PARCEL: '// &
                         'nEndParcel<nStartParcel')
                 end if
-             end if
-             call read_var('DtParcel',dt_output(parcel_+1))
-             dt_output(parcel_+1:parcel_+nParcel)=dt_output(parcel_+1)
-             if(dt_output(parcel_+1) > 0)then
+             elseif(dt_output(parcel_+1) > 0)then
                 call read_var('StartTimeParcel',StartTimeParcel)
                 call read_var('EndTimeParcel',EndTimeParcel)
-             end if
-             if (EndTimeParcel < StartTimeParcel .or. &
-                  (EndTimeParcel-StartTimeParcel)/dt_output(parcel_+1) >&
-                  1e6) then
-                write(*,*) ' StartTimeParcel =', StartTimeParcel
-                write(*,*) ' EndTimeParcel   =', EndTimeParcel
+                if (EndTimeParcel < StartTimeParcel .or. &
+                     (EndTimeParcel-StartTimeParcel)/dt_output(parcel_+1) >&
+                     1e6) then
+                   write(*,*) ' StartTimeParcel =', StartTimeParcel
+                   write(*,*) ' EndTimeParcel   =', EndTimeParcel
+                   call stop_mpi(NameSub//' correct #PARCEL: '// &
+                        'EndTimeParcel<StartTimeParcel or too small DtParcel')
+                endif
+             else
                 call stop_mpi(NameSub//' correct #PARCEL: '// &
-                     'EndTimeParcel<StartTimeParcel or too small DtParcel')
+                     'Dt or Dn must be positive')
              endif
-
+             
              if(index(StringParcel,'VAR')>0 .or. &
                   index(StringParcel,'var')>0 )then
                 plot_var='var'

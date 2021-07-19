@@ -83,11 +83,10 @@ contains
 
     ! Parcel variables
     integer                     :: iParcel, iUnitParcel_I(MaxParcel)=-1
-    logical                     :: IsParcelFileName_e
     character(len=2)            :: ParcelFile
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'write_logfile'
+    
+    logical                     :: DoTest
+    character(len=*), parameter :: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
@@ -100,7 +99,7 @@ contains
     DoWritePosition = .false.
 
     if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
-        index(StringTest,'show_pmax')>0 ) ) then
+         index(StringTest,'show_pmax')>0 ) ) then
 
        tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock) &
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
@@ -145,6 +144,11 @@ contains
        StringTime = TimeSat_I(iSat)
        DoWritePosition = .true.
     elseif (iSatIn<0) then
+       if (time_accurate)then
+          StringTime = 'step time'
+       else
+          StringTime = 'step'
+       end if
        DoWritePosition = .true.
        call split_string(StringParcelVar, MaxLogVar, NameLogVar_I, nLogVar, &
             UseArraySyntaxIn=.true.)
@@ -271,13 +275,12 @@ contains
           if(iUnit < 0)then
              iUnitParcel_I(iParcel) = io_unit_new()
              iUnit = iUnitParcel_I(iParcel)
-             filename = trim(NamePlotDir) // 'pcl'
-             if(IsParcelFileName_e)then
-                ! Event date added to log file name
+             write(ParcelFile, '(i2.2)') iParcel
+             filename = trim(NamePlotDir) // 'pcl'//'_'//ParcelFile//'_'
+             if (time_accurate) then
                 call get_date_time(iTime_I)
                 write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
-                write(ParcelFile, '(i2.2)') iParcel
-                filename = trim(filename)//'_'//ParcelFile//'_'  // '_e' //trim(eventDateTime)
+                filename = trim(filename)//'_t' //trim(eventDateTime)
              else
                 if(n_step < 1000000)then
                    write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
@@ -285,7 +288,6 @@ contains
                    write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
                 end if
              end if
-
              filename = trim(filename) // '.pcl'
 
              call open_file(iUnit, FILE=filename)
