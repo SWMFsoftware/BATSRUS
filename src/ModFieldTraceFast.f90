@@ -162,7 +162,7 @@ contains
     ! Iteration parameters
     integer, parameter :: MaxIterTrace = 150
     integer :: nIterTrace
-    logical :: Done
+    logical :: Done_I(2) ! check for changes and loop rays
     real    :: dTraceMin
     !$acc declare create(nIterTrace)
 
@@ -237,6 +237,7 @@ contains
     !$acc parallel loop gang
     do iBlock = 1, nBlock
 
+!!! should we have i,j,k loops here???
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
           Trace_DINB(:,:,:,:,:,iBlock) = NORAY-1.
@@ -302,14 +303,14 @@ contains
 
     call timing_stop('trace_grid_fast1')
 
-    call timing_start("ray_iter")
+    call timing_start("trace_iter")
     do
 
        if(DoTest)write(*,*)'nIterTrace=',nIterTrace
 
        if(nIterTrace>=MaxIterTrace)EXIT
 
-       call timing_start("ray_iter1")
+       call timing_start("trace_iter1")
        !$acc parallel loop gang
        do iBlock = 1, nBlock
 
@@ -349,12 +350,14 @@ contains
                 do iRay = 1, 2
                    ! Follow ray in direction iRay
                    GenIni_D = [iX-0.5, iY-0.5, iZ-0.5]
-                   iFace = follow_fast(.true., Gen_D, GenIni_D, DoCheckInside, iRay, iBlock)
+                   iFace = follow_fast(.true., Gen_D, GenIni_D, DoCheckInside,&
+                        iRay, iBlock)
 
                    ! Assign value to Trace_DINB
                    call assign_ray(iFace, iRay, iBlock, iX, iY, iZ, &
                         i1, j1, k1, i2, j2, k2, &
-                        .true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D, Weight_I, .true.)
+                        .true.,Trace_DINB(:,iRay,iX,iY,iZ,iBlock), Gen_D,&
+                        Weight_I, .true.)
 
                    ! Memorize ray integration results
                    IjkTrace_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
@@ -417,18 +420,13 @@ contains
              end if ! nIterTrace==0
           end do; end do; end do ! iZ, iY, iX
        end do ! iBlock
-       call timing_stop("ray_iter1")
+       call timing_stop("trace_iter1")
 
        ! Exchange Trace_DINB information
 
-       call timing_start('ray_pass')
+       call timing_start('trace_pass')
        call ray_pass
-       call timing_stop('ray_pass')
-
-       ! Q:Why is this needed ???
-       ! A:The following 'Done' part is still on CPU, and it should be
-       !   Ported to GPU in the near future.
-       !$acc update host(Trace_DINB, ray)
+       call timing_stop('trace_pass')
 
        nIterTrace = nIterTrace + 1
        !$acc update device(nIterTrace)
@@ -438,25 +436,32 @@ contains
           call timing_show('ray_trace',1)
        end if
 
-!!! This should be either a loop with an exit or a loop with a reduce
-       ! Check if we are Done by checking for significant changes in Trace_DINB
-       !! acc serial
-       Done = all(abs(ray(:,:,:,:,:,1:nBlock) - &
-            Trace_DINB(:,:,:,:,:,1:nBlock)) < dTraceMin)
-       !! acc end serial
+       ! Check for significant changes and loop rays in Trace_DINB
+       call timing_start('trace_check')
+       Done_I = .true.
+       !$acc parallel loop gang reduction(.and.:Done_I)
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock))CYCLE
+          !$acc parallel loop vector collapse(3) reduction(.and.:Done_I)
+          do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
+             Done_I(1) = Done_I(1) .and. &
+                  all(all(abs(ray(:,:,i,j,k,iBlock) &
+                  -           Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
+             Done_I(2) =  Done_I(2) .and. &
+                  Trace_DINB(1,1,i,j,k,iBlock) > LOOPRAY .and. &
+                  Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
+          end do; end do; end do
+       end do
 
-       if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Done, 1, MPI_LOGICAL, &
+       if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Done_I, 2, MPI_LOGICAL, &
             MPI_LAND, iComm, iError)
 
-       if(Done)then
-          do iBlock = 1, nBlock
-             if(Unused_B(iBlock))CYCLE
-             Done = all(Trace_DINB(1,:,:,:,:,iBlock) > LOOPRAY) ! !! NORAY)
-             if(.not.Done)EXIT
-          end do
-          call MPI_allreduce(MPI_IN_PLACE, Done, 1, MPI_LOGICAL, &
-               MPI_LAND,iComm,iError)
-          if(Done) EXIT
+       call timing_stop('trace_check')
+
+       ! Check for change
+       if(Done_I(1)) then
+          ! Check for loops
+          if(Done_I(2)) EXIT
           if(UsePreferredInterpolation)then
              if(iProc==0)call error_report('ray tracing, nIterTrace=',&
                   nIterTrace+0.0,iError1,.true.)
@@ -469,7 +474,7 @@ contains
 
     end do ! ray iteration
 
-    call timing_stop("ray_iter")
+    call timing_stop("trace_iter")
 
 #ifndef OPENACC
     ! Check for unassigned Trace_DINB in every used block
