@@ -162,8 +162,7 @@ contains
     ! Iteration parameters
     integer, parameter :: MaxIterTrace = 150
     integer :: nIterTrace
-    logical :: Done_I(2) ! check for changes and loop rays
-    real    :: dTraceMin
+    real    :: dTraceMin, dTraceMax, NegTraceMax ! check for changes and loops
     !$acc declare create(nIterTrace)
 
     real :: TraceTmp_D(3)
@@ -438,33 +437,36 @@ contains
 
        ! Check for significant changes and loop rays in Trace_DINB
        call timing_start('trace_check')
-       Done_I = .true.
-       !$acc parallel loop gang reduction(.and.:Done_I)
+       dTraceMax = 0.0; NegTraceMax = 0.0  ! note that LOOPRAY is negative
+       !$acc parallel loop gang reduction(max:dTraceMax,NegTracemax)
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          !$acc parallel loop vector collapse(3) reduction(.and.:Done_I)
+          !$acc loop vector collapse(3) reduction(max:dTraceMax,NegTraceMax)
           do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
-             Done_I(1) = Done_I(1) .and. &
-                  all(abs(ray(:,:,i,j,k,iBlock) &
-                  -       Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
-             Done_I(2) =  Done_I(2) .and. &
-                  Trace_DINB(1,1,i,j,k,iBlock) > LOOPRAY .and. &
-                  Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
+             dTraceMax = max(dTraceMax, &
+                  maxval(abs(ray(:,:,i,j,k,iBlock) &
+                  -          Trace_DINB(:,:,i,j,k,iBlock))))
+             NegTraceMax = max(NegTraceMax, &
+                  -Trace_DINB(1,1,i,j,k,iBlock), -Trace_DINB(1,2,i,j,k,iBlock))
           end do; end do; end do
        end do
 
-       if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Done_I, 2, MPI_LOGICAL, &
-            MPI_LAND, iComm, iError)
+       if(nProc > 1)then
+          call MPI_allreduce(MPI_IN_PLACE, dTraceMax, 1, MPI_REAL,&
+               MPI_MAX, iComm, iError)
+          call MPI_allreduce(MPI_IN_PLACE, NegTraceMax, 1, MPI_REAL,&
+               MPI_MAX, iComm, iError)
+       end if
 
        call timing_stop('trace_check')
 
        ! Check for change
-       if(Done_I(1)) then
+       if(dTraceMax < dTraceMin) then
           ! Check for loops
-          if(Done_I(2)) EXIT
+          if(NegTraceMax < -LOOPRAY) EXIT
           if(UsePreferredInterpolation)then
-             if(iProc==0)call error_report('ray tracing, nIterTrace=',&
-                  nIterTrace+0.0,iError1,.true.)
+             if(iProc==0)call error_report('field tracing, nIterTrace=',&
+                  nIterTrace+0.0, iError1, .true.)
              EXIT
           endif
           if(DoTest)write(*,*)'Switching to UsePreferredInterpolation=.true.'
