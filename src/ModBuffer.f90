@@ -111,6 +111,7 @@ contains
   subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
     use ModMain,       ONLY: TypeCoordTarget=>TypeCoordSystem,  &
          Time_Simulation, DoThinCurrentSheet
+    use ModChGL,       ONLY: UseChGL, get_chgl_state
     use CON_axes,      ONLY: transform_matrix, transform_velocity
     use ModAdvance,    ONLY: UseB
     use ModWaves,      ONLY: UseAlfvenWaves
@@ -172,6 +173,8 @@ contains
           else
              State_V(SignB_)= 1.0
           end if
+       elseif(UseChGL)then
+          call get_chgl_state(XyzTarget_D, State_V)
        else
           State_V(SignB_) = 0.0
        end if
