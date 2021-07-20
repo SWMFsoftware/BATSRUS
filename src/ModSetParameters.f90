@@ -3730,7 +3730,7 @@ contains
       !$acc update device(DoCoupleImPressure, DoCoupleImDensity, TauCoupleIM)
       !$acc update device(DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm)
       !$acc update device(DoAnisoPressureIMCoupling, DoMultiFluidIMCoupling)
-      
+
     end subroutine correct_parameters
     !==========================================================================
 

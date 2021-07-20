@@ -801,7 +801,7 @@ contains
     !$acc update device(ImP_CV, ImRho_CV, ImPpar_CV)
     !$acc update device(IM_bmin)
     !$acc update device(IsImRho_I, IsImP_I, IsImPpar_I)
-    
+
 !    if(DoTest)call write_IMvars_tec  ! TecPlot output
 !    if(DoTest)call write_IMvars_idl  ! IDL     output
 

@@ -87,7 +87,7 @@ module ModMain
   logical :: UseIm = .false.
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
-  logical :: DoFixPolarRegion   = .false.  
+  logical :: DoFixPolarRegion   = .false.
   logical :: DoImSatTrace       = .false.
   logical :: DoRbSatTrace       = .false.
   real    :: rFixPolarRegion    = 5.0

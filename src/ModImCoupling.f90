@@ -41,7 +41,7 @@ module ModImCoupling
 
   ! indexes of passed variables
   integer, public, allocatable :: iVarCouple_V(:)
-  
+
   ! Local variables
 
   ! The size of the IM grid
@@ -114,11 +114,11 @@ contains
     ! integer :: iIonSecond, nIons
 
     logical:: DoTest
+#ifndef OPENACC
     character(len=*), parameter:: NameSub = 'get_im_pressure'
     !--------------------------------------------------------------------------
-#ifndef OPENACC    
     call test_start(NameSub, DoTest, iBlock)
-#endif    
+#endif
     ! iIonSecond = min(IonFirst_+1, IonLast_)
     ! if (DoMultiFluidIMCoupling) then
     !   nIons = iIonSecond
@@ -142,13 +142,13 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        TauCoeffIm_C(i,j,k) = 1.0
-       
+
        ! Default is negative, which means that do not nudge GM values
        pIm_IC(:,i,j,k)   = -1.0
        RhoIm_IC(:,i,j,k) = -1.0
        PparIm_IC(:,i,j,k)   = -1.0
        BminIm_C(i,j,k)   = -1.0
-       
+
        ! For closed field lines nudge towards IM pressure/density
        if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
 
@@ -220,7 +220,7 @@ contains
                   ImRho_CV(iLat1,iLon1,iDensity) > 0.0 .and. &
                   ImRho_CV(iLat2,iLon1,iDensity) > 0.0 .and. &
                   ImRho_CV(iLat1,iLon2,iDensity) > 0.0 .and. &
-                  ImRho_CV(iLat2,iLon2,iDensity) > 0.0) then                
+                  ImRho_CV(iLat2,iLon2,iDensity) > 0.0) then
                 RhoIm_IC(iDensity,i,j,k) = Si2No_V(UnitRho_)*( &
                      LonWeight1 * ( LatWeight1*ImRho_CV(iLat1,iLon1,iDensity) &
                      +              LatWeight2*ImRho_CV(iLat2,iLon1,iDensity))+&
@@ -238,13 +238,13 @@ contains
                   ImP_CV(iLat2,iLon1,iFluid) > 0.0 .and. &
                   ImP_CV(iLat1,iLon2,iFluid) > 0.0 .and. &
                   ImP_CV(iLat2,iLon2,iFluid) > 0.0) then
-                
+
                 pIm_IC(iFluid,i,j,k) = Si2No_V(UnitP_)*( &
                      LonWeight1 * ( LatWeight1*ImP_CV(iLat1,iLon1,iFluid) &
                      +              LatWeight2*ImP_CV(iLat2,iLon1,iFluid) ) + &
                      LonWeight2 * ( LatWeight1*ImP_CV(iLat1,iLon2,iFluid) &
                      +              LatWeight2*ImP_CV(iLat2,iLon2,iFluid) ) )
-                                    
+
              ! ppar at minimum B
              if(DoAnisoPressureIMCoupling .and. IsImPpar_I(iFluid) )then
                 PparIm_IC(iFluid,i,j,k) = Si2No_V(UnitP_)*( &
@@ -279,7 +279,7 @@ contains
                 pIm_IC(iFluid,i,j,k) = pIm_IC(iFluid,i,j,k)*Coeff &
                      + 2.0*Pperp*(Coeff - 1)*Coeff/3.0
                 PparIm_IC(iFluid,i,j,k) = PparIm_IC(iFluid,i,j,k)*Coeff
-                RhoIm_IC(iFluid,i,j,k) = RhoIm_IC(iFluid,i,j,k)*Coeff                
+                RhoIm_IC(iFluid,i,j,k) = RhoIm_IC(iFluid,i,j,k)*Coeff
              end if
 
              if(dLatSmoothIm > 0.0)then
@@ -309,7 +309,7 @@ contains
           do iFluid = 1, nFluid
              pIm_IC(iFluid,i,j,k) = PolarP_I(iFluid)
           end do
-          
+
           do iDensity = 1, nDensity
              RhoIm_IC(iDensity,i,j,k) = PolarRho_I(iDensity)
           end do
@@ -318,7 +318,7 @@ contains
     end do; end do; end do
 #ifndef OPENACC
     call test_stop(NameSub, DoTest, iBlock)
-#endif    
+#endif
   end subroutine get_im_pressure
   !============================================================================
   subroutine apply_im_pressure
@@ -328,11 +328,10 @@ contains
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies, &
          nSpecies
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
-    use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_, Si2No_V
+    use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModFieldTraceFast, ONLY: trace_field_grid
-    use ModFieldTrace, ONLY : ray
     use ModB0, ONLY: B0_DGB
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
@@ -428,8 +427,8 @@ contains
     end if
     !$acc update device(iDens_I)
 
-    if (.not.allocated(RhoIm_ICB)) allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))    
-        
+    if (.not.allocated(RhoIm_ICB)) allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
+
     !$acc parallel loop gang copyin(nDensity, RhoMinIm, Factor, nDensity) &
     !$acc private(pIm_IC, TauCoeffIm_C, PparIm_IC)
     do iBlock = 1, nBlock
@@ -442,7 +441,7 @@ contains
 
 #ifndef OPENACC
        if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do
-#endif       
+#endif
 
        ! Put velocity into momentum temporarily when density is changed
        if(DoCoupleImDensity)then
@@ -452,11 +451,11 @@ contains
                 if(RhoIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
                    InvRho = 1./State_VGB(iRho_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
-                        InvRho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                     
+                        InvRho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)= &
-                        InvRho*State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)                
+                        InvRho*State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)= &
-                        InvRho*State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)                
+                        InvRho*State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)
                 end if
              end do
           end do; end do; end do
@@ -468,13 +467,13 @@ contains
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
-                   if (.not. IsImP_I(iFluid)) CYCLE                   
+                   if (.not. IsImP_I(iFluid)) CYCLE
                    if(pIm_IC(iFluid,i,j,k) > 0.0) &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
                         + Factor * TauCoeffIm_C(i,j,k) &
                         * (pIm_IC(iFluid,i,j,k) - &
-                        State_VGB(iP_I(iFluid),i,j,k,iBlock))                   
+                        State_VGB(iP_I(iFluid),i,j,k,iBlock))
                 end do
              end do; end do; end do
 
@@ -490,7 +489,7 @@ contains
                            * (PparIm_IC(iFluid,i,j,k) - &
                            State_VGB(Ppar_,i,j,k,iBlock))
                    end do
-                end do; end do; end do                   
+                end do; end do; end do
              end if
           end if
           if(DoCoupleImDensity)then
@@ -512,7 +511,7 @@ contains
           end if
        else
           if(DoCoupleImPressure)then
-             !APPLY_P2
+             ! APPLY_P2
              !$acc loop vector collapse(3)
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
@@ -540,7 +539,7 @@ contains
           end if
           if(DoCoupleImDensity)then
              !$acc loop vector collapse(3)
-             do k = 1, nK; do j = 1, nJ; do i = 1,nI ! APPLY_DENS2             
+             do k = 1, nK; do j = 1, nJ; do i = 1,nI ! APPLY_DENS2
                 do iDensity = 1,nDensity
                    if (.not. IsImRho_I(iDensity)) CYCLE
                    if(RhoIm_ICB(iDensity,i,j,k,iBlock) <= 0.0) CYCLE
@@ -557,12 +556,12 @@ contains
        ! Convert back to momentum
        if(DoCoupleImDensity)then
           !$acc loop vector collapse(3)
-          do k = 1, nK; do j = 1, nJ; do i = 1,nI          
+          do k = 1, nK; do j = 1, nJ; do i = 1,nI
              do iFluid = 1, nFluid! nIons
                 Rho = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
-                if(RhoIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then 
+                if(RhoIm_ICB(iFluid,i,j,k,iBlock) > 0.0) then
                    State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)= &
-                        Rho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)                        
+                        Rho*State_VGB(iRhoUx_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)= &
                         Rho*State_VGB(iRhoUy_I(iFluid),i,j,k,iBlock)
                    State_VGB(iRhoUz_I(iFluid),i,j,k,iBlock)= &
@@ -576,7 +575,7 @@ contains
 
     call sync_cpu_gpu('change State_VGB on GPU', NameSub)
 
-    if(allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)    
+    if(allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)
     if(allocated(iDens_I)) deallocate(iDens_I)
 
     call timing_stop(NameSub)
