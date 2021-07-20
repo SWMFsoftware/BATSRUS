@@ -263,7 +263,7 @@ contains
   subroutine set_dipole
 
     use ModMain,  ONLY: Time_Simulation
-    use CON_axes, ONLY: get_axes
+    use CON_axes, ONLY: get_axes, update_axes_gpu
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_dipole'
@@ -282,6 +282,8 @@ contains
     Dipole_D = Dipole_D * Bdp
     !$acc update device(Dipole_D)
 
+    call update_axes_gpu
+    
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     call test_stop(NameSub, DoTest)
 
