@@ -158,7 +158,7 @@ contains
 
           if(iSignRotationIC /= 0) &
                call add_rotational_velocity(iSignRotationIC, iBlock)
-          
+
           if(UseChGL)call init_chgl(iBlock)
        end if ! not restart
 

@@ -113,8 +113,8 @@ contains
 
     ! integer :: iIonSecond, nIons
 
-    logical:: DoTest
 #ifndef OPENACC
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_im_pressure'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)

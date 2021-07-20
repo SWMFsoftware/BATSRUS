@@ -459,7 +459,7 @@ contains
                   Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
           end do; end do; end do
        end do
-       
+
        if(nProc > 1)then
           Done_I = [DoneChange, DoneLoop]
           call MPI_allreduce(MPI_IN_PLACE, Done_I, 2, MPI_LOGICAL, &

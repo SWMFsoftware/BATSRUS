@@ -283,7 +283,7 @@ contains
     !$acc update device(Dipole_D)
 
     call update_axes_gpu
-    
+
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     call test_stop(NameSub, DoTest)
 

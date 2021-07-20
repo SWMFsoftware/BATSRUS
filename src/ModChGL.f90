@@ -30,7 +30,7 @@ contains
   !============================================================================
   subroutine read_chgl_param
     use ModReadParam, ONLY: read_var
-    !-------------------------------
+    !--------------------------------------------------------------------------
     call read_var('UseChGL', UseChGL)
     if(.not.UseChGL)RETURN
     if(SignB_==1)call stop_mpi(&
