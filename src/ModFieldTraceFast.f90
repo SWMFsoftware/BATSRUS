@@ -152,7 +152,7 @@ contains
     use ModMain
     use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateSlow_
     use ModB0,       ONLY: get_b0
-    use ModUpdateStateFast, ONLY: get_b0_dipole_fast
+    !@acc use ModUpdateStateFast, ONLY: get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
@@ -162,7 +162,9 @@ contains
     ! Iteration parameters
     integer, parameter :: MaxIterTrace = 150
     integer :: nIterTrace
-    real    :: dTraceMin, dTraceMax, NegTraceMax ! check for changes and loops
+    ! check for changes and loop rays in the iterative scheme
+    logical :: DoneChange, DoneLoop, Done_I(2)
+    real    :: dTraceMin
     !$acc declare create(nIterTrace)
 
     real :: TraceTmp_D(3)
@@ -437,36 +439,38 @@ contains
 
        ! Check for significant changes and loop rays in Trace_DINB
        call timing_start('trace_check')
-       dTraceMax = 0.0; NegTraceMax = 0.0  ! note that LOOPRAY is negative
-       !$acc parallel loop gang reduction(max:dTraceMax,NegTracemax)
+
+       DoneChange = .true.; DoneLoop = .true.
+       !$acc parallel loop gang reduction(.and.:DoneChange,DoneLoop)
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
-          !$acc loop vector collapse(3) reduction(max:dTraceMax,NegTraceMax)
+          !$acc loop vector collapse(3) reduction(.and.:DoneChange,DoneLoop)
           do k = 1,nK+1; do j = 1,nJ+1; do i = 1,nI+1
-             dTraceMax = max(dTraceMax, &
-                  maxval(abs(ray(:,:,i,j,k,iBlock) &
-                  -          Trace_DINB(:,:,i,j,k,iBlock))))
-             NegTraceMax = max(NegTraceMax, &
-                  -Trace_DINB(1,1,i,j,k,iBlock), -Trace_DINB(1,2,i,j,k,iBlock))
+             DoneChange = DoneChange .and. &
+                  all(abs(ray(:,:,i,j,k,iBlock) &
+                  -       Trace_DINB(:,:,i,j,k,iBlock)) < dTraceMin)
+             DoneLoop = DoneLoop .and. &
+                  Trace_DINB(1,1,i,j,k,iBlock) > LOOPRAY .and. &
+                  Trace_DINB(1,2,i,j,k,iBlock) > LOOPRAY
           end do; end do; end do
        end do
-
+       
        if(nProc > 1)then
-          call MPI_allreduce(MPI_IN_PLACE, dTraceMax, 1, MPI_REAL,&
-               MPI_MAX, iComm, iError)
-          call MPI_allreduce(MPI_IN_PLACE, NegTraceMax, 1, MPI_REAL,&
-               MPI_MAX, iComm, iError)
+          Done_I = [DoneChange, DoneLoop]
+          call MPI_allreduce(MPI_IN_PLACE, Done_I, 2, MPI_LOGICAL, &
+               MPI_LAND, iComm, iError)
+          DoneChange = Done_I(1); DoneLoop = Done_I(2)
        end if
 
        call timing_stop('trace_check')
 
        ! Check for change
-       if(dTraceMax < dTraceMin) then
+       if(DoneChange) then
           ! Check for loops
-          if(NegTraceMax < -LOOPRAY) EXIT
+          if(DoneLoop) EXIT
           if(UsePreferredInterpolation)then
-             if(iProc==0)call error_report('field tracing, nIterTrace=',&
-                  nIterTrace+0.0, iError1, .true.)
+             if(iProc==0)call error_report('ray tracing, nIterTrace=',&
+                  nIterTrace+0.0,iError1,.true.)
              EXIT
           endif
           if(DoTest)write(*,*)'Switching to UsePreferredInterpolation=.true.'
