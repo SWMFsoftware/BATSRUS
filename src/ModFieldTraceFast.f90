@@ -152,7 +152,7 @@ contains
     use ModMain
     use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateSlow_
     use ModB0,       ONLY: get_b0
-    !@acc use ModUpdateStateFast, ONLY: get_b0_dipole_fast
+    use ModUpdateStateFast, ONLY: get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
