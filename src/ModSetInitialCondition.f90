@@ -28,6 +28,7 @@ contains
          UseShockTube, UnitUser_V, ShockLeftState_V, ShockRightState_V, &
          ShockPosition, UnitU_, Io2No_V
     use ModUserInterface ! user_set_ics
+    use ModChGL,          ONLY: UseChGL, init_chgl
     use ModConstrainDivB, ONLY: constrain_ics
     use ModMultiFluid
     use ModRestartFile, ONLY: UseRestartWithFullB
@@ -153,12 +154,12 @@ contains
           end do; end do; end do
 
           if(UseConstrainB) call constrain_ics(iBlock)
-
           if(UseUserICs) call user_set_ics(iBlock)
 
           if(iSignRotationIC /= 0) &
                call add_rotational_velocity(iSignRotationIC, iBlock)
-
+          
+          if(UseChGL)call init_chgl(iBlock)
        end if ! not restart
 
     end if ! Unused_B

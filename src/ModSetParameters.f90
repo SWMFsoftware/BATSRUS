@@ -134,6 +134,7 @@ contains
     use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
          UseBorisRegion, init_mod_boris_correction
     use ModUserInterface ! user_read_inputs, user_init_session
+    use ModChGL, ONLY: read_chgl_param
     use ModConserveFlux, ONLY: init_mod_cons_flux, DoConserveFlux
     use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
     use ModFreq, ONLY: adjust_freq
@@ -2521,7 +2522,8 @@ contains
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
-
+       case("#ALIGNBANDU")
+          call read_chgl_param
           ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 
        case("#OHNEUTRALS")

@@ -9974,6 +9974,46 @@ current sheet is located by using a level set method for the sign.
 Default value is DoThinCurrentSheet = .false.
 </command>
 
+<command name="ALIGNBANDU">
+  <parameter name="UseChGL" type="logical" default="F"/>
+  <if expr="$UseChGL">
+    <parameter name="RSourceChGL" type="real" min="0" default="0"/>
+    <parameter name="RMinChGL" type="real" min="-1" default="-1"/>
+  </if>
+  
+#ALIGNBANDU
+T                       UseClGL
+2.5                     RSourceChGL
+2.5                     RMinChGL
+
+To use this command, SignB_ component of the state vector should be declared
+in the ModEquation (the possible choice is -e=AwsomChGL). In steady-state one
+can claim that the streamlineas and magnetic field lines are aligned and the
+ratio of magnetic flux to mass flux is constant along the magnetic flux tube,
+hence, the ratio of the magnetic field to velocity vectors obeys the
+conservation law. BELOW RSourceChGL this ratio (Chew-Golberger-Low state
+variable is set (as \mf{U}\cdot\bf{B}/U^2). If RSourceChGL = 0, or less than
+the miminum radius of the model geometry, the said variable is unset (either
+coupled from the model below, say from SC to IH, or set to zero identically).
+ABOVE RMinChGL, the magnetic field is enforced to be aligned with the velocity
+vector and equal to the velocity vector multipled by the local value of the
+ChGL variable. If RMinChGL= 0, or less than the miminum radius of the model
+geometry the magnetic field is aligned everywhere, if it is huge or read as
+negative (and then reset to huge(1.0) automatically), it is not aligned
+anywhere. The above setting is recommended for the steady-state SC, the
+recommended setting for the coupled steady-state IH being:
+
+#ALIGNBANDU
+T                       UseClGL
+0.0                     RSourceChGL    ! Coupled 
+0.0                     RMinChGL       ! Applied everywhere
+
+For the time accurate run in SC one can set UseClGL to .false.,
+while in IH one may want to gradually increase RRMinChGL to keep good
+steady-state solution in the region not affected by the time-accurate
+perturbation prropagatin outward the Sun
+</command>
+
 <command name="HELIOUPDATEB0" if="$NameComp ne 'GM'">
   <parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
 
