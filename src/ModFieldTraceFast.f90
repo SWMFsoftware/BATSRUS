@@ -71,12 +71,12 @@ contains
   !============================================================================
   subroutine clean_mod_trace_fast
     !--------------------------------------------------------------------------
-    if(allocated(Trace_DINB))    deallocate(Trace_DINB)
-    if(allocated(IjkTrace_DINB)) deallocate(IjkTrace_DINB)
-    if(allocated(WeightTrace_DINB))    deallocate(WeightTrace_DINB)
-    if(allocated(b_DNB))         deallocate(b_DNB)
-    if(allocated(b_DGB))         deallocate(b_DGB)
-    if(allocated(ray))           deallocate(ray)
+    if(allocated(Trace_DINB))       deallocate(Trace_DINB)
+    if(allocated(IjkTrace_DINB))    deallocate(IjkTrace_DINB)
+    if(allocated(WeightTrace_DINB)) deallocate(WeightTrace_DINB)
+    if(allocated(b_DNB))            deallocate(b_DNB)
+    if(allocated(b_DGB))            deallocate(b_DGB)
+    if(allocated(ray))              deallocate(ray)
 
   end subroutine clean_mod_trace_fast
   !============================================================================
@@ -167,7 +167,8 @@ contains
     real    :: dTraceMin
     !$acc declare create(nIterTrace)
 
-    real :: TraceTmp_D(3)
+    ! Small arrays to pass as arguments
+    real :: TraceTmp_D(3), Trace_DI(3,4)
 
     ! Minimum value of B for which integration of field lines makes any sense
     real, parameter :: SmallB = 1e-8
@@ -191,7 +192,7 @@ contains
     real :: Weight_I(4)
 
     ! Cell indices
-    integer :: i, j, k
+    integer :: i, j, k, ii, jj, kk, iCount
 
     ! Indices corresponding to the starting point of the ray
     integer :: iX, iY, iZ
@@ -327,7 +328,8 @@ contains
           DoCheckInside=Rmin_BLK(iBlock)<rTrace
 
           !$acc loop vector collapse(3) independent &
-          !$acc private(Gen_D, GenIni_D,Weight_I, TraceTmp_D)
+          !$acc private(Gen_D, GenIni_D, Weight_I, TraceTmp_D, Trace_DI, &
+          !$acc         ii, jj, kk, iCount)
           do iZ=1,nK+1; do iY=1,nJ+1; do iX=1,nI+1
              ! Exclude inside points
              if(iX>1 .and. iX<=nI .and. iY>1 .and. iY<=nJ &
@@ -406,12 +408,14 @@ contains
                          j1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
                       end select
 
-!!! We should not pass an array segment
-                      ! ray instead of Trace_DINB is used for the first argument
-                      ! to avoid GPU race condition.
-                      call rayface_interpolate(&
-                           ray(:,iRay,i1:i2,j1:j2,k1:k2,iBlock),&
-                           WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock),4,&
+                      ! Put interpolation values into a small array
+                      iCount = 1
+                      do kk = k1, k2; do jj = j1, j2; do ii = i1, i2
+                         Trace_DI(:,iCount) = ray(:,iRay,ii,jj,kk,iBlock)
+                         iCount = iCount + 1
+                      end do; end do; end do
+                      call rayface_interpolate(Trace_DI, &
+                           WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock), 4, &
                            TraceTmp_D)
 
                       Trace_DINB(:,iRay,iX,iY,iZ,iBlock) = TraceTmp_D
