@@ -255,7 +255,7 @@ contains
        Source_VCB = 0.0
     endif
 
-#ifdef OPENACC
+#ifdef _OPENACC
     nGang = MaxBlock
 #endif
 

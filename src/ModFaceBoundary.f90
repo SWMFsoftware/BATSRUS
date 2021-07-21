@@ -5,7 +5,7 @@ module ModFaceBoundary
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iVarTest, iProc
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModVarIndexes, ONLY: nVar

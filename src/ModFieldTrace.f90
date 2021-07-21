@@ -11,7 +11,7 @@ module ModFieldTrace
        MaxBlock, x_, y_, z_, IsCartesianGrid
   use ModMain, ONLY: TypeCoordSystem
   use ModPhysics, ONLY: rBody
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModNumConst, ONLY: i_DD

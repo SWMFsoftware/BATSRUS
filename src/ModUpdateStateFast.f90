@@ -183,7 +183,7 @@ contains
     real:: DivU, DivB, DivE, DtPerDv, Change_V(nFlux)
     !$acc declare create (Change_V)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     integer:: iVar
 #endif
 
@@ -202,7 +202,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-#ifdef OPENACC
+#ifdef _OPENACC
        iGang = iBlock
 #else
        iGang = 1
@@ -215,7 +215,7 @@ contains
        if(UseBody .and. IsBodyBlock)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
                   .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
                   .and. (iDimTest == 0 .or. iDimTest == 1)
@@ -230,7 +230,7 @@ contains
           if(nDim > 1)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
                      .and. (iDimTest == 0 .or. iDimTest == 2)
@@ -246,7 +246,7 @@ contains
           if(nDim > 2)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
                      .and. (iDimTest == 0 .or. iDimTest == 3)
@@ -262,7 +262,7 @@ contains
        else ! Not a body block
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. (i==iTest .or. i==iTest+1) &
                   .and. j==jTest .and. k==kTest .and. iBlock == iBlockTest &
                   .and. (iDimTest == 0 .or. iDimTest == 1)
@@ -272,7 +272,7 @@ contains
           if(nDim > 1)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. (j==jTest .or. j==jTest+1) .and. k==kTest &
                      .and. (iDimTest == 0 .or. iDimTest == 2)
@@ -283,7 +283,7 @@ contains
           if(nDim > 2)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. j==jTest .and. (k==kTest .or. k==kTest+1) &
                      .and. (iDimTest == 0 .or. iDimTest == 3)
@@ -295,7 +295,7 @@ contains
        if(.not.IsTimeAccurate .and. iStage==1) call calc_timestep(iBlock)
 
        ! Update
-#ifndef OPENACC
+#ifndef _OPENACC
        if(DoTest .and. iBlock==iBlockTest)then
           write(*,*)NameSub,' nStep=', nStep,' iStage=', iStage,     &
                ' dt=',DtMax_CB(iTest,jTest,kTest,iBlock)*Cfl
@@ -314,7 +314,7 @@ contains
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
           end if
 
-#ifndef OPENACC
+#ifndef _OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
 #endif
@@ -364,7 +364,7 @@ contains
                   + DivE*cross_product( &
                   B0_DGB(:,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
-#ifndef OPENACC
+#ifndef _OPENACC
              if(DoTestCell)then
                 write(*,*) '!!! Enx =', Flux_VXI(En_,i:i+1,j,k,iGang)
                 write(*,*) '!!! Eny =', Flux_VYI(En_,i,j:j+1,k,iGang)
@@ -463,7 +463,7 @@ contains
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-#ifndef OPENACC
+#ifndef _OPENACC
           if(DoTestCell)then
              write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
              write(*,'(2x,a,2es23.15)') &
@@ -527,7 +527,7 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifndef OPENACC
+#ifndef _OPENACC
     integer:: iVar
     !--------------------------------------------------------------------------
     iGang = 1
@@ -540,7 +540,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,x_)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,*)'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
        do iVar = 1, nVar
@@ -568,7 +568,7 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifndef OPENACC
+#ifndef _OPENACC
     integer:: iVar
     !--------------------------------------------------------------------------
     iGang = 1
@@ -581,7 +581,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,y_)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,*)'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
        do iVar = 1, nVar
@@ -609,7 +609,7 @@ contains
     real :: Area, Normal_D(3), B0_D(3)
     real :: StateLeft_V(nVar), StateRight_V(nVar)
     integer:: iGang
-#ifndef OPENACC
+#ifndef _OPENACC
     integer:: iVar
     !--------------------------------------------------------------------------
     iGang = 1
@@ -622,7 +622,7 @@ contains
 
     if(UseB0) call get_b0_face(B0_D,i,j,k,iBlock,z_)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,*)'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
        do iVar = 1, nVar
@@ -669,7 +669,7 @@ contains
           !$acc loop vector collapse(3) private(Change_V) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.Used_GB(i,j,k,iBlock)) CYCLE
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest
 #endif
@@ -766,7 +766,7 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                   call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest
              if(DoTestCell)then
@@ -838,7 +838,7 @@ contains
              if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                   call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                   .and. iBlock == iBlockTest
              if(DoTestCell)then
@@ -1146,7 +1146,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-#ifdef OPENACC
+#ifdef _OPENACC
        iGang = iBlock
 #else
        iGang = 1
@@ -1166,7 +1166,7 @@ contains
        if(UseBody .and. IsBodyBlock)then
           !$acc loop vector collapse(3) independent
           do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-#ifndef OPENACC
+#ifndef _OPENACC
              DoTestCell = DoTest .and. (i == iTest .or. i == iTest+1) .and. &
                   j == jTest .and. k == kTest .and. iBlock == iBlockTest
 #endif
@@ -1181,7 +1181,7 @@ contains
           if(nDim > 1)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 #endif
@@ -1197,7 +1197,7 @@ contains
           if(nDim > 2)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 #endif
@@ -1219,7 +1219,7 @@ contains
           if(nDim > 1)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. (j==jTest .or. j==jTest+1) .and. k==kTest
 #endif
@@ -1229,7 +1229,7 @@ contains
           if(nDim > 2)then
              !$acc loop vector collapse(3) independent
              do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-#ifndef OPENACC
+#ifndef _OPENACC
                 DoTestCell = DoTest .and. iBlock==iBlockTest .and. i==iTest &
                      .and. j==jTest .and. (k==kTest .or. k==kTest+1)
 #endif
@@ -1246,7 +1246,7 @@ contains
              if(.not. Used_GB(i,j,k,iBlock)) CYCLE
           end if
 
-#ifndef OPENACC
+#ifndef _OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
 #endif
@@ -1371,7 +1371,7 @@ contains
           if(.not.UseNonConservative .or. nConservCrit>0.and.IsConserv) &
                call energy_to_pressure(State_VGB(:,i,j,k,iBlock))
 
-#ifndef OPENACC
+#ifndef _OPENACC
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
                .and. iBlock == iBlockTest
           if(DoTestCell)then
@@ -1469,7 +1469,7 @@ contains
     real:: Change_V(nFlux+nDim), CellVolume, DtPerDv
     !$acc declare create (Change_V)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state_gpu_prim'
     !--------------------------------------------------------------------------
@@ -1481,7 +1481,7 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
-#ifdef OPENACC
+#ifdef _OPENACC
        iGang = iBlock
 #else
        iGang = 1
@@ -1582,7 +1582,7 @@ contains
     end do
     !$acc end parallel
 
-#ifndef OPENACC
+#ifndef _OPENACC
     call test_stop(NameSub, DoTest, iBlock)
 #endif
   end subroutine update_state_gpu_prim
@@ -1704,7 +1704,7 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iVar, iGang
-#ifdef OPENACC
+#ifdef _OPENACC
     !--------------------------------------------------------------------------
     iGang = iBlock
 #else
@@ -1755,7 +1755,7 @@ contains
     logical, intent(in), optional:: IsBodyBlock
 
     integer:: iVar, iGang
-#ifdef OPENACC
+#ifdef _OPENACC
     !--------------------------------------------------------------------------
     iGang = iBlock
 #else
@@ -1802,7 +1802,7 @@ contains
     logical, intent(in), optional :: IsBodyBlock
 
     integer:: iVar, iGang
-#ifdef OPENACC
+#ifdef _OPENACC
     !--------------------------------------------------------------------------
     iGang = iBlock
 #else
@@ -2512,7 +2512,7 @@ contains
     if(present(Cleft))  Cleft  = Un - Fast
     if(present(Cright)) Cright = Un + Fast
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,*) &
             ' iFluid, rho, p(face)   =', 1, State_V(Rho_), State_V(p_)
@@ -2652,7 +2652,7 @@ contains
     if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
     if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,*) ' InvRho, p      =', InvRho, p
        write(*,*) ' FullB, FullBn  =', FullB_D, FullBn
@@ -2694,7 +2694,7 @@ contains
 
     real :: AreaInvCdiff, Cproduct, Bn
 
-#ifndef OPENACC
+#ifndef _OPENACC
     integer:: iVar
 #endif
     !--------------------------------------------------------------------------
@@ -2827,7 +2827,7 @@ contains
     ! Store time step constraint (to be generalized for multifluid)
     Flux_V(Vdt_) = abs(Area)*Cmax
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTestCell)then
        write(*,'(1x,a,3es13.5)')'Hat state for Normal_D=',Normal_D
        write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))

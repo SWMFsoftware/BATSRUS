@@ -7,7 +7,7 @@ module ModCoronalHeating
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModMain,       ONLY: nI, nJ, nK

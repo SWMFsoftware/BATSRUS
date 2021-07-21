@@ -8,7 +8,7 @@ module ModIeCoupling
   use ModAdvance,    ONLY: nSpecies
   use ModMultiFluid, ONLY: nIonFluid
   use ModCoordTransform, ONLY: xyz_to_dir, sph_to_xyz, cross_product
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
 

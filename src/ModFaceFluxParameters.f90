@@ -7,7 +7,7 @@ module ModFaceFluxParameters
 
   public :: init_face_flux_arrays
 
-#ifdef OPENACC
+#ifdef _OPENACC
   integer, parameter :: nFFLogic = 10, nFFInt = 17, nFFReal = 53
 #else
   integer, parameter :: nFFLogic = 1, nFFInt = 1, nFFReal = 1
@@ -112,7 +112,7 @@ contains
     ! not correctly initialized. So, they are explicitly initialized
     ! here.
 
-#ifdef OPENACC
+#ifdef _OPENACC
     !--------------------------------------------------------------------------
     IFF_I(iFluidMin_) = 1
     IFF_I(iFluidMax_) = nFluid

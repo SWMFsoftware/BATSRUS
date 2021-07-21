@@ -8,7 +8,7 @@ module ModWriteLogSatFile
        iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest, &
        iProc, nProc, iComm
   use,intrinsic :: ieee_arithmetic
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
 

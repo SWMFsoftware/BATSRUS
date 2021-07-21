@@ -6,7 +6,7 @@ module ModImCoupling
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   ! Routines related to the coupline with the Inner Magnetosphere component
@@ -113,7 +113,7 @@ contains
 
     ! integer :: iIonSecond, nIons
 
-#ifndef OPENACC
+#ifndef _OPENACC
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_im_pressure'
     !--------------------------------------------------------------------------
@@ -316,7 +316,7 @@ contains
        end if
 
     end do; end do; end do
-#ifndef OPENACC
+#ifndef _OPENACC
     call test_stop(NameSub, DoTest, iBlock)
 #endif
   end subroutine get_im_pressure
@@ -439,7 +439,7 @@ contains
 
        if(Unused_B(iBlock)) CYCLE
 
-#ifndef OPENACC
+#ifndef _OPENACC
        if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do
 #endif
 

@@ -7,7 +7,7 @@ module ModBatlInterface
   ! by extending its capabilities with BATSRUS specific extra actions
 
   use BATL_lib, ONLY: test_start, test_stop
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc

@@ -137,7 +137,7 @@ contains
        if(iTypeUpdate >= UpdateFast_)then
           call update_state_fast
        else
-#ifndef OPENACC
+#ifndef _OPENACC
           ! CPU compatible code
           !$omp parallel do
           do iBlock = 1,nBlock

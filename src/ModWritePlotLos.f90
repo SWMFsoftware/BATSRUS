@@ -2,7 +2,7 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModWritePlotLos
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use BATL_lib, ONLY: &

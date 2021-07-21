@@ -5,7 +5,7 @@ module ModCurrent
 
   use BATL_lib, ONLY: &
        test_start, test_stop
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModCoordTransform, ONLY: sph_to_xyz, cross_product

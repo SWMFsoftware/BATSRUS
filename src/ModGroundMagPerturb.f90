@@ -725,7 +725,7 @@ contains
 
              ! If the FAC is under certain threshold, do nothing
              ! This  should be commented out for testing the volume
-#ifndef OPENACC
+#ifndef _OPENACC
              if (Fac_II(iTheta,iPhi) == 0.0 &
                   .and. .not.(UseFastFacIntegral.or.UseSurfaceIntegral)) CYCLE
 
@@ -737,7 +737,7 @@ contains
 
              ! Count local line index
              if(UseFastFacIntegral) then
-#ifndef OPENACC
+#ifndef _OPENACC
                 iLineProc = iLineProc + 1
 #else
                 iLineProc = iPhi + nPhi*(iTheta-1)
@@ -797,7 +797,7 @@ contains
                 r = rCurrents - dR*(k-0.5)
 
                 ! get next position and field along the field line
-#ifndef OPENACC
+#ifndef _OPENACC
                 if(iTypeUpdate <= UpdateSlow_)then
                    call map_planet_field(Time_Simulation, XyzRcurrents_D, &
                         TypeCoordFacGrid//' NORM', r, XyzMid_D, iHemisphere)
@@ -809,7 +809,7 @@ contains
                    call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
                         iHemisphere)
                    call get_b0_dipole_fast(XyzMid_D, b_D, IsAligned=.true.)
-#ifndef OPENACC
+#ifndef _OPENACC
                 end if
 #endif
                 ! The volume element is proportional to 1/Br. The sign

@@ -2230,7 +2230,7 @@ contains
     use ModAdvance,  ONLY: nFlux
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_physical_flux
-#ifndef OPENACC
+#ifndef _OPENACC
     use ModFaceFlux, ONLY: iFace, jFace, kFace, DoTestCell, &
          HallJx, HallJy, HallJz, UseHallGradPe, B0x, B0y, B0z, Area
 #endif
@@ -2241,7 +2241,7 @@ contains
     real, intent(in)   :: StateCons_VC(:,:,:,:) ! dimension(nVar,nI,nJ,nK)
     real, intent(in)   :: B0_DC(:,:,:,:)        ! dimension(MaxDim,nI,nJ,nK)
     real, intent(out)  :: Flux_VC(:,:,:,:)      ! dimension(nVar,nI,nJ,nK)
-#ifndef OPENACC
+#ifndef _OPENACC
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
@@ -2303,7 +2303,7 @@ contains
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: &
          set_block_values, set_cell_values, get_speed_max
-#ifndef OPENACC
+#ifndef _OPENACC
     use ModFaceFlux, ONLY: B0x, B0y, B0z, CmaxDt, Area, DoTestCell,&
          iFace, jFace, kFace, UnLeft_I, UnRight_I
 #endif
@@ -2319,7 +2319,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
-#ifndef OPENACC
+#ifndef _OPENACC
     call test_start(NameSub, DoTest, iBlock)
 
     ! The electron speed is set to zero (I can't remember why)

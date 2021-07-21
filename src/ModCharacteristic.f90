@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModCharacteristicMhd
 
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   use ModCoordTransform, ONLY: cross_product

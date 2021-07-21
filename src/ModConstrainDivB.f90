@@ -125,7 +125,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_VxB'
     !--------------------------------------------------------------------------
     iGang = 1
-#ifdef OPENACC
+#ifdef _OPENACC
     iGang = iBlock
 #endif
     call test_start(NameSub, DoTest, iBlock)
@@ -193,7 +193,7 @@ contains
     character(len=*), parameter:: NameSub = 'bound_VxB'
     !--------------------------------------------------------------------------
     iGang = 1
-#ifdef OPENACC
+#ifdef _OPENACC
     iGang = iBlock
 #endif
     call test_start(NameSub, DoTest, iBlock)

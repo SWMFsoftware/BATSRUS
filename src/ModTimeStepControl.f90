@@ -146,7 +146,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-#ifdef OPENACC
+#ifdef _OPENACC
     iGang = iBlock
 #else
     iGang = 1
@@ -169,7 +169,7 @@ contains
        end if
     end do; end do; end do
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoFixAxis)then
        ! Use the time step in the super cell of the cell just outside.
        ! In time accurate this removes the time step constraints from supercell
@@ -297,7 +297,7 @@ contains
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
     end if
 
-#ifndef OPENACC
+#ifndef _OPENACC
     if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
@@ -311,7 +311,7 @@ contains
        end do; end do; end do
     endif
 
-#ifndef OPENACC
+#ifndef _OPENACC
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
@@ -419,7 +419,7 @@ contains
           end if
        endif
 
-#ifndef OPENACC
+#ifndef _OPENACC
        ! Set Dt to minimum time step over all the PE-s
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 #else
@@ -428,7 +428,7 @@ contains
 
        Dt = DtMin
 
-#ifndef OPENACC
+#ifndef _OPENACC
        if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
@@ -540,7 +540,7 @@ contains
     end do
     !$omp end parallel do
 
-#ifndef  OPENACC
+#ifndef _OPENACC
     ! Collect time level information from all processors
     if(UseMaxTimeStep .and. nProc > 1) call MPI_allreduce(MPI_IN_PLACE, &
          iTimeLevel_A, nNode, MPI_INTEGER, MPI_SUM, iComm, iError)

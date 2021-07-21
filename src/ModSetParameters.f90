@@ -3660,7 +3660,7 @@ contains
       case('fast4', 'gpuprim')
          iTypeUpdate = UpdateFast_+3
       case default
-#ifdef OPENACC
+#ifdef _OPENACC
          iTypeUpdate = UpdateFast_ ! Default for GPU
 #else
          iTypeUpdate = UpdateOrig_ ! Default for CPU

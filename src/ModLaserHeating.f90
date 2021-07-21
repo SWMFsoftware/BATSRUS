@@ -5,7 +5,7 @@ module ModLaserHeating
 
   use BATL_lib, ONLY: &
        test_start, test_stop, nDim ,iProc, nProc, iComm
-#ifdef OPENACC
+#ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
   ! Calculate heating due to irradiation by a laser. The laser is represented
