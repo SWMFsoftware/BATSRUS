@@ -1385,7 +1385,7 @@ contains
 
     call test_start(NameSub, DoTest, iBlock)
     iGang = 1
-#ifdef OPENACC
+#ifdef _OPENACC
     iGang = iBlock
 #endif
 
