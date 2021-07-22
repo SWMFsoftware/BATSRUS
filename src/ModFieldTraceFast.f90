@@ -155,8 +155,7 @@ contains
 
     use ModMain
     use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateSlow_
-    use ModB0,       ONLY: get_b0
-    use ModUpdateStateFast, ONLY: get_b0_dipole_fast
+    use ModB0,       ONLY: get_b0, get_b0_dipole_fast
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
@@ -779,8 +778,7 @@ contains
       ! steps were Done
 
       use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign is needed
-      use ModUpdateStateFast, ONLY: map_planet_field_fast
-      use CON_planet_field, ONLY: map_planet_field
+      use CON_planet_field, ONLY: map_planet_field, map_planet_field_fast
 
       real, intent(inout):: Xyz_D(3)
       integer, intent(in):: iRay

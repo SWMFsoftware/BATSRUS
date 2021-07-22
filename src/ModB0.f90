@@ -40,9 +40,10 @@ module ModB0
   public:: set_b0_face      ! set face centered B0_DX,Y,Z
   public:: set_b0_source    ! set DivB0 and CurlB0
   public:: get_b0           ! get B0 at an arbitrary point
+  public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: add_b0           ! add B0 to B1 for given block
   public:: subtract_b0      ! subtract B0 from B0+B1 for given block
-
+  
   ! If B0 varies with time it should be update at some frequency
   logical, public:: DoUpdateB0  = UseB
   real,    public:: DtUpdateB0  = 0.0001
@@ -783,5 +784,41 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine subtract_b0
   !============================================================================
+  subroutine get_b0_dipole_fast(Xyz_D, b_D, IsAligned)
+    !$acc routine seq
+
+    use ModPhysics, ONLY: DipoleStrength => Bdp, Dipole_D
+    use BATL_lib, ONLY: x_, y_, z_
+    
+    real, intent(in):: Xyz_D(3)
+    real, intent(out):: b_D(3)
+    logical, optional, intent(in):: IsAligned
+
+    ! Proved magnetic field b_D in normalized unit at location Xyz_D
+    ! By default the coordinate system of BATSRUS is used
+    ! If IsAligned is present, then MAG/SMG coordinate system is assumed
+
+    real:: r2, r3Inv, Term1
+    !--------------------------------------------------------------------------
+    r2 = sum(Xyz_D**2)
+    if(r2 < 1E-12) then
+       ! return zero field if very small
+       b_D = 0
+       RETURN
+    end if
+
+    r3Inv = 1/(r2*sqrt(r2))
+
+    if(present(IsAligned))then
+       Term1      = DipoleStrength*Xyz_D(3)*3/r2
+       b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
+       b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
+    else
+       Term1 = sum(Dipole_D*Xyz_D)*3/r2
+       b_D   = (Term1*Xyz_D - Dipole_D)*r3Inv
+    end if
+
+  end subroutine get_b0_dipole_fast
+  !============================================================================  
 end module ModB0
 !==============================================================================

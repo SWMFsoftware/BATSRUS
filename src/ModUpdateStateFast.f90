@@ -29,11 +29,11 @@ module ModUpdateStateFast
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1, &
        GammaMinus1_I, InvGammaMinus1_I, FaceState_VI, CellState_VI, &
        C2light, InvClight, InvClight2, RhoMin_I, pMin_I, &
-       OmegaBody_D, DipoleStrength => Bdp, Dipole_D, set_dipole
+       OmegaBody_D, set_dipole
   use ModMain, ONLY: Dt, DtMax_B => Dt_BLK, Cfl, nStep => n_step, &
        TimeSimulation => time_simulation, &
        iTypeCellBc_I, body1_, UseRotatingBc, UseB, SpeedHyp, UseIe
-  use ModB0, ONLY: B0_DGB
+  use ModB0, ONLY: B0_DGB, get_b0_dipole_fast
   use ModNumConst, ONLY: cUnit_DD
   use ModTimeStepControl, ONLY: calc_timestep
   use ModGeometry, ONLY: IsBody_B => Body_BLK, IsNoBody_B => true_BLK, x2, &
@@ -51,8 +51,6 @@ module ModUpdateStateFast
   public:: update_state_fast     ! Fast update of State_VGB
   public:: update_b0_fast        ! Fast update of B0
   public:: set_boundary_fast     ! set cell based boundary for State_VGB
-  public:: get_b0_dipole_fast    ! get B0 field for a dipole
-  public:: map_planet_field_fast ! map dipole field
 
   logical:: DoTestCell= .false.
 
@@ -3063,136 +3061,13 @@ contains
 
   end subroutine update_b0_fast
   !============================================================================
-  subroutine get_b0_dipole_fast(Xyz_D, b_D, IsAligned)
-    !$acc routine seq
-
-    real, intent(in):: Xyz_D(3)
-    real, intent(out):: b_D(3)
-    logical, optional, intent(in):: IsAligned
-
-    ! Proved magnetic field b_D in normalized unit at location Xyz_D
-    ! By default the coordinate system of BATSRUS is used
-    ! If IsAligned is present, then MAG/SMG coordinate system is assumed
-
-    real:: r2, r3Inv, Term1
-    !--------------------------------------------------------------------------
-    r2 = sum(Xyz_D**2)
-    if(r2 < 1E-12) then
-       ! return zero field if very small
-       b_D = 0
-       RETURN
-    end if
-
-    r3Inv = 1/(r2*sqrt(r2))
-
-    if(present(IsAligned))then
-       Term1      = DipoleStrength*Xyz_D(3)*3/r2
-       b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
-       b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
-    else
-       Term1 = sum(Dipole_D*Xyz_D)*3/r2
-       b_D   = (Term1*Xyz_D - Dipole_D)*r3Inv
-    end if
-
-  end subroutine get_b0_dipole_fast
-  !============================================================================
-  subroutine map_planet_field_fast(XyzIn_D, rMap, XyzMap_D, iHemisphere, &
-       DdirDxyz_DD, UseGsm, DoNotConvertBack)
-    !$acc routine seq
-
-    ! This subroutine is a simplified version of
-    ! CON_planet_field.f90:map_planet_field11
-
-    real,              intent(in) :: XyzIn_D(3)   ! spatial position
-    real,              intent(in) :: rMap       ! radial distance to map to
-    real,              intent(out):: XyzMap_D(3)      ! mapped position
-    integer,           intent(out):: iHemisphere      ! which hemisphere
-    real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
-    logical, optional, intent(in) :: UseGsm           ! use GSM coords
-    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG
-
-    real             :: Xyz_D(3)        ! Normalized and rotated position
-
-    ! Temporary variables for the analytic mapping
-    real :: rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
-
-    character(len=*), parameter:: NameSub = 'map_planet_field_fast'
-    !--------------------------------------------------------------------------
-    if(present(UseGsm)) then
-       Xyz_D = matmul( SmgGsm_DD, XyzIn_D)
-    else
-       Xyz_D = XyzIn_D
-    end if
-
-    ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
-    iHemisphere = sign(1.0,Xyz_D(3))
-
-    ! Normalized radial distance
-    r = sqrt(sum(Xyz_D**2))
-
-    ! Calculate powers of the radii
-    rMap2 = rMap**2
-    rMap3 = rMap2*rMap
-    r3    = r**3
-
-    ! This is the ratio of input and mapped X and Y components
-    XyRatio = sqrt(rMap3/r3)
-
-    ! Calculate the X and Y components of the mapped position
-    XyzMap_D(1:2) = XyRatio*Xyz_D(1:2)
-
-    ! The squared distance of the mapped position from the magnetic axis
-    XyMap2 = XyzMap_D(1)**2 + XyzMap_D(2)**2
-
-    ! Check if there is a mapping at all
-    if(rMap2 < XyMap2)then
-       ! The point does not map to the given radius
-       iHemisphere = 0
-
-       ! Put mapped point to the magnetic equator
-       XyzMap_D(1:2) = (rMap/sqrt(Xyz_D(1)**2 + Xyz_D(2)**2))*Xyz_D(1:2)
-       XyzMap_D(3) = 0
-    else
-       ! Calculate the Z component of the mapped position
-       ! Select the same hemisphere as for the input position
-       XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
-    end if
-
-    if(.not.present(DoNotConvertBack) .and. present(UseGsm)) &
-         XyzMap_D = matmul(XyzMap_D, SmgGsm_DD )
-
-    if(.not.present(DdirDxyz_DD)) RETURN
-
-    XyMap = sqrt(XyMap2)
-
-    DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
-         ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
-         ( XyzMap_D(3) * XyMap / XyRatio )
-
-    ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
-    DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
-
-    ! dPhi/dx = -y/(x^2+y^2)
-    ! dPhi/dy =  x/(x^2+y^2)
-    Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
-    DdirDxyz_DD(2,1) = - Xyz_D(2) / Xy2
-    DdirDxyz_DD(2,2) =   Xyz_D(1) / Xy2
-
-    ! dPhi/dz = 0.0
-    DdirDxyz_DD(2,3) = 0.0
-
-    ! Transform into the system of the input coordinates
-    ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
-    if(present(UseGsm)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
-
-  end subroutine map_planet_field_fast
-  !============================================================================
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
     !$acc routine seq
 
     use ModIeCoupling, ONLY: dIonoPotential_DII, rIonosphere, &
          dThetaIono, dPhiIono
     use ModCoordTransform, ONLY: xyz_to_dir
+    use CON_planet_field,  ONLY: map_planet_field_fast
 
     real, intent(in)    :: tSimulation      ! Simulation time
     real, intent(in)    :: Xyz_D(3)    ! Position vector

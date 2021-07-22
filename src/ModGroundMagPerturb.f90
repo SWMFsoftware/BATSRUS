@@ -490,8 +490,9 @@ contains
     ! NOTE: The surface integral includes the external (IMF) field as well.
 
     use ModMain,            ONLY: Time_Simulation, n_Step
-    use CON_planet_field,   ONLY: get_planet_field, map_planet_field
-    use ModUpdateStateFast, ONLY: get_b0_dipole_fast, map_planet_field_fast
+    use CON_planet_field,   ONLY: get_planet_field, map_planet_field, &
+         map_planet_field_fast
+    use ModB0,              ONLY: get_b0_dipole_fast
     use ModAdvance,         ONLY: iTypeUpdate, UpdateSlow_
     use ModNumConst,        ONLY: cPi, cTwoPi
     use ModCurrent,         ONLY: calc_field_aligned_current
