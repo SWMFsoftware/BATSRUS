@@ -4279,7 +4279,7 @@ contains
       use ModChGL,     ONLY: UseChGL, rMinChGL
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseAnisoPressure, UseAnisoPe
+           UseAnisoPressure, UseAnisoPe, SignB_
 
       real, intent(in) :: State_V(:)
       real, optional, intent(out) :: CmaxDt_I(:)
@@ -4296,7 +4296,8 @@ contains
       real:: dB1dB1
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
-           B1B0L, B1B0R, Ut2, UnChGL, ChGL2OverRho
+           B1B0L, B1B0R, Ut2, UnChGLMin, UnChGLMax, UnChGLLeft, UnChGLRight,&
+           ChGL2OverRho, cChGLLeft, cChGLRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       logical :: DoChGLCorrection = .false.
@@ -4577,12 +4578,58 @@ contains
             Cleft_I(1)   = Cleft_I(1)  - Fast
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+         elseif(DoChGLCorrection)then
+            ! Tangetial velocity squared 
+            Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
+            ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+            ChGL2OverRho = InvRho*State_V(SignB_)**2
+            ! Magetosonic speed squared:
+            Sound2     = Sound2 + Ut2*ChGL2OverRho
+            ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
+            ChGL2OverRho   = 0.5*ChGL2OverRho
+            UnChGLLeft   = UnLeft*ChGL2OverRho
+            UnChGLRight  = UnRight*ChGL2OverRho
+            Cleft_I(1)   = min(UnLeft - max(UnChGLLeft,0.0) & ! Corrected Un
+                 - sqrt( max(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
+                 UnRight - max(UnChGLRight,0.0)             &  ! Corrected Un)
+                 - sqrt( max(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+            Cright_I(1)  = max(UnLeft - min(UnChGLLeft,0.0) & ! Corrected Un
+                 + sqrt( min(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
+                 UnRight - min(UnChGLRight,0.0)             & ! Corrected Un)
+                 + sqrt( min(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+            Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+            CmaxDt_I(1) = Cmax_I(1)
          else
             Cleft_I(1)   = min(UnLeft, UnRight) - Fast
             Cright_I(1)  = max(UnLeft, UnRight) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1) = Cmax_I(1)
          end if
+      elseif(DoChGLCorrection)then
+         ! Tangetial velocity squared 
+         Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
+         ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+         ChGL2OverRho = InvRho*State_V(SignB_)**2
+         ! Magetosonic speed squared:
+         Sound2     = Sound2 + Ut2*ChGL2OverRho
+         ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
+         ChGL2OverRho  = 0.5*ChGL2OverRho
+         UnChGLMin   = UnMin*ChGL2OverRho
+         UnChGLMax   = UnMax*ChGL2OverRho
+         cChGLLeft   = min(UnMin - max(UnChGLMin,0.0)  & ! Corrected Un
+              - sqrt( max(UnChGLMin,0.0)**2 + Sound2), & ! sound
+              UnMax - max(UnChGLMax,0.0)               & ! Corrected Un)
+              - sqrt( max(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+         cChGLRight  = max(UnMin - min(UnChGLMin,0.0)  & ! Corrected Un
+              + sqrt( min(UnChGLMin,0.0)**2 + Sound2), & ! sound
+              UnMax - min(UnChGLMax,0.0)               & ! Corrected Un)
+              + sqrt( min(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+         if(present(Cmax_I))then
+            Cmax_I(1)    = max(cChGLRight, -cChGLLeft)
+            CmaxDt_I(1) = Cmax_I(1)
+         end if
+         if(present(Cleft_I))  Cleft_I(1)  = cChGLLeft
+         if(present(Cright_I)) Cright_I(1) = cChGLRight
       else
          if(present(Cmax_I))then
             if(HallCoeff > 0.0)then
