@@ -9986,32 +9986,35 @@ T                       UseClGL
 2.5                     RSourceChGL
 2.5                     RMinChGL
 
-To use this command, SignB_ component of the state vector should be declared
-in the ModEquation (the possible choice is -e=AwsomChGL). In steady-state one
-can claim that the streamlineas and magnetic field lines are aligned and the
+To use this command, the SignB variable of the state vector should be declared
+in the ModEquation (the possible choice is -e=AwsomChGL). Given proper boundary
+conditions, in steady state the streamlineas and magnetic field lines are
+aligned and the
 ratio of magnetic flux to mass flux is constant along the magnetic flux tube,
-hence, the ratio of the magnetic field to velocity vectors obeys the
-conservation law. BELOW RSourceChGL this ratio (Chew-Golberger-Low state
-variable is set (as \mf{U}\cdot\bf{B}/U^2). If RSourceChGL = 0, or less than
-the miminum radius of the model geometry, the said variable is unset (either
-coupled from the model below, say from SC to IH, or set to zero identically).
-ABOVE RMinChGL, the magnetic field is enforced to be aligned with the velocity
+hence, the ratio of the magnetic field to velocity vectors obeys a
+conservation law.
+
+Below RSourceChGL this ratio (Chew-Golberger-Low state
+variable is set $U.B/U^2$. If RSourceChGL is zero, then the
+ChGl variable is either obtained from the model below, for example from SC to IH,
+or set to zero identically.
+
+Above RMinChGL, the magnetic field is enforced to be aligned with the velocity
 vector and equal to the velocity vector multipled by the local value of the
-ChGL variable. If RMinChGL= 0, or less than the miminum radius of the model
-geometry the magnetic field is aligned everywhere, if it is huge or read as
-negative (and then reset to huge(1.0) automatically), it is not aligned
-anywhere. The above setting is recommended for the steady-state SC, the
-recommended setting for the coupled steady-state IH being:
+ChGL variable. If RMinChGL is zero, then the magnetic field is aligned everywhere.
+If it is negative or larger than the size of the domain, then it is not aligned
+anywhere. The above setting is recommended for the steady-state SC.
+The recommended setting for the coupled steady state IH is
 
 #ALIGNBANDU
 T                       UseClGL
 0.0                     RSourceChGL    ! Coupled 
 0.0                     RMinChGL       ! Applied everywhere
 
-For the time accurate run in SC one can set UseClGL to .false.,
-while in IH one may want to gradually increase RRMinChGL to keep good
+For the time accurate run in SC one can set UseChGL to .false.,
+while in IH one may want to gradually increase RMinChGL to keep good
 steady-state solution in the region not affected by the time-accurate
-perturbation prropagatin outward the Sun
+perturbation prropagating outward.
 </command>
 
 <command name="HELIOUPDATEB0" if="$NameComp ne 'GM'">
