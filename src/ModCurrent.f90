@@ -24,7 +24,8 @@ contains
 
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
-
+    !$acc routine seq
+    
     ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and
     ! the current (if iVarMax=nVar+3) for input position
     ! XyzIn_D given in Cartesian coordinates. The interpolated state
@@ -87,7 +88,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
+#ifndef _OPENACC    
     call test_start(NameSub, DoTest)
+#endif    
     ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
@@ -98,7 +101,9 @@ contains
     if(IsCartesianGrid)then
        Xyz_D = XyzIn_D
     else
+#ifndef _OPENACC       
        call xyz_to_coord(XyzIn_D, Xyz_D)
+#endif       
     end if
 
     ! Set state and weight to zero, so MPI_reduce will add it up right
@@ -227,13 +232,16 @@ contains
     end do BLOCK
 
     ! call test_stop(NameSub, DoTest)
+#ifndef _OPENACC    
     call test_stop(NameSub, DoTest)
+#endif    
   end subroutine get_point_data
   !============================================================================
 
   subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange, &
        DoIgnoreBody)
-
+    !$acc routine seq
+    
     ! Calculate the current in a cell of a block
     ! Avoid using ghost cells at resolution changes.
     ! Avoid using cells inside the body.
@@ -247,8 +255,10 @@ contains
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
+#ifndef _OPENACC    
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
     use omp_lib
+#endif    
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
@@ -420,6 +430,32 @@ contains
        end if
     end if
 
+#ifdef _OPENACC
+    ! Calculate current on Cartesian grid.
+    Current_D(x_) = &
+         + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
+         + By*State_VGB(Bz_,i,j ,k ,iBlock) &
+         + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
+         - Az*State_VGB(By_,i,j ,kL,iBlock) &
+         - Bz*State_VGB(By_,i,j ,k ,iBlock) &
+         - Cz*State_VGB(By_,i,j ,kR,iBlock)
+
+    Current_D(y_) = &
+         + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
+         + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
+         + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
+         - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
+         - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
+         - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
+
+    Current_D(z_) = &
+         + Ax*State_VGB(By_,iL,j ,k,iBlock) &
+         + Bx*State_VGB(By_,i ,j ,k,iBlock) &
+         + Cx*State_VGB(By_,iR,j ,k,iBlock) &
+         - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
+         - By*State_VGB(Bx_,i ,j ,k,iBlock) &
+         - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
+#else    
     if(IsCartesianGrid)then
        call calc_cartesian_j
     else
@@ -438,7 +474,8 @@ contains
        ! Add curl(B0) to the current
        Current_D = Current_D + CurlB0_DC(:,i,j,k)
     end if
-
+#endif
+    
   contains
     !==========================================================================
     subroutine calc_cartesian_j
@@ -468,10 +505,11 @@ contains
            - By*State_VGB(Bx_,i ,j ,k,iBlock) &
            - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
 
+#ifndef _OPENACC      
       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
-
+#endif
     end subroutine calc_cartesian_j
     !==========================================================================
 
@@ -547,8 +585,10 @@ contains
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
-    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
+    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V, set_dipole
+    use ModB0,             ONLY: get_b0_dipole_fast
+    use CON_planet_field,  ONLY: get_planet_field, map_planet_field, &
+         map_planet_field_fast
     use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
     use ModMpi
     use BATL_lib,          ONLY: iProc, iComm
@@ -571,6 +611,7 @@ contains
 
     ! Field aligned current at rIn
     real, intent(out):: Fac_II(nTheta,nPhi)
+    !$acc declare create(Fac_II)
 
     ! Radial component of magnetic field at rIn
     real, intent(out), optional:: Br_II(nTheta,nPhi)
@@ -587,6 +628,7 @@ contains
     ! Coordinate arrays allow non-uniform grid
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
+    !$acc declare create(Theta_I, Phi_I)
 
     ! Coordinate system of the Theta-Phi grid and Brin
     character(len=3), intent(in), optional:: TypeCoordFacGrid
@@ -604,12 +646,14 @@ contains
 
     ! Interpolation weight, interpolated agnetic field and current
     real, allocatable :: bCurrent_VII(:,:,:)
+    !$acc declare create(bCurrent_VII)
 
-    integer :: i, j, iHemisphere, iError
+    integer :: i, j, ii, jj, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
     real    :: bIn_D(3), bIn, Br
     real    :: GmFac_DD(3,3)
+    !$acc declare create(GmFac_DD)
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
     logical :: DoMap
@@ -629,6 +673,7 @@ contains
     Fac_II = 0.0
 
     GmFac_DD = transform_matrix(Time_Simulation, TypeCoordFac, TypeCoordSystem)
+    !$acc update device(GmFac_DD)
 
     if(present(LatBoundary)) LatBoundary = 100.0
 
@@ -641,82 +686,117 @@ contains
     dPhi = cTwoPi/nPhi
     dTheta = cPi /(nTheta-1)
 
-    do j = 1, nPhi
+#ifdef _OPENACC
+    call set_dipole
+
+    if(present(Phi_I))then
+       !$acc update device(Phi_I)
+    end if
+    
+    if(present(Theta_I))then
+       !$acc update device(Theta_I)
+    end if
+#endif
+
+    !$acc parallel loop collapse(2) private(XyzIn_D, Xyz_D, B0_D, State_V)
+    do j = 1, nPhi; do i = 1, nTheta
+
        if(present(Phi_I))then
           Phi = Phi_I(j)
        else
           Phi = (j-1) * dPhi
        end if
-       do i = 1, nTheta
-          if(present(Theta_I))then
-             Theta = Theta_I(i)
-          else
-             Theta = (i-1) * dTheta
+
+       if(present(Theta_I))then
+          Theta = Theta_I(i)
+       else
+          Theta = (i-1) * dTheta
+       end if
+
+       call sph_to_xyz(rIn,Theta,Phi, XyzIn_D)
+
+       if (DoMap)then
+#ifdef _OPENACC
+          ! Warning: only works for TypeCoordFac == 'SMG'
+          call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, iHemisphere)
+#else             
+          call map_planet_field(Time_Simulation, XyzIn_D, &
+               TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
+#endif             
+
+          if(iHemisphere == 0) then
+             ! This point does not map
+             ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
+             bCurrent_VII(:,i,j) = &
+                  [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+             CYCLE
           end if
+       else
+          Xyz_D = XyzIn_D
+       end if
 
-          call sph_to_xyz(rIn,Theta,Phi, XyzIn_D)
+#ifdef _OPENACC
+       XyzIn_D = 0
+       do jj=1,3; do ii=1,3
+          XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
+       end do; end do
+       Xyz_D = XyzIn_D
+#else       
+       ! Convert to GM coordinates
+       Xyz_D = matmul(GmFac_DD, Xyz_D)
+#endif       
 
-          if (DoMap)then
-             call map_planet_field(Time_Simulation, XyzIn_D, &
-                  TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
+       if(present(LatBoundary)) &
+            LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
 
-             if(iHemisphere == 0) then
-                ! This point does not map
-                ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
-                bCurrent_VII(:,i,j) = &
-                     [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                CYCLE
-             end if
-          else
-             Xyz_D = XyzIn_D
-          end if
+#ifdef _OPENACC
+       call get_b0_dipole_fast(Xyz_D, B0_D)
+#else
+       ! Get the B0 field at the mapped position
+       call get_planet_field(Time_Simulation, Xyz_D, &
+            TypeCoordSystem//' NORM', B0_D)
+       B0_D = B0_D*Si2No_V(UnitB_)
+#endif          
 
-          ! Convert to GM coordinates
-          Xyz_D = matmul(GmFac_DD, Xyz_D)
+       ! Extract currents and magnetic field for this position
+       call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
 
-          if(present(LatBoundary)) &
-               LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
+       bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
+       bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+            State_V(Bx_-1)*B0_D
+       bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
 
-          ! Get the B0 field at the mapped position
-          call get_planet_field(Time_Simulation, Xyz_D, &
-               TypeCoordSystem//' NORM', B0_D)
+       ! if(.false.)then
+       !   write(*,*)'iHemispher=',iHemisphere
+       !   write(*,*)'Phi,Theta=',Phi,Theta
+       !   write(*,*)'XyzIn_D  =', XyzIn_D
+       !   write(*,*)'Xyz_D    =',Xyz_D
+       !   write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
+       !   write(*,*)'B0_D     =',B0_D
+       !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
+       !   call stop_mpi('DEBUG')
+       ! end if
+    end do; end do
 
-          B0_D = B0_D*Si2No_V(UnitB_)
-
-          ! Extract currents and magnetic field for this position
-          call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-
-          bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
-          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
-               State_V(Bx_-1)*B0_D
-          bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
-
-          ! if(.false.)then
-          !   write(*,*)'iHemispher=',iHemisphere
-          !   write(*,*)'Phi,Theta=',Phi,Theta
-          !   write(*,*)'XyzIn_D  =', XyzIn_D
-          !   write(*,*)'Xyz_D    =',Xyz_D
-          !   write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
-          !   write(*,*)'B0_D     =',B0_D
-          !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
-          !   call stop_mpi('DEBUG')
-          ! end if
-       end do
-    end do
-
+#ifndef _OPENACC    
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
          iComm,iError)
+#endif    
+
 
     ! Map the field aligned current to rIn sphere
     if(iProc==0)then
-
+       !!$acc update  device(bCurrent_VII)
+       !$acc parallel loop collapse(2) private(b_D, j_D, bUnit_D, XyzIn_D, xyz_D, bIn_D, rUnit_D)
        do j = 1, nPhi
-          if(present(Phi_I))then
-             Phi = Phi_I(j)
-          else
-             Phi = (j-1) * dPhi
-          end if
           do i = 1, nTheta
+
+             if(present(Phi_I))then
+                Phi = Phi_I(j)
+             else
+                Phi = (j-1) * dPhi
+             end if
+
              if(present(Theta_I))then
                 Theta = Theta_I(i)
              else
@@ -741,21 +821,33 @@ contains
              Fac = sum(bUnit_D*j_D)
 
              ! Get Cartesian coordinates
-             call sph_to_xyz(rIn, Theta, Phi, XyzIn_D)
+             call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
+#ifdef _OPENACC
+             XyzIn_D = 0
+             do jj=1,3; do ii=1,3
+                XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
+             end do; end do
+#else             
              ! Convert to GM coordinates
-             XyzIn_D = matmul(GmFac_DD, XyzIn_D)
-
+             XyzIn_D = matmul(GmFac_DD, Xyz_D)
+#endif             
+             
              if(DoMap)then
                 ! Calculate magnetic field strength at the rIn grid point
 
+#ifdef _OPENACC
+                call get_b0_dipole_fast(XyzIn_D, bIn_D)
+#else
                 call get_planet_field(Time_Simulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)
 
-                ! Convert to normalized units and get magnitude
+                ! Convert to normalized units
                 bIn_D = bIn_D*Si2No_V(UnitB_)
-                bIn   = norm2(bIn_D)
 
+#endif                
+                bIn   = norm2(bIn_D)
+                
                 ! Multiply by the ratio of the magnetic field strengths
                 Fac = bIn / bRcurrents * Fac
              else
@@ -779,6 +871,7 @@ contains
              ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
 
+#ifndef _OPENACC             
              ! store the B field in the FAC coordinates
              if(present(b_DII)) b_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
 
@@ -788,14 +881,23 @@ contains
              ! store tangential B field vector in FAC coordinates
              if(present(Bt_DII)) Bt_DII(:,i,j) = &
                   matmul( cross_product(rUnit_D, bIn_D), GmFac_DD )
-
+#endif
           end do
        end do
     end if
     deallocate(bCurrent_VII)
 
-    call test_stop(NameSub, DoTest)
+    !$acc update host(Fac_II)
 
+
+    !write(*,*)'fac(3,1):',Fac_II(3,1)
+    ! do j = 1, 3!nPhi
+    !    do i = 1, 3!nTheta
+    !       write(*,*)'i,j,fac:',i,j,Fac_II(i,j)
+    !    end do
+    ! end do
+
+    call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
   !============================================================================
 

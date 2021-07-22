@@ -26,6 +26,7 @@ module ModGeometry
   ! Coordinates of 1,1,1 cell. Coord111_DB would be a good name.
   ! Same as BATL_lib::CoordMin_DB + 0.5*CellSize_DB
   real, allocatable :: XyzStart_BLK(:,:)
+  !$acc declare create(XyzStart_BLK)
 
   ! Obsolete variables. Same as BATL_lib::CoordMin_D and CoordMax_D
   real :: XyzMin_D(3), XyzMax_D(3)
