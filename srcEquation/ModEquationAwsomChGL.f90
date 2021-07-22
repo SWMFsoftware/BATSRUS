@@ -17,12 +17,12 @@ module ModVarIndexes
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationAwsom.f90"
+  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomChGL.f90"
 
   ! This equation module contains the standard MHD equations with wave energy
   ! and electron pressure
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + electron pressure'
+       NameEquation='MHD + Alfven waves + electron pressure + ChGL'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -77,7 +77,7 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
-       0.0, & ! SignB_
+       0.0, & ! SignB_ or ChGL_
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 ] ! Energy_

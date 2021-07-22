@@ -21,7 +21,7 @@ module ModChGL
   real :: RSourceChGL = 0.0
   ! For R > RMinChGL the magnetic field is solved as
   ! \mathbf{B} = (\rho s)\mathbf{U}:
-  real :: RMinChGL = -1.0
+  real, public :: RMinChGL = -1.0
   public :: read_chgl_param ! Read model parameters
   public :: init_chgl
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
