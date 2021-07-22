@@ -223,6 +223,9 @@ module ModFaceFlux
   real, public :: B0x=0.0, B0y=0.0, B0z=0.0
   !$omp threadprivate( B0x, B0y, B0z )
 
+  real, public :: rFace = 0.0
+  !$omp threadprivate( rFace )
+
   ! Variables needed by viscosity
   real :: ViscoCoeff
   !$omp threadprivate( ViscoCoeff )
@@ -1001,6 +1004,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
+
+    rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
+         Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
+
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
        ! The face is at the pole
@@ -4266,9 +4273,10 @@ contains
     subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
          UnLeft, UnRight, UseAwSpeed)
 
-      use ModB0,       ONLY: UseCurlB0
+      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0
       use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
+      use ModChGL,     ONLY: UseChGL, rMinChGL
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe
@@ -4288,12 +4296,14 @@ contains
       real:: dB1dB1
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
-           B1B0L, B1B0R
+           B1B0L, B1B0R, Ut2, UnChGL, ChGL2OverRho
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
+      logical :: DoChGLCorrection = .false.
 
       integer:: jFluid
       !------------------------------------------------------------------------
+      DoChGLCorrection = UseChGL.and.rFace > rMinChGL
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -4395,7 +4405,7 @@ contains
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
-      if(UseCurlB0)then
+      if(UseCurlB0.and.rFace > rCurrentFreeB0)then
          B1B0L = StateLeft_V(Bx_)*B0x &
               +  StateLeft_V(By_)*B0y &
               +  StateLeft_V(Bz_)*B0z
