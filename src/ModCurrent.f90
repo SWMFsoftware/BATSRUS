@@ -698,7 +698,7 @@ contains
     end if
 #endif
 
-    !$acc parallel loop collapse(2) private(XyzIn_D, Xyz_D, B0_D, State_V)
+    !$acc parallel loop vector collapse(2) private(XyzIn_D, Xyz_D, B0_D, State_V)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -785,7 +785,7 @@ contains
 
     ! Map the field aligned current to rIn sphere
     if(iProc==0)then
-       !$acc parallel loop collapse(2) private(b_D, j_D, bUnit_D, &
+       !$acc parallel loop vector collapse(2) private(b_D, j_D, bUnit_D, &
        !$acc XyzIn_D, xyz_D, bIn_D, rUnit_D)
        do j = 1, nPhi
           do i = 1, nTheta
