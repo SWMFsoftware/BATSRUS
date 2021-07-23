@@ -586,7 +586,7 @@ contains
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V, set_dipole
-    use ModB0,             ONLY: get_b0_dipole_fast
+    use ModB0,             ONLY: get_b0_dipole
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field, &
          map_planet_field_fast
     use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
@@ -750,7 +750,7 @@ contains
             LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
 
 #ifdef _OPENACC
-       call get_b0_dipole_fast(Xyz_D, B0_D)
+       call get_b0_dipole(Xyz_D, B0_D)
 #else
        ! Get the B0 field at the mapped position
        call get_planet_field(Time_Simulation, Xyz_D, &
@@ -836,7 +836,7 @@ contains
                 ! Calculate magnetic field strength at the rIn grid point
 
 #ifdef _OPENACC
-                call get_b0_dipole_fast(XyzIn_D, bIn_D)
+                call get_b0_dipole(XyzIn_D, bIn_D)
 #else
                 call get_planet_field(Time_Simulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)

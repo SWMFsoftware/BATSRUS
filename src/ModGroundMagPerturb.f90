@@ -492,7 +492,7 @@ contains
     use ModMain,            ONLY: Time_Simulation, n_Step
     use CON_planet_field,   ONLY: get_planet_field, map_planet_field, &
          map_planet_field_fast
-    use ModB0,              ONLY: get_b0_dipole_fast
+    use ModB0,              ONLY: get_b0_dipole
     use ModAdvance,         ONLY: iTypeUpdate, UpdateSlow_
     use ModNumConst,        ONLY: cPi, cTwoPi
     use ModCurrent,         ONLY: calc_field_aligned_current
@@ -809,7 +809,7 @@ contains
 #endif
                    call map_planet_field_fast(XyzRcurrents_D, r, XyzMid_D, &
                         iHemisphere)
-                   call get_b0_dipole_fast(XyzMid_D, b_D, IsAligned=.true.)
+                   call get_b0_dipole(XyzMid_D, b_D, IsAligned=.true.)
 #ifndef _OPENACC
                 end if
 #endif

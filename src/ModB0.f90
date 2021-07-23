@@ -40,7 +40,7 @@ module ModB0
   public:: set_b0_face      ! set face centered B0_DX,Y,Z
   public:: set_b0_source    ! set DivB0 and CurlB0
   public:: get_b0           ! get B0 at an arbitrary point
-  public:: get_b0_dipole_fast    ! get B0 field for a dipole
+  public:: get_b0_dipole    ! get B0 field for a dipole
   public:: add_b0           ! add B0 to B1 for given block
   public:: subtract_b0      ! subtract B0 from B0+B1 for given block
 
@@ -651,30 +651,30 @@ contains
 
   end subroutine get_b0
   !============================================================================
-  subroutine get_b0_dipole(Xyz_D, B0_D)
+  subroutine get_b0_dipole(Xyz_D, B0_D, IsAligned)
+    !$acc routine seq
 
-    ! Calculate the B0_D dipole field at location Xyz_D.
+    ! Provide magnetic field B0_D in normalized unit at location Xyz_D
+    ! By default the coordinate system of BATSRUS is used.
+    ! If IsAligned is present, then MAG/SMG coordinate system is assumed.
 
-    ! Note that ThetaTilt is positive when the north magnetic pole
-    ! points AWAY from the sun.
-
-    use ModPhysics, ONLY: Bdp, Dipole_D, CosThetaTilt, SinThetaTilt, rBody
+    use ModPhysics, ONLY: DipoleStrength => Bdp, Dipole_D, &
+         CosThetaTilt, SinThetaTilt
+    use BATL_lib, ONLY: x_, y_, z_
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
+    logical, optional, intent(in):: IsAligned
 
-    real :: x, y, r2, rInv, r2Inv, r3Inv
-    real :: Bx, By
-    real :: Dp
-
-    ! Determine radial distance and powers of it
+    real :: r2, r3Inv, Term1
+    real :: x, y, Bx, By ! Using Dipole_D in 2D would be better
 
     character(len=*), parameter:: NameSub = 'get_b0_dipole'
     !--------------------------------------------------------------------------
     r2 = sum(Xyz_D(1:nDim)**2)
 
-    ! Avoid calculating B0 inside a critical radius = 1.E-6*Rbody
-    if(r2 <= 1e-12*rBody)then
+    ! Avoid calculating B0 near the origin
+    if(r2 <= 1e-12)then
        B0_D = 0.0
     elseif(nDim == 2) then
 
@@ -684,26 +684,31 @@ contains
        ! except that they define the dipole pointing down, while this one
        ! points upward.
 
-       x = Xyz_D(1)
-       y = Xyz_D(2)
-       Dp = Bdp/r2**2
+       x = Xyz_D(x_)
+       y = Xyz_D(y_)
+       Term1 = DipoleStrength/r2**2
 
        ! Dipole aligned with the +Y axis
-       Bx = Dp*2*x*y
-       By = Dp*(y**2 - x**2)
+       Bx = Term1*2*x*y
+       By = Term1*(y**2 - x**2)
 
        ! Rotate the field with -ThetaTilt around the Z axis
-       B0_D(1) =  CosThetaTilt*Bx + SinThetaTilt*By
-       B0_D(2) = -SinThetaTilt*Bx + CosThetaTilt*By
+       B0_D(x_) =  CosThetaTilt*Bx + SinThetaTilt*By
+       B0_D(y_) = -SinThetaTilt*Bx + CosThetaTilt*By
        B0_D(3) = 0.0
     else
-       rInv  = 1.0/sqrt(r2)
-       r2Inv = rInv**2
-       r3Inv = rInv*r2Inv
+       r3Inv = 1/(r2*sqrt(r2))
 
-       ! Compute dipole moment of the intrinsic magnetic field B0.
-       Dp   = 3*sum(Dipole_D*Xyz_D)*r2Inv
-       B0_D = (Dp*Xyz_D - Dipole_D)*r3Inv
+       ! Compute intrinsic magnetic field B0 as a 3D dipole
+       if(present(IsAligned))then
+          Term1       = DipoleStrength*Xyz_D(3)*3/r2
+          B0_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
+          B0_D(z_)    = (Term1*Xyz_D(z_) - DipoleStrength)*r3Inv
+       else
+          Term1 = sum(Dipole_D*Xyz_D)*3/r2
+          B0_D  = (Term1*Xyz_D - Dipole_D)*r3Inv
+       end if
+
     end if
 
   end subroutine get_b0_dipole
@@ -783,42 +788,6 @@ contains
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine subtract_b0
-  !============================================================================
-  subroutine get_b0_dipole_fast(Xyz_D, b_D, IsAligned)
-    !$acc routine seq
-
-    use ModPhysics, ONLY: DipoleStrength => Bdp, Dipole_D
-    use BATL_lib, ONLY: x_, y_, z_
-
-    real, intent(in):: Xyz_D(3)
-    real, intent(out):: b_D(3)
-    logical, optional, intent(in):: IsAligned
-
-    ! Proved magnetic field b_D in normalized unit at location Xyz_D
-    ! By default the coordinate system of BATSRUS is used
-    ! If IsAligned is present, then MAG/SMG coordinate system is assumed
-
-    real:: r2, r3Inv, Term1
-    !--------------------------------------------------------------------------
-    r2 = sum(Xyz_D**2)
-    if(r2 < 1E-12) then
-       ! return zero field if very small
-       b_D = 0
-       RETURN
-    end if
-
-    r3Inv = 1/(r2*sqrt(r2))
-
-    if(present(IsAligned))then
-       Term1      = DipoleStrength*Xyz_D(3)*3/r2
-       b_D(x_:y_) = Term1*Xyz_D(x_:y_)*r3Inv
-       b_D(z_)    = (Term1*Xyz_D(z_)-DipoleStrength)*r3Inv
-    else
-       Term1 = sum(Dipole_D*Xyz_D)*3/r2
-       b_D   = (Term1*Xyz_D - Dipole_D)*r3Inv
-    end if
-
-  end subroutine get_b0_dipole_fast
   !============================================================================
 end module ModB0
 !==============================================================================
