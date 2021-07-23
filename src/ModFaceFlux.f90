@@ -4593,12 +4593,18 @@ contains
                  - sqrt( max(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
                  UnRight - max(UnChGLRight,0.0)             &  ! Corrected Un)
                  - sqrt( max(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+            if(UseAlfvenWaves)Cleft_I(1) = min(Cleft_I(1),  &
+                 UnLeft  - sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
+                 UnRight - sqrt(2*UnRight*UnChGLRight))        ! (left)
             Cright_I(1)  = max(UnLeft - min(UnChGLLeft,0.0) & ! Corrected Un
                  + sqrt( min(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
                  UnRight - min(UnChGLRight,0.0)             & ! Corrected Un)
                  + sqrt( min(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+            if(UseAlfvenWaves)CRight_I(1) = max(CRight_I(1),  &
+                 UnLeft  + sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
+                 UnRight + sqrt(2*UnRight*UnChGLRight))        ! (Right)
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-            CmaxDt_I(1) = Cmax_I(1)
+            CmaxDt_I(1)  = Cmax_I(1)
          else
             Cleft_I(1)   = min(UnLeft, UnRight) - Fast
             Cright_I(1)  = max(UnLeft, UnRight) + Fast
@@ -4620,10 +4626,16 @@ contains
               - sqrt( max(UnChGLMin,0.0)**2 + Sound2), & ! sound
               UnMax - max(UnChGLMax,0.0)               & ! Corrected Un)
               - sqrt( max(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+         if(UseAlfvenWaves)cChGLLeft = min(cChGLLeft,    &
+              UnMin  - sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
+              UnMax  - sqrt(2*UnMax*UnChGLMax))          ! (left)
          cChGLRight  = max(UnMin - min(UnChGLMin,0.0)  & ! Corrected Un
               + sqrt( min(UnChGLMin,0.0)**2 + Sound2), & ! sound
               UnMax - min(UnChGLMax,0.0)               & ! Corrected Un)
               + sqrt( min(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+         if(UseAlfvenWaves)cChGLRight = max(cChGLRight,  &
+              UnMin  + sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
+              UnMax  + sqrt(2*UnMax*UnChGLMax))          ! (Right)
          if(present(Cmax_I))then
             Cmax_I(1)    = max(cChGLRight, -cChGLLeft)
             CmaxDt_I(1) = Cmax_I(1)
