@@ -4579,7 +4579,7 @@ contains
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
          elseif(DoChGLCorrection)then
-            ! Tangetial velocity squared 
+            ! Tangetial velocity squared
             Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
             ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
             ChGL2OverRho = InvRho*State_V(SignB_)**2
@@ -4612,7 +4612,7 @@ contains
             CmaxDt_I(1) = Cmax_I(1)
          end if
       elseif(DoChGLCorrection)then
-         ! Tangetial velocity squared 
+         ! Tangetial velocity squared
          Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
          ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
          ChGL2OverRho = InvRho*State_V(SignB_)**2

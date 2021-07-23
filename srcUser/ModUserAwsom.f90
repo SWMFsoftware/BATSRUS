@@ -382,7 +382,6 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        if(UseChGL)State_VGB(SignB_,i,j,k,iBlock) = &
             sum(B0_DGB(1:3,i,j,k,iBlock)*r_D) / (r*Usound)
-       
 
        if(UseAlfvenWaves)then
           Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
