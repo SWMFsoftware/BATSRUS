@@ -43,7 +43,7 @@ module ModB0
   public:: get_b0_dipole_fast    ! get B0 field for a dipole
   public:: add_b0           ! add B0 to B1 for given block
   public:: subtract_b0      ! subtract B0 from B0+B1 for given block
-  
+
   ! If B0 varies with time it should be update at some frequency
   logical, public:: DoUpdateB0  = UseB
   real,    public:: DtUpdateB0  = 0.0001
@@ -789,7 +789,7 @@ contains
 
     use ModPhysics, ONLY: DipoleStrength => Bdp, Dipole_D
     use BATL_lib, ONLY: x_, y_, z_
-    
+
     real, intent(in):: Xyz_D(3)
     real, intent(out):: b_D(3)
     logical, optional, intent(in):: IsAligned
@@ -819,6 +819,6 @@ contains
     end if
 
   end subroutine get_b0_dipole_fast
-  !============================================================================  
+  !============================================================================
 end module ModB0
 !==============================================================================

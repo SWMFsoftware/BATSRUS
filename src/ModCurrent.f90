@@ -25,7 +25,7 @@ contains
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
     !$acc routine seq
-    
+
     ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and
     ! the current (if iVarMax=nVar+3) for input position
     ! XyzIn_D given in Cartesian coordinates. The interpolated state
@@ -88,9 +88,9 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC    
+#ifndef _OPENACC
     call test_start(NameSub, DoTest)
-#endif    
+#endif
     ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
@@ -101,9 +101,9 @@ contains
     if(IsCartesianGrid)then
        Xyz_D = XyzIn_D
     else
-#ifndef _OPENACC       
+#ifndef _OPENACC
        call xyz_to_coord(XyzIn_D, Xyz_D)
-#endif       
+#endif
     end if
 
     ! Set state and weight to zero, so MPI_reduce will add it up right
@@ -232,16 +232,16 @@ contains
     end do BLOCK
 
     ! call test_stop(NameSub, DoTest)
-#ifndef _OPENACC    
+#ifndef _OPENACC
     call test_stop(NameSub, DoTest)
-#endif    
+#endif
   end subroutine get_point_data
   !============================================================================
 
   subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange, &
        DoIgnoreBody)
     !$acc routine seq
-    
+
     ! Calculate the current in a cell of a block
     ! Avoid using ghost cells at resolution changes.
     ! Avoid using cells inside the body.
@@ -255,10 +255,10 @@ contains
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
-#ifndef _OPENACC    
+#ifndef _OPENACC
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
     use omp_lib
-#endif    
+#endif
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
@@ -455,7 +455,7 @@ contains
          - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
          - By*State_VGB(Bx_,i ,j ,k,iBlock) &
          - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
-#else    
+#else
     if(IsCartesianGrid)then
        call calc_cartesian_j
     else
@@ -475,7 +475,7 @@ contains
        Current_D = Current_D + CurlB0_DC(:,i,j,k)
     end if
 #endif
-    
+
   contains
     !==========================================================================
     subroutine calc_cartesian_j
@@ -505,7 +505,7 @@ contains
            - By*State_VGB(Bx_,i ,j ,k,iBlock) &
            - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
 
-#ifndef _OPENACC      
+#ifndef _OPENACC
       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
@@ -692,7 +692,7 @@ contains
     if(present(Phi_I))then
        !$acc update device(Phi_I)
     end if
-    
+
     if(present(Theta_I))then
        !$acc update device(Theta_I)
     end if
@@ -719,10 +719,10 @@ contains
 #ifdef _OPENACC
           ! Warning: only works for TypeCoordFac == 'SMG'
           call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, iHemisphere)
-#else             
+#else
           call map_planet_field(Time_Simulation, XyzIn_D, &
                TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
-#endif             
+#endif
 
           if(iHemisphere == 0) then
              ! This point does not map
@@ -741,10 +741,10 @@ contains
           XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
        end do; end do
        Xyz_D = XyzIn_D
-#else       
+#else
        ! Convert to GM coordinates
        Xyz_D = matmul(GmFac_DD, Xyz_D)
-#endif       
+#endif
 
        if(present(LatBoundary)) &
             LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
@@ -756,7 +756,7 @@ contains
        call get_planet_field(Time_Simulation, Xyz_D, &
             TypeCoordSystem//' NORM', B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
-#endif          
+#endif
 
        ! Extract currents and magnetic field for this position
        call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
@@ -778,16 +778,15 @@ contains
        ! end if
     end do; end do
 
-#ifndef _OPENACC    
+#ifndef _OPENACC
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
          iComm,iError)
-#endif    
-
+#endif
 
     ! Map the field aligned current to rIn sphere
     if(iProc==0)then
-       !!$acc update  device(bCurrent_VII)
-       !$acc parallel loop collapse(2) private(b_D, j_D, bUnit_D, XyzIn_D, xyz_D, bIn_D, rUnit_D)
+       !$acc parallel loop collapse(2) private(b_D, j_D, bUnit_D, &
+       !$acc XyzIn_D, xyz_D, bIn_D, rUnit_D)
        do j = 1, nPhi
           do i = 1, nTheta
 
@@ -828,11 +827,11 @@ contains
              do jj=1,3; do ii=1,3
                 XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
              end do; end do
-#else             
+#else
              ! Convert to GM coordinates
              XyzIn_D = matmul(GmFac_DD, Xyz_D)
-#endif             
-             
+#endif
+
              if(DoMap)then
                 ! Calculate magnetic field strength at the rIn grid point
 
@@ -845,9 +844,9 @@ contains
                 ! Convert to normalized units
                 bIn_D = bIn_D*Si2No_V(UnitB_)
 
-#endif                
+#endif
                 bIn   = norm2(bIn_D)
-                
+
                 ! Multiply by the ratio of the magnetic field strengths
                 Fac = bIn / bRcurrents * Fac
              else
@@ -871,7 +870,7 @@ contains
              ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
 
-#ifndef _OPENACC             
+#ifndef _OPENACC
              ! store the B field in the FAC coordinates
              if(present(b_DII)) b_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
 
@@ -888,14 +887,6 @@ contains
     deallocate(bCurrent_VII)
 
     !$acc update host(Fac_II)
-
-
-    !write(*,*)'fac(3,1):',Fac_II(3,1)
-    ! do j = 1, 3!nPhi
-    !    do i = 1, 3!nTheta
-    !       write(*,*)'i,j,fac:',i,j,Fac_II(i,j)
-    !    end do
-    ! end do
 
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
