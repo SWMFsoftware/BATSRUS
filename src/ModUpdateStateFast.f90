@@ -3091,7 +3091,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
     !--------------------------------------------------------------------------
     call map_planet_field_fast(Xyz_D, rIonosphere, XyzIono_D, &
-         iHemisphere, DdirDxyz_DD, UseGsm=.true., DoNotConvertBack=.true.)
+         iHemisphere, DdirDxyz_DD, UseGsmIn=.true., DoNotConvertBack=.true.)
 
     ! Calculate angular coordinates
     call xyz_to_dir(XyzIono_D, Theta, Phi)

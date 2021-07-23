@@ -794,7 +794,7 @@ contains
       else
 #endif
          call map_planet_field_fast(Xyz_D, rIonosphere, x_D, iHemisphere, &
-              UseGsm=.true.)
+              UseGsmIn=.true.)
 #ifndef _OPENACC
       end if
 

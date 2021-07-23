@@ -4,11 +4,11 @@
 module ModCurrent
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, x_, y_, z_
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModCoordTransform, ONLY: sph_to_xyz, cross_product
+  use ModCoordTransform, ONLY: sph_to_xyz!, cross_product
   use CON_axes,          ONLY: transform_matrix
 
   implicit none
@@ -577,7 +577,65 @@ contains
 
   end subroutine get_current
   !============================================================================
+  function matmul31(a_DD, b_D) result(c_D)
+    !$acc routine seq
 
+    ! This is copied from ModGroundMagPerturb.f90. It should be moved tof
+    ! a proper module in the near future!
+    
+    ! Matrix-vector multiplication for 3x3 matrix,
+    ! to avoid temporaries at the call site.
+    ! Equivalent with c_D = matmul(a_DD, b_D)
+
+    real, intent(in) :: a_DD(3,3), b_D(3)
+    real :: c_D(3)
+    integer:: i, j
+    !--------------------------------------------------------------------------
+    c_D(:)=0
+    do j=1,3
+       do i=1,3
+          c_D(i) = c_D(i) + a_DD(i,j)*b_D(j)
+       end do
+    end do
+
+  end function matmul31
+  !============================================================================
+  function matmul13(a_D, b_DD) result(c_D)
+    !$acc routine seq
+    
+    real, intent(in) :: a_D(3), b_DD(3,3)
+    real :: c_D(3)
+    integer:: i, j
+    !--------------------------------------------------------------------------
+    c_D(:)=0
+
+    do i=1,3
+       do j=1,3
+          c_D(i) = c_D(i) + a_D(j)*b_DD(j,i)
+       end do
+    end do
+
+  end function matmul13
+  !============================================================================
+  function cross_product(a_D, b_D) result(c_D)
+    !$acc routine seq
+
+    ! Copied from ModFastUpdata.f90 here so that it can be inlined
+    ! to avoid race condition.
+    
+    ! Return c = a x b
+
+    real, intent(in) :: a_D(3), b_D(3)
+    !RETURN VALUE:
+    real             :: c_D(3)
+    !--------------------------------------------------------------------------
+    c_D(x_) = a_D(y_)*b_D(z_) - a_D(z_)*b_D(y_)
+    c_D(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
+    c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
+  end function cross_product
+  !============================================================================
+
+  
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
        Br_II, Bt_DII, b_DII, &
        LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
@@ -615,12 +673,15 @@ contains
 
     ! Radial component of magnetic field at rIn
     real, intent(out), optional:: Br_II(nTheta,nPhi)
-
+    !$acc declare create(Br_II)
+    
     ! Tangential component (r x B/r) of field at rIn in FAC coordinates
     real, intent(out), optional:: Bt_DII(3,nTheta,nPhi)
-
+    !$acc declare create(Bt_DII)
+    
     ! Magnetic field at rIn in FAC coordinates
     real, intent(out), optional:: b_DII(3,nTheta,nPhi)
+    !$acc declare create(b_DII)
 
     ! Lowest latitude that maps up to rCurrents
     real, intent(out), optional :: LatBoundary
@@ -648,6 +709,8 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
+    real    :: LatBoundaryLocal
+    
     integer :: i, j, ii, jj, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
@@ -658,14 +721,16 @@ contains
     real    :: dPhi, dTheta
     logical :: DoMap
 
-    logical:: DoTest
+    logical :: UseGsm
+    logical :: DoTest
     character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     TypeCoordFac = 'SMG'
     if(present(TypeCoordFacGrid)) TypeCoordFac = TypeCoordFacGrid
-
+    UseGsm = TypeCoordFac == 'GSM'
+    
     if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6,nTheta,nPhi))
 
     bCurrent_VII = 0.0
@@ -676,7 +741,7 @@ contains
     !$acc update device(GmFac_DD)
 
     if(present(LatBoundary)) LatBoundary = 100.0
-
+    
     if (abs(rIn - rCurrents) < 1.0e-3)then
        DoMap = .false.
     else
@@ -696,9 +761,12 @@ contains
     if(present(Theta_I))then
        !$acc update device(Theta_I)
     end if
-#endif
-
-    !$acc parallel loop vector collapse(2) private(XyzIn_D, Xyz_D, B0_D, State_V)
+    
+    LatBoundaryLocal = 100.0
+#endif        
+    
+    !$acc parallel loop vector collapse(2) &
+    !$acc private(XyzIn_D, Xyz_D, B0_D, State_V) reduction(min:LatBoundaryLocal)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -717,8 +785,8 @@ contains
 
        if (DoMap)then
 #ifdef _OPENACC
-          ! Warning: only works for TypeCoordFac == 'SMG'
-          call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, iHemisphere)
+          call map_planet_field_fast(XyzIn_D, rCurrents, Xyz_D, &
+               iHemisphere, UseGsmIn=UseGsm)
 #else
           call map_planet_field(Time_Simulation, XyzIn_D, &
                TypeCoordFac//' NORM', rCurrents, Xyz_D, iHemisphere)
@@ -736,22 +804,18 @@ contains
        end if
 
 #ifdef _OPENACC
-       XyzIn_D = 0
-       do jj=1,3; do ii=1,3
-          XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
-       end do; end do
-       Xyz_D = XyzIn_D
+       Xyz_D = matmul31(GmFac_DD, Xyz_D)
+       
+       LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
+
+       call get_b0_dipole(Xyz_D, B0_D)
 #else
        ! Convert to GM coordinates
        Xyz_D = matmul(GmFac_DD, Xyz_D)
-#endif
 
        if(present(LatBoundary)) &
             LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
 
-#ifdef _OPENACC
-       call get_b0_dipole(Xyz_D, B0_D)
-#else
        ! Get the B0 field at the mapped position
        call get_planet_field(Time_Simulation, Xyz_D, &
             TypeCoordSystem//' NORM', B0_D)
@@ -778,6 +842,10 @@ contains
        ! end if
     end do; end do
 
+#ifdef _OPENACC
+    if(present(LatBoundary)) LatBoundary = LatBoundaryLocal
+#endif    
+    
 #ifndef _OPENACC
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
          iComm,iError)
@@ -823,10 +891,7 @@ contains
              call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
 #ifdef _OPENACC
-             XyzIn_D = 0
-             do jj=1,3; do ii=1,3
-                XyzIn_D(ii) = XyzIn_D(ii) + GmFac_DD(ii,jj)*Xyz_D(jj)
-             end do; end do
+             XyzIn_D = matmul31(GmFac_DD, Xyz_D)
 #else
              ! Convert to GM coordinates
              XyzIn_D = matmul(GmFac_DD, Xyz_D)
@@ -870,24 +935,35 @@ contains
              ! store the (radial component of the) field alinged current
              Fac_II(i,j) = Fac
 
-#ifndef _OPENACC
              ! store the B field in the FAC coordinates
-             if(present(b_DII)) b_DII(:,i,j) = matmul(bIn_D, GmFac_DD)
+             if(present(b_DII)) b_DII(:,i,j) = matmul13(bIn_D, GmFac_DD)
 
              ! store radial component of B field
              if(present(Br_II)) Br_II(i,j) = Br
 
              ! store tangential B field vector in FAC coordinates
              if(present(Bt_DII)) Bt_DII(:,i,j) = &
-                  matmul( cross_product(rUnit_D, bIn_D), GmFac_DD )
-#endif
+                  matmul13( cross_product(rUnit_D, bIn_D), GmFac_DD )
           end do
        end do
     end if
     deallocate(bCurrent_VII)
 
+#ifdef _OPENACC    
     !$acc update host(Fac_II)
+    if(present(Br_II))then
+       !$acc update host(Br_II)
+    end if
 
+    if(present(Bt_DII))then
+       !$acc update host(Bt_DII)
+    end if
+
+    if(present(b_DII))then
+       !$acc update host(B_dII)
+    end if    
+#endif    
+        
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
   !============================================================================
