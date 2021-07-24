@@ -4,6 +4,7 @@
 
 module ModFieldTraceFast
 
+  use ModKind
   use ModFieldTrace
 
   use BATL_lib, ONLY: &
@@ -26,8 +27,8 @@ module ModFieldTraceFast
   ! Local variables
 
   ! Stored face and cell indices of the 2 rays starting from a face of a block
-  integer, allocatable :: IjkTrace_DINB(:,:,:,:,:,:)
-  !$acc declare create(IjkTrace_DINB)
+  integer(Int1_), allocatable :: I_DINB(:,:,:,:,:,:)
+  !$acc declare create(I_DINB)
 
   ! Stored weights for the 2 rays starting from a face of a block
   real, allocatable :: WeightTrace_DINB(:,:,:,:,:,:)
@@ -58,8 +59,8 @@ contains
     !--------------------------------------------------------------------------
     if(.not.allocated(Trace_DINB)) &
          allocate(Trace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
-    if(.not.allocated(IjkTrace_DINB)) &
-         allocate(IjkTrace_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
+    if(.not.allocated(I_DINB)) &
+         allocate(I_DINB(3,2,nI+1,nJ+1,nK+1,MaxBlock))
     if(.not.allocated(WeightTrace_DINB)) &
          allocate(WeightTrace_DINB(4,2,nI+1,nJ+1,nK+1,MaxBlock))
     if(.not.allocated(b_DNB)) &
@@ -76,7 +77,7 @@ contains
   subroutine clean_mod_trace_fast
     !--------------------------------------------------------------------------
     if(allocated(Trace_DINB))       deallocate(Trace_DINB)
-    if(allocated(IjkTrace_DINB))    deallocate(IjkTrace_DINB)
+    if(allocated(I_DINB))    deallocate(I_DINB)
     if(allocated(WeightTrace_DINB)) deallocate(WeightTrace_DINB)
     if(allocated(b_DNB))            deallocate(b_DNB)
     if(allocated(b_DGB))            deallocate(b_DGB)
@@ -366,15 +367,15 @@ contains
                         Weight_I, .true.)
 
                    ! Memorize ray integration results
-                   IjkTrace_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
+                   I_DINB(1,iRay,iX,iY,iZ,iBlock) = iFace
                    if(iFace>0)then
                       select case(iFace)
                       case(1,2)
-                         IjkTrace_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [j1,k1]
+                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [j1,k1]
                       case(3,4)
-                         IjkTrace_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,k1]
+                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,k1]
                       case(6,5)
-                         IjkTrace_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,j1]
+                         I_DINB(2:3,iRay,iX,iY,iZ,iBlock) = [i1,j1]
                       end select
                       WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock) = Weight_I
                    end if
@@ -382,33 +383,33 @@ contains
              else
                 do iRay = 1, 2
                    ! Use stored values
-                   iFace=IjkTrace_DINB(1,iRay,iX,iY,iZ,iBlock)
+                   iFace=I_DINB(1,iRay,iX,iY,iZ,iBlock)
                    if(iFace>0)then
                       select case(iFace)
                       case(1)
                          i1=1; i2=1
-                         j1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); j2=j1+1
-                         k1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
+                         j1=I_DINB(2,iRay,iX,iY,iZ,iBlock); j2=j1+1
+                         k1=I_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
                       case(2)
                          i1=nI+1; i2=i1
-                         j1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); j2=j1+1
-                         k1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
+                         j1=I_DINB(2,iRay,iX,iY,iZ,iBlock); j2=j1+1
+                         k1=I_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
                       case(3)
                          j1=1; j2=1
-                         i1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
-                         k1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
+                         i1=I_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
+                         k1=I_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
                       case(4)
                          j1=nJ+1; j2=nJ+1
-                         i1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
-                         k1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
+                         i1=I_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
+                         k1=I_DINB(3,iRay,iX,iY,iZ,iBlock); k2=k1+1
                       case(5)
                          k1=1; k2=1
-                         i1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
-                         j1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
+                         i1=I_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
+                         j1=I_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
                       case(6)
                          k1=nK+1; k2=k1
-                         i1=IjkTrace_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
-                         j1=IjkTrace_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
+                         i1=I_DINB(2,iRay,iX,iY,iZ,iBlock); i2=i1+1
+                         j1=I_DINB(3,iRay,iX,iY,iZ,iBlock); j2=j1+1
                       end select
 
                       ! Put interpolation values into a small array
@@ -648,12 +649,12 @@ contains
                      write(*,*)'Xyz_DGB(z_,1,1,1),dx=',&
                           Xyz_DGB(:,1,1,1,iBlock), CellSize_DB(x_,iBlock)
 
-                     iPos_D=IjkTrace_DINB(:,iRay,iX,iY,iZ,iBlock)
+                     iPos_D=I_DINB(:,iRay,iX,iY,iZ,iBlock)
                      if(iPos_D(1)>0)then
                         write(*,*)' Trace_DINB   =', &
                              Trace_DINB(:,iRay,iX,iY,iZ,iBlock)
-                        write(*,*)' IjkTrace_DINB=', &
-                             IjkTrace_DINB(:,iRay,iX,iY,iZ,iBlock)
+                        write(*,*)' I_DINB=', &
+                             I_DINB(:,iRay,iX,iY,iZ,iBlock)
                         write(*,*)' WeightTrace_DINB=', &
                              WeightTrace_DINB(:,iRay,iX,iY,iZ,iBlock)
                         select case(iPos_D(1))
@@ -678,7 +679,7 @@ contains
                              Xyz_DGB(:,jx,jy,jz,iBlock) &
                              -0.5*CellSize_DB(:,iBlock)
                      else
-                        write(*,*)' IjkTrace_DINB=',iPos_D
+                        write(*,*)' I_DINB=',iPos_D
                      end if
                   end do
                end do
@@ -1489,33 +1490,33 @@ contains
     case(1)
        nFaceJ=nJ+1; nFaceK=nK+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,1,:,:,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,1,:,:,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,1,:,:,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,1,:,:,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,1,:,:,iBlock)
     case(2)
        nFaceJ=nJ+1; nFaceK=nK+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,nI+1,:,:,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,nI+1,:,:,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,nI+1,:,:,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,nI+1,:,:,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,nI+1,:,:,iBlock)
     case(3)
        nFaceJ=nI+1; nFaceK=nK+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,:,1,:,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,:,1,:,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,:,1,:,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,:,1,:,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,:,1,:,iBlock)
     case(4)
        nFaceJ=nI+1; nFaceK=nK+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,:,nJ+1,:,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,:,nJ+1,:,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,:,nJ+1,:,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,:,nJ+1,:,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,:,nJ+1,:,iBlock)
     case(5)
        nFaceJ=nI+1; nFaceK=nJ+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,:,:,1,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,:,:,1,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,:,:,1,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,:,:,1,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,:,:,1,iBlock)
     case(6)
        nFaceJ=nI+1; nFaceK=nJ+1
        Trace_DIII( :,:,1:nFaceJ,1:nFaceK)=Trace_DINB(:,:,:,:,nK+1,iBlock)
-       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,1,:,:,nK+1,iBlock)
-       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=IjkTrace_DINB(1,2,:,:,nK+1,iBlock)
+       IjkTrace_DII(1,1:nFaceJ,1:nFaceK)=I_DINB(1,1,:,:,nK+1,iBlock)
+       IjkTrace_DII(2,1:nFaceJ,1:nFaceK)=I_DINB(1,2,:,:,nK+1,iBlock)
     case default
        call stop_mpi('Impossible value for iFace in prolong_ray')
     end select
@@ -2418,48 +2419,48 @@ contains
          !$acc loop vector collapse(2)
          do j = 1, nFaceJ ; do k = 1, nFaceK
             Trace_DIII( :,:,j,k)=Trace_DINB(   :,:,1,j,k,iBlock)
-            IjkTrace_DII(1,j,k)=IjkTrace_DINB(1,1,1,j,k,iBlock)
-            IjkTrace_DII(2,j,k)=IjkTrace_DINB(1,2,1,j,k,iBlock)
+            IjkTrace_DII(1,j,k)=I_DINB(1,1,1,j,k,iBlock)
+            IjkTrace_DII(2,j,k)=I_DINB(1,2,1,j,k,iBlock)
          end do; end do
       case(2)
          nFaceJ=nJ+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
          do j = 1, nFaceJ; do k = 1, nFaceK
             Trace_DIII( :,:,j,k)=Trace_DINB(   :,:,nI+1,j,k,iBlock)
-            IjkTrace_DII(1,j,k)=IjkTrace_DINB(1,1,nI+1,j,k,iBlock)
-            IjkTrace_DII(2,j,k)=IjkTrace_DINB(1,2,nI+1,j,k,iBlock)
+            IjkTrace_DII(1,j,k)=I_DINB(1,1,nI+1,j,k,iBlock)
+            IjkTrace_DII(2,j,k)=I_DINB(1,2,nI+1,j,k,iBlock)
          end do; end do
       case(3)
          nFaceJ=nI+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do k = 1, nFaceK
             Trace_DIII( :,:,i,k)=Trace_DINB(   :,:,i,1,k,iBlock)
-            IjkTrace_DII(1,i,k)=IjkTrace_DINB(1,1,i,1,k,iBlock)
-            IjkTrace_DII(2,i,k)=IjkTrace_DINB(1,2,i,1,k,iBlock)
+            IjkTrace_DII(1,i,k)=I_DINB(1,1,i,1,k,iBlock)
+            IjkTrace_DII(2,i,k)=I_DINB(1,2,i,1,k,iBlock)
          end do; end do
       case(4)
          nFaceJ=nI+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do k = 1, nFaceK
             Trace_DIII( :,:,i,k)=Trace_DINB(   :,:,i,nJ+1,k,iBlock)
-            IjkTrace_DII(1,i,k)=IjkTrace_DINB(1,1,i,nJ+1,k,iBlock)
-            IjkTrace_DII(2,i,k)=IjkTrace_DINB(1,2,i,nJ+1,k,iBlock)
+            IjkTrace_DII(1,i,k)=I_DINB(1,1,i,nJ+1,k,iBlock)
+            IjkTrace_DII(2,i,k)=I_DINB(1,2,i,nJ+1,k,iBlock)
          end do; end do
       case(5)
          nFaceJ=nI+1; nFaceK=nJ+1
          !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do j = 1, nFaceK
             Trace_DIII(:,:,i,j)=Trace_DINB(   :,:,i,j,1,iBlock)
-            IjkTrace_DII(1,i,j)=IjkTrace_DINB(1,1,i,j,1,iBlock)
-            IjkTrace_DII(2,i,j)=IjkTrace_DINB(1,2,i,j,1,iBlock)
+            IjkTrace_DII(1,i,j)=I_DINB(1,1,i,j,1,iBlock)
+            IjkTrace_DII(2,i,j)=I_DINB(1,2,i,j,1,iBlock)
          end do; end do
       case(6)
          nFaceJ=nI+1; nFaceK=nJ+1
          !$acc loop vector collapse(2)
          do i = 1, nFaceJ; do j = 1, nFaceK
             Trace_DIII(:,:,i,j)=Trace_DINB(   :,:,i,j,nK+1,iBlock)
-            IjkTrace_DII(1,i,j)=IjkTrace_DINB(1,1,i,j,nK+1,iBlock)
-            IjkTrace_DII(2,i,j)=IjkTrace_DINB(1,2,i,j,nK+1,iBlock)
+            IjkTrace_DII(1,i,j)=I_DINB(1,1,i,j,nK+1,iBlock)
+            IjkTrace_DII(2,i,j)=I_DINB(1,2,i,j,nK+1,iBlock)
          end do; end do
       case default
 #ifndef _OPENACC
