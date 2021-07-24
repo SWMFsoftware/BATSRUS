@@ -1210,7 +1210,6 @@ contains
        end if
 
        State_VG(Rho_, 0, j, k) = RhoNoDimOut
-       ! UAbsMax = min(UAbsMax,0.10*sqrt(State_VG(p_, 0, j, k)/RhoNoDimOut))
        ! Extrapolation of density
        State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2&
             /State_VG(Rho_,1,j,k)
