@@ -1076,6 +1076,7 @@ contains
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
          UseEfield, UseAnisoPe
     use ModMain,    ONLY: UseB
+    !use ModChGL,    ONLY: UseChGL
 
     integer :: iVar, iFluid
 
@@ -1176,9 +1177,9 @@ contains
     end if
 
     if(SignB_ > 1)then
-       UnitUser_V(SignB_)        = 1.0
-       NameUnitUserTec_V(SignB_) = ''
-       NameUnitUserIdl_V(SignB_) = '1'
+       UnitUser_V(SignB_)        = No2Io_V(UnitB_)/No2Io_V(UnitU_)
+       NameUnitUserTec_V(SignB_) = 'Gs*s/km'
+       NameUnitUserIdl_V(SignB_) = 'Gs*s/km'
     end if
 
     if(Ehot_ > 1)then
