@@ -263,7 +263,8 @@ test_shocktube_1d:
 	$(MAKE) test_shocktube_1d_check
 
 test_shocktube_1d_compile:
-	./Config.pl -noopenmp ${OPENACC} -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
+	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -u=Default -e=MhdHyp -ng=2 -g=1024,1,1
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.hyp.1d
 	$(MAKE) BATSRUS
 	make PIDL
@@ -329,7 +330,8 @@ test_fast_wave:
 	$(MAKE) test_fast_wave_check
 
 test_fast_wave_compile:
-	./Config.pl -noopenmp ${OPENACC} -u=Waves -e=Mhd -g=10,10,10
+	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -u=Waves -e=Mhd -g=10,10,10
 	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave
 	$(MAKE) BATSRUS
 	make PIDL
@@ -1693,7 +1695,8 @@ test_earth_start:
 	$(MAKE) test_earth_check
 
 test_earth_compile:
-	./Config.pl -noopenmp ${OPENACC} -e=Mhd -u=Default -g=10,10,10
+	cd ${DIR}; ./Config.pl -noopenmp ${OPENACC}
+	./Config.pl -e=Mhd -u=Default -g=10,10,10
 	./Config.pl -opt=Param/EARTH/PARAM.in.GPU.dev
 	${MAKE} BATSRUS
 	make PIDL
