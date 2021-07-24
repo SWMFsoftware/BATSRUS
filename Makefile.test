@@ -99,7 +99,7 @@ test:
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
 	-@($(MAKE) test_earth TESTDIR=run_test_earth)	
-	./Config.pl -noacc
+	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)
 	-@($(MAKE) test_shockramp TESTDIR=run_test_shockramp)
