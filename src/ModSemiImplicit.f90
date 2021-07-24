@@ -276,6 +276,7 @@ contains
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
     use ModFixAxisCells, ONLY: fix_axis_cells
     use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B, nIJK
+    use ModEnergy, ONLY: limit_pressure
     ! use omp_lib
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
@@ -413,6 +414,7 @@ contains
           call stop_mpi(NameSub//': no update_impl implemented for' &
                //TypeSemiImplicit)
        end select
+       call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, 1)
     end do
     !$omp end parallel do
 
