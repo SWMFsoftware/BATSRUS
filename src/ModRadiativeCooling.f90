@@ -124,8 +124,8 @@ contains
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
        if(index(StringTest, NameSub)>0)then
-          if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.NumberDensCgs<1.0e2.or.&
-               NumberDensCgs<1.0e2.or.NumberDensCgs>1.0e14)then
+          if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.&
+               NumberDensCgs<1.0e1.or.NumberDensCgs>1.0e14)then
              write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
              if(present(iError))iError=1
              if(TeSiIn<0.0)call stop_mpi(&
