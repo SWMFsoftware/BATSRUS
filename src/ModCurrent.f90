@@ -582,7 +582,7 @@ contains
 
     ! This is copied from ModGroundMagPerturb.f90. It should be moved tof
     ! a proper module in the near future!
-    
+
     ! Matrix-vector multiplication for 3x3 matrix,
     ! to avoid temporaries at the call site.
     ! Equivalent with c_D = matmul(a_DD, b_D)
@@ -602,7 +602,7 @@ contains
   !============================================================================
   function matmul13(a_D, b_DD) result(c_D)
     !$acc routine seq
-    
+
     real, intent(in) :: a_D(3), b_DD(3,3)
     real :: c_D(3)
     integer:: i, j
@@ -622,7 +622,7 @@ contains
 
     ! Copied from ModFastUpdata.f90 here so that it can be inlined
     ! to avoid race condition.
-    
+
     ! Return c = a x b
 
     real, intent(in) :: a_D(3), b_D(3)
@@ -635,7 +635,6 @@ contains
   end function cross_product
   !============================================================================
 
-  
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
        Br_II, Bt_DII, b_DII, &
        LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
@@ -674,11 +673,11 @@ contains
     ! Radial component of magnetic field at rIn
     real, intent(out), optional:: Br_II(nTheta,nPhi)
     !$acc declare create(Br_II)
-    
+
     ! Tangential component (r x B/r) of field at rIn in FAC coordinates
     real, intent(out), optional:: Bt_DII(3,nTheta,nPhi)
     !$acc declare create(Bt_DII)
-    
+
     ! Magnetic field at rIn in FAC coordinates
     real, intent(out), optional:: b_DII(3,nTheta,nPhi)
     !$acc declare create(b_DII)
@@ -710,7 +709,7 @@ contains
     !$acc declare create(bCurrent_VII)
 
     real    :: LatBoundaryLocal
-    
+
     integer :: i, j, ii, jj, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
     real    :: b_D(3), bRcurrents, Fac, j_D(3), bUnit_D(3), B0_D(3)
@@ -722,7 +721,7 @@ contains
     logical :: DoMap
 
     logical :: UseGsm
-    logical :: DoTest
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -730,7 +729,7 @@ contains
     TypeCoordFac = 'SMG'
     if(present(TypeCoordFacGrid)) TypeCoordFac = TypeCoordFacGrid
     UseGsm = TypeCoordFac == 'GSM'
-    
+
     if(.not.allocated(bCurrent_VII)) allocate(bCurrent_VII(0:6,nTheta,nPhi))
 
     bCurrent_VII = 0.0
@@ -741,7 +740,7 @@ contains
     !$acc update device(GmFac_DD)
 
     if(present(LatBoundary)) LatBoundary = 100.0
-    
+
     if (abs(rIn - rCurrents) < 1.0e-3)then
        DoMap = .false.
     else
@@ -761,10 +760,10 @@ contains
     if(present(Theta_I))then
        !$acc update device(Theta_I)
     end if
-    
+
     LatBoundaryLocal = 100.0
-#endif        
-    
+#endif
+
     !$acc parallel loop vector collapse(2) &
     !$acc private(XyzIn_D, Xyz_D, B0_D, State_V) reduction(min:LatBoundaryLocal)
     do j = 1, nPhi; do i = 1, nTheta
@@ -805,7 +804,7 @@ contains
 
 #ifdef _OPENACC
        Xyz_D = matmul31(GmFac_DD, Xyz_D)
-       
+
        LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
 
        call get_b0_dipole(Xyz_D, B0_D)
@@ -844,8 +843,8 @@ contains
 
 #ifdef _OPENACC
     if(present(LatBoundary)) LatBoundary = LatBoundaryLocal
-#endif    
-    
+#endif
+
 #ifndef _OPENACC
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
          iComm,iError)
@@ -949,7 +948,7 @@ contains
     end if
     deallocate(bCurrent_VII)
 
-#ifdef _OPENACC    
+#ifdef _OPENACC
     !$acc update host(Fac_II)
     if(present(Br_II))then
        !$acc update host(Br_II)
@@ -961,9 +960,9 @@ contains
 
     if(present(b_DII))then
        !$acc update host(B_dII)
-    end if    
-#endif    
-        
+    end if
+#endif
+
     call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
   !============================================================================
