@@ -57,6 +57,7 @@ module ModGroundMagPerturb
 
   ! Fast algorithms:
   real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
+  !$acc declare create(LineContrib_DII, InvDist2_DII)
   logical:: UseSurfaceIntegral = .true.       ! true for fast surface integral
   logical:: UseFastFacIntegral = .true.       ! true for fast FAC integral
   character(len=3):: TypeCoordFacGrid = 'MAG' ! 'MAG' for fast integral
@@ -589,6 +590,7 @@ contains
           nLineProc = 1 + (nTheta*nPhi-1)/nProc
           allocate(LineContrib_DII(3,nMagTotal,nLineProc))
           LineContrib_DII = 0.0
+          !$acc update device(LineContrib_DII)
           if(iProc==0) write(*,*) NameSub, &
                ' allocated LineContrib_DII(3,',nMagTotal,',',nLineProc,')'
        end if
@@ -596,6 +598,7 @@ contains
        if(UseSurfaceIntegral .and. .not.allocated(InvDist2_DII))then
           allocate(InvDist2_DII(3,nMagTotal,nLineProc))
           InvDist2_DII = 0.0
+          !$acc update device(InvDist2_DII)
           if(iProc==0) write(*,*) NameSub, &
                ' allocated InvDist2_DII(3,',nMagTotal,',',nLineProc,')'
        end if
@@ -621,13 +624,18 @@ contains
        end select
     end if
 
+    !$acc data &
+    !$acc copyin(Fac_II, Br_II, Bt_DII) &
+    !$acc copy(MagPerturbMhd_DI, MagPerturbFac_DI) &
+    !$acc
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
        iLineProc = 0
        !$acc parallel &
        !$acc default(none) &
-       !$acc copy(MagPerturbMhd_DI,MagPerturbFac_DI) &
-       !$acc copyin(Fac_II, Br_II, Bt_DII, InvDist2_DII, LineContrib_DII) &
+       !$acc present(MagPerturbMhd_DI,MagPerturbFac_DI) &
+       !$acc present(Fac_II, Br_II, Bt_DII) &
+       !$acc present(InvDist2_DII, LineContrib_DII) &
        !$acc private(Bt_D) &
        !$acc
        do iTheta = 1, nTheta
@@ -701,9 +709,10 @@ contains
        !$acc  default(none) &
        !$acc  private(iLineProc,XyzMid_D,b_D,Bt_D,InvDist2_D,XyzRcurrents_D,&
        !$acc  Pert_D) &
-       !$acc  copyin(Fac_II,Bt_DII,Br_II,SmToFacGrid_DD,Xyz_DI) &
-       !$acc  copy(InvDist2_DII) &
-       !$acc  copy(MagPerturbFac_DI, LineContrib_DII, MagPerturbMhd_DI)
+       !$acc  copyin(SmToFacGrid_DD,Xyz_DI) &
+       !$acc  present(Fac_II,Bt_DII,Br_II) &
+       !$acc  present(InvDist2_DII, LineContrib_DII) &
+       !$acc  present(MagPerturbFac_DI, MagPerturbMhd_DI)
        do iTheta = 1, nTheta
           Theta = (iTheta-1) * dTheta
           ! At the poles sin(Theta)=0, but the area of the triangle
@@ -863,6 +872,7 @@ contains
        !$acc end parallel
        call timing_stop('ground_slow_int')
     end if
+    !$acc end data
     !! Volume of the two spherical caps above Height (should be filled
     !! with field lines). See https://en.wikipedia.org/wiki/Spherical_cap
     ! write(*,*)'!!! Volumes =', Volume, 2*cPi*Height**2*(rCurrents - Height/3)
