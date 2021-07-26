@@ -624,29 +624,42 @@ contains
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
        iLineProc = 0
+       !$acc parallel &
+       !$acc default(none) &
+       !$acc copy(MagPerturbMhd_DI,MagPerturbFac_DI) &
+       !$acc copyin(Fac_II, Br_II, Bt_DII, InvDist2_DII, LineContrib_DII) &
+       !$acc private(Bt_D) &
+       !$acc
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
+#ifndef _OPENACC             
              iLine = iLine + 1
              if(mod(iLine, nProc) /= iProc)CYCLE
 
              iLineProc = iLineProc + 1
+#else
+             iLineProc = iPhi + nPhi*(iTheta-1)
+#endif
 
              if(UseSurfaceIntegral)then
                 Br   = Br_II(iTheta,iPhi)
                 Bt_D = Bt_DII(:,iTheta,iPhi)
 
+                !$acc loop gang worker vector private(InvDist2_D, Pert_D)
                 do iMag = 1, nMag
                    ! dA*(x-x0)/(4pi*|x-x0|^3)
                    InvDist2_D = InvDist2_DII(:,iMag+iMag0,iLineProc)
 
+                   Pert_D = cross_product(Bt_D, InvDist2_D)
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
-                        + Br*InvDist2_D + cross_product(Bt_D, InvDist2_D)
+                        + Br*InvDist2_D + Pert_D
                 end do
              end if
 
              FacRcurrents = Fac_II(iTheta,iPhi)
              if(FacRcurrents == 0.0) CYCLE
 
+             !$acc loop gang worker vector
              do iMag = 1, nMag
 
                 ! Add contribution from this line to this magnetometer
@@ -655,6 +668,7 @@ contains
              end do
           end do
        end do
+       !$acc end parallel
        call timing_stop('ground_fast_int')
     else
        call timing_start('ground_slow_int')
