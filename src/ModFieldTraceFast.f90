@@ -245,7 +245,9 @@ contains
     !$acc parallel loop gang
     do iBlock = 1, nBlock
 
-!!! should we have i,j,k loops here???
+       ! Q: Should we have i,j,k loops here?
+       ! A: Since this kernel is already short and fast, replacing the 
+       !    following array operations with loops does not improve speed.
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
           Trace_DINB(:,:,:,:,:,iBlock) = NORAY-1.
@@ -2417,7 +2419,7 @@ contains
       case(1)
          nFaceJ=nJ+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
-         do j = 1, nFaceJ ; do k = 1, nFaceK
+         do k = 1, nFaceK; do j = 1, nFaceJ
             Trace_DIII( :,:,j,k)=Trace_DINB(   :,:,1,j,k,iBlock)
             IjkTrace_DII(1,j,k)=I_DINB(1,1,1,j,k,iBlock)
             IjkTrace_DII(2,j,k)=I_DINB(1,2,1,j,k,iBlock)
@@ -2425,7 +2427,7 @@ contains
       case(2)
          nFaceJ=nJ+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
-         do j = 1, nFaceJ; do k = 1, nFaceK
+         do k = 1, nFaceK; do j = 1, nFaceJ
             Trace_DIII( :,:,j,k)=Trace_DINB(   :,:,nI+1,j,k,iBlock)
             IjkTrace_DII(1,j,k)=I_DINB(1,1,nI+1,j,k,iBlock)
             IjkTrace_DII(2,j,k)=I_DINB(1,2,nI+1,j,k,iBlock)
@@ -2433,7 +2435,7 @@ contains
       case(3)
          nFaceJ=nI+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
-         do i = 1, nFaceJ; do k = 1, nFaceK
+         do k = 1, nFaceK; do i = 1, nFaceJ
             Trace_DIII( :,:,i,k)=Trace_DINB(   :,:,i,1,k,iBlock)
             IjkTrace_DII(1,i,k)=I_DINB(1,1,i,1,k,iBlock)
             IjkTrace_DII(2,i,k)=I_DINB(1,2,i,1,k,iBlock)
@@ -2441,7 +2443,7 @@ contains
       case(4)
          nFaceJ=nI+1; nFaceK=nK+1
          !$acc loop vector collapse(2)
-         do i = 1, nFaceJ; do k = 1, nFaceK
+         do k = 1, nFaceK; do i = 1, nFaceJ
             Trace_DIII( :,:,i,k)=Trace_DINB(   :,:,i,nJ+1,k,iBlock)
             IjkTrace_DII(1,i,k)=I_DINB(1,1,i,nJ+1,k,iBlock)
             IjkTrace_DII(2,i,k)=I_DINB(1,2,i,nJ+1,k,iBlock)
@@ -2449,7 +2451,7 @@ contains
       case(5)
          nFaceJ=nI+1; nFaceK=nJ+1
          !$acc loop vector collapse(2)
-         do i = 1, nFaceJ; do j = 1, nFaceK
+         do j = 1, nFaceK; do i = 1, nFaceJ
             Trace_DIII(:,:,i,j)=Trace_DINB(   :,:,i,j,1,iBlock)
             IjkTrace_DII(1,i,j)=I_DINB(1,1,i,j,1,iBlock)
             IjkTrace_DII(2,i,j)=I_DINB(1,2,i,j,1,iBlock)
@@ -2457,7 +2459,7 @@ contains
       case(6)
          nFaceJ=nI+1; nFaceK=nJ+1
          !$acc loop vector collapse(2)
-         do i = 1, nFaceJ; do j = 1, nFaceK
+         do j = 1, nFaceK; do i = 1, nFaceJ
             Trace_DIII(:,:,i,j)=Trace_DINB(   :,:,i,j,nK+1,iBlock)
             IjkTrace_DII(1,i,j)=I_DINB(1,1,i,j,nK+1,iBlock)
             IjkTrace_DII(2,i,j)=I_DINB(1,2,i,j,nK+1,iBlock)
@@ -2468,7 +2470,8 @@ contains
 #endif
       end select
 
-      !$acc loop vector collapse(2) private(Trace_DI, Weight2_I, Weight4_I)
+      !$acc loop vector collapse(2) &
+      !$acc private(Trace_DI, Trace4_DI, Weight2_I, Weight4_I)
       do iRay=1,2
          do k=1,nfaceK
             Weight2_I = 0.5
