@@ -626,8 +626,7 @@ contains
 
     !$acc data &
     !$acc copyin(Fac_II, Br_II, Bt_DII) &
-    !$acc copy(MagPerturbMhd_DI, MagPerturbFac_DI) &
-    !$acc
+    !$acc copy(MagPerturbMhd_DI, MagPerturbFac_DI)
     if(UseFastFacIntegral_I(iGroup))then
        call timing_start('ground_fast_int')
        iLineProc = 0
@@ -636,8 +635,7 @@ contains
        !$acc present(MagPerturbMhd_DI,MagPerturbFac_DI) &
        !$acc present(Fac_II, Br_II, Bt_DII) &
        !$acc present(InvDist2_DII, LineContrib_DII) &
-       !$acc private(Bt_D) &
-       !$acc
+       !$acc private(Bt_D)
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
 #ifndef _OPENACC             
