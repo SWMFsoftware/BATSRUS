@@ -9,7 +9,7 @@ module ModGroundMagPerturb
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: &
-       sph_to_xyz, rot_xyz_sph, xyz_to_lonlat, cross_product
+       sph_to_xyz, rot_xyz_sph, xyz_to_lonlat
   use ModFaceBoundary,   ONLY: RatioOH, UseYoungBc, F107Young
   use ModConst,          ONLY: cDegToRad, cRadToDeg
 
@@ -109,6 +109,8 @@ module ModGroundMagPerturb
   character(len=*), parameter :: NameAeVars = 'AL AU AE AO '
 
 contains
+  !============================================================================
+  include 'vector_functions.h'
   !============================================================================
   subroutine read_magperturb_param(NameCommand)
 
@@ -446,26 +448,6 @@ contains
 
   end subroutine ground_mag_perturb
   !============================================================================
-  pure function matmul3(a_DD, b_D) result(c_D)
-    !$acc routine seq
-
-    ! Matrix-vector multiplication for 3x3 matrix,
-    ! to avoid temporaries at the call site.
-    ! Equivalent with c_D = matmul(a_DD, b_D)
-
-    real, intent(in) :: a_DD(3,3), b_D(3)
-    real :: c_D(3)
-    integer:: i, j
-    !--------------------------------------------------------------------------
-    c_D(:)=0
-    do j=1,3
-       do i=1,3
-          c_D(i) = c_D(i) + a_DD(i,j)*b_D(j)
-       end do
-    end do
-
-  end function matmul3
-  !============================================================================
   subroutine ground_mag_perturb_fac(NameGroup, nMag, Xyz_DI, &
        MagPerturbFac_DI, MagPerturbMhd_DI)
 
@@ -768,7 +750,7 @@ contains
                 do iMag = 1, nMag
                    if(DoConvertCoord) then
                       ! ? This could be done in advance
-                      Xyz_D = matmul3(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                      Xyz_D = matmul3_left(SmToFacGrid_DD, Xyz_DI(:,iMag))
                    else
                       Xyz_D = Xyz_DI(:,iMag)
                    end if
@@ -828,7 +810,7 @@ contains
                 !$acc loop gang worker vector private(Xyz_D,Pert_D)
                 do iMag = 1, nMag
                    if (DoConvertCoord) then
-                      Xyz_D = matmul3(SmToFacGrid_DD, Xyz_DI(:,iMag))
+                      Xyz_D = matmul3_left(SmToFacGrid_DD, Xyz_DI(:,iMag))
                    else
                       Xyz_D = Xyz_DI(:,iMag)
                    end if
@@ -1442,7 +1424,7 @@ contains
             nint(PosMagnetometer_II(2,iMag+iStart)) == 360) then
           Xyz_D = 0.0
        else
-          call  sph_to_xyz(1.0,                           &
+          call sph_to_xyz(1.0,                           &
                (90-PosMagnetometer_II(1,iMag+iStart))*cDegToRad, &
                PosMagnetometer_II(2,iMag+iStart)*cDegToRad, Xyz_D)
           Xyz_D = matmul(MagtoGm_DD, Xyz_D)

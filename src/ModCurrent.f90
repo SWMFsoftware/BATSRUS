@@ -21,7 +21,8 @@ module ModCurrent
 
 contains
   !============================================================================
-
+  include 'vector_functions.h'
+  !============================================================================
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
     !$acc routine seq
@@ -512,7 +513,6 @@ contains
 #endif
     end subroutine calc_cartesian_j
     !==========================================================================
-
     subroutine calc_gencoord_j
 
       use ModCoordTransform, ONLY: inverse_matrix
@@ -520,7 +520,6 @@ contains
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
 
       ! Get the dCartesian/dGencoord matrix with central difference
-
       !------------------------------------------------------------------------
       DxyzDcoord_DD(:,1) = InvDx2 &
            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
@@ -574,67 +573,8 @@ contains
 
     end subroutine calc_gencoord_j
     !==========================================================================
-
   end subroutine get_current
   !============================================================================
-  function matmul31(a_DD, b_D) result(c_D)
-    !$acc routine seq
-
-    ! This is copied from ModGroundMagPerturb.f90. It should be moved tof
-    ! a proper module in the near future!
-
-    ! Matrix-vector multiplication for 3x3 matrix,
-    ! to avoid temporaries at the call site.
-    ! Equivalent with c_D = matmul(a_DD, b_D)
-
-    real, intent(in) :: a_DD(3,3), b_D(3)
-    real :: c_D(3)
-    integer:: i, j
-    !--------------------------------------------------------------------------
-    c_D(:)=0
-    do j=1,3
-       do i=1,3
-          c_D(i) = c_D(i) + a_DD(i,j)*b_D(j)
-       end do
-    end do
-
-  end function matmul31
-  !============================================================================
-  function matmul13(a_D, b_DD) result(c_D)
-    !$acc routine seq
-
-    real, intent(in) :: a_D(3), b_DD(3,3)
-    real :: c_D(3)
-    integer:: i, j
-    !--------------------------------------------------------------------------
-    c_D(:)=0
-
-    do i=1,3
-       do j=1,3
-          c_D(i) = c_D(i) + a_D(j)*b_DD(j,i)
-       end do
-    end do
-
-  end function matmul13
-  !============================================================================
-  function cross_product(a_D, b_D) result(c_D)
-    !$acc routine seq
-
-    ! Copied from ModFastUpdata.f90 here so that it can be inlined
-    ! to avoid race condition.
-
-    ! Return c = a x b
-
-    real, intent(in) :: a_D(3), b_D(3)
-    !RETURN VALUE:
-    real             :: c_D(3)
-    !--------------------------------------------------------------------------
-    c_D(x_) = a_D(y_)*b_D(z_) - a_D(z_)*b_D(y_)
-    c_D(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
-    c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
-  end function cross_product
-  !============================================================================
-
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
        Br_II, Bt_DII, b_DII, &
        LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
@@ -803,7 +743,7 @@ contains
        end if
 
 #ifdef _OPENACC
-       Xyz_D = matmul31(GmFac_DD, Xyz_D)
+       Xyz_D = matmul3_left(GmFac_DD, Xyz_D)
 
        LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
 
@@ -890,7 +830,7 @@ contains
              call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
 #ifdef _OPENACC
-             XyzIn_D = matmul31(GmFac_DD, Xyz_D)
+             XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
 #else
              ! Convert to GM coordinates
              XyzIn_D = matmul(GmFac_DD, Xyz_D)
@@ -935,14 +875,16 @@ contains
              Fac_II(i,j) = Fac
 
              ! store the B field in the FAC coordinates
-             if(present(b_DII)) b_DII(:,i,j) = matmul13(bIn_D, GmFac_DD)
+             if(present(b_DII)) b_DII(:,i,j) = matmul3_right(bIn_D, GmFac_DD)
 
              ! store radial component of B field
              if(present(Br_II)) Br_II(i,j) = Br
 
              ! store tangential B field vector in FAC coordinates
-             if(present(Bt_DII)) Bt_DII(:,i,j) = &
-                  matmul13( cross_product(rUnit_D, bIn_D), GmFac_DD )
+             if(present(Bt_DII))then
+                b_D = cross_product(rUnit_D, bIn_D)
+                Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
+             end if
           end do
        end do
     end if

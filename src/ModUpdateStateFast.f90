@@ -56,6 +56,8 @@ module ModUpdateStateFast
 
 contains
   !============================================================================
+  include 'vector_functions.h'
+  !============================================================================
   subroutine sync_cpu_gpu(String, NameCaller)
 
     character(len=*), intent(in):: String
@@ -3004,20 +3006,6 @@ contains
 
   end subroutine pressure_to_energy
   !============================================================================
-  function cross_product(a_D, b_D) result(c_D)
-    !$acc routine seq
-
-    ! Return c = a x b
-
-    real, intent(in) :: a_D(3), b_D(3)
-    !RETURN VALUE:
-    real             :: c_D(3)
-    !--------------------------------------------------------------------------
-    c_D(x_) = a_D(y_)*b_D(z_) - a_D(z_)*b_D(y_)
-    c_D(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
-    c_D(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
-  end function cross_product
-  !============================================================================
   subroutine update_b0_fast
 
     ! Update B0 due to the rotation of the dipole
@@ -3112,7 +3100,7 @@ contains
          +             Dist2     * dIonoPotential_DII(:, iTheta+1, iPhi+1))
 
     ! E = -grad(Potential) = - dPotential/d(Theta,Phi) * d(Theta,Phi)/d(x,y,z)
-    eField_D = - matmul( dPotential_D, DdirDxyz_DD)
+    eField_D = - matmul23_right( dPotential_D, DdirDxyz_DD)
 
     ! Magnetic field
     B2  = sum(b_D**2)
