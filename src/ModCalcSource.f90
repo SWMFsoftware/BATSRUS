@@ -382,7 +382,8 @@ contains
     if(UseRadCooling)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
-               RadCooling_C(i,j,k))
+               RadCooling_C(i,j,k), NameCaller=NameSub, &
+               Xyz_D=Xyz_DGB(:,i,j,k,iBlock) ) 
 
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &

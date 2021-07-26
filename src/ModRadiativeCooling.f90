@@ -64,17 +64,20 @@ contains
 
   end subroutine check_cooling_param
   !============================================================================
-  subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling, iError)
+  subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling, &
+       iError, NameCaller, Xyz_D)
 
     use ModPhysics,    ONLY: No2Si_V, UnitN_
     use ModVarIndexes, ONLY: Rho_
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, MaxDim
     use ModMultiFluid, ONLY: UseMultiIon, ChargeIon_I, iRhoIon_I, MassIon_I
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: TeSiIn
     real,   intent(out) :: RadiativeCooling
     integer,intent(out),optional::iError
+    character(LEN=*), intent(in), optional :: NameCaller
+    real, intent(in), optional             :: Xyz_D(MaxDim)
     real :: NumberDensCgs
     character(len=*), parameter:: NameSub = 'get_radiative_cooling'
     !--------------------------------------------------------------------------
@@ -102,7 +105,8 @@ contains
     end if
   end subroutine get_radiative_cooling
   !============================================================================
-  real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
+  real function radiative_cooling(TeSiIn, NumberDensCgs, iError, &
+       NameCaller, Xyz_D)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
     use ModMultiFluid,    ONLY: UseMultiIon
@@ -110,6 +114,8 @@ contains
     ! Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
     integer,optional,intent(out)::iError
+    character(LEN=*), intent(in), optional :: NameCaller
+    real, intent(in), optional             :: Xyz_D(MaxDim)
 
     real :: CoolingFunctionCgs
     real :: CoolingTableOut_I(1)
@@ -128,8 +134,13 @@ contains
                NumberDensCgs<1.0e1.or.NumberDensCgs>1.0e14)then
              write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
              if(present(iError))iError=1
-             if(TeSiIn<0.0)call stop_mpi(&
-                  'Negative temperature in calculating rad. cooling')
+             if(TeSiIn<0.0)then
+                if(present(NameCaller))write(*,'(a)')&
+                     'Subroutine '//NameSub//' is called from '//NameCaller
+                if(present(Xyz_D))write(*,*)'at the point ', Xyz_D
+                call stop_mpi(&
+                     'Negative temperature in calculating rad. cooling')
+             end if
           end if
        end if
        call interpolate_lookup_table(iTableRadCool, max(TeSiIn,1.0e4),&

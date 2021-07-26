@@ -1043,7 +1043,8 @@ contains
 
           if(DoRadCooling)then
              call get_radiative_cooling(i, j, k, iBlock, TeSi, &
-                  CoolHeat_CB(i,j,k,iBlock))
+                  CoolHeat_CB(i,j,k,iBlock), NameCaller=NameSub, &
+                  Xyz_D=Xyz_DGB(:,i,j,k,iBlock))
              call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
                   RadCoolEpsilonR)
              call get_radiative_cooling(i, j, k, iBlock, TeSi-TeEpsilonSi, &

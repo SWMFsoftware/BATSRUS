@@ -247,7 +247,8 @@ contains
        ! No time step restriction yet if the electron pressure is used
        if(UseRadCooling .and. .not.UseElectronPressure)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
+             call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source,&
+                  NameCaller=NameSub)
 
              if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
 
