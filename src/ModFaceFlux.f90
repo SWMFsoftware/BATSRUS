@@ -1011,7 +1011,7 @@ contains
        rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
     else
-       ! Modify solution depending on the face center radial distance 
+       ! Modify solution depending on the face center radial distance
        rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
             Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
     end if

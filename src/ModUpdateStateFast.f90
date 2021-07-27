@@ -57,7 +57,6 @@ module ModUpdateStateFast
 contains
   !============================================================================
   include 'vector_functions.h'
-  !============================================================================
   subroutine sync_cpu_gpu(String, NameCaller)
 
     character(len=*), intent(in):: String

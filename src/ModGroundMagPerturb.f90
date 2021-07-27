@@ -112,7 +112,6 @@ module ModGroundMagPerturb
 contains
   !============================================================================
   include 'vector_functions.h'
-  !============================================================================
   subroutine read_magperturb_param(NameCommand)
 
     ! Handle params for all magnetometer-related commands.
@@ -638,7 +637,7 @@ contains
        !$acc private(Bt_D)
        do iTheta = 1, nTheta
           do iPhi = 1, nPhi
-#ifndef _OPENACC             
+#ifndef _OPENACC
              iLine = iLine + 1
              if(mod(iLine, nProc) /= iProc)CYCLE
 
