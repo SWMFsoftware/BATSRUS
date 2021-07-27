@@ -90,7 +90,8 @@ contains
        NumberDensCgs = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitN_)*1.0e-6
     end if
 
-    RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs,iError)
+    RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs, iError, &
+         NameCaller, Xyz_D)
 
     ! include multiplicative factors to make up for extention of
     ! perpendicular heating at low temperatures (as per Abbett 2007).
