@@ -435,7 +435,7 @@ contains
 
              ! Add up perturbation
              MagPerturb_D = MagPerturb_D + CellVolume_GB(i,j,k,iBlock)*&
-                  cross_product(Current_D, Xyz_D-Xyz_DGB(:,i,j,k,iBlock)) &
+                  cross_prod(Current_D, Xyz_D-Xyz_DGB(:,i,j,k,iBlock)) &
                   /(4*cPi*r3)
           end do; end do; end do
        end do
@@ -656,7 +656,7 @@ contains
                    ! dA*(x-x0)/(4pi*|x-x0|^3)
                    InvDist2_D = InvDist2_DII(:,iMag+iMag0,iLineProc)
 
-                   Pert_D = cross_product(Bt_D, InvDist2_D)
+                   Pert_D = cross_prod(Bt_D, InvDist2_D)
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
                         + Br*InvDist2_D + Pert_D
                 end do
@@ -783,7 +783,7 @@ contains
                    InvDist2_D = dSurface*Xyz_D/(4*cPi*sqrt(sum(Xyz_D**2))**3)
 
                    ! explicit temporary to avoid an implicit one
-                   Pert_D = cross_product(Bt_D, InvDist2_D)
+                   Pert_D = cross_prod(Bt_D, InvDist2_D)
                    MagPerturbMhd_DI(:,iMag) = MagPerturbMhd_DI(:,iMag) &
                         + Br*InvDist2_D + Pert_D
 
@@ -840,7 +840,7 @@ contains
                    ! where the field aligned J is proportional to B
                    Xyz_D = Xyz_D - XyzMid_D
                    ! explicit array to avoid an implicit one
-                   Pert_D = cross_product(b_D, Xyz_D)
+                   Pert_D = cross_prod(b_D, Xyz_D)
                    Pert_D = Pert_D*dVol/(4*cPi*(sqrt(sum((Xyz_D)**2)))**3)
 
                    MagPerturbFac_DI(:,iMag) = MagPerturbFac_DI(:,iMag) + &

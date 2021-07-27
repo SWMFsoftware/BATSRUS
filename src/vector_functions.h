@@ -50,7 +50,7 @@
 
   end function matmul23_right
   !============================================================================
-  function cross_product(a_D, b_D) result(c_D)
+  function cross_prod(a_D, b_D) result(c_D)
     !$acc routine seq
 
     ! Return c = a x b
@@ -62,5 +62,5 @@
     c_D(2) = a_D(3)*b_D(1) - a_D(1)*b_D(3)
     c_D(3) = a_D(1)*b_D(2) - a_D(2)*b_D(1)
 
-  end function cross_product
+  end function cross_prod
   !============================================================================

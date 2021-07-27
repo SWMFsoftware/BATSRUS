@@ -8,7 +8,7 @@ module ModCurrent
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModCoordTransform, ONLY: sph_to_xyz!, cross_product
+  use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
 
   implicit none
@@ -882,7 +882,7 @@ contains
 
              ! store tangential B field vector in FAC coordinates
              if(present(Bt_DII))then
-                b_D = cross_product(rUnit_D, bIn_D)
+                b_D = cross_prod(rUnit_D, bIn_D)
                 Bt_DII(:,i,j) = matmul3_right(b_D, GmFac_DD )
              end if
           end do

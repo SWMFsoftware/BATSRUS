@@ -357,11 +357,11 @@ contains
              DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
                   /State_VGB(Rho_,i,j,k,iBlock)
              Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_product( &
+                  + DivE*cross_prod( &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
              if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_product( &
+                  + DivE*cross_prod( &
                   B0_DGB(:,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 #ifndef _OPENACC
@@ -374,13 +374,13 @@ contains
                 write(*,*)'!!! Coef   =', (ClightFactor**2 - 1)*InvClight2
                 write(*,*)'divE*Coef  =', divE
                 if(UseB0)then
-                   write(*,*) '!!! e_D=', cross_product( &
+                   write(*,*) '!!! e_D=', cross_prod( &
                         B0_DGB(:,i,j,k,iBlock) &
                         + State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                         State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
                         /State_VGB(Rho_,i,j,k,iBlock)
                 else
-                   write(*,*) '!!! e_D=', DivE*cross_product( &
+                   write(*,*) '!!! e_D=', DivE*cross_prod( &
                         State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                         State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)) &
                         /State_VGB(Rho_,i,j,k,iBlock)
@@ -952,7 +952,7 @@ contains
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            - DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+            - DivE*cross_prod(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
@@ -1289,11 +1289,11 @@ contains
              DivE = DivE*(ClightFactor**2 - 1)*InvClight2 &
                   /State_VGB(Rho_,i,j,k,iBlock)
              Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_product( &
+                  + DivE*cross_prod( &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
              if(UseB0) Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-                  + DivE*cross_product( &
+                  + DivE*cross_prod( &
                   B0_DGB(:,i,j,k,iBlock), &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
           end if
@@ -1684,7 +1684,7 @@ contains
        DivE = Flux_V(En_)*(ClightFactor**2 - 1)*InvClight2 &
             /State_VGB(Rho_,i,j,k,iBlock)
        Change_V(RhoUx_:RhoUz_) = Change_V(RhoUx_:RhoUz_) &
-            - DivE*cross_product(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
+            - DivE*cross_prod(B0_D, State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
     end if
 
     ! Calculate maximum of Cmax*Area from the faces per dimension
@@ -2219,7 +2219,7 @@ contains
 
     if (UseRotatingBc) then
        ! The corotation velocity is u = Omega x R
-       u_D = cross_product(OmegaBody_D, XyzFace_D)
+       u_D = cross_prod(OmegaBody_D, XyzFace_D)
 
        ! Apply corotation for the following BC:  'reflect','linetied', &
        ! 'ionosphere','ionospherefloat','polarwind','ionosphereoutflow'
@@ -2381,7 +2381,7 @@ contains
 
     ! Electric field divided by speed of light:
     ! E= - U x B / c = (B x U)/c
-    e_D = InvClight*cross_product(FullB_D, u_D)
+    e_D = InvClight*cross_prod(FullB_D, u_D)
 
     ! Electric field squared/c^2
     E2Half  = 0.5*sum(e_D**2)
@@ -2898,7 +2898,7 @@ contains
     ! e = e_boris - (U x B)^2/(2 c^2)   eq 92
     u_D = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
     State_V(p_) = State_V(p_) &
-         - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
+         - 0.5*sum(cross_prod(u_D, b_D)**2)*InvClight2
 
   end subroutine boris_to_mhd
   !============================================================================
@@ -2936,7 +2936,7 @@ contains
     end if
     ! e_Boris = e + (UxB)^2/(2 c^2)   eq 92
     State_V(p_) = State_V(p_) &
-         + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
+         + 0.5*sum(cross_prod(u_D, b_D)**2)*InvClight2
 
   end subroutine mhd_to_boris
   !============================================================================
@@ -3106,7 +3106,7 @@ contains
     B2  = sum(b_D**2)
 
     ! U = (E x B) / B^2
-    u_D = cross_product(eField_D, b_D) / B2
+    u_D = cross_prod(eField_D, b_D) / B2
   end subroutine calc_inner_bc_velocity
   !============================================================================
 
