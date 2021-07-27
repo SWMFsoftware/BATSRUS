@@ -999,14 +999,22 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
+    use ModChGL,     ONLY: UseChGL
 
     real :: r
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
-
-    rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
-         Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
+    if(UseChGL)then
+       ! Modify solution (speed max) if at least in one of
+       ! the interfaced cells the velocity is field-aligned
+       rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
+            r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+    else
+       ! Modify solution depending on the face center radial distance 
+       rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
+            Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
+    end if
 
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
