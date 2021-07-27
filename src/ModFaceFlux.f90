@@ -4593,6 +4593,8 @@ contains
             ChGL2OverRho = InvRho*State_V(SignB_)**2
             ! Magetosonic speed squared:
             Sound2     = Sound2 + Ut2*ChGL2OverRho
+            if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
+                 (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
             ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
             ChGL2OverRho   = 0.5*ChGL2OverRho
             UnChGLLeft   = UnLeft*ChGL2OverRho
@@ -4626,6 +4628,8 @@ contains
          ChGL2OverRho = InvRho*State_V(SignB_)**2
          ! Magetosonic speed squared:
          Sound2     = Sound2 + Ut2*ChGL2OverRho
+         if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
+              (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
          ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
          ChGL2OverRho  = 0.5*ChGL2OverRho
          UnChGLMin   = UnMin*ChGL2OverRho
