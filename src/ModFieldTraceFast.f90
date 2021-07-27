@@ -220,8 +220,6 @@ contains
 
     call timing_start('trace_grid_fast1')
 
-    write(*,*) NameSub,' starting'
-
     if(DoTime)call timing_reset('ray_pass',2)
 
     IsBVectorField = NameVectorField == 'B'
