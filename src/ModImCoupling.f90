@@ -22,8 +22,8 @@ module ModImCoupling
   public:: apply_im_pressure
 
   ! The number of IM pressures obtained so far
-  integer, public :: iNewPIm = 0 
-  
+  integer, public :: iNewPIm = 0
+
   real, public, dimension(:), allocatable   :: &
        IM_lat, IM_lon
   !$acc declare create(IM_lat, IM_lon)
@@ -45,7 +45,7 @@ module ModImCoupling
   ! Local variables
 
   integer :: iLastPIm = -1, iLastGrid = -1
-  
+
   ! The size of the IM grid
   integer :: iSize, jSize
   !$acc declare create(iSize, jSize)
@@ -60,7 +60,7 @@ module ModImCoupling
   real, allocatable :: TauCoeffIm_CB(:,:,:,:)
   real, allocatable :: PparIm_ICB(:,:,:,:,:)
   !$acc declare create(RhoIm_ICB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
-  
+
 contains
   !============================================================================
   subroutine im_pressure_init(iSizeIn,jSizeIn)
@@ -112,7 +112,7 @@ contains
        allocate(RhoIm_ICB(nDensity,nI,nJ,nK,MaxBlock))
        allocate(pIm_ICB(nFluid,nI,nJ,nK,MaxBlock))
        allocate(TauCoeffIm_CB(nI,nJ,nK,MaxBlock))
-       allocate(PparIm_ICB(nFluid,nI,nJ,nK,MaxBlock))       
+       allocate(PparIm_ICB(nFluid,nI,nJ,nK,MaxBlock))
     endif
 
     !$acc update device(iDens_I, nDensity)
@@ -370,9 +370,9 @@ contains
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
-    
+
     real :: RhoMinIm
-    
+
     real :: InvRho, Rho
 
     ! integer :: iIonSecond, nIons
@@ -406,9 +406,9 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           call get_im_pressure(iBlock)
-       end do       
+       end do
     end if
-    
+
     ! Remember this call
     iLastPIm = iNewPIm; iLastGrid = iNewGrid
 
@@ -439,9 +439,9 @@ contains
     !    else
     !       nIons = 1
     !    end if
-       
+
     !$acc parallel loop gang copyin(RhoMinIm, Factor)
-    do iBlock = 1, nBlock       
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
 #ifndef _OPENACC

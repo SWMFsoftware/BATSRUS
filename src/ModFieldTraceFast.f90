@@ -244,7 +244,7 @@ contains
     do iBlock = 1, nBlock
 
        ! Q: Should we have i,j,k loops here?
-       ! A: Since this kernel is already short and fast, replacing the 
+       ! A: Since this kernel is already short and fast, replacing the
        !    following array operations with loops does not improve speed.
        if(Unused_B(iBlock))then
           ! Trace_DINB in unused blocks is assigned to NORAY-1.
