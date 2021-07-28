@@ -22,8 +22,8 @@ module ModImCoupling
   public:: apply_im_pressure
 
   ! The number of IM pressures obtained so far
-  integer, public :: iNewPIm = 0
-
+  integer, public :: iNewPIm = 0 
+  
   real, public, dimension(:), allocatable   :: &
        IM_lat, IM_lon
   !$acc declare create(IM_lat, IM_lon)
@@ -44,15 +44,31 @@ module ModImCoupling
 
   ! Local variables
 
+  integer :: iLastPIm = -1, iLastGrid = -1
+  
   ! The size of the IM grid
   integer :: iSize, jSize
   !$acc declare create(iSize, jSize)
 
+  integer :: nDensity
+  !$acc declare create(nDensity)
+  integer, allocatable:: iDens_I(:)
+  !$acc declare create(iDens_I)
+
+  real, allocatable :: RhoIm_ICB(:,:,:,:,:)
+  real, allocatable :: pIm_ICB(:,:,:,:,:)
+  real, allocatable :: TauCoeffIm_CB(:,:,:,:)
+  real, allocatable :: PparIm_ICB(:,:,:,:,:)
+  !$acc declare create(RhoIm_ICB, pIm_ICB, TauCoeffIm_CB, PparIm_ICB)
+  
 contains
   !============================================================================
   subroutine im_pressure_init(iSizeIn,jSizeIn)
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
-    integer :: iSizeIn, jSizeIn
+    use ModVarIndexes, ONLY: Rho_, SpeciesFirst_
+    use ModMultiFluid, ONLY: iRho_I
+    use ModSize,       ONLY: MaxBlock, nI, nJ, nK
+    integer :: iSizeIn, jSizeIn, iDensity
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'im_pressure_init'
@@ -75,12 +91,36 @@ contains
     allocate(ImPpar_CV(iSize,jSize,nFluid), &
          IM_bmin(iSize,jSize))
 
+    ! Set array of density indexes:
+    ! nSpecies for multispecies, nFluid for multifluid
+    if(UseMultiSpecies)then
+       nDensity = nSpecies+1
+       allocate(iDens_I(nDensity))
+       ! first density with multispecies is the total
+       iDens_I(1) = Rho_
+       ! subsequent densities are the species
+       do iDensity=2,nDensity
+          iDens_I(iDensity) = SpeciesFirst_+iDensity-2
+       enddo
+    else
+       nDensity = nFluid ! nIons
+       allocate(iDens_I(nDensity))
+       iDens_I = iRho_I(1:nFluid)!(1:nIons)
+    end if
+
+    if (.not.allocated(RhoIm_ICB)) then
+       allocate(RhoIm_ICB(nDensity,nI,nJ,nK,MaxBlock))
+       allocate(pIm_ICB(nFluid,nI,nJ,nK,MaxBlock))
+       allocate(TauCoeffIm_CB(nI,nJ,nK,MaxBlock))
+       allocate(PparIm_ICB(nFluid,nI,nJ,nK,MaxBlock))       
+    endif
+
+    !$acc update device(iDens_I, nDensity)
     !$acc update device(iSize, jSize)
     call test_stop(NameSub, DoTest)
   end subroutine im_pressure_init
   !============================================================================
-  subroutine get_im_pressure(iBlock, nDensity,pIm_IC, RhoIm_IC, TauCoeffIm_C, &
-       PparIm_IC)
+  subroutine get_im_pressure(iBlock)
     !$acc routine vector
     use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion, &
          dLatSmoothIm, UseB0
@@ -92,12 +132,7 @@ contains
     use ModB0,       ONLY: B0_DGB
     use ModVarIndexes, ONLY: IonFirst_, IonLast_, IsMhd
 
-    integer, intent(in)  :: iBlock,nDensity
-
-    real,    intent(out) :: pIm_IC(nFluid,1:nI, 1:nJ, 1:nK)
-    real,    intent(out) :: RhoIm_IC(nDensity,1:nI, 1:nJ, 1:nK)
-    real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
-    real,    intent(out) :: PparIm_IC(nFluid,1:nI, 1:nJ, 1:nK)
+    integer, intent(in)  :: iBlock
 
     real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
 
@@ -141,12 +176,12 @@ contains
     !$acc loop vector collapse(3) private(b_D)
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       TauCoeffIm_C(i,j,k) = 1.0
+       TauCoeffIm_CB(i,j,k,iBlock) = 1.0
 
        ! Default is negative, which means that do not nudge GM values
-       pIm_IC(:,i,j,k)   = -1.0
-       RhoIm_IC(:,i,j,k) = -1.0
-       PparIm_IC(:,i,j,k)   = -1.0
+       pIm_ICB(:,i,j,k,iBlock)   = -1.0
+       RhoIm_ICB(:,i,j,k,iBlock) = -1.0
+       PparIm_ICB(:,i,j,k,iBlock)   = -1.0
        BminIm_C(i,j,k)   = -1.0
 
        ! For closed field lines nudge towards IM pressure/density
@@ -221,7 +256,7 @@ contains
                   ImRho_CV(iLat2,iLon1,iDensity) > 0.0 .and. &
                   ImRho_CV(iLat1,iLon2,iDensity) > 0.0 .and. &
                   ImRho_CV(iLat2,iLon2,iDensity) > 0.0) then
-                RhoIm_IC(iDensity,i,j,k) = Si2No_V(UnitRho_)*( &
+                RhoIm_ICB(iDensity,i,j,k,iBlock) = Si2No_V(UnitRho_)*( &
                      LonWeight1 * ( LatWeight1*ImRho_CV(iLat1,iLon1,iDensity) &
                      +              LatWeight2*ImRho_CV(iLat2,iLon1,iDensity))+&
                      LonWeight2 * ( LatWeight1*ImRho_CV(iLat1,iLon2,iDensity) &
@@ -239,7 +274,7 @@ contains
                   ImP_CV(iLat1,iLon2,iFluid) > 0.0 .and. &
                   ImP_CV(iLat2,iLon2,iFluid) > 0.0) then
 
-                pIm_IC(iFluid,i,j,k) = Si2No_V(UnitP_)*( &
+                pIm_ICB(iFluid,i,j,k,iBlock) = Si2No_V(UnitP_)*( &
                      LonWeight1 * ( LatWeight1*ImP_CV(iLat1,iLon1,iFluid) &
                      +              LatWeight2*ImP_CV(iLat2,iLon1,iFluid) ) + &
                      LonWeight2 * ( LatWeight1*ImP_CV(iLat1,iLon2,iFluid) &
@@ -247,7 +282,7 @@ contains
 
              ! ppar at minimum B
              if(DoAnisoPressureIMCoupling .and. IsImPpar_I(iFluid) )then
-                PparIm_IC(iFluid,i,j,k) = Si2No_V(UnitP_)*( &
+                PparIm_ICB(iFluid,i,j,k,iBlock) = Si2No_V(UnitP_)*( &
                      LonWeight1 * ( LatWeight1*ImPpar_CV(iLat1,iLon1,iFluid) &
                      +              LatWeight2*ImPpar_CV(iLat2,iLon1,iFluid) )+&
                      LonWeight2 * ( LatWeight1*ImPpar_CV(iLat1,iLon2,iFluid) &
@@ -263,12 +298,12 @@ contains
                   .or. .not. IsImPpar_I(iFluid))then
                 ! If coupled with RCM or if GM is not using anisotropic
                 ! pressure then set ppar = p.
-                PparIm_IC(iFluid,i,j,k) = pIm_IC(iFluid,i,j,k)
+                PparIm_ICB(iFluid,i,j,k,iBlock) = pIm_ICB(iFluid,i,j,k,iBlock)
              else
                 ! Anisotropic pressure coupling
                 ! Pperp at minimum B
-                Pperp = (3.0*pIm_IC(iFluid,i,j,k) - PparIm_IC(iFluid,i,j,k))/2.0
-                PperpInvPpar = Pperp/PparIm_IC(iFluid,i,j,k)
+                Pperp = (3.0*pIm_ICB(iFluid,i,j,k,iBlock) - PparIm_ICB(iFluid,i,j,k,iBlock))/2.0
+                PperpInvPpar = Pperp/PparIm_ICB(iFluid,i,j,k,iBlock)
                 b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
                 if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
                 Coeff = 1/(PperpInvPpar &
@@ -276,10 +311,10 @@ contains
                      BminIm_C(i,j,k)/norm2(b_D))*(1 - PperpInvPpar))
 
                 ! pressures and density at arbitrary location of a field line
-                pIm_IC(iFluid,i,j,k) = pIm_IC(iFluid,i,j,k)*Coeff &
+                pIm_ICB(iFluid,i,j,k,iBlock) = pIm_ICB(iFluid,i,j,k,iBlock)*Coeff &
                      + 2.0*Pperp*(Coeff - 1)*Coeff/3.0
-                PparIm_IC(iFluid,i,j,k) = PparIm_IC(iFluid,i,j,k)*Coeff
-                RhoIm_IC(iFluid,i,j,k) = RhoIm_IC(iFluid,i,j,k)*Coeff
+                PparIm_ICB(iFluid,i,j,k,iBlock) = PparIm_ICB(iFluid,i,j,k,iBlock)*Coeff
+                RhoIm_ICB(iFluid,i,j,k,iBlock) = RhoIm_ICB(iFluid,i,j,k,iBlock)*Coeff
              end if
 
              if(dLatSmoothIm > 0.0)then
@@ -293,7 +328,7 @@ contains
                 ! Set TauCoeff as a function of lat distance from unset lines
                 ! No adjustment at the unset line, full adjustment if latitude
                 ! difference exceeds dLatSmoothIm
-                TauCoeffIm_C(i,j,k) = &
+                TauCoeffIm_CB(i,j,k,iBlock) = &
                      min( abs(IM_lat(n) - IM_lat(iLat1))/dLatSmoothIm, 1.0 )
              end if
              end if
@@ -303,15 +338,15 @@ contains
        ! If the pressure is not set by IM, and DoFixPolarRegion is true
        ! and the cell is within radius rFixPolarRegion and flow points outward
        ! then nudge the pressure (and density) towards the "polarregion" values
-       if(pIm_IC(1,i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
+       if(pIm_ICB(1,i,j,k,iBlock) < 0.0 .and. DoFixPolarRegion .and. &
             R_BLK(i,j,k,iBlock) < rFixPolarRegion .and. &
             Xyz_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0)then
           do iFluid = 1, nFluid
-             pIm_IC(iFluid,i,j,k) = PolarP_I(iFluid)
+             pIm_ICB(iFluid,i,j,k,iBlock) = PolarP_I(iFluid)
           end do
 
           do iDensity = 1, nDensity
-             RhoIm_IC(iDensity,i,j,k) = PolarRho_I(iDensity)
+             RhoIm_ICB(iDensity,i,j,k,iBlock) = PolarRho_I(iDensity)
           end do
        end if
 
@@ -325,8 +360,7 @@ contains
 
     use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
          time_accurate, Dt, DoCoupleImPressure, DoCoupleImDensity, RhoMinDimIm
-    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, UseMultiSpecies, &
-         nSpecies
+    use ModAdvance, ONLY: State_VGB, UseAnisoPressure
     use ModVarIndexes, ONLY: Rho_, SpeciesFirst_, Ppar_
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
@@ -336,22 +370,13 @@ contains
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
-
-    real,allocatable :: RhoIm_ICB(:,:,:,:,:)
-    !$acc declare create(RhoIm_ICB)
+    
     real :: RhoMinIm
-    real :: pIm_IC(nFluid,nI,nJ,nK)
-    real :: TauCoeffIm_C(nI,nJ,nK)
-    real :: PparIm_IC(nFluid,nI,nJ,nK)
-    !$acc declare create(pIm_IC, TauCoeffIm_C, PparIm_IC)
-
+    
     real :: InvRho, Rho
 
-    integer :: iLastPIm = -1, iLastGrid = -1
     ! integer :: iIonSecond, nIons
-    integer :: i, j, k, iBlock, iFluid, nDensity, iDensity
-    integer, allocatable:: iDens_I(:)
-    !$acc declare create(iDens_I)
+    integer :: i, j, k, iBlock, iFluid, iDensity
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'apply_im_pressure'
@@ -376,8 +401,14 @@ contains
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
        call trace_field_grid
-    end if
 
+       !$acc parallel loop gang
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          call get_im_pressure(iBlock)
+       end do       
+    end if
+    
     ! Remember this call
     iLastPIm = iNewPIm; iLastGrid = iNewGrid
 
@@ -408,39 +439,13 @@ contains
     !    else
     !       nIons = 1
     !    end if
-
-    ! Set array of density indexes:
-    ! nSpecies for multispecies, nFluid for multifluid
-    if(UseMultiSpecies)then
-       nDensity = nSpecies+1
-       allocate(iDens_I(nDensity))
-       ! first density with multispecies is the total
-       iDens_I(1) = Rho_
-       ! subsequent densities are the species
-       do iDensity=2,nDensity
-          iDens_I(iDensity) = SpeciesFirst_+iDensity-2
-       enddo
-    else
-       nDensity = nFluid ! nIons
-       allocate(iDens_I(nDensity))
-       iDens_I = iRho_I(1:nFluid)!(1:nIons)
-    end if
-    !$acc update device(iDens_I)
-
-    if (.not.allocated(RhoIm_ICB)) allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
-
-    !$acc parallel loop gang copyin(nDensity, RhoMinIm, Factor, nDensity) &
-    !$acc private(pIm_IC, TauCoeffIm_C, PparIm_IC)
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-
-       call get_im_pressure(iBlock, nDensity, pIm_IC, &
-            RhoIm_ICB(:,:,:,:,iBlock), TauCoeffIm_C, PparIm_IC)
-
+       
+    !$acc parallel loop gang copyin(RhoMinIm, Factor)
+    do iBlock = 1, nBlock       
        if(Unused_B(iBlock)) CYCLE
 
 #ifndef _OPENACC
-       if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do
+       if(all(pIm_ICB(:,:,:,:,iBlock) < 0.0)) CYCLE  ! Nothing to do
 #endif
 
        ! Put velocity into momentum temporarily when density is changed
@@ -468,11 +473,11 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
                    if (.not. IsImP_I(iFluid)) CYCLE
-                   if(pIm_IC(iFluid,i,j,k) > 0.0) &
+                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock) = &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock)   &
-                        + Factor * TauCoeffIm_C(i,j,k) &
-                        * (pIm_IC(iFluid,i,j,k) - &
+                        + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
+                        * (pIm_ICB(iFluid,i,j,k,iBlock) - &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock))
                 end do
              end do; end do; end do
@@ -482,11 +487,11 @@ contains
                 do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    do iFluid = 1, nFluid! nIons
                       if (.not. IsImP_I(iFluid)) CYCLE
-                      if(PparIm_IC(iFluid,i,j,k) > 0.0) &
+                      if(PparIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
                            State_VGB(Ppar_,i,j,k,iBlock) = &
                            State_VGB(Ppar_,i,j,k,iBlock)   &
-                           + Factor * TauCoeffIm_C(i,j,k) &
-                           * (PparIm_IC(iFluid,i,j,k) - &
+                           + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
+                           * (PparIm_ICB(iFluid,i,j,k,iBlock) - &
                            State_VGB(Ppar_,i,j,k,iBlock))
                    end do
                 end do; end do; end do
@@ -503,7 +508,7 @@ contains
                    ! Here iDens_I can index multiple species or fluids
                    State_VGB(iDens_I(iDensity),i,j,k,iBlock) = max( RhoMinIm, &
                         State_VGB(iDens_I(iDensity),i,j,k,iBlock) &
-                        + Factor * TauCoeffIm_C(i,j,k) &
+                        + Factor * TauCoeffIm_CB(i,j,k,iBlock) &
                         * (RhoIm_ICB(iDensity,i,j,k,iBlock) &
                         - State_VGB(iDens_I(iDensity),i,j,k,iBlock)))
                 end do
@@ -516,11 +521,11 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 do iFluid = 1, nFluid! nIons
                    if (.not. IsImP_I(iFluid)) CYCLE
-                   if(pIm_IC(iFluid,i,j,k) > 0.0) &
+                   if(pIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
                         State_VGB(iP_I(iFluid),i,j,k,iBlock) = Factor* &
                         (TauCoupleIM &
                         *State_VGB(iP_I(iFluid),i,j,k,iBlock)+&
-                        pIm_IC(iFluid,i,j,k))
+                        pIm_ICB(iFluid,i,j,k,iBlock))
                 end do
              end do; end do; end do
 
@@ -529,10 +534,10 @@ contains
                 do k = 1, nK; do j = 1, nJ; do i = 1, nI
                    do iFluid = 1, nFluid! nIons
                       if (.not. IsImP_I(iFluid)) CYCLE
-                      if(PparIm_IC(iFluid,i,j,k) > 0.0) &
+                      if(PparIm_ICB(iFluid,i,j,k,iBlock) > 0.0) &
                            State_VGB(Ppar_,i,j,k,iBlock) = Factor* &
                            (TauCoupleIM*State_VGB(Ppar_,i,j,k,iBlock) + &
-                           PparIm_IC(iFluid,i,j,k))
+                           PparIm_ICB(iFluid,i,j,k,iBlock))
                    end do
                 end do; end do; end do
              end if
@@ -574,9 +579,6 @@ contains
     end do
 
     call sync_cpu_gpu('change State_VGB on GPU', NameSub)
-
-    if(allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)
-    if(allocated(iDens_I)) deallocate(iDens_I)
 
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)
