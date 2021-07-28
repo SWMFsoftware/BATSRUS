@@ -1014,7 +1014,7 @@ contains
        ! the interfaced cells the velocity is field-aligned
        rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
-       ! Check if this face is the part of ChGL  domain boundary 
+       ! Check if this face is the part of ChGL  domain boundary
        IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
             iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
     else
