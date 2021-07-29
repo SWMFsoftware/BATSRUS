@@ -113,7 +113,7 @@ contains
     !$acc update device(iDens_I, nDensity)
     !$acc update device(iSize, jSize)
     call test_stop(NameSub, DoTest)
-  end subroutine im_pressure_init  
+  end subroutine im_pressure_init
   !============================================================================
   subroutine im_allocate_arrays
     use ModMain, ONLY: nBlock
@@ -121,14 +121,14 @@ contains
     !--------------------------------------------------------------------------
     if(nBlock /= nBlockLast) then
        nBlockLast = nBlock
-       
+
        if (allocated(RhoIm_ICB)) deallocate(RhoIm_ICB)
        if (allocated(pIm_ICB)) deallocate(pIm_ICB)
        if (allocated(TauCoeffIm_CB)) deallocate(TauCoeffIm_CB)
        if (allocated(PparIm_ICB)) deallocate(PparIm_ICB)
 
        allocate(pIm_ICB(nFluid,nI,nJ,nK,nBlock))
-       allocate(TauCoeffIm_CB(nI,nJ,nK,nBlock))       
+       allocate(TauCoeffIm_CB(nI,nJ,nK,nBlock))
        if(DoCoupleImDensity) &
             allocate(RhoIm_ICB(nDensity,nI,nJ,nK,nBlock))
        if(UseAnisoPressure) &
@@ -266,7 +266,7 @@ contains
           end if
           LonWeight2 = 1 - LonWeight1
 
-          if(DoCoupleImDensity) then 
+          if(DoCoupleImDensity) then
              DENSITY: do iDensity=1,nDensity
                 ! check if density is available from IM, if not cycle to next
                 if (.not. IsImRho_I(iDensity)) CYCLE DENSITY
@@ -300,7 +300,7 @@ contains
                      LonWeight2 * ( LatWeight1*ImP_CV(iLat1,iLon2,iFluid) &
                      +              LatWeight2*ImP_CV(iLat2,iLon2,iFluid) ) )
 
-                if(UseAnisoPressure)  then 
+                if(UseAnisoPressure)  then
                    ! ppar at minimum B
                    if(DoAnisoPressureIMCoupling .and. IsImPpar_I(iFluid) )then
                       PparIm_ICB(iFluid,i,j,k,iBlock) = Si2No_V(UnitP_)*( &
@@ -337,7 +337,7 @@ contains
                       PparIm_ICB(iFluid,i,j,k,iBlock) = PparIm_ICB(iFluid,i,j,k,iBlock)*Coeff
                       if(DoCoupleImDensity) RhoIm_ICB(iFluid,i,j,k,iBlock) = &
                            RhoIm_ICB(iFluid,i,j,k,iBlock)*Coeff
-                   end if                   
+                   end if
                 endif
 
                 if(dLatSmoothIm > 0.0)then
@@ -429,7 +429,7 @@ contains
        call trace_field_grid
 
        call im_allocate_arrays
-       
+
        !$acc parallel loop gang
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
