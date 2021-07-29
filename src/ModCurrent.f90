@@ -251,10 +251,11 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: True_Cell, true_BLK, r_BLK
-    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB
+    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB, &
+         nI, nJ, nK, x_, y_, z_
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
-    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
+    use ModCoordTransform, ONLY: inverse_matrix
 #ifndef _OPENACC
     use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
     use omp_lib
@@ -271,6 +272,8 @@ contains
     integer:: iL, iR, jL, jR, kL, kR
     real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real   :: InvDx2, InvDy2, InvDz2
+
+    real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
 
     integer:: iBlockLast = -1
     !$omp threadprivate( iBlockLast )
@@ -430,38 +433,85 @@ contains
        end if
     end if
 
-#ifdef _OPENACC
-    ! Calculate current on Cartesian grid.
-    Current_D(x_) = &
-         + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
-         + By*State_VGB(Bz_,i,j ,k ,iBlock) &
-         + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
-         - Az*State_VGB(By_,i,j ,kL,iBlock) &
-         - Bz*State_VGB(By_,i,j ,k ,iBlock) &
-         - Cz*State_VGB(By_,i,j ,kR,iBlock)
-
-    Current_D(y_) = &
-         + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
-         + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
-         + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
-         - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
-         - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
-         - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
-
-    Current_D(z_) = &
-         + Ax*State_VGB(By_,iL,j ,k,iBlock) &
-         + Bx*State_VGB(By_,i ,j ,k,iBlock) &
-         + Cx*State_VGB(By_,iR,j ,k,iBlock) &
-         - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
-         - By*State_VGB(Bx_,i ,j ,k,iBlock) &
-         - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
-#else
     if(IsCartesianGrid)then
-       call calc_cartesian_j
+       Current_D(x_) = &
+            + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
+            + By*State_VGB(Bz_,i,j ,k ,iBlock) &
+            + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
+            - Az*State_VGB(By_,i,j ,kL,iBlock) &
+            - Bz*State_VGB(By_,i,j ,k ,iBlock) &
+            - Cz*State_VGB(By_,i,j ,kR,iBlock)
+
+       Current_D(y_) = &
+            + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
+            + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
+            + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
+            - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
+            - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
+            - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
+
+       Current_D(z_) = &
+            + Ax*State_VGB(By_,iL,j ,k,iBlock) &
+            + Bx*State_VGB(By_,i ,j ,k,iBlock) &
+            + Cx*State_VGB(By_,iR,j ,k,iBlock) &
+            - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
+            - By*State_VGB(Bx_,i ,j ,k,iBlock) &
+            - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
     else
-       call calc_gencoord_j
+       ! Get current in generalized coordinates
+
+       DxyzDcoord_DD(:,1) = InvDx2 &
+            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
+
+       DxyzDcoord_DD(:,2) = InvDy2 &
+            *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
+
+       if(nK > 1)then
+          DxyzDcoord_DD(:,3) = InvDz2 &
+               *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
+       else
+          DxyzDcoord_DD(:,3) = [ 0., 0., 1. ]
+       end if
+
+       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+
+       ! Calculate the partial derivatives dB/dGencoord
+       DbDcoord_DD(:,1) = &
+            + Ax*State_VGB(Bx_:Bz_,iL,j,k,iBlock) &
+            + Bx*State_VGB(Bx_:Bz_,i ,j,k,iBlock) &
+            + Cx*State_VGB(Bx_:Bz_,iR,j,k,iBlock)
+
+       DbDcoord_DD(:,2) = &
+            + Ay*State_VGB(Bx_:Bz_,i,jL,k,iBlock) &
+            + By*State_VGB(Bx_:Bz_,i,j ,k,iBlock) &
+            + Cy*State_VGB(Bx_:Bz_,i,jR,k,iBlock)
+
+       if(nK > 1)then
+          DbDcoord_DD(:,3) = &
+               + Az*State_VGB(Bx_:Bz_,i,j,kL,iBlock) &
+               + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
+               + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
+       else
+          DbDcoord_DD(:,3) = 0.0
+       end if
+
+       ! Jx = Dbz/Dy - Dby/Dz = Dbz/Dcoord.Dcoord/Dy - DBy/Dcoord.Dccord/dz
+       Current_D(x_) = &
+            + sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,y_)) &
+            - sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,z_))
+
+       ! Jy = Dbx/Dz - Dbz/Dx
+       Current_D(y_) = &
+            + sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,z_)) &
+            - sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,x_))
+
+       ! Jz = Dby/Dx - Dbx/Dy
+       Current_D(z_) = &
+            + sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,x_)) &
+            - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
     end if
 
+#ifndef _OPENACC
     ! Add curl B0 if necessary
     if(UseCurlB0)then
        ! Curl B0 is zero inside rCurrentFreeB0
@@ -476,102 +526,6 @@ contains
     end if
 #endif
 
-  contains
-    !==========================================================================
-    subroutine calc_cartesian_j
-
-      !------------------------------------------------------------------------
-      Current_D(x_) = &
-           + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
-           + By*State_VGB(Bz_,i,j ,k ,iBlock) &
-           + Cy*State_VGB(Bz_,i,jR,k ,iBlock) &
-           - Az*State_VGB(By_,i,j ,kL,iBlock) &
-           - Bz*State_VGB(By_,i,j ,k ,iBlock) &
-           - Cz*State_VGB(By_,i,j ,kR,iBlock)
-
-      Current_D(y_) = &
-           + Az*State_VGB(Bx_,i ,j,kL,iBlock) &
-           + Bz*State_VGB(Bx_,i ,j,k ,iBlock) &
-           + Cz*State_VGB(Bx_,i ,j,kR,iBlock) &
-           - Ax*State_VGB(Bz_,iL,j,k ,iBlock) &
-           - Bx*State_VGB(Bz_,i ,j,k ,iBlock) &
-           - Cx*State_VGB(Bz_,iR,j,k ,iBlock)
-
-      Current_D(z_) = &
-           + Ax*State_VGB(By_,iL,j ,k,iBlock) &
-           + Bx*State_VGB(By_,i ,j ,k,iBlock) &
-           + Cx*State_VGB(By_,iR,j ,k,iBlock) &
-           - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
-           - By*State_VGB(Bx_,i ,j ,k,iBlock) &
-           - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
-
-#ifndef _OPENACC
-      ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
-      if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
-           + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
-#endif
-    end subroutine calc_cartesian_j
-    !==========================================================================
-    subroutine calc_gencoord_j
-
-      use ModCoordTransform, ONLY: inverse_matrix
-
-      real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
-
-      ! Get the dCartesian/dGencoord matrix with central difference
-      !------------------------------------------------------------------------
-      DxyzDcoord_DD(:,1) = InvDx2 &
-           *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
-
-      DxyzDcoord_DD(:,2) = InvDy2 &
-           *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
-
-      if(nK > 1)then
-         DxyzDcoord_DD(:,3) = InvDz2 &
-              *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
-      else
-         DxyzDcoord_DD(:,3) = [ 0., 0., 1. ]
-      end if
-
-      DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
-
-      ! Calculate the partial derivatives dB/dGencoord
-      DbDcoord_DD(:,1) = &
-           + Ax*State_VGB(Bx_:Bz_,iL,j,k,iBlock) &
-           + Bx*State_VGB(Bx_:Bz_,i ,j,k,iBlock) &
-           + Cx*State_VGB(Bx_:Bz_,iR,j,k,iBlock)
-
-      DbDcoord_DD(:,2) = &
-           + Ay*State_VGB(Bx_:Bz_,i,jL,k,iBlock) &
-           + By*State_VGB(Bx_:Bz_,i,j ,k,iBlock) &
-           + Cy*State_VGB(Bx_:Bz_,i,jR,k,iBlock)
-
-      if(nK > 1)then
-         DbDcoord_DD(:,3) = &
-              + Az*State_VGB(Bx_:Bz_,i,j,kL,iBlock) &
-              + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
-              + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
-      else
-         DbDcoord_DD(:,3) = 0.0
-      end if
-
-      ! Jx = Dbz/Dy - Dby/Dz = Dbz/Dcoord.Dcoord/Dy - DBy/Dcoord.Dccord/dz
-      Current_D(x_) = &
-           + sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,y_)) &
-           - sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,z_))
-
-      ! Jy = Dbx/Dz - Dbz/Dx
-      Current_D(y_) = &
-           + sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,z_)) &
-           - sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,x_))
-
-      ! Jz = Dby/Dx - Dbx/Dy
-      Current_D(z_) = &
-           + sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,x_)) &
-           - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
-
-    end subroutine calc_gencoord_j
-    !==========================================================================
   end subroutine get_current
   !============================================================================
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
@@ -647,7 +601,7 @@ contains
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
 
-    real    :: LatBoundaryLocal
+!!! real    :: LatBoundaryLocal
 
     integer :: i, j, ii, jj, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
@@ -700,11 +654,11 @@ contains
        !$acc update device(Theta_I)
     end if
 
-    LatBoundaryLocal = 100.0
+!!! LatBoundaryLocal = 100.0
 #endif
 
     !$acc parallel loop vector collapse(2) &
-    !$acc private(XyzIn_D, Xyz_D, B0_D, State_V) reduction(min:LatBoundaryLocal)
+    !$acc private(XyzIn_D, Xyz_D, B0_D, State_V) !!! reduction(min:LatBoundaryLocal)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -744,7 +698,7 @@ contains
 #ifdef _OPENACC
        Xyz_D = matmul3_left(GmFac_DD, Xyz_D)
 
-       LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
+!!! LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
 
        call get_b0_dipole(Xyz_D, B0_D)
 #else
@@ -779,10 +733,6 @@ contains
        !   call stop_mpi('DEBUG')
        ! end if
     end do; end do
-
-#ifdef _OPENACC
-    if(present(LatBoundary)) LatBoundary = LatBoundaryLocal
-#endif
 
 #ifndef _OPENACC
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
