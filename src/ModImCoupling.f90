@@ -119,7 +119,7 @@ contains
 
   end subroutine im_pressure_init
   !============================================================================
-  subroutine im_allocate_arrays
+  subroutine allocate_arrays
     !--------------------------------------------------------------------------
     if(nBlock /= nBlockLast) then
        nBlockLast = nBlock
@@ -136,7 +136,7 @@ contains
        if(UseAnisoPressure) &
             allocate(PparIm_ICB(nFluid,nI,nJ,nK,nBlock))
     end if
-  end subroutine im_allocate_arrays
+  end subroutine allocate_arrays
   !============================================================================
   subroutine get_im_pressure(iBlock)
     !$acc routine vector
@@ -435,6 +435,8 @@ contains
     end if
 
     if(iNewPIm > iLastPIm .or. iNewDecomposition > iLastDecomposition)then
+       call allocate_arrays
+       
        !$acc parallel loop gang
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
