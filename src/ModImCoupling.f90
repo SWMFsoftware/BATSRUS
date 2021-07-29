@@ -16,7 +16,7 @@ module ModImCoupling
 #endif
 
   ! Routines related to the coupling with the Inner Magnetosphere component
-  
+
   implicit none
 
   SAVE
@@ -436,7 +436,7 @@ contains
 
     if(iNewPIm > iLastPIm .or. iNewDecomposition > iLastDecomposition)then
        call allocate_arrays
-       
+
        !$acc parallel loop gang
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -587,7 +587,7 @@ contains
 
           end if
        end if
-       
+
        if(DoCoupleImDensity)then
           ! Convert back to momentum
 
