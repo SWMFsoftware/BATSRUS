@@ -882,6 +882,7 @@ contains
     use ModViscosity, ONLY: UseArtificialVisco
 
     use BATL_lib, ONLY: CellFace_DB
+    use ModChGL,  ONLY: UseChGL, correct_chgl_face_value
 
     logical, intent(in):: DoResChangeOnly
     logical, intent(in):: DoMonotoneRestrict
@@ -1249,7 +1250,7 @@ contains
           end if
        end if
     end select  ! nOrder
-
+    if(UseChGL)call correct_chgl_face_value(iBlock, DoResChangeOnly)
     if(DoTest)then
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
        if(iDimTest==0 .or. iDimTest==1) &
