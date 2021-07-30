@@ -1,0 +1,124 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.fast_wave_2d: fast wave propagation		StringDescription
+
+#UPDATE
+fast			TypeUpdate
+
+#TIMING
+T			UseTiming
+-1			DnTiming  ! every session
+-1			nDepthTiming
+cumu			TypeTimingReport
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRID
+5			nRootBlock1
+5			nRootBlock2
+1			nRootBlock3
+-32.			xMin
+ 32.	  		xMax
+-32.			yMin
+ 32.			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#GRIDGEOMETRY
+rotatedcartesian		TypeGeometry
+
+#SHOCKPOSITION
+0.0			ShockPosition
+0.75			ShockSlope
+
+#GRIDBLOCKALL
+30			MaxBlock
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.04			StateVar By
+0.0			StateVar Bz
+4.5e-4			StateVar p
+
+#USERINPUTBEGIN -----------------------------------
+
+#WAVE
+1			Rho_
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+2			Ux_
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+6			By_
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+8			p_
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#USERINPUTEND -------------------------------------
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+-1			DnSaveLogfile
+100.0			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 mhd idl_ascii		StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+300.0			tSimulationMax
