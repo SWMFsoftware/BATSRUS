@@ -21,8 +21,8 @@ module ModCurrent
   public:: calc_field_aligned_current
 
 contains
-  include 'vector_functions.h'
   !============================================================================
+  include 'vector_functions.h'
   subroutine get_point_data_fast(Xyz_D, b_D, j_D)
     !$acc routine seq
 
@@ -30,7 +30,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use BATL_lib, ONLY: find_grid_block, iProc
-    
+
     real, intent(in):: Xyz_D(3)
     real, intent(out):: b_D(3), j_D(3)
 
