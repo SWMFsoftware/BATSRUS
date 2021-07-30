@@ -4,12 +4,13 @@
 module ModCurrent
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, x_, y_, z_
+       test_start, test_stop
+  use ModAdvance,        ONLY: iTypeUpdate, UpdateFast_, State_VGB
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use CON_axes,          ONLY: transform_matrix
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use CON_axes,          ONLY: transform_matrix
 
   implicit none
 
@@ -20,8 +21,53 @@ module ModCurrent
   public:: calc_field_aligned_current
 
 contains
-  !============================================================================
   include 'vector_functions.h'
+  !============================================================================
+  subroutine get_point_data_fast(Xyz_D, b_D, j_D)
+    !$acc routine seq
+
+    ! Obtain B and J at location Xyz_D using ghost cells
+
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
+    use BATL_lib, ONLY: find_grid_block, iProc
+    
+    real, intent(in):: Xyz_D(3)
+    real, intent(out):: b_D(3), j_D(3)
+
+    integer:: iProcOut, iBlock, iCell_D(3)
+    integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
+    real:: Dist_D(3), WeightX, WeightY, WeightZ, WeightXyz, Current_D(3)
+    !--------------------------------------------------------------------------
+    call find_grid_block(Xyz_D, iProcOut, iBlock, iCell_D, Dist_D, &
+         UseGhostCell=.true.)
+
+    if(iProc /= iProcOut) RETURN
+
+    iLo = iCell_D(1); jLo = iCell_D(2); kLo = iCell_D(3)
+    iHi = iLo + 1; jHi = jLo + 1; kHi = kLo + 1
+
+    ! Simple trilinear interpolation. Could be optimized if needed.
+    b_D = 0.0
+    j_D = 0.0
+    do k = kLo, kHi
+       WeightZ = (k-kLo)*Dist_D(3) + (kHi-k)*(1-Dist_D(3))
+       do j = jLo, jHi
+          WeightY = (j-jLo)*Dist_D(2) + (jHi-j)*(1-Dist_D(2))
+          do i = iLo, iHi
+             WeightX = (i-iLo)*Dist_D(1) + (iHi-i)*(1-Dist_D(1))
+             WeightXyz = WeightX*WeightY*WeightZ
+             if(WeightXyz == 0.0) CYCLE
+
+             b_D = b_D + WeightXyz * State_VGB(Bx_:Bz_,i,j,k,iBlock)
+
+             call get_current(i, j, k, iBlock, Current_D)
+             j_D = j_D + WeightXyz * Current_D
+          end do
+       end do
+    end do
+
+  end subroutine get_point_data_fast
+  !============================================================================
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
     !$acc routine seq
@@ -85,13 +131,8 @@ contains
     real:: Current_D(3)
 
     ! Testing
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_point_data'
     !--------------------------------------------------------------------------
-#ifndef _OPENACC
-    call test_start(NameSub, DoTest)
-#endif
-    ! call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
     iStateMax = min(iVarMax, nVar)
@@ -101,9 +142,7 @@ contains
     if(IsCartesianGrid)then
        Xyz_D = XyzIn_D
     else
-#ifndef _OPENACC
        call xyz_to_coord(XyzIn_D, Xyz_D)
-#endif
     end if
 
     ! Set state and weight to zero, so MPI_reduce will add it up right
@@ -112,8 +151,6 @@ contains
     ! Loop through all blocks
     BLOCK: do iBlock = iBlockMin, iBlockMax
        if(Unused_B(iBlock)) CYCLE
-
-       ! if(DoTest)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
        ! Put cell size of current block into an array
        Dxyz_D = CellSize_DB(:,iBlock)
@@ -167,13 +204,6 @@ contains
           end if
        end do
 
-       ! if(DoTest)then
-       !    write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
-       !         iProc,iBlock,IjkLo_D
-       !    write(*,*)'iProc, XyzStart_BLK,Dx=', iProc, &
-       !         XyzStart_BLK(:,iBlock), Dxyz_D(1)
-       ! end if
-
        ! Set the index range for the physical cells
        iLo = max(IjkLo_D(1),1)
        jLo = max(IjkLo_D(2),1)
@@ -222,22 +252,14 @@ contains
                            + WeightXyz * Current_D
                    end if
 
-                   ! if(DoTest)write(*,*) &
-                   !     'Contribution iProc,i,j,k,WeightXyz=',&
-                   !     iProc,i,j,k,WeightXyz
                 end if
              end do
           end do
        end do
     end do BLOCK
 
-    ! call test_stop(NameSub, DoTest)
-#ifndef _OPENACC
-    call test_stop(NameSub, DoTest)
-#endif
   end subroutine get_point_data
   !============================================================================
-
   subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange, &
        DoIgnoreBody)
     !$acc routine seq
@@ -530,8 +552,7 @@ contains
   !============================================================================
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, &
        Br_II, Bt_DII, b_DII, &
-       LatBoundary, Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, &
-       FacMin)
+       Theta_I, Phi_I, TypeCoordFacGrid, IsRadial, IsRadialAbs, FacMin)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
@@ -575,9 +596,6 @@ contains
     real, intent(out), optional:: b_DII(3,nTheta,nPhi)
     !$acc declare create(b_DII)
 
-    ! Lowest latitude that maps up to rCurrents
-    real, intent(out), optional :: LatBoundary
-
     ! Coordinate arrays allow non-uniform grid
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
@@ -600,8 +618,6 @@ contains
     ! Interpolation weight, interpolated agnetic field and current
     real, allocatable :: bCurrent_VII(:,:,:)
     !$acc declare create(bCurrent_VII)
-
-!!! real    :: LatBoundaryLocal
 
     integer :: i, j, ii, jj, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3), rUnit_D(3)
@@ -632,8 +648,6 @@ contains
     GmFac_DD = transform_matrix(Time_Simulation, TypeCoordFac, TypeCoordSystem)
     !$acc update device(GmFac_DD)
 
-    if(present(LatBoundary)) LatBoundary = 100.0
-
     if (abs(rIn - rCurrents) < 1.0e-3)then
        DoMap = .false.
     else
@@ -653,12 +667,10 @@ contains
     if(present(Theta_I))then
        !$acc update device(Theta_I)
     end if
-
-!!! LatBoundaryLocal = 100.0
 #endif
 
     !$acc parallel loop vector collapse(2) &
-    !$acc private(XyzIn_D, Xyz_D, B0_D, State_V) !!! reduction(min:LatBoundaryLocal)
+    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, j_D)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -695,19 +707,11 @@ contains
           Xyz_D = XyzIn_D
        end if
 
-#ifdef _OPENACC
+       ! Convert to GM coordinates
        Xyz_D = matmul3_left(GmFac_DD, Xyz_D)
-
-!!! LatBoundaryLocal = min( abs(Theta - cHalfPi), LatBoundaryLocal )
-
+#ifdef _OPENACC
        call get_b0_dipole(Xyz_D, B0_D)
 #else
-       ! Convert to GM coordinates
-       Xyz_D = matmul(GmFac_DD, Xyz_D)
-
-       if(present(LatBoundary)) &
-            LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
-
        ! Get the B0 field at the mapped position
        call get_planet_field(Time_Simulation, Xyz_D, &
             TypeCoordSystem//' NORM', B0_D)
@@ -715,12 +719,18 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-       call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-
-       bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
-       bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
-            State_V(Bx_-1)*B0_D
-       bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+       if(iTypeUpdate >= UpdateFast_)then
+          call get_point_data_fast(Xyz_D, b_D, j_D)
+          bCurrent_VII(0,  i,j) = 1.0          ! Weight
+          bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
+          bCurrent_VII(4:6,i,j) = j_D          ! Currents
+       else
+          call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
+          bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
+          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+               State_V(Bx_-1)*B0_D
+          bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+       end if
 
        ! if(.false.)then
        !   write(*,*)'iHemispher=',iHemisphere
@@ -736,7 +746,7 @@ contains
 
 #ifndef _OPENACC
     call MPI_reduce_real_array(bCurrent_VII, size(bCurrent_VII), MPI_SUM, 0, &
-         iComm,iError)
+         iComm, iError)
 #endif
 
     ! Map the field aligned current to rIn sphere
@@ -778,12 +788,8 @@ contains
              ! Get Cartesian coordinates
              call sph_to_xyz(rIn, Theta, Phi, Xyz_D)
 
-#ifdef _OPENACC
-             XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
-#else
              ! Convert to GM coordinates
-             XyzIn_D = matmul(GmFac_DD, Xyz_D)
-#endif
+             XyzIn_D = matmul3_left(GmFac_DD, Xyz_D)
 
              if(DoMap)then
                 ! Calculate magnetic field strength at the rIn grid point
@@ -796,7 +802,6 @@ contains
 
                 ! Convert to normalized units
                 bIn_D = bIn_D*Si2No_V(UnitB_)
-
 #endif
                 bIn   = norm2(bIn_D)
 
