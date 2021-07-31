@@ -479,9 +479,13 @@ contains
             - Ay*State_VGB(Bx_,i ,jL,k,iBlock) &
             - By*State_VGB(Bx_,i ,j ,k,iBlock) &
             - Cy*State_VGB(Bx_,i ,jR,k,iBlock)
+#ifndef _OPENACC
+       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
+       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
+            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
+#endif
     else
        ! Get current in generalized coordinates
-
        DxyzDcoord_DD(:,1) = InvDx2 &
             *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
 
@@ -670,7 +674,7 @@ contains
 #endif
 
     !$acc parallel loop vector collapse(2) &
-    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, j_D)
+    !$acc private(XyzIn_D, Xyz_D, B0_D, b_D, j_D, State_V)
     do j = 1, nPhi; do i = 1, nTheta
 
        if(present(Phi_I))then
@@ -719,7 +723,7 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-       if(iTypeUpdate >= UpdateFast_)then
+       if(iTypeUpdate >= UpdateFast_+100)then
           call get_point_data_fast(Xyz_D, b_D, j_D)
           bCurrent_VII(0,  i,j) = 1.0          ! Weight
           bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
@@ -732,16 +736,6 @@ contains
           bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
        end if
 
-       ! if(.false.)then
-       !   write(*,*)'iHemispher=',iHemisphere
-       !   write(*,*)'Phi,Theta=',Phi,Theta
-       !   write(*,*)'XyzIn_D  =', XyzIn_D
-       !   write(*,*)'Xyz_D    =',Xyz_D
-       !   write(*,*)'rCurrents=',rCurrents, norm2(Xyz_D)
-       !   write(*,*)'B0_D     =',B0_D
-       !   write(*,*)'bCurrent_VII =',bCurrent_VII(:,i,j)
-       !   call stop_mpi('DEBUG')
-       ! end if
     end do; end do
 
 #ifndef _OPENACC
