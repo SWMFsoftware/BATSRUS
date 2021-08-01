@@ -43,7 +43,7 @@ contains
 
     b_D = 0.0
     j_D = 0.0
-    
+
     if(iProc /= iProcOut) RETURN
 
     iLo = iCell_D(1); jLo = iCell_D(2); kLo = iCell_D(3)
@@ -724,20 +724,18 @@ contains
 #endif
 
        ! Extract currents and magnetic field for this position
-       ! if(iTypeUpdate >= UpdateFast_+100)then
-       
-       call get_point_data_fast(Xyz_D, b_D, j_D)
-       bCurrent_VII(0,  i,j) = 1.0          ! Weight
-       bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
-       bCurrent_VII(4:6,i,j) = j_D          ! Currents
-       
-       ! else
-       !    call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
-       !    bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
-       !    bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
-       !         State_V(Bx_-1)*B0_D
-       !    bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
-       ! end if
+       if(iTypeUpdate >= UpdateFast_)then
+          call get_point_data_fast(Xyz_D, b_D, j_D)
+          bCurrent_VII(0,  i,j) = 1.0          ! Weight
+          bCurrent_VII(1:3,i,j) = b_D + B0_D   ! B1 and B0
+          bCurrent_VII(4:6,i,j) = j_D          ! Currents
+       else
+          call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
+          bCurrent_VII(0,  i,j) = State_V(Bx_-1)        ! Weight
+          bCurrent_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+               State_V(Bx_-1)*B0_D
+          bCurrent_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+       end if
 
     end do; end do
 
