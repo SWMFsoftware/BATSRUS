@@ -6,6 +6,7 @@ module ModGroundMagPerturb
   use BATL_lib, ONLY: &
        test_start, test_stop, lVerbose, iProc, nProc, iComm
 
+  use ModKind,           ONLY: Real4_
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: &
@@ -56,7 +57,7 @@ module ModGroundMagPerturb
   real, allocatable:: IeMagPerturb_DII(:,:,:)
 
   ! Fast algorithms:
-  real, allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
+  real(Real4_), allocatable:: LineContrib_DII(:,:,:), InvDist2_DII(:,:,:)
   !$acc declare create(LineContrib_DII, InvDist2_DII)
   logical:: UseSurfaceIntegral = .true.       ! true for fast surface integral
   logical:: UseFastFacIntegral = .true.       ! true for fast FAC integral
