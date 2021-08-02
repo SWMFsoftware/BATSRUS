@@ -1,3 +1,9 @@
+#DESCRIPTION
+Param/EARTH/PARAM.in.2D: Two dimensional Earth simulation
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
 #DIPOLE
 -3.11e-6                DipoleStrength [Tesla]
 
@@ -11,12 +17,6 @@ T                       IsMagAxisPrimary (rest of parameters read if true)
 #PROGRESS
 10			DnShowProgressShort
 100			DnShowProgressLong
-
-#DESCRIPTION
-Param/EARTH/PARAM.in.2D: Two dimensional Earth simulation
-
-#TIMEACCURATE
-F			IsTimeAccurate
 
 #ROTATION
 F			UseRotation
@@ -90,6 +90,12 @@ T                       DoAmr
 200                     DnAmr
 -1                      DtAmr
 T                       IsStrictAmr
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
