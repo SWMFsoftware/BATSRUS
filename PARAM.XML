@@ -5631,7 +5631,7 @@ and #AMRCRITERIARESOLUTION commands allow even more flexibility in controlling
 the grid adaptation, but the initial resolution/level still has to be set
 by this command. However, if #AMRCRITERIALEVEL/AMRCRITERIARESOLUTION is 
 specified, the user should not use #GRIDLEVEL/#GRIDRESOLUTION to specify
-any NameShape except 'initial', otherwise the code will just crashed.
+any NameShape except 'initial', otherwise the code will just crash.
 
 If NameShape is set to 'initial', it determines the number of grid adaptations
 used to initialize the grid. The grid adaptations are done according to the
