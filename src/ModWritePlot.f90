@@ -1009,7 +1009,7 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
-    use ModFieldTrace, ONLY: ray, Trace_DINB
+    use ModFieldTrace, ONLY: ray
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          plot_dimensional, Plot_
@@ -1562,20 +1562,6 @@ contains
           ! needed for Tecplot.  It will be fixed later using message
           ! passing
           PlotVar(1:nI,1:nJ,1:nK,iVar) = ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBlock)
-
-          ! EXTRA RAYTRACE variables
-       case('f1x')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(1,1,1:nI,1:nJ,1:nK,iBlock)
-       case('f1y')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(2,1,1:nI,1:nJ,1:nK,iBlock)
-       case('f1z')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(3,1,1:nI,1:nJ,1:nK,iBlock)
-       case('f2x')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(1,2,1:nI,1:nJ,1:nK,iBlock)
-       case('f2y')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(2,2,1:nI,1:nJ,1:nK,iBlock)
-       case('f2z')
-          PlotVar(1:nI,1:nJ,1:nK,iVar) = Trace_DINB(3,2,1:nI,1:nJ,1:nK,iBlock)
 
           ! GRID INFORMATION
        case('crit1')
