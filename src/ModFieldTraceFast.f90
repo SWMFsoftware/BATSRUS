@@ -18,7 +18,6 @@ module ModFieldTraceFast
        iNode_B, iTree_IA, Coord0_,  Xyz_DGB, CellSize_DB, &
        message_pass_cell, message_pass_node
 
-
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -1846,8 +1845,8 @@ contains
       integer:: iNode, iDim, iSideFace
 
       integer:: iS, jS, kS, iR, jR, kR, iRay
-      !------------------------------------------------------------------------
 #ifdef _OPENACC
+      !------------------------------------------------------------------------
       do iFace=iFaceMin,iFaceMax
          !$acc parallel loop gang
          do iBlock = 1, nBlock

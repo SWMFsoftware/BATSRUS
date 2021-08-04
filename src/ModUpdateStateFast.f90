@@ -64,7 +64,7 @@ contains
     real, optional:: State_VGB(:,:,:,:,:)
     real, optional:: B0_DGB(:,:,:,:,:)
     real, optional:: Trace_DICB(:,:,:,:,:,:)
-    
+
     ! Ensure that variables are in sync between CPU and GPU.
     ! Only perform the acc update if the status index of a variable
     ! is larger on the source than the targer device (DiVAR is 1 or -1).
