@@ -397,7 +397,7 @@ contains
     use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
     use ModMultiFluid, ONLY : iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModFieldTraceFast, ONLY: trace_field_grid
+    use ModFieldTraceFast, ONLY: trace_field_grid, ray
     use ModUpdateStateFast, ONLY: sync_cpu_gpu
 
     real :: Factor
@@ -432,6 +432,7 @@ contains
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
        call trace_field_grid
+       call sync_cpu_gpu('update on GPU', NameSub, Trace_DICB=ray)
     end if
 
     if(iNewPIm > iLastPIm .or. iNewDecomposition > iLastDecomposition)then

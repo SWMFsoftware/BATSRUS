@@ -29,6 +29,7 @@ module ModFieldTraceFast
 
   private ! except
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
+  public:: ray                        ! inherited from ModFieldTrace
 
   ! Local variables
   logical, parameter:: DoDebug = .false.

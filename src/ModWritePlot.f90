@@ -407,7 +407,7 @@ contains
           ! Use true signed magnetic field in plots
           if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBlock)
 
-          call set_plotvar(iBlock, iFile-plot_, nPlotVar, plotvarnames, PlotVar,&
+          call set_plotvar(iBlock, iFile - plot_, nPlotVar, plotvarnames, PlotVar,&
                plotvar_inBody,plotvar_useBody)
 
           if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBlock, &
@@ -992,9 +992,8 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_plot_scalars
   !============================================================================
-
-  subroutine set_plotvar(iBlock,iPlotFile,nplotvar,plotvarnames,plotvar,&
-       plotvar_inBody,plotvar_useBody)
+  subroutine set_plotvar(iBlock, iPlotFile, nPlotvar, plotvarnames, Plotvar,&
+       plotvar_inBody, plotvar_useBody)
 
     use ModMain
     use ModVarIndexes
