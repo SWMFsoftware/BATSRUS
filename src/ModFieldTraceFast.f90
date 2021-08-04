@@ -6,7 +6,7 @@ module ModFieldTraceFast
 
   use ModKind
   use ModFieldTrace
-  use ModMain, ONLY: UseB0, TypeCoordSystem
+  use ModMain, ONLY: UseB0, TypeCoordSystem, Time_Simulation
   use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
   use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
 
@@ -14,7 +14,7 @@ module ModFieldTraceFast
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProc, iComm, nProc, &
        nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, MaxBlock, Unused_B, IsCartesianGrid, &
+       nBlock, MaxBlock, Unused_B, IsCartesianGrid, x_, y_, z_, &
        iNode_B, iTree_IA, Coord0_,  Xyz_DGB, CellSize_DB, &
        message_pass_cell, message_pass_node
 
