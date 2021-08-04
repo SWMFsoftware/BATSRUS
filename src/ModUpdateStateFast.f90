@@ -57,28 +57,30 @@ module ModUpdateStateFast
 contains
   !============================================================================
   include 'vector_functions.h'
-  subroutine sync_cpu_gpu(String, NameCaller)
+  subroutine sync_cpu_gpu(String, NameCaller, State_VGB, B0_DGB, Trace_DICB)
 
     character(len=*), intent(in):: String
     character(len=*), optional, intent(in):: NameCaller
-
-    ! Ensure that some variables are in sync between CPU and GPU.
-    ! Only perform the !$ acc update if the status index of a variable
+    real, optional:: State_VGB(:,:,:,:,:)
+    real, optional:: B0_DGB(:,:,:,:,:)
+    real, optional:: Trace_DICB(:,:,:,:,:,:)
+    
+    ! Ensure that variables are in sync between CPU and GPU.
+    ! Only perform the acc update if the status index of a variable
     ! is larger on the source than the targer device (DiVAR is 1 or -1).
 
-    ! By default update the variables listed in String from the CPU to the GPU.
+    ! By default update the variables passed from the CPU to the GPU.
     ! If string contains "CPU", then update from GPU to CPU
     ! If string contains "change", then set DiVar=-1 for GPU or DiVar=1 for CPU
     !
     ! Examples:
-    ! call sync_cpu_gpu("State_VGB, B0_DGB", NameSub)
-    ! call sync_cpu_gpu("State_VGB, B0_DGB on CPU")
-    ! call sync_cpu_gpu("change B0_DGB")
-    ! call sync_cpu_gpu("change State_VGB on CPU")
+    ! call sync_cpu_gpu("update on GPU", NameSub, State_VGB, B0_DGB)
+    ! call sync_cpu_gpu("update on CPU", NameSub, B0_DGB=B0_DGB)
+    ! call sync_cpu_gpu("change on GPU", Trace_DICB=Trace_DICB)
     !
     ! The optional NameCaller string is used for testing purposes
 
-    integer:: DiState=0, DiB0 = 0
+    integer:: DiState=0, DiB0 = 0, DiTrace = 0
     logical:: DoChange, IsCpu
 
     logical:: DoTest
@@ -96,7 +98,7 @@ contains
     DoChange = index(String, 'change') > 0
     IsCpu    = index(String, 'CPU') > 0
 
-    if(index(String, 'State_VGB') > 0)then
+    if(present(State_VGB))then
        if(DoChange)then
           if(IsCpu)then
              DiState = 1
@@ -119,7 +121,7 @@ contains
           endif
        endif
     endif
-    if(UseB0 .and. index(String,'B0_DGB') > 0) then
+    if(UseB0 .and. present(B0_DGB)) then
        if(DoChange)then
           if(IsCpu)then
              DiB0 = 1
@@ -142,8 +144,32 @@ contains
           endif
        endif
     endif
+    if(present(Trace_DICB))then
+       if(DoChange)then
+          if(IsCpu)then
+             DiTrace = 1
+          else
+             DiTrace = -1
+          endif
+       else
+          if(IsCpu .and. DiTrace < 0)then
+             if(DoTest)write(*,*) NameSub,': acc update Trace to CPU'
+             call timing_start("sync_trace")
+             !$acc update host (Trace_DICB)
+             call timing_stop("sync_trace")
+             DiTrace = 0
+          elseif(.not.IsCpu .and. DiTrace > 0)then
+             if(DoTest)write(*,*) NameSub,': acc update Trace to GPU'
+             call timing_start("sync_trace")
+             !$acc update device(Trace_DICB)
+             call timing_stop("sync_trace")
+             DiTrace = 0
+          endif
+       endif
 
-    if(DoTest)write(*,*) NameSub,': DiState, DiB0', DiState, DiB0
+    end if
+    if(DoTest)write(*,*) NameSub,': DiState, DiB0, DiTrace=', &
+         DiState, DiB0, DiTrace
 
     call test_stop(NameSub, DoTest)
 
@@ -155,8 +181,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'update_state_fast'
     !--------------------------------------------------------------------------
-    call sync_cpu_gpu('update State_VGB and B0_DGB on GPU', NameSub)
-    call sync_cpu_gpu('change State_VGB on GPU', NameSub)
+    call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
+    call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
 
     select case(iTypeUpdate)
     case(3)
@@ -3017,8 +3043,9 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    call sync_cpu_gpu('update B0_DGB, State_VGB on GPU', NameSub)
-    call sync_cpu_gpu('change B0_DGB on GPU', NameSub)
+    call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
+    call sync_cpu_gpu('change on GPU', NameSub, B0_DGB=B0_DGB)
+
     call set_dipole
 
     !$acc parallel loop gang independent

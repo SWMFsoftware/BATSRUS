@@ -6,13 +6,19 @@ module ModFieldTraceFast
 
   use ModKind
   use ModFieldTrace
+  use ModMain, ONLY: UseB0, TypeCoordSystem
+  use ModB0, ONLY: B0_DGB, get_b0, get_b0_dipole
+  use ModAdvance, ONLY: State_VGB, Bx_, Bz_, iTypeUpdate, UpdateSlow_
 
   use BATL_lib, ONLY: &
        test_start, test_stop, StringTest, xTest, yTest, zTest, &
        iTest, jTest, kTest, iBlockTest, iProc, iComm, nProc, &
        nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       nBlock, MaxBlock, Unused_B, IsCartesianGrid
-  use ModMain, ONLY: TypeCoordSystem
+       nBlock, MaxBlock, Unused_B, IsCartesianGrid, &
+       iNode_B, iTree_IA, Coord0_,  Xyz_DGB, CellSize_DB, &
+       message_pass_cell, message_pass_node
+
+
 #ifdef _OPENACC
   use ModUtilities, ONLY: norm2
 #endif
@@ -25,6 +31,8 @@ module ModFieldTraceFast
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
 
   ! Local variables
+
+  logical, parameter:: DoDebug = .false.
 
   ! Stored face and cell indices of the 2 rays starting from a face of a block
   integer(Int1_), allocatable :: I_DINB(:,:,:,:,:,:)
@@ -109,7 +117,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     call init_mod_trace_fast
 
@@ -154,13 +162,8 @@ contains
   !============================================================================
   subroutine trace_grid_fast
 
-    use ModMain
-    use ModAdvance,  ONLY: Bx_, Bz_, State_VGB, iTypeUpdate, UpdateSlow_
-    use ModB0,       ONLY: get_b0, get_b0_dipole
     use ModParallel, ONLY: NOBLK, neiLEV
     use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
-         message_pass_cell, message_pass_node
     use ModMpi
 
     ! Iteration parameters
@@ -1008,7 +1011,7 @@ contains
                ! New mid point using the reduced Ds
                GenMid_D = GenIni_D + 0.5*Ds*bIni_D
 
-               if(DoTestRay.and.okdebug)&
+               if(DoTestRay.and.DoDebug)&
                     write(*,*)'new decreased Ds: me,iBlock,Ds=', &
                     iProc,iBlock,Ds
 
@@ -1018,7 +1021,7 @@ contains
 
                   DsNext = sign(min(DsMax, abs(Ds)/sqrt(DxRel)), Ds)
 
-                  if(DoTestRay.and.okdebug)&
+                  if(DoTestRay.and.DoDebug)&
                        write(*,*)'new increased DsNext: me,iBlock,DsNext=', &
                        iProc, iBlock, DsNext
 
@@ -1033,7 +1036,7 @@ contains
          nSegment = nSegment+1
          s = s + abs(Ds)
 
-         if(DoTestRay.and.okdebug)&
+         if(DoTestRay.and.DoDebug)&
               write(*,*)'me,iBlock,nSegment,s,Gen_D=', &
               iProc, iBlock, nSegment, s, Gen_D
 
@@ -1788,8 +1791,6 @@ contains
     subroutine ray_pass_faces(&
          iDir, iFaceMin, iFaceMax, DoEqual, DoRestrict, DoProlong)
 
-      use ModMain, ONLY : okdebug, Unused_B
-      use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
       use ModParallel, ONLY : NOBLK, neiLEV, neiBLK, neiPE
       use ModMpi
 
@@ -1978,13 +1979,13 @@ contains
            iProc,iFaceMin,iFaceMax,DoEqual,DoRestrict,DoProlong
 
       ! Debug
-      if(okdebug)Buffer_IIBI  =0.00
+      if(DoDebug)Buffer_IIBI  =0.00
 
       nRecvRequest = 0
       iRecvRequest_I = MPI_REQUEST_NULL
 
       do iFace=iFaceMin,iFaceMax
-         if(okdebug.and.DoTest)then
+         if(DoDebug.and.DoTest)then
             write(*,*)&
                  'setranges_ray for receive Done: me,iFace,iSize,iSizeR',&
                  iProc, iFace, iSize, iSizeR
@@ -2027,7 +2028,7 @@ contains
                     'Error in message pass: Invalid value for neiLEV')
             end select
 
-            if(okdebug.and.DoTest)write(*,*)&
+            if(DoDebug.and.DoTest)write(*,*)&
                  'receive: me, DiLevel, nSubFace, iSize1',&
                  iProc, DiLevel, nSubFace, iSize1
 
@@ -2037,7 +2038,7 @@ contains
                   ! Remote receive
                   iTag = 100*iBlock+10*iFace+iSubFace
 
-                  if(DoTest.and.okdebug)write(*,*)&
+                  if(DoTest.and.DoDebug)write(*,*)&
                        'Remote receive, me,iTag,DiLevel,jProc=',&
                        iProc, iTag, DiLevel, jProc
 
@@ -2065,7 +2066,7 @@ contains
               iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
               iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
-         if(okdebug.and.DoTest)write(*,*)&
+         if(DoDebug.and.DoTest)write(*,*)&
               'setranges_ray for send Done: me, iFace=',iProc, iFace
 
          if(DoEqual) allocate(BufEqual_DIC( &
@@ -2073,14 +2074,14 @@ contains
          if(DoRestrict.or.DoProlong) allocate( &
               BufRestrict_DIC(3,2,iMinR:iMaxR,jMinR:jMaxR,kMinR:kMaxR))
 
-         if(okdebug.and.DoTest)write(*,*)'allocation Done, me,iFace=',&
+         if(DoDebug.and.DoTest)write(*,*)'allocation Done, me,iFace=',&
               iProc, iFace
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             DiLevel = neiLEV(iFace,iBlock)
 
-            if(okdebug.and.DoTest)write(*,*)&
+            if(DoDebug.and.DoTest)write(*,*)&
                  'sending: me, iFace,iBlock,DiLevel=', &
                  iProc, iFace, iBlock, DiLevel
 
@@ -2092,7 +2093,7 @@ contains
                jBlock=neiBLK(1,iFace,iBlock)
                if(jProc==iProc)then
                   ! Local copy
-                  if(okdebug.and.DoTest)write(*,*)&
+                  if(DoDebug.and.DoTest)write(*,*)&
                        'local equal copy: me,iFace,iBlock=',iProc,iFace,iBlock
 
                   ! Debug
@@ -2115,7 +2116,7 @@ contains
                else
                   ! Remote send
                   iTag = 100*jBlock+10*iFace+1
-                  if(DoTest.and.okdebug)write(*,*)&
+                  if(DoTest.and.DoDebug)write(*,*)&
                        'Remote equal send, me,iTag,jProc=',iProc,iTag,jProc
 
                   BufEqual_DIC=&
@@ -2165,7 +2166,7 @@ contains
                        iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR, &
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS)
 
-                  if(okdebug.and.DoTest)write(*,*)&
+                  if(DoDebug.and.DoTest)write(*,*)&
                        'local restricted copy: me,iFace,iBlock,_s=',&
                        iProc, iFace, iBlock,&
                        iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
@@ -2182,7 +2183,7 @@ contains
 
                   ! Remote send
                   iTag = 100*jBlock+10*iFace+iSubFace
-                  if(DoTest.and.okdebug)write(*,*)&
+                  if(DoTest.and.DoDebug)write(*,*)&
                        'Remote restricted send, me,iFace,iTag=',&
                        iProc,iFace,iTag
                   call MPI_Rsend(BufRestrict_DIC,iSizeR,&
@@ -2203,7 +2204,7 @@ contains
 
                   if(jProc==iProc)then
                      ! Local copy of appropriate subface
-                     if(okdebug.and.DoTest)write(*,*)&
+                     if(DoDebug.and.DoTest)write(*,*)&
                           'local prolonged copy: me,iSubFace,iFace,iBlock,S=',&
                           iProc,iSubFace,iFace,iBlock,&
                           iMinS, iMaxS, jMinS, jMaxS, kMinS, kMaxS
@@ -2223,7 +2224,7 @@ contains
                           iBlock)
 
                      iTag = 100*jBlock + 10*iFace + 1
-                     if(DoTest.and.okdebug)write(*,*)&
+                     if(DoTest.and.DoDebug)write(*,*)&
                           'Remote prolong send, me,iFace,iTag=',&
                           iProc,iFace,iTag
 
@@ -2265,20 +2266,20 @@ contains
               iMinG, iMaxG, jMinG, jMaxG, kMinG, kMaxG, &
               iMinR, iMaxR, jMinR, jMaxR, kMinR, kMaxR)
 
-         if(okdebug.and.DoTest)write(*,*)&
+         if(DoDebug.and.DoTest)write(*,*)&
               'setranges_ray for buf2ray Done: me, iFace=',iProc, iFace
 
          do iBlock = 1, nBlock
             if(Unused_B(iBlock))CYCLE
             select case(neiLEV(jFace,iBlock))
             case(0)
-               if(okdebug.and.DoTest)&
+               if(DoDebug.and.DoTest)&
                     write(*,*)'buf2rayface: me, iBlock=',iProc,iBlock
                if(DoEqual.and.neiPE(1,jFace,iBlock)/=iProc)&
                     call buf2rayface(Buffer_IIBI(1,1,iBlock,iSide),&
                     iMinG,iMaxG,jMinG,jMaxG,kMinG,kMaxG)
             case(1)
-               if(okdebug.and.DoTest)&
+               if(DoDebug.and.DoTest)&
                     write(*,*)'buf2sparserayface: me, iBlock=',iProc,iBlock
                if(DoProlong.and.neiPE(1,jFace,iBlock)/=iProc)&
                     call buf2sparserayface(Buffer_IIBI(1,1,iBlock,iSide),&
@@ -2286,7 +2287,7 @@ contains
             case(-1)
                if(DoRestrict)then
                   do iSubFace=1,4
-                     if(okdebug.and.DoTest)&
+                     if(DoDebug.and.DoTest)&
                           write(*,*)'buf2subrayface: me, iSubFace, iBlock=',&
                           iProc,iSubFace,iBlock
                      if(neiPE(iSubFace,jFace,iBlock)/=iProc)&

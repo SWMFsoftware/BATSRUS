@@ -609,7 +609,7 @@ contains
 
     end do
 
-    call sync_cpu_gpu('change State_VGB on GPU', NameSub)
+    call sync_cpu_gpu('change on GPU', NameSub, State_VGB)
 
     call timing_stop(NameSub)
     call test_stop(NameSub, DoTest)

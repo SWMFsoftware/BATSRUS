@@ -2016,7 +2016,7 @@ contains
 
     call timing_start(NameSub)
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     DoTestRay = .false.
 
@@ -2878,7 +2878,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     ! Initialize trace parameters
     DoTraceRay     = .false.

@@ -166,7 +166,7 @@ contains
       use ModMain,                ONLY: UseB0, iSignRotationIC
       use ModAdvance,             ONLY: State_VGB
       use ModBuffer,              ONLY: DoRestartBuffer
-      use ModB0,                  ONLY: set_b0_reschange
+      use ModB0,                  ONLY: set_b0_reschange, B0_DGB
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
@@ -305,8 +305,8 @@ contains
          end if
       end if
 
-      call sync_cpu_gpu('change State_VGB B0_DGB on CPU', NameSub)
-      call sync_cpu_gpu('update State_VGB B0_DGB on GPU', NameSub)
+      call sync_cpu_gpu('change on CPU', NameSub, State_VGB, B0_DGB)
+      call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
 
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
@@ -930,6 +930,8 @@ contains
       use ModFieldTraceFast,    ONLY: trace_field_grid
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
+      use ModAdvance,           ONLY: State_VGB
+      use ModB0,                ONLY: B0_DGB
 
       integer :: iSat, iPointSat, iParcel
 
@@ -944,7 +946,7 @@ contains
       !------------------------------------------------------------------------
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
 
-      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+      call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
       if(ifile==restart_) then
          ! Case for restart file
