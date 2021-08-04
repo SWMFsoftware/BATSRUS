@@ -31,8 +31,15 @@ module ModFieldTraceFast
   public:: trace_field_grid           ! trace field from 3D MHD grid cells
 
   ! Local variables
-
   logical, parameter:: DoDebug = .false.
+
+  ! Trace_DINB contains the x,y,z coordinates for the foot point of a given
+  ! field line for both directions, eg.
+  ! Trace_DINB(2,1,i,j,k,iBlock) is the y coord for direction 1
+  ! trace for node i,j,k of block iBlock.
+
+  real, allocatable :: Trace_DINB(:,:,:,:,:,:)
+  !$acc declare create(Trace_DINB)
 
   ! Stored face and cell indices of the 2 rays starting from a face of a block
   integer(Int1_), allocatable :: I_DINB(:,:,:,:,:,:)
@@ -150,8 +157,10 @@ contains
 
     if(UseAccurateTrace .or. .not.IsCartesianGrid)then
        call trace_grid_accurate
+       call sync_cpu_gpu('change on CPU', NameSub, Trace_DICB=ray)
     else
        call trace_grid_fast
+       call sync_cpu_gpu('change on GPU', NameSub, Trace_DICB=ray)
     end if
 
     call timing_stop(NameSub)
@@ -604,9 +613,6 @@ contains
           call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
        end do; end do; end do
     end do
-
-!!! If ray tracing is done more often than plotting, this is not optimal.
-    !$acc update host(ray)
 
     call timing_stop('trace_grid_fast3')
 

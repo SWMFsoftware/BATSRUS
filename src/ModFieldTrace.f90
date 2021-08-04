@@ -47,15 +47,13 @@ module ModFieldTrace
   ! mapping to the ionosphere
   real, public, allocatable:: RayMapLocal_DSII(:,:,:,:), RayMap_DSII(:,:,:,:)
 
-  ! Ray and Trace_DINB contain the x,y,z coordinates for the foot point of a given
+  ! Ray contains the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg.
   ! ray(2,1,i,j,k,iBlock) is the y coord for direction 1
-  ! ray is for cell centers; Trace_DINB is for block surfaces with
-  ! a -0.5,-0.5,-0.5 shift in block normalized coordinates
+  ! trace for cell center i,j,k of block iBlock
 
   real, public, allocatable :: ray(:,:,:,:,:,:)
-  real, public, allocatable :: Trace_DINB(:,:,:,:,:,:)
-  !$acc declare create(ray, Trace_DINB)
+  !$acc declare create(ray)
 
   ! Integrals added up for all the local ray segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
