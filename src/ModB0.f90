@@ -618,35 +618,35 @@ contains
           ! B0_DGB; (2) without 0.5 factor in the contributions to
           ! magnetic pressure; (3) with no -B0 div B0 term (the last line) -
           ! demonstrated, as the test, the mathematical equivalence of both
-          ! if-cases. 
+          ! if-cases.
           B0MomentumSource_DC(:,i,j,k) =                                &
-               + B0_DX(:,i+1,j,k)*sum(B0_DX(:,i+1,j,k)*&!B0_DGB(:,i,j,k,iBlock)
+               + B0_DX(:,i+1,j,k)*sum(B0_DX(:,i+1,j,k)*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,1,i+1,j,k,iBlock))                     &
                - FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*                   &
-               sum(B0_DX(:,i+1,j,k)**2)*0.50 &!B0_DGB(:,i,j,k,iBlock))  &
-               - B0_DX(:,i  ,j,k)*sum(B0_DX(:,i  ,j,k)*&!B0_DGB(:,i,j,k,iBlock)
+               sum(B0_DX(:,i+1,j,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))  &
+               - B0_DX(:,i  ,j,k)*sum(B0_DX(:,i  ,j,k)*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,1,i,j,k,iBlock))                       &
                + FaceNormal_DDFB(:,1,i,j,k,iBlock)*                     &
-               sum(B0_DX(:,i  ,j,k)**2)*0.50 &!B0_DGB(:,i,j,k,iBlock))
-               + B0_DY(:,i,j+1,k)*sum(B0_DY(:,i,j+1,k)*&!B0_DGB(:,i,j,k,iBlock)
+               sum(B0_DX(:,i  ,j,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               + B0_DY(:,i,j+1,k)*sum(B0_DY(:,i,j+1,k)*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,2,i,j+1,k,iBlock) )                    &
                - FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*                   &
-               sum(B0_DY(:,i,j+1,k)**2)*0.50 &!B0_DGB(:,i,j,k,iBlock)) 
-               - B0_DY(:,i,j  ,k)*sum(B0_DY(:,i,j  ,k)*&!B0_DGB(:,i,j,k,iBlock)
+               sum(B0_DY(:,i,j+1,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               - B0_DY(:,i,j  ,k)*sum(B0_DY(:,i,j  ,k)*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,2,i,j  ,k,iBlock) )                    &
                + FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*                   &
-               sum(B0_DY(:,i,j  ,k)**2)*0.50 !B0_DGB(:,i,j,k,iBlock))
+               sum(B0_DY(:,i,j  ,k)**2)*0.50 ! B0_DGB(:,i,j,k,iBlock))
 
           if(nDim == 3) B0MomentumSource_DC(:,i,j,k) =                  &
                B0MomentumSource_DC(:,i,j,k)                             &
-               + B0_DZ(:,i,j,k+1)*sum(B0_DZ(:,i,j,k+1)*&!B0_DGB(:,i,j,k,iBlock)
+               + B0_DZ(:,i,j,k+1)*sum(B0_DZ(:,i,j,k+1)*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,3,i,j,k+1,iBlock))                     &
                - FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*                   &
-               sum(B0_DZ(:,i,j,k+1)**2)*0.50 &!B0_DGB(:,i,j,k,iBlock))  
-               - B0_DZ(:,i,j,k  )*sum(B0_DZ(:,i,j,k  )*&!B0_DGB(:,i,j,k,iBlock)
+               sum(B0_DZ(:,i,j,k+1)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               - B0_DZ(:,i,j,k  )*sum(B0_DZ(:,i,j,k  )*&! B0_DGB(:,i,j,k,iBlock)
                FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )                    &
                + FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*                   &
-               sum(B0_DZ(:,i,j,k  )**2)*0.50 !B0_DGB(:,i,j,k,iBlock))
+               sum(B0_DZ(:,i,j,k  )**2)*0.50 ! B0_DGB(:,i,j,k,iBlock))
 
           B0MomentumSource_DC(:,i,j,k) =                                &
                B0MomentumSource_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock) &

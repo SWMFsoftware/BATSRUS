@@ -645,10 +645,10 @@ contains
     ! Loop over the ionosphere grid, but skip the poles
     ! and the ghost cell in the Phi direction (j=nPhi)
     iLine = 0
-    
+
     !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
     !$acc   rIonosphere, dThetaIono, dPhiIono, jHall_DII, jPedersen_DII) &
-    !$acc   copy(dBHall_DI, dBPedersen_DI) 
+    !$acc   copy(dBHall_DI, dBPedersen_DI)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
 #ifndef _OPENACC
