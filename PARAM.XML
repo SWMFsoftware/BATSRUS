@@ -7158,18 +7158,13 @@ The default is UseCurlB0 false.
 <command name="B0MOMENTUMFLUX">
   <parameter name="UseB0MomentumFlux" type="logical" default="F"/>
 
-
 #B0MOMENTUMFLUX
 T		UseB0MomentumFlux
 
 If UseB0MomentumFlux=.true., the contribution from B0 field to momentum
-source as described in the previous discussion is calculated as
-div ( B0 B0) - grad B0^2/2 - B0 div B0
-otherwise (default) as
-curl B0 x B0
-
-Although mathematically identical, these expressions are calculated in
-different ways.
+source is calculated as $div ( B0 B0) - grad B0^2/2 - B0 div B0$
+otherwise (default) as $curl B0 \times B0$. Although mathematically identical, 
+these expressions are numerically different.
 </command>
 
 
