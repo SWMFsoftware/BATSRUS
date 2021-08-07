@@ -78,6 +78,7 @@ module ModIeCoupling
 
 contains
   !============================================================================
+  include 'vector_functions.h'
   subroutine init_ie_grid(Theta_I, Phi_I, rIono)
 
     use ModNumConst, ONLY: cPi, cTwoPi
@@ -150,7 +151,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine clean_mod_ie_coupling
   !============================================================================
-
   subroutine get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
     real, intent(in) :: Theta, Phi
     real, intent(out):: ThetaNorm, PhiNorm
@@ -645,12 +645,17 @@ contains
     ! Loop over the ionosphere grid, but skip the poles
     ! and the ghost cell in the Phi direction (j=nPhi)
     iLine = 0
+
+    !$acc parallel copyin(ThetaIono_I, PhiIono_I, SinTheta_I, &
+    !$acc   rIonosphere, dThetaIono, dPhiIono, jHall_DII, jPedersen_DII) &
+    !$acc   copy(dBHall_DI, dBPedersen_DI)
     do j = 1, nPhiIono-1; do i = 2, nThetaIono-1
 
+#ifndef _OPENACC
        iLine = iLine + 1
        ! distribute the work among the BATSRUS processors
        if(mod(iLine, nProc) /= iProc)CYCLE
-
+#endif
        ! Get Cartesian coordinates for the ionospheric grid point
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
 
@@ -660,6 +665,7 @@ contains
        ! CHECK
        ! Surface = Surface + Coef0
 
+       !$acc loop gang worker vector private(dXyz_D, Coef)
        do iMag = 1, nMag
           ! Distance vector between magnetometer position
           ! and ionosphere surface element
@@ -670,10 +676,11 @@ contains
 
           ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
           dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
-               Coef*cross_product(jHall_DII(:,i,j), dXyz_D)
+               Coef*cross_prod(jHall_DII(:,i,j), dXyz_D)
           dBPedersen_DI(:,iMag) = dBPedersen_DI(:,iMag) + &
-               Coef*cross_product(jPedersen_DII(:,i,j), dXyz_D)
+               Coef*cross_prod(jPedersen_DII(:,i,j), dXyz_D)
 
+#ifndef _OPENACC
           if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
              write(*,*)NameSub,': Time=', Time_Simulation
              write(*,*)NameSub,': XyzSm,XyzIono=', &
@@ -692,9 +699,10 @@ contains
                   Coef*cross_product(jPedersen_DII(:,i,j), dXyz_D) &
                   *No2Si_V(UnitB_), dBPedersen_DI(:,iMag)*No2Si_V(UnitB_)
           end if
-
+#endif
        end do; end do
     end do
+    !$acc end parallel
     ! CHECK
     ! write(*,*)'!!! ',NameSub,': Surface=', Surface, rIonosphere**2
 

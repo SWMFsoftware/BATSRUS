@@ -17,7 +17,73 @@ module ModCalcSource
 
 contains
   !============================================================================
-
+  ! Full list of source terms for different MHD models:
+  ! 1. MHD with full field (Powell99)
+  ! For UseB=.true.; UseB0=.false. the sources are added if
+  ! UseDivBSource = .true.
+  ! ---------------------
+  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B)
+  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B)
+  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B)
+  ! ---------------------
+  ! Comments: 1a.\divB is calculated in terms of the face values of B
+  !           1b. other variables are cell-centered
+  ! -------------------
+  ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
+  !    divergence free (Powell99). For  UseB=.true.; UseB0=.true., the sources
+  !    proportional to \div B1 are added, if  UseDivBSource = .true.. The terms
+  !    proportional to \div B0 and \curl B0 (unpublished, present in the code
+  !    since 2001-2002) are added if UseB0Source = .true.:
+  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B1 + \div B0) - B0*(\div B1)- &
+  !                      cross_product(\curl B0, B1)
+  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B1 + \div B0)
+  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B1 + \div B0)
+  ! Comment: 2a. \divB is calculated in terms of the face values of B1
+  !          2b. B0*(\div B1) is calculated together with (\div B1), and
+  !              different contrributions to (\div B1) are multiplied by face-
+  !              or cell-centered B0 field
+  !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+  !              sources \div B0 sources was omitted. To enable this, turrn on
+  !              UseDivFullBSource. Depending on this switch, the divB source
+  !              cleans either div B1 or dib (B1 + B0)
+  !          2d. other variables are cell-centered
+  ! 2. MHD with split field B1 + B0, B0 field is assumed to be potential and
+  !    divergence free (Powell99). For  UseB=.true.; UseB0=.true., the sources
+  !    proportional to \div B1 are added, if  UseDivBSource = .true.. The terms
+  !    proportional to \div B0 and \curl B0 (unpublished, present in the code
+  !    since 2001-2002) are added if UseB0Source = .true.:
+  ! Source_V(Mx_:Mz_) = -B_D(Bx_:Bz_)*(\div B1 + \div B0) - B0*(\div B1)- &
+  !                      cross_product(\curl B0, B1)
+  ! Source_V(Bx_:Bz_) = -U_D(Ux_:Uz_)*(\div B1 + \div B0)
+  ! Source_V(Energy_) = -dot_product(B_D*U_D)*(\div B1 + \div B0)
+  ! Comment: 2a. \divB is calculated in terms of the face values of B1
+  !          2b. B0*(\div B1) is calculated together with (\div B1), and
+  !              different contrributions to (\div B1) are multiplied by face-
+  !              or cell-centered B0 field
+  !          2c. Historically, in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+  !              \div B0 sources were omitted. To enable them, turn on
+  !              UseDivFullBSource. Depending on this switch, the divB source
+  !              cleans the field by reducing either div B1 or dib (B1 + B0).
+  !              In the momentum equation div B0 source is always present
+  !          2d. other variables are cell-centered
+  ! 3. MHD with split field B1 + B0, B0 field is NOT assumed to be potential
+  !    and divergence free. For UseB=.true.; UseB0=.true.,
+  !    UseDivBSource = .true. and UseB0Source =0, the extra sources are applied
+  !    if UseeCurlB0 = .true. at R > rCurrrentFreeB0. The extra sources are:
+  ! Source_V(Mx_:Mz_)= Source_V(Mx_:Mz_) + SM_D
+  ! Source_V(Energy_)= Source_V(Energy_) + dot_product(SM_D,U_D)
+  ! where SM_D = cross_product(\curl B0, B1) +         &
+  !              div (B0 B0) - grad B0^2/2 - B0 div D0 ! If UseB0MomentumFlux
+  !           or cross_product(\curl B0, B0)           ! Otherwise
+  ! Comment: 2a. \divB is calculated in terms of the face values of B1
+  !          2b. B0*(\div B1) is calculated together with (\div B1), and
+  !              different contrributions to (\div B1) are multiplied by face-
+  !              or cell-centered B0 field
+  !          2c. Historically in Source_V(Bx_:Bz_) and in Source_V(Energy_)
+  !              sources \div B0 sources were omitted. To enable then, turn on
+  !              UseDivFullBSource. Depending on this switch, the divB source
+  !              cleans either div B1 or dib (B1 + B0)
+  !          2d. other variables are cell-centered
   subroutine calc_source(iBlock)
     use ModMain,          ONLY: GravityDir, UseBody2, TypeCoordSystem, &
          UseB0, UseDivBsource, UseRadDiffusion, DoThinCurrentSheet, &
@@ -45,8 +111,9 @@ contains
          UseChromosphereHeating, get_tesi_c, TeSi_C
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
-    use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0, &
-         rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ
+    use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0,    &
+         rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ, &
+         UseDivFullBSource, B0MomentumSource_DC
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_,&
          correct_face_value
@@ -64,7 +131,7 @@ contains
 
     ! Variable for B0 source term
 
-    real :: CurlB0CrossB_D(3)
+    real :: CurlB0CrossB_D(3), DivFullB
 
     ! Variables needed for Boris source terms also used for div(u)
     real :: RhoInv
@@ -568,7 +635,7 @@ contains
     !     div(B1^2 + B1.B0 - B1 B1 - B1 B0 - B0 B1)
     !
     ! Deviations between these two are
-    !   -B1 div(B1)       - usual div B source
+    !   -(B1 + B0) div(B1)- div B1 source. Added B0 div(B1) in calc_divb_source
     !   -B1 div(B0)       - div(B0) source
     !   -curl(B0) x B1    - remove this if curl B0 = 0
     !   +curl(B0) x B0    - add this if curl B0 is not 0
@@ -608,9 +675,11 @@ contains
           else
              RhoInv = 1.0/State_VGB(Rho_,i,j,k,iBlock)
              U_D = RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-
+             DivFullB = DivB1_GB(i,j,k,iBlock)
+             ! We can choose to adveect/clean div B1 or div (B1 + B0)
+             if(UseDivFullBSource)DivFullB = DivFullB + DivB0_C(i,j,k)
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
-                  -DivB1_GB(i,j,k,iBlock)*U_D
+                  -DivFullB*U_D
 
              if(.not. UseMhdMomentumFlux) CYCLE
 
@@ -621,7 +690,7 @@ contains
 
              if(.not. IsMhd) CYCLE
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  -DivB1_GB(i,j,k,iBlock)*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                  -DivFullB*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *U_D)
 
           end if
@@ -665,7 +734,7 @@ contains
           ! +curl(B0) x B1    - undo source term above
           ! +curl(B0) x B0    - add this since curl B0 is not 0
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
-               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+               State_VGB(Bx_:Bz_,i,j,k,iBlock)) + B0MomentumSource_DC(:,i,j,k)
           SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = &
                SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) &
                + CurlB0CrossB_D
@@ -1066,19 +1135,22 @@ contains
             end if
 
             DivBInternal_C(i,j,k) = &
-                 2*DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))
+                 2*DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -&
+                 RightState_VX(Bx_,i,j,k))
 
             if(nJ > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))
+                 2*DyInvHalf*(LeftState_VY(By_,i,j+1,k) -&
+                 RightState_VY(By_,i,j,k))
 
             if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-                 2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
+                 2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -&
+                 RightState_VZ(Bz_,i,j,k))
 
             ! Momentum source term from B0 only needed for div(B^2/2 - BB)
             ! discretization
             if(UseMhdMomentumFlux.and.UseB0) then
                if(iTypeUpdate == UpdateSlow_) then
-                  ! Simple approach with B0 face arrays
+                  ! Simple approach with no B0 face arrays
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                        SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace1    &

@@ -14,7 +14,7 @@ module ModB0
   ! and usually curl(B0) = 0 except if UseCurlB0 = .true.
   ! Even if curl(B0) = 0 analytically, the numerical representation
   ! may have a finite curl.
-  ! It is often constant in time dB0/dt = 0, but not necessarily.
+  ! B0 field is often constant in time dB0/dt = 0, but not necessarily.
   ! This module provides data and methods for B0.
 
   use BATL_size, ONLY: MaxDim, nDim, MaxBlock, nI, nJ, nK, &
@@ -51,10 +51,19 @@ module ModB0
   ! Use source terms related to finite div(B0) and curl(B0)
   logical, public:: UseB0Source = UseB
 
+  ! The extra source teerms in the indiction equation help to clean div B
+  ! The logical choses if one wants to clean div B1 or div (B1 + B0)
+  logical, public:: UseDivFullBSource = .false.
+
   ! Use source terms related to finite curl(B0) for non-force-free B0 field
   ! If UseCurlB0 is true, then UseB0Source must be true!
   logical, public:: UseCurlB0 = .false.
   !$acc declare create(UseCurlB0)
+
+  ! The momentum source term for non-current-free B0 field, curl B0 x B0
+  ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
+  logical :: UseB0MomentumFlux = .false.
+  !$acc declare create(UseB0MomentumFlux)
 
   ! Radius within which the B0 field is curl free (analytically)
   real, public:: rCurrentFreeB0 = -1.0
@@ -68,10 +77,11 @@ module ModB0
   !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
   !$acc declare create(B0_DX, B0_DY, B0_DZ)
 
-  ! The numerical curl and divergence of B0 for one block
+  ! The numerical curl, curl B0 x B0 and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
+  real, public, allocatable :: B0MomentumSource_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
-  !$omp threadprivate( CurlB0_DC, DivB0_C )
+  !$omp threadprivate( CurlB0_DC, DivB0_C, B0MomentumSource_DC )
 
   ! Local variables
 
@@ -102,13 +112,20 @@ contains
           UseCurlB0   = .false.
           DoUpdateB0  = .false.
           DtUpdateB0  = -1.0
+          UseDivFullBSource = .false.
        end if
     case("#DIVBSOURCE")
        call read_var('UseB0Source', UseB0Source)
 
+    case("#DIVFULLBSOURCE")
+       call read_var('UseDivFullBSource', UseDivFullBSource)
+
     case("#USECURLB0")
        call read_var('UseCurlB0', UseCurlB0)
        if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
+
+    case("#B0MOMENTUMFLUX")
+       call read_var('UseB0MomentumFlux', UseB0MomentumFlux)
 
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
@@ -196,7 +213,7 @@ contains
          allocate(DivB0_C(nI,nJ,nK))
 
     if((UseCurlB0 .or. UseB0Source) .and. .not.allocated(CurlB0_DC)) &
-         allocate(CurlB0_DC(3,nI,nJ,nK))
+         allocate(CurlB0_DC(3,nI,nJ,nK), B0MomentumSource_DC(3,nI,nJ,nK))
 
     !$omp end parallel
 
@@ -212,7 +229,7 @@ contains
 
     !$omp parallel
     if(allocated(DivB0_C))   deallocate(DivB0_C)
-    if(allocated(CurlB0_DC)) deallocate(CurlB0_DC)
+    if(allocated(CurlB0_DC)) deallocate(CurlB0_DC, B0MomentumSource_DC)
     if(allocated(B0_DX)) deallocate(B0_DX,B0_DY,B0_DZ)
     !$omp end parallel
 
@@ -590,11 +607,57 @@ contains
                FaceNormal_DDFB(:,3,i,j,k+1,iBlock), B0_DZ(:,i,j,k+1))   &
                - cross_product(                                         &
                FaceNormal_DDFB(:,3,i,j,k  ,iBlock), B0_DZ(:,i,j,k  ))
-
           CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     endif
+    if(UseB0MomentumFlux)then
+       if(IsCartesian.or.IsRzGeometry)call stop_mpi(&
+            'B0MomentumFlux is not implemented in RZ or Cartesian Geometry')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! The commented out version with: (1) involving cell-centered
+          ! B0_DGB; (2) without 0.5 factor in the contributions to
+          ! magnetic pressure; (3) with no -B0 div B0 term (the last line) -
+          ! demonstrated, as the test, the mathematical equivalence of both
+          ! if-cases.
+          B0MomentumSource_DC(:,i,j,k) =                                &
+               + B0_DX(:,i+1,j,k)*sum(B0_DX(:,i+1,j,k)*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,1,i+1,j,k,iBlock))                     &
+               - FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*                   &
+               sum(B0_DX(:,i+1,j,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))  &
+               - B0_DX(:,i  ,j,k)*sum(B0_DX(:,i  ,j,k)*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,1,i,j,k,iBlock))                       &
+               + FaceNormal_DDFB(:,1,i,j,k,iBlock)*                     &
+               sum(B0_DX(:,i  ,j,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               + B0_DY(:,i,j+1,k)*sum(B0_DY(:,i,j+1,k)*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,2,i,j+1,k,iBlock) )                    &
+               - FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*                   &
+               sum(B0_DY(:,i,j+1,k)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               - B0_DY(:,i,j  ,k)*sum(B0_DY(:,i,j  ,k)*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,2,i,j  ,k,iBlock) )                    &
+               + FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*                   &
+               sum(B0_DY(:,i,j  ,k)**2)*0.50 ! B0_DGB(:,i,j,k,iBlock))
 
+          if(nDim == 3) B0MomentumSource_DC(:,i,j,k) =                  &
+               B0MomentumSource_DC(:,i,j,k)                             &
+               + B0_DZ(:,i,j,k+1)*sum(B0_DZ(:,i,j,k+1)*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,3,i,j,k+1,iBlock))                     &
+               - FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*                   &
+               sum(B0_DZ(:,i,j,k+1)**2)*0.50 &! B0_DGB(:,i,j,k,iBlock))
+               - B0_DZ(:,i,j,k  )*sum(B0_DZ(:,i,j,k  )*&! B0_DGB(:,i,j,k,iBlock)
+               FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )                    &
+               + FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*                   &
+               sum(B0_DZ(:,i,j,k  )**2)*0.50 ! B0_DGB(:,i,j,k,iBlock))
+
+          B0MomentumSource_DC(:,i,j,k) =                                &
+               B0MomentumSource_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock) &
+               - B0_DGB(:,i,j,k,iBlock)*DivB0_C(i,j,k)
+       end do; end do; end do
+    else
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          B0MomentumSource_DC(:,i,j,k) = cross_product(CurlB0_DC(:,i,j,k), &
+               B0_DGB(:,i,j,k,iBlock))
+       end do; end do; end do
+    end if
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_source
   !============================================================================

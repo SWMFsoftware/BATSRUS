@@ -283,7 +283,6 @@ contains
     end select
   end subroutine set_satellite_file_status
   !============================================================================
-
   subroutine set_NameFile(iSat)
     use ModMain,   ONLY: n_step, time_accurate
     use ModIO,     ONLY: NamePlotDir, StringDateOrTime
@@ -339,7 +338,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_NameFile
   !============================================================================
-
   subroutine read_satellite_input_files
 
     use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
@@ -503,7 +501,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine read_satellite_input_files
   !============================================================================
-
   subroutine set_satellite_flags(iSat)
 
     use BATL_lib, ONLY: find_grid_block
@@ -534,7 +531,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_satellite_flags
   !============================================================================
-
   subroutine set_satellite_positions(iSat)
     use ModMain, ONLY:time_simulation
     use ModNumConst
@@ -595,7 +591,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine set_satellite_positions
   !============================================================================
-
   subroutine satellite_trajectory_formula(iSat)
 
     integer, intent(in) :: iSat
@@ -639,10 +634,10 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine satellite_trajectory_formula
   !============================================================================
-
   subroutine get_satellite_ray(iSatIn, SatRayVar_I)
 
     use ModFieldTrace, ONLY: ray
+    use ModUpdateStateFast, ONLY: sync_cpu_gpu
     use BATL_size, ONLY:
     use BATL_lib, ONLY: iProc, nI, nJ, nK, IsCartesianGrid, &
          CellSize_DB, CoordMin_DB, xyz_to_coord
@@ -661,6 +656,8 @@ contains
     character(len=*), parameter:: NameSub = 'get_satellite_ray'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
+    call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=ray)
 
     ! Initialize to zero
     SatRayVar_I = 0.0
@@ -768,7 +765,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine get_satellite_ray
   !============================================================================
-
   subroutine GM_trace_sat(SatXyz_D, SatRay_D)
 
     use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
@@ -921,6 +917,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine GM_trace_sat
   !============================================================================
-
 end module ModSatelliteFile
 !==============================================================================

@@ -226,6 +226,10 @@ module ModFaceFlux
   real, public :: rFace = 0.0
   !$omp threadprivate( rFace )
 
+  ! Check if this face is the part of ChGL  domain boundary
+  logical, public :: IsChGLInterface
+  !$omp threadprivate( IsChGLInterface )
+
   ! Variables needed by viscosity
   real :: ViscoCoeff
   !$omp threadprivate( ViscoCoeff )
@@ -999,7 +1003,7 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
-    use ModChGL,     ONLY: UseChGL
+    use ModChGL,     ONLY: UseChGL, rMinChGL
 
     real :: r
 
@@ -1010,6 +1014,9 @@ contains
        ! the interfaced cells the velocity is field-aligned
        rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+       ! Check if this face is the part of ChGL  domain boundary
+       IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
     else
        ! Modify solution depending on the face center radial distance
        rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
@@ -4593,6 +4600,8 @@ contains
             ChGL2OverRho = InvRho*State_V(SignB_)**2
             ! Magetosonic speed squared:
             Sound2     = Sound2 + Ut2*ChGL2OverRho
+            ! if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
+            !     (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
             ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
             ChGL2OverRho   = 0.5*ChGL2OverRho
             UnChGLLeft   = UnLeft*ChGL2OverRho
@@ -4611,6 +4620,14 @@ contains
             if(UseAlfvenWaves)CRight_I(1) = max(CRight_I(1),  &
                  UnLeft  + sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
                  UnRight + sqrt(2*UnRight*UnChGLRight))        ! (Right)
+            if(IsChGLInterface)then
+               ! Choose the estimate for speed to be applicable in both
+               ! neighboring control volumes, handled by ChGL and regular MHD
+               CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
+                    CLeft_I(1)  )                                 ! ChGL
+               CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
+                    CRight_I(1) )                                 ! ChGL
+            end if
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1)  = Cmax_I(1)
          else
@@ -4626,6 +4643,8 @@ contains
          ChGL2OverRho = InvRho*State_V(SignB_)**2
          ! Magetosonic speed squared:
          Sound2     = Sound2 + Ut2*ChGL2OverRho
+         ! if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
+         !     (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
          ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
          ChGL2OverRho  = 0.5*ChGL2OverRho
          UnChGLMin   = UnMin*ChGL2OverRho
@@ -4644,6 +4663,14 @@ contains
          if(UseAlfvenWaves)cChGLRight = max(cChGLRight,  &
               UnMin  + sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
               UnMax  + sqrt(2*UnMax*UnChGLMax))          ! (Right)
+         if(IsChGLInterface)then
+            ! Choose the estimate for speed to be applicable in both
+            ! neighboring control volumes, handled by ChGL and regular MHD
+            cChGLLeft   = min( UnMin - Fast, &                ! MHD
+                 cChGLLeft  )                                 ! ChGL
+            cChGLRight  = max( UnMax + Fast, &                ! MHD
+                 cChGLRight )                                 ! ChGL
+         end if
          if(present(Cmax_I))then
             Cmax_I(1)    = max(cChGLRight, -cChGLLeft)
             CmaxDt_I(1) = Cmax_I(1)

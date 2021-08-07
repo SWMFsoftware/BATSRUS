@@ -47,7 +47,7 @@ test_help:
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_shockramp             (run shockramp test)"
-	@echo "    test_shocktube             (run shocktube test)"
+	@echo "    test_shocktbeube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test)"
 	@echo "    test_fast_wave             (run 3D fast wave test)"
 	@echo "    test_bx0		      		  (run 3D bx0 isosurface plot test)"
@@ -258,7 +258,7 @@ test_shocktube_1d:
 	@echo "test_shocktube_1d_rundir..." >> test_shocktube_1d.diff
 	$(MAKE) test_shocktube_1d_rundir
 	@echo "test_shocktube_1d_run..." >> test_shocktube_1d.diff
-	$(MAKE) test_shocktube_1d_run
+	$(MAKE) test_shocktube_1d_run NP=1
 	@echo "test_shocktube_1d_check..." >> test_shocktube_1d.diff
 	$(MAKE) test_shocktube_1d_check
 

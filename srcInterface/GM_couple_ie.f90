@@ -70,8 +70,7 @@ contains
 
     ! Send the following information from GM to IE on the IE grid:
     !  1. radial component of the field-aligned-currents (FACs)
-    !  2. latitude boundary (LatBoundary) scalar
-    !  3. field line tracing information if DoTraceIE is true
+    !  2. field line tracing information if DoTraceIE is true
 
     use CON_axes, ONLY: transform_matrix
     use ModMain, ONLY: Time_Simulation, TypeCoordSystem
@@ -91,7 +90,7 @@ contains
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
 
     integer :: i, j
-    real :: Radius, Phi, Theta, LatBoundary
+    real :: Radius, Phi, Theta
     real, allocatable:: FieldAlignedCurrent_II(:,:)
     real, allocatable:: IE_lat(:), IE_lon(:)
     real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
@@ -102,7 +101,7 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
-    call sync_cpu_gpu('update State_VGB, B0_DGB on GPU')
+    call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
 
     if(nThetaIono < 1) call init_ie_grid( &
          Grid_C(IE_) % Coord1_I, &
@@ -114,7 +113,7 @@ contains
     ! Put the radial component of the field aligned currents
     ! into the first variable of the buffer
     call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
-         FieldAlignedCurrent_II, LatBoundary=LatBoundary, &
+         FieldAlignedCurrent_II, &
          Theta_I=ThetaIono_I, Phi_I=PhiIono_I, IsRadial=.true.)
 
     ! Take radial component of FAC and put it into the buffer sent to IE
@@ -126,7 +125,6 @@ contains
 
        ! Save the latitude boundary information to the equator
        Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
-       Buffer_IIV(nThetaIono/2:nThetaIono/2+1,1,1) = LatBoundary
     end if
 
     deallocate(FieldAlignedCurrent_II)

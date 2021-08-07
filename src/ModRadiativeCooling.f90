@@ -138,7 +138,8 @@ contains
              if(TeSiIn<0.0)then
                 if(present(NameCaller))write(*,'(a)')&
                      'Subroutine '//NameSub//' is called from '//NameCaller
-                if(present(Xyz_D))write(*,*)'at the point ', Xyz_D
+                if(present(Xyz_D))write(*,*)'at the point ', Xyz_D, &
+                     ' at the radial distance of r=', norm2(Xyz_D)
                 call stop_mpi(&
                      'Negative temperature in calculating rad. cooling')
              end if

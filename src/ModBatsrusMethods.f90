@@ -21,7 +21,6 @@ module ModBatsrusMethods
 
 contains
   !============================================================================
-
   subroutine BATS_setup
 
     use ModMpi
@@ -166,7 +165,7 @@ contains
       use ModMain,                ONLY: UseB0, iSignRotationIC
       use ModAdvance,             ONLY: State_VGB
       use ModBuffer,              ONLY: DoRestartBuffer
-      use ModB0,                  ONLY: set_b0_reschange
+      use ModB0,                  ONLY: set_b0_reschange, B0_DGB
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
       use ModAMR,                 ONLY: prepare_amr, do_amr, &
            DoSetAmrLimits, set_amr_limits
@@ -305,8 +304,8 @@ contains
          end if
       end if
 
-      call sync_cpu_gpu('change State_VGB B0_DGB on CPU', NameSub)
-      call sync_cpu_gpu('update State_VGB B0_DGB on GPU', NameSub)
+      call sync_cpu_gpu('change on CPU', NameSub, State_VGB, B0_DGB)
+      call sync_cpu_gpu('update on GPU', NameSub, State_VGB, B0_DGB)
 
       if(DoRestartBuffer)then
          ! Apply the state on the buffer grid to fill in cells
@@ -319,7 +318,6 @@ contains
 
     end subroutine set_initial_conditions
     !==========================================================================
-
     subroutine initialize_files
       use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite, &
            TypeTrajTimeRange_I
@@ -329,16 +327,13 @@ contains
 
       character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
       !------------------------------------------------------------------------
-
       plot_type(restart_)='restart'
       plot_type(logfile_)='logfile'
 
     end subroutine initialize_files
     !==========================================================================
-
   end subroutine BATS_setup
   !============================================================================
-
   subroutine BATS_init_session
 
     use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
@@ -866,15 +861,15 @@ contains
          if( (iFile == magfile_ .or. iFile == maggridfile_) &
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
-         if(dn_output(ifile) >= 0)then
-            if(dn_output(ifile) == 0)then
+         if(dn_output(iFile) >= 0)then
+            if(dn_output(iFile) == 0)then
                if(SaveThreads4Plot.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
                   SaveThreads4Plot = .false.
                end if
                call save_file
-            else if(mod(n_step,dn_output(ifile)) == 0)then
+            else if(mod(n_step,dn_output(iFile)) == 0)then
                if(SaveThreads4Plot.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -882,9 +877,9 @@ contains
                end if
                call save_file
             end if
-         else if(time_accurate .and. dt_output(ifile) > 0.)then
-            if(int(time_simulation/dt_output(ifile))>t_output_last(ifile))then
-               t_output_last(ifile) = int(time_simulation/dt_output(ifile))
+         else if(time_accurate .and. dt_output(iFile) > 0.)then
+            if(int(time_simulation/dt_output(iFile))>t_output_last(iFile))then
+               t_output_last(iFile) = int(time_simulation/dt_output(iFile))
                if(SaveThreads4Plot.and.iFile > plot_&
                     .and.iFile<=plot_+nPlotFile)then
                   call save_threads_for_plot
@@ -927,9 +922,11 @@ contains
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
-      use ModFieldTraceFast,    ONLY: trace_field_grid
+      use ModFieldTraceFast,    ONLY: trace_field_grid, ray
       use ModBuffer,            ONLY: plot_buffer
       use ModMessagePass,       ONLY: exchange_messages
+      use ModAdvance,           ONLY: State_VGB
+      use ModB0,                ONLY: B0_DGB
 
       integer :: iSat, iPointSat, iParcel
 
@@ -942,24 +939,25 @@ contains
 
       real :: tSimulationBackup = 0.0
       !------------------------------------------------------------------------
-      if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) RETURN
+      if(n_step<=n_output_last(iFile) .and. dn_output(iFile)/=0) RETURN
 
-      call sync_cpu_gpu('update State_VGB, B0_DGB on CPU', NameSub)
+      call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
-      if(ifile==restart_) then
+      if(iFile==restart_) then
          ! Case for restart file
          if(.not.save_restart_file)RETURN
          call write_restart_files
 
-      elseif(ifile==logfile_) then
+      elseif(iFile==logfile_) then
          ! Case for logfile
 
          if(.not.save_logfile)RETURN
+
          call timing_start('save_logfile')
-         call write_logfile(0,ifile)
+         call write_logfile(0, iFile)
          call timing_stop('save_logfile')
 
-      elseif(ifile>plot_ .and. ifile<=plot_+nplotfile) then
+      elseif(iFile>plot_ .and. iFile<=plot_+nplotfile) then
          ! Case for plot files
          IsFound=.false.
 
@@ -1035,7 +1033,7 @@ contains
             if(TypeSaveIn/='INITIAL')call plot_buffer(iFile)
          end if
 
-         if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
+         if(plot_type(iFile)/='nul' .and. .not.IsFound ) then
             ! Assign node numbers for tec plots
             if( index(plot_form(iFile),'tec')>0 .and. DoAssignNodeNumbers)then
                call assign_node_numbers
@@ -1043,7 +1041,10 @@ contains
             end if
 
             if(  index(plot_type(iFile),'ray')>0 .or. &
-                 index(plot_vars(iFile),'status')>0) call trace_field_grid
+                 index(plot_vars(iFile),'status')>0)then
+               call trace_field_grid
+               call sync_cpu_gpu('update on CPU', NameSub, Trace_DICB=ray)
+            end if
 
             call timing_start('save_plot')
             call write_plot(iFile)
@@ -1072,7 +1073,7 @@ contains
             do while (Time_Simulation <= EndTimeTraj_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile, &
+               call write_logfile(iSat,iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
                Time_Simulation = Time_Simulation + DtTraj_I(iSat)
             end do
@@ -1094,7 +1095,7 @@ contains
                Time_Simulation = TimeSat_II(iSat, iPointSat)
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile, &
+               call write_logfile(iSat,iFile, &
                     TimeSatHeaderIn=tSimulationBackup)
             end do
 
@@ -1111,7 +1112,7 @@ contains
 
                call set_satellite_flags(iSat)
                ! write one line for a single trajectory point
-               call write_logfile(iSat,ifile)
+               call write_logfile(iSat,iFile)
             else
                if(iProc==0)call set_satellite_file_status(iSat,'open')
 
@@ -1123,7 +1124,7 @@ contains
                do while (Time_Simulation <= TimeSatEnd_I(iSat))
                   call set_satellite_flags(iSat)
                   ! write for ALL the points of trajectory cut
-                  call write_logfile(iSat,ifile)
+                  call write_logfile(iSat,iFile)
                   Time_Simulation = Time_Simulation+dt_output(iSat+Satellite_)
                end do
                Time_Simulation = tSimulationBackup    ! ... Restore
@@ -1138,7 +1139,7 @@ contains
 
          call timing_stop('save_satellite')
 
-      elseif(ifile == magfile_) then
+      elseif(iFile == magfile_) then
          ! Cases for magnetometer files
          if(.not.DoSaveMags) RETURN
          if(time_accurate) then
@@ -1147,7 +1148,7 @@ contains
             call timing_stop('save_magnetometer')
          end if
 
-      elseif(ifile == maggridfile_) then
+      elseif(iFile == maggridfile_) then
          ! Case for grid magnetometer files
          if(.not. DoSaveGridmag) RETURN
          if(time_accurate) then
@@ -1156,12 +1157,12 @@ contains
             call timing_stop('grid_magnetometer')
          end if
 
-      elseif(ifile == indexfile_) then
+      elseif(iFile == indexfile_) then
          ! Write geomagnetic index file.
          if(time_accurate .and. DoWriteIndices) call write_geoindices
       end if
 
-      n_output_last(ifile) = n_step
+      n_output_last(iFile) = n_step
 
       if(iProc==0 .and. lVerbose>0 .and. &
            iFile /= logfile_ .and. iFile /= magfile_ &
@@ -1170,7 +1171,7 @@ contains
          if(time_accurate)then
             call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
-                 'saved ifile=',ifile,' type=',plot_type(ifile),&
+                 'saved iFile=',iFile,' type=',plot_type(iFile),&
                  ' at n_step=',n_step,' time=', &
                  int(                            Time_Simulation/3600.),':', &
                  int((Time_Simulation &
@@ -1179,14 +1180,13 @@ contains
                  ' h:m:s'
          else
             call write_prefix; write(iUnitOut,'(a,i2,a,a,a,i7)') &
-                 'saved ifile=',ifile,' type=',plot_type(ifile), &
+                 'saved iFile=',iFile,' type=',plot_type(iFile), &
                  ' at n_step=',n_step
          end if
       end if
 
     end subroutine save_file
     !==========================================================================
-
     subroutine save_files_final
 
       use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
@@ -1211,10 +1211,8 @@ contains
 
     end subroutine save_files_final
     !==========================================================================
-
   end subroutine BATS_save_files
   !============================================================================
-
   subroutine BATS_finalize
 
     ! Alphabetical order
@@ -1266,6 +1264,5 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine BATS_finalize
   !============================================================================
-
 end module ModBatsrusMethods
 !==============================================================================

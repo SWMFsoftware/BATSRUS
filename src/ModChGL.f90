@@ -26,6 +26,7 @@ module ModChGL
   public :: init_chgl
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
+  public :: correct_chgl_face_value
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -126,6 +127,162 @@ contains
        end if
     end if
   end subroutine get_chgl_state
+  !============================================================================
+  subroutine correct_chgl_face_value(iBlock, DoResChangeOnly)
+     use ModSize, ONLY: nI, nJ, nK, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+     use ModAdvance, ONLY: State_VGB, &
+       LeftState_VX,  &  ! Face Left  X
+       RightState_VX, &  ! Face Right X
+       LeftState_VY,  &  ! Face Left  Y
+       RightState_VY, &  ! Face Right Y
+       LeftState_VZ,  &  ! Face Left  Z
+       RightState_VZ     ! Face Right Z
+     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
+          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+     use ModParallel, ONLY: &
+          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+     use ModGeometry, ONLY: r_BLK
+    integer, intent(in) :: iBlock
+    logical, intent(in) :: DoResChangeOnly
+    ! Logical is true in the points of ChGL model
+    logical             :: IsChGL_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !--------------------------------------------------------------------------
+    IsChGL_G = r_BLK(:,:,:,iBlock) > rMinChGL
+    if (.not.DoResChangeOnly)then
+       call correct_faceX(&
+            1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+       if(nJ > 1) call correct_faceY(&
+            iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+       if(nK > 1) call correct_faceZ(&
+            iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+    else
+       if(neiLeast(iBlock)==+1)&
+            call correct_faceX(1,1,1,nJ,1,nK)
+       if(neiLwest(iBlock)==+1)&
+            call correct_faceX(nIFace,nIFace,1,nJ,1,nK)
+       if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+            call correct_faceY(1,nI,1,1,1,nK)
+       if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+            call correct_faceY(1,nI,nJFace,nJFace,1,nK)
+       if(nK > 1 .and. neiLbot(iBlock)==+1) &
+            call correct_faceZ(1,nI,1,nJ,1,1)
+       if(nK > 1 .and. neiLtop(iBlock)==+1) &
+            call correct_faceZ(1,nI,1,nJ,nKFace,nKFace)
+    end if
+  contains
+    !==========================================================================
+    subroutine correct_facex(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModB0,       ONLY: UseB0, B0_DX
+      use ModAdvance,  ONLY: LeftState_VX, RightState_VX
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      ! Loop variables
+      integer :: i, j, k
+      ! B0_DX field or zero
+      real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
+      !------------------------------------------------------------------------
+      if(UseB0)then
+         B0_DIII = B0_DX(:,iMin:iMax,jMin:jMax,kMin:kMax)
+      else
+         B0_DIII = 0.0
+      end if
+      do k = kMin, kMax; do j = jMin, jMax
+         i = iMin - 1
+         if(IsChGL_G(i,j,k))LeftState_VX(Bx_:Bz_,i+1,j,k) =              &
+              LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
+              B0_DIII(:,i+1,j,k)
+         do i = iMin, iMax -1
+            if(.not.IsChGL_G(i,j,k))CYCLE
+            LeftState_VX(Bx_:Bz_,i+1,j,k) =                              &
+              LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
+              B0_DIII(:,i+1,j,k)
+            RightState_VX(Bx_:Bz_,i,j,k) =                               &
+              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
+              B0_DIII(:,i,j,k)
+         end do
+         i = iMax
+         if(IsChGL_G(i,j,k))RightState_VX(Bx_:Bz_,i,j,k) =               &
+              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
+              B0_DIII(:,i,j,k)
+      end do; end do
+    end subroutine correct_facex
+    !==========================================================================
+    subroutine correct_facey(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModB0,       ONLY: UseB0, B0_DY
+      use ModAdvance,  ONLY: LeftState_VY, RightState_VY
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      ! Loop variables
+      integer :: i, j, k
+      ! B0_DY field or zero
+      real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
+      !------------------------------------------------------------------------
+      if(UseB0)then
+         B0_DIII = B0_DY(:,iMin:iMax,jMin:jMax,kMin:kMax)
+      else
+         B0_DIII = 0.0
+      end if
+      do k = kMin, kMax
+         j = jMin - 1
+         do i = iMin, iMax
+            if(IsChGL_G(i,j,k))LeftState_VY(Bx_:Bz_,i,j+1,k) =              &
+                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(SignB_,i,j+1,k)-&
+                 B0_DIII(:,i,j+1,k)
+         end do
+         do j = jMin, jMax - 1; do i = iMin, iMax
+            if(.not.IsChGL_G(i,j,k))CYCLE
+            LeftState_VY(Bx_:Bz_,i,j+1,k) =                                 &
+                 LeftState_VY(Ux_:Uz_,i,j+1,k)*LeftState_VY(SignB_,i,j+1,k)-&
+              B0_DIII(:,i,j+1,k)
+            RightState_VY(Bx_:Bz_,i,j,k) =                                  &
+              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(SignB_,i,j,k)-     &
+              B0_DIII(:,i,j,k)
+         end do; end do
+         j = jMax
+         do i = iMin, iMax
+            if(IsChGL_G(i,j,k))RightState_VY(Bx_:Bz_,i,j,k) =               &
+              RightState_VY(Ux_:Uz_,i,j,k)*RightState_VY(SignB_,i,j,k)-     &
+              B0_DIII(:,i,j,k)
+         end do
+      end do
+    end subroutine correct_facey
+    !==========================================================================
+    subroutine correct_facez(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModB0,       ONLY: UseB0, B0_DZ
+      use ModAdvance,  ONLY: LeftState_VY, RightState_VY
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      ! Loop variables
+      integer :: i, j, k
+      ! B0_DZ field or zero
+      real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
+      !------------------------------------------------------------------------
+      if(UseB0)then
+         B0_DIII = B0_DZ(:,iMin:iMax,jMin:jMax,kMin:kMax)
+      else
+         B0_DIII = 0.0
+      end if
+      k = kMin - 1
+      do  j = jMin, jMax; do i = iMin, iMax
+         if(IsChGL_G(i,j,k))LeftState_VZ(Bx_:Bz_,i,j,k+1) =              &
+              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SignB_,i,j,k+1)-&
+              B0_DIII(:,i,j,k+1)
+      end do; end do
+      do k = kMin, kMax - 1; do j = jMin, jMax; do i = iMin, iMax
+         if(.not.IsChGL_G(i,j,k))CYCLE
+         LeftState_VZ(Bx_:Bz_,i,j,k+1) =                                 &
+              LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SignB_,i,j,k+1)-&
+              B0_DIII(:,i,j+1,k)
+         RightState_VZ(Bx_:Bz_,i,j,k) =                                  &
+              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SignB_,i,j,k) - &
+              B0_DIII(:,i,j,k)
+      end do; end do; end do
+      k = kMax
+      do  j = jMin, jMax; do i = iMin, iMax
+         if(IsChGL_G(i,j,k))RightState_VZ(Bx_:Bz_,i,j,k) =               &
+              RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SignB_,i,j,k) - &
+              B0_DIII(:,i,j,k)
+      end do; end do
+    end subroutine correct_facez
+    !==========================================================================
+  end subroutine correct_chgl_face_value
   !============================================================================
 end module ModChGL
 !==============================================================================
