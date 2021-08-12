@@ -1,4 +1,4 @@
-!  Copyright (C) 2002 Regents of the University of Michigan,
+!  Copyright (C) 2002 Regents of the University of Michigan
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
@@ -9,27 +9,28 @@ module ModVarIndexes
        Redefine2 => WaveFirst_, &
        Redefine3 => WaveLast_, &
        Redefine4 => Ppar_, &
-       Redefine5 => iPparIon_I, &
-       Redefine6 => Pe_, &
-       Redefine7 => Ehot_
+       Redefine5 => Pe_, &
+       Redefine6 => Ehot_,&
+       Redefine7 => SignB_,&
+       Redefine8 => iPparIon_I
 
   implicit none
 
   save
 
-  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomAnisoPi.f90"
+  character (len=*), parameter :: NameEquationFile = "ModEquationAwsomAnisoPiChGL.f90"
 
   ! This equation module contains the anisotropic ion pressure MHD equations
   ! with wave energy and electron pressure
   character (len=*), parameter :: &
-       NameEquation='MHD + Alfven waves + isotropic Pe + anistropic Pi'
+       NameEquation='MHD + Alfven waves + isotropic Pe + anistropic Pi + ChGL'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
-  integer, parameter :: nVar = 11 + nWave
+  integer, parameter :: nVar = 12 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -46,6 +47,7 @@ module ModVarIndexes
        Ehot_      = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
+       SignB_     = nVar-3,             &
        Pe_        = nVar-2,             &
        Ppar_      = nVar-1,             &
        p_         = nVar,               &
@@ -76,6 +78,7 @@ module ModVarIndexes
        0.0, & ! Bz_
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
+       0.0, & ! SignB_ or ChGL_
        1.0, & ! Pe_
        1.0, & ! Ppar_
        1.0, & ! p_
@@ -92,6 +95,7 @@ module ModVarIndexes
        'Bz  ', & ! Bz_
        'Ehot', & ! Ehot_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
+       'Sign', & ! SignB_
        'Pe  ', & ! Pe_
        'Ppar', & ! Ppar_
        'p   ', & ! p_
@@ -101,7 +105,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = ScalarFirst_
 
 end module ModVarIndexes
 !==============================================================================
