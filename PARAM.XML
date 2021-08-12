@@ -7240,9 +7240,19 @@ Default is true.
 #DIVFULLBSOURCE
 T			UseDivFullBSource
 
-If the field is split for B0 and B1, the div B source may be designed to
-control the divergence of B1 field (UseDivFullBSource = .false., default),
-or the divergence of full field B1 + B0, if UseDivFullBSource = .true.
+By default, while solving the MHD equations, the div B source in the induction
+equations as well as in the energy equation is added  designed to
+control the divergence of magnetic field by advecting away the finite div B
+once appeared in simulations, to prevent its accumulation. However, when the
+total magnetic field is split as B = B1 + B0, the latter being assumed (but in
+fact never is) to be divergence-free, it is the matter of choice if
+this method is applied  to control the divergence of B1 field only, trying to
+reduce div B1 to zero (UseDivFullBSource = .false., default), or to the or
+the divergence of full field, div (B1 + B0), if UseDivFullBSource = .true..
+With the latter choice div B1 reduces to - div B0, to cancel it, if possible.
+
+This command does not affect the sources in the momentum equation, which are
+handled with the command DIVBSOURCE above. 
 </command>
 
 
