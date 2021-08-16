@@ -684,7 +684,9 @@ contains
              if(.not. UseMhdMomentumFlux) CYCLE
 
              ! -B1 div(B1)       - usual div B source
-             SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+             ! not added if UseDivFullBSource=.true. (added before)
+             if(.not.UseDivFullBSource)&
+                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)  &
                   -DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
@@ -1100,7 +1102,8 @@ contains
       ! Variables needed for div B source terms
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
-
+      real, dimension(MaxDim) :: B1Face1_D, B1Face2_D, B1Face3_D, B1Face4_D,&
+           B1Face5_D, B1Face6_D
       real:: BCorrect0, BCorrect1
       !------------------------------------------------------------------------
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
@@ -1113,25 +1116,27 @@ contains
          if((UseMhdMomentumFlux.and.UseB0) .or. (.not.DoCorrectFace)) then
 
             dB1nFace1 = DxInvHalf*&
-                 (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
-
+                 (RightState_VX(Bx_,i,j,k) - LeftState_VX(Bx_,i,j,k))
+            B1Face1_D = RightState_VX(Bx_:Bz_,i,j,k)
             dB1nFace2 = DxInvHalf*&
-                 (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
-
+                 (RightState_VX(Bx_,i+1,j,k) - LeftState_VX(Bx_,i+1,j,k))
+            B1Face2_D = LeftState_VX(Bx_:Bz_,i+1,j,k)
             if(nJ > 1)then
                dB1nFace3 = DyInvHalf* &
-                    (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
-
+                    (RightState_VY(By_,i,j,k) - LeftState_VY(By_,i,j,k))
+               B1Face3_D = RightState_VY(Bx_:Bz_,i,j,k)
                dB1nFace4 = DyInvHalf* &
-                    (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
+                    (RightState_VY(By_,i,j+1,k) - LeftState_VY(By_,i,j+1,k))
+               B1Face4_D = LeftState_VY(Bx_:Bz_,i,j+1,k)
             end if
 
             if(nK > 1)then
                dB1nFace5 = DzInvHalf * &
-                    (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
-
+                    (RightState_VZ(Bz_,i,j,k) - LeftState_VZ(Bz_,i,j,k))
+               B1Face5_D = RightState_VZ(Bx_:Bz_,i,j,k)
                dB1nFace6 = DzInvHalf * &
-                    (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+                    (RightState_VZ(Bz_,i,j,k+1) - LeftState_VZ(Bz_,i,j,k+1))
+               B1Face6_D = LeftState_VZ(Bx_:Bz_,i,j,k+1)
             end if
 
             DivBInternal_C(i,j,k) = &
@@ -1167,6 +1172,26 @@ contains
                        SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace5     &
                        -B0_DGB(:,i,j,k,iBlock)*dB1nFace6
+               elseif(UseDivFullBSource)then
+                  ! The face surface magnetic charge is multiplied by
+                  ! the full face field. Accordingly, -B1 div B1 source is
+                  ! not added later if UseDivFullBSource=.true.
+                  SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                       SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                       -(B0_DX(:,i,j,k) + B1Face1_D)*dB1nFace1    &
+                       -(B0_DX(:,i+1,j,k) + B1Face2_D)*dB1nFace2
+
+                  if(nJ > 1) &
+                       SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                       SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                       -(B0_DY(:,i,j,k) + B1Face3_D)*dB1nFace3   &
+                       -(B0_DY(:,i,j+1,k) + B1Face4_D)*dB1nFace4
+
+                  if(nK > 1) &
+                       SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                       SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                       -(B0_DZ(:,i,j,k) + B1Face5_D)*dB1nFace5     &
+                       -(B0_DZ(:,i,j,k+1) + B1Face6_D)*dB1nFace6
                else
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                        SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
@@ -1241,13 +1266,25 @@ contains
 
       ! Momentum source term from B0 only needed for true MHD equations
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
-
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-              SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
-              - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
-      end do; end do; end do
+      if(UseDivFullBSource)then
+         ! The magnetic charge in the cell is multiplied by
+         ! the full cell-centered field. Accordingly, -B1 div B1 source is
+         ! not added later if UseDivFullBSource=.true.
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                 - DivBInternal_C(i,j,k)*(B0_DGB(:,i,j,k,iBlock) + &
+                 State_VGB(Bx_:Bz_,i,j,k,iBlock))
+         end do; end do; end do
+      else
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                 - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
+         end do; end do; end do
+      end if
 
     end subroutine calc_divb_source
     !==========================================================================
@@ -1283,11 +1320,20 @@ contains
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
-              - B0_DX(:,i,j,k)*B1nJumpL   &
-              - B0_DX(:,i+1,j,k)*B1nJumpR
-
+         if(UseDivFullBSource)then
+            ! The face surface magnetic charge is multiplied by
+            ! the full face field. Accordingly, -B1 div B1 source is
+            ! not added later if UseDivFullBSource=.true.
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) =    &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) &
+                 - (B0_DX(:,i,j,k) + RightState_VX(Bx_:Bz_,i,j,k))*B1nJumpL &
+                 - (B0_DX(:,i+1,j,k) + LeftState_VX(Bx_:Bz_,i+1,j,k))*B1nJumpR
+         else
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 - B0_DX(:,i,j,k)*B1nJumpL   &
+                 - B0_DX(:,i+1,j,k)*B1nJumpR
+         end if
       end do; end do; end do
 
       if(DoTest)write(*,*)NameSub,' after i divbint, divb1=', &
@@ -1317,11 +1363,20 @@ contains
               + B1nJumpL + B1nJumpR
 
          if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
-              -B0_DY(:,i,j,k)*B1nJumpL &
-              -B0_DY(:,i,j+1,k)*B1nJumpR
-
+         if(UseDivFullBSource)then
+            ! The face surface magnetic charge is multiplied by
+            ! the full face field. Accordingly, -B1 div B1 source is
+            ! not added later if UseDivFullBSource=.true.
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 -(B0_DY(:,i,j,k) + RightState_VY(Bx_:Bz_,i,j,k))*B1nJumpL &
+                 -(B0_DY(:,i,j+1,k) + LeftState_VY(Bx_:Bz_,i,j+1,k))*B1nJumpR
+         else
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 -B0_DY(:,i,j,k)*B1nJumpL &
+                 -B0_DY(:,i,j+1,k)*B1nJumpR
+         end if
       end do; end do; end do
 
       if(DoTest)write(*,*)NameSub,' after j divbint, divb1=', &
@@ -1354,11 +1409,20 @@ contains
                  + B1nJumpL + B1nJumpR
 
             if(.not.(UseMhdMomentumFlux .and. UseB0)) CYCLE
-
-            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
-                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
-                 -B0_DZ(:,i,j,k)*B1nJumpL &
-                 -B0_DZ(:,i,j,k+1)*B1nJumpR
+            if(UseDivFullBSource)then
+               ! The face surface magnetic charge is multiplied by
+               ! the full face field. Accordingly, -B1 div B1 source is
+               ! not added later if UseDivFullBSource=.true.
+               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                    -(B0_DZ(:,i,j,k) + RightState_VZ(Bx_:Bz_,i,j,k))*B1nJumpL &
+                    -(B0_DZ(:,i,j,k+1) + LeftState_VZ(Bx_:Bz_,i,j,k+1))*B1nJumpR
+            else
+               SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                    -B0_DZ(:,i,j,k)*B1nJumpL &
+                    -B0_DZ(:,i,j,k+1)*B1nJumpR
+            end if
          end do; end do; end do
       end if
 
@@ -1375,13 +1439,25 @@ contains
            DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
       if(.not.(UseMhdMomentumFlux .and. UseB0)) RETURN
-
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
-              - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
-      end do; end do; end do
-
+      if(UseDivFullBSource)then
+         ! The magnetic charge in the cell is multiplied by
+         ! the full cell-centered field. Accordingly, -B1 div B1 source is
+         ! not added later if UseDivFullBSource=.true.
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 - DivBInternal_C(i,j,k)*(B0_DGB(:,i,j,k,iBlock) + &
+                 State_VGB(Bx_:Bz_,i,j,k,iBlock))
+         end do; end do; end do
+      else
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            if(.not.true_cell(i,j,k,iBlock)) CYCLE
+            SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
+                 SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)&
+                 - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
+         end do; end do; end do
+      end if
     end subroutine calc_divb_source_gencoord
     !==========================================================================
 
