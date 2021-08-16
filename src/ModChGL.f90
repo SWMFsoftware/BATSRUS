@@ -77,20 +77,20 @@ contains
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
-          ! RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
-          ! if(RhoU2 ==0.0)then
-          RhoUDotR = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*&
-               Xyz_DGB(:,i,j,k,iBlock))
-          if(RhoUDotR <= 0.0) then
+          RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
+          if(RhoU2 ==0.0)then
+          ! RhoUDotR = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*&
+          !     Xyz_DGB(:,i,j,k,iBlock))
+          ! if(RhoUDotR <= 0.0) then
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
              State_VGB(SignB_,i,j,k,iBlock) =                   &
-                  State_VGB(Rho_,i,j,k,iBlock)/RhoUDotR*        &
-                  sum(Xyz_DGB(:,i,j,k,iBlock)*B_D)
-                  ! (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
-                  ! sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
+                  ! State_VGB(Rho_,i,j,k,iBlock)/RhoUDotR*        &
+                  ! sum(Xyz_DGB(:,i,j,k,iBlock)*B_D)
+                  (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
        end if
        if(R_BLK(i,j,k,iBlock) > RMinChGL)then
