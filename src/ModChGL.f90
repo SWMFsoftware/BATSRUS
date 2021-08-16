@@ -67,25 +67,30 @@ contains
   !============================================================================
   subroutine update_chgl(iBlock)
     use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
-    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModGeometry, ONLY: r_BLK, true_cell, Xyz_DGB
     use ModB0,       ONLY: UseB0, B0_DGB
     integer, intent(in) :: iBlock
     integer :: i, j, k
-    real    :: RhoU2, B_D(MaxDim)
+    real    :: RhoU2, B_D(MaxDim), RhoUDotR
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
-          RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
-          if(RhoU2 ==0.0)then
+          ! RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
+          ! if(RhoU2 ==0.0)then
+          RhoUDotR = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*&
+               Xyz_DGB(:,i,j,k,iBlock))
+          if(RhoUDotR <= 0.0) then
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
              State_VGB(SignB_,i,j,k,iBlock) =                   &
-                  (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*         &
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
+                  State_VGB(Rho_,i,j,k,iBlock)/RhoUDotR*        &
+                  sum(Xyz_DGB(:,i,j,k,iBlock)*B_D)
+                  ! (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
+                  ! sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
        end if
        if(R_BLK(i,j,k,iBlock) > RMinChGL)then
