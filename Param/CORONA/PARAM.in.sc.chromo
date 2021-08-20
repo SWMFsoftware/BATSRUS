@@ -62,9 +62,10 @@ T			IsLogRadius
 FACTORB0
 2.0			FactorB0
 
-#USECURLB0
+#CURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
+F			UseB0MomentumFlux
 
 #USERSWITCH
 +init +ic		StringSwitch

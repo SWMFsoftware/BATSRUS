@@ -131,7 +131,7 @@ init_hall_resist krylov load_balance		StringTest
 #TESTVAR
 By			NameTestVar
 
-#DIVBSOURCE
+#B0SOURCE
 F			UseB0Source
 
 #STRICT

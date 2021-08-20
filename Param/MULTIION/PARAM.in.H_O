@@ -170,9 +170,6 @@ parabola		TypeConservCrit
 10.0			xParabolaConserv
 25.0			yParabolaConserv
 
-#DIVBSOURCE
-T                       UseB0Source
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog

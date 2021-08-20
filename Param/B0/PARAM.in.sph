@@ -20,7 +20,7 @@ NONCONSERVATIVE
 F			UseNonConservative
 
 ! Large errors if B0 source terms are switched off
-DIVBSOURCE
+B0SOURCE
 F			UseB0Source
 
 #SAVERESTART
