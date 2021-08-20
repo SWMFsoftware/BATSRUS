@@ -1206,17 +1206,21 @@ fieldlinethreads - threaded magnetic field BC for AWSOM-R solar model
 user          - user defined
 \end{verbatim}
 
-Here are some tips for spherical grids. If the box defined in the #GRID command is completely inside
-the spherical grid (defined by #LIMITRADIUS) then the outer cell boundary at rMax is not used.
-If a "body" is used (see #BODY command) with a radius larger or equal than the minimum radius
-of the spherical grid (defined by #LIMITRADIUS) then the cell boundary at rMin is not used.
-On the other hand, if the box defined by #GRID is completely outside the spherical grid then
-the rMax cell boundary is used, and if there is no body defined, or if it has smaller radius than
-rMin, then the cell boundary at rMin is used.
-One can mix cell and face based boundaries. For example the xMin defined by #GRID may cut through the
-spherical grid, while the xMax ... zMax may be outside. This can be used to define inflow at the
-face based boundary at xMin using the #BOXBOUNDARY command, while the cell boundaries at the rMax boundary
-can be set to outflow using the #OUTERBOUNDARY command.
+Here are some tips for spherical grids. If the box defined in the
+#GRID command is completely inside the spherical grid (defined by
+#LIMITRADIUS) then the outer cell boundary at rMax is not used.  If a
+"body" is used (see #BODY command) with a radius larger or equal than
+the minimum radius of the spherical grid (defined by #LIMITRADIUS)
+then the cell boundary at rMin is not used.  On the other hand, if the
+box defined by #GRID is completely outside the spherical grid then the
+rMax cell boundary is used, and if there is no body defined, or if it
+has smaller radius than rMin, then the cell boundary at rMin is used.
+One can mix cell and face based boundaries. For example the xMin
+defined by #GRID may cut through the spherical grid, while the xMax
+... zMax may be outside. This can be used to define inflow at the face
+based boundary at xMin using the #BOXBOUNDARY command, while the cell
+boundaries at the rMax boundary can be set to outflow using the
+#OUTERBOUNDARY command.
 
 The default values are 'none' on all sides.
 </command>
