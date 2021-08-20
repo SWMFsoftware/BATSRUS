@@ -543,31 +543,30 @@ contains
           ! Write Auxilliary header info, which is useful for EUV images.
           ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
+
+          write(FormatTime,*)&
+               '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+          call get_date_time(iTime_I)
+          write(TextDateTime0,FormatTime) iStartTime_I
+          write(TextDateTime ,FormatTime) iTime_I
+
+          ! Optimize the amount of information required in the header
+
+          ! TIMEEVENT and TIMEEVENTSTART
+          StringHeadLine = trim(StringHeadline)// &
+               ' TIMEEVENT='//trim(TextDateTime)// &
+               ' TIMEEVENTSTART='//TextDateTime0
+
+          ! TIMESECONDSABSOLUTE
+          ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+          ! write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          ! StringHeadLine = trim(StringHeadLine)//&
+          !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
+
           if (UseTableGen) then
-
-             write(FormatTime,*)&
-                  '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-             call get_date_time(iTime_I)
-             write(TextDateTime0,FormatTime) iStartTime_I
-             write(TextDateTime ,FormatTime) iTime_I
-
-             ! Optimize the amount of information required in the header
-
-             ! TIMEEVENT and TIMEEVENTSTART
-             StringHeadLine = trim(StringHeadline)// &
-                  ' TIMEEVENT='//trim(TextDateTime)// &
-                  ' TIMEEVENTSTART='//TextDateTime0
-
-             ! TIMESECONDSABSOLUTE
-             ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-             ! write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-             ! StringHeadLine = trim(StringHeadLine)//&
-             !      '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
-
              ! NAMELOSTABLE
              StringHeadLine = trim(StringHeadLine)//' NAMELOSTABLE='//&
                   NameLosTable(iFile)
-
           endif
 
           ! Set image size and dimensionalize if necessary
