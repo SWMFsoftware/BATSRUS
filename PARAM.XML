@@ -7230,17 +7230,18 @@ is used. The hyperbolic cleaning can be combined with UseDivbSource only.
 
 <command name="B0SOURCE">
   <parameter name="UseB0Source" type="logical" default="T"/>
-  <parameter name="UseDivFullBSource" type="logical" default="F"/>
+  <parameter name="UseDivFullBSource" type="logical" default="F"
+	     if="$UseB0Source"/>
 
 #B0SOURCE
 T			UseB0Source
-F			UseDivFullBSource
+F			UseDivFullBSource (read if UseB0Source is true)
 
 If UseB0Source is true, add extra source terms related to the non-zero
 divergence and curl of B0 in the momentum equation to cancel out
 numerical errors in the divergence of the Maxwell tensor.
 
-If UseDivFullBSource is true, use div(B1+B0) in the induction
+If UseDivFullBSource is also true, use div(B1+B0) in the induction
 and energy equations instead of div(B1) in the 8-wave scheme.
 
 Default values are shown. 
@@ -10009,32 +10010,33 @@ Default value is DoThinCurrentSheet = .false.
   </if>
   
 #ALIGNBANDU
-T                       UseClGL
+T                       UseChGL
 2.5                     RSourceChGL
 2.5                     RMinChGL
 
-To use this command, the SignB variable of the state vector should be declared
-in the ModEquation (the possible choice is -e=AwsomChGL). Given proper boundary
-conditions, in steady state the streamlineas and magnetic field lines are
-aligned and the
-ratio of magnetic flux to mass flux is constant along the magnetic flux tube,
+To use this command, the SignB variable of the state vector should be
+declared in the ModEquation (the possible choice is
+-e=AwsomChGL). Given proper boundary conditions, in steady state the
+streamlineas and magnetic field lines are aligned and the ratio of
+magnetic flux to mass flux is constant along the magnetic flux tube,
 hence, the ratio of the magnetic field to velocity vectors obeys a
 conservation law.
 
-Below RSourceChGL this ratio (Chew-Golberger-Low state
-variable is set $U.B/U^2$. If RSourceChGL is zero, then the
-ChGl variable is either obtained from the model below, for example from SC to IH,
-or set to zero identically.
+Below RSourceChGL this ratio (Chew-Golberger-Low state variable is set
+$U.B/U^2$. If RSourceChGL is zero, then the ChGl variable is either
+obtained from the model below, for example from SC to IH, or set to
+zero identically.
 
-Above RMinChGL, the magnetic field is enforced to be aligned with the velocity
-vector and equal to the velocity vector multipled by the local value of the
-ChGL variable. If RMinChGL is zero, then the magnetic field is aligned everywhere.
-If it is negative or larger than the size of the domain, then it is not aligned
-anywhere. The above setting is recommended for the steady-state SC.
-The recommended setting for the coupled steady state IH is
+Above RMinChGL, the magnetic field is enforced to be aligned with the
+velocity vector and equal to the velocity vector multipled by the
+local value of the ChGL variable. If RMinChGL is zero, then the
+magnetic field is aligned everywhere.  If it is negative or larger
+than the size of the domain, then it is not aligned anywhere. The
+above setting is recommended for the steady-state SC.  The recommended
+setting for the coupled steady state IH is
 
 #ALIGNBANDU
-T                       UseClGL
+T                       UseChGL
 0.0                     RSourceChGL    ! Coupled 
 0.0                     RMinChGL       ! Applied everywhere
 
