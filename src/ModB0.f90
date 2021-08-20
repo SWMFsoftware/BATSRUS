@@ -116,8 +116,11 @@ contains
        end if
     case("#B0SOURCE")
        call read_var('UseB0Source', UseB0Source)
-       if(UseB0Source) &
-            call read_var('UseDivFullBSource', UseDivFullBSource)
+       if(UseB0Source)then
+          call read_var('UseDivFullBSource', UseDivFullBSource)
+       else
+          UseDivFullBSource = .false.
+       end if
 
     case("#CURLB0")
        call read_var('UseCurlB0', UseCurlB0)
