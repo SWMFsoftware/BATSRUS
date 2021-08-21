@@ -18,7 +18,8 @@ module ModEnergy
        pMin_I, PeMin, Tmin_I, TeMin
   use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        MaxBlock, Used_GB
-
+  use ModChGL,     ONLY: UseChGL, rMinChGL
+  use ModGeometry, ONLY: R_BLK
   implicit none
 
   private ! except
@@ -85,7 +86,7 @@ contains
 
           ! Done with all fluids except first MHD fluid
           if(iFluid > 1 .or. .not. IsMhd) CYCLE
-
+          if(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)CYCLE
           ! Add magnetic energy density
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -145,7 +146,9 @@ contains
                /State_VGB(iRho,i,j,k,iBlock)
        end if
        ! Add magnetic energy if needed
-       if(IsMhd .and. iFluid == 1) Energy_G(i,j,k) = Energy_G(i,j,k) &
+       if(IsMhd .and. iFluid == 1                                  &
+            .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL) &
+            ) Energy_G(i,j,k) = Energy_G(i,j,k) &
             + 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
     end do; end do; end do
 
@@ -173,7 +176,8 @@ contains
                /State_VG(iRho,i,j,k)
 
           ! Add magnetic energy density
-          if(iFluid == 1 .and. IsMhd) State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
+          if(iFluid == 1 .and. IsMhd)&
+               State_VG(iP,i,j,k) = State_VG(iP,i,j,k) &
                + 0.5*sum(State_VG(Bx_:Bz_,i,j,k)**2)
 
        end do; end do; end do
@@ -228,9 +232,10 @@ contains
              if(.not.IsConserv_CB(i,j,k,iBlock)) CYCLE
           end if
 
-          if(iFluid == 1 .and. IsMhd) then
+          if(iFluid == 1 .and. IsMhd                                      &
+               .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)     &
+               ) then
              ! Deal with first MHD fluid
-
              ! Subtract the magnetic energy density
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
@@ -283,7 +288,9 @@ contains
           if(.not.Used_GB(i,j,k,iBlock)) CYCLE
 
           ! Subtract the magnetic energy density
-          if(iFluid == 1 .and. IsMhd) then
+          if(iFluid == 1 .and. IsMhd                                 &
+               .and..not.(UseChGL.and.R_BLK(i,j,k,iBlock) > rMinChGL)&
+               ) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   - 0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if

@@ -1003,7 +1003,7 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
-    use ModChGL,     ONLY: UseChGL, rMinChGL
+    use ModChGL,     ONLY: UseChGL, rMinChGL, rSourceChGL, UseAligningSource
 
     real :: r
 
@@ -1016,7 +1016,8 @@ contains
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
        ! Check if this face is the part of ChGL  domain boundary
        IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
-            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))&
+            .or.(UseAligningSource.and.rFace < rMinChGL.and.rFace > rSourceChGL)
     else
        ! Modify solution depending on the face center radial distance
        rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
