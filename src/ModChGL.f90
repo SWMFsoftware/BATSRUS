@@ -31,8 +31,8 @@ module ModChGL
   ! the aligning source is applied
   logical, public   :: UseAligningSource  = .false.
   ! The aligning source, in addition to the geometric factor is limited, if
-  ! the local Alvenic Mach number is less than sqrt(MA2Limiter) 
-  real, parameter   :: MA2Limiter = 0.01 
+  ! the local Alvenic Mach number is less than sqrt(MA2Limiter)
+  real, parameter   :: MA2Limiter = 0.01
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -103,7 +103,7 @@ contains
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
              State_VGB(SignB_,i,j,k,iBlock) =                 &
                   (State_VGB(Rho_,i,j,k,iBlock)/              &
-                  ! Limiter, reducing the aligning source for slow stream 
+                  ! Limiter, reducing the aligning source for slow stream
                   max(RhoU2, &
                   MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2)) )*&
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D) *       &
