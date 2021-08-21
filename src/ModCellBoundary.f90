@@ -96,6 +96,7 @@ contains
     use ModUserInterface ! user_set_cell_boundary
     use ModThreadedLC, ONLY: set_field_line_thread_bc
     use BATL_lib, ONLY: IsCartesianGrid
+    use ModChGL,  ONLY: UseChGL
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -277,6 +278,9 @@ contains
                kMin, kMax, nVarState, State_VG)
           if(UseHyperbolicDivb) &
                call set_fixed_bc(Hyp_, Hyp_, [0.0], iMin, iMax, jMin, jMax, &
+               kMin, kMax,  nVarState, State_VG)
+          if(UseChGL)           &
+               call set_fixed_bc(SignB_, SignB_, [0.0], iMin, iMax, jMin, jMax,&
                kMin, kMax,  nVarState, State_VG)
           if(UseEfield)         &
                call set_fixed_bc(HypE_, HypE_, [0.0], iMin, iMax, jMin, jMax, &
