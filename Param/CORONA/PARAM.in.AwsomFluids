@@ -30,9 +30,6 @@ T			UseBody
 #BODY
 F			UseBody
 
-#USECURLB0
-F			UseCurlB0
-
 #MONOPOLEB0
 5.6e-4			MonopoleStrengthSi
 

@@ -18,7 +18,7 @@ module ModChGL
   PRIVATE ! Except
   logical, public :: UseChGL = .false.
   ! For R < RSourceChGL the ChGL ratio is calculated in terms of U, B
-  real :: RSourceChGL = 0.0
+  real, public :: RSourceChGL = 0.0
   ! For R > RMinChGL the magnetic field is solved as
   ! \mathbf{B} = (\rho s)\mathbf{U}:
   real, public :: RMinChGL = -1.0
@@ -27,6 +27,12 @@ module ModChGL
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value
+  ! If the below logical is true, between rSourceChGL and rMinChGL
+  ! the aligning source is applied
+  logical, public   :: UseAligningSource  = .false.
+  ! The aligning source, in addition to the geometric factor is limited, if
+  ! the local Alvenic Mach number is less than sqrt(MA2Limiter)
+  real, parameter   :: MA2Limiter = 0.01
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -66,26 +72,53 @@ contains
   end subroutine init_chgl
   !============================================================================
   subroutine update_chgl(iBlock)
-    use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
-    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, StateOld_VGB
+    use ModGeometry, ONLY: r_BLK, true_cell!, Xyz_DGB
     use ModB0,       ONLY: UseB0, B0_DGB
     integer, intent(in) :: iBlock
     integer :: i, j, k
-    real    :: RhoU2, B_D(MaxDim)
+    real    :: RhoU2, B_D(MaxDim), RhoUDotR, VOld_D(MaxDim), Xi
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
-          if(RhoU2 ==0.0)then
+          if(RhoU2 ==0.0.or.UseAligningSource)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SignB_,i,j,k,iBlock) =                   &
-                  (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*         &
+             State_VGB(SignB_,i,j,k,iBlock) =                 &
+                  (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
+          end if
+       elseif(UseAligningSource.and.r_BLK(i,j,k,iBlock) < RMinChGL)then
+          RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
+          if(RhoU2 ==0.0)then
+             State_VGB(SignB_,i,j,k,iBlock) = 0
+          else
+             ! The ChGL ratio is calculated in terms of U, B
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
+             State_VGB(SignB_,i,j,k,iBlock) =                 &
+                  (State_VGB(Rho_,i,j,k,iBlock)/              &
+                  ! Limiter, reducing the aligning source for slow stream
+                  max(RhoU2, &
+                  MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2)) )*&
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D) *       &
+                  ! Geometric interpolation factor
+                  (R_BLK(i,j,k,iBlock) - RSourceChGL) /                  &
+                  (RMinChGL - RSourceChGL)
+             ! Apply aligning source in the induction equation prop to
+             ! \alpha*dU/dt
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
+                  State_VGB(SignB_,i,j,k,iBlock)*(      &
+                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  State_VGB(Rho_,i,j,k,iBlock) -        &
+                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  StateOld_VGB(Rho_,i,j,k,iBlock) )
           end if
        end if
        if(R_BLK(i,j,k,iBlock) > RMinChGL)then

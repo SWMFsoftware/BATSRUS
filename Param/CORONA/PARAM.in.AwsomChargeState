@@ -35,9 +35,6 @@ T			UseBody
 #BODY
 F			UseBody
 
-#USECURLB0
-F			UseCurlB0
-
 #HELIODIPOLE
 2.8e-4			HelioDipoleStrength
 0.0			HelioDipoleTilt

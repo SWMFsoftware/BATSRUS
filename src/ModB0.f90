@@ -105,7 +105,7 @@ contains
     call test_start(NameSub, DoTest)
 
     select case(NameCommand)
-    case("#USEB0")
+    case("#B0")
        call read_var('UseB0', UseB0)
        if(.not.UseB0)then
           UseB0Source = .false.
@@ -114,18 +114,20 @@ contains
           DtUpdateB0  = -1.0
           UseDivFullBSource = .false.
        end if
-    case("#DIVBSOURCE")
+    case("#B0SOURCE")
        call read_var('UseB0Source', UseB0Source)
+       if(UseB0Source)then
+          call read_var('UseDivFullBSource', UseDivFullBSource)
+       else
+          UseDivFullBSource = .false.
+       end if
 
-    case("#DIVFULLBSOURCE")
-       call read_var('UseDivFullBSource', UseDivFullBSource)
-
-    case("#USECURLB0")
+    case("#CURLB0")
        call read_var('UseCurlB0', UseCurlB0)
-       if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
-
-    case("#B0MOMENTUMFLUX")
-       call read_var('UseB0MomentumFlux', UseB0MomentumFlux)
+       if(UseCurlB0)then
+          call read_var('rCurrentFreeB0', rCurrentFreeB0)
+          call read_var('UseB0MomentumFlux', UseB0MomentumFlux)
+       end if
 
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)

@@ -1,5 +1,6 @@
 
-#DIVBSOURCE
+#B0SOURCE
 T                       UseB0Source
+F			UseDivFullBSource
 
 #END

@@ -101,7 +101,7 @@ float			TypeBc6
 #TESTVAR
 By			NameTestVar
 
-#DIVBSOURCE
+#B0SOURCE
 F			UseB0Source
 
 #STRICT

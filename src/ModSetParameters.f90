@@ -1705,8 +1705,7 @@ contains
           ! reinitialize constrained transport if needed
           DoInitConstrainB = .true.
 
-       case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0", &
-            "#B0MOMENTUMFLUX", "#DIVFULLBSOURCE")
+       case("#USEB0", "#B0SOURCE", "#CURLB0", "#MONOPOLEB0")
           if(.not.is_first_session())CYCLE READPARAM
           call read_b0_param(NameCommand)
 

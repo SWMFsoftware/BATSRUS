@@ -4,7 +4,7 @@ Param/EARTH/PARAM.in.L1toBC: Solar wind propagation
 #COORDSYSTEM
 GSE			NameCoordSystem
 
-#USEB0
+#B0
 F			UseB0
 
 #STARTTIME

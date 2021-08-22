@@ -96,7 +96,7 @@ contains
     write(*,'(a,a,l1)') trim(NameFileIn), ', IsMagStation=', IsMagStation
 
     ! Get simulation start date-time from filename *_e(....)
-    i = index(NameFileIn, '_e') + 2
+    i = index(NameFileIn, '_e', back=.true.) + 2
     iTime_I = 0
     read(NameFileIn(i:i+14),'(i4,2i2,1x,3i2)', iostat=iError) iTime_I(1:6)
     if(iError /= 0)then
