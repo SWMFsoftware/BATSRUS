@@ -265,7 +265,13 @@ contains
           if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 
-       if(DoCalcTimeStep)then
+       if(DoCalcTimeStep.and.&
+            ! Why not ".and.time_accurate"? If time_accurate=.false. then
+            ! any manipulations with time_simulation seem to make no sense.
+            !
+            ! Skip this if UseAligning source, employing dt/=0
+            .not.(.not.time_accurate.and.UseAligningSource) &
+            )then
           ! Update check only works for half step 2 stages time integration.
           ! The final Dt is determined by the second stage if Dt changed by
           ! update_check subroutine.
