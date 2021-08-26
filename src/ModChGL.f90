@@ -14,6 +14,9 @@ module ModChGL
   use ModVarIndexes, ONLY: Bx_, Bz_, RhoUx_, RhoUz_, SignB_, Rho_, &
        nVar, Ux_, Uz_
   use BATL_lib, ONLY: MaxDim
+  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
+  use ModGeometry, ONLY: r_BLK, true_cell
+  use ModB0,       ONLY: UseB0, B0_DGB
   implicit none
   PRIVATE ! Except
   logical, public :: UseChGL = .false.
@@ -48,9 +51,6 @@ contains
   end subroutine read_chgl_param
   !============================================================================
   subroutine init_chgl(iBlock)
-    use ModAdvance,  ONLY: State_VGB, nI, nJ, nK
-    use ModGeometry, ONLY: r_BLK, true_cell
-    use ModB0,       ONLY: UseB0, B0_DGB
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
@@ -72,9 +72,7 @@ contains
   end subroutine init_chgl
   !============================================================================
   subroutine update_chgl(iBlock)
-    use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, StateOld_VGB
-    use ModGeometry, ONLY: r_BLK, true_cell!, Xyz_DGB
-    use ModB0,       ONLY: UseB0, B0_DGB
+    use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim), RhoUDotR, VOld_D(MaxDim), Xi
@@ -106,15 +104,15 @@ contains
                   ! Limiter, reducing the aligning source for slow stream
                   max(RhoU2, &
                   MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2)) )*&
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D) *       &
-                  ! Geometric interpolation factor
-                  (R_BLK(i,j,k,iBlock) - RSourceChGL) /                  &
-                  (RMinChGL - RSourceChGL)
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
              ! Apply aligning source in the induction equation prop to
              ! \alpha*dU/dt
              State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
-                  State_VGB(SignB_,i,j,k,iBlock)*(      &
+                  State_VGB(SignB_,i,j,k,iBlock) *      &
+                  ! Geometric interpolation factor
+                  (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
+                  (RMinChGL - RSourceChGL)*(            &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock) -        &
                   StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
@@ -162,19 +160,11 @@ contains
   end subroutine get_chgl_state
   !============================================================================
   subroutine correct_chgl_face_value(iBlock, DoResChangeOnly)
-     use ModSize, ONLY: nI, nJ, nK, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-     use ModAdvance, ONLY: State_VGB, &
-       LeftState_VX,  &  ! Face Left  X
-       RightState_VX, &  ! Face Right X
-       LeftState_VY,  &  ! Face Left  Y
-       RightState_VY, &  ! Face Right Y
-       LeftState_VZ,  &  ! Face Left  Z
-       RightState_VZ     ! Face Right Z
+     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
      use ModMain,     ONLY: nIFace, nJFace, nKFace, &
           iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
      use ModParallel, ONLY: &
           neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
-     use ModGeometry, ONLY: r_BLK
     integer, intent(in) :: iBlock
     logical, intent(in) :: DoResChangeOnly
     ! Logical is true in the points of ChGL model
@@ -205,7 +195,7 @@ contains
   contains
     !==========================================================================
     subroutine correct_facex(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModB0,       ONLY: UseB0, B0_DX
+      use ModB0,       ONLY: B0_DX
       use ModAdvance,  ONLY: LeftState_VX, RightState_VX
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
@@ -240,7 +230,7 @@ contains
     end subroutine correct_facex
     !==========================================================================
     subroutine correct_facey(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModB0,       ONLY: UseB0, B0_DY
+      use ModB0,       ONLY: B0_DY
       use ModAdvance,  ONLY: LeftState_VY, RightState_VY
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
@@ -279,8 +269,8 @@ contains
     end subroutine correct_facey
     !==========================================================================
     subroutine correct_facez(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModB0,       ONLY: UseB0, B0_DZ
-      use ModAdvance,  ONLY: LeftState_VY, RightState_VY
+      use ModB0,       ONLY: B0_DZ
+      use ModAdvance,  ONLY: LeftState_VZ, RightState_VZ
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       ! Loop variables
       integer :: i, j, k
