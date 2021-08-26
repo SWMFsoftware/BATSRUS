@@ -50,6 +50,7 @@ contains
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
          UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
     use ModViscosity, ONLY: UseArtificialVisco
+    use ModChGL, ONLY: UseAligningSource
     use omp_lib
 
     logical, intent(in) :: DoCalcTimestep
@@ -219,8 +220,9 @@ contains
              ! for time accurate calculations.
              ! For time accurate with UseDtLimit, do not
              ! calculate time step.
-             if(time_accurate .and. .not.UseDtLimit .and. &
-                  iStage == nStage .and. DoCalcTimestep) &
+             if( ( (time_accurate .and. .not.UseDtLimit).or.&
+                  (.not.time_accurate.and.UseAligningSource) ).and. &
+                  iStage == nStage .and. DoCalcTimestep)&
                   call calc_timestep(iBlock)
 
              ! At this point the user has surely set all "block data"

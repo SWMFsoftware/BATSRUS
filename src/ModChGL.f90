@@ -29,7 +29,8 @@ module ModChGL
   public :: init_chgl
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
-  public :: correct_chgl_face_value
+  public :: correct_chgl_face_value ! Calculate magnetic field face values
+  public :: calc_aligning_region_timestep ! Use global timestep in the region
   ! If the below logical is true, between rSourceChGL and rMinChGL
   ! the aligning source is applied
   logical, public   :: UseAligningSource  = .false.
@@ -47,14 +48,17 @@ contains
             'Reconfigure the code with setting meaningful value for SignB_')
     call read_var('RSourceChGL', RSourceChGL)
     call read_var('RMinChGL', RMinChGL)
-    if(RMinChGL < 0)RMinChGL = huge(1.0)
+    UseAligningSource = RMinChGL > RSourceChGL + 0.1
+    ! if(RMinChGL < 0)RMinChGL = huge(1.0)
   end subroutine read_chgl_param
   !============================================================================
   subroutine init_chgl(iBlock)
+    use ModMain, ONLY: Dt, IsTimeAccurate=>time_accurate
     integer, intent(in) :: iBlock
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
     !--------------------------------------------------------------------------
+    if(.not.IsTimeAccurate.and.UseAligningSource)Dt = max(Dt,0.0)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        ! The ChGL ratio is calculated in terms of U, B
@@ -109,10 +113,12 @@ contains
              ! \alpha*dU/dt
              State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
+                  ! Field to tream speed ratio
                   State_VGB(SignB_,i,j,k,iBlock) *      &
                   ! Geometric interpolation factor
                   (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
                   (RMinChGL - RSourceChGL)*(            &
+                  ! Increment in velocity
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock) -        &
                   StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
@@ -306,6 +312,24 @@ contains
     end subroutine correct_facez
     !==========================================================================
   end subroutine correct_chgl_face_value
+  !============================================================================
+  subroutine calc_aligning_region_timestep(iBlock)
+    use ModMain, ONLY: IsTimeAccurate=>time_accurate, dt_BLK, dt, cfl
+    use ModAdvance, ONLY: time_BLK
+    integer, intent(in) :: iBlock
+    logical :: Mask_C(1:nI,1:nJ,1:nK) = .false.
+    !--------------------------------------------------------------------------
+    ! Mask for aligning source region
+    Mask_C = true_cell(1:nI,1:nJ,1:nK,iBlock).and.       &
+         r_blk(1:nI,1:nJ,1:nK,iBlock) > RSourceChGL.and.&
+         r_blk(1:nI,1:nJ,1:nK,iBlock) < RMinChGL
+    ! Do nothing, if no point is in the aligning source region
+    if(.not.any(Mask_C))RETURN
+    ! Store the minimum time step for the aligning source region
+    Dt_BLK(iBlock) = minval(time_blk(1:nI,1:nJ,1:nK,iBlock), MASK = Mask_C)
+    ! Set the global time step throughout this region
+    where(Mask_C)time_blk(1:nI,1:nJ,1:nK,iBlock) = Dt/CFL
+  end subroutine calc_aligning_region_timestep
   !============================================================================
 end module ModChGL
 !==============================================================================
