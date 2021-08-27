@@ -13,6 +13,18 @@ T			UseUpdateCheck
 #COMPONENT
 SC			NameComp
 
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#STARTTIME
+2011			iYear
+2			iMonth
+16			iDay
+17			iHour
+26			iMinute
+0			iSecond
+0.0			FracSecond
+
 #SAVERESTART
 T			DoSaveRestart
 10000			DnSaveRestart
@@ -32,20 +44,8 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
-#STARTTIME
-2011			iYear
-2			iMonth
-16			iDay
-17			iHour
-26			iMinute
-0			iSecond
-0.0			FracSecond
-
-READPOTENTIALFIELD
-T			UseMagnetogram
-potentialfield.out		NamePotentialFieldFile
-0.0			H_PFSSM
-2.0			UnitB 1.0
+#BODY
+F			UseBody
 
 #HARMONICSFILE
 Param/CORONA/CR2077_GNG.dat		NameHarmonicsFile
@@ -67,62 +67,106 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 F			UseB0MomentumFlux
 
-#USERSWITCH
-+init +ic		StringSwitch
-
 #POYNTINGFLUX
-0.55e6			PoyntingFluxPerBSi
+1e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
-alfvenwavedissipation		TypeCoronalHeating
-7.5e4			LperpTimesSqrtBSi
-0.08			Crefl
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
-HYPERBOLICDIVB
-F			UseHyperbolicDivb
-400.0			SpeedHypDim
-0.1			HypDecay
-
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
-
-#HEATFLUXCOLLISIONLESS
-F			UseHeatFluxCollisionless
-
-#HEATFLUXREGION
-T			UseHeatFluxRegion
-5.0			rCollisional
-8.0			rCollisionless
-
-#TEST
-update_b0		StringTest
-
-#SEMIIMPLICIT
-T			UseSemiImplicit
-parcond			TypeSemiImplicit
-
-#SEMIKRYLOV
-GMRES			TypeKrylov
-1.0e-5			ErrorMaxKrylov
-10			MaxMatvecKrylov
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 #RADIATIVECOOLING
 T			UseRadCooling
 
-#LOOKUPTABLE
-radcool			NameTable
-load			NameCommand
-RadCoolCorona.dat		NameFile
-ascii			TypeFile
+#USERSWITCH
++init +ic		StringSwitch
+
+#USERINPUTBEGIN -------------------------------------
+
+#CHROMOBC
+2e17			NchromoSi
+5e4			TchromoSi
+
+#USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
 T			DoExpandTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
-#INCLUDE
-GridChromo
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_TR.dat		NameGridFile
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#GRIDBLOCKALL
+4000			MaxBlock
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
+
+#AMRREGION
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
+
+#AMRREGION
+LargeShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+2.0			Radius
+
+#AMRCRITERIARESOLUTION
+4			nRefineCrit
+Level +InnerShell		StringRefine
+4			RefineTo
+4			CoarsenFrom
+currentsheet +LargeShell -InnerShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+currentsheet -LargeShell		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+0.1			MaxResolution
+
+#GRIDRESOLUTION
+12.0			Resolution
+initial			StringShape
+
+HYPERBOLICDIVB
+F			UseHyperbolicDivb
+400.0			SpeedHypDim
+0.1			HypDecay
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
 
 #DOAMR
 T			DoAmr
@@ -134,21 +178,40 @@ AMR
 5			DnRefine 40000
 F			DoAutoRefine
 
-#TIMEACCURATE
-F			IsTimeAccurate
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
+Linde			TypeFlux
+minmod			TypeLimiter
+
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			peMinDim
+
+#MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+250			SpeedMinDim
+10 h			TauSpeedMinDim
+
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #MESSAGEPASS
 all			TypeMessagePass
@@ -162,16 +225,13 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#INNERBOUNDARY
-user			TypeBcBody
-
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #SAVEPLOT
 5			nPlotFile 1
@@ -308,6 +368,10 @@ cancelflux		TypeBStrap
 0.4			qDistance
 10			UChargeX
 
+#TIMESTEPLIMIT
+T			UseDtLimit
+5.0			DtLimitDim [sec] (read if UseDtLimit is true)
+
 #STOP
 -1			MaxIteration
 10.0			tSimulationMax
@@ -316,14 +380,6 @@ cancelflux		TypeBStrap
 
 #HELIOUPDATEB0
 -1.0			DtUpdateB0
-
-#MINIMUMPRESSURE
-1.0E-9			pMinDim
-1.0e-9			peMinDim
-
-#MINIMUMTEMPERATURE
-5.0e4			TminDim
-5.0e4
 
 #TIMESTEPLIMIT
 T			UseDtLimit
@@ -334,4 +390,4 @@ F			UseUpdateCheck
 
 #STOP
 -1			MaxIteration
-600.0			tSimulationMax
+100.0			tSimulationMax
