@@ -121,7 +121,7 @@ module ModCoronalHeating
   ! Non-linear dissipation in the current sheet (if regular magnetic field is
   ! lower than the irregular one.
   logical :: UseNonLinearAWDissipation = .false.
-  
+
 contains
   !============================================================================
 
