@@ -118,6 +118,10 @@ module ModCoronalHeating
   real, public :: DtUpdateFlux = -1.0
   real, public :: UnsignedFluxHeight = -99999.0
 
+  ! Non-linear dissipation in the current sheet (if regular magnetic field is
+  ! lower than the irregular one.
+  logical :: UseNonLinearAWDissipation = .false.
+
 contains
   !============================================================================
 
@@ -526,7 +530,8 @@ contains
 
     case("#ALIGNMENTANGLE")
        call read_var('UseAlignmentAngle', UseAlignmentAngle)
-
+    case("#NONLINAWDISSIPATION")
+       call read_var('UseNonLinearAWDissipation',UseNonLinearAWDissipation)
     case default
        call stop_mpi(NameSub//': unknown command = ' &
             // NameCommand)
@@ -728,8 +733,15 @@ contains
     else
        FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
-    FullB = norm2(FullB_D)
-
+    if(UseNonLinearAWDissipation)then
+       ! Account for a contribution from the wave field into their dissipation
+       ! A half of wave energy, w/2, is the magneic oscillation energy,
+       ! deltaB^2/2. Hence, DeltaB+/-=sqrt(W+/-)
+       FullB = sqrt(sum(FullB_D**2) + &
+            sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) )
+    else
+       FullB = norm2(FullB_D)
+    end if
     Coef = 2.0*sqrt(FullB/State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)) &
          /LperpTimesSqrtB
 

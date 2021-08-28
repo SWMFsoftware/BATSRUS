@@ -2559,7 +2559,7 @@ contains
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
             "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
-            "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE")
+            "#HIGHBETASTOCHASTIC", "#ALIGNMENTANGLE", "#NONLINAWDISSIPATION")
           call read_coronal_heating_param(NameCommand)
 
        case("#RADIATIVECOOLING")

@@ -9741,6 +9741,17 @@ heating.
 Default is DoOpenClosedField = .false.
 </command>
 
+<command name="#NONLINAWDISSIPATION">
+  <parameter name="UseNonLinearAWDissipation" type="logical" default="F"/>
+
+
+#NONLINAWDISSIPATION
+T			UseNonLinearAWDissipation
+
+Intensifies the Alfven wave disssipation in the regions of weak field 
+
+</command>
+
 <command name="HEATPARTITIONING">
   <parameter name="TypeHeatPartitioning" type="string" case="lower"
              input="select" >
