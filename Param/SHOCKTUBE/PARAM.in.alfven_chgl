@@ -1,0 +1,118 @@
+#DESCRIPTION
+Param/SHOCKTUBE/PARAM.in.alfve_wave_chgl		StringDescriptor
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#ALIGNBANDU
+T                       UseChGL
+0.0                     RSourceChGL
+0.0                     RMinChGL
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#GRID
+5			nRootBlock1
+5			nRootBlock2
+1			nRootBlock3
+-32.			xMin
+ 32.	  		xMax
+-32.			yMin
+ 32.			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#GRIDBLOCKALL
+30			MaxBlock
+
+#UNIFORMSTATE
+0.25			StateVar Rho
+1.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+1.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+1.0			StateVar ChGL
+0.25			StateVar p
+
+#USERINPUTBEGIN -----------------------------------
+
+#WAVE
+3			Uy_
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+4			Uz_
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+6			By_
+1000.0			Width
+0.1			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+7			Bz_
+1000.0			Width
+0.1			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#USERINPUTEND -------------------------------------
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 mhd idl_ascii		StringPlot
+-1			DnSavePlot
+1.0			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+32.0			tSimulationMax
