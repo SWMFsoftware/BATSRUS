@@ -226,9 +226,16 @@ module ModFaceFlux
   real, public :: rFace = 0.0
   !$omp threadprivate( rFace )
 
-  ! Check if this face is the part of ChGL  domain boundary
-  logical, public :: IsChGLInterface
-  !$omp threadprivate( IsChGLInterface )
+  ! IsChGLDomain= .true. means that at least from one side of the face
+  ! the stream-aligned MHD is solved. The characteristic speeds should be
+  ! solved within the framework of stream-aligned MHD.
+  ! IsChGLInterface = .true. EITHER means that from one side of the face the
+  ! pure MHD is used and from the other one the stream-aligned MHD is on, or
+  ! that at least from one side of the face the aligning source acts. The
+  ! upper and lower bounds for the characterestic speed should be valid both
+  ! for pure MHD and for stream-aligned MHD
+  logical, public :: IsChGLInterface = .false., IsChGLDomain = .false.
+  !$omp threadprivate( IsChGLInterface, IsChGLDomain )
 
   ! Variables needed by viscosity
   real :: ViscoCoeff
@@ -1014,11 +1021,13 @@ contains
        ! the interfaced cells the velocity is field-aligned
        rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
+       IsChGLDomain = rFace > rMinChGL 
        ! Check if this face is the part of ChGL  domain boundary
        IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
             iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))&
             .or.(UseAligningSource.and.rFace < rMinChGL.and.rFace > rSourceChGL)
     else
+       IsChGLInterface = .false.; IsChGLDomain = .false. 
        ! Modify solution depending on the face center radial distance
        rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
             Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
@@ -4292,7 +4301,7 @@ contains
       use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0
       use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
-      use ModChGL,     ONLY: UseChGL, rMinChGL
+      ! use ModChGL,     ONLY: UseChGL, rMinChGL
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_
@@ -4316,11 +4325,8 @@ contains
            ChGL2OverRho, cChGLLeft, cChGLRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
-      logical :: DoChGLCorrection = .false.
-
       integer:: jFluid
       !------------------------------------------------------------------------
-      DoChGLCorrection = UseChGL.and.rFace > rMinChGL
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
@@ -4594,16 +4600,13 @@ contains
             Cleft_I(1)   = Cleft_I(1)  - Fast
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-         elseif(DoChGLCorrection)then
+         elseif(IsChGLDomain.or.IsChGLInterface)then
             ! Tangetial velocity squared
             Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
             ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
             ChGL2OverRho = InvRho*State_V(SignB_)**2
             ! Magetosonic speed squared:
             Sound2     = Sound2 + Ut2*ChGL2OverRho
-            ! if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
-            !     (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
-            ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
             ChGL2OverRho   = 0.5*ChGL2OverRho
             UnChGLLeft   = UnLeft*ChGL2OverRho
             UnChGLRight  = UnRight*ChGL2OverRho
@@ -4637,15 +4640,13 @@ contains
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1) = Cmax_I(1)
          end if
-      elseif(DoChGLCorrection)then
+      elseif(IsChGLDomain.or.IsChGLInterface)then
          ! Tangetial velocity squared
          Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
          ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
          ChGL2OverRho = InvRho*State_V(SignB_)**2
          ! Magetosonic speed squared:
          Sound2     = Sound2 + Ut2*ChGL2OverRho
-         ! if(UseCurlB0.and.rFace > rCurrentFreeB0)Sound2 = Sound2 + &
-         !     (abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
          ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
          ChGL2OverRho  = 0.5*ChGL2OverRho
          UnChGLMin   = UnMin*ChGL2OverRho
