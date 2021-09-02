@@ -130,7 +130,7 @@ program spectrum
   ! Variables for using measured ion temperature
   logical                     :: UseTion = .false.
   real                        :: Tion
-  
+
   ! Derived type to read tabulated G values
   !----------------------------------------------------------------------------
   type LineTableType
@@ -645,11 +645,11 @@ contains
                   + CosAlpha**2 * Var_VIII(tpar_,i,jPixel,kPixel)
 
              if(UseTion)Tlos = Tion
-             
+
              ! Calculate thermal and non-thermal broadening
              Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
              Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)
-             
+
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3
              ! 1 : 0.83  electron to proton ratio is assumed
@@ -999,7 +999,7 @@ contains
        case("#USETION")
           call read_var('UseTion',UseTion)
           call read_var('Tion',Tion)
-          
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
