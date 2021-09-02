@@ -1021,13 +1021,13 @@ contains
        ! the interfaced cells the velocity is field-aligned
        rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
             r_BLK(iLeft,jLeft,kLeft,iBlockFace))
-       IsChGLDomain = rFace > rMinChGL 
+       IsChGLDomain = rFace > rMinChGL
        ! Check if this face is the part of ChGL  domain boundary
        IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
             iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))&
             .or.(UseAligningSource.and.rFace < rMinChGL.and.rFace > rSourceChGL)
     else
-       IsChGLInterface = .false.; IsChGLDomain = .false. 
+       IsChGLInterface = .false.; IsChGLDomain = .false.
        ! Modify solution depending on the face center radial distance
        rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
             Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
