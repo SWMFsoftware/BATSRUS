@@ -996,7 +996,7 @@ contains
        case("#PROTONELECTRONRATIO")
           call read_var('ProtonElectronRatio',ProtonElectronRatio)
 
-       case("#USETION")
+       case("#IONTEMPERATURE")
           call read_var('UseTion',UseTion)
           call read_var('Tion',Tion)
 
