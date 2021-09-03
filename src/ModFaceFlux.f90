@@ -4301,7 +4301,7 @@ contains
       use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0
       use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
-      ! use ModChGL,     ONLY: UseChGL, rMinChGL
+      use ModChGL,     ONLY: UseAligningSource
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_
@@ -4322,7 +4322,7 @@ contains
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R, Ut2, UnChGLMin, UnChGLMax, UnChGLLeft, UnChGLRight,&
-           ChGL2OverRho, cChGLLeft, cChGLRight
+           ChGL2OverRho, cChGLLeft, cChGLRight, TildeVAlfvenNormal
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
@@ -4601,36 +4601,84 @@ contains
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
          elseif(IsChGLDomain.or.IsChGLInterface)then
-            ! Tangetial velocity squared
-            Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
-            ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
-            ChGL2OverRho = InvRho*State_V(SignB_)**2
-            ! Magetosonic speed squared:
-            Sound2     = Sound2 + Ut2*ChGL2OverRho
-            ChGL2OverRho   = 0.5*ChGL2OverRho
-            UnChGLLeft   = UnLeft*ChGL2OverRho
-            UnChGLRight  = UnRight*ChGL2OverRho
-            Cleft_I(1)   = min(UnLeft - max(UnChGLLeft,0.0) & ! Corrected Un
-                 - sqrt( max(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
-                 UnRight - max(UnChGLRight,0.0)             &  ! Corrected Un)
-                 - sqrt( max(UnChGLRight,0.0)**2 + Sound2) )  ! sound
-            if(UseAlfvenWaves)Cleft_I(1) = min(Cleft_I(1),  &
-                 UnLeft  - sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
-                 UnRight - sqrt(2*UnRight*UnChGLRight))        ! (left)
-            Cright_I(1)  = max(UnLeft - min(UnChGLLeft,0.0) & ! Corrected Un
-                 + sqrt( min(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
-                 UnRight - min(UnChGLRight,0.0)             & ! Corrected Un)
-                 + sqrt( min(UnChGLRight,0.0)**2 + Sound2) )  ! sound
-            if(UseAlfvenWaves)CRight_I(1) = max(CRight_I(1),  &
-                 UnLeft  + sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
-                 UnRight + sqrt(2*UnRight*UnChGLRight))        ! (Right)
-            if(IsChGLInterface)then
-               ! Choose the estimate for speed to be applicable in both
-               ! neighboring control volumes, handled by ChGL and regular MHD
-               CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
-                    CLeft_I(1)  )                                 ! ChGL
-               CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
-                    CRight_I(1) )                                 ! ChGL
+            if(IsChGLDomain&
+                 ! Stream-aligned MHD is at least from one side of the face
+                 .and..not.(IsChGLInterface.and.UseAligningSource))then
+               ! Tangetial velocity squared
+               Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, &
+                    0.0)
+               ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+               ChGL2OverRho = InvRho*State_V(SignB_)**2
+               ! Magetosonic speed squared:
+               Sound2     = Sound2 + Ut2*ChGL2OverRho
+               ChGL2OverRho   = 0.5*ChGL2OverRho
+               UnChGLLeft   = UnLeft *ChGL2OverRho
+               UnChGLRight  = UnRight*ChGL2OverRho
+               Cleft_I(1)   = min(UnLeft - max(UnChGLLeft,0.0) & ! Corrected Un
+                    - sqrt( max(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
+                    UnRight - max(UnChGLRight,0.0)             & ! Corrected Un
+                    - sqrt( max(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+               if(UseAlfvenWaves)Cleft_I(1) = min(Cleft_I(1),  &
+                    UnLeft  - sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
+                    UnRight - sqrt(2*UnRight*UnChGLRight))       ! (left)
+               Cright_I(1)  = max(UnLeft - min(UnChGLLeft,0.0) & ! Corrected Un
+                    + sqrt( min(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
+                    UnRight - min(UnChGLRight,0.0)             & ! Corrected Un
+                    + sqrt( min(UnChGLRight,0.0)**2 + Sound2) )  ! sound
+               if(UseAlfvenWaves)CRight_I(1) = max(CRight_I(1),  &
+                    UnLeft  + sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
+                    UnRight + sqrt(2*UnRight*UnChGLRight))       ! (Right)
+               if(IsChGLInterface)then
+                  ! From the other side of interface there is pure MHD
+                  ! Choose the estimate for speed to be applicable in both
+                  ! neighboring control volumes, handled by ChGL and regular MHD
+                  CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
+                       CLeft_I(1)  )                                 ! ChGL
+                  CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
+                       CRight_I(1) )                                 ! ChGL
+               end if
+            else
+               ! The aligning source is applied at least from one side of
+               ! the face. Available are: Sound2 - square of the sound speed,
+               ! including the contributions from electron pressure and AW
+               ! pressure, InvRho, FullBn, Alfven2Normal, UnLeft, UnRight,
+               ! Fast2 = Alfven2 + Sound2
+               TildeVAlfvenNormal = FullBn*InvRho*State_V(SignB_)
+               if(TildeVAlfvenNormal > 0.0)then
+                  CLeft_I(1) = min(          UnLeft - 0.5*TildeVAlfvenNormal - &
+                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnLeft *  &
+                       TildeVAlfvenNormal), UnRight - 0.5*TildeVAlfvenNormal - &
+                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnRight*  &
+                       TildeVAlfvenNormal) )
+                  CRight_I(1) = max(         UnLeft                  + sqrt(  &
+                       0.5 *(Fast2 - UnLeft *TildeVAlfvenNormal) +    sqrt(   &
+                       0.25*(Fast2 - UnLeft *TildeVAlfvenNormal)**2  -        &
+                       Sound2*(Alfven2Normal - UnLeft *TildeVAlfvenNormal))), &
+                                            UnRight                  + sqrt(  &
+                       0.5 *(Fast2 - UnRight*TildeVAlfvenNormal) +    sqrt(   &
+                       0.25*(Fast2 - UnRight*TildeVAlfvenNormal)**2  -        &
+                       Sound2*(Alfven2Normal - UnRight*TildeVAlfvenNormal)))  )
+               else
+                  CRight_I(1) = max(         UnLeft - 0.5*TildeVAlfvenNormal +&
+                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnLeft *  &
+                       TildeVAlfvenNormal), UnRight - 0.5*TildeVAlfvenNormal +&
+                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnRight*  &
+                       TildeVAlfvenNormal) )
+                  CLeft_I(1)  = min(         UnLeft                  - sqrt(  &
+                       0.5 *(Fast2 - UnLeft *TildeVAlfvenNormal) +    sqrt(   &
+                       0.25*(Fast2 - UnLeft *TildeVAlfvenNormal)**2  -        &
+                       Sound2*(Alfven2Normal - UnLeft *TildeVAlfvenNormal))), &
+                                            UnRight                  - sqrt(  &
+                       0.5 *(Fast2 - UnRight*TildeVAlfvenNormal) +    sqrt(   &
+                       0.25*(Fast2 - UnRight*TildeVAlfvenNormal)**2  -        &
+                       Sound2*(Alfven2Normal - UnRight*TildeVAlfvenNormal)))  )
+               end if
+               if(UseAlfvenWaves)then
+                  Cleft_I(1)  = min(Cleft_I(1) ,  &
+                       min(UnLeft, UnRight)  - sqrt(Alfven2Normal))
+                  CRight_I(1) = max(CRight_I(1),  &
+                       max(UnLeft, UnRight)  + sqrt(Alfven2Normal))
+               end if
             end if
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1)  = Cmax_I(1)
@@ -4641,37 +4689,82 @@ contains
             CmaxDt_I(1) = Cmax_I(1)
          end if
       elseif(IsChGLDomain.or.IsChGLInterface)then
-         ! Tangetial velocity squared
-         Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
-         ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
-         ChGL2OverRho = InvRho*State_V(SignB_)**2
-         ! Magetosonic speed squared:
-         Sound2     = Sound2 + Ut2*ChGL2OverRho
-         ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
-         ChGL2OverRho  = 0.5*ChGL2OverRho
-         UnChGLMin   = UnMin*ChGL2OverRho
-         UnChGLMax   = UnMax*ChGL2OverRho
-         cChGLLeft   = min(UnMin - max(UnChGLMin,0.0)  & ! Corrected Un
-              - sqrt( max(UnChGLMin,0.0)**2 + Sound2), & ! sound
-              UnMax - max(UnChGLMax,0.0)               & ! Corrected Un)
-              - sqrt( max(UnChGLMax,0.0)**2 + Sound2) )  ! sound
-         if(UseAlfvenWaves)cChGLLeft = min(cChGLLeft,    &
-              UnMin  - sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
-              UnMax  - sqrt(2*UnMax*UnChGLMax))          ! (left)
-         cChGLRight  = max(UnMin - min(UnChGLMin,0.0)  & ! Corrected Un
-              + sqrt( min(UnChGLMin,0.0)**2 + Sound2), & ! sound
-              UnMax - min(UnChGLMax,0.0)               & ! Corrected Un)
-              + sqrt( min(UnChGLMax,0.0)**2 + Sound2) )  ! sound
-         if(UseAlfvenWaves)cChGLRight = max(cChGLRight,  &
-              UnMin  + sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
-              UnMax  + sqrt(2*UnMax*UnChGLMax))          ! (Right)
-         if(IsChGLInterface)then
-            ! Choose the estimate for speed to be applicable in both
-            ! neighboring control volumes, handled by ChGL and regular MHD
-            cChGLLeft   = min( UnMin - Fast, &                ! MHD
-                 cChGLLeft  )                                 ! ChGL
-            cChGLRight  = max( UnMax + Fast, &                ! MHD
-                 cChGLRight )                                 ! ChGL
+         if(IsChGLDomain&
+              ! Stream-aligned MHD is at least from one side of the face
+              .and..not.(IsChGLInterface.and.UseAligningSource))then
+            ! Tangetial velocity squared
+            Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
+            ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+            ChGL2OverRho = InvRho*State_V(SignB_)**2
+            ! Magetosonic speed squared:
+            Sound2     = Sound2 + Ut2*ChGL2OverRho
+            ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
+            ChGL2OverRho  = 0.5*ChGL2OverRho
+            UnChGLMin   = UnMin*ChGL2OverRho
+            UnChGLMax   = UnMax*ChGL2OverRho
+            cChGLLeft   = min(UnMin - max(UnChGLMin,0.0)  & ! Corrected Un
+                 - sqrt( max(UnChGLMin,0.0)**2 + Sound2), & ! sound
+                 UnMax - max(UnChGLMax,0.0)               & ! Corrected Un)
+                 - sqrt( max(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+            if(UseAlfvenWaves)cChGLLeft = min(cChGLLeft,    &
+                 UnMin  - sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
+                 UnMax  - sqrt(2*UnMax*UnChGLMax))          ! (left)
+            cChGLRight  = max(UnMin - min(UnChGLMin,0.0)  & ! Corrected Un
+                 + sqrt( min(UnChGLMin,0.0)**2 + Sound2), & ! sound
+                 UnMax - min(UnChGLMax,0.0)               & ! Corrected Un)
+                 + sqrt( min(UnChGLMax,0.0)**2 + Sound2) )  ! sound
+            if(UseAlfvenWaves)cChGLRight = max(cChGLRight,  &
+                 UnMin  + sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
+                 UnMax  + sqrt(2*UnMax*UnChGLMax))          ! (Right)
+            if(IsChGLInterface)then
+               ! From the other side of interface there is pure MHD
+               ! Choose the estimate for speed to be applicable in both
+               ! neighboring control volumes, handled by ChGL and regular MHD
+               cChGLLeft   = min( UnMin - Fast, &                ! MHD
+                    cChGLLeft  )                                 ! ChGL
+               cChGLRight  = max( UnMax + Fast, &                ! MHD
+                    cChGLRight )                                 ! ChGL
+            end if
+         else
+            ! The aligning source is applied at least from one side of
+            ! the face. Available are: Sound2 - square of the sound speed,
+            ! including the contributions from electron pressure and AW
+            ! pressure, InvRho, FullBn, Alfven2Normal, UnMin <= UnMax,
+            ! Fast2 = Alfven2 + Sound2
+            TildeVAlfvenNormal = FullBn*InvRho*State_V(SignB_)
+            if(TildeVAlfvenNormal > 0.0)then
+               cChGLLeft  = min(          UnMin - 0.5*TildeVAlfvenNormal - &
+                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMin *  &
+                    TildeVAlfvenNormal), UnMax - 0.5*TildeVAlfvenNormal - &
+                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMax*  &
+                    TildeVAlfvenNormal) )
+               cChGLRight = max(          UnMin                  + sqrt(  &
+                    0.5 *(Fast2 - UnMin *TildeVAlfvenNormal) +    sqrt(   &
+                    0.25*(Fast2 - UnMin *TildeVAlfvenNormal)**2  -        &
+                    Sound2*(Alfven2Normal - UnMin *TildeVAlfvenNormal))), &
+                    UnMax                  + sqrt(  &
+                    0.5 *(Fast2 - UnMax*TildeVAlfvenNormal) +     sqrt(   &
+                    0.25*(Fast2 - UnMax*TildeVAlfvenNormal)**2   -        &
+                    Sound2*(Alfven2Normal - UnMax*TildeVAlfvenNormal)))  )
+            else
+               cChGLRight = max(         UnMin - 0.5*TildeVAlfvenNormal + &
+                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMin *  &
+                    TildeVAlfvenNormal), UnMax - 0.5*TildeVAlfvenNormal + &
+                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMax *  &
+                    TildeVAlfvenNormal) )
+               cChGLLeft   = min(         UnMin                  - sqrt(  &
+                    0.5 *(Fast2 - UnMin *TildeVAlfvenNormal) +    sqrt(   &
+                    0.25*(Fast2 - UnMin *TildeVAlfvenNormal)**2  -        &
+                    Sound2*(Alfven2Normal - UnMin *TildeVAlfvenNormal))), &
+                    UnMax                  - sqrt(  &
+                    0.5 *(Fast2 - UnMax*TildeVAlfvenNormal) +    sqrt(   &
+                    0.25*(Fast2 - UnMax*TildeVAlfvenNormal)**2  -        &
+                    Sound2*(Alfven2Normal - UnMax*TildeVAlfvenNormal)))  )
+            end if
+            if(UseAlfvenWaves)then
+               cChGLRight = max(cChGLRight,  UnMax + sqrt(Alfven2Normal))
+               cChGLLeft  = min(cChGLLeft,   UnMin - sqrt(Alfven2Normal))
+            end if
          end if
          if(present(Cmax_I))then
             Cmax_I(1)    = max(cChGLRight, -cChGLLeft)

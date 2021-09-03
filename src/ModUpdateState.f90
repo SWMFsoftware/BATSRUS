@@ -93,7 +93,7 @@ contains
        call update_heatflux_collisionless(iBlock)
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
-    if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock)
+    if(SignB_ > 1.and.UseChGL)call update_chgl(iBlock, iStage)
     if(DoTest)then
        write(*,*)NameSub,' final for n_step =', n_step
        do iVar=1,nVar
