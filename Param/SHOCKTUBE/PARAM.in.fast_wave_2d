@@ -16,6 +16,10 @@ NONE			NamePlanet
 #IOUNITS
 NONE			TypeIoUnit
 
+#FIXEDTIMESTEP
+T			UseDtFixed
+5.			DtFixedDim [sec] (read if UseDtFixed is true)
+
 #NORMALIZATION
 NONE			TypeNormalization
 

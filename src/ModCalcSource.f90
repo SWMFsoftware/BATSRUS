@@ -175,7 +175,8 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nSource
        Source_VC(iVar,i,j,k) = 0
     end do; end do; end do; end do
-
+    ! Contribution from the magnetic source is collected separately
+    ! To be used in calculating electrric field for hybrid scheme
     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = RhoUx_, RhoUz_
        SourceMhd_VC(iVar,i,j,k) = 0
     end do; end do; end do; end do
@@ -537,7 +538,7 @@ contains
           end if
        end do; end do; end do
        if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
-    end if
+    end if ! UseElectronPressure .and..not.(UseElectronEntropy.and.UseMultiIon)
 
     if(IsRzGeometry)then
        ! The following geometrical source terms are added for the MHD equations
@@ -622,7 +623,7 @@ contains
                   *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/CellSize_DB(x_,iBlock)
           end do; end do; end do
        end if
-    end if
+    end if ! UseRzGeometry
 
     ! We consider two cases: curl(B0) is zero analytically or non-zero
     ! These are distinguished by UseCurlB0 being true or false.
@@ -640,12 +641,39 @@ contains
     !   -curl(B0) x B1    - remove this if curl B0 = 0
     !   +curl(B0) x B0    - add this if curl B0 is not 0
 
+    ! Calculate the source terms formulated via B0
     if(UseB0) call set_b0_source(iBlock)
 
     if(UseB .and. UseDivbSource)then
+       ! 8 wave scheme results in terms proportional to div B
        if(IsCartesian)then
           call calc_divb_source(iBlock)
        else
+          ! Calculate div B1 via the face interpolation of the magnetic field
+          ! In paarallel, the some source terms in the momentum equation
+          ! calculated which can be formally represented as -(B1 + B0) div B1.
+          ! Although B1 and B0 contribution to this term look additive and
+          ! identical, nevertheless their contributions are calculated
+          ! differently and in different places. Historically, div B1 as
+          ! calculated via the half of sum of internal and external face
+          ! values of magnetic field, it may be also represented as the
+          ! internal divergence, calculated in terms of the inner interpolated
+          ! field values and the sum of contributions from jumps in the
+          ! normal component, which may be thought of the magnetic charges
+          ! associated with the given cell (the internal divergence) and
+          ! the surface magnetic charges at the faces. Historically, the
+          ! effect from B0 field, B0 div B1, is ALWAYS (well, if UseB0 is !
+          ! .true.) is calculated via thus decomposed magnettic charge, i. e.
+          ! the internal difergence B1 is multiplied by the cell-centered
+          ! value of B0 field, while the the face B0 field is applied to the
+          ! surface magnetic charges at the faces. In contrast with this
+          ! approach, the entire effect from B1 field, B1 div B1 was calculated
+          ! by applying cell-centered B1 field to the total divergence (see
+          ! below. Now, there is an option to set UseDivFullBSource=.true.
+          ! so that the contribution from the source B1 div B1 is also
+          ! calculated via the decomposed magnetic charges, hence, it is
+          ! also calculated in the calc_divb_source_gencoord subroutine and
+          ! is not calculated below.
           call calc_divb_source_gencoord
        end if
 
@@ -678,13 +706,16 @@ contains
              DivFullB = DivB1_GB(i,j,k,iBlock)
              ! We can choose to adveect/clean div B1 or div (B1 + B0)
              if(UseDivFullBSource)DivFullB = DivFullB + DivB0_C(i,j,k)
+             ! Add magnetic charge advection to the induction equuation
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
                   -DivFullB*U_D
 
              if(.not. UseMhdMomentumFlux) CYCLE
 
              ! -B1 div(B1)       - usual div B source
-             ! not added if UseDivFullBSource=.true. (added before)
+             ! if UseDivFullBSource=.true., the source term to the momentum
+             ! equattion was added in calc_divb_source_gencoord and should not
+             ! be added here.
              if(.not.UseDivFullBSource)&
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k) = &
                   SourceMhd_VC(RhoUx_:RhoUz_,i,j,k)  &
@@ -721,11 +752,11 @@ contains
              write(*,*)'CurlB0_DC=',CurlB0_DC(:,iTest,jTest,kTest)
              call write_source('After B0 source')
           end if
-       end if
+       end if ! UseB0Source .and. UseMhdMomentumFlux
 
     else
        if(UseB)call calc_divb(iBlock)
-    end if
+    end if ! UseB .and. UseDivbSource
 
     if(UseB .and. UseCurlB0 .and. UseMhdMomentumFlux)then
 
@@ -734,7 +765,9 @@ contains
           if(R_BLK(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
 
           ! +curl(B0) x B1    - undo source term above
-          ! +curl(B0) x B0    - add this since curl B0 is not 0
+          ! +curl(B0) x B1    - add this if B0MomentumFux = .true.
+          ! + div.(B0 B0 - I B0^2/2) - B0 div B0 -  or this, if it is .false.
+          ! since curl B0 is not 0 and produces the force effect.
           CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
                State_VGB(Bx_:Bz_,i,j,k,iBlock)) + B0MomentumSource_DC(:,i,j,k)
           SourceMhd_VC(rhoUx_:rhoUz_,i,j,k) = &
@@ -749,7 +782,7 @@ contains
        if(DoTest .and. &
             (iVarTest==Energy_.or.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_))&
             call write_source('After curl B0')
-    end if
+    end if ! UseB .and. UseCurlB0 .and. UseMhdMomentumFlux
 
     if(UseB .and. UseBorisCorrection &
          .and. ClightFactor < 0.9999 &
@@ -1401,9 +1434,8 @@ contains
                  sum(FaceArea_D*(RightState_VZ(Bx_:B_+nDim,i,j,k+1) &
                  -               LeftState_VZ(Bx_:B_+nDim,i,j,k+1)))
 
-            DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
-                 sum(FaceArea_D*LeftState_VZ(Bx_:B_+nDim,i,j,k+1))) &
-                 /CellVolume_GB(i,j,k,iBlock)
+            DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
+                 sum(FaceArea_D*LeftState_VZ(Bx_:B_+nDim,i,j,k+1))
 
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
                  + B1nJumpL + B1nJumpR
@@ -1432,7 +1464,9 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) +DivBInternal_C(i,j,k)
+         DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+              /CellVolume_GB(i,j,k,iBlock)
+         DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + DivBInternal_C(i,j,k)
       end do; end do; end do
 
       if(DoTest)write(*,*)NameSub,' final divb1=', &

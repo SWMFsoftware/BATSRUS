@@ -127,6 +127,10 @@ program spectrum
   integer                     :: i, iLine, jPixel, kPixel
   integer                     :: nLineAll ! All lines of interest
 
+  ! Variables for using measured ion temperature
+  logical                     :: UseTion = .false.
+  real                        :: Tion
+
   ! Derived type to read tabulated G values
   !----------------------------------------------------------------------------
   type LineTableType
@@ -336,7 +340,6 @@ contains
 
   end subroutine calc_dem
   !============================================================================
-
   subroutine set_data_block
     ! When no data file input is used set up uniform data values in defined box
     integer, parameter             :: iUnitOut = 18
@@ -640,6 +643,8 @@ contains
              SinAlpha = sqrt(1 - CosAlpha**2)
              Tlos = SinAlpha**2 * Var_VIII(tperp_,i,jPixel,kPixel) &
                   + CosAlpha**2 * Var_VIII(tpar_,i,jPixel,kPixel)
+
+             if(UseTion)Tlos = Tion
 
              ! Calculate thermal and non-thermal broadening
              Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
@@ -990,6 +995,10 @@ contains
 
        case("#PROTONELECTRONRATIO")
           call read_var('ProtonElectronRatio',ProtonElectronRatio)
+
+       case("#IONTEMPERATURE")
+          call read_var('UseTion',UseTion)
+          call read_var('Tion',Tion)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '

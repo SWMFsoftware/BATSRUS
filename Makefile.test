@@ -285,6 +285,40 @@ test_shocktube_1d_check:
 	ls -l test_shocktube_1d.diff
 
 
+### FASTWAVE TEST SIMPLIFIED ###
+
+test_fastwave_2d:
+	@echo "test_fastwave_2d_compile..." > test_fastwave_2d.diff
+	$(MAKE) test_fastwave_2d_compile
+	@echo "test_fastwave_2d_rundir..." >> test_fastwave_2d.diff
+	$(MAKE) test_fastwave_2d_rundir
+	@echo "test_fastwave_2d_run..." >> test_fastwave_2d.diff
+	$(MAKE) test_fastwave_2d_run
+	@echo "test_fastwave_2d_check..." >> test_fastwave_2d.diff
+	$(MAKE) test_fastwave_2d_check
+
+test_fastwave_2d_compile:
+	cd ${DIR}; ./Config.pl ${OPENACC}
+	./Config.pl -u=Waves -e=Mhd -g=6,6,1
+	./Config.pl -opt=Param/SHOCKTUBE/PARAM.in.fast_wave_2d
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_fastwave_2d_rundir:test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.fast_wave_2d PARAM.in
+	-./TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_fastwave_2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe | tee runlog
+	cd ${TESTDIR}; rm -rf RESULT; ./PostProc.pl -m RESULT
+
+test_fastwave_2d_check:
+	-@(${DIFFNUM} -t -r=1e-3 -a=1e-6 \
+                ${TESTDIR}/RESULT/GM/z=0_mhd_1_t00000500_n00000060.out \
+                Param/SHOCKTUBE/TestOutput/fastwave_2d_ref.out \
+                > test_fastwave_2d.diff)
+	ls -l test_fastwave_2d.diff
+
 ### SHOCKRAMP TEST ###
 
 test_shockramp:

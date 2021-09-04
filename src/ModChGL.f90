@@ -75,9 +75,10 @@ contains
     end do; end do; end do
   end subroutine init_chgl
   !============================================================================
-  subroutine update_chgl(iBlock)
+  subroutine update_chgl(iBlock, iStage)
+    use ModMain,     ONLY: nStage
     use ModAdvance,  ONLY: StateOld_VGB
-    integer, intent(in) :: iBlock
+    integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim), RhoUDotR, VOld_D(MaxDim), Xi
     !--------------------------------------------------------------------------
@@ -95,7 +96,8 @@ contains
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
-       elseif(UseAligningSource.and.r_BLK(i,j,k,iBlock) < RMinChGL)then
+       elseif(UseAligningSource.and.r_BLK(i,j,k,iBlock) < RMinChGL       &
+            .and.iStage==nStage)then
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
@@ -103,21 +105,21 @@ contains
              ! The ChGL ratio is calculated in terms of U, B
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SignB_,i,j,k,iBlock) =                 &
-                  (State_VGB(Rho_,i,j,k,iBlock)/              &
-                  ! Limiter, reducing the aligning source for slow stream
+             State_VGB(SignB_,i,j,k,iBlock) =                            &
+                  State_VGB(Rho_,i,j,k,iBlock)*                          &
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)/        &
                   max(RhoU2, &
-                  MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2)) )*&
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
+                  ! Limiter, reducing the aligning source for slow stream
+                  MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2) )* &
+                  ! Geometric interpolation factor
+                  (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
+                  (RMinChGL - RSourceChGL)
              ! Apply aligning source in the induction equation prop to
              ! \alpha*dU/dt
              State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
-                  ! Field to tream speed ratio
-                  State_VGB(SignB_,i,j,k,iBlock) *      &
-                  ! Geometric interpolation factor
-                  (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
-                  (RMinChGL - RSourceChGL)*(            &
+                  ! Field-to-stream-speed ratio
+                  State_VGB(SignB_,i,j,k,iBlock) *(     &
                   ! Increment in velocity
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock) -        &
