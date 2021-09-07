@@ -2494,7 +2494,7 @@ contains
   !============================================================================
 
   subroutine get_numerical_flux(Flux_V)
-    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, SignB_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -2519,6 +2519,7 @@ contains
     real :: Pwave
     real :: GradPe_D(3)
     real :: InvElectronDens
+    real :: UnUpwind, BUpwind_D(MaxDim)
     integer :: i, j, k, iFluid
     real :: NatomicSi, TeSi
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -2628,6 +2629,17 @@ contains
     end if
 
     if(UseB)then
+       if(IsChGLDomain.and.IsChGLInterface)then
+          ! Corrrect upwind ChGL variable in terms of Un and Bn
+          UnUpwind = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
+          if(UnUpwind<=0.0)then
+             StateLeft_V(SignB_) = 0.0
+          else
+             BUpwind_D = StateLeft_V(Bx_:Bz_)
+             if(UseB0)BUpwind_D = BUpwind_D + [B0x,B0y,B0z]
+             StateLeft_V(SignB_) = sum(BUpwind_D*Normal_D)/UnUpwind
+          end if
+       end if
        if(DoRoe)then
           if(IsBoundary)then
              uLeft_D  = StateLeft_V(Ux_:Uz_)
