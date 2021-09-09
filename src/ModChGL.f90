@@ -300,7 +300,7 @@ contains
          if(.not.IsChGL_G(i,j,k))CYCLE
          LeftState_VZ(Bx_:Bz_,i,j,k+1) =                                 &
               LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SignB_,i,j,k+1)-&
-              B0_DIII(:,i,j+1,k)
+              B0_DIII(:,i,j,k+1)
          RightState_VZ(Bx_:Bz_,i,j,k) =                                  &
               RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SignB_,i,j,k) - &
               B0_DIII(:,i,j,k)
