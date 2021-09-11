@@ -4438,7 +4438,7 @@ contains
          ! subtracting (Bright - Bleft)*FullB we obtain Bright^2 and Bleft^2
          ! corresspondingly. By adding absolute value of the said dot product,
          ! we would arrive at max(Bleft^2,Bright^2)
-         ! 
+         !
          dB1_D = StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)
          dB1dB1 = 0.25*sum(dB1_D**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
