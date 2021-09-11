@@ -2629,17 +2629,6 @@ contains
     end if
 
     if(UseB)then
-       if(IsChGLDomain.and.IsChGLInterface)then
-          ! Corrrect upwind ChGL variable in terms of Un and Bn
-          UnUpwind = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
-          if(UnUpwind<=0.0)then
-             StateLeft_V(SignB_) = 0.0
-          else
-             BUpwind_D = StateLeft_V(Bx_:Bz_)
-             if(UseB0)BUpwind_D = BUpwind_D + [B0x,B0y,B0z]
-             StateLeft_V(SignB_) = sum(BUpwind_D*Normal_D)/UnUpwind
-          end if
-       end if
        if(DoRoe)then
           if(IsBoundary)then
              uLeft_D  = StateLeft_V(Ux_:Uz_)
@@ -2704,7 +2693,17 @@ contains
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
-
+    if(IsChGLDomain.and.IsChGLInterface)then
+       ! Corrrect upwind ChGL variable in terms of Un and Bn
+       UnUpwind = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
+       if(UnUpwind<=0.0)then
+          StateLeft_V(SignB_) = 0.0
+       else
+          BUpwind_D = StateLeft_V(Bx_:Bz_)
+          if(UseB0)BUpwind_D = BUpwind_D + [B0x,B0y,B0z]
+          StateLeft_V(SignB_) = sum(BUpwind_D*Normal_D)/UnUpwind
+       end if
+    end if
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
@@ -4330,7 +4329,10 @@ contains
       real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
-      real:: dB1dB1
+      ! dB1_D = B1R_D - B1L_D; dB1dB1 = 0.25*sum(dB1_D**2)
+      real:: dB1_D(MaxDim), dB1dB1
+      ! dB1DotFullB = sum(dB1_D*[FullBx, FullBy, FullBz]
+      real:: dB1DotFullB
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R, Ut2, UnChGLMin, UnChGLMax, UnChGLLeft, UnChGLRight,&
@@ -4426,17 +4428,22 @@ contains
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
-         ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
-         ! the average field squared (Bright+Bleft)^2/4 results in
-         ! an upper estimate of the left and right Alfven speeds
-         ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
-         !
-         ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
-         ! this is clearly not true.
-         !
-         dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_) &
-              -             StateLeft_V(Bx_:Bz_))**2)
+         ! According to I. Sokolov computinng fast magnetosonic wave speed
+         ! in terms of the average field squared (Bright+Bleft)^2/4 does not
+         ! provide reliable esstimate for the maximum speed, since the average
+         ! magnetic field by magnitude may be much less than left or right
+         ! field, if the left and right field are antiparallel. By adding
+         ! dB1dB1 = (Bright-Bleft)^2/4 to the average field squared it reduces
+         ! to arithmetic average of the field squared. Then, by adding or
+         ! subtracting (Bright - Bleft)*FullB we obtain Bright^2 and Bleft^2
+         ! corresspondingly. By adding absolute value of the said dot product,
+         ! we would arrive at max(Bleft^2,Bright^2)
+         ! 
+         dB1_D = StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)
+         dB1dB1 = 0.25*sum(dB1_D**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
+         dB1DotFullB = sum(dB1_D*[FullBx, FullBy, FullBz])
+         DiffBb = 0.250*sum(dB1_D*Normal_D)**2
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
@@ -4656,6 +4663,9 @@ contains
                ! pressure, InvRho, FullBn, Alfven2Normal, UnLeft, UnRight,
                ! Fast2 = Alfven2 + Sound2
                TildeVAlfvenNormal = FullBn*InvRho*State_V(SignB_)
+               ! Increease numerical diffusion
+               Fast2 = Fast2 + abs(dB1DotFullB)*InvRho
+               Alfven2Normal = Alfven2Normal + DiffBb*InvRho
                if(TildeVAlfvenNormal > 0.0)then
                   CLeft_I(1) = min(          UnLeft - 0.5*TildeVAlfvenNormal - &
                        sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnLeft *  &
