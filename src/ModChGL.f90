@@ -212,20 +212,8 @@ contains
       integer :: i, j, k
       ! B0_DX field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
-      ! Left boundary of the ChGL: it separate the cells at which IsChGL_G is
-      ! false from the next cell in direction of i in which IsChGL_G is true
-      logical :: IsLeftBoundaryChGL_G(iMin:iMax,jMin:jMax,kMin:kMax)
-      ! Right boundary of the ChGL: it separate the cells at which IsChGL_G is
-      ! true from the next cell in direction of i in which IsChGL_G is false
-      logical :: IsRightBoundaryChGL_G(iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
       if(.not.any(IsChGL_G(iMin-1:iMax,jMin:jMax,kMin:kMax)))RETURN
-      IsLeftBoundaryChGL_G(iMin:iMax,jMin:jMax,kMin:kMax) = &
-           IsChGL_G(iMin:iMax,jMin:jMax,kMin:kMax).and..not.&
-           IsChGL_G(iMin-1:iMax-1,jMin:jMax,kMin:kMax)
-      IsRightBoundaryChGL_G(iMin:iMax,jMin:jMax,kMin:kMax) = &
-           .not.IsChGL_G(iMin:iMax,jMin:jMax,kMin:kMax).and.&
-           IsChGL_G(iMin-1:iMax-1,jMin:jMax,kMin:kMax)
       if(UseB0)then
          B0_DIII = B0_DX(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -233,111 +221,24 @@ contains
       end if
       do k = kMin, kMax; do j = jMin, jMax
          i = iMin - 1
-         if(IsChGL_G(i,j,k))then
-            LeftState_VX(Bx_:Bz_,i+1,j,k) =              &
+         if(IsChGL_G(i,j,k))LeftState_VX(Bx_:Bz_,i+1,j,k) =              &
               LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
               B0_DIII(:,i+1,j,k)
-         elseif(IsLeftBoundaryChGL_G(i+1,j,k))then
-            call fix_x_left_boundary(i+1,j,k,B0_DIII(:,i+1,j,k))
-         end if
          do i = iMin, iMax -1
-            if(IsChGL_G(i,j,k))then
-               LeftState_VX(Bx_:Bz_,i+1,j,k) =                              &
-                    LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
-                    B0_DIII(:,i+1,j,k)
-               RightState_VX(Bx_:Bz_,i,j,k) =                               &
-                    RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
-                    B0_DIII(:,i,j,k)
-            elseif(IsLeftBoundaryChGL_G(i+1,j,k))then
-               call fix_x_left_boundary(i+1,j,k,B0_DIII(:,i+1,j,k))
-            elseif(IsRightBoundaryChGL_G(i,j,k))then
-               call fix_x_right_boundary(i,j,k,B0_DIII(:,i,j,k))
-            end if
-         end do
-         i = iMax
-         if(IsChGL_G(i,j,k))then
-            RightState_VX(Bx_:Bz_,i,j,k) =               &
+            if(.not.IsChGL_G(i,j,k))CYCLE
+            LeftState_VX(Bx_:Bz_,i+1,j,k) =                              &
+                 LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
+                 B0_DIII(:,i+1,j,k)
+            RightState_VX(Bx_:Bz_,i,j,k) =                               &
                  RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
                  B0_DIII(:,i,j,k)
-         elseif(IsRightBoundaryChGL_G(i,j,k))then
-            call fix_x_right_boundary(i,j,k,B0_DIII(:,i,j,k))
-         end if
+         end do
+         i = iMax
+         if(IsChGL_G(i,j,k))RightState_VX(Bx_:Bz_,i,j,k) =               &
+              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
+              B0_DIII(:,i,j,k)
       end do; end do
     end subroutine correct_facex
-    !==========================================================================
-    subroutine fix_x_left_boundary(iFace, jFace, kFace, B0_D)
-      use ModAdvance,  ONLY: LeftState_VX, RightState_VX
-      integer, intent(in) :: iFace, jFace, kFace
-      real,    intent(in) :: B0_D(3)
-      ! Face area vector and  Unit vector normal to the face
-      real :: Area_D(3), Normal_D(3), Area
-      real :: UnLeft, UnRight, Bn
-      character(len=*), parameter:: NameSub = 'fix_x_left_boundary'
-      !------------------------------------------------------------------------
-      if(IsCartesian)then
-         Normal_D = [1.0, 0.0, 0.0]
-      else
-         Area_D = FaceNormal_DDFB(:, 1, iFace,jFace,kFace, iBlock)
-         Area = norm2(Area_D)
-         if(Area < 1e-15)then
-            ! The face is at the pole
-            Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlock) &
-                 -     Xyz_DGB(:,iFace-1,jFace,kFace,iBlock)
-            Normal_D = Normal_D/norm2(Normal_D)
-         else
-            Normal_D = Area_D/Area
-         end if
-      end if
-      UnLeft  = sum(LeftState_VX( Ux_:Uz_,iFace, jFace, kFace)*Normal_D)
-      UnRight = sum(RightState_VX(Ux_:Uz_,iFace, jFace, kFace)*Normal_D)
-      if(min(UnLeft, UnRight)<=0.0)then
-         ! Prolong solution from ChGL
-         LeftState_VX(SignB_,iFace, jFace, kFace) = &
-              RightState_VX(SignB_,iFace, jFace, kFace)
-      else
-         ! Correct upwinded value for the  ChGL variable in terms of Un and Bn
-         Bn = sum( (LeftState_VX(Bx_:Bz_,iFace, jFace, kFace) + B0_D)*&
-              Normal_D)
-         LeftState_VX(SignB_,iFace, jFace, kFace) = Bn/max(UnLeft, UnRight)
-      end if
-    end subroutine fix_x_left_boundary
-    !==========================================================================
-    subroutine fix_x_right_boundary(iFace, jFace, kFace, B0_D)
-      use ModAdvance,  ONLY: LeftState_VX, RightState_VX
-      integer, intent(in) :: iFace, jFace, kFace
-      real,    intent(in) :: B0_D(3)
-      ! Face area vector and  Unit vector normal to the face
-      real :: Area_D(3), Normal_D(3), Area
-      real :: UnLeft, UnRight, Bn
-      character(len=*), parameter:: NameSub = 'fix_x_right_boundary'
-      !------------------------------------------------------------------------
-      if(IsCartesian)then
-         Normal_D = [1.0, 0.0, 0.0]
-      else
-         Area_D = FaceNormal_DDFB(:, 1, iFace,jFace,kFace, iBlock)
-         Area = norm2(Area_D)
-         if(Area < 1e-15)then
-            ! The face is at the pole
-            Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlock) &
-                 -     Xyz_DGB(:,iFace-1,jFace,kFace,iBlock)
-            Normal_D = Normal_D/norm2(Normal_D)
-         else
-            Normal_D = Area_D/Area
-         end if
-      end if
-      UnLeft  = sum(LeftState_VX( Ux_:Uz_,iFace, jFace, kFace)*Normal_D)
-      UnRight = sum(RightState_VX(Ux_:Uz_,iFace, jFace, kFace)*Normal_D)
-      if(max(UnLeft, UnRight)>=0.0)then
-         ! Prolong solution from ChGL
-         RightState_VX(SignB_,iFace, jFace, kFace) = &
-              LeftState_VX(SignB_,iFace, jFace, kFace)
-      else
-         ! Correct upwinded value for the  ChGL variable in terms of Un and Bn
-         Bn = sum( (RightState_VX(Bx_:Bz_,iFace, jFace, kFace) + B0_D)*&
-              Normal_D)
-         RightState_VX(SignB_,iFace, jFace, kFace) = Bn/min(UnLeft, UnRight)
-      end if
-    end subroutine fix_x_right_boundary
     !==========================================================================
     subroutine correct_facey(iMin,iMax,jMin,jMax,kMin,kMax)
       use ModB0,       ONLY: B0_DY
