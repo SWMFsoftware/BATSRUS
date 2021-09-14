@@ -3634,7 +3634,7 @@ contains
     subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
          UnLeft, UnRight, UseAwSpeed)
 
-      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0
+      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0, UseB0MomentumFlux
       use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
@@ -3771,7 +3771,7 @@ contains
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
-      if(UseCurlB0.and.rFace > rCurrentFreeB0)then
+      if(UseCurlB0.and..not.UseB0MomentumFlux.and.rFace > rCurrentFreeB0)then
          B1B0L = StateLeft_V(Bx_)*B0x &
               +  StateLeft_V(By_)*B0y &
               +  StateLeft_V(Bz_)*B0z
