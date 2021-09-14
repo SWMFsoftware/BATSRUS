@@ -116,7 +116,7 @@ contains
              DeltaU_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
                   State_VGB(Rho_,i,j,k,iBlock) -        &
                   StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  StateOld_VGB(Rho_,i,j,k,iBlock) 
+                  StateOld_VGB(Rho_,i,j,k,iBlock)
              B2 = sum(B_D**2)
              ! Check if the stream is energetic enough
              if(B2*Rho > RhoU2)then
@@ -335,7 +335,7 @@ contains
     integer, intent(in) :: iFace,jFace,kFace, iBlockFace,              &
          iLefft, jLeft, kLeft
     real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
-    real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar) 
+    real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
     call stop_mpi('Work in progresss')
   end subroutine aligning_bc

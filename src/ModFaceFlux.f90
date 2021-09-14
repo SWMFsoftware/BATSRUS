@@ -1011,9 +1011,9 @@ contains
 
     real :: r
 
+    ! Modify solution depending on the face center radial distance
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
-    ! Modify solution depending on the face center radial distance
     rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
          Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
     if(UseChGL)then
