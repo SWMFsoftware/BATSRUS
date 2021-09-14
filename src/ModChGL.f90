@@ -30,6 +30,7 @@ module ModChGL
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value ! Calculate magnetic field face values
+  public :: aligning_bc             ! Align field and stream from the MHD side
   public :: calc_aligning_region_timestep ! Use global timestep in the region
   ! If the below logical is true, between rSourceChGL and rMinChGL
   ! the aligning source is applied
@@ -80,7 +81,7 @@ contains
     use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
-    real    :: RhoU2, B_D(MaxDim), RhoUDotR, VOld_D(MaxDim), Xi
+    real    :: RhoU2, B_D(MaxDim), Rho, DeltaU_D(3), MomentumSource_D(3), B2
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
@@ -103,28 +104,36 @@ contains
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              ! The ChGL ratio is calculated in terms of U, B
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SignB_,i,j,k,iBlock) =                            &
-                  State_VGB(Rho_,i,j,k,iBlock)*                          &
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)/        &
-                  max(RhoU2, &
-                  ! Limiter, reducing the aligning source for slow stream
-                  MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2) )* &
+             State_VGB(SignB_,i,j,k,iBlock) = Rho/RhoU2*                &
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)*       &
                   ! Geometric interpolation factor
                   (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
                   (RMinChGL - RSourceChGL)
-             ! Apply aligning source in the induction equation prop to
-             ! \alpha*dU/dt
+             ! Increment in velocity
+             DeltaU_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  State_VGB(Rho_,i,j,k,iBlock) -        &
+                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  StateOld_VGB(Rho_,i,j,k,iBlock) 
+             B2 = sum(B_D**2)
+             ! Check if the stream is energetic enough
+             if(B2*Rho > RhoU2)then
+                ! The increment in the velcity should be reduced
+                MomentumSource_D = (1 - RhoU2/(Rho*B2))*(&
+                     sum(DeltaU_D*B_D)*B_D/B2 - DeltaU_D)
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + &
+                     MomentumSource_D*Rho
+                DeltaU_D = DeltaU_D + MomentumSource_D
+             end if
              State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
                   ! Field-to-stream-speed ratio
-                  State_VGB(SignB_,i,j,k,iBlock) *(     &
+                  State_VGB(SignB_,i,j,k,iBlock) *      &
                   ! Increment in velocity
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock) -        &
-                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  StateOld_VGB(Rho_,i,j,k,iBlock) )
+                  DeltaU_D
           end if
        end if
        if(R_BLK(i,j,k,iBlock) > RMinChGL)then
@@ -319,6 +328,17 @@ contains
     end subroutine correct_facez
     !==========================================================================
   end subroutine correct_chgl_face_value
+  !============================================================================
+  subroutine aligning_bc(iFace,jFace,kFace, iBlockFace,                &
+         iLefft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                &
+         StateLeft_V, StateRight_V)
+    integer, intent(in) :: iFace,jFace,kFace, iBlockFace,              &
+         iLefft, jLeft, kLeft
+    real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
+    real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar) 
+    !--------------------------------------------------------------------------
+    call stop_mpi('Work in progresss')
+  end subroutine aligning_bc
   !============================================================================
   subroutine calc_aligning_region_timestep(iBlock)
     use ModMain, ONLY: IsTimeAccurate=>time_accurate, dt_BLK, dt, cfl

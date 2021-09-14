@@ -600,7 +600,7 @@ contains
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
+         StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
          StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
@@ -1010,29 +1010,25 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
-    use ModChGL,     ONLY: UseChGL, rMinChGL, rSourceChGL, UseAligningSource
+    use ModChGL,     ONLY: UseChGL, rMinChGL
 
     real :: r
 
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
+    ! Modify solution depending on the face center radial distance
+    rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
+         Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
     if(UseChGL)then
-       ! Modify solution (speed max) if at least in one of
-       ! the interfaced cells the velocity is field-aligned
-       rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
-            r_BLK(iLeft,jLeft,kLeft,iBlockFace))
-       IsChGLDomain = rFace > rMinChGL
+       ! Check if this face is in the ChGL  domain
+       IsChGLDomain = rMinChGL < max(r_BLK(&
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
        ! Check if this face is the part of ChGL  domain boundary
-       IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
-            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))&
-            .or.(UseAligningSource.and.rFace < rMinChGL.and.rFace > rSourceChGL)
+       IsChGLInterface = IsChGLDomain.and.rMinChGL>=min(r_BLK(&
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
     else
        IsChGLInterface = .false.; IsChGLDomain = .false.
-       ! Modify solution depending on the face center radial distance
-       rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
-            Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
     end if
-
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
        ! The face is at the pole
@@ -1951,6 +1947,7 @@ contains
          iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
+    use ModChGL,         ONLY: aligning_bc
 
     real, intent(out):: Flux_V(nFaceValue)
 
@@ -2130,7 +2127,9 @@ contains
           DiffBb = sum(DiffBn_D**2)
        end if
     end if
-
+    if(IsChGLInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
+         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
+         StateLeft_V, StateRight_V)
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
