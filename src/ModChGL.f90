@@ -330,10 +330,10 @@ contains
   end subroutine correct_chgl_face_value
   !============================================================================
   subroutine aligning_bc(iFace,jFace,kFace, iBlockFace,                &
-         iLefft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                &
+         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                 &
          StateLeft_V, StateRight_V)
     integer, intent(in) :: iFace,jFace,kFace, iBlockFace,              &
-         iLefft, jLeft, kLeft
+         iLeft, jLeft, kLeft
     real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
     real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
     !--------------------------------------------------------------------------
