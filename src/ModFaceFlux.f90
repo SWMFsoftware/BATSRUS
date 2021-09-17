@@ -1011,10 +1011,9 @@ contains
 
     real :: r
 
+    ! Modify solution depending on the face center radial distance
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
-
-    ! Modify solution depending on the face center radial distance
     rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
          Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
 
@@ -3946,7 +3945,7 @@ contains
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
          elseif(IsChGLDomain)then
             ! Stream-aligned MHD is at least from one side of the face
-            call get_chgl_speed(U1n=UnLeft, U2n=UnRight,                & 
+            call get_chgl_speed(U1n=UnLeft, U2n=UnRight,                &
                  ! Tangetial velocity squared
                  Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
                  Un*Un, 0.0),                                           &
@@ -3973,14 +3972,14 @@ contains
          end if
       elseif(IsChGLDomain)then
          ! Stream-aligned MHD is at least from one side of the face
-         call get_chgl_speed(U1n=UnMin, U2n=UnMax,                   & 
+         call get_chgl_speed(U1n=UnMin, U2n=UnMax,                   &
               ! Tangetial velocity squared
               Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
               Un*Un, 0.0),                                           &
               InvRho = InvRho,                                       &
               Sound2 = Sound2,                                       &
               Alpha  = State_V(SignB_),                              &
-              cChGLLeft =  cChGLLeft , cChGLRight = cChGLRight) 
+              cChGLLeft =  cChGLLeft , cChGLRight = cChGLRight)
          if(IsChGLInterface)then
             ! From the other side of interface there is pure MHD
             ! Choose the estimate for speed to be applicable in both
@@ -4021,10 +4020,10 @@ contains
       real, intent(inout) :: Sound2 ! Misc
       real, intent(in)    :: Alpha    ! ChGL ratio
       ! Left and right  perturbation speed
-      real, intent(out)   :: cChGLLeft, cChGLRight 
+      real, intent(out)   :: cChGLLeft, cChGLRight
       real :: U1nChGL, U2nChGL, ChGL2OverRho
-      !------------------------------------------------------------------------
       ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+      !------------------------------------------------------------------------
       ChGL2OverRho = InvRho*Alpha**2
       ! Magetosonic speed squared:
       Sound2     = Sound2 + Ut2*ChGL2OverRho
