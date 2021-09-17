@@ -330,14 +330,26 @@ contains
   end subroutine correct_chgl_face_value
   !============================================================================
   subroutine aligning_bc(iFace,jFace,kFace, iBlockFace,                &
-         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                 &
+         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                &
          StateLeft_V, StateRight_V)
     integer, intent(in) :: iFace,jFace,kFace, iBlockFace,              &
          iLeft, jLeft, kLeft
     real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
     real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
+    real :: FullB_D(3),  FullBt_D(3), Un_D(3), Ut_D(3), Un, FullBn
     !--------------------------------------------------------------------------
-    call stop_mpi('Work in progresss')
+    FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
+    FullBn = sum(FullB_D*Normal_D)
+    FullBt_D = FullB_D - FullBn*Normal_D
+    Un     = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
+    Ut_D     = StateLeft_V(Ux_:Uz_) - Un*Normal_D
+    StateLeft_V(Bx_:Bz_) = StateLeft_V(Bx_:Bz_) +                      &
+         ! The Leontowich BC: at the impedance boundary
+         ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
+         ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
+         (-FullBn*Ut_D + Un*FullBt_D)/ &
+         ! The estimate for impedance is as follows:
+         sqrt(max(1.0e-30, Un**2 + FullBn**2/StateLeft_V(Rho_)))
   end subroutine aligning_bc
   !============================================================================
   subroutine calc_aligning_region_timestep(iBlock)
@@ -360,4 +372,3 @@ contains
   !============================================================================
 end module ModChGL
 !==============================================================================
-
