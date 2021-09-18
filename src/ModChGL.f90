@@ -344,8 +344,15 @@ contains
     Un     = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
     Ut_D     = StateLeft_V(Ux_:Uz_) - Un*Normal_D
     StateLeft_V(Bx_:Bz_) = StateLeft_V(Bx_:Bz_) +                      &
-         ! The Leontowich BC: at the impedance boundary
+         ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
+         ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
+         ! of metals). Near the surface with concentrated impedance (surface of
+         ! a metal in case of pronounced skin-effect) the tangential eelectric
+         ! and magnetic field vectors are related with the boundary condition:
          ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
+         ! Note: the unit vetor of normal is directed toward the metal, i.e.
+         ! from the MHD domain toward the ChGL domain.
+         !
          ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
          (-FullBn*Ut_D + Un*FullBt_D)/ &
          ! The estimate for impedance is as follows:
