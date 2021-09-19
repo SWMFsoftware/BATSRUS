@@ -229,11 +229,8 @@ module ModFaceFlux
   ! IsChGLDomain= .true. means that at least from one side of the face
   ! the stream-aligned MHD is solved. The characteristic speeds should be
   ! solved within the framework of stream-aligned MHD.
-  ! IsChGLInterface = .true. EITHER means that from one side of the face the
-  ! pure MHD is used and from the other one the stream-aligned MHD is on, or
-  ! that at least from one side of the face the aligning source acts. The
-  ! upper and lower bounds for the characterestic speed should be valid both
-  ! for pure MHD and for stream-aligned MHD
+  ! IsChGLInterface = .true. means that from one side of the face the
+  ! pure MHD is used and from the other one is the stream-aligned MHD.
   logical, public :: IsChGLInterface = .false., IsChGLDomain = .false.
   !$omp threadprivate( IsChGLInterface, IsChGLDomain )
 
@@ -600,7 +597,7 @@ contains
             DeltaBnL = 0.0; DeltaBnR = 0.0
          end if
 
-         StateLeft_V  = LeftState_VX(:,iFace,jFace,kFace)
+         StateLeft_V  = LeftState_VX( :,iFace,jFace,kFace)
          StateRight_V = RightState_VX(:,iFace,jFace,kFace)
 
          call get_numerical_flux(Flux_VXI(:,iFace,jFace,kFace,iGang))
@@ -1010,29 +1007,26 @@ contains
   subroutine set_cell_values_common
     use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
-    use ModChGL,     ONLY: UseChGL, rMinChGL, rSourceChGL, UseAligningSource
+    use ModChGL,     ONLY: UseChGL, rMinChGL
 
     real :: r
 
+    ! Modify solution depending on the face center radial distance
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
     !--------------------------------------------------------------------------
+    rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
+         Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
+
     if(UseChGL)then
-       ! Modify solution (speed max) if at least in one of
-       ! the interfaced cells the velocity is field-aligned
-       rFace = max(r_BLK(iFace,jFace,kFace,iBlockFace), &
-            r_BLK(iLeft,jLeft,kLeft,iBlockFace))
-       IsChGLDomain = rFace > rMinChGL
+       ! Check if this face is in the ChGL  domain
+       IsChGLDomain = rMinChGL < max(r_BLK(&
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
        ! Check if this face is the part of ChGL  domain boundary
-       IsChGLInterface = rFace > rMinChGL.and.rMinChGL>=min(r_BLK(&
-            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))&
-            .or.(UseAligningSource.and.rFace < rMinChGL.and.rFace > rSourceChGL)
+       IsChGLInterface = IsChGLDomain.and.rMinChGL>=min(r_BLK(&
+            iFace,jFace,kFace,iBlockFace),r_BLK(iLeft,jLeft,kLeft,iBlockFace))
     else
        IsChGLInterface = .false.; IsChGLDomain = .false.
-       ! Modify solution depending on the face center radial distance
-       rFace = 0.50*norm2(Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) + &
-            Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace))
     end if
-
     Area2 = AreaX**2 + AreaY**2 + AreaZ**2
     if(Area2 < 1e-30)then
        ! The face is at the pole
@@ -1121,559 +1115,6 @@ contains
     end if
 
   end subroutine set_cell_values_common
-  !============================================================================
-  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
-    use ModPhysics, ONLY: Gamma,GammaMinus1,InvGammaMinus1
-
-    real, intent(out):: Flux_V(nFlux)
-    real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
-
-    ! Number of MHD waves including the divB wave
-    integer, parameter :: nWaveMhd=8
-
-    ! Named MHD wave indexes
-    integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
-         SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8
-
-    ! Loop variables
-    integer :: iFlux, iVar, iWave
-
-    ! Left and right face
-    real :: RhoL, BnL, Bt1L, Bt2L, BbL, pL, eL, aL, CsL, CfL
-    real :: RhoR, BnR, Bt1R, Bt2R, BbR, pR, eR, aR, CsR, CfR
-
-    ! Roe average (hat)
-    real :: RhoH,UnH,Ut1H,Ut2H
-    real :: BnH,Bt1H,Bt2H,BbH
-    real :: B1nH,B1t1H,B1t2H,Bb1H
-    real :: pH,eH,UuH
-    real :: aH,CsH,CfH
-
-    real :: BetaY, BetaZ, AlphaS, AlphaF
-
-    real :: RhoInvL,RhoInvR,RhoInvH
-    real :: RhoSqrtH,    RhoSqrtL,    RhoSqrtR, &
-         RhoInvSqrtH, RhoInvSqrtL, RhoInvSqrtR
-
-    ! Jump in the conservative state
-    real, dimension(nWaveMhd) :: dCons_V
-
-    ! Eigenvalues and jumps in characteristic variable
-    real, dimension(nWaveMhd) :: Eigenvalue_V, DeltaWave_V
-
-    ! Eigenvectors
-    real, dimension(nWaveMhd, nWaveMhd):: EigenvectorL_VV  ! Left  eigenvectors
-    real, dimension(nWaveMhd, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
-
-    ! Fluxes
-    real, dimension(nFluxMhd) :: Diffusion_V      ! Diffusive fluxes
-
-    ! Misc. scalar variables
-    real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv
-
-    character(len=*), parameter:: NameSub = 'roe_solver'
-    !--------------------------------------------------------------------------
-
-    RhoL  =  StateLeft_V(Rho_)
-    pL    =  StateLeft_V(p_ )
-    RhoR  =  StateRight_V(Rho_)
-    pR    =  StateRight_V(p_  )
-
-    ! Rotate vector variables into a coordinate system orthogonal to the face
-    call rotate_state_vectors
-
-    ! Jump in scalar conservative variables
-    dCons_V(RhoMhd_) = RhoR      - RhoL
-    dCons_V(RhoUn_ ) = RhoR*UnR  - RhoL*UnL
-    dCons_V(RhoUt1_) = RhoR*Ut1R - RhoL*Ut1L
-    dCons_V(RhoUt2_) = RhoR*Ut2R - RhoL*Ut2L
-    dCons_V(B1n_   ) = B1nR      - B1nL
-    dCons_V(B1t1_  ) = B1t1R     - B1t1L
-    dCons_V(B1t2_  ) = B1t2R     - B1t2L
-    dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
-
-    ! Derived variables
-    RhoInvL = 1./RhoL
-    BnL  = B0n+B1nL
-    Bt1L = B0t1+B1t1L
-    Bt2L = B0t2+B1t2L
-    BbL  = BnL**2 + Bt1L**2 + Bt2L**2
-    aL   = Gamma*pL*RhoInvL
-
-    RhoInvR = 1./RhoR
-    BnR  = B0n+B1nR
-    Bt1R = B0t1+B1t1R
-    Bt2R = B0t2+B1t2R
-    BbR  = BnR**2 + Bt1R**2 + Bt2R**2
-    aR   = Gamma*pR*RhoInvR
-
-    ! Hat face
-    RhoH = 0.5*(RhoL + RhoR)
-    RhoInvH = 1./RhoH
-    UnH  = 0.5*(  UnL +   UnR)
-    Ut1H = 0.5*( Ut1L +  Ut1R)
-    Ut2H = 0.5*( Ut2L +  Ut2R)
-    BnH  = 0.5*(  BnL +   BnR)
-    Bt1H = 0.5*( Bt1L +  Bt1R)
-    Bt2H = 0.5*( Bt2L +  Bt2R)
-    B1nH = 0.5*( B1nL +  B1nR)
-    B1t1H= 0.5*(B1t1L + B1t1R)
-    B1t2H= 0.5*(B1t2L + B1t2R)
-    pH   = 0.5*(   pL +    pR)
-    BbH  = BnH**2  + Bt1H**2  + Bt2H**2
-
-    Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
-    aH   = Gamma*pH*RhoInvH
-
-    ! if(aL<0.0)then
-    !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
-    !        aL,iProc,iDimFace,i,j,k,&
-    !        Xyz_DGB(:,i,j,k,iBlockFace)
-    !   call stop_mpi
-    ! end if
-
-    aL = sqrt(aL)
-    aR = sqrt(aR)
-    aH = sqrt(aH)
-
-    eL = aL*aL + BbL*RhoInvL
-    CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
-    eR = aR**2 + BbR*RhoInvR
-    CfR = max(0., (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
-    eH = aH**2 + BbH*RhoInvH
-    CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
-
-    CfL = sqrt(CfL)
-    CfR = sqrt(CfR)
-    CfH = sqrt(CfH)
-
-    CsL = max(0.,0.5*(eL-CfL))
-    CfL = 0.5*(eL+CfL)
-
-    CsR = max(0.,0.5*(eR-CfR))
-    CfR = 0.5*(eR+CfR)
-
-    CsH = max(0.,0.5*(eH-CfH))
-    CfH = 0.5*(eH+CfH)
-
-    UuH = UnH**2 + Ut1H**2 + Ut2H**2
-    eH  = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
-
-    CsL = sqrt(CsL)
-    CsR = sqrt(CsR)
-    CsH = sqrt(CsH)
-    CfL = sqrt(CfL)
-    CfR = sqrt(CfR)
-    CfH = sqrt(CfH)
-
-    CsL = min(CsL,aL)
-    CfL = max(CfL,aL)
-    CsR = min(CsR,aR)
-    CfR = max(CfR,aR)
-    CsH = min(CsH,aH)
-    CfH = max(CfH,aH)
-
-    ! Non-dimensional scaling factors
-    Tmp1 = Bt1H**2 + Bt2H**2
-
-    if(Tmp1 > 1e-8)then
-       Tmp1 = sqrt(1./Tmp1)
-       BetaY = Bt1H*Tmp1
-       BetaZ = Bt2H*Tmp1
-    else
-       BetaY = cSqrtHalf
-       BetaZ = cSqrtHalf
-    end if
-
-    Tmp1 = CfH**2 - CsH**2
-    if (Tmp1 > 1.0e-08) then
-       AlphaF = max(0.0, (aH**2  - CsH**2)/Tmp1)
-       AlphaS = max(0.0, (CfH**2 - aH**2 )/Tmp1)
-
-       AlphaF = sqrt(AlphaF)
-       AlphaS = sqrt(AlphaS)
-    else if (BnH**2 * RhoInvH <= aH**2 ) then
-       AlphaF = 1.0
-       AlphaS = 0.0
-    else
-       AlphaF = 0.0
-       AlphaS = 1.0
-    endif
-
-    ! Set some values that are reused over and over
-
-    RhoSqrtH = sqrt(RhoH)
-    RhoSqrtL = sqrt(RhoL)
-    RhoSqrtR = sqrt(RhoR)
-    RhoInvSqrtH = 1./RhoSqrtH
-    RhoInvSqrtL = 1./RhoSqrtL
-    RhoInvSqrtR = 1./RhoSqrtR
-
-    SignBnH     = sign(1.,BnH)
-    Gamma1A2Inv = GammaMinus1/aH**2
-
-    ! Eigenvalues
-    Eigenvalue_V(EntropyW_) = UnH
-    Eigenvalue_V(AlfvenRW_) = UnH + BnH*RhoInvSqrtH
-    Eigenvalue_V(AlfvenLW_) = UnH - BnH*RhoInvSqrtH
-    Eigenvalue_V(SlowRW_)   = UnH + CsH
-    Eigenvalue_V(FastRW_)   = UnH + CfH
-    Eigenvalue_V(SlowLW_)   = UnH - CsH
-    Eigenvalue_V(FastLW_)   = UnH - CfH
-    Eigenvalue_V(DivBW_)    = UnH
-
-    ! Entropy fix for Eigenvalues
-    Tmp1 = UnR - UnL
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(1)) < Tmp1*0.5) then
-       Eigenvalue_V(1) = sign(1.,Eigenvalue_V(1))*   &
-            ((Eigenvalue_V(1)*Eigenvalue_V(1)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR + BnR*RhoInvSqrtR) - (UnL + BnL*RhoInvSqrtL)
-    Tmp1 = max(cTiny,4.*Tmp1)
-    if (abs(Eigenvalue_V(2)) < Tmp1*0.5) then
-       Eigenvalue_V(2) = sign(1.,Eigenvalue_V(2))*   &
-            ((Eigenvalue_V(2)*Eigenvalue_V(2)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR - BnR*RhoInvSqrtR) - (UnL - BnL*RhoInvSqrtL)
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(3)) < Tmp1*0.5) then
-       Eigenvalue_V(3) = sign(1.,Eigenvalue_V(3))*   &
-            ((Eigenvalue_V(3)*Eigenvalue_V(3)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR + CsR) - (UnL + CsL)
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(4)) < Tmp1*0.5) then
-       Eigenvalue_V(4) = sign(1.,Eigenvalue_V(4))*   &
-            ((Eigenvalue_V(4)*Eigenvalue_V(4)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR+CfR) - (UnL+CfL)
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(5)) < Tmp1*0.5) then
-       Eigenvalue_V(5) = sign(1.,Eigenvalue_V(5))*   &
-            ((Eigenvalue_V(5)*Eigenvalue_V(5)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR-CsR) - (UnL-CsL)
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(6)) < Tmp1*0.5) then
-       Eigenvalue_V(6) = sign(1.,Eigenvalue_V(6))*   &
-            ((Eigenvalue_V(6)*Eigenvalue_V(6)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = (UnR-CfR) - (UnL-CfL)
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(7)) < Tmp1*0.5) then
-       Eigenvalue_V(7) = sign(1.,Eigenvalue_V(7))*   &
-            ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
-    end if
-
-    Tmp1 = UnR - UnL
-    Tmp1 = max(cTiny, 4.*Tmp1)
-    if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
-       Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
-            ((Eigenvalue_V(8)*Eigenvalue_V(8)/Tmp1) + Tmp1*0.25)
-    end if
-
-    ! Timur's divergence wave fix
-    ! original  version
-    !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
-    !
-    ! Enhanced diffusion, the maximum eigenvalue
-    Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
-
-    ! The original version was proposed by Timur Linde for heliosphere
-    ! simulations. Enhanced version was found to be more robust on 8/20/01
-    ! The original version was commented out in versions 6x resulting in
-    ! worse stability for the Roe solver.
-
-    ! At inner BC replace all eigenvalues with the enhanced eigenvalue
-    ! of divB, which is the maximum eigenvalue
-    if(IsBoundary) Eigenvalue_V(1:nWaveMhd) = Eigenvalue_V(DivBW_)
-
-    ! Eigenvectors
-    Tmp1 = 1./(2.*RhoH*aH**2)
-    Tmp2 = RhoInvH*cSqrtHalf
-    Tmp3 = RhoInvSqrtH*cSqrtHalf
-
-    ! Left eigenvector for Entropy wave
-    EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
-    EigenvectorL_VV(2,1) = Gamma1A2Inv*UnH
-    EigenvectorL_VV(3,1) = Gamma1A2Inv*Ut1H
-    EigenvectorL_VV(4,1) = Gamma1A2Inv*Ut2H
-    EigenvectorL_VV(5,1) = Gamma1A2Inv*B1nH
-    EigenvectorL_VV(6,1) = Gamma1A2Inv*B1t1H
-    EigenvectorL_VV(7,1) = Gamma1A2Inv*B1t2H
-    EigenvectorL_VV(8,1) = -Gamma1A2Inv
-
-    ! Left eigenvector for Alfven wave +
-    EigenvectorL_VV(1,2) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
-    EigenvectorL_VV(2,2) = 0.
-    EigenvectorL_VV(3,2) = -(BetaZ*Tmp2)
-    EigenvectorL_VV(4,2) = (BetaY*Tmp2)
-    EigenvectorL_VV(5,2) = 0.
-    EigenvectorL_VV(6,2) = (BetaZ*Tmp3)
-    EigenvectorL_VV(7,2) = -(BetaY*Tmp3)
-    EigenvectorL_VV(8,2) = 0.
-
-    ! Left eigenvector for Alfven wave -
-    EigenvectorL_VV(1,3) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
-    EigenvectorL_VV(2,3) = 0.
-    EigenvectorL_VV(3,3) = -(BetaZ*Tmp2)
-    EigenvectorL_VV(4,3) = (BetaY*Tmp2)
-    EigenvectorL_VV(5,3) = 0.
-    EigenvectorL_VV(6,3) = -(BetaZ*Tmp3)
-    EigenvectorL_VV(7,3) = (BetaY*Tmp3)
-    EigenvectorL_VV(8,3) = 0.
-
-    ! Left eigenvector for Slow magnetosonic wave +
-    EigenvectorL_VV(1,4) = Tmp1* &
-         (AlphaS*(GammaMinus1*UuH/2. - UnH*CsH) - &
-         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorL_VV(2,4) = &
-         Tmp1*(AlphaS*(-UnH*GammaMinus1+CsH))
-    EigenvectorL_VV(3,4) = &
-         Tmp1*(-GammaMinus1*AlphaS*Ut1H+AlphaF*CfH*BetaY*SignBnH)
-    EigenvectorL_VV(4,4) = &
-         Tmp1*(-GammaMinus1*AlphaS*Ut2H+AlphaF*CfH*BetaZ*SignBnH)
-    EigenvectorL_VV(5,4) = &
-         Tmp1*(-GammaMinus1*B1nH*AlphaS)
-    EigenvectorL_VV(6,4) = &
-         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
-    EigenvectorL_VV(7,4) = &
-         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
-    EigenvectorL_VV(8,4) = &
-         Tmp1*(GammaMinus1*AlphaS)
-
-    ! Left eigenvector for Fast magnetosonic wave +
-    EigenvectorL_VV(1,5) = Tmp1* &
-         (AlphaF*(GammaMinus1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
-         (Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorL_VV(2,5) = &
-         Tmp1*(AlphaF*(-UnH*GammaMinus1+CfH))
-    EigenvectorL_VV(3,5) = &
-         Tmp1*(-GammaMinus1*AlphaF*Ut1H-AlphaS*CsH*BetaY*SignBnH)
-    EigenvectorL_VV(4,5) = &
-         Tmp1*(-GammaMinus1*AlphaF*Ut2H-AlphaS*CsH*BetaZ*SignBnH)
-    EigenvectorL_VV(5,5) = &
-         Tmp1*(-GammaMinus1*B1nH*AlphaF)
-    EigenvectorL_VV(6,5) = &
-         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
-    EigenvectorL_VV(7,5) = &
-         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
-    EigenvectorL_VV(8,5) = Tmp1*(GammaMinus1*AlphaF)
-
-    ! Left eigenvector for Slow magnetosonic wave -
-    EigenvectorL_VV(1,6) = Tmp1* &
-         (AlphaS*(GammaMinus1*UuH/2. + UnH*CsH) + &
-         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorL_VV(2,6) = &
-         Tmp1*(AlphaS*(-UnH*GammaMinus1-CsH))
-    EigenvectorL_VV(3,6) = &
-         Tmp1*(-GammaMinus1*AlphaS*Ut1H-AlphaF*CfH*BetaY*SignBnH)
-    EigenvectorL_VV(4,6) = &
-         Tmp1*(-GammaMinus1*AlphaS*Ut2H-AlphaF*CfH*BetaZ*SignBnH)
-    EigenvectorL_VV(5,6) = &
-         Tmp1*(-GammaMinus1*B1nH*AlphaS)
-    EigenvectorL_VV(6,6) = &
-         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
-    EigenvectorL_VV(7,6) = &
-         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
-    EigenvectorL_VV(8,6) = &
-         Tmp1*(GammaMinus1*AlphaS)
-
-    ! Left eigenvector for Fast magnetosonic wave -
-    EigenvectorL_VV(1,7) = Tmp1* &
-         (AlphaF*(GammaMinus1*UuH/2. + UnH*CfH) - &
-         AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorL_VV(2,7) = &
-         Tmp1*(AlphaF*(-UnH*GammaMinus1-CfH))
-    EigenvectorL_VV(3,7) = &
-         Tmp1*(-GammaMinus1*AlphaF*Ut1H+AlphaS*CsH*BetaY*SignBnH)
-    EigenvectorL_VV(4,7) = &
-         Tmp1*(-GammaMinus1*AlphaF*Ut2H+AlphaS*CsH*BetaZ*SignBnH)
-    EigenvectorL_VV(5,7) = &
-         Tmp1*(-GammaMinus1*B1nH*AlphaF)
-    EigenvectorL_VV(6,7) = &
-         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
-    EigenvectorL_VV(7,7) = &
-         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
-    EigenvectorL_VV(8,7) = &
-         Tmp1*(GammaMinus1*AlphaF)
-
-    ! Left eigenvector for Divergence wave
-    EigenvectorL_VV(1,8) = 0.
-    EigenvectorL_VV(2,8) = 0.
-    EigenvectorL_VV(3,8) = 0.
-    EigenvectorL_VV(4,8) = 0.
-    EigenvectorL_VV(5,8) = 1.
-    EigenvectorL_VV(6,8) = 0.
-    EigenvectorL_VV(7,8) = 0.
-    EigenvectorL_VV(8,8) = 0.
-
-    ! coefficient for pressure component of the Right vector
-    Tmp1 = Gamma*max(pL,pR)
-
-    ! Pressure component is not linearly independent and obeys the
-    ! equation as follows:
-    ! EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
-    !                     UnH*EigenvectorR_VV(1:8,2)-&
-    !                     Ut1H*EigenvectorR_VV(1:8,3)-&
-    !                     Ut2H*EigenvectorR_VV(1:8,4)-&
-    !                     B1nH*EigenvectorR_VV(1:8,5)-&
-    !                     B1t1H*EigenvectorR_VV(1:8,6)-&
-    !                     B1t2H*EigenvectorR_VV(1:8,7)+
-    !                     EigenvectorR_VV(1:8,8))*inv_gm1
-
-    ! Right eigenvector for Entropy wave
-    EigenvectorR_VV(1,1) = 1.
-    EigenvectorR_VV(1,2) = UnH
-    EigenvectorR_VV(1,3) = Ut1H
-    EigenvectorR_VV(1,4) = Ut2H
-    EigenvectorR_VV(1,5) = 0.
-    EigenvectorR_VV(1,6) = 0.
-    EigenvectorR_VV(1,7) = 0.
-    EigenvectorR_VV(1,eMhd_) = 0.5*UuH
-    EigenvectorR_VV(1,pMhd_) = 0.0
-
-    ! Right eigenvector for Alfven wave +
-    EigenvectorR_VV(2,1) = 0.
-    EigenvectorR_VV(2,2) = 0.
-    EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrtHalf
-    EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrtHalf
-    EigenvectorR_VV(2,5) = 0.
-    EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
-         + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(2,pMhd_) = 0.0
-
-    ! Right eigenvector for Alfven wave -
-    EigenvectorR_VV(3,1) = 0.
-    EigenvectorR_VV(3,2) = 0.
-    EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrtHalf
-    EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrtHalf
-    EigenvectorR_VV(3,5) = 0.
-    EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
-         - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(3,pMhd_) = 0.0
-
-    ! Right eigenvector for Slow magnetosonic wave +
-    EigenvectorR_VV(4,1) = RhoH*AlphaS
-    EigenvectorR_VV(4,2) = RhoH*AlphaS*(UnH+CsH)
-    EigenvectorR_VV(4,3) = RhoH*(AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
-    EigenvectorR_VV(4,4) = RhoH*(AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
-    EigenvectorR_VV(4,5) = 0.
-    EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
-    EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
-    EigenvectorR_VV(4,eMhd_) = &
-         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
-         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-         - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(4,pMhd_) = Tmp1*AlphaS
-
-    ! Right eigenvector for Fast magnetosonic wave +
-    EigenvectorR_VV(5,1) = RhoH*AlphaF
-    EigenvectorR_VV(5,2) = RhoH*AlphaF* (UnH+CfH)
-    EigenvectorR_VV(5,3) = RhoH* (AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
-    EigenvectorR_VV(5,4) = RhoH* (AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
-    EigenvectorR_VV(5,5) = 0.
-    EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
-    EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
-    EigenvectorR_VV(5,eMhd_) = &
-         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
-         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-         - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(5,pMhd_) = Tmp1*AlphaF
-
-    ! Right eigenvector for Slow magnetosonic wave -
-    EigenvectorR_VV(6,1) = RhoH*AlphaS
-    EigenvectorR_VV(6,2) = RhoH*AlphaS*(UnH-CsH)
-    EigenvectorR_VV(6,3) = RhoH* (AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
-    EigenvectorR_VV(6,4) = RhoH* (AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
-    EigenvectorR_VV(6,5) = 0.
-    EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
-    EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
-    EigenvectorR_VV(6,eMhd_) = &
-         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
-         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-         + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(6,pMhd_) = Tmp1*AlphaS
-
-    ! Right eigenvector for Fast magnetosonic wave -
-    EigenvectorR_VV(7,1) = RhoH*AlphaF
-    EigenvectorR_VV(7,2) = RhoH*AlphaF* (UnH-CfH)
-    EigenvectorR_VV(7,3) = RhoH*(AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
-    EigenvectorR_VV(7,4) = RhoH*(AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
-    EigenvectorR_VV(7,5) = 0.
-    EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
-    EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
-    EigenvectorR_VV(7,eMhd_) = &
-         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
-         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
-         + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-    EigenvectorR_VV(7,pMhd_) = Tmp1*AlphaF
-
-    ! Right eigenvector for Divergence wave
-    EigenvectorR_VV(8,1) = 0.
-    EigenvectorR_VV(8,2) = 0.
-    EigenvectorR_VV(8,3) = 0.
-    EigenvectorR_VV(8,4) = 0.
-    EigenvectorR_VV(8,5) = 1.
-    EigenvectorR_VV(8,6) = 0.
-    EigenvectorR_VV(8,7) = 0.
-    EigenvectorR_VV(8,eMhd_) = B1nH
-    EigenvectorR_VV(8,pMhd_) = 0.0
-
-    ! Alphas (elemental wave strengths)
-    ! matmul is slower than the loop for the NAG F95 compiler
-    ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
-    do iWave = 1, nWaveMhd
-       DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
-    end do
-
-    ! Take absolute value of eigenvalues
-    Eigenvalue_V = abs(Eigenvalue_V)
-
-    ! Limit them if required
-    if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
-
-    ! Calculate the Roe Interface fluxes
-    ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
-    ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
-    !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
-    do iFlux = 1, nFluxMhd
-       Diffusion_V(iFlux) = &
-            sum(Eigenvalue_V*DeltaWave_V*EigenvectorR_VV(:,iFlux))
-    end do
-
-    ! Scalar variables
-    Flux_V(Rho_   ) = Diffusion_V(RhoMhd_)
-    Flux_V(P_     ) = Diffusion_V(pMhd_)
-    Flux_V(Energy_) = Diffusion_V(eMhd_)
-
-    ! Rotate fluxes of vector variables back
-    call rotate_flux_vector(Diffusion_V, Flux_V)
-
-    ! The diffusive flux for the advected scalar variables is simply
-    ! 0.5*|Velocity|*(U_R - U_L)
-    do iVar = ScalarFirst_, ScalarLast_
-       Flux_V(iVar) = abs(UnH)*(StateRightCons_V(iVar) - StateLeftCons_V(iVar))
-    end do
-
-    ! Roe flux = average of left and right flux plus the diffusive flux
-    Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Flux_V)
-
-    ! Normal velocity and maximum wave speed
-    Unormal_I = UnH
-    CmaxDt    = abs(UnH) + CfH
-  end subroutine roe_solver
   !============================================================================
   subroutine get_physical_flux(State_V, StateCons_V, Flux_V, Un_I, &
        En, Pe, Pwave)
@@ -2494,7 +1935,7 @@ contains
   !============================================================================
 
   subroutine get_numerical_flux(Flux_V)
-    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, SignB_
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -2504,6 +1945,7 @@ contains
          iRho, iP, iEnergy, iRhoIon_I, iPIon_I, MassIon_I, select_fluid
     use ModUserInterface ! user_material_properties
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
+    use ModChGL,         ONLY: aligning_bc
 
     real, intent(out):: Flux_V(nFaceValue)
 
@@ -2683,7 +2125,9 @@ contains
           DiffBb = sum(DiffBn_D**2)
        end if
     end if
-
+    if(IsChGLInterface)call aligning_bc(iFace, jFace, kFace, iBlockFace, &
+         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                   &
+         StateLeft_V, StateRight_V)
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     if(DoSimple)then
        State_V = StateLeft_V
@@ -2692,7 +2136,6 @@ contains
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
-
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
          DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
@@ -3759,112 +3202,6 @@ contains
 
   end subroutine get_numerical_flux
   !============================================================================
-
-  subroutine calc_cell_flux(iBlock)
-
-    ! Calculate cell centered fluxes including ghost cells
-
-    use ModAdvance, ONLY: nVar, State_VGB, FluxLeft_VGD, FluxRight_VGD
-    use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
-    use ModMain, ONLY: UseDtFixed, Cfl, Dt
-    use BATL_lib, ONLY: nDim
-
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k, iDim, iFluid
-    integer:: iGang
-    real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
-    real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
-
-    logical:: IsFF_I(nFFLogic)
-    integer:: IFF_I(nFFInt)
-    real:: RFF_I(nFFReal)
-
-    ! These are calculated but not used
-    real:: Un_I(nFluid+1), En, Pe, Pwave
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_cell_flux'
-    !--------------------------------------------------------------------------
-    iGang = 1
-
-    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
-
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(.not.allocated(FluxLeft_VGD)) allocate( &
-         FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
-         FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
-
-    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
-    DoTestCell = .false.
-
-    do iDim = 1, nDim
-       call set_block_values(iBlock, iDim)
-
-       if(Dt > 0)then
-          CmaxAll = CellSize_DB(iDim,iBlock)/Dt
-          if(.not.UseDtFixed) CmaxAll = Cfl*CmaxAll
-       else
-          CmaxAll = 0.0
-       end if
-
-       do k = MinK, MaxK; kFace = k
-          do j = MinJ, MaxJ; jFace = j
-             do i = MinI, MaxI; iFace = i
-!!! call set_cell_values
-
-                ! Get primitive variables used by get_physical_flux
-                Primitive_V = State_VGB(:,i,j,k,iBlock)
-                do iFluid = 1, nFluid
-                   iRho = iRho_I(iFluid)
-                   iUx = iUx_I(iFluid)
-                   iUz = iUz_I(iFluid)
-                   RhoInv = 1/Primitive_V(iRho)
-                   Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
-                end do
-
-                if(UseB0)then
-                   B0x = B0_DGB(x_,i,j,k,iBlock)
-                   B0y = B0_DGB(y_,i,j,k,iBlock)
-                   B0z = B0_DGB(z_,i,j,k,iBlock)
-                end if
-
-                ! Get the flux
-                call get_physical_flux(Primitive_V, Conservative_V, Flux_V, &
-                     Un_I, En, Pe, Pwave)
-
-                FluxLeft_VGD(:,i,j,k,iDim) = &
-                     0.5*Area*(Flux_V + CmaxAll*Conservative_V)
-                FluxRight_VGD(:,i,j,k,iDim)= &
-                     0.5*Area*(Flux_V - CmaxAll*Conservative_V)
-
-                ! Get the maximum speed
-                call get_speed_max(Primitive_V, Cmax_I)
-
-                CmaxArea = maxval(Cmax_I)*Area
-                select case(iDim)
-                case(1)
-                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
-                        k>0 .and. k<=nK) &
-                        Flux_VXI(Vdt_,i,j,k,iGang) = CmaxArea
-                case(2)
-                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
-                        k>0 .and. k<=nK) &
-                        Flux_VYI(Vdt_,i,j,k,iGang) = CmaxArea
-                case(3)
-                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
-                        k>0 .and. k<=nK+1) &
-                        Flux_VZI(Vdt_,i,j,k,iGang) = CmaxArea
-                end select
-
-             end do
-          end do
-       end do
-    end do
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine calc_cell_flux
-  !============================================================================
   subroutine calc_simple_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
@@ -4298,10 +3635,9 @@ contains
     subroutine get_mhd_speed(State_V, CmaxDt_I, Cmax_I, Cleft_I, Cright_I, &
          UnLeft, UnRight, UseAwSpeed)
 
-      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0
+      use ModB0,       ONLY: UseCurlB0, rCurrentFreeB0, UseB0MomentumFlux
       use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
-      use ModChGL,     ONLY: UseAligningSource
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure, UseAnisoPe, SignB_
@@ -4318,11 +3654,13 @@ contains
       real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
-      real:: dB1dB1
+      ! dB1_D = B1R_D - B1L_D; dB1dB1 = 0.25*sum(dB1_D**2)
+      real:: dB1_D(MaxDim), dB1dB1
+      ! dB1DotFullB = sum(dB1_D*[FullBx, FullBy, FullBz]
+      real:: dB1DotFullB
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
-           B1B0L, B1B0R, Ut2, UnChGLMin, UnChGLMax, UnChGLLeft, UnChGLRight,&
-           ChGL2OverRho, cChGLLeft, cChGLRight, TildeVAlfvenNormal
+           B1B0L, B1B0R, cChGLLeft, cChGLRight
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
       integer:: jFluid
@@ -4414,21 +3752,26 @@ contains
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
-         ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
-         ! the average field squared (Bright+Bleft)^2/4 results in
-         ! an upper estimate of the left and right Alfven speeds
-         ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
+         ! According to I. Sokolov computinng fast magnetosonic wave speed
+         ! in terms of the average field squared (Bright+Bleft)^2/4 does not
+         ! provide reliable esstimate for the maximum speed, since the average
+         ! magnetic field by magnitude may be much less than left or right
+         ! field, if the left and right field are antiparallel. By adding
+         ! dB1dB1 = (Bright-Bleft)^2/4 to the average field squared it reduces
+         ! to arithmetic average of the field squared. Then, by adding or
+         ! subtracting (Bright - Bleft)*FullB we obtain Bright^2 and Bleft^2
+         ! corresspondingly. By adding absolute value of the said dot product,
+         ! we would arrive at max(Bleft^2,Bright^2)
          !
-         ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
-         ! this is clearly not true.
-         !
-         dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_) &
-              -             StateLeft_V(Bx_:Bz_))**2)
+         dB1_D = StateRight_V(Bx_:Bz_) - StateLeft_V(Bx_:Bz_)
+         dB1dB1 = 0.25*sum(dB1_D**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
+         dB1DotFullB = sum(dB1_D*[FullBx, FullBy, FullBz])
+         DiffBb = 0.250*sum(dB1_D*Normal_D)**2
       else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if
-      if(UseCurlB0.and.rFace > rCurrentFreeB0)then
+      if(UseCurlB0.and..not.UseB0MomentumFlux.and.rFace > rCurrentFreeB0)then
          B1B0L = StateLeft_V(Bx_)*B0x &
               +  StateLeft_V(By_)*B0y &
               +  StateLeft_V(Bz_)*B0z
@@ -4600,85 +3943,24 @@ contains
             Cleft_I(1)   = Cleft_I(1)  - Fast
             Cright_I(1)  = Cright_I(1) + Fast
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
-         elseif(IsChGLDomain.or.IsChGLInterface)then
-            if(IsChGLDomain&
-                 ! Stream-aligned MHD is at least from one side of the face
-                 .and..not.(IsChGLInterface.and.UseAligningSource))then
-               ! Tangetial velocity squared
-               Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, &
-                    0.0)
-               ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
-               ChGL2OverRho = InvRho*State_V(SignB_)**2
-               ! Magetosonic speed squared:
-               Sound2     = Sound2 + Ut2*ChGL2OverRho
-               ChGL2OverRho   = 0.5*ChGL2OverRho
-               UnChGLLeft   = UnLeft *ChGL2OverRho
-               UnChGLRight  = UnRight*ChGL2OverRho
-               Cleft_I(1)   = min(UnLeft - max(UnChGLLeft,0.0) & ! Corrected Un
-                    - sqrt( max(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
-                    UnRight - max(UnChGLRight,0.0)             & ! Corrected Un
-                    - sqrt( max(UnChGLRight,0.0)**2 + Sound2) )  ! sound
-               if(UseAlfvenWaves)Cleft_I(1) = min(Cleft_I(1),  &
-                    UnLeft  - sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
-                    UnRight - sqrt(2*UnRight*UnChGLRight))       ! (left)
-               Cright_I(1)  = max(UnLeft - min(UnChGLLeft,0.0) & ! Corrected Un
-                    + sqrt( min(UnChGLLeft,0.0)**2 + Sound2),  & ! sound
-                    UnRight - min(UnChGLRight,0.0)             & ! Corrected Un
-                    + sqrt( min(UnChGLRight,0.0)**2 + Sound2) )  ! sound
-               if(UseAlfvenWaves)CRight_I(1) = max(CRight_I(1),  &
-                    UnLeft  + sqrt(2*UnLeft*UnChGLLeft),       & ! Alfven wave
-                    UnRight + sqrt(2*UnRight*UnChGLRight))       ! (Right)
-               if(IsChGLInterface)then
-                  ! From the other side of interface there is pure MHD
-                  ! Choose the estimate for speed to be applicable in both
-                  ! neighboring control volumes, handled by ChGL and regular MHD
-                  CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
-                       CLeft_I(1)  )                                 ! ChGL
-                  CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
-                       CRight_I(1) )                                 ! ChGL
-               end if
-            else
-               ! The aligning source is applied at least from one side of
-               ! the face. Available are: Sound2 - square of the sound speed,
-               ! including the contributions from electron pressure and AW
-               ! pressure, InvRho, FullBn, Alfven2Normal, UnLeft, UnRight,
-               ! Fast2 = Alfven2 + Sound2
-               TildeVAlfvenNormal = FullBn*InvRho*State_V(SignB_)
-               if(TildeVAlfvenNormal > 0.0)then
-                  CLeft_I(1) = min(          UnLeft - 0.5*TildeVAlfvenNormal - &
-                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnLeft *  &
-                       TildeVAlfvenNormal), UnRight - 0.5*TildeVAlfvenNormal - &
-                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnRight*  &
-                       TildeVAlfvenNormal) )
-                  CRight_I(1) = max(         UnLeft                  + sqrt(  &
-                       0.5 *(Fast2 - UnLeft *TildeVAlfvenNormal) +    sqrt(   &
-                       0.25*(Fast2 - UnLeft *TildeVAlfvenNormal)**2  -        &
-                       Sound2*(Alfven2Normal - UnLeft *TildeVAlfvenNormal))), &
-                                            UnRight                  + sqrt(  &
-                       0.5 *(Fast2 - UnRight*TildeVAlfvenNormal) +    sqrt(   &
-                       0.25*(Fast2 - UnRight*TildeVAlfvenNormal)**2  -        &
-                       Sound2*(Alfven2Normal - UnRight*TildeVAlfvenNormal)))  )
-               else
-                  CRight_I(1) = max(         UnLeft - 0.5*TildeVAlfvenNormal +&
-                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnLeft *  &
-                       TildeVAlfvenNormal), UnRight - 0.5*TildeVAlfvenNormal +&
-                       sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnRight*  &
-                       TildeVAlfvenNormal) )
-                  CLeft_I(1)  = min(         UnLeft                  - sqrt(  &
-                       0.5 *(Fast2 - UnLeft *TildeVAlfvenNormal) +    sqrt(   &
-                       0.25*(Fast2 - UnLeft *TildeVAlfvenNormal)**2  -        &
-                       Sound2*(Alfven2Normal - UnLeft *TildeVAlfvenNormal))), &
-                                            UnRight                  - sqrt(  &
-                       0.5 *(Fast2 - UnRight*TildeVAlfvenNormal) +    sqrt(   &
-                       0.25*(Fast2 - UnRight*TildeVAlfvenNormal)**2  -        &
-                       Sound2*(Alfven2Normal - UnRight*TildeVAlfvenNormal)))  )
-               end if
-               if(UseAlfvenWaves)then
-                  Cleft_I(1)  = min(Cleft_I(1) ,  &
-                       min(UnLeft, UnRight)  - sqrt(Alfven2Normal))
-                  CRight_I(1) = max(CRight_I(1),  &
-                       max(UnLeft, UnRight)  + sqrt(Alfven2Normal))
-               end if
+         elseif(IsChGLDomain)then
+            ! Stream-aligned MHD is at least from one side of the face
+            call get_chgl_speed(U1n=UnLeft, U2n=UnRight,                &
+                 ! Tangetial velocity squared
+                 Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
+                 Un*Un, 0.0),                                           &
+                 InvRho = InvRho,                                       &
+                 Sound2 = Sound2,                                       &
+                 Alpha  = State_V(SignB_),                              &
+                 cChGLLeft = Cleft_I(1), cChGLRight = Cright_I(1))
+            if(IsChGLInterface)then
+               ! From the other side of interface there is pure MHD
+               ! Choose the estimate for speed to be applicable in both
+               ! neighboring control volumes, handled by ChGL and regular MHD
+               CLeft_I(1)   = min( min(UnLeft, UnRight) - Fast, & ! MHD
+                    CLeft_I(1)  )                                 ! ChGL
+               CRight_I(1)  = max( max(UnLeft, UnRight) + Fast, & ! MHD
+                    CRight_I(1) )                                 ! ChGL
             end if
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1)  = Cmax_I(1)
@@ -4688,83 +3970,24 @@ contains
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1) = Cmax_I(1)
          end if
-      elseif(IsChGLDomain.or.IsChGLInterface)then
-         if(IsChGLDomain&
-              ! Stream-aligned MHD is at least from one side of the face
-              .and..not.(IsChGLInterface.and.UseAligningSource))then
-            ! Tangetial velocity squared
-            Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - Un*Un, 0.0)
-            ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
-            ChGL2OverRho = InvRho*State_V(SignB_)**2
-            ! Magetosonic speed squared:
-            Sound2     = Sound2 + Ut2*ChGL2OverRho
-            ! For the factor to calculate ChGL speed is 0.5*ChGL2OverRho
-            ChGL2OverRho  = 0.5*ChGL2OverRho
-            UnChGLMin   = UnMin*ChGL2OverRho
-            UnChGLMax   = UnMax*ChGL2OverRho
-            cChGLLeft   = min(UnMin - max(UnChGLMin,0.0)  & ! Corrected Un
-                 - sqrt( max(UnChGLMin,0.0)**2 + Sound2), & ! sound
-                 UnMax - max(UnChGLMax,0.0)               & ! Corrected Un)
-                 - sqrt( max(UnChGLMax,0.0)**2 + Sound2) )  ! sound
-            if(UseAlfvenWaves)cChGLLeft = min(cChGLLeft,    &
-                 UnMin  - sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
-                 UnMax  - sqrt(2*UnMax*UnChGLMax))          ! (left)
-            cChGLRight  = max(UnMin - min(UnChGLMin,0.0)  & ! Corrected Un
-                 + sqrt( min(UnChGLMin,0.0)**2 + Sound2), & ! sound
-                 UnMax - min(UnChGLMax,0.0)               & ! Corrected Un)
-                 + sqrt( min(UnChGLMax,0.0)**2 + Sound2) )  ! sound
-            if(UseAlfvenWaves)cChGLRight = max(cChGLRight,  &
-                 UnMin  + sqrt(2*UnMin*UnChGLMin),        & ! Alfven wave
-                 UnMax  + sqrt(2*UnMax*UnChGLMax))          ! (Right)
-            if(IsChGLInterface)then
-               ! From the other side of interface there is pure MHD
-               ! Choose the estimate for speed to be applicable in both
-               ! neighboring control volumes, handled by ChGL and regular MHD
-               cChGLLeft   = min( UnMin - Fast, &                ! MHD
-                    cChGLLeft  )                                 ! ChGL
-               cChGLRight  = max( UnMax + Fast, &                ! MHD
-                    cChGLRight )                                 ! ChGL
-            end if
-         else
-            ! The aligning source is applied at least from one side of
-            ! the face. Available are: Sound2 - square of the sound speed,
-            ! including the contributions from electron pressure and AW
-            ! pressure, InvRho, FullBn, Alfven2Normal, UnMin <= UnMax,
-            ! Fast2 = Alfven2 + Sound2
-            TildeVAlfvenNormal = FullBn*InvRho*State_V(SignB_)
-            if(TildeVAlfvenNormal > 0.0)then
-               cChGLLeft  = min(          UnMin - 0.5*TildeVAlfvenNormal - &
-                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMin *  &
-                    TildeVAlfvenNormal), UnMax - 0.5*TildeVAlfvenNormal - &
-                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMax*  &
-                    TildeVAlfvenNormal) )
-               cChGLRight = max(          UnMin                  + sqrt(  &
-                    0.5 *(Fast2 - UnMin *TildeVAlfvenNormal) +    sqrt(   &
-                    0.25*(Fast2 - UnMin *TildeVAlfvenNormal)**2  -        &
-                    Sound2*(Alfven2Normal - UnMin *TildeVAlfvenNormal))), &
-                    UnMax                  + sqrt(  &
-                    0.5 *(Fast2 - UnMax*TildeVAlfvenNormal) +     sqrt(   &
-                    0.25*(Fast2 - UnMax*TildeVAlfvenNormal)**2   -        &
-                    Sound2*(Alfven2Normal - UnMax*TildeVAlfvenNormal)))  )
-            else
-               cChGLRight = max(         UnMin - 0.5*TildeVAlfvenNormal + &
-                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMin *  &
-                    TildeVAlfvenNormal), UnMax - 0.5*TildeVAlfvenNormal + &
-                    sqrt(0.25*TildeVAlfvenNormal**2 + Fast2 - UnMax *  &
-                    TildeVAlfvenNormal) )
-               cChGLLeft   = min(         UnMin                  - sqrt(  &
-                    0.5 *(Fast2 - UnMin *TildeVAlfvenNormal) +    sqrt(   &
-                    0.25*(Fast2 - UnMin *TildeVAlfvenNormal)**2  -        &
-                    Sound2*(Alfven2Normal - UnMin *TildeVAlfvenNormal))), &
-                    UnMax                  - sqrt(  &
-                    0.5 *(Fast2 - UnMax*TildeVAlfvenNormal) +    sqrt(   &
-                    0.25*(Fast2 - UnMax*TildeVAlfvenNormal)**2  -        &
-                    Sound2*(Alfven2Normal - UnMax*TildeVAlfvenNormal)))  )
-            end if
-            if(UseAlfvenWaves)then
-               cChGLRight = max(cChGLRight,  UnMax + sqrt(Alfven2Normal))
-               cChGLLeft  = min(cChGLLeft,   UnMin - sqrt(Alfven2Normal))
-            end if
+      elseif(IsChGLDomain)then
+         ! Stream-aligned MHD is at least from one side of the face
+         call get_chgl_speed(U1n=UnMin, U2n=UnMax,                   &
+              ! Tangetial velocity squared
+              Ut2 = max(sum( State_V(iUxIon_I(1):iUzIon_I(1))**2 ) - &
+              Un*Un, 0.0),                                           &
+              InvRho = InvRho,                                       &
+              Sound2 = Sound2,                                       &
+              Alpha  = State_V(SignB_),                              &
+              cChGLLeft =  cChGLLeft , cChGLRight = cChGLRight)
+         if(IsChGLInterface)then
+            ! From the other side of interface there is pure MHD
+            ! Choose the estimate for speed to be applicable in both
+            ! neighboring control volumes, handled by ChGL and regular MHD
+            cChGLLeft   = min( UnMin - Fast, &                ! MHD
+                 cChGLLeft  )                                 ! ChGL
+            cChGLRight  = max( UnMax + Fast, &                ! MHD
+                 cChGLRight )                                 ! ChGL
          end if
          if(present(Cmax_I))then
             Cmax_I(1)    = max(cChGLRight, -cChGLLeft)
@@ -4788,6 +4011,40 @@ contains
          if(present(Cright_I)) Cright_I(1) = UnMax + Fast
       end if
     end subroutine get_mhd_speed
+    !==========================================================================
+    subroutine get_chgl_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
+         cChGLLeft, cChGLRight)
+      real, intent(in)    :: U1n, U2n ! Two estimates for normal speed
+      real, intent(in)    :: Ut2      ! Tangential velocity squared
+      real, intent(in)    :: InvRho   ! Inverse density
+      real, intent(inout) :: Sound2 ! Misc
+      real, intent(in)    :: Alpha    ! ChGL ratio
+      ! Left and right  perturbation speed
+      real, intent(out)   :: cChGLLeft, cChGLRight
+      real :: U1nChGL, U2nChGL, ChGL2OverRho
+      ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
+      !------------------------------------------------------------------------
+      ChGL2OverRho = InvRho*Alpha**2
+      ! Magetosonic speed squared:
+      Sound2     = Sound2 + Ut2*ChGL2OverRho
+      ChGL2OverRho   = 0.5*ChGL2OverRho
+      U1nChGL   = U1n*ChGL2OverRho
+      U2nChGL   = U2n*ChGL2OverRho
+      cChGLLeft    = min(U1n - max(U1nChGL,0.0)& ! Corrected Un
+           - sqrt( max(U1nChGL,0.0)**2 + Sound2),  & ! sound
+           U2n - max(U2nChGL,0.0)              & ! Corrected Un
+           - sqrt( max(U2nChGL,0.0)**2 + Sound2) )   ! sound
+      if(UseAlfvenWaves)cChGLLeft  = min(cChGLLeft,    &
+           U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
+           U2n - sqrt(2*U2n*U2nChGL))            ! (left)
+      cChGLRight  = max(U1n - min(U1nChGL, 0.0)& ! Corrected Un
+           + sqrt( min(U1nChGL,0.0)**2 + Sound2),  & ! sound
+           U2n - min(U2nChGL, 0.0)             & ! Corrected Un
+           + sqrt( min(U2nChGL,0.0)**2 + Sound2) )   ! sound
+      if(UseAlfvenWaves) cChGLRight = max(cChGLRight,  &
+           U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
+           U2n + sqrt(2*U2n*U2nChGL))            ! (Right)
+    end subroutine get_chgl_speed
     !==========================================================================
 
     subroutine get_hd_speed
@@ -5136,6 +4393,666 @@ contains
             +           Tangent2_D(z_)*FluxRot_V(B1t2_)
     end if
   end subroutine rotate_flux_vector
+  !============================================================================
+  !==================REDUNDANT ROUTINES========================================
+
+  subroutine calc_cell_flux(iBlock)
+
+    ! Calculate cell centered fluxes including ghost cells
+
+    use ModAdvance, ONLY: nVar, State_VGB, FluxLeft_VGD, FluxRight_VGD
+    use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
+    use ModMain, ONLY: UseDtFixed, Cfl, Dt
+    use BATL_lib, ONLY: nDim
+
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k, iDim, iFluid
+    integer:: iGang
+    real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
+    real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
+
+    logical:: IsFF_I(nFFLogic)
+    integer:: IFF_I(nFFInt)
+    real:: RFF_I(nFFReal)
+
+    ! These are calculated but not used
+    real:: Un_I(nFluid+1), En, Pe, Pwave
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_cell_flux'
+    !--------------------------------------------------------------------------
+    iGang = 1
+
+    call init_face_flux_arrays( IsFF_I, IFF_I, RFF_I, Unormal_I, bCrossArea_D)
+
+    call test_start(NameSub, DoTest, iBlock)
+
+    if(.not.allocated(FluxLeft_VGD)) allocate( &
+         FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
+         FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
+
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
+    DoTestCell = .false.
+
+    do iDim = 1, nDim
+       call set_block_values(iBlock, iDim)
+
+       if(Dt > 0)then
+          CmaxAll = CellSize_DB(iDim,iBlock)/Dt
+          if(.not.UseDtFixed) CmaxAll = Cfl*CmaxAll
+       else
+          CmaxAll = 0.0
+       end if
+
+       do k = MinK, MaxK; kFace = k
+          do j = MinJ, MaxJ; jFace = j
+             do i = MinI, MaxI; iFace = i
+!!! call set_cell_values
+
+                ! Get primitive variables used by get_physical_flux
+                Primitive_V = State_VGB(:,i,j,k,iBlock)
+                do iFluid = 1, nFluid
+                   iRho = iRho_I(iFluid)
+                   iUx = iUx_I(iFluid)
+                   iUz = iUz_I(iFluid)
+                   RhoInv = 1/Primitive_V(iRho)
+                   Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
+                end do
+
+                if(UseB0)then
+                   B0x = B0_DGB(x_,i,j,k,iBlock)
+                   B0y = B0_DGB(y_,i,j,k,iBlock)
+                   B0z = B0_DGB(z_,i,j,k,iBlock)
+                end if
+
+                ! Get the flux
+                call get_physical_flux(Primitive_V, Conservative_V, Flux_V, &
+                     Un_I, En, Pe, Pwave)
+
+                FluxLeft_VGD(:,i,j,k,iDim) = &
+                     0.5*Area*(Flux_V + CmaxAll*Conservative_V)
+                FluxRight_VGD(:,i,j,k,iDim)= &
+                     0.5*Area*(Flux_V - CmaxAll*Conservative_V)
+
+                ! Get the maximum speed
+                call get_speed_max(Primitive_V, Cmax_I)
+
+                CmaxArea = maxval(Cmax_I)*Area
+                select case(iDim)
+                case(1)
+                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK) &
+                        Flux_VXI(Vdt_,i,j,k,iGang) = CmaxArea
+                case(2)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
+                        k>0 .and. k<=nK) &
+                        Flux_VYI(Vdt_,i,j,k,iGang) = CmaxArea
+                case(3)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK+1) &
+                        Flux_VZI(Vdt_,i,j,k,iGang) = CmaxArea
+                end select
+
+             end do
+          end do
+       end do
+    end do
+
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine calc_cell_flux
+  !============================================================================
+  subroutine roe_solver(Flux_V, StateLeftCons_V, StateRightCons_V)
+    use ModPhysics, ONLY: Gamma,GammaMinus1,InvGammaMinus1
+
+    real, intent(out):: Flux_V(nFlux)
+    real, intent(in):: StateLeftCons_V(:), StateRightCons_V(:)
+
+    ! Number of MHD waves including the divB wave
+    integer, parameter :: nWaveMhd=8
+
+    ! Named MHD wave indexes
+    integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
+         SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8
+
+    ! Loop variables
+    integer :: iFlux, iVar, iWave
+
+    ! Left and right face
+    real :: RhoL, BnL, Bt1L, Bt2L, BbL, pL, eL, aL, CsL, CfL
+    real :: RhoR, BnR, Bt1R, Bt2R, BbR, pR, eR, aR, CsR, CfR
+
+    ! Roe average (hat)
+    real :: RhoH,UnH,Ut1H,Ut2H
+    real :: BnH,Bt1H,Bt2H,BbH
+    real :: B1nH,B1t1H,B1t2H,Bb1H
+    real :: pH,eH,UuH
+    real :: aH,CsH,CfH
+
+    real :: BetaY, BetaZ, AlphaS, AlphaF
+
+    real :: RhoInvL,RhoInvR,RhoInvH
+    real :: RhoSqrtH,    RhoSqrtL,    RhoSqrtR, &
+         RhoInvSqrtH, RhoInvSqrtL, RhoInvSqrtR
+
+    ! Jump in the conservative state
+    real, dimension(nWaveMhd) :: dCons_V
+
+    ! Eigenvalues and jumps in characteristic variable
+    real, dimension(nWaveMhd) :: Eigenvalue_V, DeltaWave_V
+
+    ! Eigenvectors
+    real, dimension(nWaveMhd, nWaveMhd):: EigenvectorL_VV  ! Left  eigenvectors
+    real, dimension(nWaveMhd, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
+
+    ! Fluxes
+    real, dimension(nFluxMhd) :: Diffusion_V      ! Diffusive fluxes
+
+    ! Misc. scalar variables
+    real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv
+
+    character(len=*), parameter:: NameSub = 'roe_solver'
+    !--------------------------------------------------------------------------
+
+    RhoL  =  StateLeft_V(Rho_)
+    pL    =  StateLeft_V(p_ )
+    RhoR  =  StateRight_V(Rho_)
+    pR    =  StateRight_V(p_  )
+
+    ! Rotate vector variables into a coordinate system orthogonal to the face
+    call rotate_state_vectors
+
+    ! Jump in scalar conservative variables
+    dCons_V(RhoMhd_) = RhoR      - RhoL
+    dCons_V(RhoUn_ ) = RhoR*UnR  - RhoL*UnL
+    dCons_V(RhoUt1_) = RhoR*Ut1R - RhoL*Ut1L
+    dCons_V(RhoUt2_) = RhoR*Ut2R - RhoL*Ut2L
+    dCons_V(B1n_   ) = B1nR      - B1nL
+    dCons_V(B1t1_  ) = B1t1R     - B1t1L
+    dCons_V(B1t2_  ) = B1t2R     - B1t2L
+    dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
+
+    ! Derived variables
+    RhoInvL = 1./RhoL
+    BnL  = B0n+B1nL
+    Bt1L = B0t1+B1t1L
+    Bt2L = B0t2+B1t2L
+    BbL  = BnL**2 + Bt1L**2 + Bt2L**2
+    aL   = Gamma*pL*RhoInvL
+
+    RhoInvR = 1./RhoR
+    BnR  = B0n+B1nR
+    Bt1R = B0t1+B1t1R
+    Bt2R = B0t2+B1t2R
+    BbR  = BnR**2 + Bt1R**2 + Bt2R**2
+    aR   = Gamma*pR*RhoInvR
+
+    ! Hat face
+    RhoH = 0.5*(RhoL + RhoR)
+    RhoInvH = 1./RhoH
+    UnH  = 0.5*(  UnL +   UnR)
+    Ut1H = 0.5*( Ut1L +  Ut1R)
+    Ut2H = 0.5*( Ut2L +  Ut2R)
+    BnH  = 0.5*(  BnL +   BnR)
+    Bt1H = 0.5*( Bt1L +  Bt1R)
+    Bt2H = 0.5*( Bt2L +  Bt2R)
+    B1nH = 0.5*( B1nL +  B1nR)
+    B1t1H= 0.5*(B1t1L + B1t1R)
+    B1t2H= 0.5*(B1t2L + B1t2R)
+    pH   = 0.5*(   pL +    pR)
+    BbH  = BnH**2  + Bt1H**2  + Bt2H**2
+
+    Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
+    aH   = Gamma*pH*RhoInvH
+
+    ! if(aL<0.0)then
+    !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
+    !        aL,iProc,iDimFace,i,j,k,&
+    !        Xyz_DGB(:,i,j,k,iBlockFace)
+    !   call stop_mpi
+    ! end if
+
+    aL = sqrt(aL)
+    aR = sqrt(aR)
+    aH = sqrt(aH)
+
+    eL = aL*aL + BbL*RhoInvL
+    CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
+    eR = aR**2 + BbR*RhoInvR
+    CfR = max(0., (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
+    eH = aH**2 + BbH*RhoInvH
+    CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
+
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
+
+    CsL = max(0.,0.5*(eL-CfL))
+    CfL = 0.5*(eL+CfL)
+
+    CsR = max(0.,0.5*(eR-CfR))
+    CfR = 0.5*(eR+CfR)
+
+    CsH = max(0.,0.5*(eH-CfH))
+    CfH = 0.5*(eH+CfH)
+
+    UuH = UnH**2 + Ut1H**2 + Ut2H**2
+    eH  = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
+
+    CsL = sqrt(CsL)
+    CsR = sqrt(CsR)
+    CsH = sqrt(CsH)
+    CfL = sqrt(CfL)
+    CfR = sqrt(CfR)
+    CfH = sqrt(CfH)
+
+    CsL = min(CsL,aL)
+    CfL = max(CfL,aL)
+    CsR = min(CsR,aR)
+    CfR = max(CfR,aR)
+    CsH = min(CsH,aH)
+    CfH = max(CfH,aH)
+
+    ! Non-dimensional scaling factors
+    Tmp1 = Bt1H**2 + Bt2H**2
+
+    if(Tmp1 > 1e-8)then
+       Tmp1 = sqrt(1./Tmp1)
+       BetaY = Bt1H*Tmp1
+       BetaZ = Bt2H*Tmp1
+    else
+       BetaY = cSqrtHalf
+       BetaZ = cSqrtHalf
+    end if
+
+    Tmp1 = CfH**2 - CsH**2
+    if (Tmp1 > 1.0e-08) then
+       AlphaF = max(0.0, (aH**2  - CsH**2)/Tmp1)
+       AlphaS = max(0.0, (CfH**2 - aH**2 )/Tmp1)
+
+       AlphaF = sqrt(AlphaF)
+       AlphaS = sqrt(AlphaS)
+    else if (BnH**2 * RhoInvH <= aH**2 ) then
+       AlphaF = 1.0
+       AlphaS = 0.0
+    else
+       AlphaF = 0.0
+       AlphaS = 1.0
+    endif
+
+    ! Set some values that are reused over and over
+
+    RhoSqrtH = sqrt(RhoH)
+    RhoSqrtL = sqrt(RhoL)
+    RhoSqrtR = sqrt(RhoR)
+    RhoInvSqrtH = 1./RhoSqrtH
+    RhoInvSqrtL = 1./RhoSqrtL
+    RhoInvSqrtR = 1./RhoSqrtR
+
+    SignBnH     = sign(1.,BnH)
+    Gamma1A2Inv = GammaMinus1/aH**2
+
+    ! Eigenvalues
+    Eigenvalue_V(EntropyW_) = UnH
+    Eigenvalue_V(AlfvenRW_) = UnH + BnH*RhoInvSqrtH
+    Eigenvalue_V(AlfvenLW_) = UnH - BnH*RhoInvSqrtH
+    Eigenvalue_V(SlowRW_)   = UnH + CsH
+    Eigenvalue_V(FastRW_)   = UnH + CfH
+    Eigenvalue_V(SlowLW_)   = UnH - CsH
+    Eigenvalue_V(FastLW_)   = UnH - CfH
+    Eigenvalue_V(DivBW_)    = UnH
+
+    ! Entropy fix for Eigenvalues
+    Tmp1 = UnR - UnL
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(1)) < Tmp1*0.5) then
+       Eigenvalue_V(1) = sign(1.,Eigenvalue_V(1))*   &
+            ((Eigenvalue_V(1)*Eigenvalue_V(1)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR + BnR*RhoInvSqrtR) - (UnL + BnL*RhoInvSqrtL)
+    Tmp1 = max(cTiny,4.*Tmp1)
+    if (abs(Eigenvalue_V(2)) < Tmp1*0.5) then
+       Eigenvalue_V(2) = sign(1.,Eigenvalue_V(2))*   &
+            ((Eigenvalue_V(2)*Eigenvalue_V(2)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR - BnR*RhoInvSqrtR) - (UnL - BnL*RhoInvSqrtL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(3)) < Tmp1*0.5) then
+       Eigenvalue_V(3) = sign(1.,Eigenvalue_V(3))*   &
+            ((Eigenvalue_V(3)*Eigenvalue_V(3)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR + CsR) - (UnL + CsL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(4)) < Tmp1*0.5) then
+       Eigenvalue_V(4) = sign(1.,Eigenvalue_V(4))*   &
+            ((Eigenvalue_V(4)*Eigenvalue_V(4)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR+CfR) - (UnL+CfL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(5)) < Tmp1*0.5) then
+       Eigenvalue_V(5) = sign(1.,Eigenvalue_V(5))*   &
+            ((Eigenvalue_V(5)*Eigenvalue_V(5)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR-CsR) - (UnL-CsL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(6)) < Tmp1*0.5) then
+       Eigenvalue_V(6) = sign(1.,Eigenvalue_V(6))*   &
+            ((Eigenvalue_V(6)*Eigenvalue_V(6)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = (UnR-CfR) - (UnL-CfL)
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(7)) < Tmp1*0.5) then
+       Eigenvalue_V(7) = sign(1.,Eigenvalue_V(7))*   &
+            ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
+    end if
+
+    Tmp1 = UnR - UnL
+    Tmp1 = max(cTiny, 4.*Tmp1)
+    if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
+       Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
+            ((Eigenvalue_V(8)*Eigenvalue_V(8)/Tmp1) + Tmp1*0.25)
+    end if
+
+    ! Timur's divergence wave fix
+    ! original  version
+    !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
+    !
+    ! Enhanced diffusion, the maximum eigenvalue
+    Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
+
+    ! The original version was proposed by Timur Linde for heliosphere
+    ! simulations. Enhanced version was found to be more robust on 8/20/01
+    ! The original version was commented out in versions 6x resulting in
+    ! worse stability for the Roe solver.
+
+    ! At inner BC replace all eigenvalues with the enhanced eigenvalue
+    ! of divB, which is the maximum eigenvalue
+    if(IsBoundary) Eigenvalue_V(1:nWaveMhd) = Eigenvalue_V(DivBW_)
+
+    ! Eigenvectors
+    Tmp1 = 1./(2.*RhoH*aH**2)
+    Tmp2 = RhoInvH*cSqrtHalf
+    Tmp3 = RhoInvSqrtH*cSqrtHalf
+
+    ! Left eigenvector for Entropy wave
+    EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
+    EigenvectorL_VV(2,1) = Gamma1A2Inv*UnH
+    EigenvectorL_VV(3,1) = Gamma1A2Inv*Ut1H
+    EigenvectorL_VV(4,1) = Gamma1A2Inv*Ut2H
+    EigenvectorL_VV(5,1) = Gamma1A2Inv*B1nH
+    EigenvectorL_VV(6,1) = Gamma1A2Inv*B1t1H
+    EigenvectorL_VV(7,1) = Gamma1A2Inv*B1t2H
+    EigenvectorL_VV(8,1) = -Gamma1A2Inv
+
+    ! Left eigenvector for Alfven wave +
+    EigenvectorL_VV(1,2) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
+    EigenvectorL_VV(2,2) = 0.
+    EigenvectorL_VV(3,2) = -(BetaZ*Tmp2)
+    EigenvectorL_VV(4,2) = (BetaY*Tmp2)
+    EigenvectorL_VV(5,2) = 0.
+    EigenvectorL_VV(6,2) = (BetaZ*Tmp3)
+    EigenvectorL_VV(7,2) = -(BetaY*Tmp3)
+    EigenvectorL_VV(8,2) = 0.
+
+    ! Left eigenvector for Alfven wave -
+    EigenvectorL_VV(1,3) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
+    EigenvectorL_VV(2,3) = 0.
+    EigenvectorL_VV(3,3) = -(BetaZ*Tmp2)
+    EigenvectorL_VV(4,3) = (BetaY*Tmp2)
+    EigenvectorL_VV(5,3) = 0.
+    EigenvectorL_VV(6,3) = -(BetaZ*Tmp3)
+    EigenvectorL_VV(7,3) = (BetaY*Tmp3)
+    EigenvectorL_VV(8,3) = 0.
+
+    ! Left eigenvector for Slow magnetosonic wave +
+    EigenvectorL_VV(1,4) = Tmp1* &
+         (AlphaS*(GammaMinus1*UuH/2. - UnH*CsH) - &
+         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,4) = &
+         Tmp1*(AlphaS*(-UnH*GammaMinus1+CsH))
+    EigenvectorL_VV(3,4) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut1H+AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorL_VV(4,4) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut2H+AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,4) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaS)
+    EigenvectorL_VV(6,4) = &
+         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+    EigenvectorL_VV(7,4) = &
+         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+    EigenvectorL_VV(8,4) = &
+         Tmp1*(GammaMinus1*AlphaS)
+
+    ! Left eigenvector for Fast magnetosonic wave +
+    EigenvectorL_VV(1,5) = Tmp1* &
+         (AlphaF*(GammaMinus1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
+         (Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,5) = &
+         Tmp1*(AlphaF*(-UnH*GammaMinus1+CfH))
+    EigenvectorL_VV(3,5) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut1H-AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorL_VV(4,5) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut2H-AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,5) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaF)
+    EigenvectorL_VV(6,5) = &
+         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+    EigenvectorL_VV(7,5) = &
+         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+    EigenvectorL_VV(8,5) = Tmp1*(GammaMinus1*AlphaF)
+
+    ! Left eigenvector for Slow magnetosonic wave -
+    EigenvectorL_VV(1,6) = Tmp1* &
+         (AlphaS*(GammaMinus1*UuH/2. + UnH*CsH) + &
+         AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,6) = &
+         Tmp1*(AlphaS*(-UnH*GammaMinus1-CsH))
+    EigenvectorL_VV(3,6) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut1H-AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorL_VV(4,6) = &
+         Tmp1*(-GammaMinus1*AlphaS*Ut2H-AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,6) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaS)
+    EigenvectorL_VV(6,6) = &
+         Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+    EigenvectorL_VV(7,6) = &
+         Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+    EigenvectorL_VV(8,6) = &
+         Tmp1*(GammaMinus1*AlphaS)
+
+    ! Left eigenvector for Fast magnetosonic wave -
+    EigenvectorL_VV(1,7) = Tmp1* &
+         (AlphaF*(GammaMinus1*UuH/2. + UnH*CfH) - &
+         AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorL_VV(2,7) = &
+         Tmp1*(AlphaF*(-UnH*GammaMinus1-CfH))
+    EigenvectorL_VV(3,7) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut1H+AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorL_VV(4,7) = &
+         Tmp1*(-GammaMinus1*AlphaF*Ut2H+AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorL_VV(5,7) = &
+         Tmp1*(-GammaMinus1*B1nH*AlphaF)
+    EigenvectorL_VV(6,7) = &
+         Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+    EigenvectorL_VV(7,7) = &
+         Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+    EigenvectorL_VV(8,7) = &
+         Tmp1*(GammaMinus1*AlphaF)
+
+    ! Left eigenvector for Divergence wave
+    EigenvectorL_VV(1,8) = 0.
+    EigenvectorL_VV(2,8) = 0.
+    EigenvectorL_VV(3,8) = 0.
+    EigenvectorL_VV(4,8) = 0.
+    EigenvectorL_VV(5,8) = 1.
+    EigenvectorL_VV(6,8) = 0.
+    EigenvectorL_VV(7,8) = 0.
+    EigenvectorL_VV(8,8) = 0.
+
+    ! coefficient for pressure component of the Right vector
+    Tmp1 = Gamma*max(pL,pR)
+
+    ! Pressure component is not linearly independent and obeys the
+    ! equation as follows:
+    ! EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
+    !                     UnH*EigenvectorR_VV(1:8,2)-&
+    !                     Ut1H*EigenvectorR_VV(1:8,3)-&
+    !                     Ut2H*EigenvectorR_VV(1:8,4)-&
+    !                     B1nH*EigenvectorR_VV(1:8,5)-&
+    !                     B1t1H*EigenvectorR_VV(1:8,6)-&
+    !                     B1t2H*EigenvectorR_VV(1:8,7)+
+    !                     EigenvectorR_VV(1:8,8))*inv_gm1
+
+    ! Right eigenvector for Entropy wave
+    EigenvectorR_VV(1,1) = 1.
+    EigenvectorR_VV(1,2) = UnH
+    EigenvectorR_VV(1,3) = Ut1H
+    EigenvectorR_VV(1,4) = Ut2H
+    EigenvectorR_VV(1,5) = 0.
+    EigenvectorR_VV(1,6) = 0.
+    EigenvectorR_VV(1,7) = 0.
+    EigenvectorR_VV(1,eMhd_) = 0.5*UuH
+    EigenvectorR_VV(1,pMhd_) = 0.0
+
+    ! Right eigenvector for Alfven wave +
+    EigenvectorR_VV(2,1) = 0.
+    EigenvectorR_VV(2,2) = 0.
+    EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrtHalf
+    EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrtHalf
+    EigenvectorR_VV(2,5) = 0.
+    EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+         + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(2,pMhd_) = 0.0
+
+    ! Right eigenvector for Alfven wave -
+    EigenvectorR_VV(3,1) = 0.
+    EigenvectorR_VV(3,2) = 0.
+    EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrtHalf
+    EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrtHalf
+    EigenvectorR_VV(3,5) = 0.
+    EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+         - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+    EigenvectorR_VV(3,pMhd_) = 0.0
+
+    ! Right eigenvector for Slow magnetosonic wave +
+    EigenvectorR_VV(4,1) = RhoH*AlphaS
+    EigenvectorR_VV(4,2) = RhoH*AlphaS*(UnH+CsH)
+    EigenvectorR_VV(4,3) = RhoH*(AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorR_VV(4,4) = RhoH*(AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorR_VV(4,5) = 0.
+    EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(4,eMhd_) = &
+         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
+         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(4,pMhd_) = Tmp1*AlphaS
+
+    ! Right eigenvector for Fast magnetosonic wave +
+    EigenvectorR_VV(5,1) = RhoH*AlphaF
+    EigenvectorR_VV(5,2) = RhoH*AlphaF* (UnH+CfH)
+    EigenvectorR_VV(5,3) = RhoH* (AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorR_VV(5,4) = RhoH* (AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorR_VV(5,5) = 0.
+    EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(5,eMhd_) = &
+         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
+         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(5,pMhd_) = Tmp1*AlphaF
+
+    ! Right eigenvector for Slow magnetosonic wave -
+    EigenvectorR_VV(6,1) = RhoH*AlphaS
+    EigenvectorR_VV(6,2) = RhoH*AlphaS*(UnH-CsH)
+    EigenvectorR_VV(6,3) = RhoH* (AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
+    EigenvectorR_VV(6,4) = RhoH* (AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
+    EigenvectorR_VV(6,5) = 0.
+    EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(6,eMhd_) = &
+         AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
+         - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(6,pMhd_) = Tmp1*AlphaS
+
+    ! Right eigenvector for Fast magnetosonic wave -
+    EigenvectorR_VV(7,1) = RhoH*AlphaF
+    EigenvectorR_VV(7,2) = RhoH*AlphaF* (UnH-CfH)
+    EigenvectorR_VV(7,3) = RhoH*(AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
+    EigenvectorR_VV(7,4) = RhoH*(AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
+    EigenvectorR_VV(7,5) = 0.
+    EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
+    EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
+    EigenvectorR_VV(7,eMhd_) = &
+         AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
+         + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+         + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+    EigenvectorR_VV(7,pMhd_) = Tmp1*AlphaF
+
+    ! Right eigenvector for Divergence wave
+    EigenvectorR_VV(8,1) = 0.
+    EigenvectorR_VV(8,2) = 0.
+    EigenvectorR_VV(8,3) = 0.
+    EigenvectorR_VV(8,4) = 0.
+    EigenvectorR_VV(8,5) = 1.
+    EigenvectorR_VV(8,6) = 0.
+    EigenvectorR_VV(8,7) = 0.
+    EigenvectorR_VV(8,eMhd_) = B1nH
+    EigenvectorR_VV(8,pMhd_) = 0.0
+
+    ! Alphas (elemental wave strengths)
+    ! matmul is slower than the loop for the NAG F95 compiler
+    ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
+    do iWave = 1, nWaveMhd
+       DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
+    end do
+
+    ! Take absolute value of eigenvalues
+    Eigenvalue_V = abs(Eigenvalue_V)
+
+    ! Limit them if required
+    if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
+
+    ! Calculate the Roe Interface fluxes
+    ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
+    ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
+    !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
+    do iFlux = 1, nFluxMhd
+       Diffusion_V(iFlux) = &
+            sum(Eigenvalue_V*DeltaWave_V*EigenvectorR_VV(:,iFlux))
+    end do
+
+    ! Scalar variables
+    Flux_V(Rho_   ) = Diffusion_V(RhoMhd_)
+    Flux_V(P_     ) = Diffusion_V(pMhd_)
+    Flux_V(Energy_) = Diffusion_V(eMhd_)
+
+    ! Rotate fluxes of vector variables back
+    call rotate_flux_vector(Diffusion_V, Flux_V)
+
+    ! The diffusive flux for the advected scalar variables is simply
+    ! 0.5*|Velocity|*(U_R - U_L)
+    do iVar = ScalarFirst_, ScalarLast_
+       Flux_V(iVar) = abs(UnH)*(StateRightCons_V(iVar) - StateLeftCons_V(iVar))
+    end do
+
+    ! Roe flux = average of left and right flux plus the diffusive flux
+    Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Flux_V)
+
+    ! Normal velocity and maximum wave speed
+    Unormal_I = UnH
+    CmaxDt    = abs(UnH) + CfH
+  end subroutine roe_solver
   !============================================================================
 end module ModFaceFlux
 !==============================================================================

@@ -62,7 +62,7 @@ module ModB0
 
   ! The momentum source term for non-current-free B0 field, curl B0 x B0
   ! may be alternatively calculated as div (B0 B0) - grad B0^2/2 -B0 div B0
-  logical :: UseB0MomentumFlux = .false.
+  logical, public :: UseB0MomentumFlux = .false.
   !$acc declare create(UseB0MomentumFlux)
 
   ! Radius within which the B0 field is curl free (analytically)

@@ -30,6 +30,7 @@ module ModChGL
   public :: update_chgl ! Assign ChGL density or express B = (\rho s)\mathbf{U}
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value ! Calculate magnetic field face values
+  public :: aligning_bc             ! Align field and stream from the MHD side
   public :: calc_aligning_region_timestep ! Use global timestep in the region
   ! If the below logical is true, between rSourceChGL and rMinChGL
   ! the aligning source is applied
@@ -80,7 +81,7 @@ contains
     use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
-    real    :: RhoU2, B_D(MaxDim), RhoUDotR, VOld_D(MaxDim), Xi
+    real    :: RhoU2, B_D(MaxDim), Rho, DeltaU_D(3), MomentumSource_D(3), B2
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
@@ -103,28 +104,36 @@ contains
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              ! The ChGL ratio is calculated in terms of U, B
+             Rho = State_VGB(Rho_,i,j,k,iBlock)
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
              if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SignB_,i,j,k,iBlock) =                            &
-                  State_VGB(Rho_,i,j,k,iBlock)*                          &
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)/        &
-                  max(RhoU2, &
-                  ! Limiter, reducing the aligning source for slow stream
-                  MA2Limiter*State_VGB(Rho_,i,j,k,iBlock)*sum(B_D**2) )* &
+             State_VGB(SignB_,i,j,k,iBlock) = Rho/RhoU2*                &
+                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)*       &
                   ! Geometric interpolation factor
                   (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
                   (RMinChGL - RSourceChGL)
-             ! Apply aligning source in the induction equation prop to
-             ! \alpha*dU/dt
+             ! Increment in velocity
+             DeltaU_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  State_VGB(Rho_,i,j,k,iBlock) -        &
+                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+                  StateOld_VGB(Rho_,i,j,k,iBlock)
+             B2 = sum(B_D**2)
+             ! Check if the stream is energetic enough
+             if(B2*Rho > RhoU2)then
+                ! The increment in the velcity should be reduced
+                MomentumSource_D = (1 - RhoU2/(Rho*B2))*(&
+                     sum(DeltaU_D*B_D)*B_D/B2 - DeltaU_D)
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + &
+                     MomentumSource_D*Rho
+                DeltaU_D = DeltaU_D + MomentumSource_D
+             end if
              State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
                   ! Field-to-stream-speed ratio
-                  State_VGB(SignB_,i,j,k,iBlock) *(     &
+                  State_VGB(SignB_,i,j,k,iBlock) *      &
                   ! Increment in velocity
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock) -        &
-                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  StateOld_VGB(Rho_,i,j,k,iBlock) )
+                  DeltaU_D
           end if
        end if
        if(R_BLK(i,j,k,iBlock) > RMinChGL)then
@@ -168,11 +177,13 @@ contains
   end subroutine get_chgl_state
   !============================================================================
   subroutine correct_chgl_face_value(iBlock, DoResChangeOnly)
-     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
-          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-     use ModParallel, ONLY: &
-          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+    use ModParallel, ONLY: &
+         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+    use BATL_lib,      ONLY: IsCartesian, Xyz_DGB, FaceNormal_DDFB
+
     integer, intent(in) :: iBlock
     logical, intent(in) :: DoResChangeOnly
     ! Logical is true in the points of ChGL model
@@ -211,6 +222,7 @@ contains
       ! B0_DX field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
+      if(.not.any(IsChGL_G(iMin-1:iMax,jMin:jMax,kMin:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DX(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -224,11 +236,11 @@ contains
          do i = iMin, iMax -1
             if(.not.IsChGL_G(i,j,k))CYCLE
             LeftState_VX(Bx_:Bz_,i+1,j,k) =                              &
-              LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
-              B0_DIII(:,i+1,j,k)
+                 LeftState_VX(Ux_:Uz_,i+1,j,k)*LeftState_VX(SignB_,i+1,j,k)-&
+                 B0_DIII(:,i+1,j,k)
             RightState_VX(Bx_:Bz_,i,j,k) =                               &
-              RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
-              B0_DIII(:,i,j,k)
+                 RightState_VX(Ux_:Uz_,i,j,k)*RightState_VX(SignB_,i,j,k)-  &
+                 B0_DIII(:,i,j,k)
          end do
          i = iMax
          if(IsChGL_G(i,j,k))RightState_VX(Bx_:Bz_,i,j,k) =               &
@@ -246,6 +258,7 @@ contains
       ! B0_DY field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
+      if(.not.any(IsChGL_G(iMin:iMax,jMin-1:jMax,kMin:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DY(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -285,6 +298,7 @@ contains
       ! B0_DZ field or zero
       real :: B0_DIII(MaxDim,iMin:iMax,jMin:jMax,kMin:kMax)
       !------------------------------------------------------------------------
+      if(.not.any(IsChGL_G(iMin:iMax,jMin:jMax,kMin-1:kMax)))RETURN
       if(UseB0)then
          B0_DIII = B0_DZ(:,iMin:iMax,jMin:jMax,kMin:kMax)
       else
@@ -300,7 +314,7 @@ contains
          if(.not.IsChGL_G(i,j,k))CYCLE
          LeftState_VZ(Bx_:Bz_,i,j,k+1) =                                 &
               LeftState_VZ(Ux_:Uz_,i,j,k+1)*LeftState_VZ(SignB_,i,j,k+1)-&
-              B0_DIII(:,i,j+1,k)
+              B0_DIII(:,i,j,k+1)
          RightState_VZ(Bx_:Bz_,i,j,k) =                                  &
               RightState_VZ(Ux_:Uz_,i,j,k)*RightState_VZ(SignB_,i,j,k) - &
               B0_DIII(:,i,j,k)
@@ -314,6 +328,36 @@ contains
     end subroutine correct_facez
     !==========================================================================
   end subroutine correct_chgl_face_value
+  !============================================================================
+  subroutine aligning_bc(iFace,jFace,kFace, iBlockFace,                &
+         iLeft, jLeft, kLeft, Normal_D, B0x, B0y, B0z,                &
+         StateLeft_V, StateRight_V)
+    integer, intent(in) :: iFace,jFace,kFace, iBlockFace,              &
+         iLeft, jLeft, kLeft
+    real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
+    real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
+    real :: FullB_D(3),  FullBt_D(3), Un_D(3), Ut_D(3), Un, FullBn
+    !--------------------------------------------------------------------------
+    FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
+    FullBn = sum(FullB_D*Normal_D)
+    FullBt_D = FullB_D - FullBn*Normal_D
+    Un     = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
+    Ut_D     = StateLeft_V(Ux_:Uz_) - Un*Normal_D
+    StateLeft_V(Bx_:Bz_) = StateLeft_V(Bx_:Bz_) +                      &
+         ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
+         ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
+         ! of metals). Near the surface with concentrated impedance (surface of
+         ! a metal in case of pronounced skin-effect) the tangential eelectric
+         ! and magnetic field vectors are related with the boundary condition:
+         ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
+         ! Note: the unit vetor of normal is directed toward the metal, i.e.
+         ! from the MHD domain toward the ChGL domain.
+         !
+         ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
+         (-FullBn*Ut_D + Un*FullBt_D)/ &
+         ! The estimate for impedance is as follows:
+         sqrt(max(1.0e-30, Un**2 + FullBn**2/StateLeft_V(Rho_)))
+  end subroutine aligning_bc
   !============================================================================
   subroutine calc_aligning_region_timestep(iBlock)
     use ModMain, ONLY: IsTimeAccurate=>time_accurate, dt_BLK, dt, cfl
@@ -335,4 +379,3 @@ contains
   !============================================================================
 end module ModChGL
 !==============================================================================
-
