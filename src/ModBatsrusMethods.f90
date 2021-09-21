@@ -481,7 +481,7 @@ contains
     use BATL_lib, ONLY: iProc
     use ModFreq, ONLY: is_time_to
     use ModPic, ONLY: AdaptPic, calc_pic_criteria, &
-         pic_set_cell_status
+         pic_set_cell_status, iPicGrid, iPicDecomposition
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
@@ -629,7 +629,9 @@ contains
 
     ! Re-calculate the active PIC regions
     if(AdaptPic % DoThis) then
-       if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate)) then
+       if(is_time_to(AdaptPic, n_step, Time_Simulation, time_accurate) &
+            .or. iPicGrid /= iNewGrid &
+            .or. iPicDecomposition /= iNewDecomposition) then
           if(iProc==0 .and. lVerbose > 0)then
              call write_prefix; write(iUnitOut,*) NameSub, &
                   " adapt PIC region at simulation time=", Time_Simulation
