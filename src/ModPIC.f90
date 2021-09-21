@@ -1385,7 +1385,7 @@ contains
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
              case('entropy')
-                call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+                call calc_crit_entropy(i, j, k, iBlock, CritEntropy)
                 CriteriaValue = CritEntropy
              end select
 
@@ -1483,13 +1483,12 @@ contains
 
   end subroutine calc_crit_jbperp
   !============================================================================
-  subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+  subroutine calc_crit_entropy(i, j, k, iBlock, CritEntropy)
 
-    use ModAdvance, ONLY: Rho_, p_
+    use ModAdvance, ONLY: Rho_, p_, State_VGB
     use ModPhysics, ONLY: Gamma
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(in) :: State_VGB(:,:,:,:,:)
 
     real, intent(out) :: CritEntropy
     !--------------------------------------------------------------------------
