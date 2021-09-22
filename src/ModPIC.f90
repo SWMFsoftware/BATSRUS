@@ -122,7 +122,7 @@ module ModPIC
 
   ! The last grid/decomposition when pic criteria were calculated.
   integer, public :: iPicGrid = -1, iPicDecomposition = -1
-  
+
   logical :: IsPicRegionInitialized = .false.
 
 contains
@@ -1230,7 +1230,7 @@ contains
 
     iPicGrid = iNewGrid
     iPicDecomposition = iNewDecomposition
-    
+
     ! if pic criteria exists in PARAM.in
     if(.not. allocated(PicCritInfo_CBI)) &
          allocate(PicCritInfo_CBI(nI,nJ,nK,MaxBlock,nCriteriaPic))
