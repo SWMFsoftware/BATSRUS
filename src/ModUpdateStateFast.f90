@@ -1905,7 +1905,8 @@ contains
     if(IsCartesianGrid)then
        Normal_D = cUnit_DD(:,iDir)
     else
-       Normal_D = FaceNormal_DDFB(:,iDir,i,j,k,iBlock)/Area
+       Normal_D = 0.0
+       Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlock)/Area
     end if
 
   end subroutine get_normal
