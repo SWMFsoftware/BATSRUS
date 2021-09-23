@@ -1721,8 +1721,7 @@ contains
           end if
        case('entropy')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call calc_crit_entropy(i, j, k, iBlock, State_VGB,&
-                  PlotVar(i,j,k,iVar))
+             call calc_crit_entropy(i, j, k, iBlock, PlotVar(i,j,k,iVar))
           end do; end do; end do
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI

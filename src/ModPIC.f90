@@ -120,6 +120,9 @@ module ModPIC
   ! Is the node overlaped with PIC domain?
   logical, public,allocatable:: IsPicNode_A(:)
 
+  ! The last grid/decomposition when pic criteria were calculated.
+  integer, public :: iPicGrid = -1, iPicDecomposition = -1
+
   logical :: IsPicRegionInitialized = .false.
 
 contains
@@ -1202,6 +1205,7 @@ contains
     use ModPhysics,      ONLY: Io2No_V, UnitX_, UnitB_, UnitJ_, UnitU_, &
          UnitP_, UnitRho_, Gamma
     use ModCoordTransform, ONLY: cross_product
+    use ModMain,         ONLY: iNewGrid, iNewDecomposition
 
     integer :: iBlock, i, j, k, iCriteria
     integer, allocatable :: PicCritInfo_CBI(:,:,:,:,:)
@@ -1223,6 +1227,9 @@ contains
        IsPicCrit_CB = iPicOn_
        RETURN
     end if
+
+    iPicGrid = iNewGrid
+    iPicDecomposition = iNewDecomposition
 
     ! if pic criteria exists in PARAM.in
     if(.not. allocated(PicCritInfo_CBI)) &
@@ -1385,7 +1392,7 @@ contains
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
              case('entropy')
-                call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+                call calc_crit_entropy(i, j, k, iBlock, CritEntropy)
                 CriteriaValue = CritEntropy
              end select
 
@@ -1483,13 +1490,12 @@ contains
 
   end subroutine calc_crit_jbperp
   !============================================================================
-  subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
+  subroutine calc_crit_entropy(i, j, k, iBlock, CritEntropy)
 
-    use ModAdvance, ONLY: Rho_, p_
+    use ModAdvance, ONLY: Rho_, p_, State_VGB
     use ModPhysics, ONLY: Gamma
 
     integer, intent(in) :: i, j, k, iBlock
-    real,    intent(in) :: State_VGB(:,:,:,:,:)
 
     real, intent(out) :: CritEntropy
     !--------------------------------------------------------------------------
