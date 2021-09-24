@@ -1392,7 +1392,7 @@ contains
                 CriteriaValue = 2*State_VGB(p_,i,j,k,iBlock) &
                      /sum(FullB_DGB(:,i,j,k,iBlock)**2)
              case('entropy')
-                call calc_crit_entropy(i, j, k, iBlock, CritEntropy)
+                call calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
                 CriteriaValue = CritEntropy
              end select
 
@@ -1437,12 +1437,13 @@ contains
   !============================================================================
   subroutine calc_crit_jb(i, j, k, iBlock, FullB_DG, CriteriaB1, CritJB)
 
-    use BATL_lib,         ONLY: CellSize_DB
+    use BATL_lib,         ONLY: CellSize_DB, MinI, MaxI,&
+         MinJ, MaxJ, MinK, MaxK
     use ModCurrent,       ONLY: get_current
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CriteriaB1
-    real, intent(in):: FullB_DG(:,:,:,:)
+    real, intent(in):: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     real :: current, current_D(3)
 
@@ -1464,13 +1465,14 @@ contains
   subroutine calc_crit_jbperp( &
        i, j, k, iBlock, FullB_DG, CriteriaB1, CritJBperp)
 
-    use BATL_lib,          ONLY: CellSize_DB
+    use BATL_lib,          ONLY: CellSize_DB, MinI, MaxI,&
+         MinJ, MaxJ, MinK, MaxK
     use ModCurrent,        ONLY: get_current
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CriteriaB1
-    real, intent(in):: FullB_DG(:,:,:,:)
+    real, intent(in):: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     real :: current, current_D(3), CurrentCrossB_D(3)
 
@@ -1490,12 +1492,14 @@ contains
 
   end subroutine calc_crit_jbperp
   !============================================================================
-  subroutine calc_crit_entropy(i, j, k, iBlock, CritEntropy)
+  subroutine calc_crit_entropy(i, j, k, iBlock, State_VGB, CritEntropy)
 
-    use ModAdvance, ONLY: Rho_, p_, State_VGB
+    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    use ModAdvance, ONLY: nVar, Rho_, p_
     use ModPhysics, ONLY: Gamma
 
     integer, intent(in) :: i, j, k, iBlock
+    real,    intent(in) :: State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     real, intent(out) :: CritEntropy
     !--------------------------------------------------------------------------
