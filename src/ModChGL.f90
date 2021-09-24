@@ -97,8 +97,8 @@ contains
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
-       elseif(UseAligningSource.and.r_BLK(i,j,k,iBlock) < RMinChGL       &
-            .and.iStage==nStage)then
+       elseif(r_BLK(i,j,k,iBlock) < RMinChGL)then
+          if(iStage/=nStage.or..not.UseAligningSource)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
@@ -135,8 +135,7 @@ contains
                   ! Increment in velocity
                   DeltaU_D
           end if
-       end if
-       if(R_BLK(i,j,k,iBlock) > RMinChGL)then
+       else
           ! the magnetic field is solved as
           ! \mathbf{B} = (\rho s)\mathbf{U}
           B_D = State_VGB(SignB_,i,j,k,iBlock)*       &
