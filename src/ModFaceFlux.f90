@@ -3952,7 +3952,8 @@ contains
                  InvRho = InvRho,                                       &
                  Sound2 = Sound2,                                       &
                  Alpha  = State_V(SignB_),                              &
-                 cChGLLeft = Cleft_I(1), cChGLRight = Cright_I(1))
+                 cChGLLeft = Cleft_I(1), cChGLRight = Cright_I(1),      &
+                 Fast2 = Fast2, Alfven2Normal = Alfven2Normal)
             if(IsChGLInterface)then
                ! From the other side of interface there is pure MHD
                ! Choose the estimate for speed to be applicable in both
@@ -4013,34 +4014,36 @@ contains
     end subroutine get_mhd_speed
     !==========================================================================
     subroutine get_chgl_speed(U1n, U2n, Ut2, InvRho, Sound2, Alpha, &
-         cChGLLeft, cChGLRight)
+         cChGLLeft, cChGLRight, Fast2, Alfven2Normal)
       real, intent(in)    :: U1n, U2n ! Two estimates for normal speed
       real, intent(in)    :: Ut2      ! Tangential velocity squared
       real, intent(in)    :: InvRho   ! Inverse density
-      real, intent(inout) :: Sound2 ! Misc
+      real, intent(inout) :: Sound2   ! Misc
       real, intent(in)    :: Alpha    ! ChGL ratio
       ! Left and right  perturbation speed
       real, intent(out)   :: cChGLLeft, cChGLRight
-      real :: U1nChGL, U2nChGL, ChGL2OverRho
+      real, intent(in), optional :: Fast2, Alfven2Normal
+      real :: U1nChGL, U2nChGL, ChGL2OverRho, ChGLFast2
       ! B^2/(\rho U^2 - inverse alfvenic Mach number squared
       !------------------------------------------------------------------------
       ChGL2OverRho = InvRho*Alpha**2
       ! Magetosonic speed squared:
-      Sound2     = Sound2 + Ut2*ChGL2OverRho
+      ChGLFast2     = Sound2 + Ut2*ChGL2OverRho
+      if(present(Fast2))ChGLFast2 = max(ChGLFast2, Fast2 - Alfven2Normal)
       ChGL2OverRho   = 0.5*ChGL2OverRho
       U1nChGL   = U1n*ChGL2OverRho
       U2nChGL   = U2n*ChGL2OverRho
       cChGLLeft    = min(U1n - max(U1nChGL,0.0)& ! Corrected Un
-           - sqrt( max(U1nChGL,0.0)**2 + Sound2),  & ! sound
+           - sqrt( max(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - max(U2nChGL,0.0)              & ! Corrected Un
-           - sqrt( max(U2nChGL,0.0)**2 + Sound2) )   ! sound
+           - sqrt( max(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
       if(UseAlfvenWaves)cChGLLeft  = min(cChGLLeft,    &
            U1n - sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n - sqrt(2*U2n*U2nChGL))            ! (left)
       cChGLRight  = max(U1n - min(U1nChGL, 0.0)& ! Corrected Un
-           + sqrt( min(U1nChGL,0.0)**2 + Sound2),  & ! sound
+           + sqrt( min(U1nChGL,0.0)**2 + ChGLFast2),  & ! sound
            U2n - min(U2nChGL, 0.0)             & ! Corrected Un
-           + sqrt( min(U2nChGL,0.0)**2 + Sound2) )   ! sound
+           + sqrt( min(U2nChGL,0.0)**2 + ChGLFast2) )   ! sound
       if(UseAlfvenWaves) cChGLRight = max(cChGLRight,  &
            U1n + sqrt(2*U1n*U1nChGL),          & ! Alfven wave
            U2n + sqrt(2*U2n*U2nChGL))            ! (Right)

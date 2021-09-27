@@ -34,10 +34,7 @@ module ModChGL
   public :: calc_aligning_region_timestep ! Use global timestep in the region
   ! If the below logical is true, between rSourceChGL and rMinChGL
   ! the aligning source is applied
-  logical, public   :: UseAligningSource  = .false.
-  ! The aligning source, in addition to the geometric factor is limited, if
-  ! the local Alvenic Mach number is less than sqrt(MA2Limiter)
-  real, parameter   :: MA2Limiter = 0.01
+  logical, public,parameter   :: UseAligningSource  = .false.
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -49,7 +46,7 @@ contains
             'Reconfigure the code with setting meaningful value for SignB_')
     call read_var('RSourceChGL', RSourceChGL)
     call read_var('RMinChGL', RMinChGL)
-    UseAligningSource = RMinChGL > RSourceChGL + 0.1
+    ! UseAligningSource = RMinChGL > RSourceChGL + 0.1
     ! if(RMinChGL < 0)RMinChGL = huge(1.0)
   end subroutine read_chgl_param
   !============================================================================
@@ -89,7 +86,7 @@ contains
        if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
-          if(RhoU2 ==0.0.or.UseAligningSource)then
+          if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -99,7 +96,7 @@ contains
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
        elseif(r_BLK(i,j,k,iBlock) < RMinChGL)then
-          if(iStage/=nStage.or..not.UseAligningSource)CYCLE
+          if(iStage/=nStage)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
@@ -127,7 +124,7 @@ contains
                (RMinChGL - RSourceChGL)
           B2 = max(sum(B_D**2), 1e-30)
           U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/Rho
-          UDotB = sum(U_D*B_D); UPar2 = max(sum(0.50*U_D**2), UDotB**2/B2)
+          UDotB = sum(U_D*B_D); UPar2 = UDotB**2/B2
           Ut_D = U_D - UDotB*B_D/B2
           VA2 = B2/Rho
           U_D = U_D - GeometricFactor*Ut_D*VA2/(VA2 + UPar2)
