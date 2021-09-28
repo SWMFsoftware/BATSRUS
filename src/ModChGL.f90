@@ -34,10 +34,7 @@ module ModChGL
   public :: calc_aligning_region_timestep ! Use global timestep in the region
   ! If the below logical is true, between rSourceChGL and rMinChGL
   ! the aligning source is applied
-  logical, public   :: UseAligningSource  = .false.
-  ! The aligning source, in addition to the geometric factor is limited, if
-  ! the local Alvenic Mach number is less than sqrt(MA2Limiter)
-  real, parameter   :: MA2Limiter = 0.01
+  logical, public,parameter   :: UseAligningSource  = .false.
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -49,7 +46,7 @@ contains
             'Reconfigure the code with setting meaningful value for SignB_')
     call read_var('RSourceChGL', RSourceChGL)
     call read_var('RMinChGL', RMinChGL)
-    UseAligningSource = RMinChGL > RSourceChGL + 0.1
+    ! UseAligningSource = RMinChGL > RSourceChGL + 0.1
     ! if(RMinChGL < 0)RMinChGL = huge(1.0)
   end subroutine read_chgl_param
   !============================================================================
@@ -81,14 +78,15 @@ contains
     use ModAdvance,  ONLY: StateOld_VGB
     integer, intent(in) :: iBlock, iStage
     integer :: i, j, k
-    real    :: RhoU2, B_D(MaxDim), Rho, DeltaU_D(3), MomentumSource_D(3), B2
+    real    :: RhoU2, B_D(MaxDim), Rho, B2
+    real    :: VA2, UDotB, UPar2, GeometricFactor, U_D(3), Ut_D(3)
     !--------------------------------------------------------------------------
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        if(R_BLK(i,j,k,iBlock) < RSourceChGL)then
           ! The ChGL ratio is calculated in terms of U, B
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
-          if(RhoU2 ==0.0.or.UseAligningSource)then
+          if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -97,46 +95,46 @@ contains
                   (State_VGB(Rho_,i,j,k,iBlock)/RhoU2)*       &
                   sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)
           end if
-       elseif(UseAligningSource.and.r_BLK(i,j,k,iBlock) < RMinChGL       &
-            .and.iStage==nStage)then
+       elseif(r_BLK(i,j,k,iBlock) < RMinChGL)then
+          if(iStage/=nStage)CYCLE
           RhoU2 = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)
           if(RhoU2 ==0.0)then
              State_VGB(SignB_,i,j,k,iBlock) = 0
-          else
-             ! The ChGL ratio is calculated in terms of U, B
-             Rho = State_VGB(Rho_,i,j,k,iBlock)
-             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-             if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(SignB_,i,j,k,iBlock) = Rho/RhoU2*                &
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*B_D)*       &
-                  ! Geometric interpolation factor
-                  (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
-                  (RMinChGL - RSourceChGL)
-             ! Increment in velocity
-             DeltaU_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  State_VGB(Rho_,i,j,k,iBlock) -        &
-                  StateOld_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
-                  StateOld_VGB(Rho_,i,j,k,iBlock)
-             B2 = sum(B_D**2)
-             ! Check if the stream is energetic enough
-             if(B2*Rho > RhoU2)then
-                ! The increment in the velcity should be reduced
-                MomentumSource_D = (1 - RhoU2/(Rho*B2))*(&
-                     sum(DeltaU_D*B_D)*B_D/B2 - DeltaU_D)
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + &
-                     MomentumSource_D*Rho
-                DeltaU_D = DeltaU_D + MomentumSource_D
-             end if
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) =          &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock) +     &
-                  ! Field-to-stream-speed ratio
-                  State_VGB(SignB_,i,j,k,iBlock) *      &
-                  ! Increment in velocity
-                  DeltaU_D
+             CYCLE
           end if
-       end if
-       if(R_BLK(i,j,k,iBlock) > RMinChGL)then
+          ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
+          ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
+          ! of metals). Near the surface with concentrated impedance (surface of
+          ! a metal in case of pronounced skin-effect) the tangential eelectric
+          ! and magnetic field vectors are related with the boundary condition:
+          ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
+          ! Note: the unit vetor of normal is directed toward the metal, i.e.
+          ! from the MHD domain toward the ChGL domain.
+          !
+          ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
+          ! (-FullBn*Ut_D + Un*FullBt_D)/ &
+          ! The estimate for impedance is as follows:
+          ! sqrt(max(1.0e-30, Un**2 + FullBn**2/StateLeft_V(Rho_)))
+
+          Rho = State_VGB(Rho_,i,j,k,iBlock)
+          B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0)B_D = B_D + B0_DGB(:,i,j,k,iBlock)
+          ! Geometric interpolation factor
+          GeometricFactor = (R_BLK(i,j,k,iBlock) - RSourceChGL) / &
+               (RMinChGL - RSourceChGL)
+          B2 = max(sum(B_D**2), 1e-30)
+          U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/Rho
+          UDotB = sum(U_D*B_D); UPar2 = UDotB**2/B2
+          Ut_D = U_D - UDotB*B_D/B2
+          VA2 = B2/Rho
+          U_D = U_D - GeometricFactor*Ut_D*VA2/(VA2 + UPar2)
+          B_D = B_D + GeometricFactor*Ut_D*UDotB/(VA2 + UPar2)
+          State_VGB(SignB_,i,j,k,iBlock) = sum(U_D*B_D)/max(sum(U_D**2), 1e-30)
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = Rho*U_D
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
+               GeometricFactor*Ut_D*UDotB/(VA2 + UPar2)
+       else
           ! the magnetic field is solved as
           ! \mathbf{B} = (\rho s)\mathbf{U}
           B_D = State_VGB(SignB_,i,j,k,iBlock)*       &
@@ -336,27 +334,18 @@ contains
          iLeft, jLeft, kLeft
     real, intent(in)    :: Normal_D(3), B0x, B0y, B0z
     real, intent(inout) :: StateLeft_V(nVar), StateRight_V(nVar)
-    real :: FullB_D(3),  FullBt_D(3), Un_D(3), Ut_D(3), Un, FullBn
+    real :: FullB_D(3), U2
     !--------------------------------------------------------------------------
-    FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
-    FullBn = sum(FullB_D*Normal_D)
-    FullBt_D = FullB_D - FullBn*Normal_D
-    Un     = sum(StateLeft_V(Ux_:Uz_)*Normal_D)
-    Ut_D     = StateLeft_V(Ux_:Uz_) - Un*Normal_D
-    StateLeft_V(Bx_:Bz_) = StateLeft_V(Bx_:Bz_) +                      &
-         ! The Leontowich BC (see L. D. Landau and E. M. Livshits,
-         ! Electrrodynamics of Continuous Media, Chapter 87 Surface impedance
-         ! of metals). Near the surface with concentrated impedance (surface of
-         ! a metal in case of pronounced skin-effect) the tangential eelectric
-         ! and magnetic field vectors are related with the boundary condition:
-         ! \delta B_t \propto n x E_t, where E_t = Bn n x U_t - Un n x B_t
-         ! Note: the unit vetor of normal is directed toward the metal, i.e.
-         ! from the MHD domain toward the ChGL domain.
-         !
-         ! Hence, \delta B = (-Bn U_t + Un B_t)/Impedance
-         (-FullBn*Ut_D + Un*FullBt_D)/ &
-         ! The estimate for impedance is as follows:
-         sqrt(max(1.0e-30, Un**2 + FullBn**2/StateLeft_V(Rho_)))
+    U2 = max(sum(StateLeft_V(Ux_:Uz_)**2), sum(StateRight_V(Ux_:Uz_)**2),1e-30)
+    if(r_BLK(iLeft,jLeft,kLeft,iBlockFace) < RMinChGL.and.&
+         r_BLK(iFace,jFace,kFace,iBlockFace) >= RMinChGL)then
+       FullB_D  = StateLeft_V(Bx_:Bz_) + [B0x, B0y, B0z]
+       StateLeft_V(SignB_) = sum(StateLeft_V(Ux_:Uz_)*FullB_D)/U2
+    elseif(r_BLK(iFace,jFace,kFace,iBlockFace) < RMinChGL.and.&
+         r_BLK(iLeft,jLeft,kLeft,iBlockFace) >= RMinChGL)then
+       FullB_D  = StateRight_V(Bx_:Bz_) + [B0x, B0y, B0z]
+       StateRight_V(SignB_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
+    end if
   end subroutine aligning_bc
   !============================================================================
   subroutine calc_aligning_region_timestep(iBlock)

@@ -50,7 +50,8 @@ test_help:
 	@echo "    test_shocktbeube             (run shocktube test)"
 	@echo "    test_shocktube_1d          (run 1D shocktube test)"
 	@echo "    test_fast_wave             (run 3D fast wave test)"
-	@echo "    test_bx0		      		  (run 3D bx0 isosurface plot test)"
+	@echo "    test_fastwave_2d           (run 2D fast wave test)"
+	@echo "    test_bx0                   (run 3D bx0 isosurface plot test)"
 	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_spectrum2             (run spectrum2 post-processing test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
@@ -98,7 +99,8 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_shocktube_1d TESTDIR=run_test_shocktube_1d)
 	-@($(MAKE) test_fast_wave TESTDIR=run_test_fast_wave)
-	-@($(MAKE) test_earth TESTDIR=run_test_earth)	
+	-@($(MAKE) test_earth TESTDIR=run_test_earth)
+	-@($(MAKE) test_fastwave_2d TESTDIR=run_test_fastwave_2d)
 	cd ${DIR}; ./Config.pl -noacc
 	-@($(MAKE) test_bx0 TESTDIR=run_test_bx0)
 	-@($(MAKE) test_shocktube TESTDIR=run_test_shocktube)

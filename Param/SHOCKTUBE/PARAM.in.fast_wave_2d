@@ -28,7 +28,7 @@ NONE			TypeNormalization
 5			nRootBlock2
 1			nRootBlock3
 -32.			xMin
- 32.	  		xMax
+ 32.			xMax
 -32.			yMin
  32.			yMax
 -0.5			zMin

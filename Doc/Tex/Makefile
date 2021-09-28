@@ -32,7 +32,7 @@ USERMANUAL.pdf: \
 PDF:  USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
 
 clean:
-	rm -rf *.aux *.log *.toc *.dvi *~ ../../PARAM.xmltex
+	rm -rf *.aux *.log *.toc *.dvi *.ind *.idx *~ ../../PARAM.xmltex
 
 cleanpdf: clean
 	cd ..;     rm -rf USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
