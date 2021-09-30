@@ -31,10 +31,6 @@ module ModChGL
   public :: get_chgl_state ! Do same in a single point
   public :: correct_chgl_face_value ! Calculate magnetic field face values
   public :: aligning_bc             ! Align field and stream from the MHD side
-  public :: calc_aligning_region_timestep ! Use global timestep in the region
-  ! If the below logical is true, between rSourceChGL and rMinChGL
-  ! the aligning source is applied
-  logical, public,parameter   :: UseAligningSource  = .false.
 contains
   !============================================================================
   subroutine read_chgl_param
@@ -46,8 +42,6 @@ contains
             'Reconfigure the code with setting meaningful value for SignB_')
     call read_var('RSourceChGL', RSourceChGL)
     call read_var('RMinChGL', RMinChGL)
-    ! UseAligningSource = RMinChGL > RSourceChGL + 0.1
-    ! if(RMinChGL < 0)RMinChGL = huge(1.0)
   end subroutine read_chgl_param
   !============================================================================
   subroutine init_chgl(iBlock)
@@ -56,7 +50,6 @@ contains
     integer :: i, j, k
     real    :: RhoU2, B_D(MaxDim)
     !--------------------------------------------------------------------------
-    if(.not.IsTimeAccurate.and.UseAligningSource)Dt = max(Dt,0.0)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock))CYCLE
        ! The ChGL ratio is calculated in terms of U, B
@@ -347,24 +340,6 @@ contains
        StateRight_V(SignB_) = sum(StateRight_V(Ux_:Uz_)*FullB_D)/U2
     end if
   end subroutine aligning_bc
-  !============================================================================
-  subroutine calc_aligning_region_timestep(iBlock)
-    use ModMain, ONLY: IsTimeAccurate=>time_accurate, dt_BLK, dt, cfl
-    use ModAdvance, ONLY: time_BLK
-    integer, intent(in) :: iBlock
-    logical :: Mask_C(1:nI,1:nJ,1:nK) = .false.
-    !--------------------------------------------------------------------------
-    ! Mask for aligning source region
-    Mask_C = true_cell(1:nI,1:nJ,1:nK,iBlock).and.       &
-         r_blk(1:nI,1:nJ,1:nK,iBlock) > RSourceChGL.and.&
-         r_blk(1:nI,1:nJ,1:nK,iBlock) < RMinChGL
-    ! Do nothing, if no point is in the aligning source region
-    if(.not.any(Mask_C))RETURN
-    ! Store the minimum time step for the aligning source region
-    Dt_BLK(iBlock) = minval(time_blk(1:nI,1:nJ,1:nK,iBlock), MASK = Mask_C)
-    ! Set the global time step throughout this region
-    where(Mask_C)time_blk(1:nI,1:nJ,1:nK,iBlock) = Dt/CFL
-  end subroutine calc_aligning_region_timestep
   !============================================================================
 end module ModChGL
 !==============================================================================

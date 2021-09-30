@@ -50,7 +50,6 @@ contains
     use ModParticleMover, ONLY: UseChargedParticles=>UseParticles, &
          UseHybrid, trace_particles, get_state_from_vdf, advance_ion_current
     use ModViscosity, ONLY: UseArtificialVisco
-    use ModChGL, ONLY: UseAligningSource
     use omp_lib
 
     logical, intent(in) :: DoCalcTimestep
@@ -220,8 +219,7 @@ contains
              ! for time accurate calculations.
              ! For time accurate with UseDtLimit, do not
              ! calculate time step.
-             if( ( (time_accurate .and. .not.UseDtLimit).or.&
-                  (.not.time_accurate.and.UseAligningSource) ).and. &
+             if( time_accurate .and. .not.UseDtLimit.and. &
                   iStage == nStage .and. DoCalcTimestep)&
                   call calc_timestep(iBlock)
 
@@ -265,13 +263,7 @@ contains
           if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 
-       if(DoCalcTimeStep.and.&
-            ! Why not ".and.time_accurate"? If time_accurate=.false. then
-            ! any manipulations with time_simulation seem to make no sense.
-            !
-            ! Skip this if UseAligning source, employing dt/=0
-            .not.(.not.time_accurate.and.UseAligningSource) &
-            )then
+       if(DoCalcTimeStep)then
           ! Update check only works for half step 2 stages time integration.
           ! The final Dt is determined by the second stage if Dt changed by
           ! update_check subroutine.
