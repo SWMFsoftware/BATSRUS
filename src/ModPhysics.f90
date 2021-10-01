@@ -102,7 +102,7 @@ module ModPhysics
 
   real :: ThetaTilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
-  
+
   !$acc declare create(SinThetaTilt, CosThetaTilt)
 
   ! Far field solar wind solution variables.
