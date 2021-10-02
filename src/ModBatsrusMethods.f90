@@ -457,7 +457,6 @@ contains
     use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step,     &
          set_global_timestep, DoCheckTimeStep, DnCheckTimeStep, TimeStepMin, &
          TimeSimulationOldCheck
-    use ModChGL,  ONLY: UseAligningSource
     use ModParticleFieldLine, ONLY: UseParticles, advect_particle_line
     use ModLaserHeating,    ONLY: add_laser_heating
     use ModVarIndexes, ONLY: Te0_
@@ -533,9 +532,6 @@ contains
        end if
 
        if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
-    elseif(UseAligningSource)then
-       ! Calculate minimal time step in the region of alighning source
-       call set_global_timestep(TimeSimulationLimit=-1.0)
     end if
 
     ! Select block types and load balance blocks

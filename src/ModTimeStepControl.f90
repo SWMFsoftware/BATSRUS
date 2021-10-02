@@ -131,7 +131,6 @@ contains
     use ModNumConst, ONLY: cHalfPi
     use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
-    use ModChGL, ONLY: UseAligningSource, calc_aligning_region_timestep
 
     integer, intent(in) :: iBlock
 
@@ -330,10 +329,6 @@ contains
     if(.not.true_BLK(iBlock)) then
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
             time_BLK(:,:,:,iBlock) = 0.0
-    end if
-    if(.not.time_accurate.and.UseAligningSource)then
-       Dt_BLK(iBlock) = 1e20
-       call calc_aligning_region_timestep(iBlock)
     end if
 #endif
     call test_stop(NameSub, DoTest, iBlock)

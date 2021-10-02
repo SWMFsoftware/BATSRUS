@@ -73,7 +73,7 @@ contains
   ! Source_V(Mx_:Mz_)= Source_V(Mx_:Mz_) + SM_D
   ! Source_V(Energy_)= Source_V(Energy_) + dot_product(SM_D,U_D)
   ! where SM_D = cross_product(\curl B0, B1) +         &
-  !              div (B0 B0) - grad B0^2/2 - B0 div D0 ! If UseB0MomentumFlux
+  !              div (B0 B0) - grad B0^2/2 - B0 div B0 ! If UseB0MomentumFlux
   !           or cross_product(\curl B0, B0)           ! Otherwise
   ! Comment: 2a. \divB is calculated in terms of the face values of B1
   !          2b. B0*(\div B1) is calculated together with (\div B1), and

@@ -103,6 +103,8 @@ module ModPhysics
   real :: ThetaTilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
 
+  !$acc declare create(SinThetaTilt, CosThetaTilt)
+
   ! Far field solar wind solution variables.
   real :: SW_T_dim=0.0, &
        SW_rho=0.0, SW_rho_dim=0.0, &
@@ -280,7 +282,7 @@ contains
        Dipole_D = [-SinThetaTilt, 0.0, CosThetaTilt]
     end if
     Dipole_D = Dipole_D * Bdp
-    !$acc update device(Dipole_D)
+    !$acc update device(Dipole_D, SinThetaTilt, CosThetaTilt)
 
     if(DoTest) write(*,*) NameSub,': Dipole_D=', Dipole_D
     call test_stop(NameSub, DoTest)
