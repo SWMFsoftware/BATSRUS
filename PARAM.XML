@@ -7913,7 +7913,7 @@ By default the whole domain covered by PIC grids can become active.
 
 <command name="PICCRITERIA">
   <parameter name='nPicCriteria' type="integer" default="1"
-	     min="0" max="3" />
+	     min="0" max="9" />
   <for from="1" to="$nPicCriteria">
     <parameter name="StringPicCriteria" type="string" length="$lLine"
 	       input="select" >
@@ -7922,6 +7922,7 @@ By default the whole domain covered by PIC grids can become active.
       <option name="rho"		/>
       <option name="beta"		/>
       <option name="divcurv"		/>
+      <option name="entropy"            />
     </parameter>
     <parameter name="MinCriteriaValue" type="real" default="0" />
     <parameter name="MaxCriteriaValue" type="real" min="$MinCriteriaValue" />
@@ -7929,14 +7930,20 @@ By default the whole domain covered by PIC grids can become active.
   </for>
 
 #PICCRITERIA
-2			nPicCriteria
+4			nPicCriteria
 j/b			StringPicCriteria
 0.1			MinCriteriaValue
 999.0			MaxCriteriaValue
 10.0                    CriteriaB1
+j/bperp                 StringPicCriteria
+0.8                     MinCriteriaValue
+999.0                   MaxCriteriaValue
 divcurv			StringPicCriteria
-5.0			MinCriteriaValue
+-0.1			MinCriteriaValue
 999.0			MaxCriteriaValue
+entropy                 StringPicCriteria
+0.02                    MinCriteriaValue
+999.0                   MaxCriteriaValue
 
 This command defines the physical criteria for selecting the PIC region.
 The first input is the number of criteria. For each criterion,
