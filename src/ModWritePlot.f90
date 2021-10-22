@@ -1079,7 +1079,7 @@ contains
     if(.not.UseB)then
        FullB_DG = 0.00
     elseif(UseB0)then
-       FullB_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)+B0_DGB(:,:,:,:,iBlock)
+       FullB_DG(:,:,:,:) = State_VGB(Bx_:Bz_,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
     else
        FullB_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
     end if
