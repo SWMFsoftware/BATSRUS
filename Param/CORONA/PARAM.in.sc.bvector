@@ -1,16 +1,17 @@
-DESCROAIPTION
+#DESCRIPTION
+Param/CORONA/PARAM.in.sc.bvector: reading vector magnetogram		StringDescription
 
 VERBOSE
 10			lVerbose
 
 #GRIDBLOCKALL
-50000		MaxBlock
+50000			MaxBlock
 
 #LOOKUPTABLE
-Bvector                 NameTable
-load                    NameCommand
-Param/CORONA/sharp_cr2157.dat    NameFile
-ascii                   TypeFile
+Bvector			NameTable
+load			NameCommand
+Param/CORONA/sharp_cr2157.dat		NameFile
+ascii			TypeFile
 
 #COMPONENT
 SC			NameComp
@@ -22,11 +23,10 @@ T			DoSaveRestart
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
- GM_set_parameters setting .UseRotatingFrame = T
 
 #PLASMA
-1.0			FluidMass [amu]		MassFluid
-1.0			IonCharge [e]		ChargeIon
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 #BODY
@@ -50,13 +50,12 @@ F			UseBody
 Param/CORONA/CR2157_HMI.dat		NameHarmonicsFile
 
 #CURLB0
-T               UseCurlB0
-2.5             rCurrentFreeB0    (read if UseCurlB0 is true)
-T               UseB0MomentumFlux (read if UseCurlB0 is true) 
+T			UseCurlB0
+2.5			rCurrentFreeB0
+T			UseB0MomentumFlux
 
 #USERSWITCH
 +init +ic		StringSwitch
- Switches: Init,IC,Perturb,B0,SExpl,SImpl,Update,Progress= T T F F F F F F
 
 #USERINPUTBEGIN
 
@@ -66,22 +65,22 @@ T               UseB0MomentumFlux (read if UseCurlB0 is true)
 5.0			ExtLatBelow
 5.0			ExtLatBelow
 
-#USERINPUTEND
+#USERINPUTEND -------------------------------------
 
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T		UseWaveReflection
+T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
-0.0		rMinWaveReflection
-F		UseSurfaceWaveRefl
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21		StochasticExponent
-0.18		StochasticAmplitude
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 #TEST
 update_b0		StringTest
@@ -96,38 +95,38 @@ load			NameCommand
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion		DoExtendTransitionRegion
-2.2e5			TeTransitionRegionSi		TeModSi
+T			DoExpandTransitionRegion
+2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
 #COARSEAXIS
-T                       UseCoarseAxis
-2                       nCoarseLayer
+T			UseCoarseAxis
+2			nCoarseLayer
 
 #GRIDGEOMETRY
-spherical_genr          TypeGeometry
-./Param/CORONA/grid_awsom.dat         NameGridFile
+spherical_genr		TypeGeometry
+Param/CORONA/grid_awsom.dat		NameGridFile
 
 #GRID
-2                       nRootBlock1 nRootBlockX
-2                       nRootBlock2 nRootBlockY
-1                       nRootBlock3 nRootBlockZ
--100.0                  xMin
- 100.0                  xMax
--100.0                  yMin
- 100.0                  yMax
--100.0                  zMin
- 100.0                  zMax
+2			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
 
 #LIMITRADIUS
-1.0                     rMin
-24.0                    rMax
+1.0			rMin
+24.0			rMax
 
 #AMRREGION
-InnerShell              NameRegion
-shell0                  StringShape
-1.0                     RadiusInner
-1.7                     Radius
+InnerShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.7			Radius
 
 #AMRREGION
 ActiveRegion		NameRegion
@@ -140,60 +139,60 @@ box_gen			StringShape
 -3.0			zMaxBox
 
 #AMRCRITERIARESOLUTION
-3					 nRefineCrit
-dphi				       	 StringRefine
-6                         		 RefineTo
-3	                    		 CoarsenFrom
-dphi Innershell			       	 StringRefine
-3                         		 RefineTo
-1.5	                    		 CoarsenFrom
-dphi ActiveRegion    			 StringRefine
-1.5                       		 RefineTo
-0.75  	                  		 CoarsenFrom
-currentsheet            		 StringRefine
-0.5                     		 CoarsenLimit
-0.5                     		 RefineLimit
-1.5                     		 MaxResolution
+3			nRefineCrit
+dphi			StringRefine
+6			RefineTo
+3			CoarsenFrom
+dphi Innershell		StringRefine
+3			RefineTo
+1.5			CoarsenFrom
+dphi ActiveRegion		StringRefine
+1.5			RefineTo
+0.75  			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+1.5			MaxResolution
 
 #GRIDRESOLUTION
-1.5	                Resolution		AreaResolution
-initial                 StringShape
+1.5			Resolution
+initial			StringShape
 
 #DOAMR
-F                       DoAmr
+F			DoAmr
 -1			DnAmr
 -1			DtAmr
 F			IsStrictAmr
 
 #TIMEACCURATE
-F			IsTimeAccurate		DoTimeAccurate
+F			IsTimeAccurate
 
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
 
 #SCHEME
-2			nOrder (1 or 2)
-Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
+2			nOrder
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
 #LIMITER
-T                       UseLogRhoLimiter
-T                       UseLogPLimiter
-F                       UseRhoRatioLimiter
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
 
 #MINIMUMTEMPERATURE
-5E4                     TminDim  [K] for fluid 1 TMinDim
+5E4			TminDim  [K]
 
 #MINIMUMPRESSURE
-1E-9                    pMinDim for fluid 1
+1E-9			pMinDim
 
 #NONCONSERVATIVE
 F			UseNonConservative
 
 #RESCHANGE
-T			UseAccurateReschange		UseAccurateResChange
+T			UseAccurateReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -201,60 +200,56 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-INNERBOUNDARY
-user			TypeBcBody		TypeBcInner
-
 #OUTERBOUNDARY
-user			TypeBc1   user for spherical and user_outerbcs		TypeCellBc
-float			TypeBc2		TypeCellBc
-float			TypeBc3		TypeCellBc
-float			TypeBc4		TypeCellBc
-float			TypeBc5		TypeCellBc
-float			TypeBc6		TypeCellBc
+user			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SAVEPLOT
-4			nPlotFile 1
-x=0 VAR idl_ascii	StringPlot
+4			nPlotFile
+x=0 VAR idl_ascii		StringPlot
 2			DnSavePlot 5000
 -1			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti bx by bz I01 I02 p dy 		NameVars
 {default}		NamePars
-z=0 VAR idl_ascii	StringPlot
+z=0 VAR idl_ascii		StringPlot
 2			DnSavePlot 5000
 -1			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti bx by bz I01 I02 p dy		NameVars
 {default}		NamePars
-shl VAR idl_ascii               StringPlot
-2                      DnSavePlot
--1                      DtSavePlot
-HGR                     TypeCoordPlot
-1.000005                  rMin
-1.000005                    rMax
-0.0                    LonMin
-360.0                  LonMax
-1.5                     dLon
--90.0                   LatMin
-90.0                    LatMax
-1.5                     dLat
-rho ux uy uz ti bx by bz I01 I02 p dy             NameVars
-{default}               NamePars
-shl VAR idl_ascii               StringPlot
-2                      DnSavePlot
--1                      DtSavePlot
-HGR                     TypeCoordPlot
-1.0005                  rMin
-1.0005                    rMax
-0.0                    LonMin
-360.0                  LonMax
-1.5                     dLon
--90.0                   LatMin
-90.0                    LatMax
-1.5                     dLat
-rho ux uy uz ti bx by bz I01 I02 p dy             NameVars
-{default}               NamePars
-
+shl VAR idl_ascii		StringPlot
+2			DnSavePlot
+-1			DtSavePlot
+HGR			TypeCoordPlot
+1.000005		rMin
+1.000005		rMax
+0.0			LonMin
+360.0			LonMax
+1.5			dLon
+-90.0			LatMin
+90.0			LatMax
+1.5			dLat
+rho ux uy uz ti bx by bz I01 I02 p dy		NameVars
+{default}		NamePars
+shl VAR idl_ascii		StringPlot
+2			DnSavePlot
+-1			DtSavePlot
+HGR			TypeCoordPlot
+1.0005			rMin
+1.0005			rMax
+0.0			LonMin
+360.0			LonMax
+1.5			dLon
+-90.0			LatMin
+90.0			LatMax
+1.5			dLat
+rho ux uy uz ti bx by bz I01 I02 p dy		NameVars
+{default}		NamePars
 
 #SAVEINITIAL
 T			DoSaveInitial
