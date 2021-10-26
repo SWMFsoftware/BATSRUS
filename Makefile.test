@@ -114,7 +114,6 @@ test:
 	-@($(MAKE) test_mhdions TESTDIR=run_test_mhdions)
 	-@($(MAKE) test_mhdnoncons TESTDIR=run_test_mhdnoncons)
 	-@($(MAKE) test_viscosity TESTDIR=run_test_viscosity)
-	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
 	-@($(MAKE) test_chromo TESTDIR=run_test_chromo)
 	-@($(MAKE) test_earthsph TESTDIR=run_test_earthsph)
 	-@($(MAKE) test_2bodyplot TESTDIR=run_test_2bodyplot)
@@ -132,6 +131,7 @@ test:
 test_extra:
 	-@($(MAKE) test_awsomchargestate TESTDIR=run_test_awsomchargestate)
 	-@($(MAKE) test_awsomfluids TESTDIR=run_test_awsomfluids)
+	-@($(MAKE) test_bvector TESTDIR=run_test_bvector)
 	-@($(MAKE) test_fluxemergence TESTDIR=run_test_fluxemergence)
 	-@($(MAKE) test_eosgodunov TESTDIR=run_test_eosgodunov)
 	./Config.pl -nohdf5
