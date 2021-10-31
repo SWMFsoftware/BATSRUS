@@ -847,7 +847,7 @@ contains
     NameTecUnit_V(UnitN_)           = '[m^-^3]'
     NameTecUnit_V(UnitP_)           = '[Pa]'
     NameTecUnit_V(UnitB_)           = '[T]'
-    NameTecUnit_V(UnitRhoU_)        = '[kg m^-^2 s^-^2]'
+    NameTecUnit_V(UnitRhoU_)        = '[kg m^-^2 s^-^1]'
     NameTecUnit_V(UnitEnergydens_)  = '[J/m^3]'
     NameTecUnit_V(UnitPoynting_)    = '[J m^-^2 s^-^1]'
     NameTecUnit_V(UnitJ_)           = '[A/m^2]'
