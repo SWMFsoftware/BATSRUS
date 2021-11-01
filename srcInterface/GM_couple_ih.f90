@@ -13,7 +13,7 @@ module GM_couple_ih
   private ! except
 
   public:: GM_put_from_mh         ! coupling toolkit based coupler
-
+  public:: GM_put_from_ih_buffer  ! buffer grid based coupler
   character(len=3),  public:: NameCoord
   integer,           public:: nY, nZ
   real,              public:: yMin, yMax, zMin, zMax
