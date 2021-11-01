@@ -49,8 +49,7 @@ module GM_wrapper
 
   !^CMP IF IH BEGIN
   public:: GM_is_right_boundary_d
-  public:: GM_put_from_ih           ! coupling toolkit based coupler
-  public:: GM_put_from_ih_buffer    ! buffer grid based coupler
+  public:: GM_put_from_mh           ! coupling toolkit based coupler
   !^CMP END IH
 
   !^CMP IF IM BEGIN

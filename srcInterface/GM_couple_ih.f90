@@ -12,8 +12,7 @@ module GM_couple_ih
 
   private ! except
 
-  public:: GM_put_from_ih         ! coupling toolkit based coupler
-  public:: GM_put_from_ih_buffer  ! buffer grid based coupler
+  public:: GM_put_from_mh         ! coupling toolkit based coupler
 
   character(len=3),  public:: NameCoord
   integer,           public:: nY, nZ
@@ -22,8 +21,8 @@ module GM_couple_ih
 
 contains
   !============================================================================
-  ! ROUTINE: GM_put_from_ih - transform and put the data got from IH_
-  subroutine GM_put_from_ih(nPartial,&
+  ! ROUTINE: GM_put_from_mh - transform and put the data got from IH_
+  subroutine GM_put_from_mh(nPartial,&
        iPutStart,&
        Put,&
        Weight,&
@@ -62,7 +61,7 @@ contains
          BuffBz_   =7,&
          BuffP_    =8
 
-    character(len=*), parameter:: NameSub = 'GM_put_from_ih'
+    character(len=*), parameter:: NameSub = 'GM_put_from_mh'
     !--------------------------------------------------------------------------
     State_V(BuffRho_)              = StateSI_V(BuffRho_) *Si2No_V(UnitRho_)
     State_V(BuffRhoUx_:BuffRhoUz_) = StateSI_V(BuffRhoUx_:BuffRhoUz_) &
@@ -94,7 +93,7 @@ contains
             B0_DGB(:,i,j,k,iBlock)
        State_VGB(P_,i,j,k,iBlock)  = State_V(BuffP_)
     end if
-  end subroutine GM_put_from_ih
+  end subroutine GM_put_from_mh
   !============================================================================
 
   subroutine GM_put_from_ih_buffer( &
