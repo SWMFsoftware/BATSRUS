@@ -7945,19 +7945,20 @@ entropy                 StringPicCriteria
 0.02                    MinCriteriaValue
 999.0                   MaxCriteriaValue
 
-This command defines the physical criteria for selecting the PIC region.
-The first input is the number of criteria. For each criterion,
-there are three inputs: the name, minimum value and maximum value.
-The cell which satisfies all criteria will be active. This physics based
-selection can be limited geometrically by the #PICREGIONMIN and #PICREGIONMAX
-commands.
+This command defines the physical criteria for selecting the PIC
+region.  The first input is the number of criteria. For each
+criterion, there are three inputs: the name, minimum value and maximum
+value.  The cell which satisfies all criteria will be active. This
+physics based selection can be limited geometrically by the
+#PICREGIONMIN and #PICREGIONMAX commands.
 
-The available criteria are "rho" (for testing), "beta" (the ratiro between plasma 
-pressure and magnetic paressure), "j/b", "j/bperp" (current divided
-by magnetic field for finding current sheets) and "divcurv" (the divergence
-of the curvature of the magnetic field lines to distinguish X lines from
-flux ropes). Criteria "j/b" and "j/bperp" requires an extra input parameter
-for B1 in the denominator to avoid dividing by 0. Default value of B1 is 0.
+The available criteria are "rho" (for testing), "beta" (the ratiro
+between plasma pressure and magnetic paressure), "j/b", "j/bperp"
+(current divided by magnetic field for finding current sheets) and
+"divcurv" (the divergence of the curvature of the magnetic field lines
+to distinguish X lines from flux ropes). Criteria "j/b" and "j/bperp"
+requires an extra input parameter for B1 in the denominator to avoid
+dividing by 0. Default value of B1 is 0.
 
 By default the whole PIC region is active (possibly limited by #PICREGIONMAX).
 </command>
