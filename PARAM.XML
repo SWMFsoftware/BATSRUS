@@ -1413,6 +1413,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
     <option name="linetied"			/>
     <option name="polarwind"			/>
     <option name="buffergrid"			/>
+    <option name="body2orbit"			/>
     <option name="user"				/>
   </parameter>
   <if expr="$UseBody2">

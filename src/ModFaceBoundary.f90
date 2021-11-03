@@ -980,9 +980,8 @@ contains
             end if
          end if
 
-      case('Body2Orbit')
+      case('body2orbit')
          FBC%VarsGhostFace_V = FaceState_V
-         ! FBC%VarsGhostFace_V(Bx_:Bz_) = FBC%VarsGhostFace_V(Bx_:Bz_) - FBC%B0Face_D
 
          ! Setting velocity BCs to be the second body orbital velocity:
          ! Ux = -( \omega_SI y_SI)-> NoDim
