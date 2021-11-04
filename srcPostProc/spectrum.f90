@@ -1407,7 +1407,7 @@ contains
 
        ! When reached end of file, exit loop
        if(iError /= 0) EXIT READLOOP
-       
+
        ! If wavelength is different than previous line
        ! pass only if wavelength is inside of wavelengthintervals of interest
        do iWavelengthInterval = 1, nWavelengthInterval
