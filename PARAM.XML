@@ -1482,7 +1482,7 @@ Possible values for TypeBcBody are:
                     or apply values read from the #POLARWIND command
 'buffergrid'      - IH(OH) component obtains inner boundary from the SC(IH)
 		    component, through a buffer grid. The buffer grid is set
-		    by the #BUFFERGRID, # or #HELIOBUFFERGRID commands. In
+		    by the #BUFFERGRID or #HELIOBUFFERGRID commands. In
 		    SC/GM coipling the second body BC is implemented via the
 		    buffer grid filled in from GM, for exoplanet orbiting in
 		    the stellar corona.
@@ -1635,7 +1635,7 @@ shown above.
 
 </command>
 
-<command name="BUFFER2NDBODY">
+<command name="BUFFERBODY2">
   <parameter name="nRBuff" type="integer" min="2"        default="2" />
   <parameter name="nLonBuff" type="integer" min="2"      default="90" />
   <parameter name="nLatBuff" type="integer" min="2"      default="45" />
@@ -1650,7 +1650,7 @@ shown above.
   <parameter name="LatBuffMax" type="real"               default="90"
 	     min="$LatBuffMin" max="90" />
 
-#BUFFER2NDBODY
+#BUFFERBODY2
 2	nRBuff
 90	nLonBuff
 45	nLatBuff

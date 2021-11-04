@@ -3,12 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
+  use BATL_lib,     ONLY: test_start, test_stop
   use ModNumConst,  ONLY: cHalfPi, cTwoPi
   use BATL_lib,     ONLY: MaxDim
   implicit none
-  save
+
+  SAVE
+
   ! Named indexes for the spherical buffer
   integer, parameter :: BuffR_  =1, BuffLon_ =  2, BuffLat_ =  3
 
@@ -23,6 +24,7 @@ module ModBuffer
 
   ! Mesh sizes
   real               :: dSphBuff_D(MaxDim)
+
   ! Minimum and maximum coordinate values. For radius the use of UnitX_
   ! is assumed, while the longitude and latitude are expressed in radians
   real               :: BufferMin_D(MaxDim) = [ 19.0,    0.0, -cHalfPi]
@@ -33,18 +35,22 @@ module ModBuffer
   ! the IH). Therefore, we need both the coordinate system identifier from
   ! the source model...
   character (len=3)  :: TypeCoordSource = '???'
+
   ! ...and the matrix to convert the coordinate, velocity and the
   ! magnetic field vectors between the buffer grid and the model one:
   real               :: SourceTarget_DD(MaxDim, MaxDim)
+
   ! To figure out, if the time-dependent conversion matrix needs to be
   ! recalculated for a new time step
   real               :: TimeSimulationLast = -1.0
+
   ! If the logical below is true the buffer may be restarted, even is the
   ! source model is not used/configured in the restarted run.
   logical            :: DoRestartBuffer = .false.
+
   ! If the logical below is true the buffer grid is centered
   ! at xBody2, yBody2, zBBody2
-  logical            :: Is2ndBodyBuffer = .false.
+  logical            :: IsBody2Buffer = .false.
 contains
   !============================================================================
   subroutine init_buffer_grid
@@ -64,13 +70,14 @@ contains
   end subroutine init_buffer_grid
   !============================================================================
   subroutine read_buffer_grid_param(NameCommand)
+
     ! Read all parameters from the parameter file and/or restart header file
-    use ModReadParam, ONLY: read_var
     ! The longitude and latitude range are read in degrees and then converted
     ! to radians
+
+    use ModReadParam, ONLY: read_var
     use ModNumConst,  ONLY: cDegToRad
-    ! At the time the use of buffer grid is expected in IH or OH, but not in
-    ! SC
+
     use ModMain,      ONLY: NameThisComp
     character(LEN=*), intent(in) :: NameCommand
     character(len=*), parameter:: NameSub = 'read_buffer_grid_param'
@@ -88,11 +95,11 @@ contains
        BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
        BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
        call init_buffer_grid
-    case("#BUFFERGRID","#BUFFER2NDBODY")
-       if(NameCommand=="BUFFER2NDBODY")then
-          Is2ndBodyBuffer = .true.
+    case("#BUFFERGRID","#BUFFERBODY2")
+       if(NameCommand=="#BUFFERBODY2")then
+          IsBody2Buffer = .true.
        else
-          Is2ndBodyBuffer = .false.
+          IsBody2Buffer = .false.
        end if
        call read_var('nRBuff'    ,  nRBuff)
        call read_var('nLonBuff'  ,  nLonBuff)
@@ -142,7 +149,7 @@ contains
 
     !--------------------------------------------------------------------------
     Xyz_D = XyzTarget_D
-    if(Is2ndBodyBuffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
+    if(IsBody2Buffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
 
@@ -348,8 +355,8 @@ contains
     write(iFile,'(a)')'T'//cTab//cTab//cTab//'DoRestartBuffer'
     write(iFile,'(a)')TypeCoordSource//cTab//cTab//cTab//'TypeCoordSource'
     write(iFile,*)
-    if(Is2ndBodyBuffer)then
-       write(iFile,'(a)')'#BUFFER2NDBODY'
+    if(IsBody2Buffer)then
+       write(iFile,'(a)')'#BUFFERBODY2'
     else
        write(iFile,'(a)')'#BUFFERGRID'
     end if
@@ -388,7 +395,7 @@ contains
     use ModGeometry, ONLY: R_BLK, R2_BLK
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
-    if(Is2ndBodyBuffer)then
+    if(IsBody2Buffer)then
        is_buffered_point =   R2_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
             .and.            R2_BLK(i,j,k,iBlock) >= BufferMin_D(1)
     else
