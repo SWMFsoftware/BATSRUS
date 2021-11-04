@@ -42,6 +42,9 @@ module ModBuffer
   ! If the logical below is true the buffer may be restarted, even is the
   ! source model is not used/configured in the restarted run.
   logical            :: DoRestartBuffer = .false.
+  ! If the logical below is true the buffer grid is centered
+  ! at xBody2, yBody2, zBBody2
+  logical            :: Is2ndBodyBuffer = .false.
 contains
   !============================================================================
   subroutine init_buffer_grid
@@ -85,7 +88,12 @@ contains
        BufferMin_D(BuffLon_:BuffLat_) = [0.0   , -cHalfPi]
        BufferMax_D(BuffLon_:BuffLat_) = [cTwoPi,  cHalfPi]
        call init_buffer_grid
-    case("#BUFFERGRID")
+    case("#BUFFERGRID","#BUFFER2NDBODY")
+       if(NameCommand=="BUFFER2NDBODY")then
+          Is2ndBodyBuffer = .true.
+       else
+          Is2ndBodyBuffer = .false.
+       end if
        call read_var('nRBuff'    ,  nRBuff)
        call read_var('nLonBuff'  ,  nLonBuff)
        call read_var('nLatBuff'  ,  nLatBuff)
@@ -115,7 +123,8 @@ contains
     use CON_axes,      ONLY: transform_matrix, transform_velocity
     use ModAdvance,    ONLY: UseB
     use ModWaves,      ONLY: UseAlfvenWaves
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitU_, UnitX_,  &
+         xBody2,  yBody2, zBody2
     use ModVarIndexes, ONLY: Ux_, Uz_, RhoUx_, RhoUz_, SignB_,  Rho_,&
          WaveFirst_, WaveLast_, Bx_, Bz_
     use ModCoordTransform, ONLY: xyz_to_rlonlat
@@ -124,12 +133,16 @@ contains
     real,   intent(out):: State_V(nVar)
 
     real              :: Ewave
+    ! Cartesian coords of target point:
+    real              :: Xyz_D(MaxDim)
     ! Cartesian coords of mapped point within the source model
     real              :: XyzSource_D(MaxDim)
     ! Sphhherical coords of mapped point within the source model
     real              :: Sph_D(MaxDim)
 
     !--------------------------------------------------------------------------
+    Xyz_D = XyzTarget_D
+    if(Is2ndBodyBuffer)Xyz_D = Xyz_D - [xBody2, yBody2, zBody2]
     if(TypeCoordSource /= TypeCoordTarget) then
        ! Convert target coordinates to the coordiante system of the model
 
@@ -138,9 +151,9 @@ contains
                TypeCoordIn = TypeCoordTarget, TypeCoordOut = TypeCoordSource)
           TimeSimulationLast = Time_Simulation
        end if
-       XyzSource_D = matmul(SourceTarget_DD, XyzTarget_D)
+       XyzSource_D = matmul(SourceTarget_DD, Xyz_D)
     else
-       XyzSource_D = XyzTarget_D
+       XyzSource_D = Xyz_D
     end if
 
     call xyz_to_rlonlat(XyzSource_D, Sph_D)
@@ -335,7 +348,11 @@ contains
     write(iFile,'(a)')'T'//cTab//cTab//cTab//'DoRestartBuffer'
     write(iFile,'(a)')TypeCoordSource//cTab//cTab//cTab//'TypeCoordSource'
     write(iFile,*)
-    write(iFile,'(a)')'#BUFFERGRID'
+    if(Is2ndBodyBuffer)then
+       write(iFile,'(a)')'#BUFFER2NDBODY'
+    else
+       write(iFile,'(a)')'#BUFFERGRID'
+    end if
     write(iFile,'(i8,a)')nRBuff, cTab//cTab//'nRBuff'
     write(iFile,'(i8,a)')nLonBuff, cTab//cTab//'nLonBuff'
     write(iFile,'(i8,a)')nlatBuff, cTab//cTab//'nLatBuff'
@@ -368,11 +385,16 @@ contains
   end subroutine read_buffer_restart
   !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
-    use ModGeometry, ONLY: R_BLK
+    use ModGeometry, ONLY: R_BLK, R2_BLK
     integer, intent(in):: i, j, k, iBlock
     !--------------------------------------------------------------------------
-    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
-         .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+    if(Is2ndBodyBuffer)then
+       is_buffered_point =   R2_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            R2_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+    else
+       is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
+            .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+    end if
   end function is_buffered_point
   !============================================================================
   subroutine fill_in_from_buffer(iBlock)
