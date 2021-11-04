@@ -23,17 +23,17 @@ F			UseComp
 #TIMEACCURATE
 F			IsTimeAccurate
 
-! Start time should be the time of the middle of the Carrington Rotation 
+! Start time should be the time of the middle of the Carrington Rotation
 ! and the time of the EIT image
 
 #STARTTIME
-2000                    iYear
-1                       iMonth
-1                       iDay
-0                      iHour
-0                      iMinute
-0                       iSecond
-0.0                     FracSecond
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0			FracSecond
 
 #SAVERESTART
 T			DoSaveRestart
@@ -53,33 +53,33 @@ spherical_lnr		TypeGeometry
 1			nRootBlock1
 2			nRootBlock2
 1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
+-275.0			xMin
+ 275.0			xMax
+-275.0			yMin
+ 275.0			yMax
+-275.0			zMin
+ 275.0			zMax
 
 #LIMITRADIUS
 1.05			rMin
-250.0			rMax
+275.0			rMax
 
 #GRIDLEVEL
-8                       nLevelArea
-initial                 NameArea
+8			nLevel
+initial			StringShape
 
 #GRIDLEVEL
-4                       Resolution
-shell0                  NameShape
-1.05                     RadiusInner
-30.                    Radius
+4			nLevel
+shell0			StringShape
+1.05			RadiusInner
+30.			Radius
 
 #GRIDLEVEL
-8                       Resolution
-ringz0                  NameShape
-1.                      height
-9.4                     RadiusInner
-10.6                    Radius
+8			nLevel
+ringz0			StringShape
+1.			Height
+9.4			RadiusInner
+10.6			Radius
 
 
 #TIMESTEPPING
@@ -93,9 +93,9 @@ HGR			TypeCoordSystem
 90000			MaxBlock
 
 #FIELDLINETHREAD
-T                       UseFieldLineThreads
-180                     nPointInThreadMax
-1.0e-3                  DsThreadMin
+T			UseFieldLineThreads
+180			nPointThreadMax
+1.0e-3			DsThreadMin
 
 #BODY
 T			UseBody
@@ -107,30 +107,30 @@ T			UseBody
 F			UseBody
 
 #STAR
-0.8
-0.84
-11.25                     RotationPeriod
+0.8			RadiusStar
+0.84			MassStar
+11.25			RotationPeriodStar
 
 #SECONDBODY
-T		UseBody2 ! Rest of the parameters read if .true.
-0.2		rBody2
-10.		xBody2
-0.		yBody2
-0.		zBody2
-0.2		rCurrents2 !This is unused currently
-1.e7		RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
-10000.0		TDimBody2 (K) temperature for fixed BC for P_BLK
-F		UseOrbit
-2.		OrbitPeriod [days]
+T			UseBody2 ! Rest of the parameters read if .true.
+0.2			rBody2
+10.			xBody2
+0.			yBody2
+0.			zBody2
+0.2			rCurrents2 !This is unused currently
+1.e7			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
+10000.0			tDimBody2 (K) temperature for fixed BC for P_BLK
+F			UseOrbit
+2.			OrbitPeriod [days]
 
 #DIPOLEBODY2
-0.0             BdpDimBody2x [nT]
-0.0             BdpDimBody2y [nT]
-0.1		BdpDimBody2z [nT]
+0.0			BdpDimBody2x [nT]
+0.0			BdpDimBody2y [nT]
+0.1			BdpDimBody2z [nT]
 
 
 #HARMONICSFILE
-HD189733_2006.dat             NameHarmonicsFile
+HD189733_2006.dat		NameHarmonicsFile
 
 #HARMONICSGRID
 1.0			rMagnetogram
@@ -156,11 +156,11 @@ F			UseB0MomentumFlux
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection (read for turbulentcascade only)
-1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
-1.2                     rMinWaveReflection (read if UseWaveReflection is true)
-T                       UseSurfaceWaveRefl (read if UseWaveReflection is true)
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection (read for turbulentcascade only)
+1.5e5			LperpTimesSqrtBSi (read for turbulentcascade only)
+1.2			rMinWaveReflection (read if UseWaveReflection is true)
+T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -188,44 +188,44 @@ T			UseRadCooling
 #RADIOEMISSION
 bremsstrahlung
 
-#USERINPUTEND
+#USERINPUTEND -------------------------------------
 
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat
+RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
 TR			NameTable
 load			NameCommand
-TR.dat
+TR.dat			NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
-AiaXrt                  NameTable
-load                    TypeAction
-los_tbl.dat             NameFile
-ascii                   TypeFIle
+AiaXrt			NameTable
+load			NameCommand
+los_tbl.dat		NameFile
+ascii			TypeFile
 
 
 LOOKUPTABLE
-EuviA				NameTable
-load                    	TypeAction
-SC/Param/los_EuviA.dat      	NameFile
-ascii                   	TypeFile
+EuviA			NameTable
+load			TypeAction
+SC/Param/los_EuviA.dat		NameFile
+ascii			TypeFile
 
 LOOKUPTABLE
-EuviB				NameTable
-load                    	TypeAction
+EuviB			NameTable
+load			TypeAction
 SC/Param/los_EuviB.dat		NameFIle
-ascii                   	TypeFIle
+ascii			TypeFIle
 
 #LOOKUPTABLE
-euv                             NameTable
-load                            TypeAction
-SC/Param/los_Eit_cor.dat        NameFile
-ascii                           TypeFIle
+euv			NameTable
+load			NameCommand
+SC/Param/los_Eit_cor.dat		NameFile
+ascii			TypeFile
 
 
 
@@ -246,7 +246,7 @@ T			UseSpeedMin
 
 #SCHEME
 2			nOrder (1 or 2)
-Sokolov	        TypeFlux (Roe, Rusanov, Linde, Sokolov
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -290,15 +290,15 @@ float			TypeBc6
 
 
 #INNERBOUNDARY
-user
-body2orbit
+user			TypeBcBody
+fixed			TypeBcBody2
 
 
 #SAVEPLOT
 1			nPlotFile
-z=0 MHD tcp
--1
-7200.
+z=0 MHD tcp		StringPlot
+-1			DnSavePlot
+7200.			DtSavePlot
 
 #SAVEINITIAL
 F			DoSaveInitial
@@ -321,7 +321,7 @@ T			UseComp
 #COUPLE1
 SC			NameSource
 GM			NameTarget
-1			DnCouple
+1000			DnCouple
 -1.0			DtCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
@@ -331,15 +331,15 @@ GSE			TypeCoordSystem
 
 
 PLANET
-New                     NamePlanet
-24764.0e+3                RadiusPlanet [m]
-1.024e+26               MassPlanet   [kg]
-0.0                    OmegaPlanet  [radian/s]
-0.0                    TiltRotation [degree]
-DIPOLE                  TypeBField
-0.0                    MagAxisThetaGeo [degree]
-0.0                   MagAxisPhiGeo   [degree]
-0.0                   DipoleStrength  [T]
+New			NamePlanet
+24764.0e+3		RadiusPlanet [m]
+1.024e+26		MassPlanet   [kg]
+0.0			OmegaPlanet  [radian/s]
+0.0			TiltRotation [degree]
+DIPOLE			TypeBField
+0.0			MagAxisThetaGeo [degree]
+0.0			MagAxisPhiGeo   [degree]
+0.0			DipoleStrength  [T]
 
 DIPOLE
 -0.3e-4
@@ -353,7 +353,7 @@ T			UseBody
 
 #GRIDRESOLUTION
 2.0			Resolution
-initial
+initial			StringShape
 
 #DOAMR
 T			DoAmr
@@ -362,12 +362,12 @@ T			DoAmr
 T			IsStrictAmr
 
 #GRIDBLOCKALL
-30000                   MaxBlock
+30000			MaxBlock
 
 #GRID
-1			nRootBlock_D(x_)
-1			nRootBlock_D(y_)
-1			nRootBlock_D(z_)
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -224.			xMin
  32.			xMax
 -128.			yMin
@@ -385,13 +385,13 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-polarwind
+polarwind		TypeBcBody
 
 #POLARBOUNDARY
-3.0e+7                  PolarNDim [amu/cc] for fluid 1
-10000.0                 PolarTDim [K]      for fluid 1
-0.0                            PolarUDim [km/s]   for fluid 1
-0.0                            PolarLatitude [deg]
+3.0e+7			PolarNDim [amu/cc] for fluid 1
+10000.0			PolarTDim [K]      for fluid 1
+0.0			PolarUDim [km/s]   for fluid 1
+0.0			PolarLatitude [deg]
 
 #RESCHANGE
 T			UseAccurateReschange
@@ -421,19 +421,10 @@ T			UseNonConservative
 			DxSavePlot
 #END_COMP GM -----------------------------------------------------------------
 
-#STOP
-20002
--1.
-
-#RUN
-
-#COMPONENT
-SC                      NameComp
-F                       UseComp
 
 #STOP
-28000
--1.
+28000			MaxIter
+-1.			TimeMax
 
 End session: 2
 #END ##########################################################################
