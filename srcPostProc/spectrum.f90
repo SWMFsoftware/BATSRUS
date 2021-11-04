@@ -1405,6 +1405,9 @@ contains
           DoStore = .false.
        end if
 
+       ! When reached end of file, exit loop
+       if(iError /= 0) EXIT READLOOP
+       
        ! If wavelength is different than previous line
        ! pass only if wavelength is inside of wavelengthintervals of interest
        do iWavelengthInterval = 1, nWavelengthInterval
@@ -1464,9 +1467,6 @@ contains
           EXIT
 
        end do
-
-       ! When reached end of file, exit loop
-       if(iError /= 0) EXIT READLOOP
 
     end do READLOOP
     call close_file
