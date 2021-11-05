@@ -134,19 +134,20 @@ program spectrum
   ! Variables for using equilibrium ionization despite having charge states
   ! To use non-equilibrium ions set it to false
   logical                     :: UseEquilIon = .true.
-  integer, parameter          :: nElement = 30    
+  integer, parameter          :: nElement = 30
   character(len=2)            :: NameElement_I(1:nElement) = ['h ','he','li',&
        'be','b ','c ','n ','o ','f ','ne','na','mg','al','si','p ','s ','cl',&
        'ar','k ','ca','sc','ti','v ','cr','mn','fe','co','ni','cu','zn']
   integer                     :: nIonFracMax = 500
 
+  !----------------------------------------------------------------------------
   type IonFracTableType
      character(len=6)         :: NameIonFrac
      real,allocatable         :: IonFraction_III(:,:,:)
   end type IonFracTableType
 
   type(IonFracTableType), allocatable :: IonFracTable_I(:)
-  
+
   ! Derived type to read tabulated G values
   !----------------------------------------------------------------------------
   type LineTableType
@@ -590,7 +591,7 @@ contains
     real                           :: Aion
     real                           :: TShift, EquilIonFrac
     logical                        :: IsFound = .false.
-    
+
     character(len=*), parameter:: NameSub = 'calc_flux'
     !--------------------------------------------------------------------------
 
@@ -598,13 +599,13 @@ contains
     IsFound = .false.
     if(.not. UseEquilIon)then
        do iIon=1,nIonFracMax
-          if(LineTable_I(iLine)%NameIon .eq. IonFracTable_I(iIon)%NameIonFrac)then
+          if(LineTable_I(iLine)%NameIon == IonFracTable_I(iIon)%NameIonFrac)then
              IsFound = .true.
              EXIT
           end if
        enddo
     endif
-       
+
     if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
 
     do kPixel=1,n3
@@ -722,7 +723,6 @@ contains
                 Gint = Gint/EquilIonFrac * IonFracTable_I(iIon)%IonFraction_III(i,jPixel,kPixel)
              end if
 
-             
              ! When Gint becomes negative due to extrapolation -> move to next
              if(Gint<=0)CYCLE
 
@@ -1037,8 +1037,8 @@ contains
 
        ! if false, then non-equilibrium charge states are used
        case("#IONEQUIL")
-          call read_var('UseEquilIon',UseEquilIon) 
-          
+          call read_var('UseEquilIon',UseEquilIon)
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -1081,11 +1081,11 @@ contains
     real                        :: Coord, Dz1, Dz2
 
     integer                     :: iElement, iCharge, nCharge, iIonFrac = 0
-    character(len=4)            :: NameChargestate 
+    character(len=4)            :: NameChargestate
     character(len=6)            :: NameChiantiChargestate
     real                        :: IonFracSum
     logical                     :: IsFound = .false.
-    
+
     character(len=*), parameter:: NameSub = 'read_data'
     !--------------------------------------------------------------------------
     call read_plot_file(NameFile=NameDataFile, &
@@ -1162,7 +1162,7 @@ contains
     end if
 
     if(.not. UseEquilIon)allocate(IonFracTable_I(nIonFracMax))
-    
+
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
        Var_VIII(rho_,1:n1,1:n2,1:n3)   = rhoUni * 1e6 * cProtonMass
@@ -1271,7 +1271,7 @@ contains
                               trim(NameElement_I(iElement))//'_',iCharge
                       end if
 
-                      if(NameVar_V(iVar+nDim) .eq. NameChargestate)then
+                      if(NameVar_V(iVar+nDim) == NameChargestate)then
                          IonFracTable_I(iIonFrac)%NameIonFrac = NameChiantiChargestate
                          allocate(IonFracTable_I(iIonFrac)%IonFraction_III(1:n1,1:n2,1:n3))
                          IonFracTable_I(iIonFrac)%IonFraction_III(1:n1,1:n2,1:n3)&
@@ -1306,7 +1306,7 @@ contains
                            IonFracTable_I(iCharge)%IonFraction_III(i,j,k)&
                            /IonFracSum
                    end do
-                end do; end do; end do 
+                end do; end do; end do
              end if
              iIonFrac = iIonFrac + nCharge
           end do
@@ -1465,7 +1465,7 @@ contains
        read(UnitTmp_,*,iostat=iError) &
             NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG, LogIonFrac
-       
+
        if(iError  /= 0 .and. iError /= -1)then
           write(*,*)'iError = ',iError
           write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
@@ -1512,7 +1512,7 @@ contains
           ! Create equilibrium ionization fractions table
           allocate(LineTable_I(iLine)%IonFrac_II(iMin:iMax,jMin:jMax))
           LineTable_I(iLine)%IonFrac_II = IonFrac_II(iMin:iMax,jMin:jMax)
-             
+
           ! Storage is done
           DoStore = .false.
        end if
@@ -1559,7 +1559,7 @@ contains
           LineTable_I(iLine)%nLevelFrom     = nLevelFrom
           LineTable_I(iLine)%nLevelTo       = nLevelTo
           LineTable_I(iLine)%LineWavelength = LineWavelength
-          
+
           if(IsVerbose)write(*,*)'NameIon, LineWavelength = ',NameIon,LineWavelength
 
           ! Calculate indexes and store as the minimum indexes
@@ -1576,7 +1576,7 @@ contains
           ! Store first element
           g_II(iN,iT) = 10.0**LogG
           IonFrac_II(iN,iT) = 10.0**LogIonFrac
-          
+
           ! Go on reading the lines corresponding to the wavelength above
           EXIT
 
