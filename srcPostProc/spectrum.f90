@@ -1252,7 +1252,7 @@ contains
              ! In case charge states are used in the output file
              if(.not. UseEquilIon)then
                 iIonFrac = 0
-                do iElement = 1, nElement
+                ELEMENTLOOP: do iElement = 1, nElement
                    nCharge = iElement+1
                    do iCharge = 1, nCharge
                       iIonFrac = iIonFrac+1
@@ -1263,24 +1263,27 @@ contains
                          write(NameChargestate,'(a,i2.2)')&
                               trim(NameElement_I(iElement)),iCharge
                       end if
-                      if(iCharge < 10) then
-                         write(NameChiantiChargestate,'(a,i1.1)')&
-                              trim(NameElement_I(iElement))//'_',iCharge
-                      else
-                         write(NameChiantiChargestate,'(a,i2.2)')&
-                              trim(NameElement_I(iElement))//'_',iCharge
-                      end if
 
                       if(NameVar_V(iVar+nDim) == NameChargestate)then
-                         IonFracTable_I(iIonFrac)%NameIonFrac = NameChiantiChargestate
+                         IonFracTable_I(iIonFrac)%NameIonFrac = &
+                              NameChiantiChargestate
                          allocate(IonFracTable_I(iIonFrac)%IonFraction_III(1:n1,1:n2,1:n3))
-                         IonFracTable_I(iIonFrac)%IonFraction_III(1:n1,1:n2,1:n3)&
-                              = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+                         IonFracTable_I(iIonFrac)%IonFraction_III(:,:,:)&
+                              = VarIn_VIII(iVar,:,:,:)
+
+                         if(iCharge < 10) then
+                            write(NameChiantiChargestate,'(a,i1.1)')&
+                                 trim(NameElement_I(iElement))//'_',iCharge
+                         else
+                            write(NameChiantiChargestate,'(a,i2.2)')&
+                                 trim(NameElement_I(iElement))//'_',iCharge
+                         end if
 
                          IsFound = .true.
+                         EXIT ELEMENTLOOP
                       end if
                    enddo
-                enddo
+                enddo ELEMENTLOOP
              endif
 
              if(.not.IsFound) write(*,*) NameSub // ' unused NameVar = '&
